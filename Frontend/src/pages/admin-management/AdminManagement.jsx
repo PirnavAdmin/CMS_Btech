@@ -19,7 +19,7 @@ import InfoCardImports_default from '../../components/InfoCard'
 import { academicYearApi as apiEndpointsImports_academicYearApi, studentApi as apiEndpointsImports_studentApi, facultyApi as apiEndpointsImports_facultyApi, courseApi as apiEndpointsImports_courseApi, roleApi as apiEndpointsImports_roleApi, sectionApi as apiEndpointsImports_sectionApi, sectionAssignmentApi as apiEndpointsImports_sectionAssignmentApi } from '../../api/apiEndpoints'
 import eventBusImports_default, { ERP_EVENTS as eventBusImports_ERP_EVENTS } from '../../services/eventBus'
 import { showDeactivationBlocked as DeactivationBlockedDialogImports_showDeactivationBlocked } from '../../components/DeactivationBlockedDialog'
-import { FiEye as fiImports_FiEye, FiEdit2 as fiImports_FiEdit2, FiToggleLeft as fiImports_FiToggleLeft, FiToggleRight as fiImports_FiToggleRight, FiPlus as fiImports_FiPlus, FiCalendar as fiImports_FiCalendar, FiClock as fiImports_FiClock, FiSearch as fiImports_FiSearch, FiX as fiImports_FiX, FiCheck as fiImports_FiCheck, FiArrowLeft as fiImports_FiArrowLeft, FiAlertCircle as fiImports_FiAlertCircle, FiHome as fiImports_FiHome, FiFilter as fiImports_FiFilter, FiTrash2 as fiImports_FiTrash2, FiUserPlus as fiImports_FiUserPlus, FiLayers as fiImports_FiLayers, FiBookOpen as fiImports_FiBookOpen, FiUser as fiImports_FiUser, FiUserCheck as fiImports_FiUserCheck, FiShield as fiImports_FiShield, FiAward as fiImports_FiAward, FiUsers as fiImports_FiUsers, FiKey as fiImports_FiKey, FiSliders as fiImports_FiSliders, FiChevronLeft as fiImports_FiChevronLeft, FiChevronRight as fiImports_FiChevronRight, FiInfo as fiImports_FiInfo, FiRotateCcw as fiImports_FiRotateCcw, FiGrid as fiImports_FiGrid, FiCheckCircle as fiImports_FiCheckCircle, FiBookmark as fiImports_FiBookmark, FiLink as fiImports_FiLink, FiUnlock as fiImports_FiUnlock, FiCpu as fiImports_FiCpu, FiMonitor as fiImports_FiMonitor, FiMapPin as fiImports_FiMapPin, FiAlertTriangle as fiImports_FiAlertTriangle, FiSlash as fiImports_FiSlash } from 'react-icons/fi'
+import { FiEye, FiEdit2, FiToggleLeft, FiToggleRight, FiPlus, FiCalendar, FiClock, FiSearch, FiX, FiCheck, FiArrowLeft, FiAlertCircle, FiHome, FiFilter, FiTrash2, FiUserPlus, FiLayers, FiBookOpen, FiUser, FiUserCheck, FiShield, FiAward, FiUsers, FiKey, FiSliders, FiChevronLeft, FiChevronRight, FiInfo, FiRotateCcw, FiGrid, FiCheckCircle, FiBookmark, FiLink, FiUnlock, FiCpu, FiMonitor, FiMapPin, FiAlertTriangle, FiSlash, FiDownload, FiZap } from 'react-icons/fi'
 import SearchableSelectImports_default, { ProjectSelect as SearchableSelectImports_ProjectSelect } from '../../components/SearchableSelect'
 import { GENERIC_ERROR_MESSAGE as userErrorImports_GENERIC_ERROR_MESSAGE } from '../../utils/userError.js'
 import { collegeLogoValue as collegeLogoImports_collegeLogoValue } from '../../utils/collegeLogo'
@@ -62,16 +62,6 @@ const studentApi = apiEndpointsImports_studentApi
 const ERP_EVENTS = eventBusImports_ERP_EVENTS
 const eventBus = eventBusImports_default
 const showDeactivationBlocked = DeactivationBlockedDialogImports_showDeactivationBlocked
-const FiEye = fiImports_FiEye
-const FiEdit2 = fiImports_FiEdit2
-const FiToggleLeft = fiImports_FiToggleLeft
-const FiToggleRight = fiImports_FiToggleRight
-const FiPlus = fiImports_FiPlus
-const FiCalendar = fiImports_FiCalendar
-const FiClock = fiImports_FiClock
-const FiSearch = fiImports_FiSearch
-const FiX = fiImports_FiX
-
 const DAY = 864e5;
 const states = ['UPCOMING', 'ACTIVE', 'ARCHIVED'];
 const blank = { name: '', startDate: '', endDate: '', autoActivate: false };
@@ -797,8 +787,6 @@ const useRef = reactImports_useRef
 const useState = reactImports_useState
 const useNavigate = react_router_domImports_useNavigate
 const useSearchParams = react_router_domImports_useSearchParams
-const FiCheck = fiImports_FiCheck
-const FiArrowLeft = fiImports_FiArrowLeft
 const DashboardLayout = DashboardLayoutImports_default
 const SearchableSelect = SearchableSelectImports_default
 const cacheCollegeLogo = collegeApiImports_cacheCollegeLogo
@@ -924,8 +912,10 @@ function Field({ label, name, values, errors, touched, onChange, required, maxLe
   return <label className="ac-field" htmlFor={`ac-${name}`}>
     <span>{label}{required && <b aria-hidden="true"> *</b>}</span>
     <input id={`ac-${name}`} name={name} value={values[name]} onChange={onChange} required={required} maxLength={maxLength} aria-invalid={Boolean(error)} aria-describedby={error ? `ac-${name}-error` : undefined} {...props} />
-    {maxLength && <small className="ac-counter">{values[name].length}/{maxLength}</small>}
-    {error && <small id={`ac-${name}-error`} className="ac-error" role="alert">{error}</small>}
+    {(error || maxLength) && <span className="ac-field-meta">
+      {error && <small id={`ac-${name}-error`} className="ac-error" role="alert">{error}</small>}
+      {maxLength && <small className="ac-counter">{values[name].length}/{maxLength}</small>}
+    </span>}
   </label>
 }
 
@@ -1582,17 +1572,9 @@ const useState = reactImports_useState
 const useEffect = reactImports_useEffect
 const useRef = reactImports_useRef
 const useNavigate = react_router_domImports_useNavigate
-const FiAlertCircle = fiImports_FiAlertCircle
-const FiArrowLeft = fiImports_FiArrowLeft
-const EyeIcon = fiImports_FiEye
-const EditIcon = fiImports_FiEdit2
-const FiHome = fiImports_FiHome
-const Plus = fiImports_FiPlus
-const FiToggleLeft = fiImports_FiToggleLeft
-const FiToggleRight = fiImports_FiToggleRight
-const FiSearch = fiImports_FiSearch
-const FiFilter = fiImports_FiFilter
-const FiTrash2 = fiImports_FiTrash2
+const EyeIcon = FiEye
+const EditIcon = FiEdit2
+const Plus = FiPlus
 const DashboardLayout = DashboardLayoutImports_default
 const FilterPanel = FilterPanelImports_default
 const PAGE_SIZE = TablePaginationImports_PAGE_SIZE
@@ -3111,21 +3093,6 @@ const courseApi = apiEndpointsImports_courseApi
 const normalizeFaculty = facultyServiceImports_normalizeFaculty
 const facultyService = facultyServiceImports_default
 const showDeactivationBlocked = DeactivationBlockedDialogImports_showDeactivationBlocked
-const FiEye = fiImports_FiEye
-const FiEdit2 = fiImports_FiEdit2
-const FiPlus = fiImports_FiPlus
-const FiSearch = fiImports_FiSearch
-const FiToggleLeft = fiImports_FiToggleLeft
-const FiToggleRight = fiImports_FiToggleRight
-const FiTrash2 = fiImports_FiTrash2
-const FiUserPlus = fiImports_FiUserPlus
-const FiLayers = fiImports_FiLayers
-const FiArrowLeft = fiImports_FiArrowLeft
-const FiBookOpen = fiImports_FiBookOpen
-const FiUser = fiImports_FiUser
-const FiUserCheck = fiImports_FiUserCheck
-const FiCheck = fiImports_FiCheck
-const FiX = fiImports_FiX
 const SearchableSelect = SearchableSelectImports_default
 const useAcademic = AcademicContextImports_useAcademic
 
@@ -4197,24 +4164,6 @@ const normalizeFaculty = facultyServiceImports_normalizeFaculty
 const facultyService = facultyServiceImports_default
 const academicService = academicServiceImports_default
 const roleApi = apiEndpointsImports_roleApi
-const FiShield = fiImports_FiShield
-const FiAward = fiImports_FiAward
-const FiUsers = fiImports_FiUsers
-const FiKey = fiImports_FiKey
-const FiPlus = fiImports_FiPlus
-const FiEdit2 = fiImports_FiEdit2
-const FiTrash2 = fiImports_FiTrash2
-const FiSearch = fiImports_FiSearch
-const FiCheck = fiImports_FiCheck
-const FiX = fiImports_FiX
-const FiSliders = fiImports_FiSliders
-const FiUserCheck = fiImports_FiUserCheck
-const FiChevronLeft = fiImports_FiChevronLeft
-const FiChevronRight = fiImports_FiChevronRight
-const FiInfo = fiImports_FiInfo
-const FiAlertCircle = fiImports_FiAlertCircle
-const FiRotateCcw = fiImports_FiRotateCcw
-
 // ==========================================
 // SYSTEM MODULES & PERMISSION SCHEMAS
 // ==========================================
@@ -4246,11 +4195,11 @@ const SYSTEM_MODULES = [
 ]
 
 const PERMISSION_ACTIONS = [
-  { id: 'view', label: 'View', icon: '👁️', desc: 'Read / View records' },
-  { id: 'create', label: 'Create', icon: '➕', desc: 'Add new records' },
-  { id: 'edit', label: 'Edit', icon: '✏️', desc: 'Modify existing data' },
-  { id: 'delete', label: 'Delete', icon: '🗑️', desc: 'Remove records' },
-  { id: 'export', label: 'Export', icon: '📤', desc: 'Download Excel/PDF' },
+  { id: 'view', label: 'View', icon: FiEye, desc: 'Read / View records' },
+  { id: 'create', label: 'Create', icon: FiPlus, desc: 'Add new records' },
+  { id: 'edit', label: 'Edit', icon: FiEdit2, desc: 'Modify existing data' },
+  { id: 'delete', label: 'Delete', icon: FiTrash2, desc: 'Remove records' },
+  { id: 'export', label: 'Export', icon: FiDownload, desc: 'Download Excel/PDF' },
 ]
 
 const fullAccessPermissions = () => {
@@ -6070,7 +6019,7 @@ function RolesAndDesignations() {
                               </button>
                             </>
                           ) : (
-                            '✨ Auto-generating'
+                            'Auto-generating'
                           )}
                         </span>
                       )}
@@ -6234,7 +6183,7 @@ function RolesAndDesignations() {
                             </button>
                           </>
                         ) : (
-                          '✨ Auto-generating'
+                          'Auto-generating'
                         )}
                       </span>
                     </div>
@@ -6420,11 +6369,11 @@ function RolesAndDesignations() {
                 </div>
 
                 <div className="rbac-legend-strip">
-                  <span><strong>👁️ View:</strong> Read</span>
-                  <span><strong>➕ Create:</strong> Add</span>
-                  <span><strong>✏️ Edit:</strong> Update</span>
-                  <span><strong>🗑️ Delete:</strong> Remove</span>
-                  <span><strong>📤 Export:</strong> Download</span>
+                  <span><strong><FiEye size={16} aria-hidden="true" /> View:</strong> Read</span>
+                  <span><strong><FiPlus size={16} aria-hidden="true" /> Create:</strong> Add</span>
+                  <span><strong><FiEdit2 size={16} aria-hidden="true" /> Edit:</strong> Update</span>
+                  <span><strong><FiTrash2 size={16} aria-hidden="true" /> Delete:</strong> Remove</span>
+                  <span><strong><FiDownload size={16} aria-hidden="true" /> Export:</strong> Download</span>
                 </div>
               </div>
 
@@ -6443,12 +6392,12 @@ function RolesAndDesignations() {
                   <thead>
                     <tr>
                       <th className="th-mod-name">ERP Module & Scope Description</th>
-                      <th className="th-action-col">👁️ VIEW</th>
-                      <th className="th-action-col">➕ CREATE</th>
-                      <th className="th-action-col">✏️ EDIT</th>
-                      <th className="th-action-col">🗑️ DELETE</th>
-                      <th className="th-action-col">📤 EXPORT</th>
-                      <th className="th-toggle-col">⚡ MODULE QUICK ALL</th>
+                      <th className="th-action-col"><FiEye size={16} aria-hidden="true" /> VIEW</th>
+                      <th className="th-action-col"><FiPlus size={16} aria-hidden="true" /> CREATE</th>
+                      <th className="th-action-col"><FiEdit2 size={16} aria-hidden="true" /> EDIT</th>
+                      <th className="th-action-col"><FiTrash2 size={16} aria-hidden="true" /> DELETE</th>
+                      <th className="th-action-col"><FiDownload size={16} aria-hidden="true" /> EXPORT</th>
+                      <th className="th-toggle-col"><FiZap size={16} aria-hidden="true" /> MODULE QUICK ALL</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -6472,7 +6421,7 @@ function RolesAndDesignations() {
                                   className="rbac-cat-bulk-btn"
                                   onClick={() => handleToggleCategoryAll(category)}
                                 >
-                                  {allCatChecked ? '✖ Deselect All in Category' : '✔ Grant All in Category'}
+                                  {allCatChecked ? <><FiX size={16} aria-hidden="true" /> Deselect All in Category</> : <><FiCheck size={16} aria-hidden="true" /> Grant All in Category</>}
                                 </button>
                               </div>
                             </td>
@@ -6871,28 +6820,6 @@ const useMemo = reactImports_useMemo
 const useCallback = reactImports_useCallback
 const useNavigate = react_router_domImports_useNavigate
 const useParams = react_router_domImports_useParams
-const FiGrid = fiImports_FiGrid
-const FiPlus = fiImports_FiPlus
-const FiEdit2 = fiImports_FiEdit2
-const FiTrash2 = fiImports_FiTrash2
-const FiSearch = fiImports_FiSearch
-const FiX = fiImports_FiX
-const FiEye = fiImports_FiEye
-const FiCheck = fiImports_FiCheck
-const FiHome = fiImports_FiHome
-const FiUsers = fiImports_FiUsers
-const FiLayers = fiImports_FiLayers
-const FiInfo = fiImports_FiInfo
-const FiCheckCircle = fiImports_FiCheckCircle
-const FiBookmark = fiImports_FiBookmark
-const FiLink = fiImports_FiLink
-const FiUnlock = fiImports_FiUnlock
-const FiCpu = fiImports_FiCpu
-const FiMonitor = fiImports_FiMonitor
-const FiMapPin = fiImports_FiMapPin
-const FiAlertTriangle = fiImports_FiAlertTriangle
-const FiSlash = fiImports_FiSlash
-const FiArrowLeft = fiImports_FiArrowLeft
 const DashboardLayout = DashboardLayoutImports_default
 const PageHeader = PageHeaderImports_default
 const ExportMenu = ExportMenuImports_default

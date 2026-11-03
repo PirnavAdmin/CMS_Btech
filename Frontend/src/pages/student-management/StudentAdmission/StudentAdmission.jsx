@@ -11,12 +11,7 @@ import { isApiResult } from '../../../utils/exportProvenance'
 import ExportMenu, { PrintDetailsButton } from '../../../components/ExportMenu'
 import { admissionColumns } from '../../../utils/exportColumns'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import {
-  FiAlertCircle, FiArrowLeft, FiArrowRight, FiBookOpen, FiCamera, FiCheck, FiCheckCircle,
-  FiChevronRight, FiClock, FiCreditCard, FiEdit2, FiFileText, FiGrid,
-  FiHome, FiInbox, FiPhone, FiPlus, FiSave, FiSearch, FiShield,
-  FiTrash2, FiUploadCloud, FiUser, FiUsers, FiX,
-} from 'react-icons/fi'
+import { FiAlertCircle, FiArrowLeft, FiArrowRight, FiBookOpen, FiCamera, FiCheck, FiCheckCircle, FiChevronRight, FiClock, FiCreditCard, FiEdit2, FiFileText, FiGrid, FiHome, FiInbox, FiPhone, FiPlus, FiSave, FiSearch, FiShield, FiTrash2, FiUploadCloud, FiUser, FiUsers, FiX } from 'react-icons/fi'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import DashboardLayout from '../../../layouts/DashboardLayout'
 import FilterPanel from '../../../components/FilterPanel'

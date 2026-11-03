@@ -93,6 +93,15 @@ test('custom download action remains supported and reports failures', async () =
   assert.equal(menu.downloads.length, 0)
 })
 
+test('direct-download export controls download CSV from the primary button', async () => {
+  const menu = harness({ filename: 'library-catalog', rows: records, directDownload: true })
+  await menu.buttons[0].props.onClick()
+  assert.equal(menu.downloads.length, 1)
+  assert.equal(menu.downloads[0].filename, 'library-catalog')
+  assert.equal(menu.downloads[0].csv.split('\r\n').length - 1, records.length)
+  assert.deepEqual(menu.successes, ['CSV downloaded successfully'])
+})
+
 test('academic-year CSV contains only user-facing mapped fields', async () => {
   const year = { id: '1', name: '2025-2026', startDate: '2025-06-02', endDate: '2026-05-31', status: 'ACTIVE', createdAt: '2025-01-01T10:22:45Z', updatedAt: '2025-02-03T12:30:00Z' }
   const menu = harness({ filename: 'academic-years', rows: [year], columns: yearColumns })

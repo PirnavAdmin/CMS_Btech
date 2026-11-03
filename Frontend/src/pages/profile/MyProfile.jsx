@@ -2,7 +2,7 @@ import { ProjectSelect as SearchableSelectImports_ProjectSelect } from '../../co
 import { showWarning as toastImports_showWarning } from '../../utils/toast'
 import useToastStateImports_default from '../../hooks/useToastState'
 import { useEffect as reactImports_useEffect, useRef as reactImports_useRef, useState as reactImports_useState } from 'react'
-import { FiEdit2 as fiImports_FiEdit2, FiMail as fiImports_FiMail, FiMapPin as fiImports_FiMapPin, FiPhone as fiImports_FiPhone, FiShield as fiImports_FiShield, FiUser as fiImports_FiUser, FiX as fiImports_FiX } from 'react-icons/fi'
+import { FiEdit2, FiMail, FiMapPin, FiPhone, FiShield, FiUser, FiX } from 'react-icons/fi'
 import DashboardLayoutImports_default from '../../layouts/DashboardLayout'
 import { lookupIndianPincode as apiEndpointsImports_lookupIndianPincode, profileApi as apiEndpointsImports_profileApi } from '../../api/apiEndpoints'
 import { getDepartments as collegeApiImports_getDepartments } from '../../auth/collegeApi'
@@ -21,13 +21,6 @@ const useRef = reactImports_useRef
 const useState = reactImports_useState
 const useSearchParams = react_router_domImports_useSearchParams
 const useNavigate = react_router_domImports_useNavigate
-const FiEdit2 = fiImports_FiEdit2
-const FiMail = fiImports_FiMail
-const FiMapPin = fiImports_FiMapPin
-const FiPhone = fiImports_FiPhone
-const FiShield = fiImports_FiShield
-const FiUser = fiImports_FiUser
-const FiX = fiImports_FiX
 const DashboardLayout = DashboardLayoutImports_default
 const lookupIndianPincode = apiEndpointsImports_lookupIndianPincode
 const profileApi = apiEndpointsImports_profileApi

@@ -1,4 +1,4 @@
-﻿import './CompactSummary.css'
+import './CompactSummary.css'
 
 export default function CompactSummary({ items = [], label = 'Summary' }) {
   return (

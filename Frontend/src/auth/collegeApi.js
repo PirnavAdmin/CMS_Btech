@@ -648,6 +648,12 @@ export const fetchExams = async (params = {}) => {
   return { items: body?.data ?? [], totalCount: body?.totalCount ?? 0 };
 };
 
+export const fetchExamTypes = async (params = {}) => {
+  const body = (await ACADEMIC_API.get('/exam-types', { params: academicParams(cleanParams(params)) })).data;
+  const items = Array.isArray(body?.data) ? body.data : Array.isArray(body?.items) ? body.items : [];
+  return { items, totalCount: body?.count ?? body?.totalCount ?? items.length };
+};
+
 export const hasExamSetup = async (params = {}) => {
   const { totalCount } = await fetchExams({ ...params, Page: 1, PageSize: 1 });
   return totalCount > 0;

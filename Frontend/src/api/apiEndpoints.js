@@ -460,6 +460,8 @@ const withQuery = (url, params = {}) => {
   const query = new URLSearchParams(Object.entries(params || {}).filter(([, value]) => value !== '' && value !== undefined && value !== null))
   return query.size ? `${url}?${query}` : url
 }
+// Reuse authenticated transport in the campus and examination integrations.
+export { request as authenticatedRequest }
 const dataResponse = (response) => response?.data?.data ?? response?.data ?? response ?? null
 const listData = (response) => listResponse(response)
 

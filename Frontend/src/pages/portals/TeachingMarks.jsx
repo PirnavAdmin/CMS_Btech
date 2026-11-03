@@ -1,17 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import {
-  FiAward,
-  FiBookOpen,
-  FiCheck,
-  FiCheckCircle,
-  FiEdit3,
-  FiRefreshCw,
-  FiSearch,
-  FiTrendingUp,
-  FiUsers,
-  FiZap
-} from 'react-icons/fi'
+import { FiAward, FiBookOpen, FiCheck, FiCheckCircle, FiEdit3, FiRefreshCw, FiSearch, FiTrendingUp, FiUsers, FiZap } from 'react-icons/fi'
 import { getAuthStorage } from '../../auth/auth.js'
 import { teachingService as service } from '../../services/portals/teachingService.js'
 import { Feedback, PortalDialog } from '../../components/portals/PortalUI.jsx'

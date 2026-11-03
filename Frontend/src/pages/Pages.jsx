@@ -1,5 +1,6 @@
 import { Link as react_router_domImports_Link, useNavigate as react_router_domImports_useNavigate, useSearchParams as react_router_domImports_useSearchParams, useLocation as react_router_domImports_useLocation } from 'react-router-dom'
 import { FiBookOpen as fiImports_FiBookOpen, FiLogIn as fiImports_FiLogIn, FiArrowLeft as fiImports_FiArrowLeft, FiActivity as fiImports_FiActivity, FiArrowRight as fiImports_FiArrowRight, FiAward as fiImports_FiAward, FiBarChart2 as fiImports_FiBarChart2, FiBriefcase as fiImports_FiBriefcase, FiCalendar as fiImports_FiCalendar, FiCheckCircle as fiImports_FiCheckCircle, FiChevronRight as fiImports_FiChevronRight, FiClock as fiImports_FiClock, FiExternalLink as fiImports_FiExternalLink, FiGrid as fiImports_FiGrid, FiLayers as fiImports_FiLayers, FiPieChart as fiImports_FiPieChart, FiPlus as fiImports_FiPlus, FiRefreshCw as fiImports_FiRefreshCw, FiSearch as fiImports_FiSearch, FiSliders as fiImports_FiSliders, FiStar as fiImports_FiStar, FiTrendingUp as fiImports_FiTrendingUp, FiUser as fiImports_FiUser, FiUserCheck as fiImports_FiUserCheck, FiUserPlus as fiImports_FiUserPlus, FiUsers as fiImports_FiUsers, FiZap as fiImports_FiZap, FiEye as fiImports_FiEye, FiEyeOff as fiImports_FiEyeOff, FiCheck as fiImports_FiCheck, FiHome as fiImports_FiHome, FiMenu as fiImports_FiMenu, FiTool as fiImports_FiTool, FiX as fiImports_FiX, FiBell as fiImports_FiBell, FiFileText as fiImports_FiFileText } from 'react-icons/fi'
+import { FiSun, FiMoon } from 'react-icons/fi'
 import college_campus_hero_pngImports_default from '../assets/college-campus-hero.png'
 import useCollegeStateImports_default from '../hooks/useCollegeState'
 import { useEffect as reactImports_useEffect, useState as reactImports_useState, useMemo as reactImports_useMemo, useRef as reactImports_useRef } from 'react'
@@ -118,31 +119,6 @@ const useState = reactImports_useState
 const useMemo = reactImports_useMemo
 const Link = react_router_domImports_Link
 const useNavigate = react_router_domImports_useNavigate
-const FiActivity = fiImports_FiActivity
-const FiArrowRight = fiImports_FiArrowRight
-const FiAward = fiImports_FiAward
-const FiBarChart2 = fiImports_FiBarChart2
-const FiBookOpen = fiImports_FiBookOpen
-const FiBriefcase = fiImports_FiBriefcase
-const FiCalendar = fiImports_FiCalendar
-const FiCheckCircle = fiImports_FiCheckCircle
-const FiChevronRight = fiImports_FiChevronRight
-const FiClock = fiImports_FiClock
-const FiExternalLink = fiImports_FiExternalLink
-const FiGrid = fiImports_FiGrid
-const FiLayers = fiImports_FiLayers
-const FiPieChart = fiImports_FiPieChart
-const FiPlus = fiImports_FiPlus
-const FiRefreshCw = fiImports_FiRefreshCw
-const FiSearch = fiImports_FiSearch
-const FiSliders = fiImports_FiSliders
-const FiStar = fiImports_FiStar
-const FiTrendingUp = fiImports_FiTrendingUp
-const FiUser = fiImports_FiUser
-const FiUserCheck = fiImports_FiUserCheck
-const FiUserPlus = fiImports_FiUserPlus
-const FiUsers = fiImports_FiUsers
-const FiZap = fiImports_FiZap
 const getUserRole = authImports_getUserRole
 const ROLES = rolesImports_ROLES
 const DashboardLayout = DashboardLayoutImports_default
@@ -1429,10 +1405,6 @@ const resendOtp = authApiImports_resendOtp
 const verifyOtp = authApiImports_verifyOtp
 const resetPassword = authApiImports_resetPassword
 const notifyApiUnavailable = apiFailureNoticeImports_notifyApiUnavailable
-const FiArrowLeft = fiImports_FiArrowLeft
-const FiEye = fiImports_FiEye
-const FiEyeOff = fiImports_FiEyeOff
-
 const isValidContact = (value, method) => method === 'email'
   ? /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z]{2,})+$/.test(value)
   : /^[6-9]\d{9}$/.test(value)
@@ -1634,19 +1606,6 @@ const useEffect = reactImports_useEffect
 const useRef = reactImports_useRef
 const useState = reactImports_useState
 const Link = react_router_domImports_Link
-const FiArrowRight = fiImports_FiArrowRight
-const FiAward = fiImports_FiAward
-const FiBookOpen = fiImports_FiBookOpen
-const FiCalendar = fiImports_FiCalendar
-const FiCheck = fiImports_FiCheck
-const FiExternalLink = fiImports_FiExternalLink
-const FiGrid = fiImports_FiGrid
-const FiHome = fiImports_FiHome
-const FiMenu = fiImports_FiMenu
-const FiUsers = fiImports_FiUsers
-const FiTool = fiImports_FiTool
-const FiTrendingUp = fiImports_FiTrendingUp
-const FiX = fiImports_FiX
 const RequestDemo = RequestDemoImports_default
 const ThemeToggle = ThemeToggleImports_default
 
@@ -1731,11 +1690,6 @@ const login = apiEndpointsImports_login
 const validateLogin = loginValidationImports_validateLogin
 const ForgotPassword = ForgotPasswordScreen.default
 const ThemeToggle = ThemeToggleImports_default
-const FiArrowLeft = fiImports_FiArrowLeft
-const FiBell = fiImports_FiBell
-const FiBookOpen = fiImports_FiBookOpen
-const FiCalendar = fiImports_FiCalendar
-const FiFileText = fiImports_FiFileText
 const campusHero = college_campus_hero_pngImports_default
 
 const validateContact = (input) => {
@@ -1769,7 +1723,9 @@ function Login() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const greeting = new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening'
   const greetingParts = greeting.split(' ')
-  const greetingIcon = new Date().getHours() < 12 ? '☀️' : new Date().getHours() < 18 ? '🌤️' : '🌙'
+  const greetingIcon = new Date().getHours() < 18
+    ? <FiSun size={18} aria-hidden="true" />
+    : <FiMoon size={18} aria-hidden="true" />
 
   // OTP Flow States: 'login' | 'request_otp' | 'verify_otp' | 'success'
   const [viewMode, setViewMode] = useState('login')
@@ -2131,12 +2087,6 @@ const AuthRequestError = authApiImports_AuthRequestError
 const register = authApiImports_register
 const passwordRequirements = registrationValidationImports_passwordRequirements
 const validateRegistration = registrationValidationImports_validateRegistration
-const FiBell = fiImports_FiBell
-const FiBookOpen = fiImports_FiBookOpen
-const FiCalendar = fiImports_FiCalendar
-const FiEye = fiImports_FiEye
-const FiEyeOff = fiImports_FiEyeOff
-const FiFileText = fiImports_FiFileText
 const ThemeToggle = ThemeToggleImports_default
 const campusHero = college_campus_hero_pngImports_default
 

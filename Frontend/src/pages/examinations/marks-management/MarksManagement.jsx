@@ -1,5 +1,5 @@
 import { NavLink as react_router_domImports_NavLink, Link as react_router_domImports_Link, Navigate as react_router_domImports_Navigate } from 'react-router-dom'
-import { FiBarChart2 as fiImports_FiBarChart2, FiCheckSquare as fiImports_FiCheckSquare, FiEdit3 as fiImports_FiEdit3, FiUploadCloud as fiImports_FiUploadCloud, FiUser as fiImports_FiUser, FiFileText as fiImports_FiFileText, FiSearch as fiImports_FiSearch, FiX as fiImports_FiX, FiCheck as fiImports_FiCheck, FiEye as fiImports_FiEye, FiEdit2 as fiImports_FiEdit2, FiPlus as fiImports_FiPlus, FiTrash2 as fiImports_FiTrash2, FiBookOpen as fiImports_FiBookOpen, FiAlertCircle as fiImports_FiAlertCircle } from 'react-icons/fi'
+import { FiCheckSquare as fiImports_FiCheckSquare, FiEdit3 as fiImports_FiEdit3, FiUploadCloud as fiImports_FiUploadCloud, FiUser as fiImports_FiUser, FiFileText as fiImports_FiFileText, FiSearch as fiImports_FiSearch, FiX as fiImports_FiX, FiCheck as fiImports_FiCheck, FiEye as fiImports_FiEye, FiEdit2 as fiImports_FiEdit2, FiPlus as fiImports_FiPlus, FiTrash2 as fiImports_FiTrash2, FiBookOpen as fiImports_FiBookOpen, FiAlertCircle as fiImports_FiAlertCircle } from 'react-icons/fi'
 import SearchableSelectImports_default, { ProjectSelect as SearchableSelectImports_ProjectSelect } from '../../../components/SearchableSelect'
 import { useMemo as reactImports_useMemo, useState as reactImports_useState, useCallback as reactImports_useCallback, useEffect as reactImports_useEffect, useRef as reactImports_useRef } from 'react'
 import DashboardLayoutImports_default from '../../../layouts/DashboardLayout'
@@ -22,7 +22,7 @@ import studentServiceImports_default from '../../../services/studentService'
 import subjectServiceImports_default from '../../../services/subjectService'
 import academicServiceImports_default from '../../../services/academicService'
 import { getExamTypes as examServiceImports_getExamTypes } from '../../../services/examService'
-import { fetchExams as collegeApiImports_fetchExams } from '../../../auth/collegeApi'
+import { fetchExams as collegeApiImports_fetchExams, fetchExamTypes as collegeApiImports_fetchExamTypes } from '../../../auth/collegeApi'
 import './MarksManagement.css'
 
 const exportMarksFile = async (action, params = {}) => {
@@ -44,17 +44,13 @@ const exportMarksFile = async (action, params = {}) => {
 // MarksModuleNav screen and private helpers.
 const MarksModuleNavScreen = (() => {
 const NavLink = react_router_domImports_NavLink
-const FiBarChart2 = fiImports_FiBarChart2
 const FiCheckSquare = fiImports_FiCheckSquare
 const FiEdit3 = fiImports_FiEdit3
 const FiUploadCloud = fiImports_FiUploadCloud
-const FiUser = fiImports_FiUser
 
 const modules = [
   { label: 'Marks Entry', description: 'Record assessments', to: '/marks-management/marks-entry', icon: FiEdit3 },
   { label: 'Bulk Marks Upload', description: 'Preview a marks file', to: '/marks-management/bulk-marks-upload', icon: FiUploadCloud },
-  { label: 'Student Marks', description: 'Review one student', to: '/marks-management/student-marks', icon: FiUser },
-  { label: 'Subject Marks Report', description: 'Compare performance', to: '/marks-management/subject-marks-report', icon: FiBarChart2 },
   { label: 'Marks Approval', description: 'Verify submissions', to: '/marks-management/marks-approval', icon: FiCheckSquare },
 ]
 
@@ -86,6 +82,7 @@ const BulkMarksUploadScreen = (() => {
 const ProjectSelect = SearchableSelectImports_ProjectSelect
 const useMemo = reactImports_useMemo
 const useState = reactImports_useState
+const useEffect = reactImports_useEffect
 const FiFileText = fiImports_FiFileText
 const FiSearch = fiImports_FiSearch
 const FiUploadCloud = fiImports_FiUploadCloud
@@ -100,6 +97,7 @@ const EmptyState = EmptyStateImports_default
 const marksApi = apiEndpointsImports_marksApi
 const showError = toastImports_showError
 const showSuccess = toastImports_showSuccess
+const fetchExams = collegeApiImports_fetchExams
 
 const PAGE_SIZE = 10
 const normalized = value => String(value ?? '').trim().toLowerCase()
@@ -184,9 +182,33 @@ function BulkMarksUpload() {
   const [fileError, setFileError] = useState('')
   const [reading, setReading] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [examLoading, setExamLoading] = useState(true)
+  const [examLoadError, setExamLoadError] = useState('')
+  const [exams, setExams] = useState([])
+  const [selectedExamId, setSelectedExamId] = useState('')
+  const [isDragging, setIsDragging] = useState(false)
+  const [previewMode, setPreviewMode] = useState('')
+  const [uploadComplete, setUploadComplete] = useState(false)
   const [query, setQuery] = useState('')
   const [columnFilters, setColumnFilters] = useState({})
   const [page, setPage] = useState(1)
+
+  useEffect(() => {
+    let active = true
+    fetchExams({ Page: 1, PageSize: 500, Status: true })
+      .then(result => {
+        if (active) setExams(Array.isArray(result?.items) ? result.items : [])
+      })
+      .catch(error => {
+        if (active) setExamLoadError(error.message || 'Examinations could not be loaded.')
+      })
+      .finally(() => {
+        if (active) setExamLoading(false)
+      })
+    return () => { active = false }
+  }, [])
+
+  const selectedExam = exams.find(exam => String(exam.examId) === String(selectedExamId))
 
   const columnOptions = useMemo(() => Object.fromEntries(
     columns.map(column => {
@@ -213,25 +235,62 @@ function BulkMarksUpload() {
   const hasFilters = Boolean(query || Object.values(columnFilters).some(Boolean))
   const activeFilterCount = Object.values(columnFilters).filter(Boolean).length + Number(Boolean(query.trim()))
 
-  const uploadFile = async event => {
-    const file = event.target.files?.[0]
-    event.target.value = ''
+  const uploadFile = async input => {
+    const file = input?.target?.files?.[0] || input?.dataTransfer?.files?.[0]
+    if (input?.target) input.target.value = ''
     if (!file) return
     setFileError('')
     setUploadScope(null)
+    setUploadPreview(null)
+    setColumns([])
+    setRows([])
+    setFileName('')
+    setSelectedFile(null)
+    setUploadComplete(false)
+    setPreviewMode('')
+    setQuery('')
+    setColumnFilters({})
+    setPage(1)
     setReading(true)
     try {
+      if (!file.size) throw new Error('The selected file is empty.')
+      if (file.size > 10 * 1024 * 1024) throw new Error('Choose a file smaller than 10 MB.')
       const isWorkbook = /\.xlsx$/i.test(file.name)
-      const preview = await (async () => {
-        if (isWorkbook) {
-          const result = await marksApi.upload(file, {}, true)
-          if (!result?.examId) throw new Error('Workbook preview did not return an examination ID from the file.')
-          setUploadScope({ examId: result.examId, sectionId: result.sectionId || undefined })
-          return result
+      if (!isWorkbook && !/\.(csv|tsv|txt)$/i.test(file.name)) {
+        throw new Error('Choose an XLSX, CSV, TSV, or TXT marks file.')
+      }
+
+      let preview
+      let previewColumns
+      let previewRows
+      if (isWorkbook) {
+        const examId = Number(selectedExamId)
+        if (!Number.isSafeInteger(examId) || examId <= 0) {
+          throw new Error('Select an examination before previewing an XLSX workbook.')
         }
+        const scope = { examId }
+        preview = await marksApi.upload(file, scope, true)
+        setUploadScope(scope)
+        setSelectedFile(file)
+        setPreviewMode('workbook')
+        previewColumns = [
+          { key: 'rowNumber', label: 'Data Row' },
+          { key: 'studentCode', label: 'Student Code' },
+          { key: 'subjectCode', label: 'Subject Code' },
+          { key: 'errorCode', label: 'Issue' },
+          { key: 'message', label: 'Validation detail' },
+        ]
+        previewRows = (Array.isArray(preview?.errors) ? preview.errors : []).map((row, index) => ({
+          __bulkRowId: `upload-error-${index}`,
+          validationStatus: 'Rejected',
+          rowNumber: row.rowNumber,
+          studentCode: row.studentCode,
+          subjectCode: row.subjectCode,
+          errorCode: row.errorCode,
+          message: row.message,
+        }))
+      } else {
         const parsed = parseDelimitedFile(await file.text(), file.name)
-        setColumns(parsed.columns)
-        setRows(parsed.rows)
         const columnFor = (...names) => parsed.columns.find(column =>
           names.includes(column.label.toLowerCase().replace(/[^a-z0-9]/g, '')),
         )
@@ -243,21 +302,26 @@ function BulkMarksUpload() {
         const maximumColumn = columnFor('maxmarks', 'maximummarks')
         const gradeColumn = columnFor('grade')
         const remarksColumn = columnFor('remarks')
-        if (!studentColumn || !subjectColumn || !marksColumn || !examColumn) {
-          throw new Error('File headings must include ExamId, StudentCode, SubjectCode, and MarksObtained.')
+        if (!studentColumn || !subjectColumn || !marksColumn) {
+          throw new Error('Required columns: StudentCode, SubjectCode, and MarksObtained. ExamId is optional when an examination is selected above.')
+        }
+        if (!examColumn && !selectedExamId) {
+          throw new Error('Select an examination above or include an ExamId column in this file.')
         }
         const scopeByRow = parsed.rows.map((row, index) => {
-          const examId = Number(row[examColumn.key])
+          const fileExamId = examColumn ? String(row[examColumn.key] || '').trim() : ''
+          const examId = Number(fileExamId || selectedExamId)
           const sectionValue = sectionColumn ? String(row[sectionColumn.key] || '').trim() : ''
           const sectionId = sectionValue ? Number(sectionValue) : undefined
-          if (!Number.isSafeInteger(examId) || examId <= 0) throw new Error(`Row ${index + 2}: ExamId must be a positive number.`)
-          if (sectionValue && (!Number.isSafeInteger(sectionId) || sectionId <= 0)) throw new Error(`Row ${index + 2}: SectionId must be a positive number.`)
+          if (!Number.isSafeInteger(examId) || examId <= 0) throw new Error(`Data row ${index + 1}: ExamId must be a positive number.`)
+          if (sectionValue && (!Number.isSafeInteger(sectionId) || sectionId <= 0)) throw new Error(`Data row ${index + 1}: SectionId must be a positive number.`)
+          if (selectedExamId && examId !== Number(selectedExamId)) throw new Error(`Data row ${index + 1}: ExamId does not match the selected examination.`)
           return { examId, sectionId }
         })
         const examIds = [...new Set(scopeByRow.map(scopeRow => scopeRow.examId))]
         const sectionIds = [...new Set(scopeByRow.map(scopeRow => scopeRow.sectionId).filter(Boolean))]
         if (examIds.length !== 1 || sectionIds.length > 1) {
-          throw new Error('Each upload file must contain rows for one examination and one section.')
+          throw new Error('Each file must contain rows for one examination and one section.')
         }
         const scope = { examId: examIds[0], sectionId: sectionIds[0] }
         setUploadScope(scope)
@@ -266,8 +330,8 @@ function BulkMarksUpload() {
           const maximumValue = maximumColumn ? row[maximumColumn.key] : ''
           const marksObtained = Number(marksValue)
           const maxMarks = Number(maximumValue)
-          if (!String(marksValue || '').trim() || !Number.isFinite(marksObtained)) throw new Error(`Row ${index + 2}: MarksObtained must be numeric.`)
-          if (String(maximumValue || '').trim() && !Number.isFinite(maxMarks)) throw new Error(`Row ${index + 2}: MaxMarks must be numeric.`)
+          if (!String(marksValue || '').trim() || !Number.isFinite(marksObtained)) throw new Error(`Data row ${index + 1}: MarksObtained must be numeric.`)
+          if (String(maximumValue || '').trim() && !Number.isFinite(maxMarks)) throw new Error(`Data row ${index + 1}: MaxMarks must be numeric.`)
           return {
             studentCode: row[studentColumn.key],
             subjectCode: row[subjectColumn.key],
@@ -277,41 +341,42 @@ function BulkMarksUpload() {
             ...(remarksColumn ? { remarks: row[remarksColumn.key] } : {}),
           }
         })
-        const result = await marksApi.bulkPreview({
-          examId: scope.examId,
-          sectionId: scope.sectionId,
-          rows: requestRows,
+        preview = await marksApi.bulkPreview({ examId: scope.examId, sectionId: scope.sectionId, rows: requestRows })
+        setPreviewMode('delimited')
+        const errorsByRow = new Map((Array.isArray(preview?.errors) ? preview.errors : []).map(error => [Number(error.rowNumber), error]))
+        previewColumns = [
+          { key: 'rowNumber', label: 'Data Row' },
+          ...parsed.columns,
+          { key: 'validationStatus', label: 'Validation' },
+          { key: 'validationMessage', label: 'Validation detail' },
+        ]
+        previewRows = parsed.rows.map((row, index) => {
+          const validationError = errorsByRow.get(index + 1)
+          return {
+            ...row,
+            rowNumber: index + 1,
+            validationStatus: validationError ? 'Rejected' : 'Ready',
+            validationMessage: validationError?.message || 'Passed server validation.',
+          }
         })
-        setSelectedFile(null)
-        return result
-      })()
-      const previewErrors = Array.isArray(preview?.errors) ? preview.errors : []
-      setColumns([
-        { key: 'rowNumber', label: 'Row' },
-        { key: 'studentCode', label: 'Student Code' },
-        { key: 'subjectCode', label: 'Subject Code' },
-        { key: 'errorCode', label: 'Error Code' },
-        { key: 'message', label: 'Message' },
-      ])
-      setRows(previewErrors.map((row, index) => ({
-        __bulkRowId: `upload-error-${index}`,
-        rowNumber: row.rowNumber,
-        studentCode: row.studentCode,
-        subjectCode: row.subjectCode,
-        errorCode: row.errorCode,
-        message: row.message,
-      })))
-      setSelectedFile(isWorkbook ? file : null)
+      }
+
+      setColumns(previewColumns)
+      setRows(previewRows)
       setUploadPreview(preview)
       setFileName(file.name)
       setQuery('')
       setColumnFilters({})
       setPage(1)
     } catch (error) {
-      setFileError(error.message || 'Could not preview this workbook.')
+      setFileError(error.message || 'Could not preview this file.')
       setSelectedFile(null)
       setUploadScope(null)
       setUploadPreview(null)
+      setColumns([])
+      setRows([])
+      setFileName('')
+      setPreviewMode('')
       showError(error)
     } finally {
       setReading(false)
@@ -329,10 +394,12 @@ function BulkMarksUpload() {
       }, false)
       showSuccess(`Marks upload completed: ${result.insertedRows || 0} inserted, ${result.updatedRows || 0} updated, ${result.rejectedRows || 0} rejected.`)
       setUploadPreview(result)
+      setUploadComplete(true)
       setSelectedFile(null)
       setUploadScope(null)
       setRows(Array.isArray(result.errors) ? result.errors.map((row, index) => ({
         __bulkRowId: `upload-error-${index}`,
+        validationStatus: 'Rejected',
         rowNumber: row.rowNumber,
         studentCode: row.studentCode,
         subjectCode: row.subjectCode,
@@ -347,6 +414,18 @@ function BulkMarksUpload() {
     }
   }
 
+  const downloadTemplate = () => {
+    const csv = 'ExamId,StudentCode,SubjectCode,MarksObtained,MaxMarks,Grade,Remarks\r\n'
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'marks-upload-template.csv'
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  }
+
   const clearPreview = () => {
     setSelectedFile(null)
     setUploadScope(null)
@@ -358,6 +437,8 @@ function BulkMarksUpload() {
     setColumnFilters({})
     setPage(1)
     setFileError('')
+    setPreviewMode('')
+    setUploadComplete(false)
   }
   const clearFilters = () => {
     setQuery('')
@@ -371,12 +452,12 @@ function BulkMarksUpload() {
         <PageHeader
           className="marks-module-page-header"
           title="Bulk Marks Upload"
-          subtitle="Inspect an uploaded marks file, review its structure, and prepare the rows you need."
+          subtitle="Validate a marks workbook, review row-level issues, and import clean results into the selected examination."
           breadcrumb={[{ label: 'Marks Management', link: '/marks-management' }, 'Bulk Marks Upload']}
           compactSummary={[
-            { label: 'Uploaded Rows', value: rows.length, tone: 'warning' },
-            { label: 'File Columns', value: columns.length },
-            { label: 'Matching Rows', value: filteredRows.length, tone: 'completed' },
+            { label: 'Uploaded Rows', value: uploadPreview?.totalRows ?? rows.length, tone: 'warning' },
+            { label: 'Valid Rows', value: uploadPreview?.validRows ?? 0, tone: 'completed' },
+            { label: 'Rejected Rows', value: uploadPreview?.rejectedRows ?? 0, tone: uploadPreview?.rejectedRows ? 'inactive' : 'default' },
             { label: 'Active Filters', value: activeFilterCount, tone: activeFilterCount ? 'active' : 'default' },
           ]}
         />
@@ -386,28 +467,62 @@ function BulkMarksUpload() {
           <header className="erp-card-header bulk-marks-upload-card__header">
             <div>
               <h2 className="erp-card-title">Upload Marks File</h2>
-              <p className="erp-card-subtitle">Upload a CSV, TSV, or TXT file to preview its rows before importing.</p>
+              <p className="erp-card-subtitle">Choose an examination, validate an XLSX workbook, and review every row before import.</p>
             </div>
-            {fileName && <button type="button" className="erp-btn erp-btn--secondary bulk-marks-upload-clear" onClick={clearPreview}><FiX /> Clear file</button>}
+            <div className="bulk-marks-upload-card__actions">
+              <button type="button" className="erp-btn erp-btn--secondary" onClick={downloadTemplate}><FiFileText /> Download CSV template</button>
+              {fileName && <button type="button" className="erp-btn erp-btn--secondary bulk-marks-upload-clear" onClick={clearPreview}><FiX /> Clear file</button>}
+            </div>
           </header>
 
-          <label className={`bulk-marks-upload-dropzone${reading ? ' is-reading' : ''}`}>
+          <div className="bulk-marks-upload-context">
+            <label>
+              <span>Target examination <b>*</b></span>
+              <ProjectSelect
+                aria-label="Target examination"
+                value={selectedExamId}
+                disabled={examLoading}
+                onChange={event => {
+                  setSelectedExamId(event.target.value)
+                  clearPreview()
+                }}
+              >
+                <option value="">{examLoading ? 'Loading examinations…' : 'Select an examination'}</option>
+                {exams.map(exam => {
+                  const examId = String(exam.examId)
+                  const name = exam.examName || exam.examTypeName || `Exam ${examId}`
+                  const detail = [exam.examTypeName, exam.examCode, exam.academicYear].filter(Boolean).join(' · ')
+                  return <option key={examId} value={examId}>{detail ? `${name} — ${detail}` : name}</option>
+                })}
+              </ProjectSelect>
+            </label>
+            <p>{selectedExam
+              ? `Uploaded marks will be checked against ${selectedExam.examName || selectedExam.examTypeName}${selectedExam.examCode ? ` (${selectedExam.examCode})` : ''}.`
+              : examLoadError || (examLoading ? 'Loading active examinations from your college.' : exams.length ? 'Select the examination that these marks belong to.' : 'No active examination is available. Create an examination before importing marks.')}</p>
+          </div>
+
+          <label
+            className={`bulk-marks-upload-dropzone${reading ? ' is-reading' : ''}${isDragging ? ' is-dragging' : ''}`}
+            onDragOver={event => { event.preventDefault(); setIsDragging(true) }}
+            onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget)) setIsDragging(false) }}
+            onDrop={event => { event.preventDefault(); setIsDragging(false); uploadFile(event) }}
+          >
             <input type="file" accept=".xlsx,.csv,.tsv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/tab-separated-values,text/plain" onChange={uploadFile} disabled={reading || uploading} />
             <span className="bulk-marks-upload-dropzone__icon"><FiUploadCloud /></span>
-            <span className="bulk-marks-upload-dropzone__text"><strong>{reading ? 'Validating file…' : fileName || 'Choose a marks file'}</strong><small>{reading ? 'Checking rows with the marks API' : 'XLSX uploads, or CSV / TSV / TXT previews · Required: ExamId, StudentCode, SubjectCode, MarksObtained'}</small></span>
-            <span className="erp-btn erp-btn--primary bulk-marks-upload-browse">Browse files</span>
+            <span className="bulk-marks-upload-dropzone__text"><strong>{reading ? 'Validating your file…' : isDragging ? 'Drop the file to begin validation' : fileName || 'Drop a marks file here'}</strong><small>{reading ? 'Checking the file and its rows against the selected examination.' : 'XLSX files can be imported. CSV, TSV, and TXT files are available for validation preview.'}</small></span>
+            <span className="erp-btn erp-btn--primary bulk-marks-upload-browse">{reading ? 'Validating…' : 'Browse files'}</span>
           </label>
           {uploadPreview && <div className="bulk-marks-upload-status" role="status">
-            <p>{uploadPreview.totalRows} total · {uploadPreview.validRows} valid · {uploadPreview.rejectedRows} rejected</p>
-            {selectedFile && uploadPreview.validRows > 0 && <button type="button" className="erp-btn erp-btn--primary" onClick={confirmUpload} disabled={uploading}>{uploading ? 'Uploading…' : 'Upload valid marks'}</button>}
+            <p><strong>{uploadComplete ? 'Import completed' : previewMode === 'workbook' ? 'Workbook validated' : 'Preview validated'}</strong><span>{uploadPreview.totalRows} rows · {uploadPreview.validRows} ready · {uploadPreview.rejectedRows} need attention</span></p>
+            {selectedFile && uploadPreview.validRows > 0 && <button type="button" className="erp-btn erp-btn--primary" onClick={confirmUpload} disabled={uploading}>{uploading ? 'Importing…' : `Import ${uploadPreview.validRows} valid rows`}</button>}
           </div>}
           {fileError && <p className="bulk-marks-upload-error" role="alert">{fileError}</p>}
-          {fileName && !fileError && <p className="bulk-marks-upload-status"><FiFileText /> Validated {uploadPreview?.totalRows || 0} rows from {fileName}.</p>}
+          {fileName && !fileError && <p className="bulk-marks-upload-status"><FiFileText /><span>{fileName} · {previewMode === 'delimited' ? 'Preview only. Convert the validated file to XLSX to import it.' : uploadComplete ? 'Import finished. Rejected rows remain available below.' : 'Review validation results before importing.'}</span></p>}
         </article>
 
         <article className="erp-card bulk-marks-preview-card">
           <header className="erp-card-header bulk-marks-preview-card__header">
-            <div><h2 className="erp-card-title">Uploaded Data</h2><p className="erp-card-subtitle">{fileName ? `${filteredRows.length} of ${rows.length} rows shown` : 'Upload a file to preview its data in a table.'}</p></div>
+            <div><h2 className="erp-card-title">Uploaded Data</h2><p className="erp-card-subtitle">{fileName ? `${filteredRows.length} of ${rows.length} rows shown · ${columns.length} columns` : 'Upload a file to review its rows and validation results.'}</p></div>
           </header>
 
           <FilterPanel
@@ -444,12 +559,12 @@ function BulkMarksUpload() {
             <div className="bulk-marks-table-wrap">
               <table className="erp-table bulk-marks-table">
                 <thead><tr>{columns.map(column => <th key={column.key}>{column.label}</th>)}</tr></thead>
-                <tbody>{visibleRows.map(row => <tr key={row.__bulkRowId}>{columns.map(column => <td key={column.key}>{row[column.key] || '—'}</td>)}</tr>)}</tbody>
+                <tbody>{visibleRows.map(row => <tr key={row.__bulkRowId} className={row.validationStatus === 'Rejected' ? 'bulk-marks-row--rejected' : ''}>{columns.map(column => <td key={column.key}>{column.key === 'validationStatus' ? <span className={`bulk-marks-validation-pill${row.validationStatus === 'Rejected' ? ' is-rejected' : ' is-ready'}`}>{row.validationStatus}</span> : row[column.key] || '—'}</td>)}</tr>)}</tbody>
               </table>
-              {filteredRows.length === 0 && <EmptyState title="No matching rows" description="Adjust or clear the filters to see more uploaded data." />}
+              {filteredRows.length === 0 && <EmptyState title={hasFilters ? 'No matching rows' : uploadPreview ? 'No rows need attention' : 'No matching rows'} description={hasFilters ? 'Adjust or clear the filters to see more uploaded data.' : uploadPreview ? 'Every row passed server validation for the selected examination.' : 'Upload a file to review its validation results.'} />}
             </div>
           )}
-          {columns.length === 0 && <EmptyState title="No file uploaded" description="Choose a CSV, TSV, or TXT file above to display its contents here." />}
+          {columns.length === 0 && <EmptyState title="No file uploaded" description="Choose an XLSX workbook or a CSV, TSV, or TXT file above to review validation results." />}
           {filteredRows.length > PAGE_SIZE && <TablePagination currentPage={page} totalPages={Math.ceil(filteredRows.length / PAGE_SIZE)} onPageChange={setPage} />}
         </article>
       </section>
@@ -1527,6 +1642,7 @@ const sectionAssignmentApi = apiEndpointsImports_sectionAssignmentApi
 const useRef = reactImports_useRef
 const FiAlertCircle = fiImports_FiAlertCircle
 const fetchExams = collegeApiImports_fetchExams
+const fetchExamTypes = collegeApiImports_fetchExamTypes
 
 const columns = [
   { key: 'academicYear', label: 'Academic Year' },
@@ -1583,10 +1699,59 @@ const initialAssessment = {
 const fieldOptions = {
   examType: [
     'End Semester Regular Exam',
+    'End Semester',
+    'Regular',
     'Supplementary Exam',
     'Improvement Exam',
+    'Backlog',
+    'Mid Semester',
+    'Internal Assessment',
+    'Continuous Internal Assessment',
+    'Practical',
+    'Lab/Internal Practical Examination',
+    'Viva',
+    'Project Evaluation',
+    'Special',
   ],
-  assessmentType: ['Internal', 'External'],
+  assessmentType: [
+    'Internal',
+    'External',
+    'Theory',
+    'Practical',
+    'Laboratory',
+    'Project',
+    'Viva',
+    'Assignment',
+    'Quiz',
+    'Seminar',
+    'Internship',
+    'Continuous Assessment',
+    'Written',
+    'Oral',
+  ],
+}
+
+const assessmentTypeForExam = (exam, fallback = 'Internal') => {
+  const explicitValue = exam?.assessmentType
+    || exam?.assessmentTypeName
+    || exam?.defaultAssessmentType
+    || exam?.assessmentName
+    || (Array.isArray(exam?.assessmentTypes) ? exam.assessmentTypes[0] : '')
+  const explicitType = typeof explicitValue === 'string'
+    ? explicitValue
+    : explicitValue?.assessmentTypeName || explicitValue?.typeName || explicitValue?.name || explicitValue?.label || ''
+  if (String(explicitType || '').trim()) return String(explicitType).trim()
+
+  const examName = normalized(`${exam?.examTypeName || exam?.examType || ''} ${exam?.examName || exam?.name || ''}`)
+  if (/\b(practical|laboratory|lab)\b/.test(examName)) return /\b(laboratory|lab)\b/.test(examName) ? 'Laboratory' : 'Practical'
+  if (/\b(viva|oral)\b/.test(examName)) return /\boral\b/.test(examName) ? 'Oral' : 'Viva'
+  if (/\b(project|capstone)\b/.test(examName)) return 'Project'
+  if (/\bassignment\b/.test(examName)) return 'Assignment'
+  if (/\bseminar\b/.test(examName)) return 'Seminar'
+  if (/\binternship\b/.test(examName)) return 'Internship'
+  if (/\b(internal|mid[- ]?semester|midterm|continuous|quiz|class test)\b/.test(examName)) return 'Internal'
+  if (/\b(external|end[- ]?semester|supplementary|improvement|backlog|regular|special|final|university)\b/.test(examName)) return 'External'
+  return fallback || 'Internal'
 }
 
 const selectFields = new Set([
@@ -1598,6 +1763,7 @@ const selectFields = new Set([
   'registrationNumber',
   'studentName',
   'subject',
+  'subjectCode',
   'facultyName',
   'examType',
   'assessmentType',
@@ -1615,6 +1781,18 @@ const entityLabel = (item, keys) =>
 
 const normalized = value =>
   String(value ?? '').trim().toLowerCase()
+
+const normalizeExamType = value =>
+  normalized(value).replace(/\b(exam|examination)\b/g, '').replace(/\s+/g, ' ').trim()
+
+const sameExamType = (left, right) => {
+  const leftName = normalizeExamType(left)
+  const rightName = normalizeExamType(right)
+  return Boolean(leftName && rightName && (
+    leftName === rightName
+    || (Math.min(leftName.length, rightName.length) >= 6 && (leftName.includes(rightName) || rightName.includes(leftName)))
+  ))
+}
 
 const semesterNumber = value =>
   String(value ?? '').match(/\d+/)?.[0] || ''
@@ -1734,6 +1912,7 @@ function MarksEntry() {
   const [deletingRow, setDeletingRow] = useState(null)
   const [submittingMarkId, setSubmittingMarkId] = useState('')
   const [examsList, setExamsList] = useState([])
+  const [examTypesList, setExamTypesList] = useState([])
   const [modalError, setModalError] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
   const formRef = useRef(null)
@@ -1844,6 +2023,12 @@ function MarksEntry() {
     fetchExams({ Page: 1, PageSize: 500 })
       .then(res => setExamsList(Array.isArray(res?.items) ? res.items : []))
       .catch(() => setExamsList([]))
+  }, [])
+
+  useEffect(() => {
+    fetchExamTypes({ Status: true })
+      .then(res => setExamTypesList(Array.isArray(res?.items) ? res.items : []))
+      .catch(() => setExamTypesList([]))
   }, [])
 
   const allRows = draftRows
@@ -2555,14 +2740,50 @@ function MarksEntry() {
         }),
       ),
       subject: mergeOptions(optionsFor(eligibleSubjects, ['subjectName', 'name', 'subject'], ['subjectCode', 'code']), savedOptions('subject')),
+      subjectCode: mergeOptions(optionsFor(eligibleSubjects, ['subjectCode', 'code'], [], ['subjectCode', 'code']), savedOptions('subjectCode')),
       facultyName: mergeOptions(optionsFor(facultyMembers, ['fullName', 'facultyName', 'name']), savedOptions('facultyName')),
-      examType: mergeOptions(
-        examsList.map(e => option(e.examName || e.examTypeName, `${e.examName || e.examTypeName}${e.examCode ? ` (${e.examCode})` : ''}`)),
-        uniqueValues([...fieldOptions.examType, ...subjects.map(item => item.examType), ...savedAssessmentOptions.examType]).map(value => option(value)),
-      ),
-      assessmentType: uniqueValues([...fieldOptions.assessmentType, ...subjects.map(item => item.assessmentType), ...savedAssessmentOptions.assessmentType]).map(value => option(value)),
+      examType: (() => {
+        const examOptions = examsList
+          .filter(exam => Number(exam.examId) > 0)
+          .map(exam => {
+            const typeName = exam.examTypeName || exam.examType || 'Exam'
+            const examName = exam.examName || exam.examCode || `Exam ${exam.examId}`
+            const code = exam.examCode && normalized(exam.examCode) !== normalized(examName) ? ` (${exam.examCode})` : ''
+            return option(exam.examId, `${typeName} — ${examName}${code}`)
+          })
+        const registeredTypes = uniqueValues([
+          ...fieldOptions.examType,
+          ...examTypesList.map(type => type.name || type.examTypeName || type.label),
+          ...subjects.map(item => item.examType),
+          ...savedAssessmentOptions.examType,
+        ])
+        const unconfiguredTypeOptions = registeredTypes
+          .filter(typeName => !examsList.some(exam =>
+            sameExamType(exam.examTypeName || exam.examType, typeName)
+            || normalized(exam.examTypeCode) === normalized(typeName)
+            || normalized(exam.examCode) === normalized(typeName),
+          ))
+          .map(typeName => ({
+            ...option(`unavailable:${typeName}`, `${typeName} — create an examination first`),
+            disabled: true,
+          }))
+        return [...examOptions, ...unconfiguredTypeOptions]
+      })(),
+      assessmentType: uniqueValues([
+        ...fieldOptions.assessmentType,
+        ...subjects.map(item => item.assessmentType),
+        ...savedAssessmentOptions.assessmentType,
+        ...examsList.flatMap(exam => {
+          const directTypes = [exam.assessmentType, exam.assessmentTypeName, exam.defaultAssessmentType, exam.assessmentName]
+            .map(type => typeof type === 'string' ? type : entityLabel(type, ['assessmentTypeName', 'typeName', 'name', 'label']))
+          const nestedTypes = Array.isArray(exam.assessmentTypes)
+            ? exam.assessmentTypes.map(type => typeof type === 'string' ? type : entityLabel(type, ['assessmentTypeName', 'typeName', 'name', 'label']))
+            : []
+          return [...directTypes, ...nestedTypes]
+        }),
+      ]).map(value => option(value)),
     }
-  }, [academicYears, academicCourses, branches, semesters, sections, sectionEligibleStudents, eligibleSubjects, facultyMembers, subjects, assessment, savedAssessmentOptions, examsList])
+  }, [academicYears, academicCourses, branches, semesters, sections, sectionEligibleStudents, eligibleSubjects, facultyMembers, subjects, assessment, savedAssessmentOptions, examsList, examTypesList])
   const selectedCourse = academicCourses.find(item =>
     normalized(entityLabel(item, ['courseName', 'name', 'course', 'programName', 'title'])) === normalized(assessment.course)
     || (assessment.courseId && normalized(item.courseId ?? item.id) === normalized(assessment.courseId)),
@@ -2661,7 +2882,7 @@ function MarksEntry() {
     const matchedExam = (key === 'examType' || key === 'examId')
       ? examsList.find(e =>
           (key === 'examId' && String(e.examId) === String(value))
-          || (key === 'examType' && (normalized(e.examName) === normalized(value) || normalized(e.examTypeName) === normalized(value) || normalized(e.examCode) === normalized(value))),
+          || (key === 'examType' && (String(e.examId) === String(value) || normalized(e.examName) === normalized(value) || normalized(e.examTypeName) === normalized(value) || normalized(e.examCode) === normalized(value))),
         )
       : null
     const matchedSavedExam = (key === 'examType' || key === 'examId')
@@ -2775,8 +2996,9 @@ function MarksEntry() {
         ? {
           subjectCode:
             matchedSubject?.subjectCode ||
+            matchedSubject?.code ||
             matchedSavedSubject?.subjectCode ||
-            current.subjectCode ||
+            matchedSavedSubject?.code ||
             '',
           subjectId: matchedSubject?.subjectId || matchedSubject?.id || matchedSavedSubject?.subjectId || current.subjectId || '',
         }
@@ -2793,7 +3015,8 @@ function MarksEntry() {
       ...(key === 'examType' && matchedExam
         ? {
           examId: String(matchedExam.examId),
-          examType: matchedExam.examName || matchedExam.examTypeName || value,
+          examType: matchedExam.examTypeName || matchedExam.examName || value,
+          assessmentType: assessmentTypeForExam(matchedExam, current.assessmentType),
           ...(matchedExam.academicYear ? { academicYear: matchedExam.academicYear, academicYearId: matchedExam.academicYearId || current.academicYearId } : {}),
           ...(matchedExam.courseName ? { course: matchedExam.courseName, courseId: matchedExam.courseId || current.courseId } : {}),
           ...(matchedExam.branchName ? { branch: matchedExam.branchName, branchId: matchedExam.branchId || current.branchId } : {}),
@@ -2802,13 +3025,20 @@ function MarksEntry() {
         : key === 'examType' && matchedSavedExam
           ? {
             examId: String(matchedSavedExam.examId || current.examId),
+            assessmentType: assessmentTypeForExam(matchedSavedExam, current.assessmentType),
           }
-          : {}),
+          : key === 'examType'
+            ? {
+              examId: '',
+              assessmentType: value ? assessmentTypeForExam({ examTypeName: value }, current.assessmentType) : '',
+            }
+            : {}),
 
       ...(key === 'examId' && matchedExam
         ? {
           examId: String(matchedExam.examId),
-          examType: matchedExam.examName || matchedExam.examTypeName || current.examType,
+          examType: matchedExam.examTypeName || matchedExam.examName || current.examType,
+          assessmentType: assessmentTypeForExam(matchedExam, current.assessmentType),
         }
         : key === 'examId' && matchedSavedExam
           ? {
@@ -2940,9 +3170,8 @@ function MarksEntry() {
     const errorMessages = []
 
     if (!editingId && (!Number.isSafeInteger(examId) || examId <= 0)) {
-      errors.examId = true
       errors.examType = true
-      errorMessages.push('Please select an Exam from the list or enter a valid Examination ID.')
+      errorMessages.push('Please select a valid Exam Type from the list.')
     }
     if (!editingId && (!Number.isSafeInteger(studentId) || studentId <= 0)) {
       errors.registrationNumber = true
@@ -3444,10 +3673,6 @@ function MarksEntry() {
                     <div className="marks-entry-form__grid">
                       {[
                         [
-                          'examId',
-                          'Examination ID',
-                        ],
-                        [
                           'academicYear',
                           'Academic Year',
                         ],
@@ -3472,6 +3697,14 @@ function MarksEntry() {
                           'Semester',
                         ],
                         [
+                          'subject',
+                          'Subject',
+                        ],
+                        [
+                          'subjectCode',
+                          'Subject Code',
+                        ],
+                        [
                           'section',
                           'Section',
                         ],
@@ -3484,16 +3717,8 @@ function MarksEntry() {
                           'Student Name',
                         ],
                         [
-                          'subject',
-                          'Subject',
-                        ],
-                        [
                           'facultyName',
                           'Faculty Name',
-                        ],
-                        [
-                          'subjectCode',
-                          'Subject Code',
                         ],
                         [
                           'examType',
@@ -3639,6 +3864,12 @@ function MarksEntry() {
                                         ? assessment.courseId || selectedCourse?.courseId || selectedCourse?.id || fieldValue || ''
                                         : key === 'branch'
                                           ? assessment.branchId || selectedBranch?.branchId || selectedBranch?.id || fieldValue || ''
+                                          : key === 'examType'
+                                            ? assessment.examId || examsList.find(exam =>
+                                              normalized(exam.examName) === normalized(fieldValue)
+                                              || normalized(exam.examTypeName) === normalized(fieldValue)
+                                              || normalized(exam.examCode) === normalized(fieldValue),
+                                            )?.examId || ''
                                           : fieldValue ?? ''
                                     }
                                     onChange={event => updateAssessment(key, event.target.value)}
@@ -3664,7 +3895,7 @@ function MarksEntry() {
                                         : `Select ${label.toLowerCase()}`}
                                     </option>
                                     {(formSelectOptions[key] || []).map(option => (
-                                      <option key={`${key}-${option.value}`} value={option.value} label={option.label}>
+                                      <option key={`${key}-${option.value}`} value={option.value} label={option.label} disabled={option.disabled}>
                                         {option.label}
                                       </option>
                                     ))}

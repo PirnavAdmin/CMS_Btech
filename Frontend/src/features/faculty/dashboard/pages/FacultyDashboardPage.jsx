@@ -1,15 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import {
-  FiAlertTriangle,
-  FiArrowRight,
-  FiBookOpen,
-  FiCalendar,
-  FiCheckCircle,
-  FiClock,
-  FiLayers,
-  FiUsers,
-} from 'react-icons/fi'
+import { FiAlertTriangle, FiArrowRight, FiBookOpen, FiCalendar, FiCheckCircle, FiClock, FiLayers, FiUsers } from 'react-icons/fi'
 import PortalLayout from '../../../../layouts/PortalLayout.jsx'
 import { getAuthStorage } from '../../../../auth/auth.js'
 import FacultyCardSkeleton from '../../components/FacultyCardSkeleton.jsx'

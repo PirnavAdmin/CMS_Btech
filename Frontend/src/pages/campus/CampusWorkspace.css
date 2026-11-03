@@ -171,6 +171,22 @@ feels part of the table card rather than a second, dashed card. */
   animation: advFadeIn 0.25s ease-out;
 }
 
+:root:has(.adv-library-workspace) {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb, #CBD5E1) transparent;
+  -ms-overflow-style: auto;
+}
+
+:root:has(.adv-library-workspace)::-webkit-scrollbar {
+  width: 8px;
+  display: block;
+}
+
+:root:has(.adv-library-workspace)::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb, #CBD5E1);
+  border-radius: 999px;
+}
+
 @keyframes advFadeIn {
   from {
     opacity: 0;
@@ -200,6 +216,12 @@ feels part of the table card rather than a second, dashed card. */
   font-weight: 500;
   border: 1px solid rgba(255, 255, 255, 0.1);
   animation: advSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.page-content .adv-library-workspace .adv-toast {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #14532d;
 }
 
 @keyframes advSlideUp {
@@ -606,6 +628,23 @@ feels part of the table card rather than a second, dashed card. */
   display: none;
 }
 
+#root .page-content .adv-library-workspace .adv-tabs-bar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb, #CBD5E1) transparent;
+  -ms-overflow-style: auto;
+  overscroll-behavior-x: contain;
+}
+
+#root .page-content .adv-library-workspace .adv-tabs-bar::-webkit-scrollbar {
+  height: 8px;
+  display: block;
+}
+
+#root .page-content .adv-library-workspace .adv-tabs-bar::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb, #CBD5E1);
+  border-radius: 999px;
+}
+
 .adv-tab-btn {
   display: flex;
   align-items: center;
@@ -689,6 +728,10 @@ feels part of the table card rather than a second, dashed card. */
   box-sizing: border-box;
 }
 
+#root .page-content .adv-library-workspace .adv-control-bar__search input {
+  padding: 0 38px 0 40px;
+}
+
 .adv-control-bar__search input:focus {
   background: var(--surface, #ffffff);
   border-color: #2563eb;
@@ -719,6 +762,19 @@ feels part of the table card rather than a second, dashed card. */
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.adv-library-workspace .adv-control-bar__select-group {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: end;
+  align-items: center;
+  flex: 1 1 420px;
+  min-width: 0;
+}
+
+.adv-library-workspace .adv-control-bar__select-group > :nth-child(2) {
+  width: 100%;
 }
 
 .adv-control-bar__select-group select {
@@ -1536,6 +1592,24 @@ feels part of the table card rather than a second, dashed card. */
   padding: 16px 24px;
   border-top: 1px solid var(--border, #e2e8f0);
   background: var(--surface-soft, #f8fafc);
+}
+
+.adv-modal--md > form {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.adv-modal--md > form > .adv-modal__body {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-y: auto;
+}
+
+.adv-modal--md > form > .adv-modal__footer {
+  flex: 0 0 auto;
 }
 
 /* Modal Form Controls */
