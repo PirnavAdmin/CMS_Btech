@@ -1,4 +1,4 @@
-﻿import test from 'node:test'
+import test from 'node:test'
 import assert from 'node:assert/strict'
 import { validateDocument, documentCategories } from './staffDocumentsStore.js'
 test('personal document upload accepts supported non-empty files up to 5 MB', () => {

@@ -1,25 +1,5 @@
 import { useState } from 'react'
-import {
-  FiAlertTriangle,
-  FiAward,
-  FiBriefcase,
-  FiCalendar,
-  FiCheck,
-  FiCheckCircle,
-  FiClock,
-  FiDownload,
-  FiEdit2,
-  FiEye,
-  FiFileText,
-  FiInfo,
-  FiMail,
-  FiMapPin,
-  FiPhone,
-  FiShield,
-  FiUser,
-  FiUsers,
-  FiX,
-} from 'react-icons/fi'
+import { FiAlertTriangle, FiAward, FiBriefcase, FiCalendar, FiCheck, FiCheckCircle, FiClock, FiDownload, FiEdit2, FiEye, FiFileText, FiInfo, FiMail, FiMapPin, FiPhone, FiShield, FiUser, FiUsers, FiX } from 'react-icons/fi'
 import { STAFF_PROFILE } from './staffSampleData.js'
 import './staff-portal.css'
 

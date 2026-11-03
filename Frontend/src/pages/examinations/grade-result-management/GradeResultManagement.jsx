@@ -2442,7 +2442,7 @@ function CGPACalculator({ storageKey }) {
                 onClick={loadAutonomousPreset}
                 title="Populate standard 160-credit B.Tech credit structure across 8 semesters"
               >
-                ⚡ B.Tech 160-Cr Model (R20/R23)
+                <FiZap aria-hidden="true" /> B.Tech 160-Cr Model (R20/R23)
               </button>
               <button
                 type="button"
@@ -2450,7 +2450,7 @@ function CGPACalculator({ storageKey }) {
                 onClick={loadUniform8Preset}
                 title="Populate 8 Semesters with 20 credits per semester"
               >
-                ⚡ Uniform 8 Sems (20 Cr/Sem)
+                <FiZap aria-hidden="true" /> Uniform 8 Sems (20 Cr/Sem)
               </button>
             </div>
 
@@ -2701,10 +2701,11 @@ function CGPACalculator({ storageKey }) {
             </div>
 
             <p className={`grm-cgpa__hint${duplicateSemester || invalidRow ? ' is-error' : ''}`} role={duplicateSemester || invalidRow ? 'alert' : undefined}>
+              {(duplicateSemester || invalidRow) && <FiAlertTriangle aria-hidden="true" />}{' '}
               {duplicateSemester
-                ? '⚠️ Duplicate semester detected. Ensure each completed semester has a unique label.'
+                ? 'Duplicate semester detected. Ensure each completed semester has a unique label.'
                 : invalidRow
-                  ? '⚠️ Enter valid semester details: SGPA must be between 0.00 and 10.00, and credits must be a positive number.'
+                  ? 'Enter valid semester details: SGPA must be between 0.00 and 10.00, and credits must be a positive number.'
                   : 'Official UGC / AICTE Autonomous grading standard. Degree classification requires 160 total credits and no active backlogs.'}
             </p>
           </div>
@@ -3089,7 +3090,7 @@ function CGPACalculator({ storageKey }) {
                   <p className="grm-cgpa__planner-note">Enter a valid target CGPA (1-10).</p>
                 ) : goalAnalysis.isImpossible ? (
                   <div className="grm-cgpa__planner-alert is-warning">
-                    <strong>⚠️ Target Unreachable in {goalAnalysis.remSems} Semesters (Required SGPA: {goalAnalysis.requiredAvgSgpa.toFixed(2)} &gt; 10.00)</strong>
+                    <strong><FiAlertTriangle aria-hidden="true" /> Target Unreachable in {goalAnalysis.remSems} Semesters (Required SGPA: {goalAnalysis.requiredAvgSgpa.toFixed(2)} &gt; 10.00)</strong>
                     <p>
                       The gap between your current performance ({cgpa.toFixed(2)}) and target ({goalAnalysis.target.toFixed(2)}) cannot be bridged with only {goalAnalysis.upcomingTotalCredits} credits. Consider extending your goal across more semesters or earning additional honors/minor credits.
                     </p>
@@ -3110,7 +3111,7 @@ function CGPACalculator({ storageKey }) {
                     </div>
                     <div className="grm-cgpa__planner-advice">
                       <span className={`grm-cgpa__feasibility-pill ${goalAnalysis.isEasy ? 'is-easy' : goalAnalysis.isModerate ? 'is-moderate' : 'is-hard'}`}>
-                        {goalAnalysis.isEasy ? '✨ Easily Achievable' : goalAnalysis.isModerate ? '⚡ Moderate Challenge' : '🔥 High Performance Required'}
+                        {goalAnalysis.isEasy ? <><FiCheckCircle aria-hidden="true" /> Easily Achievable</> : goalAnalysis.isModerate ? <><FiZap aria-hidden="true" /> Moderate Challenge</> : <><FiTrendingUp aria-hidden="true" /> High Performance Required</>}
                       </span>
                       <p>
                         Scoring an average SGPA of <strong>{goalAnalysis.requiredAvgSgpa.toFixed(2)}</strong> across {goalAnalysis.upcomingTotalCredits} remaining credits will lift your cumulative performance from {cgpa.toFixed(2)} to exactly <strong>{goalAnalysis.target.toFixed(2)} CGPA</strong>.

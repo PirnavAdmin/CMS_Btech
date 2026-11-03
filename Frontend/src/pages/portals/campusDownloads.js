@@ -1,4 +1,4 @@
-﻿const csvCell = value => `"${String(value ?? '').replace(/^[=+@-]/, "'$&").replaceAll('"', '""')}"`
+const csvCell = value => `"${String(value ?? '').replace(/^[=+@-]/, "'$&").replaceAll('"', '""')}"`
 export function mentoringCsv(students, notes) {
   return [['Roll number', 'Student', 'Branch', 'CGPA', 'Preparation', 'Mentoring notes'], ...students.map(row => [row.roll, row.name, row.branch, row.cgpa, notes[row.id]?.status || 'Not started', notes[row.id]?.note || ''])].map(row => row.map(csvCell).join(',')).join('\r\n')
 }

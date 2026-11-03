@@ -1,23 +1,5 @@
 import { useMemo, useState } from 'react'
-import {
-  FiAlertCircle,
-  FiArrowRight,
-  FiCalendar,
-  FiCheck,
-  FiCheckCircle,
-  FiChevronLeft,
-  FiChevronRight,
-  FiClock,
-  FiEye,
-  FiFileText,
-  FiFilter,
-  FiInfo,
-  FiLogIn,
-  FiLogOut,
-  FiMapPin,
-  FiUserCheck,
-  FiX,
-} from 'react-icons/fi'
+import { FiAlertCircle, FiArrowRight, FiCalendar, FiCheck, FiCheckCircle, FiChevronLeft, FiChevronRight, FiClock, FiEye, FiFileText, FiFilter, FiInfo, FiLogIn, FiLogOut, FiMapPin, FiUserCheck, FiX } from 'react-icons/fi'
 import {
   MONTHLY_ATTENDANCE_DATA,
   STAFF_USER,
