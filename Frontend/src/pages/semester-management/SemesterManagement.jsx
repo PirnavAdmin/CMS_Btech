@@ -585,8 +585,8 @@ function SemesterForm({ editMode = false }) {
   if (loading) return <Page><Empty icon={FiClock} title="Loading semester workflow..." /></Page>
   return <Page>
 
-    <Header title={editMode ? 'Edit Semester' : 'Recover Semester Definitions'} text={editMode ? 'Update schedule and lifecycle details without replacing the historical academic year.' : 'Configure semesters from Course, Branch, and the active Academic Year.'}><Link className="semester-primary secondary" to="/semester-management"><FiArrowLeft /> Back</Link></Header>
-    <div className="semester-workflow">
+    <Header title={editMode ? 'Edit Semester' : 'Add Semester Structure'} text={editMode ? 'Update schedule and lifecycle details without replacing the historical academic year.' : 'Configure semesters from Course, Branch, and the active Academic Year.'}><Link className="semester-primary secondary" to="/semester-management"><FiArrowLeft /> Back</Link></Header>
+    <div className="semester-workflow" data-without-live-preview="true">
       <section className="semester-workflow-main">
         {error && <div className="semester-form-error" role="alert">{error}</div>}
         {yearWarning && <div className="semester-config-warning" role="alert">{yearWarning}</div>}
@@ -717,130 +717,11 @@ function SemesterForm({ editMode = false }) {
         </footer>
       </section>
 
-      <SemesterPreview college={college} course={course} branch={branch || editingSemester} activeYear={activeYear} coursePeriod={coursePeriod} plan={editMode ? plan.filter((item) => Number(item.semesterNumber) === Number(form.semesterNumber)) : plan} dates={dates} />
+      <></>
     </div>
   </Page>
 }
 
-function SemesterPreview({ college, course, branch, activeYear, coursePeriod, plan = [], dates = {} }) {
-  const sections = [
-    {
-      title: 'Academic Structure',
-      fields: [
-        ['College', college?.name],
-        ['Academic Year', activeYear?.name],
-        ['Course', course ? `${course.code ? course.code + ' - ' : ''}${course.name}` : ''],
-        ['Branch', branch ? `${branch.code ? branch.code + ' - ' : ''}${branch.name || branch.branchName}` : ''],
-        ['Branch Type', branch?.branchType],
-        ['Cohort', coursePeriod],
-        ['Pattern', course?.academicPattern],
-        ['Duration', course?.durationYears ? `${course.durationYears} Years` : ''],
-        ['Total Semesters', course?.totalSemesters ? `${course.totalSemesters} Semesters` : ''],
-      ],
-    },
-  ].map((sec) => ({
-    ...sec,
-    fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '-'),
-  })).filter((sec) => sec.fields.length > 0)
-
-  const hasAnyData = sections.length > 0 || plan.length > 0
-
-  return (
-    <aside className="semester-live-preview" aria-label="Semester Structure Live Preview">
-      <header className="preview-top-bar">
-        <span className="preview-live-tag">
-          <span className="live-dot" /> LIVE PREVIEW
-        </span>
-        <span className="preview-sync-hint">Real-time sync</span>
-      </header>
-
-      {!hasAnyData ? (
-        <div className="preview-empty-hint">
-          <span>Enter details in the form to preview here in real time.</span>
-        </div>
-      ) : (
-        <div className="preview-body-container">
-          {course && (
-            <div className="preview-hero">
-              <div className="preview-hero-badge">
-                {course?.code ? course.code.slice(0, 4).toUpperCase() : 'BTECH'}
-              </div>
-              <div className="preview-hero-details">
-                <h3 className="preview-course-title">
-                  {course?.name || 'Selected Course'}
-                </h3>
-                <p className="preview-course-meta">
-                  {coursePeriod ? `${coursePeriod} Cohort` : ''}
-                  {course?.durationYears ? ` | ${course.durationYears} Years (${course.totalSemesters || 'Not configured'} Sems)` : ''}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {sections.map((sec) => (
-            <div key={sec.title} className="preview-section-group">
-              <span className="preview-section-title">{sec.title}</span>
-              <div className="preview-kv-grid">
-                {sec.fields.map(([label, text]) => (
-                  <div key={label} className="preview-kv-item">
-                    <span className="kv-label">{label}</span>
-                    <strong className="kv-val" title={String(text).trim()}>{String(text).trim()}</strong>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-
-          {plan.length > 0 && (
-            <div className="preview-cohort-timeline">
-              <div className="timeline-header">
-                <span className="timeline-title">COHORT SEMESTERS</span>
-                <span className="timeline-count-tag">{plan.length} Semesters</span>
-              </div>
-              <div className="timeline-table">
-                <div className="timeline-table-head">
-                  <span className="th-sem">Semester</span>
-                  <span className="th-dates">Schedule</span>
-                  <span className="th-status">Status</span>
-                </div>
-                <div className="timeline-table-body">
-                  {plan.map((item) => {
-                    const startDate = dates[item.semesterNumber]?.startDate ?? item.startDate
-                    const endDate = dates[item.semesterNumber]?.endDate ?? item.endDate
-                    const hasDates = startDate || endDate
-                    return (
-                      <div key={item.semesterNumber} className="timeline-row">
-                        <div className="timeline-cell-sem">
-                          <span className="sem-badge">S{item.semesterNumber}</span>
-                          <div className="sem-text-col">
-                            <strong>{item.semesterName}</strong>
-                            <small>{item.academicYearName}</small>
-                          </div>
-                        </div>
-                        <div className="timeline-cell-dates">
-                          {hasDates ? (
-                            <span className="date-badge">
-                              {displayDate(startDate)} &ndash; {displayDate(endDate)}
-                            </span>
-                          ) : (
-                            <span className="date-pending">Pending schedule</span>
-                          )}
-                        </div>
-                        <div className="timeline-cell-status">
-                          <StatusBadge value={item.status} />
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </aside>
-  )
-}
 
 function SemesterDetailsPage() {
   const now = useLifecycleClock()

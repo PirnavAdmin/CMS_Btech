@@ -516,7 +516,7 @@ function SectionForm({ editMode = false }) {
         <Link className="section-primary secondary" to="/section-management"><FiArrowLeft /> Back</Link>
       </Header>
       
-      <div className="erp-two-column-layout">
+      <div className="erp-two-column-layout" data-without-live-preview="true">
         <form className="erp-card-main section-form-card-unified" onSubmit={submit} noValidate>
           {errors.form && <div className="section-form-error" role="alert">{errors.form}</div>}
           {yearWarning && <div className="section-form-warning" role="alert">{yearWarning}</div>}
@@ -633,79 +633,7 @@ function SectionForm({ editMode = false }) {
           </footer>
         </form>
 
-        <aside className="college-live-preview" aria-label="Section Live Preview">
-          <header className="preview-top-bar">
-            <span className="preview-live-tag">
-              <span className="live-dot" /> LIVE PREVIEW
-            </span>
-            <span className="preview-sync-hint">Real-time sync</span>
-          </header>
-
-          <div className="preview-body-container">
-            <div className="preview-hero">
-              <div className="preview-hero-badge">
-                {form.code ? form.code.replace(/[^a-zA-Z0-9]/g, '').slice(0, 4).toUpperCase() : (form.name ? form.name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 4).toUpperCase() : 'SEC')}
-              </div>
-              <div className="preview-hero-details">
-                <h3 className="preview-course-title">
-                  {form.name ? form.name.trim() : 'Section Preview'}
-                </h3>
-                <p className="preview-course-meta">
-                  {[form.code, selectedCourseObj?.name, form.capacity && `${form.capacity} Students`].filter(Boolean).join(' ') || 'Academic details'}
-                </p>
-              </div>
-            </div>
-
-            {(() => {
-              const sections = [
-                {
-                  title: 'Academic Mapping',
-                  fields: [
-                    ['Course', selectedCourseObj?.name],
-                    ['Branch', selectedBranchObj?.name],
-                    ['Semester', selectedSemesterObj?.name || form.semester],
-                    ['Academic Year', form.courseId ? activeYear?.name : ''],
-                  ],
-                },
-                {
-                  title: 'Section Details',
-                  fields: [
-                    ['Section Name', form.name],
-                    ['Section Code', form.code],
-                    ['Capacity', form.capacity ? `${form.capacity} Students` : ''],
-                    ['Faculty Advisor', selectedTeacher?.fullName || form.advisor],
-                    ['Status', form.status],
-                  ],
-                },
-              ].map((sec) => ({
-                ...sec,
-                fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '-'),
-              })).filter((sec) => sec.fields.length > 0)
-
-              if (sections.length === 0) {
-                return (
-                  <div className="preview-empty-hint">
-                    <span>Enter details in the form to preview here in real time.</span>
-                  </div>
-                )
-              }
-
-              return sections.map((sec) => (
-                <div key={sec.title} className="preview-section-group">
-                  <span className="preview-section-title">{sec.title}</span>
-                  <div className="preview-kv-grid">
-                    {sec.fields.map(([label, text]) => (
-                      <div key={label} className="preview-kv-item">
-                        <span className="kv-label">{label}</span>
-                        <strong className="kv-val" title={String(text).trim()}>{String(text).trim()}</strong>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))
-            })()}
-          </div>
-        </aside>
+        <></>
       </div>
     </Page>
   )

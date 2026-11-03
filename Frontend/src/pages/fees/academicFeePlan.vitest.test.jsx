@@ -82,7 +82,7 @@ test('quota dropdown supports manual Others and adds one independent row per cli
  expect(screen.queryByLabelText('Specify Admission Quota *')).toBeNull();
 })
 
-test('Fee Breakdown owns independent quota fee heads, copy, totals and preview', async () => {
+test('Fee Breakdown retains independent quota fee heads, copy and totals without live preview', async () => {
  mount(); await waitFor(() => expect(screen.getByLabelText('Course *').disabled).toBe(false));
  expect(screen.queryByRole('button', { name: 'Add Quota / Category' })).toBeNull();
  await openBreakdown();
@@ -95,7 +95,8 @@ test('Fee Breakdown owns independent quota fee heads, copy, totals and preview',
  fireEvent.change(within(cards[1]).getByLabelText('Fee head 1 amount'), { target: { value: '8000' } });
  expect(within(cards[0]).getByLabelText('Fee head 1 amount').value).toBe('5000');
  expect(within(cards[1]).getByLabelText('Fee head 1 amount').value).toBe('8000');
- expect(screen.getByLabelText('Preview configuration').value).toBe(screen.getByLabelText('Preview configuration').options[1].value);
+ expect(screen.queryByLabelText('Preview configuration')).toBeNull();
+ expect(screen.queryByRole('complementary', { name: 'Live Preview' })).toBeNull();
  fireEvent.click(within(cards[1]).getByRole('button', { name: 'Add Fee Head' }));
  expect(within(cards[0]).queryByLabelText('Fee head 2 type')).toBeNull();
  expect(within(cards[1]).getByLabelText('Fee head 2 type')).toBeTruthy();

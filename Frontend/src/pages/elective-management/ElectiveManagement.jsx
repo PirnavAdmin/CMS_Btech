@@ -541,7 +541,7 @@ export default function ElectiveManagement() {
             </div>
           </header>
 
-          <div className="erp-two-column-layout">
+          <div className="erp-two-column-layout" data-without-live-preview="true">
             <div className="erp-card-main">
               <form className="erp-form-scroll-body" onSubmit={saveGroup}>
                 <div className="sm-form-grid-2">
@@ -630,70 +630,7 @@ export default function ElectiveManagement() {
               </form>
             </div>
 
-            <aside className="preview-card" aria-label="Elective Live Preview">
-              <header className="preview-top-bar">
-                <span className="preview-live-tag">
-                  <span className="live-dot" /> LIVE PREVIEW
-                </span>
-                <span className="preview-sync-hint">Real-time sync</span>
-              </header>
-
-              <div className="preview-body-container">
-                {(() => {
-                  const sections = [
-                    {
-                      title: 'Elective Details',
-                      fields: [
-                        ['Group Code', groupForm.groupCode],
-                        ['Group Name', groupForm.groupName],
-                        ['Academic Year', groupForm.academicYear],
-                        ['Semester', groupForm.semester],
-                        ['Elective Type', groupForm.electiveType],
-                        ['Credits', groupForm.credits],
-                        ['Min / Max Picks', groupForm.minimumSelection && groupForm.maximumSelection ? `${groupForm.minimumSelection} to ${groupForm.maximumSelection}` : ''],
-                        ['Window', [groupForm.selectionStartDate, groupForm.selectionEndDate].filter(Boolean).join(' to ')],
-                      ],
-                    },
-                  ].map(sec => ({
-                    ...sec,
-                    fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '-'),
-                  })).filter(sec => sec.fields.length > 0)
-
-                  if (sections.length === 0) {
-                    return (
-                      <div className="preview-empty-hint">
-                        <span>Enter details in the form to preview here in real time.</span>
-                      </div>
-                    )
-                  }
-
-                  return (
-                    <>
-                      <div className="preview-hero" style={{ marginBottom: '12px' }}>
-                        <div className="preview-hero-badge">{groupForm.groupCode ? groupForm.groupCode.slice(0, 4).toUpperCase() : 'ELEC'}</div>
-                        <div className="preview-hero-details">
-                          <h3 className="preview-course-title" style={{ margin: 0 }}>{groupForm.groupName || 'Elective Group Preview'}</h3>
-                          <p className="preview-course-meta" style={{ margin: '2px 0 0', color: '#64748B', fontSize: '0.78rem' }}>{[groupForm.groupCode, groupForm.electiveType, groupForm.credits && `${groupForm.credits} Credits`].filter(Boolean).join('   ')}</p>
-                        </div>
-                      </div>
-                      {sections.map(sec => (
-                        <div key={sec.title} className="preview-section-group" style={{ marginBottom: '10px' }}>
-                          <span className="preview-section-title">{sec.title}</span>
-                          <div className="preview-kv-grid">
-                            {sec.fields.map(([label, textVal]) => (
-                              <div key={label} className="preview-kv-item">
-                                <span className="kv-label">{label}</span>
-                                <strong className="kv-val" title={String(textVal).trim()}>{String(textVal).trim()}</strong>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </>
-                  )
-                })()}
-              </div>
-            </aside>
+            <></>
           </div>
         </main>
       </DashboardLayout>
