@@ -994,8 +994,10 @@ function Field({ label, name, values, errors, touched, onChange, required, maxLe
   return <label className="ac-field" htmlFor={`ac-${name}`}>
     <span>{label}{required && <b aria-hidden="true"> *</b>}</span>
     <input id={`ac-${name}`} name={name} value={values[name]} onChange={onChange} required={required} maxLength={maxLength} aria-invalid={Boolean(error)} aria-describedby={error ? `ac-${name}-error` : undefined} {...props} />
-    {maxLength && <small className="ac-counter">{values[name].length}/{maxLength}</small>}
-    {error && <small id={`ac-${name}-error`} className="ac-error" role="alert">{error}</small>}
+    {(error || maxLength) && <span className="ac-field-meta">
+      {error && <small id={`ac-${name}-error`} className="ac-error" role="alert">{error}</small>}
+      {maxLength && <small className="ac-counter">{values[name].length}/{maxLength}</small>}
+    </span>}
   </label>
 }
 
