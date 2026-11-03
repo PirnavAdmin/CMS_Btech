@@ -1,6 +1,12 @@
 import { Link as react_router_domImports_Link, useNavigate as react_router_domImports_useNavigate, useSearchParams as react_router_domImports_useSearchParams, useLocation as react_router_domImports_useLocation } from 'react-router-dom'
 import { FiBookOpen as fiImports_FiBookOpen, FiLogIn as fiImports_FiLogIn, FiArrowLeft as fiImports_FiArrowLeft, FiActivity as fiImports_FiActivity, FiArrowRight as fiImports_FiArrowRight, FiAward as fiImports_FiAward, FiBarChart2 as fiImports_FiBarChart2, FiBriefcase as fiImports_FiBriefcase, FiCalendar as fiImports_FiCalendar, FiCheckCircle as fiImports_FiCheckCircle, FiChevronRight as fiImports_FiChevronRight, FiClock as fiImports_FiClock, FiExternalLink as fiImports_FiExternalLink, FiGrid as fiImports_FiGrid, FiLayers as fiImports_FiLayers, FiPieChart as fiImports_FiPieChart, FiPlus as fiImports_FiPlus, FiRefreshCw as fiImports_FiRefreshCw, FiSearch as fiImports_FiSearch, FiSliders as fiImports_FiSliders, FiStar as fiImports_FiStar, FiTrendingUp as fiImports_FiTrendingUp, FiUser as fiImports_FiUser, FiUserCheck as fiImports_FiUserCheck, FiUserPlus as fiImports_FiUserPlus, FiUsers as fiImports_FiUsers, FiZap as fiImports_FiZap, FiEye as fiImports_FiEye, FiEyeOff as fiImports_FiEyeOff, FiCheck as fiImports_FiCheck, FiHome as fiImports_FiHome, FiMenu as fiImports_FiMenu, FiTool as fiImports_FiTool, FiX as fiImports_FiX, FiBell as fiImports_FiBell, FiFileText as fiImports_FiFileText } from 'react-icons/fi'
 import { FiSun, FiMoon } from 'react-icons/fi'
+import {
+  FiChevronRight, FiBookOpen, FiEyeOff, FiFileText, FiBriefcase, FiEye,
+  FiCheck, FiCalendar, FiUser, FiBell, FiArrowRight, FiTool, FiTrendingUp,
+  FiUserCheck, FiArrowLeft, FiGrid, FiUsers, FiUserPlus, FiRefreshCw,
+  FiAward, FiExternalLink, FiHome, FiLayers, FiClock, FiX, FiMenu,
+} from 'react-icons/fi'
 import college_campus_hero_pngImports_default from '../assets/college-campus-hero.png'
 import useCollegeStateImports_default from '../hooks/useCollegeState'
 import { useEffect as reactImports_useEffect, useState as reactImports_useState, useMemo as reactImports_useMemo, useRef as reactImports_useRef } from 'react'
