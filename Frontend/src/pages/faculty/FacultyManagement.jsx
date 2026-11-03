@@ -1,4 +1,5 @@
 import * as pageDependency0 from '../../components/SearchableSelect'
+import { facultyDateErrors, joiningDateMinimum } from '../../utils/facultyDates.js'
 import * as pageDependency1 from 'react'
 import * as pageDependency2 from '../../services/facultyService'
 import * as pageDependency3 from '../../api/apiEndpoints'
@@ -2059,8 +2060,7 @@ function validateFaculty(data, rows) {
     const number = String(data[key] ?? '').trim()
     if (number && !/^[6-9]\d{9}$/.test(number)) errors[key] = 'Enter a valid 10-digit mobile number starting with 6, 7, 8 or 9.'
   }
-  for (const key of ['dob', 'joiningDate']) if (data[key] && (!/^\d{4}-\d{2}-\d{2}$/.test(data[key]) || !Number.isFinite(Date.parse(data[key])) || new Date(data[key]).toISOString().slice(0, 10) !== data[key] || data[key] > today())) errors[key] = 'Enter a valid date that is not in the future.'
-  if (data.dob && data.joiningDate && data.joiningDate <= data.dob) errors.joiningDate = 'Joining date must be after date of birth.'
+  Object.assign(errors, facultyDateErrors(data, today()))
   for (const key of experienceKeys) if (data[key] !== '' && (!Number.isFinite(Number(data[key])) || Number(data[key]) < 0 || Number(data[key]) > 80)) errors[key] = 'Enter experience between 0 and 80 years.'
   if (data.passingYear && (!/^\d{4}$/.test(data.passingYear) || Number(data.passingYear) < 1950 || Number(data.passingYear) > new Date().getFullYear())) errors.passingYear = 'Enter a four-digit year from 1950 to the current year.'
   if (data.pincode && !/^\d{6}$/.test(String(data.pincode).trim())) errors.pincode = 'Enter a 6-digit numeric pincode.'
@@ -3101,7 +3101,7 @@ function Field({ field, data, errors, update, native = false, collegeOptions = [
         {type === 'college' || type === 'department' ? <SearchableSelect placement="bottom" label={displayLabel} value={data[key] || ''} options={type === 'college' ? collegeOptions : departmentOptions} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={'Select ' + displayLabel.toLowerCase()} /> : Array.isArray(type) ? (() => {
           const effectiveOptions = key === 'designation' ? getDesignationOptions(data.employeeCategory) : type
           return native ? <ProjectSelect {...props}><option value="">Select {displayLabel.toLowerCase()}</option>{effectiveOptions.map(value => <option key={value}>{value}</option>)}</ProjectSelect> : <SearchableSelect placement="bottom" label={displayLabel} value={data[key] || ''} options={effectiveOptions} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={'Select ' + displayLabel.toLowerCase()} hideSearch={key === 'gender'} />
-        })() : type === 'textarea' ? <textarea {...props} rows={2} /> : <input {...props} type={type === 'readonly' ? 'text' : type} readOnly={type === 'readonly'} max={type === 'date' ? today() : key === 'passingYear' ? new Date().getFullYear() : key === 'weeklyHours' ? 60 : type === 'number' ? 80 : undefined} min={key === 'passingYear' ? 1950 : type === 'number' ? 0 : undefined} step={key === 'passingYear' ? 1 : type === 'number' ? 0.5 : undefined} inputMode={type === 'tel' || key === 'pincode' ? 'numeric' : undefined} />}
+        })() : type === 'textarea' ? <textarea {...props} rows={2} /> : <input {...props} type={type === 'readonly' ? 'text' : type} readOnly={type === 'readonly'} max={type === 'date' ? today() : key === 'passingYear' ? new Date().getFullYear() : key === 'weeklyHours' ? 60 : type === 'number' ? 80 : undefined} min={key === 'joiningDate' ? joiningDateMinimum(data.dob) : key === 'passingYear' ? 1950 : type === 'number' ? 0 : undefined} step={key === 'passingYear' ? 1 : type === 'number' ? 0.5 : undefined} inputMode={type === 'tel' || key === 'pincode' ? 'numeric' : undefined} />}
         {errors[key] && <small id={id + '-error'} className="fm-error">{errors[key]}</small>}
       </div>
       {key === 'employeeCategory' && ['Others', 'Other'].includes(data.employeeCategory) && (
@@ -3245,7 +3245,7 @@ const getNextFacultyCode = (list = [], collegeId, collegeOptions = [], isNonTeac
   return `${prefix}${String(nextSeq).padStart(3, '0')}`
 }
 
-function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], departmentOptions = [], selectedCollegeId = '', saving }) {
+function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], departmentOptions = [], selectedCollegeId = '', saving, saveError = '' }) {
   const defaultCollegeId = initial?.collegeId || selectedCollegeId || collegeOptions[0]?.value || ''
   const isInitialNonTeaching = (initial?.employeeCategory || initial?.employee_category) === 'Non-Teaching'
   const [data, setData] = useState(() => {
@@ -3268,6 +3268,14 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], 
   const [touched, setTouched] = useState({})
   const markTouched = key => setTouched(prev => ({ ...prev, [key]: true }))
   const liveErrors = useMemo(() => validateFaculty(clean(data), faculty), [data, faculty])
+  useEffect(() => {
+    // Recheck only errors already displayed, including dependent date fields.
+    // Do not show untouched required fields merely because another field changed.
+    setErrors(previous => {
+      const next = Object.fromEntries(Object.keys(previous).filter(key => liveErrors[key]).map(key => [key, liveErrors[key]]))
+      return JSON.stringify(next) === JSON.stringify(previous) ? previous : next
+    })
+  }, [liveErrors])
   const [photoBusy, setPhotoBusy] = useState(false)
   const readerRef = useRef(null)
   const formRef = useRef(null)
@@ -3308,8 +3316,9 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], 
   const stepTitles = [...sections.map(s => s.title), 'Documents']
   const totalSteps = stepTitles.length
 
-  const next = event => {
+  const next = async event => {
     event.preventDefault()
+    if (saving || photoBusy) return
     const checked = validateFaculty(clean(data), faculty)
     if (step < sections.length) {
       const keys = [...sections[step].fields.map(([key]) => key), ...(step === 1 ? ['employeeCategoryOther'] : [])]
@@ -3325,7 +3334,7 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], 
         focusError()
         return
       }
-      onSave(clean(data))
+      await onSave(clean(data))
     }
   }
 
@@ -3364,6 +3373,7 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], 
   const isDocumentsStep = step === sections.length
   const isFinalStep = step === totalSteps - 1
   const isStepOptional = (section && !section.fields.some(([, , , required]) => required)) || isDocumentsStep
+  const validationMessage = Object.values(errors).filter(value => typeof value === 'string' && value.trim()).join(' ')
 
   return (
     <div className="erp-two-column-layout" data-without-live-preview="true">
@@ -3423,6 +3433,8 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], 
               />
             )}
           </div>
+          {validationMessage && <div className="page-error-notice" role="alert" data-message-tone="error" style={{ margin: '12px 20px' }}><FiAlertCircle aria-hidden="true" /><span>{validationMessage}</span></div>}
+          {saveError && <div className="page-error-notice" role="alert" data-message-tone="error" style={{ margin: '12px 20px' }}><FiAlertCircle aria-hidden="true" /><span>{saveError}</span></div>}
           <footer className="fm-form-footer">
             <button type="button" className="fm-button secondary" onClick={onCancel}>Cancel</button>
             <span className="fm-muted">Step {step + 1} of {totalSteps}</span>
@@ -3438,7 +3450,7 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], 
                 </button>
               )}
               <button type="submit" className="fm-button" disabled={photoBusy || saving}>
-                {isFinalStep ? <><FiCheckCircle /> {data.employeeCategory === 'Non-Teaching' ? 'Save Staff' : 'Save Faculty'}</> : 'Next'}
+                {saving ? 'Saving…' : isFinalStep ? <><FiCheckCircle /> {data.employeeCategory === 'Non-Teaching' ? 'Save Staff' : 'Save Faculty'}</> : 'Next'}
               </button>
             </div>
           </footer>
@@ -4137,7 +4149,7 @@ function FacultyManagement() {
       clear()
       back(targetCat)
     } catch (error) {
-      setLoadError(error.message || 'Faculty could not be saved.')
+      setLoadError(pageDependency12.facultySaveErrorMessage(error))
       if (!data.id && savedId) navigate('/faculty/' + savedId + '/edit')
     } finally { saveLock.current = false; setSaving(false) }
   }
@@ -4217,6 +4229,7 @@ function FacultyManagement() {
           departmentOptions={departmentOptions}
           selectedCollegeId={selectedCollegeId}
           saving={saving}
+          saveError={loadError}
           onSave={save}
           onCancel={() => back()}
         />
@@ -4709,7 +4722,7 @@ function FacultyManagement() {
         </nav>
       )}
       <main className={`faculty-management${path === '/faculty' && !selectedCategory ? ' faculty-management--overview' : ''}`}>
-        {loadError && <p className="fm-error" role="alert">{loadError}</p>}
+        {loadError && path !== '/faculty/new' && !editId && <p className="fm-error" role="alert">{loadError}</p>}
         {loadingFaculty ? <section className="fm-panel">Loading faculty records...</section> : content}
         {assignedFaculty && (
           <AssignmentDialog

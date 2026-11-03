@@ -1,0 +1,64 @@
+/* Shared presentation for page/API errors. Repeated root specificity overrides
+   legacy per-module !important alert rules without changing field validation. */
+#root#root :is(.page-error-notice, .branch-api-error, .course-api-error,
+  .course-empty--error, .cm-empty--error, .cm-summary-error,
+  .sm-error[role="alert"], .em-alert[role="alert"], .flm-error, .fm-error[role="alert"],
+  .tt-error[role="alert"], .rbac-load-error-strip,
+  .hod-error-banner, .department-no-results--error, .workspace-context-select__error,
+  .sp-state[data-message-tone="error"]) {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  flex-direction: row !important;
+  gap: 12px !important;
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 12px 0 !important;
+  min-height: 46px !important;
+  height: auto !important;
+  padding: 12px 16px !important;
+  border: 1px solid var(--screen-error-border, #f0b4ae) !important;
+  border-left: 4px solid var(--screen-error-text, #c5221f) !important;
+  border-radius: 12px !important;
+  background: var(--screen-error-bg, #fff8f7) !important;
+  color: var(--screen-error-text, #b42318) !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  line-height: 1.5 !important;
+  text-align: left !important;
+  overflow-wrap: anywhere;
+  box-shadow: none !important;
+}
+
+#root#root :is(.page-error-notice, .branch-api-error, .course-api-error,
+  .sm-error[role="alert"], .em-alert[role="alert"], .flm-error,
+  .rbac-load-error-strip, .hod-error-banner) > svg {
+  flex: 0 0 19px;
+  width: 19px;
+  height: 19px;
+  margin: 0 !important;
+}
+
+#root#root :is(.page-error-notice, .branch-api-error, .course-api-error,
+  .sm-error[role="alert"], .em-alert[role="alert"], .flm-error,
+  .rbac-load-error-strip, .hod-error-banner) > span {
+  min-width: 0;
+  flex: 1;
+}
+
+#root#root :is(.course-empty--error, .cm-empty--error,
+  .sm-error[role="alert"], .em-alert[role="alert"], .flm-error,
+  .rbac-load-error-strip) > button {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+@media (max-width: 560px) {
+  #root#root :is(.page-error-notice, .branch-api-error, .course-api-error,
+    .course-empty--error, .cm-empty--error, .em-alert[role="alert"],
+    .flm-error, .rbac-load-error-strip) {
+    flex-wrap: wrap;
+  }
+}

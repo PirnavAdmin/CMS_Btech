@@ -2,8 +2,22 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import vm from 'node:vm'
 import { readFileSync } from 'node:fs'
-import { facultyCreatePayload, facultyEmployeeCode } from './facultyContracts.js'
+import { facultyCreatePayload, facultyEmployeeCode, facultySaveErrorMessage } from './facultyContracts.js'
 import { normalizeAttendanceRow } from '../utils/facultyAttendance.js'
+
+test('faculty save failures explain identity conflicts without exposing infrastructure details', () => {
+  assert.match(facultySaveErrorMessage({ code: 'USER_IDENTITY_CONFLICT' }), /Check both contact details/)
+  assert.match(facultySaveErrorMessage({ code: 'FACULTY_USER_ALREADY_LINKED' }), /existing record/)
+  const message = facultySaveErrorMessage({ status: 500, message: 'SQL exception secret' })
+  assert.match(message, /Check the faculty directory/)
+  assert.doesNotMatch(message, /SQL|secret/)
+})
+
+test('faculty creation explicitly requests account resolution unless an existing user is selected', () => {
+  const value = { collegeId: 2, departmentId: 3, fullName: 'Faculty Member' }
+  assert.equal(facultyCreatePayload(value).userId, 0)
+  assert.equal(facultyCreatePayload({ ...value, userId: '19' }).userId, 19)
+})
 
 test('marking present survives refresh of a daily row with stale statusName', async () => {
   const app = setup({ records: [{ facultyId: 9, statusName: 'Not Marked', status: 'Not Marked' }] })

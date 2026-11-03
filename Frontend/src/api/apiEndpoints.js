@@ -447,6 +447,9 @@ const request = async (url, options = {}, retried = false, bypassDedupe = false,
     const error = new Error(url.includes('/api/v1/timetable-management') ? backendMessage : (typeof userErrorMessage === 'function' ? userErrorMessage(backendMessage, response.status) : backendMessage))
     error.status = response.status
     error.validationErrors = body?.errors && typeof body.errors === 'object' ? body.errors : undefined
+    error.code = typeof body?.code === 'string' ? body.code : undefined
+    error.backendMessage = backendMessage
+    error.correlationId = typeof body?.correlationId === 'string' ? body.correlationId : undefined
     throw error
   }
   return body

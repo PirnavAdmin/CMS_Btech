@@ -1252,7 +1252,7 @@
 }
 
 /* Forms & Stepper Layout - Equal Height Two-Column Cards with Scroll */
-.faculty-management .erp-two-column-layout {
+.faculty-management .erp-two-column-layout:not([data-without-live-preview]) {
   display: grid !important;
   grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.9fr) !important;
   grid-template-rows: minmax(0, 1fr) !important;
@@ -4300,4 +4300,50 @@
   .faculty-payroll .fp-filter-fields { grid-template-columns: minmax(0, 1fr); }
   .faculty-payroll .fp-card nav { gap: 10px; overflow-x: auto; }
   .faculty-payroll .fp-card nav button { flex-shrink: 0; }
+}
+
+/* Faculty registration uses the full available width after preview removal. */
+.faculty-management .erp-two-column-layout[data-without-live-preview] {
+  grid-template-columns: minmax(0, 1fr) !important;
+  height: auto !important;
+  min-width: 0;
+}
+
+.faculty-management [data-without-live-preview] > .erp-card-main,
+.faculty-management [data-without-live-preview] .fm-form {
+  width: 100% !important;
+  height: auto !important;
+  max-height: none !important;
+}
+
+.faculty-management [data-without-live-preview] .erp-form-scroll-body {
+  flex: none !important;
+  overflow: visible !important;
+  padding: 16px 20px !important;
+}
+
+.faculty-management [data-without-live-preview] .fm-stepper {
+  flex-wrap: wrap;
+  overflow: visible !important;
+  gap: 8px !important;
+  padding: 12px 16px !important;
+}
+
+.faculty-management [data-without-live-preview] .fm-stepper > button {
+  flex: 1 1 auto;
+  justify-content: center;
+  min-height: 40px;
+}
+
+.faculty-management [data-without-live-preview] .fm-form-grid {
+  gap: 16px 20px;
+}
+
+@media (max-width: 600px) {
+  .faculty-management [data-without-live-preview] .erp-form-scroll-body {
+    padding: 14px !important;
+  }
+  .faculty-management [data-without-live-preview] .fm-stepper > button {
+    flex: 1 1 140px;
+  }
 }

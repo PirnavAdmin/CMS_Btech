@@ -216,7 +216,7 @@ const Notice = ({ children }) => {
   }
 
   const success = String(children).startsWith('Branch ')
-  return <p className={success ? 'branch-api-success' : 'branch-api-error'} role={success ? 'status' : 'alert'}><FiAlertCircle />{children}</p>
+  return <p className={success ? 'branch-api-success' : 'branch-api-error'} role={success ? 'status' : 'alert'}><FiAlertCircle aria-hidden="true" /><span>{children}</span></p>
 }
 
 const Field = ({ label, error, children, wide = false }) => {

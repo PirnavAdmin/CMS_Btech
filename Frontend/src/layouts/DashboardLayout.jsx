@@ -15,6 +15,7 @@ import { API_FAILURE_EVENT } from '../api/apiFailureNotice'
 import { dismissToast, getToasts, subscribeToToasts } from '../utils/toast'
 import './DashboardLayout.css'
 import './AccountMenu.css'
+import '../styles/error-notices.css'
 
 const empty = {
   currentPassword: '',

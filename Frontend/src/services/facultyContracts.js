@@ -1,4 +1,18 @@
 // A stable UI identifier, derived from the faculty primary key, not a FAC sequence.
+export const facultySaveErrorMessage = error => {
+  const messages = {
+    USER_IDENTITY_CONFLICT: 'The email and mobile do not identify the same existing account. Check both contact details before saving.',
+    FACULTY_USER_ALREADY_LINKED: 'This account already has a faculty record. Open the existing record to update it.',
+    FACULTY_CODE_EXISTS: 'This faculty reference is already in use. Check the faculty directory before retrying.',
+    FACULTY_UNIQUE_CONFLICT: 'A faculty code, email or mobile is already in use. Check the existing faculty record.',
+  }
+  if (messages[error?.code]) return messages[error.code]
+  if (Number(error?.status) >= 500) return 'The faculty service could not complete the save. Check the faculty directory before retrying. If the record is absent, contact your administrator.'
+  if (Number(error?.status) === 403) return 'Your account does not have permission to save faculty for this college.'
+  if (Number(error?.status) === 409) return 'The email, mobile or faculty reference is already in use. Check the existing faculty record.'
+  return error?.message || 'Faculty could not be saved. Please try again.'
+}
+
 // Never send this display code back as an API identifier.
 export const facultyEmployeeCode = facultyId => {
   const id = String(facultyId ?? '').trim()
@@ -24,6 +38,8 @@ export const requiredNumber = (value, label) => {
 }
 export const facultyCreatePayload = value => {
   const payload = {
+    // Zero explicitly requests account creation/resolution in the create API.
+    userId: optionalNumber(value.userId) || 0,
     employeeProfileId: optionalNumber(value.employeeProfileId),
     collegeId: requiredNumber(value.collegeId, 'College'),
     departmentId: requiredNumber(value.departmentId, 'Department'),
@@ -42,8 +58,6 @@ export const facultyCreatePayload = value => {
     isHod: Number(value.isHod) || 0,
     status: typeof value.status === 'number' ? value.status : 1,
   }
-  const uid = optionalNumber(value.userId)
-  if (uid) payload.userId = uid
   return payload
 }
 export const facultyUpdatePayload = value => {
