@@ -77,27 +77,27 @@ test('existing disclosure, collapse and mobile close callbacks survive icon chan
 function deferred() { let resolve; const promise = new Promise(done => { resolve = done }); return { promise, resolve } }
 const sidebarTree = props => <MemoryRouter initialEntries={['/fees/collection']}><Sidebar {...props} /></MemoryRouter>
 
-test('pending permissions do not briefly expose administrator navigation', async () => {
+test('pending permissions keep the role navigation visible until scoped links are ready', async () => {
  const request = deferred(); authAccessApi.get.mockReturnValueOnce(request.promise);
- mount(); expect(screen.getByText('Loading navigation…')).toBeTruthy(); expect(screen.queryByRole('link', { name: 'Colleges' })).toBeNull();
- expect(document.querySelectorAll('.sidebar-section-label').length).toBe(0);
+ mount(); expect(screen.getByText('Loading navigation…')).toBeTruthy(); expect(screen.getByRole('link', { name: 'Colleges' })).toBeTruthy();
+ expect(document.querySelectorAll('.sidebar-section-label').length).toBeGreaterThan(0);
  await act(async () => request.resolve({ collegeId: 7, permissions: { fees: { view: true } } }));
  expect(screen.getByRole('link', { name: 'Fee Management' })).toBeTruthy();
  expect([...document.querySelectorAll('.sidebar-section-label')].map(node => node.textContent)).toEqual(['Finance']);
 })
-test('failed access has a working retry and never falls back to blanket admin visibility', async () => {
+test('failed access preserves navigation without a sidebar error or retry button', async () => {
  authAccessApi.get.mockRejectedValueOnce(new Error('Unavailable'));
- mount(); await screen.findByRole('button', { name: 'Retry navigation' }); expect(screen.queryByRole('link')).toBeNull();
- authAccessApi.get.mockResolvedValueOnce({ collegeId: 7, permissions: { rooms: { view: true } } });
- fireEvent.click(screen.getByRole('button', { name: 'Retry navigation' }));
- await screen.findByRole('link', { name: 'Rooms & Classrooms' }); expect(screen.queryByRole('link', { name: 'Colleges' })).toBeNull();
+ mount(); await waitFor(() => expect(screen.queryByText('Loading navigation…')).toBeNull());
+ expect(screen.getByRole('link', { name: 'Colleges' })).toBeTruthy();
+ expect(screen.queryByText(/Service unavailable/)).toBeNull();
+ expect(screen.queryByRole('button', { name: 'Retry connection' })).toBeNull();
 })
 test('college changes immediately hide the old permission matrix and reload the selected scope', async () => {
  authAccessApi.get.mockResolvedValueOnce({ collegeId: 7, permissions: { fees: { view: true } } });
  const { rerender } = render(sidebarTree()); await screen.findByRole('link', { name: 'Fee Management' });
  const next = deferred(); authAccessApi.get.mockReturnValueOnce(next.promise);
  session.academic = { ...session.academic, selectedCollege: { id: '8', name: 'Next College' }, selectedCollegeId: '8' };
- rerender(sidebarTree()); expect(screen.queryByRole('link', { name: 'Fee Management' })).toBeNull();
+ rerender(sidebarTree()); expect(screen.getByRole('link', { name: 'Fee Management' })).toBeTruthy(); expect(screen.getByText('Loading navigation…')).toBeTruthy();
  await waitFor(() => expect(authAccessApi.get).toHaveBeenLastCalledWith('8'));
  await act(async () => next.resolve({ collegeId: 8, permissions: { rooms: { view: true } } }));
  expect(screen.getByRole('link', { name: 'Rooms & Classrooms' })).toBeTruthy(); expect(screen.queryByRole('link', { name: 'Fee Management' })).toBeNull();
@@ -113,7 +113,7 @@ test('late responses from a previous college cannot overwrite the current naviga
 })
 test('a mismatched college response is rejected even if it claims Super Admin', async () => {
  authAccessApi.get.mockResolvedValueOnce({ collegeId: 99, isSuperAdmin: true, permissions: {} });
- mount(); await screen.findByRole('button', { name: 'Retry navigation' }); expect(screen.queryByRole('link')).toBeNull();
+ mount(); await waitFor(() => expect(screen.queryByText('Loading navigation…')).toBeNull()); expect(screen.queryByText(/Service unavailable/)).toBeNull();
 })
 test('context loading delays requests; an empty college selection is a setup hint rather than permission denial', async () => {
  session.academic.loading = true;

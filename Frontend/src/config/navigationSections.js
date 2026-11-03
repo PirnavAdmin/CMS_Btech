@@ -2,7 +2,7 @@
 export const NAVIGATION_SECTIONS = Object.freeze([
   {
     "id": "dashboard",
-    "label": "Dashboard",
+    "label": "Overview",
     "order": 10
   },
   {

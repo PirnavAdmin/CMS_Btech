@@ -1,4 +1,5 @@
 import { ADMISSION_QUOTAS } from '../../utils/admissionQuotaOptions'
+import { approveForAdmission } from '../../services/academicFeePlanApproval.js'
 import '../admin-management/AdminManagement.css'
 import './fees.css'
 import { ProjectSelect } from '../../components/SearchableSelect'
@@ -1903,6 +1904,7 @@ export const FeeStructureModule = (() => {
         ...rows,
         ...(workflow?.rows || []).map((s) => ({
           ...workflowAcademicRow(s),
+          status: s.status === "Published" ? "Approved" : s.status,
           assignedCount: (workflow?.assignments || []).filter(
             (a) => a.structureId === s.id
           ).length,
@@ -2305,7 +2307,7 @@ export const FeeStructureModule = (() => {
                   <option value="Active">Active</option>
                   <option value="Draft">Draft</option>
                   <option value="Inactive">Inactive</option>
-                  {["Pending Approval", "Approved", "Published", "Archived"].map((status) => (
+                  {["Pending Approval", "Approved", "Archived"].map((status) => (
                     <option key={status} value={status}>{status}</option>
                   ))}
                 </select>
@@ -2529,9 +2531,10 @@ export const FeeStructureModule = (() => {
                               <FiEdit2 />
                             </button>
                           )}
-                          {r.workflowStructure && (feeStructureServiceModule.feeTransitions[r.status] || []).map(status => (
+                          {r.workflowStructure && (feeStructureServiceModule.feeTransitions[r.workflowStructure.status] || []).map(status => (
                             <button key={status} type="button"
-                              title={status === "Pending Approval" ? "Submit for Approval" : status === "Approved" ? "Approve Plan" : status === "Published" ? "Publish Plan" : status === "Archived" ? "Archive Plan" : "Return to Draft"}
+                              disabled={Boolean(workflow.transitioning)}
+                              title={status === "Pending Approval" ? "Submit for Approval" : status === "Approved" || status === "Published" ? "Approve Plan" : status === "Archived" ? "Archive Plan" : "Return to Draft"}
                               onClick={() => workflow.transition(r.id, status)}><FiCheck /></button>
                           ))}
                           <button
@@ -7238,6 +7241,7 @@ export const FeeManagementModule = (() => {
     const { pathname } = useLocation();
 
     const [state, setState] = useState(emptyFeeWorkspace);
+    const [transitioningPlan, setTransitioningPlan] = useState(false);
     const [storageError, setStorageError] = useState("");
     const [workspaceReady, setWorkspaceReady] = useState(false);
     const [students, setStudents] = useState([]);
@@ -7360,8 +7364,25 @@ export const FeeManagementModule = (() => {
                   masters={masters}
                   state={state}
                   workflow={{ rows: state.structures, assignments: state.assignments,
+                    transitioning: transitioningPlan,
                     duplicate: row => { try { commit(saveWorkflowStructure(state, { ...structuredClone(row), id: "", name: row.name + " (Copy)" }, "Draft", "Admin")); } catch (reason) { showError(reason.message); } },
-                    transition: (id, status) => { try { commit(transitionFeeStructure(state, id, status, "Admin")); } catch (reason) { showError(reason.message); } },
+                    transition: async (id, status) => {
+                      if (transitioningPlan) return;
+                      setTransitioningPlan(true);
+                      try {
+                        if (status === "Approved" || status === "Published") {
+                          const saved = await approveForAdmission(apiEndpointsModule.academicFeePlanApi, id, academic.selectedCollegeId);
+                          commit({ ...state, structures: state.structures.map(row => String(row.id) === String(id) ? { ...row, status: "Published", backendRevision: saved.revision } : row) });
+                          showSuccess("Fee plan approved and available for Student Admission.");
+                        } else if (/^[1-9]\d*$/.test(String(id))) {
+                          const actions = { "Pending Approval": "submit", Draft: "return-to-draft", Archived: "archive" };
+                          const current = await apiEndpointsModule.academicFeePlanApi.get(id, academic.selectedCollegeId);
+                          const saved = await apiEndpointsModule.academicFeePlanApi.transition(id, academic.selectedCollegeId, actions[status], current.revision);
+                          commit({ ...state, structures: state.structures.map(row => String(row.id) === String(id) ? { ...row, status, backendRevision: saved.revision } : row) });
+                        } else { commit(transitionFeeStructure(state, id, status, "Admin")); }
+                      } catch (reason) { showError(reason.message); }
+                      finally { setTransitioningPlan(false); }
+                    },
                     remove: id => { try { commit({ ...state, structures: state.structures.filter(row => row.id !== id) }); } catch (reason) { showError(reason.message); } },
                   }}
                 />

@@ -94,6 +94,16 @@ export const AcademicProvider = ({ children }) => {
       const safeColleges = (cols || []).filter(row => canSelectCollege(authorization, row.id ?? row.collegeId, getUserCollegeId()) && (!assignedCollege || String(row.id ?? row.collegeId) === assignedCollege))
       setColleges(safeColleges)
       const available = filterActiveOnly(safeColleges)
+      if (!available.length) {
+        setSelectedCollegeId('')
+        setSelectedAcademicYearId('')
+        setError(!(cols || []).length
+          ? 'The server returned no colleges for your account. Ask your administrator to check the college records.'
+          : !safeColleges.length
+            ? 'Your account is not assigned to any of the returned colleges. Ask your administrator to check your college access.'
+            : 'No active colleges are available for your account.')
+        return
+      }
       const college = available.find(row => String(row.id ?? row.collegeId) === requestedCollegeId)
         || available.find(row => String(row.id ?? row.collegeId) === String(getUserCollegeId()))
         || available[0]

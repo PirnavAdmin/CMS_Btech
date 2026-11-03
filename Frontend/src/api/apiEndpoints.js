@@ -1463,6 +1463,11 @@ export const admissionFeePlanApi = {
 }
 
 export const academicFeePlanApi = {
+  get: async (id, collegeId) => dataResponse(await request(withQuery(endpoint(`/api/v1/academic-fee-plans/${encodeURIComponent(id)}`), { collegeId }))),
+  transition: async (id, collegeId, action, expectedRevision) => {
+    if (!['submit', 'approve', 'publish', 'return-to-draft', 'archive'].includes(action)) throw new Error('Unsupported fee plan action.')
+    return dataResponse(await request(withQuery(endpoint(`/api/v1/academic-fee-plans/${encodeURIComponent(id)}/${action}`), { collegeId }), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ expectedRevision, ...(action === 'return-to-draft' ? { reason: 'Returned to draft from Fee Management.' } : {}) }) }))
+  },
   list: async (collegeId, params = {}) => listData(await request(withQuery(API_ENDPOINTS.academicFeePlans.list, { collegeId, page: 1, pageSize: 100, ...params }))),
   create: async body => dataResponse(await request(API_ENDPOINTS.academicFeePlans.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })),
   submit: async (id, collegeId, expectedRevision) => dataResponse(await request(API_ENDPOINTS.academicFeePlans.submit(id, collegeId), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ expectedRevision }) })),

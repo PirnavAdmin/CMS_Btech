@@ -1,4 +1,7 @@
 import SearchableSelectImports_default, { ProjectSelect as SearchableSelectImports_ProjectSelect } from '../../components/SearchableSelect'
+import { getSemesters, createSemester } from '../../auth/collegeApi'
+import { ensureBranchSemesters, semesterStructure, semesterRecords } from '../../services/branchSemesterWorkflow.js'
+import { selectedCollegeId as workflowCollegeId } from '../../utils/collegeScope.js'
 import { newestFirst as newestFirstImports_newestFirst, rememberCreated as newestFirstImports_rememberCreated } from '../../utils/newestFirst'
 import { showSuccess as toastImports_showSuccess } from '../../utils/toast'
 import useToastStateImports_default from '../../hooks/useToastState'
@@ -113,6 +116,8 @@ const courseMap = (record = {}) => {
     durationValue: normalizeId(record.durationYears ?? record.durationValue ?? record.duration ?? ''),
     academicPattern: content(record.academicSystem ?? record.academicPattern ?? record.pattern ?? ''),
     totalSemesters: normalizeId(record.totalSemesters ?? record.semesters ?? record.semesterCount ?? record.numberOfSemesters ?? ''),
+    semestersPerYear: record.semestersPerYear,
+    academicLevel: record.academicLevel ?? record.courseLevel,
     status: active ? 'Active' : 'Inactive',
     isActive: active,
   }
@@ -351,7 +356,7 @@ function List() {
   }
 
   return <Page>
-    <Header title="B.Tech Branch Management" text="Manage branches using the selected course as the source of truth.">
+    <Header title="Branch Management" text="Manage branches and their course-defined semester structure.">
       <CompactSummary label="Branch summary" items={[{ label: 'Total', value: stats.total }, { label: 'Active', value: stats.active, tone: 'active' }, { label: 'Inactive', value: stats.inactive, tone: 'inactive' }]} />
     </Header>
     <Notice>{error}</Notice>
@@ -448,6 +453,34 @@ const validateBranch = (value, branchId, existingRows) => {
   return errors
 }
 
+function BranchSemesterStructure({ course, branchId, compact = false }) {
+  const [records, setRecords] = reactImports_useState([])
+  const [error, setError] = reactImports_useState('')
+  let plan = [], structureError = ''
+  try { plan = semesterStructure(course) } catch (reason) { structureError = reason.message }
+  reactImports_useEffect(() => {
+    let active = true
+    const college = workflowCollegeId()
+    setRecords([])
+    if (branchId) getSemesters().then(response => {
+      if (active && college === workflowCollegeId()) { setRecords(semesterRecords(response).filter(row => String(row.branchId) === String(branchId))); setError('') }
+    }).catch(reason => { if (active) setError(reason.message) })
+    return () => { active = false }
+  }, [branchId])
+  if (!course?.id && !course?.courseId && !branchId) return null
+  return <section className={`${compact ? '' : 'cm-panel '}branch-structure-summary${compact ? ' branch-structure-summary--compact' : ''}`}><h3>Academic Duration &amp; Semester Structure</h3>
+    <div><span>Selected Course</span><strong>{course?.name || course?.courseName || 'Select a course'}</strong></div>
+    <div><span>Course Duration</span><strong>{course?.durationValue || course?.durationYears ? `${course.durationValue || course.durationYears} years` : 'Not configured'}</strong></div>
+    <div><span>Total Academic Years</span><strong>{plan.length ? Math.max(...plan.map(row => row.yearNumber)) : 'Not configured'}</strong></div>
+    <div><span>Semesters per Year</span><strong>{plan.length ? plan.length / Number(course.durationValue || course.durationYears) : 'Not configured'}</strong></div>
+    <div><span>Total Semesters</span><strong>{plan.length || 'Not configured'}</strong></div>
+    {course?.academicLevel && <div><span>Academic Level</span><strong>{course.academicLevel}</strong></div>}
+    {structureError ? <p role="status">{structureError}</p> : <details className="branch-semester-preview"><summary>Preview {plan.length} semesters</summary><ul>{Array.from(new Set(plan.map(row => row.yearNumber))).map(year => <li key={year}><strong>Year {year}:</strong> {plan.filter(row => row.yearNumber === year).map(row => row.semesterName).join(', ')}</li>)}</ul></details>}
+    {branchId && records.length > 0 && <div style={{ gridColumn: '1 / -1', overflowX: 'auto' }}><table className="branch-table"><thead><tr><th>Saved Semester</th><th>Year of Study</th><th>Saved ID</th><th>Dates</th></tr></thead><tbody>{[...records].sort((a,b) => Number(a.semesterNumber)-Number(b.semesterNumber)).map(row => <tr key={row.semesterId || row.id}><td><Link to={`/semester-management/${row.semesterId || row.id}`}>{row.semesterName}</Link></td><td>{row.yearNumber}</td><td>{row.semesterId || row.id}</td><td>{row.startDate ? String(row.startDate).slice(0,10) : 'Not scheduled'} {row.endDate ? `– ${String(row.endDate).slice(0,10)}` : ''}</td></tr>)}</tbody></table></div>}
+    {error && <p role="alert">{error}</p>}
+  </section>
+}
+
 function Form() {
   const { scopeRecords, selectedAcademicYearId } = useAcademic()
   const { id } = useParams()
@@ -461,6 +494,11 @@ function Form() {
   const [errors, setErrors] = useToastState({}, 'error')
   const [touched, setTouched] = useState({})
   const [saving, setSaving] = useState(false)
+  const [savedBranchId, setSavedBranchId] = useState(null)
+  const [savedCourse, setSavedCourse] = useState(null)
+  const ambiguousSave = useRef(false)
+  const originalCourse = useRef(null)
+  const originalStructure = useRef(null)
   const [error, setError] = useToastState('', 'error')
   const [value, setValue] = useState(() => ({ ...blank, academicYearId: selectedAcademicYearId || '' }))
   const [step, setStep] = useState(0)
@@ -501,6 +539,8 @@ function Form() {
     if (id) {
       branchApi.getById(id).then((record) => {
         const current = normalizeBranch(record)
+        originalCourse.current = String(current.courseId)
+        originalStructure.current = { duration: current.duration, totalSemesters: current.totalSemesters }
         const selectedCourse = courses.find((course) => String(course.id) === String(current.courseId)) || courses[0]
         const selectedYear = years.find((year) => String(year.id) === String(current.startingAcademicYearId)) || years[0] || null
         setValue({
@@ -531,6 +571,7 @@ function Form() {
     }
 
     const courseId = params.get('course') || ''
+    if (!courseId) return
     const selectedCourse = courses.find((course) => String(course.id) === String(courseId)) || null
     setValue({
       ...blank,
@@ -590,6 +631,7 @@ function Form() {
 
   const submit = async (event) => {
     event.preventDefault()
+    if (saving) return
     const selectedCourse = courses.find((course) => String(course.id) === String(value.courseId)) || null
     const effectiveYearId = value.academicYearId || selectedAcademicYearId || (years[0]?.id ? String(years[0].id) : '')
     const academicYear = years.find((year) => String(year.id) === String(effectiveYearId)) || null
@@ -624,7 +666,22 @@ function Form() {
     setSaving(true)
     setError('')
     try {
-      const result = await (id ? branchApi.update(id, payload) : branchApi.create(payload))
+      if (ambiguousSave.current) throw new Error('The previous branch save did not return an ID. Open the branch directory and recover its semester structure from Branch Details.')
+      if (id && originalCourse.current !== String(payload.courseId)) throw new Error('Changing the course requires dependency validation by the backend. Existing semester IDs will be preserved. Contact your administrator.')
+      if (id && ((Number(originalStructure.current?.duration) > 0 && Number(originalStructure.current.duration) !== Number(payload.duration)) || (Number(originalStructure.current?.totalSemesters) > 0 && Number(originalStructure.current.totalSemesters) !== Number(payload.totalSemesters)))) throw new Error('The course duration or semester count changed. Structural changes require backend dependency validation; this branch and its semester IDs have not been changed.')
+      if (!id) semesterStructure(selectedCourse)
+      const collegeAtSave = workflowCollegeId()
+      const result = savedBranchId ? { branchId: savedBranchId } : await (id ? branchApi.update(id, payload) : branchApi.create(payload))
+      if (!id) {
+        const persistedId = result?.branchId ?? result?.id
+        if (!persistedId) { ambiguousSave.current = true; throw new Error('Branch save did not return an ID. Check the branch directory before retrying.') }
+        setSavedBranchId(persistedId)
+        setSavedCourse(selectedCourse)
+        await ensureBranchSemesters({ branchId: persistedId, courseId: (savedCourse || selectedCourse).id, course: savedCourse || selectedCourse,
+          list: () => getSemesters(), create: createSemester,
+          assertScope: () => { if (workflowCollegeId() !== collegeAtSave) throw new Error('College changed. Return to the saved branch to continue semester setup.') },
+        })
+      }
       cacheBranchDates(result?.branchId || result?.id || id, payload.branchCode, {
         startDate: value.startDate ? value.startDate.slice(0, 10) : '',
         endDate: value.endDate ? value.endDate.slice(0, 10) : '',
@@ -632,9 +689,9 @@ function Form() {
       if (!id) rememberCreated('branches', result)
       eventBusImports_default.emit(eventBusImports_ERP_EVENTS.ACADEMIC_UPDATED, { branchId: result?.branchId ?? result?.id ?? id })
       showSuccess(`Branch ${id ? 'updated' : 'created'} successfully.`)
-      navigate('/branches')
+      navigate(id ? '/branches' : `/semester-management?branch=${result?.branchId ?? result?.id}`)
     } catch (requestError) {
-      setError(requestError?.message || 'Unable to save branch.')
+      setError(requestError?.message || 'Unable to save branch. If the branch was saved, retry semester setup without creating a second branch.')
     } finally {
       setSaving(false)
     }
@@ -658,8 +715,9 @@ function Form() {
     setStep(1)
   }
 
+  if (savedBranchId) return <Page><Header title="Branch saved" text={saving ? 'Saving and verifying missing semester definitions...' : 'Recover any missing semester definitions without creating the branch again.'}><Link className="cm-button secondary" to={`/branches/${savedBranchId}`}>View saved branch</Link></Header><Notice>{error}</Notice>{!saving && <BranchSemesterStructure course={savedCourse || selectedCourse || {}} branchId={savedBranchId} />}</Page>
   return <Page>
-    <Header title={id ? 'Edit B.Tech Branch' : 'Add B.Tech Branch'} text="Select a course and let the system resolve the structure details automatically.">
+    <Header title={id ? 'Edit Branch' : 'Add Branch'} text="Select a course and let the system resolve the structure details automatically.">
       <Link className="cm-button secondary" to="/branches"><FiArrowLeft /> Back</Link>
     </Header>
     <Notice>{error}</Notice>
@@ -674,7 +732,7 @@ function Form() {
           <div className="cm-form-grid"><Field label="Start Date"><input type="date" value={value.startDate || ''} onChange={(event) => update('startDate', event.target.value)} /></Field><Field label="End Date"><input type="date" value={value.endDate || ''} onChange={(event) => update('endDate', event.target.value)} /></Field></div>
           <div className="branch-form-actions"><span aria-hidden="true" /><button type="button" className="cm-button" onClick={nextStep}>Next</button></div>
         </section>}
-        {step === 1 && <section className="branch-step-content"><h2>Branch Configuration</h2><div className="branch-structure-summary"><h3>Course Structure</h3>{courseStructureLoading ? <p>Loading course structure...</p> : <><div><span>Duration</span><strong>{selectedCourse?.durationValue ? `${selectedCourse.durationValue} Years` : ''}</strong></div><div><span>Total Semesters</span><strong>{selectedCourse?.totalSemesters || ''}</strong></div></>}</div><div className="cm-form-grid"><Field label="Approved Intake *" error={getFieldError('intakeCapacity')}><input type="number" min="1" value={value.intakeCapacity} onChange={(event) => update('intakeCapacity', event.target.value)} placeholder="Enter approved intake" /></Field><Field label="Status *" error={getFieldError('status')}><ProjectSelect value={value.status} onChange={(event) => update('status', event.target.value)}><option value="" disabled>Select Status</option><option value="Active">Active</option><option value="Inactive">Inactive</option></ProjectSelect></Field></div><div className="branch-form-actions"><button type="button" className="cm-button secondary" onClick={() => setStep(0)}>Back</button><button type="submit" className="cm-button" disabled={saving || courseStructureLoading}>{saving ? 'Saving...' : id ? 'Update Branch' : 'Create Branch'}</button></div></section>}
+        {step === 1 && <section className="branch-step-content"><h2>Branch Configuration</h2>{courseStructureLoading ? <p role="status">Loading course structure...</p> : selectedCourse && <BranchSemesterStructure course={selectedCourse} branchId={id} compact />}<div className="cm-form-grid"><Field label="Approved Intake *" error={getFieldError('intakeCapacity')}><input type="number" min="1" value={value.intakeCapacity} onChange={(event) => update('intakeCapacity', event.target.value)} placeholder="Enter approved intake" /></Field><Field label="Status *" error={getFieldError('status')}><ProjectSelect value={value.status} onChange={(event) => update('status', event.target.value)}><option value="" disabled>Select Status</option><option value="Active">Active</option><option value="Inactive">Inactive</option></ProjectSelect></Field></div><div className="branch-form-actions"><button type="button" className="cm-button secondary" onClick={() => setStep(0)}>Back</button><button type="submit" className="cm-button" disabled={saving || courseStructureLoading}>{saving ? 'Saving...' : id ? 'Update Branch' : 'Create Branch'}</button></div></section>}
       </section>
       <></>
     </form>
@@ -721,6 +779,7 @@ function Details() {
 
   return (
     <Page>
+      <BranchSemesterStructure course={{ id: branch.courseId, name: branch.courseName, durationValue: branch.duration, totalSemesters: branch.totalSemesters }} branchId={id} />
       <div className="cm-profile-view" data-export-record>
         <div className="cm-profile-top-bar">
           <ExportMenu mode="single" title="Branch Details" filename={`branch_${branch.branchCode || branch.id}`} />

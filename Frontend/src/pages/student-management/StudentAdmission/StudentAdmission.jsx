@@ -1095,7 +1095,7 @@ function ApplicantFeeStructure({ data, update, error }) {
       }).filter(plan => plan.id)
       setServerPlanState({ loading: false, plans, error: '' })
     }).catch(fetchError => {
-      if (active) setServerPlanState({ loading: false, plans: [], error: fetchError.message || 'Unable to fetch published fee plans.' })
+      if (active) setServerPlanState({ loading: false, plans: [], error: fetchError.message || 'Unable to fetch approved fee plans.' })
     })
     return () => { active = false }
   }, [collegeId, academicYearId, courseId, branchId, semesterId, batch, quota, studentCategory])
@@ -1129,10 +1129,10 @@ function ApplicantFeeStructure({ data, update, error }) {
       <span>Assign Fee Plan</span>
       <ProjectSelect aria-label="Assign admission fee plan" value={matchedPlan?.id || ""} onChange={event => update("fees", { ...fees, configured: false, structureId: event.target.value })} disabled={!availablePlans.length}>
         {availablePlans.length > 1 && !selectedPlan && <option value="">Select a fee plan</option>}
-        {!availablePlans.length && <option value="">{serverPlanState.loading ? 'Loading matching fee plans…' : 'No matching published fee plans'}</option>}
+        {!availablePlans.length && <option value="">{serverPlanState.loading ? 'Loading matching fee plans…' : 'No matching approved fee plans'}</option>}
         {availablePlans.map(plan => <option key={plan.id} value={plan.id}>{plan.name || plan.planName} — {feeMoney(feeTotal(plan))}{plan.status === 'Assigned' ? ' (currently assigned)' : ''}</option>)}
       </ProjectSelect>
-      <small>{serverPlanState.error && !availablePlans.length ? `Could not fetch published fee plans: ${serverPlanState.error}. ` : ''}{availablePlans.length > 1 && (!semesterId || availablePlans.some(plan => !planMatchesSelectedSemester(plan))) ? 'Choose the correct semester fee plan; select a valid semester in Academic Enrollment to narrow this list. ' : ''}{!serverPlanState.loading && !availablePlans.length ? 'Check that a published plan matches the selected college, academic year, course, branch, semester and batch. ' : ''}Select a plan matching this admission's academic details. <Link to="/fees/structures" target="_blank" rel="noopener noreferrer">Manage fee plans</Link></small>
+      <small>{serverPlanState.error && !availablePlans.length ? `Could not fetch approved fee plans: ${serverPlanState.error}. ` : ''}{availablePlans.length > 1 && (!semesterId || availablePlans.some(plan => !planMatchesSelectedSemester(plan))) ? 'Choose the correct semester fee plan; select a valid semester in Academic Enrollment to narrow this list. ' : ''}{!serverPlanState.loading && !availablePlans.length ? 'Check that an approved plan matches the selected college, academic year, course, branch, semester and batch. ' : ''}Select a plan matching this admission's academic details. <Link to="/fees/structures" target="_blank" rel="noopener noreferrer">Manage fee plans</Link></small>
     </label>
   )
 
@@ -2763,7 +2763,7 @@ function DetailContent({ data, tab }) {
               No active fee plan has been configured for {studentFullName(data)} ({display(data.academic?.course)} - {display(data.academic?.branch)}).
             </p>
             <div className="sa-fee-unconfigured-hint">
-              Academic fee structures can be configured and published from <strong>Fee Management &gt; Fee Plans</strong>.
+              Academic fee structures can be configured and approved from <strong>Fee Management &gt; Fee Plans</strong>.
             </div>
           </div>
         </div>

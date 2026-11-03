@@ -27,7 +27,7 @@ export default function AcademicContextSelect({ kind, compact = false }) {
   const value = isCollege ? context.selectedCollegeId : context.selectedAcademicYearId
   const selected = items.find(item => idOf(item) === String(value))
   const disabled = context.loading || applying || !items.length
-  const selectedLabel = selected ? nameOf(selected) : context.loading ? 'Loading...' : `Select ${label.toLowerCase()}`
+  const selectedLabel = selected ? nameOf(selected) : context.loading ? 'Loading...' : context.error ? `${label} unavailable` : `Select ${label.toLowerCase()}`
 
   const change = async event => {
     const next = event.target.value
@@ -46,7 +46,7 @@ export default function AcademicContextSelect({ kind, compact = false }) {
     }
   }
 
-  return <div className={`workspace-context-select workspace-context-select--${kind}${compact ? ' workspace-context-select--compact' : ''}${disabled ? ' is-disabled' : ''}`}>
+  return <div className={`workspace-context-select workspace-context-select--${kind}${compact ? ' workspace-context-select--compact' : ''}${disabled ? ' is-disabled' : ''}${error || context.error ? ' has-notice' : ''}`}>
     {compact ? <SearchableSelect
       label={`Change ${label.toLowerCase()}`}
       value={value || ''}
@@ -59,13 +59,14 @@ export default function AcademicContextSelect({ kind, compact = false }) {
     /> : <label>
       <span>{label}</span>
       <ProjectSelect title={selectedLabel} aria-label={`Change ${label.toLowerCase()}`} value={value || ''} onChange={change} disabled={disabled}>
-        <option value="" disabled>{context.loading ? 'Loading...' : `Select ${label.toLowerCase()}`}</option>
+        <option value="" disabled>{selectedLabel}</option>
         {items.map(item => <option key={idOf(item)} value={idOf(item)}>{nameOf(item)}</option>)}
       </ProjectSelect>
     </label>}
-    {(error || context.error) && <div className={isCollege ? 'workspace-context-select__sidebar-error' : 'workspace-context-select__error'} role="alert">
-      <span>{error || (isCollege ? 'College access unavailable. Please retry.' : 'Academic years unavailable')}</span>
-    </div>}
+    {(error || context.error) && <details className="workspace-context-select__notice">
+      <summary aria-label={`${label} selection help`} title={error || context.error}>!</summary>
+      <div role="alert"><strong>{isCollege ? 'College selection unavailable' : 'Academic year unavailable'}</strong><p>{error || context.error}</p></div>
+    </details>}
     {!context.loading && !context.error && !items.length && <small>No {isCollege ? 'colleges' : 'academic years'} available.</small>}
     {applying && <small role="status">Updating...</small>}
   </div>

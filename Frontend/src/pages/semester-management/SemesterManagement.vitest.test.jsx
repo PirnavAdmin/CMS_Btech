@@ -49,29 +49,35 @@ vi.mock('../../auth/collegeApi', () => ({
   getSemesterById: vi.fn(),
 }))
 
-import { createSemester, getSemesters } from '../../auth/collegeApi'
+import { createSemester, getSemesters, getSemesterById, updateSemester } from '../../auth/collegeApi'
 
 function open(path) {
   render(<MemoryRouter initialEntries={[path]}><Routes>
     <Route path="/semester-management" element={<SemesterManagement />} />
     <Route path="/semester-management/add" element={<SemesterManagement mode="form" />} />
+    <Route path="/semester-management/:id/edit" element={<SemesterManagement mode="edit" />} />
   </Routes></MemoryRouter>)
 }
 
 async function generate() {
-  await screen.findByRole('heading', { name: 'Add Semester Structure' })
-  fireEvent.change(screen.getByRole('combobox', { name: 'Course' }), { target: { value: '10' } })
-  fireEvent.change(screen.getByRole('combobox', { name: 'Branch' }), { target: { value: '7' } })
-  fireEvent.click(screen.getByRole('button', { name: /Configure Schedule/ }))
-  fireEvent.click(screen.getByRole('button', { name: 'Generate Structure' }))
-  await screen.findByRole('heading', { name: 'Semester Management' }, { timeout: 4000 })
+  await screen.findByRole('option', { name: 'Computer Science' })
+  fireEvent.change(screen.getByRole('combobox', { name: 'Branch to recover' }), { target: { value: '7' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Recover missing definitions' }))
+  await screen.findByRole('heading', { name: 'Semester Overview & Academic Scheduling' }, { timeout: 4000 })
 }
 
 beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
+  localStorage.setItem('pirnav_academic_context', JSON.stringify({ collegeId: '1' }))
   fixtures.selectedCollegeId = '1'
   fixtures.semesters = []
+  getSemesterById.mockImplementation(async id => ({ data: { data: fixtures.semesters.find(row => String(row.semesterId) === String(id)) } }))
+  updateSemester.mockImplementation(async (id, payload) => {
+    const row = fixtures.semesters.find(row => String(row.semesterId) === String(id))
+    Object.assign(row, payload)
+    return { data: { data: row } }
+  })
 })
 afterEach(cleanup)
 
@@ -91,17 +97,19 @@ describe('saved semester directory', () => {
     await generate()
     expect(createSemester).toHaveBeenCalledTimes(8)
     expect(getSemesters.mock.calls.length).toBeGreaterThan(2)
-    expect(screen.getByText('8 configured semesters')).toBeTruthy()
+    expect(await screen.findByText('8 configured semesters')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
     expect(within(screen.getByRole('table')).getByRole('link', { name: 'Semester 8' })).toBeTruthy()
   })
 
-  it('refreshes saved data and clears filters that hide the table rows', async () => {
+  it('allows clearing a search without a manual refresh button', async () => {
     fixtures.semesters = [{ semesterId: 101, branchId: 7, courseId: 10, academicYearId: 1, semesterNumber: 1, semesterName: 'Semester 1' }]
     open('/semester-management')
     await screen.findByRole('table')
     fireEvent.change(screen.getByRole('textbox', { name: 'Search semesters' }), { target: { value: 'no match' } })
     expect(screen.queryByRole('table')).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+    expect(screen.queryByRole('button', { name: 'Refresh' })).toBeNull()
+    fireEvent.change(screen.getByRole('textbox', { name: 'Search semesters' }), { target: { value: '' } })
     const table = await screen.findByRole('table')
     expect(within(table).getByRole('link', { name: 'Semester 1' })).toBeTruthy()
     expect(screen.getByRole('textbox', { name: 'Search semesters' }).value).toBe('')
@@ -112,7 +120,37 @@ describe('saved semester directory', () => {
     open('/semester-management/add')
     await generate()
     expect(createSemester).not.toHaveBeenCalled()
-    expect(screen.getByText('8 configured semesters')).toBeTruthy()
+    expect(await screen.findByText('8 configured semesters')).toBeTruthy()
     expect(screen.getByRole('table')).toBeTruthy()
+  })
+
+  it('edits dates on the same saved ID and verifies them through GET', async () => {
+    fixtures.semesters = [{ semesterId: 101, branchId: 7, courseId: 10, academicYearId: 1, semesterNumber: 1, yearNumber: 1, semesterName: 'Semester 1', status: 0 }]
+    open('/semester-management/101/edit')
+    const start = await screen.findByLabelText('Semester 1 start date')
+    fireEvent.change(start, { target: { value: '2026-06-01' } })
+    fireEvent.change(screen.getByLabelText('Semester 1 end date'), { target: { value: '2026-10-31' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save Schedule' }))
+    await screen.findByRole('heading', { name:'Semester Overview & Academic Scheduling' })
+    expect(updateSemester).toHaveBeenCalledWith('101', expect.objectContaining({ startDate: '2026-06-01', endDate: '2026-10-31', status: 0, yearNumber: 1 }))
+    expect(getSemesterById.mock.calls.length).toBeGreaterThanOrEqual(2)
+    expect(createSemester).not.toHaveBeenCalled()
+    expect(fixtures.semesters[0].semesterId).toBe(101)
+    cleanup()
+    open('/semester-management/101/edit')
+    expect((await screen.findByLabelText('Semester 1 start date')).value).toBe('2026-06-01')
+  })
+
+  it('rejects overlapping dates without writing a semester', async () => {
+    fixtures.semesters = [
+      { semesterId:101, branchId:7, courseId:10, academicYearId:1, semesterNumber:1, semesterName:'Semester 1', yearNumber:1, startDate:'2026-06-01', endDate:'2026-10-31' },
+      { semesterId:102, branchId:7, courseId:10, academicYearId:1, semesterNumber:2, semesterName:'Semester 2', yearNumber:1 },
+    ]
+    open('/semester-management/102/edit')
+    fireEvent.change(await screen.findByLabelText('Semester 2 start date'), { target: { value:'2026-10-01' } })
+    fireEvent.change(screen.getByLabelText('Semester 2 end date'), { target: { value:'2027-01-31' } })
+    fireEvent.click(screen.getByRole('button', { name:'Save Schedule' }))
+    expect(await screen.findByText(/without overlap/)).toBeTruthy()
+    expect(updateSemester).not.toHaveBeenCalled()
   })
 })
