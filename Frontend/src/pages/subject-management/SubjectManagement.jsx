@@ -11,10 +11,11 @@ import InfoCard from '../../components/InfoCard'
 import TableActionButton from '../../components/TableActionButton'
 import TablePagination, { PAGE_SIZE } from '../../components/TablePagination'
 import subjectService from '../../services/subjectService'
-import academicService from '../../services/academicService'
+import academicService, { isRecordActive } from '../../services/academicService'
 import { showError, showSuccess } from '../../utils/toast'
 import { useAcademic } from '../../context/AcademicContext'
 import { enrichSubject } from '../../utils/subjectDirectory'
+import { subjectTypeOptions } from '../../utils/subjectTypes'
 import { downloadServerExport } from '../../utils/exportUtils'
 import './SubjectManagement.css'
 
@@ -43,13 +44,28 @@ export default function SubjectManagement() {
   const setFilters = next => { setPage(1); updateFilters(next) }
   const loadSubjects = async () => { setLoading(true); setLoadError(''); try { setSubjects(await subjectService.getSubjects({ liveOnly: true })) } catch (e) { setLoadError(e.message || 'Unable to load subjects.') } finally { setLoading(false) } }
   useEffect(() => { loadSubjects() }, [])
-  useEffect(() => { let active = true; Promise.all([academicService.getAcademicYears(), academicService.getCourses(), academicService.getBranches(), academicService.getSemesters()]).then(([years, courses, branches, semesters]) => active && setMasters({ years, courses, branches, semesters })).catch(() => active && showError('Academic mapping options could not be loaded.')); return () => { active = false } }, [])
-  const scopedCourses = scopeRecords(masters.courses)
+  useEffect(() => {
+    let active = true
+    setMasters({ years: [], courses: [], branches: [], semesters: [] })
+    if (!selectedCollegeId) return () => { active = false }
+    Promise.all([
+      academicService.getAcademicYears(),
+      academicService.getCourses({ status: 1 }),
+      academicService.getBranches(),
+      academicService.getSemesters(),
+    ]).then(([years, courses, branches, semesters]) => {
+      if (active) setMasters({ years, courses, branches, semesters })
+    }).catch(() => {
+      if (active) showError('Academic mapping options could not be loaded.')
+    })
+    return () => { active = false }
+  }, [selectedCollegeId])
+  const scopedCourses = scopeRecords(masters.courses).filter(isRecordActive)
   const branches = courseId => scopeRecords(masters.branches).filter(b => (!courseId || key(b.courseId) === key(courseId)))
   const semesters = (courseId, branchId) => scopeRecords(masters.semesters).filter(s => (!courseId || !s.courseId || key(s.courseId) === key(courseId)) && (!branchId || !s.branchId || key(s.branchId) === key(branchId)))
   const filterSemesters = semesters(filters.courseId, filters.branchId), formSemesters = semesters(form.courseId, form.branchId)
   const levels = list => [...new Set(list.map(getAcademicLevelFromSemester).filter(Boolean))]
-  const types = useMemo(() => [...new Set([...subjects.map(s => s.subjectType).filter(Boolean), 'Practical'])].map(value => ({ value, label: formatSubjectType(value) })), [subjects])
+  const types = useMemo(() => subjectTypeOptions(subjects), [subjects])
   const mapping = s => ({ year: entityName(masters.years, s.academicYearId, s.academicYear), course: entityName(masters.courses, s.courseId, s.course), branch: entityName(masters.branches, s.branchId, s.branch), semester: entityName(masters.semesters, s.semesterId, s.semester) })
 
   const scopedSubjects = useMemo(() => {

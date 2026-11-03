@@ -1,4 +1,4 @@
-﻿namespace BTech.DTOs
+namespace BTech.DTOs
 {
     public class AdmissionActionResponseDto
     {
@@ -25,5 +25,9 @@
         public string? Remarks { get; set; }
 
         public string? RejectionReason { get; set; }
+
+        public string AccountProvisioningStatus { get; set; } = "NotProvisioned";
+
+        public string CredentialDeliveryStatus { get; set; } = "NotAttempted";
     }
 }

@@ -256,22 +256,23 @@ class AcademicService {
       try {
         let list = []
         try {
-          const res = await getCoursesAcademic()
+          const res = await getCoursesAcademic(params)
           list = res?.data?.data ?? res?.data ?? []
         } catch {
           list = await courseApi.getAll(params)
         }
         return (Array.isArray(list) ? list : []).map(c => ({
-          id: c.courseId ?? c.id,
-          courseId: c.courseId ?? c.id,
-          name: c.courseName ?? c.name ?? '',
-          code: c.courseCode ?? c.code ?? '',
-          departmentId: c.departmentId,
-          collegeId: c.collegeId,
-          status: c.status,
-          durationYears: c.durationYears,
-          totalSemesters: c.totalSemesters,
-          ...c
+          ...c,
+          id: c.courseId ?? c.CourseId ?? c.id ?? c.Id,
+          courseId: c.courseId ?? c.CourseId ?? c.id ?? c.Id,
+          name: c.courseName ?? c.CourseName ?? c.name ?? c.Name ?? '',
+          code: c.courseCode ?? c.CourseCode ?? c.code ?? c.Code ?? '',
+          departmentId: c.departmentId ?? c.DepartmentId,
+          collegeId: c.collegeId ?? c.CollegeId,
+          status: c.status ?? c.Status ?? c.courseStatus ?? c.CourseStatus,
+          isActive: c.isActive ?? c.IsActive,
+          durationYears: c.durationYears ?? c.DurationYears,
+          totalSemesters: c.totalSemesters ?? c.TotalSemesters,
         }))
       } catch (err) {
         console.warn('Fallback loading courses:', err)

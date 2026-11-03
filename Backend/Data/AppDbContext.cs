@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using BTech.Models;
 
 namespace UserRoleManagement.API.Data
@@ -23,12 +23,16 @@ namespace UserRoleManagement.API.Data
 
         public DbSet<College> Colleges => Set<College>();
 
+        public DbSet<AcademicYear> AcademicYears => Set<AcademicYear>();
+
 
         // ============================================
         // ADMISSION TABLES
         // ============================================
 
         public DbSet<Admission> Admissions => Set<Admission>();
+
+        public DbSet<Student> Students => Set<Student>();
 
         public DbSet<AdmissionStatusHistory> AdmissionStatusHistories
             => Set<AdmissionStatusHistory>();
@@ -76,6 +80,10 @@ namespace UserRoleManagement.API.Data
             modelBuilder.Entity<User>()
                 .Property(x => x.PasswordHash)
                 .HasColumnName("password_hash");
+
+            modelBuilder.Entity<User>()
+                .Property(x => x.MustChangePassword)
+                .HasColumnName("must_change_password");
 
             modelBuilder.Entity<User>()
                 .Property(x => x.Status)
@@ -227,6 +235,25 @@ namespace UserRoleManagement.API.Data
             modelBuilder.Entity<College>()
                 .HasKey(x => x.CollegeId);
 
+            modelBuilder.Entity<AcademicYear>(entity =>
+            {
+                entity.ToTable("academicyears");
+                entity.HasKey(x => x.AcademicYearId);
+                entity.Property(x => x.AcademicYearId).HasColumnName("academic_year_id");
+                entity.Property(x => x.CollegeId).HasColumnName("college_id");
+                entity.Property(x => x.AcademicYearName).HasColumnName("academic_year_name");
+                entity.Property(x => x.StartDate).HasColumnName("start_date");
+                entity.Property(x => x.EndDate).HasColumnName("end_date");
+                entity.Property(x => x.Status).HasColumnName("status");
+                entity.Property(x => x.IsArchived).HasColumnName("is_archived");
+                entity.Property(x => x.CreatedAt).HasColumnName("created_at");
+                entity.Property(x => x.CreatedBy).HasColumnName("created_by");
+                entity.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+                entity.Property(x => x.UpdatedBy).HasColumnName("updated_by");
+                entity.Property(x => x.DeletedAt).HasColumnName("deleted_at");
+                entity.Property(x => x.DeletedBy).HasColumnName("deleted_by");
+            });
+
 
             // ============================================
             // ADMISSION
@@ -237,6 +264,14 @@ namespace UserRoleManagement.API.Data
 
             modelBuilder.Entity<Admission>()
                 .HasKey(x => x.AdmissionId);
+
+            modelBuilder.Entity<Student>(entity =>
+            {
+                entity.ToTable("students");
+                entity.HasKey(x => x.StudentId);
+                entity.HasIndex(x => x.AdmissionId).IsUnique();
+                entity.HasIndex(x => x.UserId).IsUnique();
+            });
 
 
             // ============================================

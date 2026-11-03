@@ -1,4 +1,6 @@
 using BTech.DTOs.Branch;
+using BTech.Data;
+using Microsoft.EntityFrameworkCore;
 using BTech.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,12 +14,14 @@ namespace BTech.Controllers.V1
     public class BranchController : ControllerBase
     {
         private readonly IBranchService _branchService;
+        private readonly ApplicationDbContext _context;
 
         public BranchController(
-            IBranchService branchService)
+            IBranchService branchService, ApplicationDbContext context)
         {
             _branchService =
                 branchService;
+            _context = context;
         }
 
         // =====================================================
@@ -73,6 +77,14 @@ namespace BTech.Controllers.V1
                 var result =
                     await _branchService
                         .GetAllAsync();
+                var collegeId = BTech.Services.CollegeRequestScope.GetCollegeId(HttpContext);
+                if (collegeId.HasValue)
+                {
+                    var courseIds = await _context.Courses.AsNoTracking()
+                        .Where(c => c.CollegeId == collegeId && c.DeletedAt == null)
+                        .Select(c => c.CourseId).ToListAsync();
+                    result = result.Where(b => courseIds.Contains(b.CourseId));
+                }
 
                 return Ok(new
                 {

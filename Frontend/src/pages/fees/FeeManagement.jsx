@@ -59,7 +59,7 @@ function FeePageHeading({ title, description, icon: Icon = external3.FiCreditCar
   return <header className="fm-page-header">
     <div className="fm-heading-identity">
       <span className="fm-heading-icon" aria-hidden="true"><Icon /></span>
-      <div><span className="fm-eyebrow">Finance workspace</span><h1>{title}</h1><p>{description}</p></div>
+      <div><h1>{title}</h1><p>{description}</p></div>
     </div>
     {children && <div className="fm-header-actions">{children}</div>}
   </header>;
@@ -101,21 +101,42 @@ function feeHeadsError(rows) {
 }
 function FeeBreakdownEditor({ category, rows, onChange, total, frequency = "Yearly", suggestions = [] }) {
   const listId = external0.useId();
+  const [customRows, setCustomRows] = external0.useState([]);
+  const academic = category === 'Academic';
+  const academicHeads = [...new Set(['Tuition Fee', 'Admission Fee', 'Examination Fee', 'Library Fee', 'Laboratory Fee', 'Development Fee', 'Registration Fee', 'Sports Fee', 'Student Activity Fee', 'Caution Deposit', ...suggestions.map(head => head.name).filter(Boolean)])];
+  const hostel = category === 'Hostel';
+  const hostelHeads = [...new Set(['Hostel Accommodation Fee', 'Mess Fee', 'Hostel Admission Fee', 'Security Deposit', 'Laundry Fee', 'Electricity Charges', 'Water Charges', ...rows.map(head => head.name).filter(Boolean), ...suggestions.map(head => head.name).filter(Boolean)])];
+  const feeHeadOptions = hostel ? hostelHeads : academicHeads;
   const transport = category === 'Transport';
-  const itemLabel = transport ? 'Transport charge' : 'Fee head';
-  const addLabel = transport ? 'Add Transport Charge' : 'Add Fee Head';
+  const itemLabel = transport ? 'Transport charge' : hostel ? 'Hostel charge' : 'Fee head';
+  const addLabel = transport ? 'Add Transport Charge' : hostel ? 'Add Component' : 'Add Fee Head';
   const update = (index, change) => onChange(rows.map((row, rowIndex) => rowIndex === index ? { ...row, ...change } : row));
   return <div className="fm-breakdown-container">
     <datalist id={listId}>{suggestions.map(head => <option key={head.id} value={head.name} />)}</datalist>
-    {!rows.length ? <div className="fm-breakdown-empty">{transport ? 'No transport charges yet. Select Add Transport Charge to get started.' : 'No fee heads yet. Select Add Fee Head to build the breakdown.'}</div> : <div className="fm-breakdown-list">
-      <div className="fm-breakdown-head"><span>{transport ? 'Transport Charge' : 'Fee Head Name'}</span><span className="fm-text-right">Amount (&#8377;)</span><span /></div>
+    {!rows.length ? <div className="fm-breakdown-empty">{transport ? 'No transport charges yet. Select Add Transport Charge to get started.' : hostel ? 'No hostel charges yet. Select Add Hostel Charge to get started.' : 'No fee heads yet. Select Add Fee Head to build the breakdown.'}</div> : <div className="fm-breakdown-list">
+      <div className="fm-breakdown-head"><span>{transport ? 'Transport Charge' : hostel ? 'Fee Component' : 'Fee Head Name'}</span><span className="fm-text-right">Amount (&#8377;)</span><span /></div>
       {rows.map((row, index) => <div key={index} className="fm-breakdown-row">
-        <input className="fm-fee-head-input" aria-label={itemLabel + " " + (index + 1) + " name"} placeholder={transport ? 'e.g. Transport Fee or Bus Pass Fee' : 'Enter fee head name'} value={row.name} list={listId} onChange={event => update(index, { name: event.target.value })} />
+        {hostel ? <div className="fm-fee-head-choice fm-hostel-component-choice">
+          <SearchableSelectModule.default label={itemLabel + " " + (index + 1)} value={customRows.includes(index) || (row.name && !feeHeadOptions.includes(row.name)) ? '__other__' : row.name || ''} options={[{ id: '', name: 'Select hostel charge' }, ...feeHeadOptions.filter(name => !rows.some((other, rowIndex) => rowIndex !== index && other.name === name)).map(name => ({ id: name, name })), { id: '__other__', name: 'Other charge' }]} onChange={value => {
+            const custom = value === '__other__';
+            setCustomRows(current => custom ? [...new Set([...current, index])] : current.filter(item => item !== index));
+            const metadata = { 'Hostel Accommodation Fee': [true, false, true], 'Mess Fee': [true, false, true], 'Hostel Admission Fee': [false, false, false], 'Security Deposit': [false, true, false], 'Laundry Fee': [false, false, true], 'Electricity Charges': [false, false, true], 'Water Charges': [false, false, true] }[value] || [false, false, true];
+            update(index, { name: custom ? '' : value, masterId: '', category: 'Hostel', frequency, mandatory: metadata[0], refundable: metadata[1], recurring: metadata[2] });
+          }} placeholder="Select or search a charge" />
+          {(customRows.includes(index) || (row.name && !feeHeadOptions.includes(row.name))) && <input className="fm-fee-head-input" aria-label={itemLabel + " " + (index + 1) + " custom name"} placeholder="Enter charge name" value={row.name} onChange={event => update(index, { name: event.target.value, category: 'Hostel', frequency, mandatory: false, refundable: false, recurring: true })} />}
+        </div> : academic ? <div className="fm-fee-head-choice">
+          <select className="fm-fee-head-input" aria-label={itemLabel + " " + (index + 1) + " type"} value={customRows.includes(index) || (row.name && !feeHeadOptions.includes(row.name)) ? '__other__' : row.name || ''} onChange={event => {
+            const custom = event.target.value === '__other__';
+            setCustomRows(current => custom ? [...new Set([...current, index])] : current.filter(item => item !== index));
+            update(index, { name: custom ? '' : event.target.value });
+          }}><option value="">Select {hostel ? 'hostel charge' : 'fee head'}</option>{feeHeadOptions.map(name => <option key={name} value={name}>{name}</option>)}<option value="__other__">Others</option></select>
+          {(customRows.includes(index) || (row.name && !feeHeadOptions.includes(row.name))) && <input className="fm-fee-head-input" aria-label={itemLabel + " " + (index + 1) + " custom name"} placeholder={hostel ? 'Enter hostel charge' : 'Enter fee head name'} value={row.name} onChange={event => update(index, { name: event.target.value })} />}
+        </div> : <input className="fm-fee-head-input" aria-label={itemLabel + " " + (index + 1) + " name"} placeholder={transport ? 'e.g. Transport Fee or Bus Pass Fee' : 'Enter fee head name'} value={row.name} list={listId} onChange={event => update(index, { name: event.target.value })} />}
         <div className="fm-amount-input-wrap"><span className="fm-currency-symbol" aria-hidden="true">&#8377;</span><input type="number" min="0.01" max="100000000" step="0.01" placeholder="0.00" aria-label={itemLabel + " " + (index + 1) + " amount"} value={row.amount} onChange={event => update(index, { amount: event.target.value })} /></div>
-        <button type="button" className="fm-remove-btn" aria-label={"Remove " + itemLabel.toLowerCase() + " " + (index + 1)} onClick={() => onChange(rows.filter((_, rowIndex) => rowIndex !== index))}><external3.FiTrash2 /></button>
+        <button type="button" className="fm-remove-btn" aria-label={"Remove " + itemLabel.toLowerCase() + " " + (index + 1)} title={hostel && row.mandatory ? "Required component" : "Remove component"} disabled={hostel && row.mandatory} onClick={() => { setCustomRows(current => current.filter(item => item !== index).map(item => item > index ? item - 1 : item)); onChange(rows.filter((_, rowIndex) => rowIndex !== index)); }}><external3.FiTrash2 /></button>
       </div>)}
     </div>}
-    <button type="button" className="erp-btn erp-btn--secondary fm-add-charge-btn" onClick={() => onChange([...rows, { masterId: "", name: "", category, frequency, amount: "", mandatory: true, refundable: false, recurring: true }])}><external3.FiPlus /> {addLabel}</button>
+    <button type="button" className="erp-btn erp-btn--secondary fm-add-charge-btn" onClick={() => onChange([...rows, { masterId: "", name: "", category, frequency, amount: "", mandatory: hostel ? false : true, refundable: false, recurring: true }])}><external3.FiPlus /> {addLabel}</button>
     <div className="fm-total-fee-row"><span className="fm-total-label">Total {category} Fee</span><strong className="fm-total-value">{feeStructureServiceModule.feeMoney(total)}</strong></div>
   </div>;
 }
@@ -487,7 +508,7 @@ export const FeeStructureWizardModule = (() => {
     );
   }
 
-  function FeeDialog({ title, close, children, footer, wide = false }) {
+  function FeeDialog({ title, close, children, footer, wide = false, busy = false }) {
     const ref = useRef(null),
       titleId = useId();
     useEffect(() => {
@@ -510,15 +531,16 @@ export const FeeStructureWizardModule = (() => {
       }
       if (e.key === "Escape") {
         e.stopPropagation();
-        close();
+        if (!busy) close();
       }
     };
     return (
-      <div className="fs-overlay" onClick={close} onKeyDown={keydown}>
+      <div className="fs-overlay" onClick={() => { if (!busy) close(); }} onKeyDown={keydown}>
         <div
           ref={ref}
           role="dialog"
           aria-modal="true"
+          aria-busy={busy}
           aria-labelledby={titleId}
           className={`fm-dialog ${wide ? "fm-dialog--wide" : ""}`}
           onClick={(e) => e.stopPropagation()}
@@ -531,6 +553,7 @@ export const FeeStructureWizardModule = (() => {
               className="fm-dialog__close"
               onClick={close}
               aria-label="Close"
+              disabled={busy}
             >
               <FiX />
             </button>
@@ -807,16 +830,19 @@ export const FeeStructureWizardModule = (() => {
     );
     const remaining = total - scheduled;
 
-    const validate = (targetStatus) => {
+    const validate = (targetStatus, step = "schedule") => {
       if (!s.academicYearId || !masters.years.some(year => String(year.id) === String(s.academicYearId))) return "Select an active academic year.";
       if (!s.courseId) return "Select a program / course.";
       if (!s.branchId) return "Select a branch.";
       if (!s.batch?.trim()) return "Select a batch.";
       if (s.applicableTo === "Selected Category" && !s.category)
         return "Select a student category / quota.";
+      if (s.cycle === "Semester-wise" && !s.semesterId) return "Select a semester.";
+      if (step === "applicability") return "";
 
       const breakdownError = feeHeadsError(s.components);
       if (breakdownError) return breakdownError;
+      if (step === "breakdown") return s.components.length ? "" : "Add at least one fee head.";
       if (targetStatus !== "Draft") {
         if (!s.components.length)
           return "Add at least one charge to the fee breakdown.";
@@ -837,7 +863,20 @@ export const FeeStructureWizardModule = (() => {
       return "";
     };
 
-    const handleSubmit = (targetStatus) => {
+    const changeFormTab = (nextTab) => {
+      const destination = formTabs.findIndex(([key]) => key === nextTab);
+      const current = formTabs.findIndex(([key]) => key === formTab);
+      if (destination > current) {
+        for (let index = 0; index < destination; index += 1) {
+          const message = validate("Active", formTabs[index][0]);
+          if (message) { setError(message); setFormTab(formTabs[index][0]); return; }
+        }
+      }
+      setError("");
+      setFormTab(nextTab);
+    };
+
+    const handleSubmit = async (targetStatus) => {
       const err = validate(targetStatus);
       if (err) {
         setError(err);
@@ -863,7 +902,7 @@ export const FeeStructureWizardModule = (() => {
           s.name?.trim() ||
           `${masters.courses.find((c) => String(c.id) === String(s.courseId))?.name || "Program"} ${masters.branches.find((b) => String(b.id) === String(s.branchId))?.name || "Branch"} ${s.batch || ""}`.trim(),
       };
-      try { save(payload, targetStatus); }
+      try { await save(payload, targetStatus); }
       catch (reason) { setError(reason.message || "Unable to save the fee plan."); }
     };
 
@@ -871,17 +910,13 @@ export const FeeStructureWizardModule = (() => {
       <div className="fm-create-plan-container fm-academic-plan-editor">
         {/* Page Header */}
         <header className="fm-page-header">
-          <div>
-            <button
-              type="button"
-              className="fm-back-btn"
-              onClick={close}
-            >
-              <FiArrowLeft /> Back to Fee Plans
-            </button>
+          <div className="fm-create-heading-copy">
             <h1>{s.id ? "Edit Academic Fee Plan" : "Create Academic Fee Plan"}</h1>
-            <p>Set the fee amount and payment terms for a student group.</p>
+            <p>Set charges and payment dates for a course, branch and batch.</p>
           </div>
+          <button type="button" className="fm-back-btn fm-create-back-btn" onClick={close}>
+            <FiArrowLeft /> Back to Fee Plans
+          </button>
         </header>
 
         <div className="fm-create-layout">
@@ -893,14 +928,14 @@ export const FeeStructureWizardModule = (() => {
           </div>
         )}
         <div className="fm-tabs-bar fm-plan-form-tabs" role="tablist" aria-label="Fee plan configuration">
-          {formTabs.map(([key, label], index) => <button key={key} type="button" role="tab" id={formTabId + "-tab-" + key} aria-controls={formTabId + "-panel-" + key} aria-selected={formTab === key} tabIndex={formTab === key ? 0 : -1} className={"fm-tab-btn " + (formTab === key ? "active" : "")} onClick={() => setFormTab(key)} onKeyDown={event => {
+          {formTabs.map(([key, label], index) => <button key={key} type="button" role="tab" id={formTabId + "-tab-" + key} aria-controls={formTabId + "-panel-" + key} aria-selected={formTab === key} tabIndex={formTab === key ? 0 : -1} className={"fm-tab-btn " + (formTab === key ? "active" : "")} onClick={() => changeFormTab(key)} onKeyDown={event => {
             let next;
             if (event.key === "ArrowRight") next = (index + 1) % formTabs.length;
             else if (event.key === "ArrowLeft") next = (index + formTabs.length - 1) % formTabs.length;
             else if (event.key === "Home") next = 0;
             else if (event.key === "End") next = formTabs.length - 1;
             else return;
-            event.preventDefault(); setFormTab(formTabs[next][0]);
+            event.preventDefault(); changeFormTab(formTabs[next][0]);
             event.currentTarget.parentElement.querySelectorAll('[role="tab"]')[next].focus();
           }}><span className="fm-form-tab-number" aria-hidden="true">{index + 1}</span>{label}</button>)}
         </div>
@@ -918,7 +953,7 @@ export const FeeStructureWizardModule = (() => {
               />
 
               <FeeSelect
-                label="Course *"
+                label="Program / Course *"
                 value={s.courseId || ""}
                 options={[{ id: "", name: "Select Course / Program" }, ...masters.courses]}
                 onChange={(courseId) => patch({ courseId, branchId: "", semesterId: "" })}
@@ -958,7 +993,7 @@ export const FeeStructureWizardModule = (() => {
               />
 
               <FeeSelect
-                label="Fee Cycle"
+                label="Billing Cycle"
                 value={s.cycle || "Yearly"}
                 options={[
                   { id: "Yearly", name: "Yearly (Per Academic Year)" },
@@ -980,7 +1015,7 @@ export const FeeStructureWizardModule = (() => {
 
           {/* SECTION 2: What should they pay? */}
           <section className="fm-form-section" hidden={formTab !== "breakdown"} role="tabpanel" id={formTabId + "-panel-breakdown"} aria-labelledby={formTabId + "-tab-breakdown"} tabIndex={0}>
-            <FeeSectionHeading number="02" title="Academic Fee Breakdown" description="Add or edit fee head names and amounts for this plan." />
+            <FeeSectionHeading number="02" title="Academic Fee Breakdown" description="Select a fee head or choose Others to add a new one." />
 
             <FeeBreakdownEditor category="Academic" frequency={s.cycle} rows={s.components} onChange={components => patch({ components })} total={total} suggestions={components.filter(head => head.status === "Active" && academicFeeComponent(head))} />
           </section>
@@ -1075,6 +1110,8 @@ export const FeeStructureWizardModule = (() => {
             Cancel
           </button>
           <div className="fm-footer-right">
+            {formTab !== 'applicability' && <button type="button" className="erp-btn erp-btn--secondary" onClick={() => setFormTab(formTab === 'schedule' ? 'breakdown' : 'applicability')}>Previous</button>}
+            {formTab !== 'schedule' && <button type="button" className="erp-btn erp-btn--primary" onClick={() => changeFormTab(formTab === 'applicability' ? 'breakdown' : 'schedule')}>Continue <FiChevronRight /></button>}
             <button
               type="button"
               className="erp-btn erp-btn--secondary"
@@ -1082,13 +1119,13 @@ export const FeeStructureWizardModule = (() => {
             >
               Save Draft
             </button>
-            <button
+            {formTab === 'schedule' && <button
               type="button"
               className="erp-btn erp-btn--primary"
               onClick={() => handleSubmit("Pending Approval")}
             >
               Submit for Approval
-            </button>
+            </button>}
           </div>
         </footer>
         </div>
@@ -1277,17 +1314,14 @@ export const FeeStructureModule = (() => {
     const category = hostel ? "Hostel" : "Transport";
     const tabId = external0.useId();
     const [formTab, setFormTab] = useState("details");
-    const tabs = [["details", category + " Details"], ["breakdown", category + " Fee Breakdown"], ["schedule", "Payment Schedule"]];
+    const tabs = [["details", hostel ? "Hostel Details" : "Transport Details"], ["breakdown", hostel ? "Room Pricing" : "Transport Fee Breakdown"], ["schedule", "Payment Schedule"]];
     const [form, setForm] = useState(() => normalizeFacilityPlan(value, type));
     const [roomIndex, setRoomIndex] = useState(0);
     const activeRoom = form.roomPricing?.[roomIndex];
-    const roomCategories = ['Single Sharing', 'Double Sharing', 'Triple Sharing', 'Four Sharing'];
+    const defaultRoomCategories = ['Single Sharing', 'Double Sharing', 'Triple Sharing', 'Four Sharing'];
+    const savedRoomCategories = existingHostels.filter(item => feeHeadName(item.hostelName).toLowerCase() === feeHeadName(form.hostelName).toLowerCase()).flatMap(item => item.roomPricing || [item]);
+    const roomCategories = [...new Set([...defaultRoomCategories, ...savedRoomCategories.map(room => room.roomType).filter(Boolean)])];
     const [manualRoomIndexes, setManualRoomIndexes] = useState([]);
-    const manualRoomCategory = manualRoomIndexes.includes(roomIndex) || Boolean(activeRoom?.roomType && !roomCategories.includes(activeRoom.roomType));
-    const selectRoomCategory = roomType => {
-      setManualRoomIndexes(indexes => roomType === 'Others' ? [...new Set([...indexes, roomIndex])] : indexes.filter(index => index !== roomIndex));
-      updateRoom({ roomType: roomType === 'Others' ? '' : roomType, occupancy: roomCategories.includes(roomType) ? String(roomCategories.indexOf(roomType) + 1) : '' });
-    };
     const total = hostel ? activeRoom ? hostelRoomTotal(activeRoom) : 0 : feeStructureServiceModule.rupees(form.components.reduce((sum, row) => sum + feeStructureServiceModule.cents(row.amount), 0));
     const [error, setError] = useState("");
     const [previewStarted, setPreviewStarted] = useState(Boolean(value.id));
@@ -1298,10 +1332,18 @@ export const FeeStructureModule = (() => {
       setError("");
     };
 
-    const updateRoom = change => patch({ roomPricing: form.roomPricing.map((room, index) => index === roomIndex ? { ...room, ...change } : room) });
+    const updateRoomAt = (targetIndex, change) => patch({ roomPricing: form.roomPricing.map((room, index) => index === targetIndex ? { ...room, ...change } : room) });
+    const updateRoom = change => updateRoomAt(roomIndex, change);
     const addRoom = () => {
-      setRoomIndex(form.roomPricing.length);
-      patch({ roomPricing: [...form.roomPricing, { roomType: "", occupancy: "", acType: "", plan: "", dueDate: "", installments: [], components: ["Room Rent", "Mess Fee", "Maintenance"].map(name => ({ name, amount: "", category: "Hostel", mandatory: true, refundable: false })) }] });
+      const nextIndex = form.roomPricing.length;
+      setRoomIndex(nextIndex);
+      patch({ roomPricing: [...form.roomPricing, { roomType: "", occupancy: "", acType: "", plan: "", dueDate: "", installments: [], components: ["Hostel Accommodation Fee", "Mess Fee"].map(name => ({ masterId: "", name, amount: "", category: "Hostel", frequency: form.frequency || "Annual", mandatory: true, refundable: false, recurring: true })) }] });
+    };
+    const removeRoom = targetIndex => {
+      const nextRooms = form.roomPricing.filter((_, index) => index !== targetIndex);
+      patch({ roomPricing: nextRooms });
+      setManualRoomIndexes(indexes => indexes.filter(index => index !== targetIndex).map(index => index > targetIndex ? index - 1 : index));
+      setRoomIndex(Math.max(0, Math.min(roomIndex > targetIndex ? roomIndex - 1 : roomIndex, nextRooms.length - 1)));
     };
     const nextStep = () => {
       const issue = validateFacilityPlan(form, type, masters.years, 'Active', formTab);
@@ -1309,14 +1351,19 @@ export const FeeStructureModule = (() => {
       setError('');
       setFormTab(formTab === 'details' ? 'breakdown' : 'schedule');
     };
-    const submit = (status = "Active") => {
+    const stepComplete = key => key === "details"
+      ? !validateFacilityPlan(form, type, masters.years, "Draft", "details")
+      : key === "breakdown"
+      ? !validateFacilityPlan(form, type, masters.years, "Draft", "breakdown")
+      : !validateFacilityPlan(form, type, masters.years, "Active", "schedule");
+    const submit = async (status = "Active") => {
       const err = validateFacilityPlan(form, type, masters.years, status);
       if (err) {
         setError(err.message);
         setFormTab(err.tab);
         return;
       }
-      try { save(type, facilityPlanPayload(form, type, masters.years, status)); } catch (reason) { setError(reason.message || "Unable to save this fee plan."); }
+      try { await save(type, facilityPlanPayload(form, type, masters.years, status)); } catch (reason) { setError(reason.message || "Unable to save this fee plan."); }
     };
 
     return (
@@ -1342,7 +1389,7 @@ export const FeeStructureModule = (() => {
         <div className="fm-create-layout">
         <div className="fm-create-form-panel">
 
-        <div className="fm-tabs-bar fm-plan-form-tabs" role="tablist" aria-label={category + " fee plan configuration"}>{tabs.map(([key, label], index) => <button key={key} type="button" role="tab" id={tabId + "-tab-" + key} aria-controls={tabId + "-panel-" + key} aria-selected={formTab === key} tabIndex={formTab === key ? 0 : -1} className={"fm-tab-btn " + (formTab === key ? "active" : "")} onClick={() => { setError(""); setFormTab(key); }} onKeyDown={event => {
+        <div className="fm-tabs-bar fm-plan-form-tabs" role="tablist" aria-label={category + " fee plan configuration"}>{tabs.map(([key, label], index) => <button key={key} type="button" role="tab" id={tabId + "-tab-" + key} aria-controls={tabId + "-panel-" + key} aria-selected={formTab === key} tabIndex={formTab === key ? 0 : -1} className={"fm-tab-btn " + (formTab === key ? "active" : "") + (stepComplete(key) && formTab !== key ? " complete" : "")} onClick={() => { setError(""); setFormTab(key); }} onKeyDown={event => {
           let next;
           if (event.key === "ArrowRight") next = (index + 1) % tabs.length;
           else if (event.key === "ArrowLeft") next = (index + tabs.length - 1) % tabs.length;
@@ -1350,7 +1397,7 @@ export const FeeStructureModule = (() => {
           else if (event.key === "End") next = tabs.length - 1;
           else return;
           event.preventDefault(); setError(""); setFormTab(tabs[next][0]); event.currentTarget.parentElement.querySelectorAll('[role="tab"]')[next].focus();
-        }}><span className="fm-form-tab-number" aria-hidden="true">{index + 1}</span>{label}</button>)}</div>
+        }}><span className="fm-form-tab-number" aria-hidden="true">{stepComplete(key) && formTab !== key ? <external3.FiCheck /> : index + 1}</span>{label}</button>)}</div>
         <div className="fm-create-form-body">
           {/* Section 1 */}
           <section className="fm-form-section" hidden={formTab !== "details"} role="tabpanel" id={tabId + "-panel-details"} aria-labelledby={tabId + "-tab-details"} tabIndex={0}>
@@ -1366,14 +1413,7 @@ export const FeeStructureModule = (() => {
 
               {hostel ? (
                 <>
-                  <datalist id={tabId + "-hostel-names"}>{[...new Set(existingHostels.map(item => item.hostelName).filter(Boolean))].map(name => <option key={name} value={name} />)}</datalist>
-                  <FeeInput
-                    list={tabId + "-hostel-names"}
-                    label="Hostel Name *"
-                    placeholder="e.g. Cauvery Bhavan (Boys)"
-                    value={form.hostelName || ""}
-                    onChange={(hostelName) => patch({ hostelName })}
-                  />
+                  <FeeInput label="Hostel Name *" placeholder="Enter hostel name" value={form.hostelName || ""} onChange={hostelName => patch({ hostelName })} />
                   <FeeSelect
                     label="Hostel Type *"
                     required
@@ -1428,14 +1468,24 @@ export const FeeStructureModule = (() => {
           </section>
 
           <section className="fm-form-section" hidden={formTab !== "breakdown"} role="tabpanel" id={tabId + "-panel-breakdown"} aria-labelledby={tabId + "-tab-breakdown"} tabIndex={0}>
-            <FeeSectionHeading number="02" title={hostel ? 'Hostel Fee Breakdown' : 'Transport Charges'} description={hostel ? 'Add or edit category-specific fee heads and amounts.' : 'Add transport charges and amounts for this route.'} />
+            <FeeSectionHeading number="02" title={hostel ? 'Hostel Fee Breakdown' : 'Transport Charges'} description={hostel ? 'Select hostel charges and enter their amounts for each room category.' : 'Add transport charges and amounts for this route.'} />
             {hostel ? <div className="fm-hostel-pricing">
               <div className="fm-workspace-heading"><p>Configure each room category separately. Prices are alternatives, not added together.</p><button type="button" className="erp-btn erp-btn--secondary" onClick={addRoom}><FiPlus /> Add Room Category</button></div>
-              {form.roomPricing.length > 0 && <div className="fm-room-summary">{form.roomPricing.map((room, index) => <button type="button" key={index} className={"fm-room-price " + (index === roomIndex ? "active" : "")} onClick={() => setRoomIndex(index)}><strong>{room.roomType || "Room Category " + (index + 1)}</strong><span>{[room.occupancy ? room.occupancy + " sharing" : "", room.acType].filter(Boolean).join(" / ")}</span><b>{money(hostelRoomTotal(room))}</b></button>)}</div>}
-              {activeRoom && <><div className="fm-form-grid"><FeeSelect label="Room Category *" required value={manualRoomCategory ? 'Others' : activeRoom.roomType || ''} options={[{ id: '', name: 'Select Room Category' }, ...roomCategories.map(name => ({ id: name, name })), { id: 'Others', name: 'Others' }]} onChange={selectRoomCategory} />
-                {manualRoomCategory && <FeeInput label="Other Room Category *" required placeholder="Enter room category" value={activeRoom.roomType || ''} onChange={roomType => updateRoom({ roomType })} />}<FeeInput label="Occupancy *" type="number" min="1" step="1" value={activeRoom.occupancy} onChange={occupancy => updateRoom({occupancy})} /><FeeSelect label="AC Category *" value={activeRoom.acType} options={[{id:"",name:"Select AC Category"},{id:"AC Room",name:"AC Room"},{id:"Non-AC",name:"Non-AC"}]} onChange={acType => updateRoom({acType})} /><button type="button" className="erp-btn erp-btn--secondary" onClick={() => {patch({roomPricing:form.roomPricing.filter((_,index) => index !== roomIndex)});setManualRoomIndexes(indexes => indexes.filter(index => index !== roomIndex).map(index => index > roomIndex ? index - 1 : index));setRoomIndex(0);}}>Remove Room Category</button></div><FeeBreakdownEditor category="Hostel" frequency={form.frequency} rows={activeRoom.components} onChange={components => updateRoom({components})} total={total} /></>}
+              {!form.roomPricing.length ? <div className="fm-room-empty"><span className="fm-room-empty-icon"><external3.FiHome /></span><strong>No room categories yet</strong><p>Add a room category to set occupancy, AC type and its fee breakdown.</p></div> : <div className="fm-room-cards">{form.roomPricing.map((room, index) => {
+                const manual = manualRoomIndexes.includes(index) || Boolean(room.roomType && !roomCategories.includes(room.roomType));
+                const occupancyOptions = Array.from({ length: Math.max(12, Number(room.occupancy) || 0) }, (_, i) => ({ id: String(i + 1), name: i === 0 ? "1 person" : `${i + 1} people` }));
+                return <article className="fm-room-card" key={room.id || index}>
+                  <header className="fm-room-card-header"><div><span className="fm-room-card-index">Room {String(index + 1).padStart(2, "0")}</span><h3>{room.roomType || `Room Category ${index + 1}`}</h3><p>{[room.occupancy ? `${room.occupancy} sharing` : "Occupancy not set", room.acType || "AC type not set"].join(" · ")}</p></div><div className="fm-room-card-total"><span>Category total</span><strong>{money(hostelRoomTotal(room))}</strong></div><button type="button" className="fm-remove-btn fm-room-remove" aria-label={`Remove room category ${index + 1}`} title="Remove room category" onClick={() => removeRoom(index)}><external3.FiTrash2 /></button></header>
+                  <div className="fm-room-fields">
+                    <div className="fm-room-category-field"><FeeSelect label="Room Category *" required value={manual ? "__other__" : room.roomType || ""} options={[{ id: "", name: "Select Room Category" }, ...roomCategories.map(name => ({ id: name, name })), { id: "__other__", name: "Other room type" }]} onChange={value => { setManualRoomIndexes(items => value === "__other__" ? [...new Set([...items, index])] : items.filter(item => item !== index)); const match = savedRoomCategories.find(item => item.roomType === value); updateRoomAt(index, { roomType: value === "__other__" ? "" : value, occupancy: match ? String(match.occupancy || "") : defaultRoomCategories.includes(value) ? String(defaultRoomCategories.indexOf(value) + 1) : room.occupancy || "", ...(match?.acType ? { acType: match.acType } : {}) }); }} />{manual && <FeeInput label="Other Room Category *" required placeholder="Enter room category" value={room.roomType || ""} onChange={roomType => updateRoomAt(index, { roomType })} />}</div>
+                    <FeeSelect label="Occupancy *" value={String(room.occupancy || "")} options={[{ id: "", name: "Select occupancy" }, ...occupancyOptions]} onChange={occupancy => updateRoomAt(index, { occupancy })} />
+                    <FeeSelect label="AC Category *" value={room.acType || ""} options={[{ id: "", name: "Select AC category" }, { id: "AC Room", name: "AC Room" }, { id: "Non-AC", name: "Non-AC" }]} onChange={acType => updateRoomAt(index, { acType })} />
+                  </div>
+                  <FeeBreakdownEditor category="Hostel" frequency={form.frequency} rows={room.components || []} onChange={components => updateRoomAt(index, { components })} total={hostelRoomTotal(room)} />
+                </article>;
+              })}</div>}
             </div> : <FeeBreakdownEditor category={category} frequency={form.frequency || (hostel ? "Annual" : "Per Semester")} rows={form.components} onChange={components => patch({ components })} total={total} />}
-            {hostel && <FeeInput label="Fee Inclusions Description" value={form.componentsText || ""} onChange={componentsText => patch({ componentsText })} />}
+            {hostel && <div className="fm-hostel-inclusions"><FeeInput label="Fee Inclusions Description" value={form.componentsText || ""} onChange={componentsText => patch({ componentsText })} /></div>}
           </section>
           <section className="fm-form-section" hidden={formTab !== "schedule"} role="tabpanel" id={tabId + "-panel-schedule"} aria-labelledby={tabId + "-tab-schedule"} tabIndex={0}>
             <FeeSectionHeading number="03" title="Payment Schedule" description="Configure full payment or installments and service validity." />
@@ -1478,7 +1528,7 @@ export const FeeStructureModule = (() => {
           total={total}
           groups={hostel ? [
             {label:"Hostel Details",rows:[["Hostel",form.hostelName],["Academic Year",masters.years.find(year => String(year.id) === String(form.academicYearId))?.name || form.academicYearName],["Hostel Type",form.hostelType],["Mess Plan",form.messPlan],["Fee Cycle",form.frequency],["Fee Inclusions",form.componentsText],["Effective From",form.effectiveFrom],["Effective To",form.effectiveTo]]},
-            ...form.roomPricing.map(room => ({label:room.roomType || "Room Category",rows:[["Occupancy",room.occupancy],["AC Category",room.acType],...feeHeadPreviewRows(room.components, money),["Category Total",hostelRoomTotal(room)>0?money(hostelRoomTotal(room)):""],["Payment Mode",room.plan],["Due Date",room.dueDate],...(room.installments || []).map((item,index) => [item.name || "Payment " + (index+1),(String(item.amount ?? "").trim() ? money(item.amount) : "Amount not entered")+" / "+(item.dueDate || "Date not set")])]}))
+            ...form.roomPricing.map(room => ({label:room.roomType || "Room Category",rows:[["Occupancy",room.occupancy],["AC Category",room.acType],...(room.components || []).filter(head => head.name?.trim() && String(head.amount ?? "").trim()).map(head => [head.name.trim(), money(head.amount)]),["Category Total",hostelRoomTotal(room)>0?money(hostelRoomTotal(room)):""],["Payment Mode",room.plan],["Due Date",room.dueDate],...(room.installments || []).filter(item => String(item.amount ?? "").trim() || item.dueDate).map((item,index) => [item.name || "Payment " + (index+1),(String(item.amount ?? "").trim() ? money(item.amount) : "")+" / "+(item.dueDate || "")])]}))
           ] : [
             { label: hostel ? "Accommodation Details" : "Transport Details", rows: [
               ["Plan Type", hostel ? "Hostel Fee" : "Transport Fee"],
@@ -1660,6 +1710,12 @@ export const FeeStructureModule = (() => {
     const [rows, setRows] = useState(readStructures);
     const [hostels, setHostels] = useState(readHostelStructures);
     const [transports, setTransports] = useState(readTransportStructures);
+    useEffect(() => {
+      setRows(readStructures());
+      setHostels(readHostelStructures());
+      setTransports(readTransportStructures());
+      setQuery('');
+    }, [selectedCollegeId]);
     const [allMasters, setMasters] = useState({
       years: [],
       departments: [],
@@ -1990,7 +2046,7 @@ export const FeeStructureModule = (() => {
     return (
       <div className="fm-page-container">
         {/* Page Header */}
-        <FeePageHeading title="Fee Plans" description="Configure academic, accommodation and transport fees." icon={external3.FiLayers}>
+        <FeePageHeading title="Fee Structures" description="Configure academic, accommodation and transport fees." icon={external3.FiLayers}>
 
 
 
@@ -2046,10 +2102,10 @@ export const FeeStructureModule = (() => {
               </h2>
               <p>
                 {tab === "academic"
-                  ? "Course, branch, batch and category based student fee plans."
+                  ? "Set course and batch fees."
                   : tab === "hostel"
-                  ? "Accommodation, room type and occupancy based fee plans."
-                  : "Route and boarding-point based transport fee plans."}
+                  ? "Set hostel and room fees."
+                  : "Set route and boarding stop fees."}
               </p>
             </div>
             <div className="fm-workspace-actions">
@@ -2069,6 +2125,7 @@ export const FeeStructureModule = (() => {
             </button>
             </div>
           </div>
+
 
           {/* Contextual Filter Toolbar */}
           {tab === "academic" && (
@@ -2322,9 +2379,7 @@ export const FeeStructureModule = (() => {
                       label: "Total Fee",
                       align: "right",
                       render: (r) => {
-                        const t = r.feeComponents
-                          ? componentTotals(r.feeComponents).total
-                          : r.fee || 0;
+                        const t = r.components ? feeStructureServiceModule.feeTotal(r) : r.feeComponents ? componentTotals(r.feeComponents).total : r.fee || 0;
                         return <strong>{money(t)}</strong>;
                       },
                     },
@@ -2712,6 +2767,7 @@ export const ServerFeeCollectionModule = (() => {
                   printSingleRecord({
                     title: `Fee Receipt ${r.receiptNumber}`,
                     sections: [{ title: "Receipt Details", rows }],
+                    receipt: true,
                   });
                 } catch (e) {
                   showError(e.message);
@@ -2792,6 +2848,10 @@ export const ServerFeeCollectionModule = (() => {
       id: String(y.academicYearId || y.id),
       name: y.academicYearName || y.name,
     }));
+
+    useEffect(() => {
+      setSelectedYear(academic.selectedAcademicYearId || "");
+    }, [academic.selectedCollegeId, academic.selectedAcademicYearId]);
 
     const fetchDashboard = () => {
       let active = true;
@@ -3073,38 +3133,27 @@ export const ServerFeeCollectionModule = (() => {
       }
     }
 
+    const reportFieldKeys = { 'Student': 'studentName', 'Category': 'feeCategory', 'Due Date': 'dueDate', 'Total Fee': 'payableAmount', 'Paid': 'paidAmount', 'Balance': 'balanceAmount', 'Receipt #': 'receiptNumber', 'Payment Date': 'paymentDate', 'Payment Mode': 'paymentMode', 'Reference': 'transactionReference', 'Amount Paid': 'totalAmount', 'Fee Category': 'categoryName', 'Assigned Demand': 'assigned', 'Collected': 'collected', 'Pending': 'pending', 'Payment Method': 'paymentMode', 'Transactions': 'paymentCount', 'Collected Amount': 'amount', 'Month': 'period', 'Date': 'period' };
+    reportColumns = reportColumns.map(column => ({...column, key: reportFieldKeys[column.label], value: reportFieldKeys[column.label]}));
+
     return (
       <div className="fm-page-container">
         {/* Page Header */}
-        <FeePageHeading
-          title="Fee Management Overview"
-          description="Financial analytics, collection performance, category breakdown, and executive reports."
-          icon={FiPieChart}
-        >
-          <div className="fm-header-year-select">
-            <select
-              aria-label="Filter by Academic Year"
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(e.target.value)}
-            >
-              <option value="">All Academic Years</option>
-              {yearOptions.map((y) => (
-                <option key={y.id} value={y.id}>
-                  {y.name}
-                </option>
-              ))}
+        <FeePageHeading title="Finance Overview" description="Track fee demand, collections, outstanding balances and receipts." icon={FiPieChart}>
+          <label className="fm-header-year-select">
+            <span>Academic year</span>
+            <select aria-label="Overview academic year" value={selectedYear} onChange={event => setSelectedYear(event.target.value)}>
+              <option value="">All academic years</option>
+              {yearOptions.map(year => <option key={year.id} value={year.id}>{year.name}</option>)}
             </select>
-          </div>
-          <button
-            type="button"
-            className="erp-btn erp-btn--secondary"
-            onClick={fetchDashboard}
-            disabled={loading}
-            title="Refresh overview metrics"
-          >
-            <FiRefreshCw className={loading ? "fm-spin" : ""} /> Refresh
-          </button>
+          </label>
         </FeePageHeading>
+
+        {yearOptions.length === 0 && <div className="fm-context-notice" role="status">
+          <FiAlertCircle />
+          <span>No academic years are configured for this college. Financial totals below are unscoped across academic years.</span>
+          <Link to="/academic-year-management">Configure academic years</Link>
+        </div>}
 
         <FeeRequestState loading={loading} error={error}>
           {/* Four Colorful KPI Cards */}
@@ -3316,7 +3365,7 @@ export const ServerFeeCollectionModule = (() => {
               {/* Category-wise Collections list */}
               {dashData?.byCategory?.length > 0 && (
                 <div className="fm-category-breakdown-list">
-                  <h4>Category-wise Collections</h4>
+                  <h4>Fee Category Collections</h4>
                   {dashData.byCategory.map((cat) => {
                     const catPct = cat.assigned > 0 ? Math.round((cat.collected / cat.assigned) * 100) : 0;
                     return (
@@ -3336,6 +3385,8 @@ export const ServerFeeCollectionModule = (() => {
                   })}
                 </div>
               )}
+
+              <p className="fm-report-data-note"><FiAlertCircle /> Course-wise and branch-wise totals are not included in the current dashboard response.</p>
 
               <div className="fm-overdue-note">
                 <FiAlertCircle />
@@ -3375,7 +3426,10 @@ export const ServerFeeCollectionModule = (() => {
           {/* Recent Payments Section */}
           <div className="fm-recent-payments-card">
             <div className="fm-card-header">
-              <h2>Recent Payments</h2>
+              <div>
+                <h2>Recent Payments</h2>
+                <p>Latest college-scoped transactions; payment history does not support academic-year filtering.</p>
+              </div>
               <Link to="/fees/students" state={{ tab: "transactions" }} className="fm-link-more">
                 View All Transactions in Student Fees →
               </Link>
@@ -3419,9 +3473,9 @@ export const ServerFeeCollectionModule = (() => {
               </div>
               <div className="fm-workspace-actions">
                 <ExportMenu
-                  data={reportRows}
-                  columns={reportColumns.map((c) => ({ label: c.label, key: c.label }))}
-                  fileName={`Fee_Report_${reportType}_${feeToday()}`}
+                  rows={reportRows}
+                  columns={reportColumns.map(({label, key}) => ({label, key, value: key}))}
+                  filename={`Fee_Report_${reportType}_${feeToday()}`}
                   title={reportTitle}
                 />
               </div>
@@ -3582,7 +3636,7 @@ export const ServerFeeCollectionModule = (() => {
     return (
       <div className="fm-page-container">
         {/* Page Header */}
-        <FeePageHeading title="Payments" description="Review collections, transaction references and student receipts." icon={external3.FiCreditCard} />
+        <FeePageHeading title="Receipts & History" description="Search confirmed transactions, open official receipts and review payment methods." icon={external3.FiCreditCard} />
 
         <div className="fm-summary-strip">
           <FeeMetric label="Collected Today" value={feeMoney(dailySummary?.totalCollected || 0)} meta="Today's collections" tone="green" icon={external3.FiDollarSign} />
@@ -3907,6 +3961,7 @@ export const ServerFeeCollectionModule = (() => {
                   try {
                     printSingleRecord({
                       title: `Fee Receipt ${successReceipt.receiptNumber}`,
+                      receipt: true,
                       sections: [
                         {
                           title: "Payment Summary",
@@ -4183,16 +4238,19 @@ export const ServerFeeCollectionModule = (() => {
 
   function FeeReports({ academic }) {
     const reportTypes = [
-      { id: "summary", name: "Monthly Collection Summary" },
-      { id: "daily", name: "Daily Collections" },
-      { id: "outstanding", name: "Outstanding Fees" },
-      { id: "overdue", name: "Overdue Fees" },
-      { id: "category", name: "Charge-wise Collections" },
-      { id: "mode", name: "Payment Methods" },
+      { id: "summary", name: "Monthly Collection Report" },
+      { id: "daily", name: "Daily Collection Report" },
+      { id: "outstanding", name: "Student Outstanding Dues" },
+      { id: "overdue", name: "Overdue Dues" },
+      { id: "category", name: "Fee Category Report" },
+      { id: "mode", name: "Payment Method Report" },
+      { id: "transactions", name: "Payment Transactions" },
       { id: "ledger", name: "Student Payment History" },
     ];
     const [type, setType] = useState("summary");
     const [academicYearId, setAcademicYearId] = useState(academic.selectedAcademicYearId || "");
+    const [courseId, setCourseId] = useState("");
+    const [branchId, setBranchId] = useState("");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
     const [studentId, setStudentId] = useState("");
@@ -4201,7 +4259,14 @@ export const ServerFeeCollectionModule = (() => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const outstanding = type === "outstanding" || type === "overdue";
+    const transactions = type === "transactions" || type === "ledger";
     const invalidRange = fromDate && toDate && fromDate > toDate;
+
+    useEffect(() => {
+      setAcademicYearId(academic.selectedAcademicYearId || "");
+      setCourseId("");
+      setBranchId("");
+    }, [academic.selectedCollegeId, academic.selectedAcademicYearId]);
 
     useEffect(() => {
       let active = true;
@@ -4210,15 +4275,15 @@ export const ServerFeeCollectionModule = (() => {
       if (invalidRange || (type === "ledger" && !studentId.trim())) { setLoading(false); return; }
       setLoading(true);
       const request = outstanding
-        ? feeCollectionApi.allPending({ academicYearId, overdueOnly: type === "overdue", dueFrom: fromDate, dueTo: toDate })
-        : type === "ledger"
-        ? feeCollectionApi.allHistory({ studentId, fromDate, toDate })
-        : feeCollectionApi.dashboard({ academicYearId, fromDate, toDate });
+        ? feeCollectionApi.allPending({ academicYearId, courseId, branchId, overdueOnly: type === "overdue", dueFrom: fromDate, dueTo: toDate })
+        : transactions
+        ? feeCollectionApi.allHistory({ ...(type === "ledger" ? { studentId } : {}), fromDate, toDate })
+        : feeCollectionApi.dashboard({ academicYearId, courseId, branchId, fromDate, toDate });
       request.then(data => { if (active) setResult(data); })
         .catch(reason => { if (active) setError(reason.message || "Unable to load this report."); })
         .finally(() => { if (active) setLoading(false); });
       return () => { active = false; };
-    }, [type, academicYearId, fromDate, toDate, studentId, academic.selectedCollegeId, invalidRange, outstanding]);
+    }, [type, academicYearId, courseId, branchId, fromDate, toDate, studentId, academic.selectedCollegeId, invalidRange, outstanding, transactions]);
 
     const title = reportTypes.find(report => report.id === type).name;
     let rows = [], columns = [];
@@ -4244,7 +4309,7 @@ export const ServerFeeCollectionModule = (() => {
         amount("Paid", "paidAmount", "12%"),
         amount("Balance", "balanceAmount", "14%"),
       ];
-      if (rows.length > 0) {
+      if (result !== null) {
         const totalPayable = rupees(rows.reduce((sum, r) => sum + cents(r.payableAmount || 0), 0));
         const totalPaid = rupees(rows.reduce((sum, r) => sum + cents(r.paidAmount || 0), 0));
         const totalBalance = rupees(rows.reduce((sum, r) => sum + cents(r.balanceAmount || 0), 0));
@@ -4255,12 +4320,13 @@ export const ServerFeeCollectionModule = (() => {
           balanceAmount: <strong>{feeMoney(totalBalance)}</strong>,
         };
         summaryMetrics = [
+          { label: "Pending Installments", value: rows.length.toLocaleString() },
           { label: "Total Payable", value: feeMoney(totalPayable) },
           { label: "Total Paid", value: feeMoney(totalPaid) },
           { label: type === "overdue" ? "Total Overdue" : "Total Outstanding", value: feeMoney(totalBalance) },
         ];
       }
-    } else if (type === "ledger") {
+    } else if (transactions) {
       rows = Array.isArray(result) ? result : [];
       columns = [
         { label: "Receipt", value: "receiptNumber", width: "16%", align: "left" },
@@ -4270,18 +4336,18 @@ export const ServerFeeCollectionModule = (() => {
         { label: "Reference", value: "transactionReference", width: "16%", align: "left" },
         amount("Paid", "totalAmount", "16%"),
       ];
-      if (rows.length > 0) {
+      if (result !== null) {
         const totalPaid = rupees(rows.reduce((sum, r) => sum + cents(r.totalAmount || 0), 0));
         totalRow = {
           receiptNumber: <strong>Total</strong>,
           totalAmount: <strong>{feeMoney(totalPaid)}</strong>,
         };
-        if (studentId.trim()) {
-          summaryMetrics = [
-            { label: "Total Paid", value: feeMoney(totalPaid) },
-            { label: "Total Receipts", value: rows.length.toLocaleString() },
-          ];
-        }
+        summaryMetrics = [
+          { label: "Total Paid", value: feeMoney(totalPaid) },
+          { label: "Total Receipts", value: rows.length.toLocaleString() },
+          { label: "Outstanding", value: "—" },
+          { label: "Collection Rate", value: "—" },
+        ];
       }
     } else if (type === "mode") {
       rows = result?.byPaymentMode || [];
@@ -4290,7 +4356,7 @@ export const ServerFeeCollectionModule = (() => {
         { label: "Transactions", value: "paymentCount", width: "30%", align: "right", render: row => Number(row.paymentCount || 0).toLocaleString() },
         amount("Collected Amount", "amount", "30%"),
       ];
-      if (rows.length > 0) {
+      if (result !== null) {
         const totalTx = rows.reduce((sum, r) => sum + Number(r.paymentCount || 0), 0);
         const totalCollected = rupees(rows.reduce((sum, r) => sum + cents(r.amount || 0), 0));
         totalRow = {
@@ -4301,6 +4367,8 @@ export const ServerFeeCollectionModule = (() => {
         summaryMetrics = [
           { label: "Total Collected", value: feeMoney(totalCollected) },
           { label: "Total Transactions", value: totalTx.toLocaleString() },
+          { label: "Outstanding Dues", value: feeMoney(result.totalPending || 0) },
+          { label: "Collection Rate", value: result.totalPayable > 0 ? `${((result.totalCollected / result.totalPayable) * 100).toFixed(1)}%` : "—" },
         ];
       }
     } else if (type === "category") {
@@ -4311,7 +4379,7 @@ export const ServerFeeCollectionModule = (() => {
         amount("Collected", "collected", "22%"),
         amount("Pending", "pending", "22%"),
       ];
-      if (rows.length > 0) {
+      if (result !== null) {
         const totalAssigned = rupees(rows.reduce((sum, r) => sum + cents(r.assigned || 0), 0));
         const totalCollected = rupees(rows.reduce((sum, r) => sum + cents(r.collected || 0), 0));
         const totalPending = rupees(rows.reduce((sum, r) => sum + cents(r.pending || 0), 0));
@@ -4325,6 +4393,7 @@ export const ServerFeeCollectionModule = (() => {
           { label: "Total Assigned", value: feeMoney(totalAssigned) },
           { label: "Total Collected", value: feeMoney(totalCollected) },
           { label: "Total Pending", value: feeMoney(totalPending) },
+          { label: "Collection Rate", value: totalAssigned > 0 ? `${((totalCollected / totalAssigned) * 100).toFixed(1)}%` : "—" },
         ];
       }
     } else {
@@ -4355,10 +4424,9 @@ export const ServerFeeCollectionModule = (() => {
         },
         amount("Collected Amount", "amount", "30%"),
       ];
-      if (rows.length > 0) {
+      if (result !== null) {
         const totalTx = rows.reduce((sum, r) => sum + Number(r.paymentCount || 0), 0);
         const totalCollected = rupees(rows.reduce((sum, r) => sum + cents(r.amount || 0), 0));
-        const avgCollection = totalTx > 0 ? rupees(Math.round(cents(totalCollected) / totalTx)) : 0;
         totalRow = {
           period: <strong>Total</strong>,
           paymentCount: <strong>{totalTx.toLocaleString()}</strong>,
@@ -4367,7 +4435,8 @@ export const ServerFeeCollectionModule = (() => {
         summaryMetrics = [
           { label: "Total Collected", value: feeMoney(totalCollected) },
           { label: "Total Transactions", value: totalTx.toLocaleString() },
-          { label: "Average Collection per Transaction", value: feeMoney(avgCollection) },
+          { label: "Outstanding Dues", value: feeMoney(result?.totalPending || 0) },
+          { label: "Collection Rate", value: result?.totalPayable > 0 ? `${((result.totalCollected / result.totalPayable) * 100).toFixed(1)}%` : "—" },
         ];
       }
     }
@@ -4389,18 +4458,23 @@ export const ServerFeeCollectionModule = (() => {
       );
     }, [rows, reportSearch, columns]);
 
+    // Keep one totals presentation: the KPI strip above the report table.
+    totalRow = null;
+
     return (
       <div className="fm-page-container fm-reports-container">
-        <FeePageHeading title="Fee Reports" description="Review financial performance and export scoped fee records." icon={external3.FiFileText}>
+        <FeePageHeading title="Fee Reports & Analytics" description="Review collections, outstanding dues and confirmed payment activity." icon={external3.FiFileText}>
           <ExportMenu rows={filteredRows} columns={columns} filename={"fee-report-" + type} title={title} loading={loading} unavailable={rangeError} />
         </FeePageHeading>
 
         <div className="fm-workspace fm-reports-workspace">
           {/* 2. Standard report filter toolbar */}
           <FilterPanel
-            active={Boolean(academicYearId || fromDate || toDate || studentId || reportSearch)}
+            active={Boolean(academicYearId || courseId || branchId || fromDate || toDate || studentId || reportSearch)}
             onClear={() => {
-              setAcademicYearId("");
+              setAcademicYearId(academic.selectedAcademicYearId || "");
+              setCourseId("");
+              setBranchId("");
               setFromDate("");
               setToDate("");
               setStudentId("");
@@ -4440,7 +4514,10 @@ export const ServerFeeCollectionModule = (() => {
                   onChange={(e) => setStudentId(e.target.value)}
                   aria-label="Student ID"
                 />
+              ) : transactions ? (
+                <span className="fm-filter-scope-note">Transactions are limited to this college and date range.</span>
               ) : (
+                <>
                 <select
                   aria-label="Academic Year"
                   value={academicYearId}
@@ -4453,6 +4530,15 @@ export const ServerFeeCollectionModule = (() => {
                     </option>
                   ))}
                 </select>
+                <select aria-label="Filter by Course" value={courseId} onChange={event => { setCourseId(event.target.value); setBranchId(""); }}>
+                  <option value="">All courses</option>
+                  {(academic.courses || []).map(course => <option key={String(course.courseId || course.id)} value={String(course.courseId || course.id)}>{course.courseName || course.name}</option>)}
+                </select>
+                <select aria-label="Filter by Branch" value={branchId} onChange={event => setBranchId(event.target.value)}>
+                  <option value="">All branches</option>
+                  {(academic.getBranchesForCourse ? academic.getBranchesForCourse(courseId) : academic.branches || []).map(branch => <option key={String(branch.branchId || branch.id)} value={String(branch.branchId || branch.id)}>{branch.branchName || branch.name}</option>)}
+                </select>
+                </>
               )}
 
               <input
@@ -4473,8 +4559,21 @@ export const ServerFeeCollectionModule = (() => {
             </div>
           </FilterPanel>
 
+          {(type === "summary" || type === "daily" || type === "category" || type === "mode") && (
+            <div className="fm-report-data-note" role="status">
+              <FiAlertCircle /> Course and branch selections scope supported reports. The current dashboard API does not provide course-wise or branch-wise aggregate series, so those comparison charts are unavailable.
+            </div>
+          )}
+          {(academic.academicYears || []).length === 0 && !transactions && (
+            <div className="fm-context-notice" role="status">
+              <FiAlertCircle />
+              <span>No academic years are configured. “All academic years” includes the college-wide data returned by the API.</span>
+              <Link to="/academic-year-management">Configure academic years</Link>
+            </div>
+          )}
+
           {/* 3. Relevant report summary strip */}
-          {summaryMetrics && !loading && !rangeError && rows.length > 0 && (
+          {summaryMetrics && !loading && !rangeError && result !== null && (
             <div className="fm-report-summary-strip" role="region" aria-label="Report summary">
               {summaryMetrics.map((item, idx) => (
                 <FeeMetric key={item.label} label={item.label} value={item.value} tone={["blue", "green", "amber", "teal"][idx % 4]} />
@@ -4489,7 +4588,7 @@ export const ServerFeeCollectionModule = (() => {
               {filteredRows.length} {filteredRows.length === 1 ? "record" : "records"} |{" "}
               {outstanding
                 ? "Dates filter installment due dates"
-                : "Dates filter payment dates"}
+                : "Dates filter payment dates"} | KPI totals follow the API scope; search narrows the table and export.
             </span>
           </div>
 
@@ -4743,8 +4842,8 @@ export const FeeManagementModule = (() => {
     const collegeName = academic?.collegeName || academic?.currentCollege?.name || "Academic ERP Institute";
     const amountVal = Number(receipt?.feeAmount || receipt?.totalAmount || 0);
     const balanceVal = Number(receipt?.balanceAmount ?? receipt?.remainingBalance ?? 0);
-    const receiptNum = receipt?.receiptNumber || `REC-${receipt?.receiptId || Date.now().toString().slice(-6)}`;
-    const dateStr = receipt?.issuedAt || receipt?.paymentDate || feeToday();
+    const receiptNum = receipt?.receiptNumber || (receipt?.receiptId ? String(receipt.receiptId) : 'Not provided');
+    const dateStr = receipt?.issuedAt || receipt?.paymentDate || 'Not provided';
 
     const handlePrint = () => {
       try {
@@ -4765,6 +4864,7 @@ export const FeeManagementModule = (() => {
         printSingleRecord({
           title: `Fee Receipt - ${receiptNum}`,
           sections: [{ title: "Receipt Details", rows }],
+          receipt: true,
         });
       } catch {
         window.print();
@@ -4915,11 +5015,11 @@ export const FeeManagementModule = (() => {
             setStudentDues(items);
             if (items.length > 0) {
               setSelectedDueId(items[0].studentFeeId);
-              const defaultBal = Number(items[0].balanceAmount || student.balance || 0);
-              setAmount(String(defaultBal > 0 ? defaultBal : student.balance));
+              const defaultBal = Number(items[0].balanceAmount ?? 0);
+              setAmount(String(defaultBal));
             }
           })
-          .catch(() => {})
+          .catch(reason => { if (active) setError(reason.message || 'Unable to load outstanding installments. Please reopen this payment to retry.'); })
           .finally(() => {
             if (active) setLoadingDues(false);
           });
@@ -4929,8 +5029,8 @@ export const FeeManagementModule = (() => {
       };
     }, [student.id, student.balance]);
 
-    const activeDue = studentDues.find((d) => d.studentFeeId === selectedDueId) || studentDues[0];
-    const maxBalance = activeDue ? Number(activeDue.balanceAmount || student.balance || 0) : Number(student.balance || 0);
+    const activeDue = studentDues.find((d) => String(d.studentFeeId) === String(selectedDueId)) || studentDues[0];
+    const maxBalance = activeDue ? Number(activeDue.balanceAmount ?? 0) : 0;
     const numAmount = Number(amount) || 0;
     const balanceAfter = Math.max(0, maxBalance - numAmount);
 
@@ -4938,6 +5038,19 @@ export const FeeManagementModule = (() => {
       e?.preventDefault();
       if (submitting) return;
       setError("");
+
+      if (loadingDues || !activeDue) {
+        setError('Load and select an outstanding installment before collecting payment.');
+        return;
+      }
+      if (!validFeeDate(paymentDate) || paymentDate > feeToday()) {
+        setError('Enter a valid payment date on or before today.');
+        return;
+      }
+      if (!validFeeHeadAmount(amount)) {
+        setError('Enter a positive payment amount with at most two decimal places.');
+        return;
+      }
 
       const targetFeeId = selectedDueId || activeDue?.studentFeeId || student.studentFeeId;
       if (!targetFeeId) {
@@ -4974,23 +5087,7 @@ export const FeeManagementModule = (() => {
         };
         const receipt = await feeCollectionApi.collect(payload);
         showSuccess(`Payment of ${feeMoney(numAmount)} recorded successfully!`);
-        onSuccess(
-          receipt || {
-            receiptNumber: `REC-${student.roll || student.id}`,
-            studentName: student.name,
-            studentCode: student.roll,
-            courseName: student.courseName,
-            branchName: student.branchName,
-            feeAmount: numAmount,
-            totalAmount: numAmount,
-            balanceAmount: balanceAfter,
-            paymentMode,
-            transactionReference: reference.trim() || "Cash payment",
-            paymentDate,
-            feeCategory: student.feeCategory || "Academic Fee",
-          },
-          student
-        );
+        onSuccess(receipt || null, student);
       } catch (err) {
         setError(err.message || "Failed to record payment. Please check network and try again.");
       } finally {
@@ -5001,6 +5098,7 @@ export const FeeManagementModule = (() => {
     return (
       <FeeDialog
         title={`Collect Payment — ${student.name}`}
+        busy={submitting}
         close={onClose}
         footer={
           <>
@@ -5011,7 +5109,7 @@ export const FeeManagementModule = (() => {
               type="button"
               className="erp-btn erp-btn--primary"
               onClick={handleSubmit}
-              disabled={submitting || numAmount <= 0 || numAmount > maxBalance || maxBalance <= 0}
+              disabled={submitting || loadingDues || !activeDue || !Number.isFinite(numAmount) || numAmount <= 0 || numAmount > maxBalance || maxBalance <= 0}
             >
               <FiCheck /> {submitting ? "Processing..." : `Collect ${numAmount > 0 ? feeMoney(numAmount) : "Payment"}`}
             </button>
@@ -5053,7 +5151,7 @@ export const FeeManagementModule = (() => {
                 value={selectedDueId}
                 onChange={(e) => {
                   setSelectedDueId(e.target.value);
-                  const selected = studentDues.find((d) => d.studentFeeId === e.target.value);
+                  const selected = studentDues.find((d) => String(d.studentFeeId) === String(e.target.value));
                   if (selected) setAmount(String(selected.balanceAmount || ""));
                 }}
               >
@@ -5074,9 +5172,9 @@ export const FeeManagementModule = (() => {
               </span>
               <input
                 type="number"
-                min="1"
+                min="0.01"
                 max={maxBalance}
-                step="any"
+                step="0.01"
                 placeholder="Enter amount"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
@@ -5121,6 +5219,7 @@ export const FeeManagementModule = (() => {
               <input
                 type="date"
                 value={paymentDate}
+                max={feeToday()}
                 onChange={(e) => setPaymentDate(e.target.value)}
                 disabled={submitting}
               />
@@ -5501,12 +5600,10 @@ export const FeeManagementModule = (() => {
           academicYearId,
           courseId,
           branchId,
+          semesterId,
           search: query,
         }),
         feeCollectionApi.allHistory({
-          academicYearId,
-          courseId,
-          branchId,
           search: query,
         }),
       ])
@@ -5534,7 +5631,7 @@ export const FeeManagementModule = (() => {
 
     useEffect(() => {
       return fetchRecords();
-    }, [academicYearId, courseId, branchId, query, academic.selectedCollegeId]);
+    }, [academicYearId, courseId, branchId, semesterId, query, academic.selectedCollegeId]);
 
     // Unified student rows merging live server fee records, payment history, student profiles, and fee plans
     const studentRows = useMemo(() => {
@@ -5557,7 +5654,8 @@ export const FeeManagementModule = (() => {
       // 2. Group confirmed server payments by studentId and studentCode
       const historyMap = new Map();
       const historyCodeMap = new Map();
-      serverHistory.forEach((h) => {
+      const scopedHistory = academicYearId || courseId || branchId || semesterId ? [] : serverHistory;
+      scopedHistory.forEach((h) => {
         const sid = String(h.studentId || "");
         if (sid) {
           if (!historyMap.has(sid)) historyMap.set(sid, []);
@@ -5881,7 +5979,7 @@ export const FeeManagementModule = (() => {
       }
 
       return rows;
-    }, [serverRows, serverHistory, students, ledgers]);
+    }, [serverRows, serverHistory, students, ledgers, academicYearId, courseId, branchId, semesterId]);
 
     const filteredStudents = useMemo(() => {
       return studentRows.filter((st) => {
@@ -5939,24 +6037,7 @@ export const FeeManagementModule = (() => {
           return;
         }
       } catch {}
-      // Synthesize fallback receipt if offline/mock
-      setReceiptModalData({
-        receipt: {
-          receiptNumber: `REC-${st.roll || st.id}`,
-          studentName: st.name,
-          studentCode: st.roll,
-          courseName: st.courseName,
-          branchName: st.branchName,
-          feeAmount: st.paid,
-          totalAmount: st.paid,
-          balanceAmount: st.balance,
-          paymentMode: "CASH",
-          paymentDate: feeToday(),
-          issuedAt: feeToday(),
-          feeCategory: st.feeCategory || st.planName || "Academic Fee",
-        },
-        student: st,
-      });
+      showError('An official receipt is not available. Refresh Payment History or contact the accounts desk.');
     };
 
     const fetchTransactions = () => {
@@ -6020,7 +6101,8 @@ export const FeeManagementModule = (() => {
       setCollectModalStudent(null);
       fetchRecords();
       if (activeView === "transactions") fetchTransactions();
-      setReceiptModalData({ receipt, student });
+      if (receipt) setReceiptModalData({ receipt, student });
+      else showError('Payment recorded, but no receipt was returned. Open Payment History to retrieve the official receipt before collecting again.');
     };
 
     const paymentModes = [
@@ -6041,32 +6123,6 @@ export const FeeManagementModule = (() => {
           description="Manage student fee balances, collections, and receipts."
           icon={FiUsers}
         >
-          <div className="fm-header-year-select">
-            <ProjectSelect
-              aria-label="Filter by Academic Year"
-              value={academicYearId}
-              onChange={(e) => setAcademicYearId(e.target.value)}
-            >
-              <option value="">All Academic Years</option>
-              {masters.years.map((y) => (
-                <option key={y.id} value={y.id}>
-                  {y.name}
-                </option>
-              ))}
-            </ProjectSelect>
-          </div>
-          <button
-            type="button"
-            className="erp-btn erp-btn--secondary"
-            onClick={() => {
-              if (activeView === "directory") fetchRecords();
-              else fetchTransactions();
-            }}
-            disabled={activeView === "directory" ? loading : txLoading}
-            title="Refresh fee records"
-          >
-            <FiRefreshCw className={(activeView === "directory" ? loading : txLoading) ? "fm-spin" : ""} /> Refresh
-          </button>
         </FeePageHeading>
 
         {/* Workspace View Switcher */}
@@ -6295,18 +6351,11 @@ export const FeeManagementModule = (() => {
                     render: (st) => (
                       <FeeIdentity
                         name={st.name}
-                        detail=""
+                        detail={st.roll || st.admissionNumber || st.application || ""}
                       />
                     ),
                   },
-                  {
-                    label: "Admission No.",
-                    render: (st) => (
-                      <span style={{ fontWeight: 600, color: "var(--text-secondary, #334155)" }}>
-                        {st.roll || st.admissionNumber || st.application || "—"}
-                      </span>
-                    ),
-                  },
+                  { label: "Academic Year", render: st => st.academicYearName || masters.years.find(year => String(year.id) === String(st.academicYearId))?.name || 'Not specified' },
                   {
                     label: "Course / Branch",
                     render: (st) => (
@@ -6708,13 +6757,6 @@ export const FeeManagementModule = (() => {
             </button>
             <button
               type="button"
-              className={`fm-tab-btn ${tab === "adjustments" ? "active" : ""}`}
-              onClick={() => setTab("adjustments")}
-            >
-              Adjustments
-            </button>
-            <button
-              type="button"
               className={`fm-tab-btn ${tab === "ledger" ? "active" : ""}`}
               onClick={() => setTab("ledger")}
             >
@@ -6817,20 +6859,7 @@ export const FeeManagementModule = (() => {
             </div>
           )}
 
-          {/* Tab 4: Adjustments */}
-          {tab === "adjustments" && (
-            <div className="fm-tab-body">
-              <div className="fm-section-header-inline">
-                <h3>Scholarships &amp; Waivers</h3>
-                <Link to="/fees/concessions" className="erp-btn erp-btn--secondary erp-btn--sm">
-                  <FiPlus /> Add Adjustment
-                </Link>
-              </div>
-              <p className="fm-empty-text">No active adjustments or waivers recorded for this student.</p>
-            </div>
-          )}
-
-          {/* Tab 5: Ledger */}
+          {/* Tab 4: Ledger */}
           {tab === "ledger" && (
             <div className="fm-tab-body">
               <FeeTable
@@ -7071,27 +7100,6 @@ export const FeeManagementModule = (() => {
     );
   }
 
-  // Adjustments & Concessions
-  function Adjustments({ state, commit }) {
-    const navigate = useNavigate();
-    return (
-      <div className="fm-page-container">
-        <header className="fm-page-header">
-          <div>
-            <button type="button" className="fm-back-btn" onClick={() => navigate("/fees/students")}>
-              <FiArrowLeft /> Back to Student Fees
-            </button>
-            <h1>Adjustments &amp; Concessions</h1>
-            <p>Manage student fee reductions, waivers and approved concessions.</p>
-          </div>
-        </header>
-        <div className="fm-workspace">
-          <p className="fm-empty-text">Saved concessions and fee adjustments will appear here.</p>
-        </div>
-      </div>
-    );
-  }
-
   // Dues & Penalties
   function Dues({ academic }) {
     const navigate = useNavigate();
@@ -7108,27 +7116,6 @@ export const FeeManagementModule = (() => {
         </header>
         <div className="fm-workspace">
           <p className="fm-empty-text">Dues and penalties records.</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Refunds
-  function Refunds() {
-    const navigate = useNavigate();
-    return (
-      <div className="fm-page-container">
-        <header className="fm-page-header">
-          <div>
-            <button type="button" className="fm-back-btn" onClick={() => navigate("/fees/receipts")}>
-              <FiArrowLeft /> Back to Payments
-            </button>
-            <h1>Refunds</h1>
-            <p>Process approved student fee refunds and reversals.</p>
-          </div>
-        </header>
-        <div className="fm-workspace">
-          <p className="fm-empty-text">No pending refund requests.</p>
         </div>
       </div>
     );
@@ -7225,10 +7212,23 @@ export const FeeManagementModule = (() => {
       ledger: feeLedger(state, a),
     }));
 
+    const feeManagementTabs = [
+      { label: 'Overview', to: '/fees/overview', active: pathname === '/fees' || pathname === '/fees/overview' },
+      { label: 'Student Fees', to: '/fees/students', active: /\/fees\/(students|accounts|ledger|assignments|concessions|dues|refunds)(\/|$)/.test(pathname) },
+      { label: 'Collect Payment', to: '/fees/collection', active: pathname.startsWith('/fees/collection') },
+      { label: 'Receipts & History', to: '/fees/receipts', active: pathname.startsWith('/fees/receipts') },
+      { label: 'Reports', to: '/fees/reports', active: pathname.startsWith('/fees/reports') },
+    ];
+
     return (
       <DashboardLayout>
         <main className="fs-page fm-page">
           <FeeRequestState loading={!workspaceReady} error={storageError}>
+          {!pathname.startsWith('/fees/structures') && pathname !== '/fees/components' && (
+            <nav className="fm-workspace-tabs fm-fee-workspace-nav" role="tablist" aria-label="Fee management sections">
+              {feeManagementTabs.map(tab => <Link key={tab.to} to={tab.to} role="tab" aria-selected={tab.active} className={`fm-workspace-tab ${tab.active ? 'is-active' : ''}`}>{tab.label}</Link>)}
+            </nav>
+          )}
           <Routes>
             <Route index element={<Navigate to="/fees/overview" replace />} />
 
@@ -7367,27 +7367,24 @@ export const FeeManagementModule = (() => {
                 />
               }
             />
-            <Route
-              path="concessions"
-              element={<Adjustments state={state} commit={commit} />}
-            />
+            <Route path="concessions" element={<Navigate to="/fees/students" replace />} />
             <Route path="dues" element={<Dues academic={academic} />} />
 
             {/* 4. PAYMENTS */}
             <Route
               path="receipts"
-              element={<Navigate to="/fees/students" replace state={{ tab: "transactions" }} />}
+              element={<ServerFeeCollection page="receipts" academic={academic} />}
             />
             <Route
               path="collection"
-              element={<Navigate to="/fees/students" replace />}
+              element={<ServerFeeCollection page="collection" academic={academic} configuration={state} />}
             />
-            <Route path="refunds" element={<Refunds />} />
+            <Route path="refunds" element={<Navigate to="/fees/students" replace />} />
 
             {/* 5. REPORTS */}
             <Route
               path="reports"
-              element={<Navigate to="/fees/overview" replace />}
+              element={<ServerFeeCollection page="reports" academic={academic} />}
             />
 
             <Route path="*" element={<Navigate to="/fees/overview" replace />} />

@@ -1,0 +1,74 @@
+# ALTERNATIVE branch: use the new application after SHORTLISTED, BEFORE
+# running ON_HOLD/REJECTED tests in Application_Selection_Validation.http.
+# Replace timestamps with your actual UTC times. Do not post a result before the interview.
+@baseUrl = https://localhost:7174
+@staffToken = REPLACE_WITH_STAFF_TOKEN
+@collegeId = 1
+@applicationId = REPLACE_WITH_SHORTLISTED_APPLICATION_ID
+@interviewId = REPLACE_WITH_RETURNED_INTERVIEW_ID
+@selectionId = REPLACE_WITH_RETURNED_SELECTION_ID
+@scheduledAt = REPLACE_WITH_FUTURE_UTC_TIME_WITHIN_DRIVE_DATES
+@completedAt = REPLACE_WITH_CURRENT_UTC_TIME_AFTER_SCHEDULED_TIME
+@offerExpiresAt = REPLACE_WITH_FUTURE_UTC_TIME
+
+### 201: create one interview (COPY response data.interviewId)
+# Example scheduledAt format: 2026-10-10T09:00:00Z.
+# Must be in the future at execution and within the drive start/end dates.
+POST {{baseUrl}}/api/v1/placements/applications/{{applicationId}}/interviews?collegeId={{collegeId}}
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{"roundNumber":1,"roundName":"Technical Interview","roundType":"TECHNICAL","interviewMode":"OFFLINE","scheduledAt":"{{scheduledAt}}","interviewerName":"Test Panel","venue":"Placement Lab 1"}
+
+### 200: complete with passed result AFTER scheduledAt; completedAt cannot be in the future
+PATCH {{baseUrl}}/api/v1/placements/interviews/{{interviewId}}/result?collegeId={{collegeId}}
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{"interviewResult":"PASSED","completedAt":"{{completedAt}}","score":85,"maxScore":100,"feedback":"Passed technical assessment"}
+
+### 200: select student; COPY response data.selectionId
+PUT {{baseUrl}}/api/v1/placements/applications/{{applicationId}}/selection?collegeId={{collegeId}}
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{"selectionStatus":"SELECTED","offeredJobTitle":"Junior Software Developer","offeredCtc":450000,"currencyCode":"INR","jobLocation":"Hyderabad","remarks":"Passed technical interview"}
+
+### 409: cannot accept before issuing
+PATCH {{baseUrl}}/api/v1/placements/selections/{{selectionId}}/offer?collegeId={{collegeId}}
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{"offerStatus":"ACCEPTED"}
+
+### 200: issue offer with future expiry
+PATCH {{baseUrl}}/api/v1/placements/selections/{{selectionId}}/offer?collegeId={{collegeId}}
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{"offerStatus":"ISSUED","offerExpiresAt":"{{offerExpiresAt}}"}
+
+### 400: expiry cannot be changed during acceptance
+PATCH {{baseUrl}}/api/v1/placements/selections/{{selectionId}}/offer?collegeId={{collegeId}}
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{"offerStatus":"ACCEPTED","offerExpiresAt":"{{offerExpiresAt}}"}
+
+### 200: accept before saved expiry
+PATCH {{baseUrl}}/api/v1/placements/selections/{{selectionId}}/offer?collegeId={{collegeId}}
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{"offerStatus":"ACCEPTED"}
+
+### 200: mark joined once (repeat returns 409)
+PATCH {{baseUrl}}/api/v1/placements/selections/{{selectionId}}/joined?collegeId={{collegeId}}
+Authorization: Bearer {{staffToken}}
+
+### 409: joined offer cannot be revoked
+PATCH {{baseUrl}}/api/v1/placements/selections/{{selectionId}}/offer?collegeId={{collegeId}}
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{"offerStatus":"REVOKED"}

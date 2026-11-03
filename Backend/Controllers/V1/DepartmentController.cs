@@ -102,7 +102,9 @@ namespace BTech.Controllers.V1
         [HttpGet]
         public async Task<IActionResult> List()
         {
-            var departments = await _context.Departments.Where(x => x.DeletedAt == null)
+            var collegeId = BTech.Services.CollegeRequestScope.GetCollegeId(HttpContext);
+            var departments = await _context.Departments.Where(x => x.DeletedAt == null &&
+                (!collegeId.HasValue || x.CollegeId == collegeId.Value))
                 .AsNoTracking()
                 .OrderBy(x => x.DepartmentName)
                 .ToListAsync();

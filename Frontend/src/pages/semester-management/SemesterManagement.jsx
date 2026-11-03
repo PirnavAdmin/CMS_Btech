@@ -1,11 +1,11 @@
 import { ProjectSelect } from '../../components/SearchableSelect'
 import DirectoryEmptyState from '../../components/DirectoryEmptyState'
-import { newestFirst, rememberCreated } from '../../utils/newestFirst'
+import { rememberCreated } from '../../utils/newestFirst'
 import useToastState from '../../hooks/useToastState'
 import ExportMenu, { PrintDetailsButton } from '../../components/ExportMenu'
 import { semesterColumns } from '../../utils/exportColumns'
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { FiArrowLeft, FiBookOpen, FiCalendar, FiClock, FiEdit2, FiEye, FiFilter, FiLayers, FiPlus, FiSearch } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import FilterPanel from '../../components/FilterPanel'
@@ -17,6 +17,9 @@ import { getActiveAcademicYears, normalizeAcademicYear } from '../../utils/acade
 import { deriveLifecycleStatus, cohortStart, sameCohort, branchTypeLabel, validateSchedule } from '../../utils/semesterUtils'
 import ViewDialog from '../../components/ViewDialog'
 import { useAcademic } from '../../context/AcademicContext'
+import { getUserCollegeId, getUserRole } from '../../auth/auth'
+import { scopeSemesterDirectory, sameSemesterRecord } from '../../utils/semesterDirectory'
+import eventBus, { ERP_EVENTS } from '../../services/eventBus'
 import './SemesterManagement.css'
 import '../../styles/directory-search.css'
 
@@ -40,9 +43,9 @@ const responseList = (response) => {
   let current = response
   for (let depth = 0; depth < 5 && current && typeof current === 'object'; depth += 1) {
     if (Array.isArray(current)) return current
-    const records = current.items ?? current.content ?? current.results ?? current.records
+    const records = current.items ?? current.content ?? current.results ?? current.records ?? current.semesters ?? current.$values
     if (Array.isArray(records)) return records
-    current = current.data
+    current = current.data ?? records
   }
   return []
 }
@@ -63,6 +66,39 @@ const parseAcademicYearStart = (year) => {
 const academicYearForStart = (years, startYear) => years.find((year) => parseAcademicYearStart(year) === startYear)
 const periodLabel = (startYear, durationYears) => startYear && durationYears ? `${startYear} - ${startYear + Number(durationYears)}` : ''
 const yearLabelFromStart = (startYear) => startYear ? `${startYear}-${startYear + 1}` : ''
+const validISODate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value || '').slice(0, 10))
+const shiftISODateYear = (value, amount) => {
+  if (!validISODate(value)) return ''
+  const [year, month, day] = String(value).slice(0, 10).split('-').map(Number)
+  const nextYear = year + amount
+  const lastDay = new Date(Date.UTC(nextYear, month, 0)).getUTCDate()
+  return `${nextYear}-${String(month).padStart(2, '0')}-${String(Math.min(day, lastDay)).padStart(2, '0')}`
+}
+const semesterDatesForYear = (academicYear, fallbackYear, yearOffset = 0) => {
+  const configuredStart = String(academicYear?.startDate || '').slice(0, 10)
+  const configuredEnd = String(academicYear?.endDate || '').slice(0, 10)
+  const startDate = validISODate(configuredStart) && validISODate(configuredEnd)
+    ? configuredStart
+    : shiftISODateYear(fallbackYear?.startDate, yearOffset)
+  const endDate = validISODate(configuredStart) && validISODate(configuredEnd)
+    ? configuredEnd
+    : shiftISODateYear(fallbackYear?.endDate, yearOffset)
+  if (!validISODate(startDate) || !validISODate(endDate) || startDate > endDate) return null
+
+  const [startYear, startMonth, startDay] = startDate.split('-').map(Number)
+  const [endYear, endMonth, endDay] = endDate.split('-').map(Number)
+  const startTime = Date.UTC(startYear, startMonth - 1, startDay)
+  const endTime = Date.UTC(endYear, endMonth - 1, endDay)
+  const totalDays = Math.floor((endTime - startTime) / 86400000) + 1
+  const firstSemesterDays = Math.ceil(totalDays / 2)
+  const secondStart = new Date(startTime + firstSemesterDays * 86400000)
+  const toISO = date => `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`
+  const firstEnd = new Date(secondStart.getTime() - 86400000)
+  return [
+    { startDate, endDate: toISO(firstEnd) },
+    { startDate: toISO(secondStart), endDate },
+  ]
+}
 const displayDate = (value) => clean(value) ? new Date(`${String(value).slice(0, 10)}T12:00:00`).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : ''
 
 const normalizeCourse = (record = {}) => {
@@ -129,7 +165,7 @@ const mapSemester = (record = {}, lookups = {}) => {
   const branch = lookups.branchById?.get(String(branchId))
   const courseId = (record.courseId ?? record.courseID ?? record.CourseId ?? record.CourseID) || record.course?.courseId || record.course?.id || branch?.courseId || ''
   const course = lookups.courseById?.get(String(courseId))
-  const collegeId = (record.collegeId ?? record.collegeID ?? record.CollegeId ?? record.CollegeID) || record.college?.collegeId || record.college?.id || course?.collegeId || ''
+  const collegeId = (record.collegeId ?? record.collegeID ?? record.CollegeId ?? record.CollegeID) || record.college?.collegeId || record.college?.id || record.course?.collegeId || course?.collegeId || ''
   const college = lookups.collegeById?.get(String(collegeId))
   const academicYearId = record.academicYearId ?? record.academicYear?.academicYearId ?? record.academicYear?.id ?? record.yearId ?? ''
   const academicYear = lookups.yearById?.get(String(academicYearId))
@@ -178,21 +214,30 @@ const createPlan = ({ course, branch, activeYear, academicYears, dates = {}, edi
   if (editingSemester) return [{ ...editingSemester, ...dates[editingSemester.semesterNumber], status: deriveLifecycleStatus({ ...editingSemester, ...dates[editingSemester.semesterNumber] }) }]
   if (!course || !isSemesterPattern(course.academicPattern) || !Number.isInteger(course.totalSemesters) || course.totalSemesters <= 0) return []
   const startYear = parseAcademicYearStart(activeYear) || new Date().getFullYear()
+  const fallbackStart = `${startYear}-09-01`
+  const fallbackEnd = `${startYear + Number(course.durationYears || 1)}-06-30`
 
   return Array.from({ length: Number(course.totalSemesters) }, (_, index) => {
     const semesterNumber = index + 1
     const yearStart = startYear + Math.floor(index / 2)
     const academicYear = academicYearForStart(academicYears || [], yearStart)
     const dateRow = dates[semesterNumber] || {}
+    const yearSchedule = semesterDatesForYear(academicYear, activeYear, yearStart - startYear) || semesterDatesForYear(null, {
+      startDate: shiftISODateYear(fallbackStart, yearStart - startYear),
+      endDate: shiftISODateYear(fallbackEnd, yearStart - startYear),
+    })
+    const defaultDates = yearSchedule?.[(semesterNumber - 1) % 2] || {}
+    const startDate = Object.hasOwn(dateRow, 'startDate') ? dateRow.startDate : defaultDates.startDate || ''
+    const endDate = Object.hasOwn(dateRow, 'endDate') ? dateRow.endDate : defaultDates.endDate || ''
     return {
       semesterNumber,
       semesterName: `Semester ${semesterNumber}`,
       yearNumber: yearNumberForSemester(semesterNumber),
-      academicYearId: academicYear?.id ?? academicYear?.academicYearId ?? activeYear?.id ?? '',
+      academicYearId: academicYear?.id ?? academicYear?.academicYearId ?? (yearStart === startYear ? activeYear?.id : ''),
       academicYearName: yearName(academicYear) || yearLabelFromStart(yearStart),
-      startDate: dateRow.startDate || '',
-      endDate: dateRow.endDate || '',
-      status: deriveLifecycleStatus(dateRow, 'Upcoming'),
+      startDate,
+      endDate,
+      status: deriveLifecycleStatus({ startDate, endDate }, 'Upcoming'),
       courseId: course.id,
       courseName: course.name,
       courseCode: course.code,
@@ -242,16 +287,21 @@ function useLifecycleClock() {
 }
 
 function SemesterList() {
-  const { scopeRecords, selectedCollegeId, selectedAcademicYearId, selectedAcademicYear } = useAcademic()
+  const { selectedCollegeId, selectedAcademicYearId } = useAcademic()
+  const assignedCollegeId = getUserCollegeId()
+  const isAdmin = getUserRole() === 'admin'
+  const location = useLocation()
+  const savedRows = location.state?.savedSemesters || []
   const now = useLifecycleClock()
-  const [rows, setRows] = useState([])
+  const [rows, setRows] = useState(() => savedRows)
   const [allCourses, setCourses] = useState([])
-  const courses = scopeRecords(allCourses)
   const [allBranches, setBranches] = useState([])
-  const branches = scopeRecords(allBranches)
+  const directoryScope = { collegeId: selectedCollegeId, assignedCollegeId, isAdmin, courses: allCourses, branches: allBranches }
+  const courses = scopeSemesterDirectory(allCourses, directoryScope)
+  const branches = scopeSemesterDirectory(allBranches, directoryScope)
   const [years, setYears] = useState([])
   const [query, setQuery] = useState('')
-  const [filters, setFilters] = useState({ courseId: '', branchId: '', academicYearId: '', status: '' })
+  const [filters, setFilters] = useState({ courseId: '', branchId: '', academicYearId: selectedAcademicYearId || '', status: '' })
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useToastState('', 'error')
@@ -261,63 +311,67 @@ function SemesterList() {
     setError('')
     try {
       const sources = await loadSemesterSources()
-      setRows(sources.rows)
+      const merged = new Map(savedRows.filter((row) => row.id != null).map((row) => [String(row.id), row]))
+      sources.rows.forEach((row) => {
+        const saved = merged.get(String(row.id))
+        merged.set(String(row.id), { ...saved, ...row, collegeId: row.collegeId || saved?.collegeId || '' })
+      })
+      setRows([...merged.values()])
       setCourses(sources.courses)
       setBranches(sources.branches)
       setYears(sources.years)
     } catch (requestError) {
-      setRows([])
       setError(apiError(requestError, 'Unable to load semester sources. Please try again.'))
     } finally {
       setLoading(false)
     }
   }
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [selectedCollegeId])
+  useEffect(() => {
+    setFilters((current) => current.academicYearId === String(selectedAcademicYearId || '')
+      ? current
+      : { ...current, academicYearId: String(selectedAcademicYearId || '') })
+    setPage(1)
+  }, [selectedAcademicYearId])
 
-  const normYear = (y) => String(y || '').replace(/[^0-9]/g, '')
-  const scopedRows = useMemo(() => {
-    return scopeRecords(rows).filter((semester) => {
-      if (selectedCollegeId) {
-        const colId = semester.collegeId ?? semester.college?.collegeId ?? ''
-        if (colId && String(colId) !== String(selectedCollegeId)) return false
-      }
-      if (selectedAcademicYearId) {
-        const yrId = semester.academicYearId ?? semester.academicYear?.academicYearId ?? ''
-        const yrName = semester.academicYearName ?? semester.academicYear?.name ?? ''
-        const matchById = yrId && String(yrId) === String(selectedAcademicYearId)
-        const matchByName = selectedAcademicYear?.name && yrName && (
-          normYear(yrName) === normYear(selectedAcademicYear.name) ||
-          String(yrName).trim().toLowerCase() === String(selectedAcademicYear.name).trim().toLowerCase()
-        )
-        if (!matchById && !matchByName) return false
-      }
-      return true
-    })
-  }, [rows, scopeRecords, selectedCollegeId, selectedAcademicYearId, selectedAcademicYear])
+  const scopedRows = useMemo(
+    () => scopeSemesterDirectory(rows, { collegeId: selectedCollegeId, assignedCollegeId, isAdmin, courses: allCourses, branches: allBranches }),
+    [rows, selectedCollegeId, assignedCollegeId, isAdmin, allCourses, allBranches]
+  )
 
   const lifecycleRows = useMemo(() => scopedRows.map((item) => ({ ...item, status: deriveLifecycleStatus(item, 'Upcoming', now) })), [scopedRows, now])
   const filteredBranches = branches.filter((item) => !filters.courseId || String(item.courseId) === String(filters.courseId))
-  const filtered = useMemo(() => newestFirst('semesters', lifecycleRows.filter((item) => `${item.semesterName} ${item.courseName} ${item.courseCode} ${item.branchName} ${item.branchCode} ${item.academicYearName}`.toLowerCase().includes(query.trim().toLowerCase()) && (!filters.courseId || String(item.courseId) === String(filters.courseId)) && (!filters.branchId || String(item.branchId) === String(filters.branchId)) && (!filters.academicYearId || String(item.academicYearId) === String(filters.academicYearId)) && (!filters.status || item.status === filters.status))), [lifecycleRows, query, filters])
+  const filtered = useMemo(() => lifecycleRows
+    .filter((item) => `${item.semesterName} ${item.courseName} ${item.courseCode} ${item.branchName} ${item.branchCode} ${item.academicYearName}`.toLowerCase().includes(query.trim().toLowerCase()) && (!filters.courseId || String(item.courseId) === String(filters.courseId)) && (!filters.branchId || String(item.branchId) === String(filters.branchId)) && (!filters.academicYearId || String(item.academicYearId) === String(filters.academicYearId)) && (!filters.status || item.status === filters.status))
+    .sort((left, right) => {
+      const statusOrder = { Active: 0, Upcoming: 1, Completed: 2 }
+      return (statusOrder[left.status] ?? 3) - (statusOrder[right.status] ?? 3)
+        || Number(left.semesterNumber || 0) - Number(right.semesterNumber || 0)
+        || String(left.startDate || '').localeCompare(String(right.startDate || ''))
+        || String(left.id || '').localeCompare(String(right.id || ''))
+    }), [lifecycleRows, query, filters])
   const counts = { total: scopedRows.length, active: lifecycleRows.filter((item) => item.status === 'Active').length, upcoming: lifecycleRows.filter((item) => item.status === 'Upcoming').length, completed: lifecycleRows.filter((item) => item.status === 'Completed').length }
   const pageSize = 5
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize))
   const currentPage = Math.min(page, pageCount)
   const visible = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize)
   const changeFilter = (name, value) => { setFilters((current) => ({ ...current, [name]: value, ...(name === 'courseId' ? { branchId: '' } : {}) })); setPage(1) }
-  const clearFilters = () => { setQuery(''); setFilters({ courseId: '', branchId: '', academicYearId: '', status: '' }); setPage(1) }
-  const hasFilters = Boolean(query || Object.values(filters).some(Boolean))
+  const clearFilters = () => { setQuery(''); setFilters({ courseId: '', branchId: '', academicYearId: String(selectedAcademicYearId || ''), status: '' }); setPage(1) }
+  const hasFilters = Boolean(query || filters.courseId || filters.branchId || filters.status || (filters.academicYearId && String(filters.academicYearId) !== String(selectedAcademicYearId || '')))
 
   return <Page>
     <Header title="Semester Management" text="Manage course-based semester structures, academic years, schedules, and lifecycle status.">
       <CompactSummary label="Semester summary" items={[{ label: 'Total', value: counts.total }, { label: 'Active', value: counts.active, tone: 'active' }, { label: 'Upcoming', value: counts.upcoming, tone: 'upcoming' }, { label: 'Completed', value: counts.completed, tone: 'completed' }]} />
     </Header>
     <section className="semester-directory-card">
+      {location.state?.semesterNotice && <p role="status" className="semester-config-warning">{location.state.semesterNotice}</p>}
       <header className="course-directory-heading">
         <div>
           <span className="cm-eyebrow">Semester Directory</span>
           <p>{filtered.length} configured semesters</p>
         </div>
         <div className="directory-export-actions">
+          <button type="button" className="cm-button secondary" disabled={loading} onClick={() => { clearFilters(); load() }}>{loading ? 'Refreshing...' : 'Refresh'}</button>
           <ExportMenu rows={filtered} columns={semesterColumns} title="Semesters" filename="semesters" loading={loading || Boolean(error)} />
           <Link className="cm-button" to="/semester-management/add"><FiPlus /> Add Semester</Link>
         </div>
@@ -346,7 +400,8 @@ function SemesterList() {
           </ProjectSelect>
         </div>
       </FilterPanel>
-      {loading ? <Empty icon={FiClock} title="Loading semesters..." /> : error ? <Empty icon={FiLayers} title={error} action={<button className="semester-primary" onClick={load}>Retry</button>} isError /> : visible.length ? (
+      {error && scopedRows.length > 0 && <p role="alert">{error} <button type="button" className="semester-primary" onClick={load}>Retry</button></p>}
+      {loading && !scopedRows.length ? <Empty icon={FiClock} title="Loading semesters..." /> : error && !scopedRows.length ? <Empty icon={FiLayers} title={error} action={<button className="semester-primary" onClick={load}>Retry</button>} isError /> : visible.length ? (
         <>
           <div className="semester-table-wrapper">
             <table className="semester-table">
@@ -421,7 +476,7 @@ function SemesterForm({ editMode = false }) {
   const [allCourses, setCourses] = useState([])
   const courses = scopeRecords(allCourses)
   const [allBranches, setBranches] = useState([])
-  const branches = scopeRecords(allBranches)
+  const branches = scopeRecords(allBranches, { courses: allCourses })
   const [colleges, setColleges] = useState([])
   const [academicYears, setAcademicYears] = useState([])
   const [existingRows, setExistingRows] = useState([])
@@ -441,7 +496,7 @@ function SemesterForm({ editMode = false }) {
   // selected college and still show the courses already available in the system.
   const availableCourses = collegeCourses.length ? collegeCourses : activeOnlyCourses
   const course = availableCourses.find((item) => String(item.id || item.courseId) === String(form.courseId)) || courses.find((item) => String(item.id || item.courseId) === String(form.courseId))
-  const availableBranches = branches.filter((item) => String(item.courseId) === String(form.courseId) && item.status !== 'Inactive' && item.status !== 0 && item.status !== false && item.isActive !== false)
+  const availableBranches = branches
   const branch = availableBranches.find((item) => String(item.id || item.branchId) === String(form.branchId))
   const effectiveAcademicYears = useMemo(() => {
     const normalized = academicYears.map(normalizeAcademicYear).filter((item) => item.id && item.name)
@@ -458,9 +513,7 @@ function SemesterForm({ editMode = false }) {
   const plan = createPlan({ course, branch, activeYear, academicYears: effectiveAcademicYears, dates, editingSemester })
   const selectedPlanRow = plan.find((item) => Number(item.semesterNumber) === Number(form.semesterNumber))
   const unsupportedPattern = course && !isSemesterPattern(course.academicPattern)
-  const noActiveYear = !editMode && activeYears.length === 0
-  const yearWarning = noActiveYear ? 'No active academic year is configured.' : !editMode && activeYears.length > 1 ? 'Multiple active academic years are configured. Using the first active academic year for this semester structure.' : ''
-  const duplicateRows = branch ? existingRows.filter((item) => sameCohort(item, { courseId: form.courseId, branchId: form.branchId, semesterNumber: 1, academicYearName: yearName(activeYear) })) : []
+  const yearWarning = !editMode && activeYears.length > 1 ? 'Multiple active academic years are configured. Using the first active academic year for this semester structure.' : ''
 
   const load = async () => {
     setLoading(true)
@@ -499,7 +552,19 @@ function SemesterForm({ editMode = false }) {
 
   const setCollege = (collegeId) => { setError(''); setForm((current) => ({ ...current, collegeId, courseId: '', branchId: '' })); setDates({}); setStep(1) }
   const setCourse = (courseId) => { setError(''); setForm((current) => ({ ...current, courseId, branchId: '' })); setDates({}); setStep(1) }
-  const setBranch = (branchId) => { setError(''); setForm((current) => ({ ...current, branchId })); setStep(1) }
+  const setBranch = (branchId) => {
+    const selectedBranch = availableBranches.find((item) => String(item.id) === String(branchId))
+    const linkedCourse = courses.find((item) => String(item.id) === String(selectedBranch?.courseId))
+    setError('')
+    setForm((current) => ({
+      ...current,
+      branchId,
+      courseId: selectedBranch ? String(selectedBranch.courseId) : current.courseId,
+      collegeId: linkedCourse?.collegeId ? String(linkedCourse.collegeId) : current.collegeId,
+    }))
+    if (selectedBranch && String(selectedBranch.courseId) !== String(form.courseId)) setDates({})
+    setStep(1)
+  }
   const updateDate = (semesterNumber, field, value) => setDates((current) => ({ ...current, [semesterNumber]: { ...current[semesterNumber], [field]: value } }))
 
   const validate = () => {
@@ -507,16 +572,14 @@ function SemesterForm({ editMode = false }) {
     const scheduleError = validateSchedule(scheduleRows)
     if (scheduleError) return scheduleError
     if (editMode) return editingSemester?.id && form.courseId && form.branchId && form.academicYearId ? '' : 'Semester mapping could not be loaded.'
-    if (noActiveYear) return yearWarning
     if (!form.collegeId) return 'College is required.'
     if (!form.courseId) return 'Course is required.'
     if (!form.branchId || !branch) return 'Branch is required.'
-    if (duplicateRows.length) return `Semester structure already exists for ${course?.name} - ${branch?.code || branch?.name} - ${coursePeriod}.`
     if (!course?.durationYears) return 'Selected course does not include a duration.'
     if (!Number.isInteger(course?.totalSemesters) || course.totalSemesters <= 0) return 'Selected course does not include total semesters.'
     if (unsupportedPattern) return `${course.academicPattern} courses are not supported for semester generation.`
     if (course.totalSemesters !== course.durationYears * 2) return 'Course duration and total semesters do not match the standard two-semester academic year.'
-    if (!coursePeriod) return 'Course period could not be calculated from academic year and course duration.'
+    if (!coursePeriod) return 'Course period could not be calculated from course duration.'
     return ''
   }
 
@@ -527,20 +590,25 @@ function SemesterForm({ editMode = false }) {
     if (validationError) { setError(validationError); return }
     setSaving(true)
     setError('')
+    let savedSemesters = []
     try {
       if (editMode) {
         const row = { ...form, ...(selectedPlanRow || {}), startDate: dates[form.semesterNumber]?.startDate ?? form.startDate, endDate: dates[form.semesterNumber]?.endDate ?? form.endDate }
         const cleanStart = row.startDate ? String(row.startDate).slice(0, 10) : ''
         const cleanEnd = row.endDate ? String(row.endDate).slice(0, 10) : ''
         cacheSemesterDates(id, `${form.branchId || form.courseId}_sem${form.semesterNumber}`, { startDate: cleanStart, endDate: cleanEnd })
-        await updateSemester(id, { collegeId: Number(college?.id || editingSemester?.collegeId) || undefined, courseId: Number(form.courseId), branchId: Number(form.branchId), academicYearId: Number(form.academicYearId || row.academicYearId), semesterName: form.semesterName, semesterNumber: Number(form.semesterNumber), yearNumber: yearNumberForSemester(form.semesterNumber), startDate: cleanStart || null, endDate: cleanEnd || null, StartDate: cleanStart || null, EndDate: cleanEnd || null, status: [0, 1].includes(Number(editingSemester.backendStatus)) ? Number(editingSemester.backendStatus) : semesterPayloadStatus(deriveLifecycleStatus(row)), createdBy: 1 })
+        const response = await updateSemester(id, { collegeId: Number(college?.id || editingSemester?.collegeId) || undefined, courseId: Number(form.courseId), branchId: Number(form.branchId), academicYearId: Number(form.academicYearId || row.academicYearId), semesterName: form.semesterName, semesterNumber: Number(form.semesterNumber), yearNumber: yearNumberForSemester(form.semesterNumber), startDate: cleanStart || null, endDate: cleanEnd || null, StartDate: cleanStart || null, EndDate: cleanEnd || null, status: [0, 1].includes(Number(editingSemester.backendStatus)) ? Number(editingSemester.backendStatus) : semesterPayloadStatus(deriveLifecycleStatus(row)), createdBy: 1 })
+        savedSemesters = [mapSemester({ ...editingSemester, ...row, ...responseRecord(response), collegeId: form.collegeId }, makeLookups(courses, branches, academicYears, colleges))]
         setNotice('Semester updated successfully.')
+        eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED, { semesterId: id })
       } else {
         const freshRows = responseList(await getSemesters()).map((item) => mapSemester(item, makeLookups(courses, branches, academicYears, colleges)))
         setExistingRows(freshRows)
-        if (freshRows.some((item) => sameCohort(item, plan[0]))) throw new Error(`Semester structure already exists for ${course.name} - ${branch.code || branch.name} - ${coursePeriod}.`)
-        const missing = plan.filter((row) => !freshRows.some((item) => sameCohort(item, row) && Number(item.semesterNumber) === Number(row.semesterNumber)))
-        if (!missing.length) { setNotice('Semester structure is already saved.', 'info'); return }
+        const missing = plan.filter((row) => !freshRows.some((item) => sameSemesterRecord(item, row)))
+        if (!missing.length) {
+          navigate('/semester-management', { state: { savedSemesters: freshRows, semesterNotice: 'Semester structure is already saved. Showing existing records.' } })
+          return
+        }
         missing.forEach((item) => {
           const cleanStart = item.startDate ? String(item.startDate).slice(0, 10) : ''
           const cleanEnd = item.endDate ? String(item.endDate).slice(0, 10) : ''
@@ -549,15 +617,35 @@ function SemesterForm({ editMode = false }) {
         const results = await Promise.allSettled(missing.map((item) => {
           const cleanStart = item.startDate ? String(item.startDate).slice(0, 10) : ''
           const cleanEnd = item.endDate ? String(item.endDate).slice(0, 10) : ''
-          return createSemester({ collegeId: Number(college?.id || item.collegeId) || undefined, courseId: Number(item.courseId), branchId: Number(item.branchId), academicYearId: Number(item.academicYearId), semesterName: item.semesterName, semesterNumber: Number(item.semesterNumber), yearNumber: Number(item.yearNumber), startDate: cleanStart || null, endDate: cleanEnd || null, StartDate: cleanStart || null, EndDate: cleanEnd || null, status: semesterPayloadStatus(item.status), createdBy: 1 })
+          return createSemester({ collegeId: Number(college?.id || item.collegeId) || undefined, courseId: Number(item.courseId), branchId: Number(item.branchId), academicYearId: Number(item.academicYearId) || null, semesterName: item.semesterName, semesterNumber: Number(item.semesterNumber), yearNumber: Number(item.yearNumber), startDate: cleanStart || null, endDate: cleanEnd || null, StartDate: cleanStart || null, EndDate: cleanEnd || null, status: semesterPayloadStatus(item.status), createdBy: 1 })
         }))
         results.filter(result => result.status === 'fulfilled').forEach(result => rememberCreated('semesters', result.value))
+        const addedSemesters = results.flatMap((result, index) => {
+          if (result.status !== 'fulfilled') return []
+          const record = responseRecord(result.value)
+          if (!(record.semesterId ?? record.id)) return []
+          return [mapSemester({ ...missing[index], ...record, collegeId: form.collegeId }, makeLookups(courses, branches, academicYears, colleges))]
+        })
+        savedSemesters = [...freshRows, ...addedSemesters]
         const created = results.filter((result) => result.status === 'fulfilled').length
-        if (!created) throw results.find((result) => result.status === 'rejected')?.reason || new Error('Unable to generate semester structure.')
-        if (created !== missing.length) throw new Error(`${created} of ${missing.length} semesters created. Use Generate again to retry missing semesters. ${apiError(results.find((result) => result.status === 'rejected')?.reason, '')}`)
+        try {
+          const fetched = responseList(await getSemesters()).map((item) => mapSemester(item, makeLookups(courses, branches, academicYears, colleges)))
+          const merged = new Map(savedSemesters.map((item) => [String(item.id), item]))
+          fetched.forEach((item) => merged.set(String(item.id), item))
+          savedSemesters = [...merged.values()]
+        } catch (refreshError) {
+          if (!created) throw refreshError
+        }
+        const unsaved = plan.filter((item) => !savedSemesters.some((saved) => sameSemesterRecord(saved, item)))
+        if (unsaved.length && !created) throw results.find((result) => result.status === 'rejected')?.reason || new Error('Unable to generate semester structure.')
+        eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED, { branchId: form.branchId })
+        if (unsaved.length) {
+          navigate('/semester-management', { state: { savedSemesters, semesterNotice: `${plan.length - unsaved.length} of ${plan.length} semesters are saved. ${apiError(results.find((result) => result.status === 'rejected')?.reason, 'Some semesters could not be saved.')} Open Add Semester to retry missing records.` } })
+          return
+        }
         setNotice(`Semester structure generated successfully for ${branch.code || branch.name}.`)
       }
-      setTimeout(() => navigate('/semester-management'), 700)
+      setTimeout(() => navigate('/semester-management', { state: { savedSemesters } }), 700)
     } catch (requestError) {
       setError(apiError(requestError, 'Unable to save semester structure.'))
     } finally {
@@ -616,7 +704,7 @@ function SemesterForm({ editMode = false }) {
                 <ReadOnly value={course?.code} placeholder="Resolved from selected course" />
               </Field>
               <Field label="Branch *">
-                <SearchableSelect label="Branch" value={form.branchId} options={availableBranches.map((item) => ({ id: item.id || item.branchId, value: item.id || item.branchId, name: item.name, code: item.code }))} onChange={setBranch} disabled={editMode || saving || !form.courseId} placeholder={form.courseId ? 'Select Branch' : 'Select Course first'} searchPlaceholder="Search branch name or code..." noOptionsMessage="No branches found for this course." />
+                <SearchableSelect label="Branch" value={form.branchId} options={availableBranches.map((item) => ({ id: item.id || item.branchId, value: item.id || item.branchId, name: item.name, code: item.code }))} onChange={setBranch} disabled={editMode || saving} placeholder="Select Branch" searchPlaceholder="Search branch name or code..." noOptionsMessage="No branches found for this college." />
               </Field>
               <Field label="Branch Code">
                 <ReadOnly value={branch?.code || editingSemester?.branchCode} placeholder="Resolved from selected branch" />
@@ -639,6 +727,8 @@ function SemesterForm({ editMode = false }) {
               <div className="semester-config-warning">This course uses {course.academicPattern}. Semester generation is available only for Semester pattern courses.</div>
             ) : (
               <div className="semester-schedule-table-wrap">
+                {plan.some((item) => !item.academicYearId) && <p className="semester-config-warning" role="status">Academic-year links can be added later. Dates for unconfigured years are estimated from the course cohort.</p>}
+                {plan.some((item) => !item.startDate || !item.endDate) && <p className="semester-config-warning" role="status">Enter dates for any semester that does not have dates available from an academic year.</p>}
                 <div className="semester-schedule-header">
                   <span className="col-sem">Semester &amp; Academic Year</span>
                   <span className="col-date">Start Date</span>
@@ -650,14 +740,14 @@ function SemesterForm({ editMode = false }) {
                     <div key={item.semesterNumber} className="semester-schedule-row">
                       <div className="col-sem">
                         <strong className="sem-name">{item.semesterName}</strong>
-                        <span className="sem-year">{item.academicYearName}</span>
+                        <span className="sem-year">{item.academicYearName || 'Academic year not configured yet'}</span>
                       </div>
                       <div className="col-date">
                         <input
                           type="date"
                           className="semester-date-input"
                           aria-label={`${item.semesterName} start date`}
-                          value={dates[item.semesterNumber]?.startDate || ''}
+                          value={dates[item.semesterNumber]?.startDate ?? item.startDate ?? ''}
                           disabled={saving || Boolean(notice)}
                           onChange={(event) => updateDate(item.semesterNumber, 'startDate', event.target.value)}
                         />
@@ -667,7 +757,7 @@ function SemesterForm({ editMode = false }) {
                           type="date"
                           className="semester-date-input"
                           aria-label={`${item.semesterName} end date`}
-                          value={dates[item.semesterNumber]?.endDate || ''}
+                          value={dates[item.semesterNumber]?.endDate ?? item.endDate ?? ''}
                           disabled={saving || Boolean(notice)}
                           onChange={(event) => updateDate(item.semesterNumber, 'endDate', event.target.value)}
                         />
@@ -687,11 +777,11 @@ function SemesterForm({ editMode = false }) {
             {step === 1 ? 'Cancel' : '← Back to Mapping'}
           </button>
           {step === 1 ? (
-            <button type="button" className="cm-button" disabled={!form.collegeId || !form.courseId || !form.branchId || noActiveYear} onClick={() => setStep(2)}>
+            <button type="button" className="cm-button" disabled={!form.collegeId || !form.courseId || !form.branchId} onClick={() => setStep(2)}>
               Configure Schedule →
             </button>
           ) : (
-            <button type="button" className="cm-button" disabled={saving || Boolean(notice) || noActiveYear} onClick={save}>
+            <button type="button" className="cm-button" disabled={saving || Boolean(notice)} onClick={save}>
               {saving ? 'Saving...' : editMode ? 'Save Schedule' : 'Generate Structure'}
             </button>
           )}
@@ -786,8 +876,8 @@ function SemesterPreview({ college, course, branch, activeYear, coursePeriod, pl
                 </div>
                 <div className="timeline-table-body">
                   {plan.map((item) => {
-                    const startDate = dates[item.semesterNumber]?.startDate || item.startDate
-                    const endDate = dates[item.semesterNumber]?.endDate || item.endDate
+                    const startDate = dates[item.semesterNumber]?.startDate ?? item.startDate
+                    const endDate = dates[item.semesterNumber]?.endDate ?? item.endDate
                     const hasDates = startDate || endDate
                     return (
                       <div key={item.semesterNumber} className="timeline-row">

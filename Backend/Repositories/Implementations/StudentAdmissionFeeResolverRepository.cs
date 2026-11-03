@@ -36,6 +36,7 @@ namespace BTech.Repositories.Implementations
 
                 try
                 {
+                    await BTech.Services.Fees.FeePlanLegacyGuard.EnsureNoSnapshotAsync(connection, admissionId);
                     return await connection.QueryFirstOrDefaultAsync<StudentAdmissionFeeResolveResultDto>(
                         "sp_student_admission_fee_resolve_and_save",
                         new

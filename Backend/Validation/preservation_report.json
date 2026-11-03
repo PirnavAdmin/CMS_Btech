@@ -1,0 +1,19 @@
+{
+  "modifiedFiles": [
+    "Controllers/V1/CoursesController.cs",
+    "Controllers/V1/FacultyManagement/FacultyCreateController.cs",
+    "Controllers/V1/FacultyManagement/FacultyLeaveController.cs",
+    "Data/ApplicationDbContext.cs",
+    "DTOs/FacultyCreateDto.cs",
+    "DTOs/FacultyLeave/FacultyLeaveRequests.cs",
+    "Repositories/Implementations/CourseRepository.cs",
+    "Repositories/Interfaces/ICourseRepository.cs",
+    "Services/FacultyService.cs",
+    "Services/Implementations/CourseService.cs"
+  ],
+  "missingSourceFiles": [],
+  "originalCsFiles": 438,
+  "routeAttributes": 495,
+  "removedRouteAttributes": [],
+  "addedRouteAttributes": []
+}

@@ -1,0 +1,134 @@
+@baseUrl = https://localhost:7174
+@token = REPLACE_WITH_YOUR_LOGIN_TOKEN
+@collegeId = 1
+@eventId = 1
+@registrationId = 1
+@scheduleId = 1
+@certificateId = 1
+@galleryId = 1
+
+### Existing sample event in Dump20261009.sql
+GET {{baseUrl}}/api/v1/events?collegeId={{collegeId}}&page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+### Event details
+GET {{baseUrl}}/api/v1/events/{{eventId}}?collegeId={{collegeId}}
+Authorization: Bearer {{token}}
+
+### Event registrations
+GET {{baseUrl}}/api/v1/events/{{eventId}}/registrations?collegeId={{collegeId}}
+Authorization: Bearer {{token}}
+
+### Event sessions
+GET {{baseUrl}}/api/v1/events/{{eventId}}/schedules?collegeId={{collegeId}}
+Authorization: Bearer {{token}}
+
+### Sample certificate PDF -- no existing certificate file is needed
+GET {{baseUrl}}/api/v1/events/{{eventId}}/certificates/{{certificateId}}/download?collegeId={{collegeId}}
+Authorization: Bearer {{token}}
+
+### Verify the existing sample certificate; authenticated management access required
+GET {{baseUrl}}/api/v1/events/certificates/verify/12dfe392-c396-11f1-ad13-f80dac71bea7?collegeId={{collegeId}}
+Authorization: Bearer {{token}}
+
+### Sample gallery metadata; sample item has no image until uploaded
+GET {{baseUrl}}/api/v1/events/{{eventId}}/gallery?collegeId={{collegeId}}
+Authorization: Bearer {{token}}
+
+### Create a future event. Change code and dates when reusing this example.
+# Save returned data.eventId into @eventId above for the remaining requests.
+POST {{baseUrl}}/api/v1/events?collegeId={{collegeId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "collegeId": 1,
+  "academicYearId": 2,
+  "departmentId": 1,
+  "organizerUserId": 1,
+  "eventCode": "API-WORKSHOP-20261015-01",
+  "eventName": "ASP.NET Core Workshop",
+  "eventType": "WORKSHOP",
+  "description": "Event API integration test",
+  "venue": "College Seminar Hall",
+  "startAt": "2026-10-15T09:00:00",
+  "endAt": "2026-10-15T16:00:00",
+  "registrationOpensAt": "2026-10-09T00:00:00",
+  "registrationClosesAt": "2026-10-14T17:00:00",
+  "maxParticipants": 30,
+  "registrationFee": 0,
+  "certificateEnabled": true,
+  "status": "PUBLISHED"
+}
+
+### Register an existing student. Duplicate active registration returns 409.
+# Save returned data.registrationId into @registrationId.
+POST {{baseUrl}}/api/v1/events/{{eventId}}/registrations?collegeId={{collegeId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"participantType":"STUDENT","studentId":2,"remarks":"Swagger test"}
+
+### External participant registration
+POST {{baseUrl}}/api/v1/events/{{eventId}}/registrations?collegeId={{collegeId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"participantType":"EXTERNAL","participantName":"Workshop Guest","email":"event.guest@example.com","mobile":"9000000010"}
+
+### Create session (no classroom booking for this initial test)
+# Save returned data.scheduleId into @scheduleId.
+POST {{baseUrl}}/api/v1/events/{{eventId}}/schedules?collegeId={{collegeId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"sessionCode":"SESSION-01","sessionTitle":"API Basics","startAt":"2026-10-15T09:00:00","endAt":"2026-10-15T12:00:00","venue":"College Seminar Hall","speakerUserId":1,"displayOrder":1,"status":"SCHEDULED"}
+
+### Update session; unchanged sessionCode is accepted
+PUT {{baseUrl}}/api/v1/events/{{eventId}}/schedules/{{scheduleId}}?collegeId={{collegeId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"sessionCode":"SESSION-01","sessionTitle":"API Basics and Swagger","startAt":"2026-10-15T09:00:00","endAt":"2026-10-15T12:00:00","venue":"College Seminar Hall","speakerUserId":1,"displayOrder":1,"status":"SCHEDULED"}
+
+### Create gallery metadata, then upload using Swagger's File picker
+# Save returned data.galleryId into @galleryId.
+POST {{baseUrl}}/api/v1/events/{{eventId}}/gallery?collegeId={{collegeId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"mediaCode":"WORKSHOP-PHOTO-01","mediaType":"IMAGE","title":"Workshop Photo","caption":"Workshop event photo","displayOrder":1,"status":"DRAFT"}
+
+### Publish gallery only after successful upload
+PUT {{baseUrl}}/api/v1/events/{{eventId}}/gallery/{{galleryId}}?collegeId={{collegeId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"mediaCode":"WORKSHOP-PHOTO-01","mediaType":"IMAGE","title":"Workshop Photo","caption":"Workshop event photo","displayOrder":1,"status":"PUBLISHED"}
+
+### Protected gallery file download (404 until upload)
+GET {{baseUrl}}/api/v1/events/{{eventId}}/gallery/{{galleryId}}/download?collegeId={{collegeId}}
+Authorization: Bearer {{token}}
+
+### Attendance example: event must be ONGOING or COMPLETED, participant CONFIRMED
+PATCH {{baseUrl}}/api/v1/events/{{eventId}}/registrations/{{registrationId}}/attendance?collegeId={{collegeId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"attendanceStatus":"PRESENT"}
+
+### Issue certificate after completion and attendance. For sample event 1 / registration 1,
+# PARTICIPATION already exists. COMPLETION is available once; repeating it returns 409.
+POST {{baseUrl}}/api/v1/events/1/certificates?collegeId={{collegeId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"registrationId":1,"certificateType":"COMPLETION","title":"Certificate of Workshop Completion"}
+
+### Cancel a registration (blocked while it has an ISSUED certificate)
+DELETE {{baseUrl}}/api/v1/events/{{eventId}}/registrations/{{registrationId}}?collegeId={{collegeId}}
+Authorization: Bearer {{token}}
+
+### Cancel a session; row is retained
+DELETE {{baseUrl}}/api/v1/events/{{eventId}}/schedules/{{scheduleId}}?collegeId={{collegeId}}
+Authorization: Bearer {{token}}

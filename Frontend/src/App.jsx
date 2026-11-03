@@ -282,8 +282,8 @@ export default function App() {
               {/* Administration - Admin Only */}
               <Route path="/college-institution-management" element={<CollegeInstitutionManagement />} />
               <Route path="/college-institution-management/add" element={<AddCollege />} />
-              <Route path="/academic-year-management" element={<AcademicYearManagement />} />
-              <Route path="/academic-year-management/:id" element={<AcademicYearManagement />} />
+              <Route path="/academic-year-management" element={<AcademicProvider><AcademicYearManagement /></AcademicProvider>} />
+              <Route path="/academic-year-management/:id" element={<AcademicProvider><AcademicYearManagement /></AcademicProvider>} />
               <Route path="/department-management" element={<DepartmentManagement />} />
               <Route path="/department-management/:id" element={<DepartmentManagement />} />
               <Route path="/courses" element={<Course />} />

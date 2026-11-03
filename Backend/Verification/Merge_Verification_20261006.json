@@ -1,0 +1,24 @@
+{
+  "ticket176": {
+    "apiSourceFiles": 76,
+    "missingOrChangedRouteAnnotations": [],
+    "changedCSharpFiles": [
+      "Repositories/Implementations/ExamManagementRepository.cs",
+      "Controllers/V1/ExamSchedulesViewsController.cs"
+    ]
+  },
+  "examConflicts": {
+    "apiSourceFiles": 75,
+    "missingOrChangedRouteAnnotations": [],
+    "changedCSharpFiles": []
+  },
+  "controllersDirectoryUniqueRoutes": 470,
+  "removedRoutesFromEitherInput": 0,
+  "frontendContractRoutesChecked": 123,
+  "missingFrontendContractRoutes": 0,
+  "scheduleOverlapCasesPassed": 27,
+  "hallOverlapCasesPassed": 12,
+  "dotnetBuild": "Not run; no .NET SDK available",
+  "liveMySqlTests": "Not run; no MySQL server available",
+  "configuration": "DefaultConnection retained from Ticket 176; all other config keys match"
+}

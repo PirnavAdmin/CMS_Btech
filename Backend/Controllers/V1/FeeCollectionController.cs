@@ -12,7 +12,8 @@ namespace BTech.Controllers.V1;
 public sealed class FeeCollectionController : ControllerBase
 {
     private readonly IFeeCollectionService _service;
-    public FeeCollectionController(IFeeCollectionService service)=>_service=service;
+    private readonly ILogger<FeeCollectionController> _logger;
+    public FeeCollectionController(IFeeCollectionService service, ILogger<FeeCollectionController> logger) { _service=service; _logger=logger; }
 
     [HttpGet("dashboard")]
     public async Task<IActionResult> Dashboard([FromQuery] FeeDashboardQuery q)
@@ -25,6 +26,7 @@ public sealed class FeeCollectionController : ControllerBase
     [HttpPost("payments")]
     public async Task<IActionResult> Pay([FromBody] FeePaymentCreateRequest request)
     {
+        _logger.LogInformation("Fee payment request. StudentFeeId={StudentFeeId}, CorrelationId={CorrelationId}", request.StudentFeeId, HttpContext.TraceIdentifier);
         var data=await _service.CreatePaymentAsync(request,UserId(),CollegeId(),IsSuperAdmin());
         return StatusCode(StatusCodes.Status201Created,new{success=true,message="Fee payment collected and receipt generated successfully.",data});
     }
@@ -65,6 +67,6 @@ public sealed class FeeCollectionController : ControllerBase
         if(!long.TryParse(raw,out var id)||id<=0) throw new UnauthorizedAccessException("Invalid authenticated user.");
         return id;
     }
-    private long? CollegeId(){var raw=User.FindFirstValue("collegeId");return long.TryParse(raw,out var id)&&id>0?id:null;}
+    private long? CollegeId(){var raw=User.FindFirstValue("collegeId")??User.FindFirstValue("college_id");return long.TryParse(raw,out var id)&&id>0?id:null;}
     private bool IsSuperAdmin()=>User.IsInRole("SUPER_ADMIN");
 }

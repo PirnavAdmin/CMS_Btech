@@ -1,4 +1,5 @@
 import { backendTimetableService as service, backendEntries } from '../backendTimetableService'
+import { normalizeTimetableMasterRows } from '../timetableService'
 import { departmentApi, subjectApi } from '../../api/apiEndpoints'
 import { academicLevel, scopeSections } from './timetableDomain'
 import { same } from '../../utils/timetableUtils'
@@ -10,7 +11,7 @@ import { scopeTimetableData } from './timetableCollegeScope.js'
 export async function loadBackendWorkflow() {
   const collegeId = selectedCollegeId()
   const [raw, departments, subjects, tables] = await Promise.all([service.getSources(), departmentApi.getAll(), subjectApi.list(), service.list()])
-  const scoped = scopeTimetableData({ ...raw, departments: departments.map(row => ({ ...row, id: row.departmentId ?? row.id, name: row.departmentName ?? row.name })), subjects: subjects.map(row => ({ ...row, id: row.subjectId ?? row.id, name: row.subjectName ?? row.name })) }, tables, collegeId)
+  const scoped = scopeTimetableData({ ...raw, departments: normalizeTimetableMasterRows(departments, 'department'), subjects: subjects.map(row => ({ ...row, id: row.subjectId ?? row.id, name: row.subjectName ?? row.name })) }, tables, collegeId)
   const sources = scoped.sources
   const contextual = scoped.tables.map(table => ({ ...table, departmentId: sources.branches.find(row => same(row.id, table.branchId))?.departmentId || '', level: academicLevel(sources.semesters.find(row => same(row.id, table.semesterId)) || {}) }))
   return { sources, tables: contextual, backend: backendEntries(contextual) }

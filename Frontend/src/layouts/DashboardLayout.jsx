@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'reac
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { FiAlertCircle, FiLock, FiLogOut, FiMoon, FiSearch, FiSun, FiUser, FiX } from 'react-icons/fi'
 import { getUserRole, signOut } from '../auth/auth'
-import { changePassword, profileApi } from '../api/apiEndpoints'
+import { changePassword, profileApi, authAccessApi } from '../api/apiEndpoints'
 import Sidebar from '../components/Sidebar'
 import { feeBreadcrumbs } from '../utils/feeNavigation'
 import HeaderAcademicYear from '../components/HeaderAcademicYear'
@@ -109,9 +109,16 @@ export default function DashboardLayout({ children }) {
     name: localStorage.getItem('btech-user-name') || sessionStorage.getItem('btech-user-name') || '',
     identifier: localStorage.getItem('btech-user-id') || sessionStorage.getItem('btech-user-id') || '',
   }))
+  const [effectiveAccess, setEffectiveAccess] = useState(null)
   const [theme, setTheme] = useState(() => localStorage.getItem('pirnav-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'))
 
   const userRole = getUserRole() || 'user'
+  const mustChangePassword = localStorage.getItem('btech-must-change-password') === 'true' || sessionStorage.getItem('btech-must-change-password') === 'true'
+  const profileIncomplete = localStorage.getItem('btech-profile-completed') === 'false' || sessionStorage.getItem('btech-profile-completed') === 'false'
+  useEffect(() => {
+    if (mustChangePassword && !pathname.startsWith('/my-profile')) navigate('/my-profile?setup=1', { replace: true })
+    else if (!mustChangePassword && profileIncomplete && pathname !== '/my-profile') navigate('/my-profile?profileSetup=1', { replace: true })
+  }, [mustChangePassword, profileIncomplete, pathname, navigate])
   const roleLabel = ['admin', 'college_admin', 'super_admin'].includes(String(userRole).toLowerCase())
     ? 'Administrator'
     : userRole.charAt(0).toUpperCase() + userRole.slice(1)
@@ -123,7 +130,7 @@ export default function DashboardLayout({ children }) {
     '/student-management/profiles': 'Student Profiles', '/student-management/promotions': 'Student Promotions',
   })[pathname] || (pathname.startsWith('/semester-management') ? 'Semesters' : pathname.startsWith('/section-management') ? 'Sections' : pathname.startsWith('/student-management/admissions') ? 'Student Admissions' : pathname.startsWith('/student-management/profiles') ? 'Student Profiles' : pathname.startsWith('/student-management/promotions') ? 'Student Promotions' : pathname.startsWith('/faculty/') ? pathname.startsWith('/faculty/attendance') ? 'Faculty Attendance' : 'Faculty Management' : pathname.startsWith('/courses') ? 'Courses' : pathname.startsWith('/branches') ? 'Branches' : 'Digital Campus')
   const breadcrumbSection = ['My Profile', 'Settings'].includes(pageName) ? 'Account' : pageName === 'Dashboard' ? 'Digital Campus' : pageName.startsWith('Student ') ? 'Student Management' : pageName.startsWith('Faculty ') ? 'Faculty' : 'Academic Configuration'
-  const financeBreadcrumbs = feeBreadcrumbs(pathname)
+  const financeBreadcrumbs = feeBreadcrumbs(pathname)?.map(crumb => ({ ...crumb, label: ({ 'Fee Structures': 'Fee Plans', 'Student Accounts': 'Student Fees', 'Create Fee Structure': 'Create Fee Plan', 'Edit Fee Structure': 'Edit Fee Plan', 'Structure Details': 'Fee Plan Details' })[crumb.label] || crumb.label }))
 
   // Logout confirmation state
   const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false)
@@ -154,8 +161,28 @@ export default function DashboardLayout({ children }) {
     return () => { active = false }
   }, [])
 
-  const globalLinks = [['Dashboard', '/dashboard'], ['Student Admissions', '/student-management/admissions'], ['Student Profiles', '/student-management/profiles'], ['Student Promotions', '/student-management/promotions'], ['Faculty Management', '/faculty'], ['College', '/college-institution-management'], ['Academic Years', '/academic-year-management'], ['Courses', '/courses'], ['Departments', '/department-management'], ['Branches', '/branches'], ['Semesters', '/semester-management'], ['Sections', '/section-management'], ['My Profile', '/my-profile']]
-  const globalResults = globalQuery.trim() ? globalLinks.filter(([label]) => label.toLowerCase().includes(globalQuery.trim().toLowerCase())) : []
+  useEffect(() => {
+    let active = true
+    authAccessApi.get().then(access => { if (active) setEffectiveAccess(access) }).catch(() => { if (active) setEffectiveAccess(null) })
+    return () => { active = false }
+  }, [])
+
+  const globalLinks = [
+    ['Dashboard', '/dashboard', 'dashboard'], ['Colleges', '/college-institution-management', 'colleges'], ['Academic Years', '/academic-year-management', 'academic_years'],
+    ['Departments', '/department-management', 'departments'], ['Courses', '/courses', 'courses'], ['Branches', '/branches', 'branches'], ['Semesters', '/semester-management', 'semesters'],
+    ['Sections', '/section-management', 'sections'], ['Rooms & Classrooms', '/rooms-management', 'rooms'], ['Fee Structure', '/fees/structures', 'fees'], ['Fee Management', '/fees/overview', 'fees'],
+    ['Faculty Directory', '/faculty', 'faculty_directory'], ['Faculty Attendance', '/faculty/attendance', 'faculty_attendance'],
+    ['Leave Management', '/faculty/leave-management', 'faculty_leaves'], ['Faculty Payroll', '/faculty/payroll', 'faculty_payroll'], ['Student Admissions', '/student-management/admissions', 'student_admissions'],
+    ['Student Profiles', '/student-management/profiles', 'student_profiles'], ['Student Attendance', '/student-management/attendance', 'student_attendance'], ['Student Promotions', '/student-management/promotions', 'student_promotions'],
+    ['Subject Management', '/subject-management', 'subjects'], ['Credits Management', '/credits-management', 'credits'], ['Elective Management', '/elective-management', 'electives'], ['Timetable Management', '/timetable', 'timetable'],
+    ['Exam Management', '/examination-setup', 'examinations'], ['Marks Management', '/marks-management/marks-entry', 'marks'], ['Grades System and Results', '/grade-result-management/grade-configuration', 'results'],
+    ['Library', '/library', 'library'], ['Meetings / Events', '/meetings-events', 'meetings_events'], ['Placement', '/placement', 'placement'], ['User Access Management', '/user-access', 'roles_permissions'],
+    ['Roles & Designations', '/roles-designations', 'roles_permissions'], ['My Profile', '/my-profile', 'my_profile'],
+  ]
+  const globalResults = globalQuery.trim() ? globalLinks.filter(([label, , module]) =>
+    label.toLowerCase().includes(globalQuery.trim().toLowerCase()) &&
+    (module === 'my_profile' || effectiveAccess?.isSuperAdmin || effectiveAccess?.permissions?.[module]?.view === true || (userRole === 'admin' && effectiveAccess == null))
+  ).slice(0, 10) : []
   const rules = useMemo(
     () => requirements(values.newPassword),
     [values.newPassword]

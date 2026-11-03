@@ -1,0 +1,15 @@
+/workspace/scratch/0fea519d36f1/backend/CMS_BTech_Section_Department_Fixed/Controllers/V1/StudentElectivesController.cs(5,7): warning CS0105: The using directive for 'BTech.DTOs.Electives' appeared previously in this namespace [/workspace/scratch/0fea519d36f1/backend/CMS_BTech_Section_Department_Fixed/BTech.csproj]
+/workspace/scratch/0fea519d36f1/backend/CMS_BTech_Section_Department_Fixed/Controllers/OtpController.cs(238,34): warning CS0168: The variable 'ex' is declared but never used [/workspace/scratch/0fea519d36f1/backend/CMS_BTech_Section_Department_Fixed/BTech.csproj]
+/workspace/scratch/0fea519d36f1/backend/CMS_BTech_Section_Department_Fixed/Controllers/OtpController.cs(743,34): warning CS0168: The variable 'ex' is declared but never used [/workspace/scratch/0fea519d36f1/backend/CMS_BTech_Section_Department_Fixed/BTech.csproj]
+/workspace/scratch/0fea519d36f1/backend/CMS_BTech_Section_Department_Fixed/Controllers/V1/FacultyController.cs(259,30): warning CS0168: The variable 'ex' is declared but never used [/workspace/scratch/0fea519d36f1/backend/CMS_BTech_Section_Department_Fixed/BTech.csproj]
+
+Build succeeded.
+
+/workspace/scratch/0fea519d36f1/backend/CMS_BTech_Section_Department_Fixed/Controllers/V1/StudentElectivesController.cs(5,7): warning CS0105: The using directive for 'BTech.DTOs.Electives' appeared previously in this namespace [/workspace/scratch/0fea519d36f1/backend/CMS_BTech_Section_Department_Fixed/BTech.csproj]
+/workspace/scratch/0fea519d36f1/backend/CMS_BTech_Section_Department_Fixed/Controllers/OtpController.cs(238,34): warning CS0168: The variable 'ex' is declared but never used [/workspace/scratch/0fea519d36f1/backend/CMS_BTech_Section_Department_Fixed/BTech.csproj]
+/workspace/scratch/0fea519d36f1/backend/CMS_BTech_Section_Department_Fixed/Controllers/OtpController.cs(743,34): warning CS0168: The variable 'ex' is declared but never used [/workspace/scratch/0fea519d36f1/backend/CMS_BTech_Section_Department_Fixed/BTech.csproj]
+/workspace/scratch/0fea519d36f1/backend/CMS_BTech_Section_Department_Fixed/Controllers/V1/FacultyController.cs(259,30): warning CS0168: The variable 'ex' is declared but never used [/workspace/scratch/0fea519d36f1/backend/CMS_BTech_Section_Department_Fixed/BTech.csproj]
+    4 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:05.76

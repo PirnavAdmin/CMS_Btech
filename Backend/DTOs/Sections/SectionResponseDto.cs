@@ -10,7 +10,7 @@
         public long AcademicYearId { get; set; }
         public string? AcademicYearName { get; set; }
 
-        public long DepartmentId { get; set; }
+        public long? DepartmentId { get; set; }
         public string? DepartmentName { get; set; }
 
         public long CourseId { get; set; }

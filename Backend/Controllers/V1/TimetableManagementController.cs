@@ -79,8 +79,8 @@ public sealed class TimetableManagementController : ControllerBase
     }
 
     [HttpGet("timetables")]
-    public async Task<IActionResult> ListTimetables([FromQuery] long? academicYearId=null,[FromQuery] long? courseId=null,[FromQuery] long? branchId=null,[FromQuery] long? semesterId=null,[FromQuery] long? sectionId=null,[FromQuery] string? status=null,[FromQuery] long? collegeId=null)
-        => await Execute(()=>_service.ListTimetablesAsync(academicYearId,courseId,branchId,semesterId,sectionId,status,IsSuperAdmin()?collegeId:CollegeId(),IsSuperAdmin()),"Timetables retrieved successfully.");
+    public async Task<IActionResult> ListTimetables([FromQuery] long? academicYearId=null,[FromQuery] long? courseId=null,[FromQuery] long? branchId=null,[FromQuery] long? semesterId=null,[FromQuery] long? sectionId=null,[FromQuery] string? status=null)
+        => await Execute(()=>_service.ListTimetablesAsync(academicYearId,courseId,branchId,semesterId,sectionId,status,CollegeId(),IsSuperAdmin()),"Timetables retrieved successfully.");
 
     [HttpGet("timetables/{timetableId:long}")]
     public async Task<IActionResult> GetTimetable(long timetableId)
@@ -166,6 +166,18 @@ public sealed class TimetableManagementController : ControllerBase
     [Authorize(Roles=AdminRoles)]
     public async Task<IActionResult> ValidateGlobal(long timetableId)
         => await Execute(() => _service.ValidateGlobalAsync(timetableId, CollegeId(), IsSuperAdmin()), "Global timetable validation completed.");
+
+    [HttpPost("timetables/{timetableId:long}/revisions")]
+    [Authorize(Roles=AdminRoles)]
+    public async Task<IActionResult> CreateRevision(long timetableId, [FromBody] CreateTimetableRevisionRequest request)
+        => await Execute(() => _service.CreateRevisionAsync(timetableId, request, UserId(), CollegeId(), IsSuperAdmin()),
+            "Revision draft created successfully.", StatusCodes.Status201Created);
+
+    [HttpPost("publication-batches")]
+    [Authorize(Roles=AdminRoles)]
+    public async Task<IActionResult> PublishBatch([FromBody] PublishTimetableBatchRequest request)
+        => await Execute(() => _service.PublishBatchAsync(request, UserId(), CollegeId(), IsSuperAdmin()),
+            "Timetable publication batch completed.");
 
     [HttpPost("timetables/{timetableId:long}/publish")]
     [Authorize(Roles=AdminRoles)]

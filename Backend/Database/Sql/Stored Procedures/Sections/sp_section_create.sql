@@ -31,9 +31,9 @@ BEGIN
         SET MESSAGE_TEXT = 'Academic year is required.';
     END IF;
 
-    IF p_department_id IS NULL OR p_department_id <= 0 THEN
+    IF p_department_id IS NOT NULL AND p_department_id <= 0 THEN
         SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Department is required.';
+        SET MESSAGE_TEXT = 'Department ID must be positive when supplied, or null.';
     END IF;
 
     IF p_course_id IS NULL OR p_course_id <= 0 THEN
@@ -81,6 +81,7 @@ BEGIN
         SELECT 1
         FROM colleges
         WHERE college_id = p_college_id
+          AND deleted_at IS NULL
           AND status = 1
     ) THEN
 
@@ -94,28 +95,33 @@ BEGIN
        ACADEMIC YEAR
        ===================================================== */
 
-    IF NOT EXISTS
-    (
-        SELECT 1
-        FROM academicyears
+    -- Validate ownership separately from activation so the response is actionable.
+    IF NOT EXISTS (
+        SELECT 1 FROM academicyears
         WHERE academic_year_id = p_academic_year_id
-          AND status = 1
-          AND is_archived = 0
+          AND college_id = p_college_id
           AND deleted_at IS NULL
     ) THEN
-
         SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT =
-            'Academic year does not exist or is inactive.';
+        SET MESSAGE_TEXT = 'Academic year does not belong to the selected college or has been deleted.';
+    END IF;
 
+    IF NOT EXISTS (
+        SELECT 1 FROM academicyears
+        WHERE academic_year_id = p_academic_year_id
+          AND college_id = p_college_id
+          AND status = 1 AND is_archived = 0 AND deleted_at IS NULL
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Activate the selected academic year in Academic Years for this college before creating sections.';
     END IF;
 
 
     /* =====================================================
-       DEPARTMENT → COLLEGE
+       OPTIONAL DEPARTMENT → COLLEGE
        ===================================================== */
 
-    IF NOT EXISTS
+    IF p_department_id IS NOT NULL AND NOT EXISTS
     (
         SELECT 1
         FROM departments
@@ -133,7 +139,7 @@ BEGIN
 
 
     /* =====================================================
-       COURSE → COLLEGE + DEPARTMENT
+       COURSE → COLLEGE
        ===================================================== */
 
     IF NOT EXISTS
@@ -142,20 +148,19 @@ BEGIN
         FROM courses
         WHERE course_id = p_course_id
           AND college_id = p_college_id
-          AND department_id = p_department_id
           AND status = 1
           AND deleted_at IS NULL
     ) THEN
 
         SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT =
-            'Course does not belong to the selected college and department.';
+            'Course does not belong to the selected college.';
 
     END IF;
 
 
     /* =====================================================
-       BRANCH → COURSE + DEPARTMENT
+       BRANCH → COURSE
        ===================================================== */
 
     IF NOT EXISTS
@@ -164,14 +169,13 @@ BEGIN
         FROM branches
         WHERE branch_id = p_branch_id
           AND course_id = p_course_id
-          AND department_id = p_department_id
           AND status = 1
           AND deleted_at IS NULL
     ) THEN
 
         SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT =
-            'Branch does not belong to the selected course and department.';
+            'Branch does not belong to the selected course.';
 
     END IF;
 
@@ -185,6 +189,8 @@ BEGIN
         SELECT 1
         FROM semesters
         WHERE semester_id = p_semester_id
+          AND course_id = p_course_id
+          AND academic_year_id = p_academic_year_id
           AND branch_id = p_branch_id
           AND status = 1
           AND is_archived = 0
@@ -192,7 +198,7 @@ BEGIN
 
         SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT =
-            'Semester does not belong to the selected branch.';
+            'Semester does not match the selected course, branch and academic year.';
 
     END IF;
 
@@ -205,14 +211,15 @@ BEGIN
     (
         SELECT 1
         FROM sections
-        WHERE academic_year_id = p_academic_year_id
-          AND department_id = p_department_id
+        WHERE college_id = p_college_id
+          AND academic_year_id = p_academic_year_id
           AND course_id = p_course_id
           AND branch_id = p_branch_id
           AND semester_id = p_semester_id
-          AND LOWER(TRIM(section_code))
-              = LOWER(TRIM(p_section_code))
+          AND LOWER(TRIM(section_code)) COLLATE utf8mb4_0900_ai_ci
+              = LOWER(TRIM(p_section_code)) COLLATE utf8mb4_0900_ai_ci
           AND is_archived = 0
+          AND deleted_at IS NULL
     ) THEN
 
         SIGNAL SQLSTATE '45000'

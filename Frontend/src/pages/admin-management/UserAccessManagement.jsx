@@ -1,163 +1,93 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { FiDownload, FiEye, FiPlus, FiRefreshCw, FiSearch, FiShield, FiUsers, FiX } from 'react-icons/fi'
+import { FiActivity, FiAlertCircle, FiCheckCircle, FiDownload, FiEdit2, FiMail, FiPlus, FiRefreshCw, FiSearch, FiShield, FiUsers, FiX } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout.jsx'
 import { AcademicProvider } from '../../context/AcademicContext.jsx'
-import { userDirectoryApi } from '../../api/apiEndpoints.js'
-import UserAccessMockWorkspace from './UserAccessMockWorkspace.jsx'
+import { roleApi, userDirectoryApi } from '../../api/apiEndpoints.js'
 import './UserAccessManagement.css'
 
-const PAGE_SIZE = 10
-const accountId = user => user.userId ?? user.UserId ?? user.user_id ?? user.id ?? ''
-const value = (user, ...keys) => keys.map(key => user?.[key]).find(item => item !== undefined && item !== null && item !== '')
-const isActive = user => [1, true, '1', 'active', 'Active'].includes(value(user, 'status', 'Status'))
-const statusLabel = user => isActive(user) ? 'Active' : 'Inactive'
-const display = item => item === undefined || item === null || item === '' ? '—' : String(item)
-const formatDate = item => {
-  if (!item) return '—'
-  const date = new Date(item)
-  return Number.isNaN(date.getTime()) ? String(item) : new Intl.DateTimeFormat(undefined, { day: '2-digit', month: 'short', year: 'numeric' }).format(date)
+const blankForm = { fullName: '', email: '', mobile: '', collegeName: '', collegeCode: '', collegeType: 'Engineering', universityName: '', collegeEmail: '', collegeMobile: '', addressLine1: '', city: '', state: '', pincode: '' }
+const statuses = ['Active', 'Pending Invitation', 'Profile Pending', 'Expired', 'Suspended', 'Deactivated']
+const initials = name => String(name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase()
+const date = value => value ? new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium' }).format(new Date(value)) : '--'
+
+function UserForm({ onClose, onSave, saving }) {
+  const [step, setStep] = useState(0)
+  const [form, setForm] = useState(() => ({ ...blankForm }))
+  const [error, setError] = useState('')
+  const patch = values => setForm(current => ({ ...current, ...values }))
+  const submit = async event => { event.preventDefault(); setError(''); if (step < 2) { setStep(step + 1); return }; try { await onSave({ ...form, fullName: form.fullName.trim(), email: form.email.trim(), mobile: form.mobile.trim(), collegeName: form.collegeName.trim(), collegeCode: form.collegeCode.trim().toUpperCase(), collegeEmail: form.collegeEmail.trim(), collegeMobile: form.collegeMobile.trim(), addressLine1: form.addressLine1.trim(), city: form.city.trim(), state: form.state.trim(), pincode: form.pincode.trim() }) } catch (reason) { setError(reason.status === 404 ? 'The running backend does not have the new college onboarding route yet. Restart the backend with the latest code, then retry.' : reason.message || 'Could not onboard client.') } }
+  const stepNames = ['Administrator', 'New college', 'Review & invite']
+  return <div className="user-directory__backdrop" onMouseDown={event => event.target === event.currentTarget && onClose()}><section className="user-directory__dialog user-directory__form-dialog" role="dialog" aria-modal="true" aria-labelledby="user-form-title"><header><div><span className="user-directory__eyebrow">New client onboarding</span><h2 id="user-form-title">Invite college administrator</h2></div><button className="user-directory__icon-button" type="button" onClick={onClose} aria-label="Close"><FiX /></button></header><form onSubmit={submit}>
+    <nav className="user-directory__wizard-steps" aria-label="Invitation progress">{stepNames.map((name, index) => <button type="button" key={name} className={step === index ? 'is-active' : step > index ? 'is-complete' : ''} onClick={() => index <= step && setStep(index)}><b>{index + 1}</b>{name}</button>)}</nav>
+    {step === 0 && <fieldset><legend>Personal Information</legend><div className="user-directory__form-grid"><label>Full Name<input required maxLength="150" value={form.fullName} onChange={event => patch({ fullName: event.target.value })} /></label><label>Official Email Address<input required type="email" maxLength="150" value={form.email} onChange={event => patch({ email: event.target.value })} /></label><label>Mobile Number<input required inputMode="tel" maxLength="15" value={form.mobile} onChange={event => patch({ mobile: event.target.value })} /></label></div></fieldset>}
+    {step === 1 && <fieldset><legend>New College Details</legend><div className="user-directory__form-grid"><label>College Name<input required maxLength="200" value={form.collegeName} onChange={event => patch({ collegeName: event.target.value })} /></label><label>College Code<input required maxLength="12" pattern="[A-Za-z0-9]{2,12}" title="Use 2 to 12 letters or numbers." value={form.collegeCode} onChange={event => patch({ collegeCode: event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') })} /></label><label>College Type<select required value={form.collegeType} onChange={event => patch({ collegeType: event.target.value })}><option>Engineering</option><option>Degree</option><option>Management</option><option>Medical</option><option>Other</option></select></label><label>University Name<input required maxLength="200" value={form.universityName} onChange={event => patch({ universityName: event.target.value })} /></label><label>College Email<input type="email" maxLength="150" value={form.collegeEmail} onChange={event => patch({ collegeEmail: event.target.value })} /></label><label>College Contact Number<input maxLength="20" value={form.collegeMobile} onChange={event => patch({ collegeMobile: event.target.value })} /></label><label>Address<input required maxLength="255" value={form.addressLine1} onChange={event => patch({ addressLine1: event.target.value })} /></label><label>City<input required maxLength="100" value={form.city} onChange={event => patch({ city: event.target.value })} /></label><label>State<input required maxLength="100" value={form.state} onChange={event => patch({ state: event.target.value })} /></label><label>Pincode<input required maxLength="10" inputMode="numeric" value={form.pincode} onChange={event => patch({ pincode: event.target.value })} /></label></div></fieldset>}    {step === 2 && <fieldset><legend>Review & Send Invitation</legend><dl className="user-directory__review"><dt>Administrator</dt><dd>{form.fullName || '—'}</dd><dt>Sign-in email</dt><dd>{form.email || '—'}</dd><dt>New college</dt><dd>{form.collegeName || '—'} ({form.collegeCode || '—'})</dd><dt>University</dt><dd>{form.universityName || '—'}</dd><dt>Initial role</dt><dd>College Administrator</dd></dl><p className="user-directory__hint"><FiMail /> The college and its administrator account will be created together. A secure password setup invitation will be sent to the administrator’s email.</p></fieldset>}    {error && <p className="user-directory__error" role="alert">{error}</p>}<footer><button type="button" className="user-directory__button" onClick={step ? () => setStep(step - 1) : onClose}>{step ? 'Back' : 'Cancel'}</button>{step < 2 ? <button type="submit" className="user-directory__button user-directory__button--primary" disabled={saving}>Next</button> : <button className="user-directory__button user-directory__button--primary" disabled={saving}>{saving ? 'Sending...' : 'Send Invitation'}</button>}</footer>
+  </form></section></div>
 }
 
-function UserDetailsDialog({ user, onClose }) {
-  if (!user) return null
-  const fields = [
-    ['Account ID', accountId(user)], ['Employee User ID', value(user, 'employeeUserId', 'EmployeeUserId')],
-    ['Full name', value(user, 'fullName', 'FullName')], ['Email', value(user, 'email', 'Email')],
-    ['Phone', value(user, 'mobile', 'Mobile')], ['College ID', value(user, 'collegeId', 'CollegeId')],
-    ['Account status', statusLabel(user)], ['Created', formatDate(value(user, 'createdAt', 'CreatedAt'))],
-    ['Updated', formatDate(value(user, 'updatedAt', 'UpdatedAt'))],
-  ]
-  return <div className="user-directory__backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
-    <section className="user-directory__dialog" role="dialog" aria-modal="true" aria-labelledby="user-detail-title">
-      <header><div><span className="user-directory__eyebrow">Account details</span><h2 id="user-detail-title">{display(value(user, 'fullName', 'FullName'))}</h2></div><button className="user-directory__icon-button" type="button" onClick={onClose} aria-label="Close details"><FiX /></button></header>
-      <dl>{fields.map(([label, fieldValue]) => <div key={label}><dt>{label}</dt><dd>{display(fieldValue)}</dd></div>)}</dl>
-      <p className="user-directory__hint"><FiShield aria-hidden="true" /> Roles, permissions, and department are not included in the backend user account response.</p>
-      <footer><button type="button" className="user-directory__button user-directory__button--primary" onClick={onClose}>Close</button></footer>
-    </section>
-  </div>
+function EditUserForm({ user, onClose, onSave, saving }) {
+  const [form, setForm] = useState({ fullName: user.fullName || '', email: user.email || '', mobile: user.mobile || '', designation: user.designation || '' })
+  const [error, setError] = useState('')
+  const patch = event => setForm(current => ({ ...current, [event.target.name]: event.target.value }))
+  const submit = async event => {
+    event.preventDefault()
+    setError('')
+    try {
+      let roleIds = (user.roleIds?.length ? user.roleIds : [user.roleId])
+        .map(value => Number(value))
+        .filter(value => Number.isInteger(value) && value > 0)
+
+      // Some directory responses provide the role name for display but omit its ID.
+      // Resolve that name against the roles API so the update DTO gets the required IDs.
+      if (!roleIds.length && user.roleName) {
+        const normalize = value => String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+        const wanted = normalize(user.roleName.split(',')[0])
+        const roles = await roleApi.getAll()
+        const match = roles.find(role => {
+          const name = role.roleName ?? role.RoleName ?? role.name ?? role.Name
+          const code = role.roleCode ?? role.RoleCode ?? role.code ?? role.Code
+          const normalizedName = normalize(name)
+          const normalizedCode = normalize(code)
+          return normalizedName === wanted || normalizedCode === wanted ||
+            (wanted === 'collegeadmin' && ['collegeadministrator', 'collegeadmin'].includes(normalizedName))
+        })
+        const resolvedId = Number(match?.roleId ?? match?.RoleId ?? match?.role_id ?? match?.Role_id ?? match?.id ?? match?.Id)
+        if (Number.isInteger(resolvedId) && resolvedId > 0) roleIds = [resolvedId]
+      }
+
+      if (!roleIds.length) throw new Error('Could not determine this account’s role ID. Refresh the user list and try again.')
+
+      await onSave({
+        collegeId: Number(user.collegeId), departmentId: user.departmentId ? Number(user.departmentId) : null,
+        roleId: roleIds[0], roleIds, employeeUserId: user.employeeUserId || undefined,
+        fullName: form.fullName.trim(), email: form.email.trim(), mobile: form.mobile.trim(),
+        designation: form.designation.trim(), academicYearIds: user.academicYearIds || [], permissions: user.permissions || {},
+      })
+    } catch (reason) { setError(reason.message || 'Could not update this account.') }
+  }
+  return <div className="user-directory__backdrop" onMouseDown={event => event.target === event.currentTarget && onClose()}><section className="user-directory__dialog user-directory__form-dialog" role="dialog" aria-modal="true" aria-labelledby="edit-user-title"><header><div><span className="user-directory__eyebrow">Update account details</span><h2 id="edit-user-title">Edit {user.fullName}</h2></div><button className="user-directory__icon-button" type="button" onClick={onClose} aria-label="Close"><FiX /></button></header><form onSubmit={submit}><fieldset><legend>Account details</legend><div className="user-directory__form-grid"><label>Full Name<input name="fullName" required maxLength="150" value={form.fullName} onChange={patch} /></label><label>Sign-in Email<input name="email" type="email" required maxLength="150" value={form.email} onChange={patch} /></label><label>Mobile Number<input name="mobile" required maxLength="15" value={form.mobile} onChange={patch} /></label><label>Designation<input name="designation" required maxLength="150" value={form.designation} onChange={patch} /></label></div></fieldset>{error && <p className="user-directory__error" role="alert">{error}</p>}<footer><button type="button" className="user-directory__button" onClick={onClose}>Cancel</button><button className="user-directory__button user-directory__button--primary" disabled={saving}>{saving ? 'Saving...' : 'Save and send setup link'}</button></footer></form></section></div>
 }
 
 function UserDirectory() {
-  const [users, setUsers] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [page, setPage] = useState(1)
-  const [selectedUser, setSelectedUser] = useState(null)
-  const [notice, setNotice] = useState('')
-
-  const loadUsers = useCallback(async () => {
-    setLoading(true)
-    setError('')
-    try {
-      setUsers(await userDirectoryApi.getAll())
-    } catch (reason) {
-      setError(reason?.message || 'Users could not be loaded. Please try again.')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    let active = true
-    userDirectoryApi.getAll()
-      .then(rows => { if (active) setUsers(rows) })
-      .catch(reason => { if (active) setError(reason?.message || 'Users could not be loaded. Please try again.') })
-      .finally(() => { if (active) setLoading(false) })
-    return () => { active = false }
-  }, [])
-
-  const filteredUsers = useMemo(() => {
-    const query = search.trim().toLowerCase()
-    return users.filter(user => {
-      const matchesSearch = !query || [accountId(user), value(user, 'employeeUserId', 'EmployeeUserId'), value(user, 'fullName', 'FullName'), value(user, 'email', 'Email'), value(user, 'collegeId', 'CollegeId')].some(item => String(item ?? '').toLowerCase().includes(query))
-      const matchesStatus = statusFilter === 'all' || (statusFilter === 'active' ? isActive(user) : !isActive(user))
-      return matchesSearch && matchesStatus
-    })
-  }, [users, search, statusFilter])
-
-  const pageCount = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE))
-  const currentPage = Math.min(page, pageCount)
-  const shownUsers = filteredUsers.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
-  const activeCount = users.filter(isActive).length
-
-  const exportUsers = async () => {
-    setNotice('')
-    try {
-      const result = await userDirectoryApi.exportCsv({ Search: search, Status: statusFilter === 'all' ? '' : statusFilter })
-      const url = URL.createObjectURL(result.blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = result.contentDisposition.match(/filename\*?=(?:UTF-8''|")?([^;"]+)/i)?.[1] || 'users.csv'
-      document.body.append(link)
-      link.click()
-      link.remove()
-      URL.revokeObjectURL(url)
-      setNotice('User export downloaded.')
-    } catch (reason) {
-      setError(reason?.message || 'The user export could not be downloaded.')
-    }
-  }
-
-  return <main className="user-directory">
-    <header className="user-directory__header">
-      <div><span className="user-directory__eyebrow">Administration / Access</span><h1>User Access Management</h1><p>View system login accounts and their college access details.</p></div>
-      <div className="user-directory__header-actions">
-        <button type="button" className="user-directory__button" onClick={exportUsers} disabled={loading || Boolean(error)}><FiDownload /> Export CSV</button>
-        <button type="button" className="user-directory__button user-directory__button--primary" onClick={() => setNotice('Account creation is not available: the backend has no administrator user-creation endpoint. New login accounts currently come from the access-request approval workflow.') }><FiPlus /> Add User</button>
-      </div>
-    </header>
-
-    {notice && <div className="user-directory__notice" role="status"><span>{notice}</span><button type="button" onClick={() => setNotice('')} aria-label="Dismiss notice"><FiX /></button></div>}
-    <section className="user-directory__capability" aria-label="Available account management features">
-      <FiShield aria-hidden="true" />
-      <p><strong>Account management capabilities are limited by the current backend.</strong> The live API supports account listing and export only. Editing, activation, deactivation, password reset, unlock, role assignment, and department links are not exposed for this screen.</p>
+  const [users, setUsers] = useState([]), [loading, setLoading] = useState(true), [saving, setSaving] = useState(false), [error, setError] = useState(''), [notice, setNotice] = useState('')
+  const [search, setSearch] = useState(''), [tab, setTab] = useState('All Users'), [college, setCollege] = useState(''), [department, setDepartment] = useState(''), [role, setRole] = useState(''), [status, setStatus] = useState(''), [editing, setEditing] = useState(null), [activity, setActivity] = useState(null)
+  const load = useCallback(async () => { setLoading(true); setError(''); try { const rows = await userDirectoryApi.getAll(); setUsers(rows) } catch (reason) { setError(reason.message || 'Users could not be loaded.') } finally { setLoading(false) } }, [])
+  useEffect(() => { load() }, [load])
+  const visible = useMemo(() => users.filter(user => (!search || [user.fullName,user.email,user.mobile,user.employeeUserId].some(value => String(value || '').toLowerCase().includes(search.toLowerCase()))) && (!college || String(user.collegeId) === college) && (!department || String(user.departmentId) === department) && (!role || String(user.roleId) === role) && (!status || user.accountStatus === status) && (tab === 'All Users' || (tab === 'Pending Invitations' ? ['Pending Invitation', 'Expired'].includes(user.accountStatus) : user.accountStatus === tab))), [users, search, college, department, role, status, tab])
+  const counts = Object.fromEntries(statuses.map(item => [item, users.filter(user => user.accountStatus === item).length]))
+  const save = async payload => { setSaving(true); try { const college = { collegeName: payload.collegeName, collegeCode: payload.collegeCode, collegeType: payload.collegeType, universityName: payload.universityName, email: payload.collegeEmail || null, mobile: payload.collegeMobile || null, addressLine1: payload.addressLine1, city: payload.city, state: payload.state, pincode: payload.pincode, country: 'India' }; await userDirectoryApi.onboardCollege({ ...college, ...Object.fromEntries(Object.entries(college).map(([key, value]) => [key[0].toUpperCase() + key.slice(1), value])), college, adminName: payload.fullName, adminFullName: payload.fullName, adminEmail: payload.email, adminMobile: payload.mobile }); setNotice('New college created and administrator invitation sent.'); setEditing(null); await load() } catch (reason) { const email = payload.email.trim().toLowerCase(), mobile = payload.mobile.trim(); const existingByEmail = reason.status === 409 ? users.find(user => String(user.email || '').trim().toLowerCase() === email) : null; const existingByMobile = reason.status === 409 ? users.find(user => String(user.mobile || '').trim() === mobile) : null; if (existingByEmail && ['Pending Invitation', 'Expired'].includes(existingByEmail.accountStatus)) { try { await userDirectoryApi.resendInvitation(existingByEmail.userId); setNotice(`Invitation resent to ${existingByEmail.email}.`); setEditing(null); await load(); return } catch (resendError) { setError(`The existing invitation could not be resent: ${resendError.message}`); throw resendError } } if (existingByEmail?.accountStatus === 'Active') { try { await userDirectoryApi.resetPassword(existingByEmail.userId); setNotice(`This account is already active. A secure password setup link was sent to ${existingByEmail.email}.`); setEditing(null); await load(); return } catch (resetError) { setError(`A password setup link could not be sent to ${existingByEmail.email}: ${resetError.message}`); throw resetError } } if (existingByMobile && String(existingByMobile.email || '').trim().toLowerCase() !== email) { const message = `This mobile number is already linked to ${existingByMobile.email || 'an account with another email'}. No email was sent. Check the address or ask an administrator to correct the existing account.`; setError(message); throw new Error(message) } if (existingByEmail) { const message = `An account for ${payload.email} already exists and is ${String(existingByEmail.accountStatus || 'unavailable').toLowerCase()}. Use the existing account or ask an administrator for help.`; setError(message); throw new Error(message) } setError(reason.message || 'Could not onboard client.'); throw reason } finally { setSaving(false) } }
+  const saveEdit = async payload => { if (!editing?.userId) return; setSaving(true); setError(''); try { await userDirectoryApi.update(editing.userId, payload); try { await userDirectoryApi.resetPassword(editing.userId) } catch (reason) { throw new Error(`Account details were saved, but the setup email could not be sent to ${payload.email}: ${reason.message}`) } setNotice(`Account details saved and password setup link sent to ${payload.email}.`); setEditing(null); await load() } catch (reason) { setError(reason.message || 'Could not update this account.'); throw reason } finally { setSaving(false) } }
+  const action = async (user, type) => { const labels = { suspend: 'suspend', activate: 'activate', deactivate: 'deactivate', resend: 'resend an invitation to', reset: 'send a password setup link to' }; if (['suspend','deactivate'].includes(type) && !window.confirm(`Are you sure you want to ${labels[type]} ${user.fullName}?`)) return; setError(''); try { if (type === 'resend') await userDirectoryApi.resendInvitation(user.userId); else if (type === 'reset') await userDirectoryApi.resetPassword(user.userId); else await userDirectoryApi.setStatus(user.userId, type); setNotice(type === 'resend' ? 'Invitation sent.' : type === 'reset' ? 'Password setup link sent.' : `Account ${type}d.`); await load() } catch (reason) { setError(reason.message || `Unable to ${labels[type]} user.`) } }
+  const exportCsv = async () => { try { const result = await userDirectoryApi.exportCsv({ Search: search }); const url = URL.createObjectURL(result.blob), link = document.createElement('a'); link.href = url; link.download = 'users.csv'; link.click(); URL.revokeObjectURL(url) } catch (reason) { setError(reason.message) } }
+  return <main className="user-directory"><header className="user-directory__header"><div><span className="user-directory__eyebrow">Administration / Access</span><h1>User Access Management</h1><p>Invite users, assign college access, and manage account security.</p></div><div className="user-directory__header-actions"><button className="user-directory__button" onClick={exportCsv}><FiDownload /> Export</button><button className="user-directory__button user-directory__button--primary" onClick={() => setEditing({})}><FiPlus /> Invite User</button></div></header>
+    {notice && <div className="user-directory__notice" role="status">{notice}<button onClick={() => setNotice('')} aria-label="Dismiss"><FiX /></button></div>}{error && <div className="user-directory__error" role="alert">{error}<button className="user-directory__button" onClick={load}>Retry</button></div>}
+    <section className="user-directory__stats"><article><span className="user-directory__stat-icon"><FiUsers /></span><div><small>Total Accounts</small><strong>{loading ? '--' : users.length}</strong></div></article><article><span className="user-directory__stat-icon user-directory__stat-icon--green"><FiCheckCircle /></span><div><small>Active Accounts</small><strong>{counts.Active || 0}</strong></div></article><article><span className="user-directory__stat-icon"><FiMail /></span><div><small>Pending Invitations</small><strong>{counts['Pending Invitation'] || 0}</strong></div></article><article><span className="user-directory__stat-icon user-directory__stat-icon--gray"><FiAlertCircle /></span><div><small>Suspended Accounts</small><strong>{counts.Suspended || 0}</strong></div></article></section>
+    <section className="user-directory__panel"><div className="user-directory__panel-heading"><div><h2>Accounts</h2><p>Access status, college assignments, and last login activity.</p></div><button className="user-directory__icon-button" onClick={load} aria-label="Refresh"><FiRefreshCw /></button></div><nav className="user-directory__tabs">{['All Users','Active','Pending Invitations','Suspended'].map(item => <button className={tab === item ? 'is-active' : ''} key={item} onClick={() => setTab(item)}>{item}</button>)}</nav>
+      <div className="user-directory__filters"><label className="user-directory__search"><FiSearch /><input placeholder="Search name, email, or employee ID" value={search} onChange={event => setSearch(event.target.value)} /></label><select value={status} onChange={event => setStatus(event.target.value)}><option value="">Any status</option>{statuses.map(item => <option key={item}>{item}</option>)}</select></div>
+      {loading ? <div className="user-directory__loading">Loading accounts...</div> : visible.length ? <div className="user-directory__table-wrap"><table><thead><tr><th>User</th><th>College / Department</th><th>Role</th><th>Status</th><th>Last Login</th><th>Actions</th></tr></thead><tbody>{visible.map(user => <tr key={user.userId}><td><div className="user-directory__identity"><span className="user-directory__avatar">{user.profileImagePath ? <img src={user.profileImagePath} alt="" /> : initials(user.fullName)}</span><div><strong>{user.fullName}</strong><small>{user.email}{user.employeeUserId ? `  /  ${user.employeeUserId}` : ''}</small></div></div></td><td>{user.collegeName || '--'}<small className="user-directory__subline">{user.departmentName || '--'}</small></td><td>{user.roleName || '--'}</td><td><span className={`user-directory__status status-${String(user.accountStatus).toLowerCase().replaceAll(' ', '-')}`}><i />{user.accountStatus}</span></td><td>{date(user.lastLoginAt)}</td><td><div className="user-directory__actions"><button title="Edit account details" aria-label={`Edit ${user.fullName}`} onClick={() => setEditing(user)}><FiEdit2 /></button>{['Pending Invitation','Expired'].includes(user.accountStatus) ? <button title="Resend invitation" aria-label={`Resend invitation to ${user.fullName}`} onClick={() => action(user,'resend')}><FiMail /></button> : <button title="Send password setup link" aria-label={`Send password setup link to ${user.fullName}`} onClick={() => action(user,'reset')}><FiShield /></button>}<button title="Account activity" aria-label={`View activity for ${user.fullName}`} onClick={async () => { try { setActivity(await userDirectoryApi.activity(user.userId)) } catch (reason) { setError(reason.message) } }}><FiActivity /></button><select aria-label={`Change ${user.fullName} status`} value="" onChange={event => event.target.value && action(user,event.target.value)}><option value="">Status...</option>{user.accountStatus === 'Active' ? <><option value="suspend">Suspend</option><option value="deactivate">Deactivate</option></> : user.accountStatus === 'Suspended' || user.accountStatus === 'Deactivated' ? <><option value="activate">Activate</option><option value="deactivate">Deactivate</option></> : <option value="deactivate">Deactivate</option>}</select></div></td></tr>)}</tbody></table></div> : <div className="user-directory__empty"><FiUsers /><h3>No users found</h3><p>Change your filters or invite a user.</p></div>}
+      <footer className="user-directory__pagination"><span>Showing {visible.length} of {users.length} accounts</span><span>{loading ? 'Refreshing...' : 'Live account data'}</span></footer>
     </section>
-
-    <section className="user-directory__stats" aria-label="User totals">
-      <article><span className="user-directory__stat-icon"><FiUsers /></span><div><span>Total accounts</span><strong>{loading ? '—' : users.length}</strong></div></article>
-      <article><span className="user-directory__stat-icon user-directory__stat-icon--green">●</span><div><span>Active</span><strong>{loading ? '—' : activeCount}</strong></div></article>
-      <article><span className="user-directory__stat-icon user-directory__stat-icon--gray">●</span><div><span>Inactive</span><strong>{loading ? '—' : users.length - activeCount}</strong></div></article>
-    </section>
-
-    <section className="user-directory__panel">
-      <div className="user-directory__panel-heading"><div><h2>All accounts</h2><p>Search by account ID, employee ID, name, email, or college.</p></div><button type="button" className="user-directory__icon-button" onClick={loadUsers} disabled={loading} aria-label="Refresh users"><FiRefreshCw className={loading ? 'is-spinning' : ''} /></button></div>
-      <div className="user-directory__filters">
-        <label className="user-directory__search"><FiSearch aria-hidden="true" /><span className="sr-only">Search users</span><input type="search" value={search} placeholder="Search users…" onChange={event => { setSearch(event.target.value); setPage(1) }} /></label>
-        <label><span>Account status</span><select value={statusFilter} onChange={event => { setStatusFilter(event.target.value); setPage(1) }}><option value="all">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
-      </div>
-
-      {error && <div className="user-directory__error" role="alert"><strong>Unable to load users</strong><span>{error}</span><button type="button" className="user-directory__button" onClick={loadUsers}>Try again</button></div>}
-      {!error && loading && <div className="user-directory__loading" role="status"><span className="user-directory__spinner" />Loading accounts…</div>}
-      {!error && !loading && users.length === 0 && <div className="user-directory__empty"><span className="user-directory__empty-icon"><FiUsers /></span><h3>No user accounts found</h3><p>The backend returned no accounts for this college.</p></div>}
-      {!error && !loading && users.length > 0 && filteredUsers.length === 0 && <div className="user-directory__empty"><h3>No matching accounts</h3><p>Try changing your search or status filter.</p><button type="button" className="user-directory__button" onClick={() => { setSearch(''); setStatusFilter('all') }}>Clear filters</button></div>}
-
-      {!error && !loading && shownUsers.length > 0 && <>
-        <div className="user-directory__table-wrap"><table><thead><tr><th scope="col">Account ID</th><th scope="col">Employee ID</th><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Mobile</th><th scope="col">College ID</th><th scope="col">Created</th><th scope="col">Updated</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead><tbody>
-          {shownUsers.map((user, index) => <tr key={accountId(user) || index}>
-            <td data-label="Account ID"><strong>{display(accountId(user))}</strong></td>
-            <td data-label="Employee ID"><strong>{display(value(user, 'employeeUserId', 'EmployeeUserId'))}</strong></td>
-            <td data-label="Name">{display(value(user, 'fullName', 'FullName'))}</td>
-            <td data-label="Email">{display(value(user, 'email', 'Email'))}</td>
-            <td data-label="Mobile">{display(value(user, 'mobile', 'Mobile'))}</td>
-            <td data-label="College ID">{display(value(user, 'collegeId', 'CollegeId'))}</td>
-            <td data-label="Created">{formatDate(value(user, 'createdAt', 'CreatedAt'))}</td>
-            <td data-label="Updated">{formatDate(value(user, 'updatedAt', 'UpdatedAt'))}</td>
-            <td data-label="Status"><span className={`user-directory__status ${isActive(user) ? 'is-active' : 'is-inactive'}`}><i />{statusLabel(user)}</span></td>
-            <td data-label="Actions"><button type="button" className="user-directory__view" onClick={() => setSelectedUser(user)}><FiEye /> View</button></td>
-          </tr>)}
-        </tbody></table></div>
-        <footer className="user-directory__pagination"><span>Showing {Math.min((currentPage - 1) * PAGE_SIZE + 1, filteredUsers.length)}–{Math.min(currentPage * PAGE_SIZE, filteredUsers.length)} of {filteredUsers.length} accounts</span><div><button type="button" onClick={() => setPage(currentPage - 1)} disabled={currentPage <= 1}>Previous</button><span>Page {currentPage} of {pageCount}</span><button type="button" onClick={() => setPage(currentPage + 1)} disabled={currentPage >= pageCount}>Next</button></div></footer>
-      </>}
-    </section>
-    <section className="user-directory__mock-panel" aria-label="Separate mock workspace">
-      <UserAccessMockWorkspace />
-    </section>
-    <UserDetailsDialog user={selectedUser} onClose={() => setSelectedUser(null)} />
+    {editing && (editing.userId ? <EditUserForm user={editing} onClose={() => setEditing(null)} onSave={saveEdit} saving={saving} /> : <UserForm onClose={() => setEditing(null)} onSave={save} saving={saving} />)}
+    {activity && <div className="user-directory__backdrop" onMouseDown={event => event.target === event.currentTarget && setActivity(null)}><section className="user-directory__dialog"><header><h2>Recent account activity</h2><button className="user-directory__icon-button" onClick={() => setActivity(null)}><FiX /></button></header><ul className="user-directory__activity">{activity.map((item,index) => <li key={index}><strong>{item.eventType || item.loginStatus}</strong><span>{date(item.loginAt)}  /  {item.ipAddress || 'IP unavailable'}</span></li>)}</ul></section></div>}
   </main>
 }
-
-export default function UserAccessManagement() {
-  return <AcademicProvider><DashboardLayout><UserDirectory /></DashboardLayout></AcademicProvider>
-}
+export default function UserAccessManagement() { return <AcademicProvider><DashboardLayout><UserDirectory /></DashboardLayout></AcademicProvider> }

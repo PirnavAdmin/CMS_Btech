@@ -43,9 +43,16 @@ namespace BTech.Services
         {
             var identifier = request.LoginId.Trim();
 
-            var user =
-                await _userRepository
-                    .FindByLoginIdentifierAsync(identifier);
+            User? user;
+            try
+            {
+                user = await _userRepository.FindByLoginIdentifierAsync(identifier);
+            }
+            catch (InvalidOperationException ex) when (ex.Message == "AMBIGUOUS_LOGIN_IDENTIFIER")
+            {
+                await CreateAuditAsync(null, identifier, "FAILED", "Ambiguous login identifier", ipAddress, userAgent);
+                return (false, "Invalid login credentials.", null);
+            }
 
             // User not found
             if (user == null)
@@ -82,9 +89,16 @@ namespace BTech.Services
             }
 
             // Password verification
-            bool passwordValid = BCrypt.Net.BCrypt.Verify(
-                request.Password,
-                user.PasswordHash);
+            bool passwordValid;
+            try
+            {
+                passwordValid = BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash);
+            }
+            catch (BCrypt.Net.SaltParseException)
+            {
+                // Legacy/demo hashes are malformed; fail closed without exposing hash details.
+                passwordValid = false;
+            }
 
             if (!passwordValid)
             {
@@ -121,6 +135,12 @@ namespace BTech.Services
                     false,
                     "User does not have an active role.",
                     null);
+            }
+
+            if (roles.Any(r => r.Equals("STUDENT", StringComparison.OrdinalIgnoreCase)) && !user.college_id.HasValue)
+            {
+                await CreateAuditAsync(user.user_id, identifier, "FAILED", "Missing college mapping", ipAddress, userAgent);
+                return (false, "Student account is not fully configured. Contact the college administrator.", null);
             }
 
             // Generate JWT Tokens
@@ -176,11 +196,13 @@ namespace BTech.Services
                     _jwtService.GetAccessTokenExpiryMinutes() * 60,
                 AccessTokenExpiresAt = accessTokenExpiresAt,
                 UserId = user.user_id,
+                CollegeId = user.college_id,
                 EmployeeUserId = user.EmployeeUserId,
                 FullName = user.FullName,
                 Email = user.Email,
                 Mobile = user.Mobile,
-                Roles = roles,
+                Roles = roles.Select(role => role.Equals("STUDENT", StringComparison.OrdinalIgnoreCase) ? "Student" : role).ToList(),
+                MustChangePassword = user.MustChangePassword,
 
                 // ADDED - REMEMBER ME
                 RememberMe = request.RememberMe
@@ -253,6 +275,12 @@ namespace BTech.Services
                     false,
                     "User account is inactive.",
                     null);
+            }
+
+            // First-login temporary credentials cannot be renewed into a new session.
+            if (user.MustChangePassword)
+            {
+                return (false, "Password change is required before refreshing tokens.", null);
             }
 
             // Get current roles

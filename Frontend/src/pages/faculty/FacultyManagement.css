@@ -920,11 +920,12 @@
 .faculty-management .fm-attendance-editor input:disabled { cursor: not-allowed; color: var(--text-muted); background: var(--surface-soft); }
 .faculty-management .fm-attendance-disabled-value { display: flex; width: 100%; min-height: 42px; align-items: center; padding: 9px 11px; border: 1px solid var(--border); border-radius: 7px; color: var(--text-muted); background: var(--surface-soft); font-size: 13px; }
 .faculty-management .fm-attendance-time-field { display: grid; gap: 5px; color: var(--text-secondary); font-size: 12px; font-weight: 700; }
-.faculty-management .fm-attendance-time-controls { display: flex; align-items: center; gap: 4px; min-height: 42px; }
-.faculty-management .fm-attendance-time-controls select { height: 42px; min-width: 0; padding: 0 7px; border: 1px solid var(--border-strong); border-radius: 7px; background: var(--surface); color: var(--text-primary); font: inherit; font-size: 12px; font-weight: 650; }
-.faculty-management .fm-attendance-time-controls select:first-child { width: 64px; }
-.faculty-management .fm-attendance-time-controls select:nth-of-type(2) { width: 64px; }
-.faculty-management .fm-attendance-time-controls select:last-child { width: 74px; }
+.faculty-management .fm-attendance-time-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) minmax(0, 1.15fr); align-items: center; gap: 8px; width: 100%; min-width: 0; min-height: 42px; }
+.faculty-management .fm-attendance-time-controls > .project-select { width: 100%; min-width: 0; }
+.faculty-management .fm-attendance-time-controls > .project-select .searchable-select__trigger { width: 100%; min-width: 0; min-height: 42px; padding: 0 9px; font-size: 13px; }
+.faculty-management .fm-attendance-time-controls > select { width: 100%; min-width: 0; height: 42px; padding: 0 9px; border: 1px solid var(--border-strong); border-radius: 7px; background: var(--surface); color: var(--text-primary); font: inherit; font-size: 13px; font-weight: 650; opacity: 1 !important; }
+.faculty-management .fm-attendance-time-controls > .fm-attendance-disabled-value { grid-column: 1 / -1; }
+.faculty-management .fm-attendance-time-separator { text-align: center; }
 .faculty-management .fm-attendance-time-controls select:focus { border-color: var(--brand); outline: 0; box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 14%, transparent); }
 .faculty-management .fm-attendance-success { display: grid; justify-items: center; width: min(100%, 420px); padding: 26px 26px 22px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-md); text-align: center; }
 .faculty-management .fm-attendance-success-icon { display: grid; width: 48px; height: 48px; margin-bottom: 12px; place-items: center; border-radius: 50%; color: var(--success, #125AA8); background: color-mix(in srgb, var(--success, #125AA8) 12%, var(--surface)); }
@@ -2446,6 +2447,46 @@
 .faculty-management > .faculty-directory > .filter-disclosure .faculty-search:focus-within input {
   border-color: var(--brand) !important;
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 18%, transparent) !important;
+}
+
+/* Keep the directory search icon in the input's flex flow so it never covers text. */
+:root[data-theme] #root .page-content .faculty-management > .faculty-directory > .filter-disclosure .filter-disclosure__bar .filter-disclosure__search .faculty-search {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 44px !important;
+  height: 44px !important;
+  padding: 0 14px !important;
+  border: 1px solid var(--border-strong) !important;
+  border-radius: 9px !important;
+  background: var(--surface) !important;
+  box-sizing: border-box !important;
+}
+:root[data-theme] #root .page-content .faculty-management > .faculty-directory > .filter-disclosure .filter-disclosure__bar .filter-disclosure__search .faculty-search > svg {
+  position: static !important;
+  flex: 0 0 18px !important;
+  width: 18px !important;
+  height: 18px !important;
+  transform: none !important;
+  pointer-events: none;
+}
+:root[data-theme] #root .page-content .faculty-management > .faculty-directory > .filter-disclosure .filter-disclosure__bar .filter-disclosure__search .faculty-search > input {
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 42px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  font-size: 14px !important;
+  line-height: 1.4 !important;
+  box-shadow: none !important;
+}
+:root[data-theme] #root .page-content .faculty-management > .faculty-directory > .filter-disclosure .filter-disclosure__search .faculty-search:focus-within {
+  border-color: var(--brand) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 16%, transparent) !important;
 }
 
 

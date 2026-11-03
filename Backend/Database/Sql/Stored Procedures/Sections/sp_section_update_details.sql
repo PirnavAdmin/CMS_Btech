@@ -15,7 +15,6 @@ CREATE PROCEDURE sp_section_update_details(
 BEGIN
     DECLARE v_college_id BIGINT DEFAULT NULL;
     DECLARE v_academic_year_id BIGINT DEFAULT NULL;
-    DECLARE v_department_id BIGINT DEFAULT NULL;
     DECLARE v_course_id BIGINT DEFAULT NULL;
     DECLARE v_branch_id BIGINT DEFAULT NULL;
     DECLARE v_semester_id BIGINT DEFAULT NULL;
@@ -24,14 +23,12 @@ BEGIN
     SELECT
         s.college_id,
         s.academic_year_id,
-        s.department_id,
         s.course_id,
         s.branch_id,
         s.semester_id
     INTO
         v_college_id,
         v_academic_year_id,
-        v_department_id,
         v_course_id,
         v_branch_id,
         v_semester_id
@@ -82,12 +79,12 @@ BEGIN
         SELECT 1
         FROM sections duplicate_section
         WHERE duplicate_section.section_id <> p_section_id
+          AND duplicate_section.college_id = v_college_id
           AND duplicate_section.academic_year_id = v_academic_year_id
-          AND duplicate_section.department_id = v_department_id
-          AND duplicate_section.course_id = v_course_id
-          AND duplicate_section.branch_id = v_branch_id
+          AND duplicate_section.course_id <=> v_course_id
+          AND duplicate_section.branch_id <=> v_branch_id
           AND duplicate_section.semester_id <=> v_semester_id
-          AND LOWER(TRIM(duplicate_section.section_code COLLATE utf8mb4_unicode_ci)) = LOWER(TRIM(p_section_code COLLATE utf8mb4_unicode_ci))
+          AND LOWER(TRIM(duplicate_section.section_code COLLATE utf8mb4_0900_ai_ci)) = LOWER(TRIM(p_section_code COLLATE utf8mb4_0900_ai_ci))
           AND duplicate_section.is_archived = 0
           AND duplicate_section.deleted_at IS NULL
     ) THEN

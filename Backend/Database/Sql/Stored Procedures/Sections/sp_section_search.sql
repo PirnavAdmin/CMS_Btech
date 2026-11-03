@@ -52,7 +52,7 @@ BEGIN
     FROM sections s
     INNER JOIN colleges col ON col.college_id = s.college_id
     INNER JOIN academicyears ay ON ay.academic_year_id = s.academic_year_id
-    INNER JOIN departments d ON d.department_id = s.department_id
+    LEFT JOIN departments d ON d.department_id = s.department_id
     INNER JOIN courses c ON c.course_id = s.course_id
     INNER JOIN branches b ON b.branch_id = s.branch_id
     LEFT JOIN semesters sem ON sem.semester_id = s.semester_id
@@ -65,9 +65,9 @@ BEGIN
     WHERE s.is_archived = 0
       AND s.deleted_at IS NULL
       AND (
-          p_search IS NULL OR TRIM(p_search COLLATE utf8mb4_unicode_ci) = ''
-          OR s.section_code LIKE CONCAT('%', TRIM(p_search COLLATE utf8mb4_unicode_ci), '%')
-          OR s.section_name LIKE CONCAT('%', TRIM(p_search COLLATE utf8mb4_unicode_ci), '%')
+          p_search IS NULL OR TRIM(p_search COLLATE utf8mb4_0900_ai_ci) = ''
+          OR s.section_code LIKE CONCAT('%', TRIM(p_search COLLATE utf8mb4_0900_ai_ci), '%')
+          OR s.section_name LIKE CONCAT('%', TRIM(p_search COLLATE utf8mb4_0900_ai_ci), '%')
       )
       AND (p_department_id IS NULL OR s.department_id = p_department_id)
       AND (p_course_id IS NULL OR s.course_id = p_course_id)

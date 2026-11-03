@@ -1,0 +1,55 @@
+### Set BASE_URL and valid IDs before running. Requests with POST/PUT/PUBLISH may change data.
+@baseUrl = https://localhost:7174
+@examId = 1
+@examTypeId = 1
+@timetableId = 1
+@markId = 1
+@gradeId = 1
+@gradePolicyId = 1
+@resultId = 1
+@studentId = 1
+
+### Exam setup - list
+GET {{baseUrl}}/api/v1/exams
+
+### Exam types - list
+GET {{baseUrl}}/api/v1/exam-types
+
+### Exam schedule list for exam
+GET {{baseUrl}}/api/v1/exams/{{examId}}/schedules
+
+### Exam rules list
+GET {{baseUrl}}/api/v1/exams/{{examId}}/rules
+
+### Timetables
+GET {{baseUrl}}/api/v1/timetables
+
+### Hall allocation summary
+GET {{baseUrl}}/api/v1/exam-schedules/views/hall-summary
+
+### Marks list
+GET {{baseUrl}}/api/v1/marks
+
+### Marks summary report
+GET {{baseUrl}}/api/v1/marks/reports/summary
+
+### Pending marks approvals
+GET {{baseUrl}}/api/v1/marks/approvals/pending
+
+### Grade list
+GET {{baseUrl}}/api/v1/grades
+
+### Grade policy list
+GET {{baseUrl}}/api/v1/grade-policies
+
+### Results list
+GET {{baseUrl}}/api/v1/results
+
+### Publication history
+GET {{baseUrl}}/api/v1/results/publication-history
+
+### Student transcript (ensure student ID exists)
+GET {{baseUrl}}/api/v1/results/students/{{studentId}}/transcript
+
+### Result detail (ensure result ID exists)
+GET {{baseUrl}}/api/v1/results/{{resultId}}

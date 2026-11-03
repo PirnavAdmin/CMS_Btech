@@ -1,94 +1,97 @@
 using BTech.Data;
+using BTech.DTOs.AcademicYear;
 using BTech.Models;
 using BTech.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace BTech.Repositories.Implementations;
 
 public class AcademicYearRepository : IAcademicYearRepository
 {
     private readonly ApplicationDbContext _context;
-    private readonly IHttpContextAccessor _http;
+    private readonly ILogger<AcademicYearRepository> _logger;
 
-    private long CollegeId
-    {
-        get
-        {
-            var request = _http.HttpContext;
-            var claim = request?.User.FindFirst("collegeId")?.Value;
-            if (request?.User.IsInRole("SUPER_ADMIN") != true && long.TryParse(claim, out var own) && own > 0)
-                return own;
-            if (request?.User.IsInRole("SUPER_ADMIN") != true) return 0;
-            return long.TryParse(request?.Request.Query["collegeId"].ToString(), out var selected) && selected > 0 ? selected : 0;
-        }
-    }
-
-    private IQueryable<AcademicYear> Years => _context.AcademicYears.Where(x => x.CollegeId == CollegeId);
-
-    public AcademicYearRepository(ApplicationDbContext context, IHttpContextAccessor http)
+    public AcademicYearRepository(
+        ApplicationDbContext context,
+        ILogger<AcademicYearRepository> logger)
     {
         _context = context;
-        _http = http;
+        _logger = logger;
     }
 
-    // =========================================================
-    // ADD ACADEMIC YEAR
-    // =========================================================
-
     public async Task<AcademicYear?> AddAsync(
+        long collegeId,
         string academicYearName,
         DateTime startDate,
         DateTime endDate,
         long? createdBy)
     {
-        if (CollegeId <= 0) throw new ArgumentException("Select a college before creating an academic year.");
-        if (await Years.AnyAsync(x => x.DeletedAt == null && x.AcademicYearName == academicYearName))
-            throw new ArgumentException("This academic year already exists for the selected college.");
+        await using var transaction = await _context.Database.BeginTransactionAsync(
+            System.Data.IsolationLevel.Serializable);
+        await LockCollegeAsync(collegeId);
+
+        var normalizedName = academicYearName.Trim().ToLowerInvariant();
+        var nameExists = await _context.AcademicYears
+            .AsNoTracking()
+            .AnyAsync(x =>
+                x.CollegeId == collegeId &&
+                x.AcademicYearName.Trim().ToLower() == normalizedName);
+
+        if (nameExists)
+        {
+            throw new InvalidOperationException(
+                $"Academic year '{academicYearName.Trim()}' already exists for college {collegeId}.");
+        }
+
+        // Bootstrap only the first current year. Future/additional years still
+        // require explicit activation and cannot replace an existing active year.
+        var hasExistingYears = await _context.AcademicYears.AsNoTracking()
+            .AnyAsync(x => x.CollegeId == collegeId && x.DeletedAt == null);
+        var today = DateTime.UtcNow.Date;
+        var activateFirstYear = !hasExistingYears && startDate.Date <= today && endDate.Date >= today;
+
         var entity = new AcademicYear
         {
-            CollegeId = CollegeId,
-            AcademicYearName = academicYearName,
-            StartDate = startDate,
-            EndDate = endDate,
-            // New academic years are upcoming. Activation is explicit so
-            // creating a record can never produce a second active year.
-            Status = 0,
+            CollegeId = collegeId,
+            AcademicYearName = academicYearName.Trim(),
+            StartDate = startDate.Date,
+            EndDate = endDate.Date,
+            Status = activateFirstYear ? (sbyte)1 : (sbyte)0,
             IsArchived = 0,
             CreatedAt = DateTime.UtcNow,
             CreatedBy = createdBy
         };
 
         _context.AcademicYears.Add(entity);
-
         await _context.SaveChangesAsync();
+        await transaction.CommitAsync();
+
+        _logger.LogInformation(
+            "Academic year created. AcademicYearId={AcademicYearId}, CollegeId={CollegeId}, ActivatedFirstYear={ActivatedFirstYear}, ActorUserId={ActorUserId}",
+            entity.AcademicYearId, collegeId, activateFirstYear, createdBy);
 
         return entity;
     }
 
-    // =========================================================
-    // GET ALL ACADEMIC YEARS
-    // =========================================================
-
-    public async Task<IEnumerable<AcademicYear>> GetAllAsync()
+    public async Task<IEnumerable<AcademicYear>> GetAllAsync(long collegeId)
     {
-        return await Years
+        return await _context.AcademicYears
             .AsNoTracking()
-            .Where(x => x.DeletedAt == null)
+            .Where(x => x.CollegeId == collegeId && x.DeletedAt == null)
             .OrderByDescending(x => x.StartDate)
+            .ThenByDescending(x => x.AcademicYearId)
             .ToListAsync();
     }
 
-
-    // =========================================================
-    // ACADEMIC YEAR DASHBOARD
-    // =========================================================
-
-    public async Task<BTech.DTOs.AcademicYear.AcademicYearDashboardDto>
-        GetDashboardAsync(string? search, string? filter)
+    public async Task<AcademicYearDashboardDto> GetDashboardAsync(
+        long collegeId,
+        string? search,
+        string? filter)
     {
-        var query = Years
+        var query = _context.AcademicYears
             .AsNoTracking()
-            .Where(x => x.DeletedAt == null);
+            .Where(x => x.CollegeId == collegeId && x.DeletedAt == null);
 
         var normalizedFilter = string.IsNullOrWhiteSpace(filter)
             ? "all"
@@ -104,7 +107,7 @@ public class AcademicYearRepository : IAcademicYearRepository
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var term = search.Trim().ToLower();
+            var term = search.Trim().ToLowerInvariant();
 
             query = query.Where(x =>
                 x.AcademicYearName.ToLower().Contains(term) ||
@@ -121,14 +124,14 @@ public class AcademicYearRepository : IAcademicYearRepository
             _ => query
         };
 
-        var all = await query
+        var filtered = await query
             .OrderByDescending(x => x.StartDate)
             .ThenByDescending(x => x.AcademicYearId)
             .ToListAsync();
 
-        var allNonDeleted = Years
+        var allNonDeleted = _context.AcademicYears
             .AsNoTracking()
-            .Where(x => x.DeletedAt == null);
+            .Where(x => x.CollegeId == collegeId && x.DeletedAt == null);
 
         var total = await allNonDeleted.CountAsync();
         var active = await allNonDeleted.CountAsync(x => x.Status == 1 && x.IsArchived == 0);
@@ -141,13 +144,12 @@ public class AcademicYearRepository : IAcademicYearRepository
             .ThenByDescending(x => x.AcademicYearId)
             .FirstOrDefaultAsync();
 
-        static BTech.DTOs.AcademicYear.AcademicYearResponseDto MapDashboard(
-            BTech.Models.AcademicYear x)
+        static AcademicYearResponseDto MapDashboard(AcademicYear x)
         {
-            return new BTech.DTOs.AcademicYear.AcademicYearResponseDto
+            return new AcademicYearResponseDto
             {
-                CollegeId = x.CollegeId,
                 AcademicYearId = x.AcademicYearId,
+                CollegeId = x.CollegeId,
                 AcademicYearName = x.AcademicYearName,
                 StartDate = x.StartDate,
                 EndDate = x.EndDate,
@@ -160,63 +162,65 @@ public class AcademicYearRepository : IAcademicYearRepository
             };
         }
 
-        return new BTech.DTOs.AcademicYear.AcademicYearDashboardDto
+        return new AcademicYearDashboardDto
         {
+            CollegeId = collegeId,
             ActiveAcademicYear = activeEntity == null ? null : MapDashboard(activeEntity),
             TotalAcademicYears = total,
             ActiveYears = active,
             UpcomingYears = upcoming,
             ArchivedYears = archived,
-            AcademicYears = all.Select(MapDashboard).ToList()
+            AcademicYears = filtered.Select(MapDashboard).ToList()
         };
     }
 
-    // =========================================================
-    // GENERATE NEXT ACADEMIC YEAR
-    // =========================================================
-
     public async Task<AcademicYear?> GenerateNextYearAsync(
+        long collegeId,
         bool activateImmediately,
-        long? createdBy)
+        long? createdBy,
+        DateTime? firstStartDate = null)
     {
-        var lastYear = await Years
-            .Where(x => x.DeletedAt == null)
-            .OrderByDescending(x => x.EndDate)
-            .ThenByDescending(x => x.AcademicYearId)
-            .FirstOrDefaultAsync();
-
-        if (lastYear == null)
-        {
-            throw new InvalidOperationException(
-                "Create the first academic year manually before generating the next year.");
-        }
-
-        var startDate = lastYear.EndDate.Date.AddDays(1);
-        var endDate = startDate.AddYears(1).AddDays(-1);
-        var academicYearName =
-            $"{startDate.Year}-{(endDate.Year % 100):00}";
-
-        var exists = await Years
-            .AnyAsync(x =>
-                x.DeletedAt == null &&
-                x.AcademicYearName == academicYearName);
-
-        if (exists)
-        {
-            throw new InvalidOperationException(
-                "Next academic year already exists.");
-        }
-
-        await using var transaction =
-            await _context.Database.BeginTransactionAsync(
-                System.Data.IsolationLevel.Serializable);
+        await using var transaction = await _context.Database.BeginTransactionAsync(
+            System.Data.IsolationLevel.Serializable);
 
         try
         {
-            if (activateImmediately)
+            await LockCollegeAsync(collegeId);
+            var lastYear = await _context.AcademicYears
+                .Where(x => x.CollegeId == collegeId && x.DeletedAt == null)
+                .OrderByDescending(x => x.EndDate)
+                .ThenByDescending(x => x.AcademicYearId)
+                .FirstOrDefaultAsync();
+
+            if (lastYear == null && !firstStartDate.HasValue)
+                throw new ArgumentException("StartDate is required to generate the first academic year for this college.");
+
+            var startDate = lastYear == null ? firstStartDate!.Value.Date : lastYear.EndDate.Date.AddDays(1);
+            if (startDate.Year < 1900 || startDate.Year > 9998)
+                throw new ArgumentException("StartDate must be between 1900 and 9998.");
+            var endDate = startDate.AddYears(1).AddDays(-1);
+            var today = DateTime.UtcNow.Date;
+            var shouldActivate = activateImmediately ||
+                (lastYear == null && startDate <= today && endDate >= today);
+            var academicYearName = $"{startDate.Year}-{(endDate.Year % 100):00}";
+            var normalizedName = academicYearName.ToLowerInvariant();
+
+            var exists = await _context.AcademicYears
+                .AnyAsync(x =>
+                    x.CollegeId == collegeId &&
+                    x.AcademicYearName.Trim().ToLower() == normalizedName);
+
+            if (exists)
             {
-                var activeYears = await Years
+                throw new InvalidOperationException(
+                    $"Academic year '{academicYearName}' already exists for college {collegeId}.");
+            }
+
+            if (shouldActivate)
+            {
+                var activeYears = await _context.AcademicYears
                     .Where(x =>
+                        x.CollegeId == collegeId &&
                         x.Status == 1 &&
                         x.IsArchived == 0 &&
                         x.DeletedAt == null)
@@ -236,11 +240,11 @@ public class AcademicYearRepository : IAcademicYearRepository
 
             var entity = new AcademicYear
             {
-                CollegeId = CollegeId,
+                CollegeId = collegeId,
                 AcademicYearName = academicYearName,
                 StartDate = startDate,
                 EndDate = endDate,
-                Status = activateImmediately ? (sbyte)1 : (sbyte)0,
+                Status = shouldActivate ? (sbyte)1 : (sbyte)0,
                 IsArchived = 0,
                 CreatedAt = DateTime.UtcNow,
                 CreatedBy = createdBy
@@ -249,6 +253,10 @@ public class AcademicYearRepository : IAcademicYearRepository
             _context.AcademicYears.Add(entity);
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
+
+            _logger.LogInformation(
+                "Next academic year generated. AcademicYearId={AcademicYearId}, CollegeId={CollegeId}, ActivatedImmediately={ActivatedImmediately}, ActorUserId={ActorUserId}",
+                entity.AcademicYearId, collegeId, shouldActivate, createdBy);
 
             return entity;
         }
@@ -259,125 +267,141 @@ public class AcademicYearRepository : IAcademicYearRepository
         }
     }
 
-    // =========================================================
-    // GET BY ID
-    // =========================================================
-
     public async Task<AcademicYear?> GetByIdAsync(
-        long academicYearId)
+        long academicYearId,
+        long collegeId)
     {
-        return await Years
+        return await _context.AcademicYears
             .AsNoTracking()
             .FirstOrDefaultAsync(x =>
                 x.AcademicYearId == academicYearId &&
+                x.CollegeId == collegeId &&
                 x.DeletedAt == null);
     }
 
-    // =========================================================
-    // EDIT ACADEMIC YEAR
-    // =========================================================
-
     public async Task<AcademicYear?> EditAsync(
         long academicYearId,
+        long collegeId,
         string academicYearName,
         DateTime startDate,
         DateTime endDate,
         long? updatedBy)
     {
-        var entity = await Years
+        var entity = await _context.AcademicYears
             .FirstOrDefaultAsync(x =>
                 x.AcademicYearId == academicYearId &&
+                x.CollegeId == collegeId &&
                 x.DeletedAt == null);
 
         if (entity == null)
-        {
             return null;
+
+        var normalizedName = academicYearName.Trim().ToLowerInvariant();
+        var duplicateName = await _context.AcademicYears
+            .AsNoTracking()
+            .AnyAsync(x =>
+                x.CollegeId == collegeId &&
+                x.AcademicYearId != academicYearId &&
+                x.AcademicYearName.Trim().ToLower() == normalizedName);
+
+        if (duplicateName)
+        {
+            throw new InvalidOperationException(
+                $"Academic year '{academicYearName.Trim()}' already exists for college {collegeId}.");
         }
 
-        entity.AcademicYearName = academicYearName;
-        entity.StartDate = startDate;
-        entity.EndDate = endDate;
+        entity.AcademicYearName = academicYearName.Trim();
+        entity.StartDate = startDate.Date;
+        entity.EndDate = endDate.Date;
         entity.UpdatedAt = DateTime.UtcNow;
         entity.UpdatedBy = updatedBy;
 
         await _context.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "Academic year updated. AcademicYearId={AcademicYearId}, CollegeId={CollegeId}, ActorUserId={ActorUserId}",
+            academicYearId, collegeId, updatedBy);
 
         return entity;
     }
 
-    // =========================================================
-    // ACTIVATE
-    // =========================================================
-
     public async Task<bool> ActivateAsync(
         long academicYearId,
+        long collegeId,
         long? updatedBy)
     {
-        await using var transaction =
-            await _context.Database.BeginTransactionAsync(
-                System.Data.IsolationLevel.Serializable);
+        await using var transaction = await _context.Database.BeginTransactionAsync(
+            System.Data.IsolationLevel.Serializable);
 
-        var entity = await Years
-            .FirstOrDefaultAsync(x =>
-                x.AcademicYearId == academicYearId &&
-                x.DeletedAt == null);
+        try
+        {
+            await LockCollegeAsync(collegeId);
+            var entity = await _context.AcademicYears
+                .FirstOrDefaultAsync(x =>
+                    x.AcademicYearId == academicYearId &&
+                    x.CollegeId == collegeId &&
+                    x.DeletedAt == null);
 
-        if (entity == null)
+            if (entity == null)
+            {
+                await transaction.RollbackAsync();
+                return false;
+            }
+
+            var previouslyActive = await _context.AcademicYears
+                .Where(x =>
+                    x.CollegeId == collegeId &&
+                    x.AcademicYearId != academicYearId &&
+                    x.Status == 1 &&
+                    x.IsArchived == 0 &&
+                    x.DeletedAt == null)
+                .ToListAsync();
+
+            foreach (var activeYear in previouslyActive)
+            {
+                activeYear.Status = 0;
+                activeYear.IsArchived = 1;
+                activeYear.UpdatedAt = DateTime.UtcNow;
+                activeYear.UpdatedBy = updatedBy;
+            }
+
+            if (previouslyActive.Count > 0)
+                await _context.SaveChangesAsync();
+
+            entity.Status = 1;
+            entity.IsArchived = 0;
+            entity.UpdatedAt = DateTime.UtcNow;
+            entity.UpdatedBy = updatedBy;
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            _logger.LogInformation(
+                "Academic year activated. AcademicYearId={AcademicYearId}, CollegeId={CollegeId}, ActorUserId={ActorUserId}",
+                academicYearId, collegeId, updatedBy);
+
+            return true;
+        }
+        catch
         {
             await transaction.RollbackAsync();
-            return false;
+            throw;
         }
-
-        var previouslyActive = await Years
-            .Where(x =>
-                x.AcademicYearId != academicYearId &&
-                x.Status == 1 &&
-                x.IsArchived == 0 &&
-                x.DeletedAt == null)
-            .ToListAsync();
-
-        foreach (var activeYear in previouslyActive)
-        {
-            activeYear.Status = 0;
-            activeYear.IsArchived = 1;
-            activeYear.UpdatedAt = DateTime.UtcNow;
-            activeYear.UpdatedBy = updatedBy;
-        }
-
-        // Persist deactivation first so the database unique guard is never
-        // temporarily violated while switching the active year.
-        if (previouslyActive.Count > 0)
-            await _context.SaveChangesAsync();
-
-        entity.Status = 1;
-        entity.IsArchived = 0;
-        entity.UpdatedAt = DateTime.UtcNow;
-        entity.UpdatedBy = updatedBy;
-
-        await _context.SaveChangesAsync();
-
-        await transaction.CommitAsync();
-
-        return true;
     }
-
-    // =========================================================
-    // DEACTIVATE
-    // =========================================================
 
     public async Task<bool> DeactivateAsync(
         long academicYearId,
+        long collegeId,
         long? updatedBy)
     {
-        var entity = await Years
+        var entity = await _context.AcademicYears
             .FirstOrDefaultAsync(x =>
                 x.AcademicYearId == academicYearId &&
+                x.CollegeId == collegeId &&
                 x.DeletedAt == null);
 
         if (entity == null)
-        {
             return false;
-        }
 
         entity.Status = 0;
         entity.IsArchived = 1;
@@ -386,27 +410,27 @@ public class AcademicYearRepository : IAcademicYearRepository
 
         await _context.SaveChangesAsync();
 
+        _logger.LogInformation(
+            "Academic year deactivated/archived. AcademicYearId={AcademicYearId}, CollegeId={CollegeId}, ActorUserId={ActorUserId}",
+            academicYearId, collegeId, updatedBy);
+
         return true;
     }
 
-    // =========================================================
-    // ARCHIVE ACADEMIC YEAR
-    // =========================================================
-
     public async Task<AcademicYear?> ArchiveAsync(
         long academicYearId,
+        long collegeId,
         long? updatedBy)
     {
-        var entity = await Years
+        var entity = await _context.AcademicYears
             .FirstOrDefaultAsync(x =>
                 x.AcademicYearId == academicYearId &&
+                x.CollegeId == collegeId &&
                 x.DeletedAt == null &&
                 x.IsArchived == 0);
 
         if (entity == null)
-        {
             return null;
-        }
 
         entity.IsArchived = 1;
         entity.Status = 0;
@@ -415,6 +439,21 @@ public class AcademicYearRepository : IAcademicYearRepository
 
         await _context.SaveChangesAsync();
 
+        _logger.LogInformation(
+            "Academic year archived. AcademicYearId={AcademicYearId}, CollegeId={CollegeId}, ActorUserId={ActorUserId}",
+            academicYearId, collegeId, updatedBy);
+
         return entity;
+    }
+
+    private async Task LockCollegeAsync(long collegeId)
+    {
+        // Lock an existing parent row, including when a college has no years yet.
+        // All activation/creation paths take this lock before reading the years.
+        var colleges = await _context.Database.SqlQuery<long>(
+            $"SELECT college_id AS Value FROM colleges WHERE college_id = {collegeId} AND deleted_at IS NULL FOR UPDATE")
+            .ToListAsync();
+        if (colleges.Count != 1)
+            throw new ArgumentException("The selected college does not exist.");
     }
 }

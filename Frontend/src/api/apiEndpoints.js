@@ -15,7 +15,7 @@ if (typeof window !== 'undefined' && window.localStorage) {
 }
 
 const normalizeBaseUrl = (value = '') => value.trim().replace(/\/+$/, '')
-const DEFAULT_API_BASE_URL = 'https://clarity-math-delouse.ngrok-free.dev'
+const DEFAULT_API_BASE_URL = 'https://abreast-curling-tutor.ngrok-free.dev'
 
 // Results endpoints are optional until the institution's result service is integrated.
 export const RESULTS_API_ENABLED = String(import.meta.env.VITE_RESULTS_API_ENABLED || '').toLowerCase() === 'true'
@@ -62,10 +62,12 @@ export const API_ENDPOINTS = Object.freeze({
     refresh: endpoint('/api/v1/auth/refresh'),
     changePassword: endpoint('/api/v1/auth/change-password'),
     forgotPassword: endpoint('/api/v1/auth/forgot-password'),
+    completeAccountSetup: endpoint('/api/v1/auth/complete-account-setup'),
   }),
   profile: Object.freeze({
     get: endpoint('/api/v1/profile'),
     update: endpoint('/api/v1/profile'),
+    photo: endpoint('/api/v1/profile/photo'),
   }),
   academicYears: Object.freeze({
     create: endpoint('/api/v1/academic-years'),
@@ -128,6 +130,7 @@ export const API_ENDPOINTS = Object.freeze({
     previousEducation: (id) => endpoint(`/api/v1/student-admissions/${id}/previous-education`),
     status: (id) => endpoint(`/api/v1/student-admissions/${id}/status`), submit: (id) => endpoint(`/api/v1/student-admissions/${id}/submit`),
     feeSummary: (id) => endpoint(`/api/v1/student-admissions/${id}/fee-summary`), feeStructure: (id) => endpoint(`/api/v1/student-admissions/${id}/fee-structure`),
+    matchingFeePlans: endpoint('/api/v1/student-admissions/fee-plans'),
   }),
   studentAcademicInformation: Object.freeze({ detail: (id) => endpoint(`/api/v1/student-academic-information/${id}`), update: (id) => endpoint(`/api/v1/student-academic-information/${id}`) }),
   students: Object.freeze({
@@ -203,9 +206,9 @@ export const API_ENDPOINTS = Object.freeze({
     export: endpoint('/api/v1/faculty-payroll/export'),
   }),
   subjectManagementSubjects: Object.freeze({
-    list: endpoint('/api/v1/subject-management/subjects'),
-    search: endpoint('/api/v1/subject-management/subjects/search'),
-    detail: id => endpoint(`/api/v1/subject-management/subjects/${id}`),
+    list: endpoint('/api/v1/subjects'),
+    search: endpoint('/api/v1/subjects/search'),
+    detail: id => endpoint(`/api/v1/subjects/${id}`),
     status: id => endpoint(`/api/v1/subject-management/subjects/${id}/status`),
     dependencies: id => endpoint(`/api/v1/subject-management/subjects/${id}/dependencies`),
     lookups: endpoint('/api/v1/subject-management/subjects/lookups'),
@@ -297,16 +300,17 @@ const readBody = async (response) => {
   try { return await response.json() } catch { return null }
 }
 
-const listResponse = (response) => {
+const extractListResponse = (response) => {
   let current = response
   for (let depth = 0; depth < 5 && current && typeof current === 'object'; depth += 1) {
     if (Array.isArray(current)) return current
-    const list = current.items ?? current.content ?? current.results ?? current.records ?? current.academicYears ?? current.years ?? current.rows ?? current.roles ?? (Array.isArray(current.data) ? current.data : undefined)
+    const list = current.items ?? current.content ?? current.results ?? current.records ?? current.academicYears ?? current.years ?? current.rows ?? current.roles ?? current.users ?? current.userList ?? (Array.isArray(current.data) ? current.data : undefined)
     if (Array.isArray(list)) return list
-    current = current.data
+    current = current.data ?? current.result ?? current.payload
   }
-  return []
+  return null
 }
+const listResponse = (response) => extractListResponse(response) ?? []
 
 const validationMessage = (body) => {
   const errors = body?.errors || body?.data?.errors
@@ -340,7 +344,7 @@ const refreshAccessToken = async () => {
     } catch {
       throw createApiUnavailableError()
     }
-    if (response.status >= 500) notifyApiUnavailable({ status: response.status })
+    if (response.status >= 500) notifyApiUnavailable({ status: response.status, url: API_ENDPOINTS.auth.refresh, method: 'POST', response })
 
     const body = await readBody(response)
     if (!response.ok || !body?.data?.accessToken) {
@@ -403,7 +407,7 @@ const request = async (url, options = {}, retried = false, bypassDedupe = false,
       console.error('API request failed', { url, method: options.method || 'GET', status: response.status })
     }
     if (response.status >= 500) {
-      if (!suppressApiFailureNotice) notifyApiUnavailable({ status: response.status })
+      if (!suppressApiFailureNotice) notifyApiUnavailable({ status: response.status, url, method, body, response })
       const genericMsg = typeof GENERIC_ERROR_MESSAGE !== 'undefined' ? GENERIC_ERROR_MESSAGE : 'Something went wrong. Please try again.'
       const error = new Error(url.includes('/api/v1/timetable-management') ? validationMessage(body) || genericMsg : genericMsg)
       error.status = response.status
@@ -448,7 +452,7 @@ const blobRequest = async (url, options = {}, retried = false) => {
   if (response.status === 401 && !retried && url !== API_ENDPOINTS.auth.refresh) { await refreshAccessToken(); return blobRequest(url, options, true) }
   if (!response.ok) {
     const body = await readBody(response)
-    if (response.status >= 500) notifyApiUnavailable({ status: response.status })
+    if (response.status >= 500) notifyApiUnavailable({ status: response.status, url, method: options.method || 'GET', body, response })
     throw new AuthRequestError(response.status >= 500 ? GENERIC_ERROR_MESSAGE : validationMessage(body) || 'The download request could not be completed.', response.status)
   }
   return { blob: await response.blob(), contentDisposition: response.headers.get('content-disposition') || '', contentType: response.headers.get('content-type') || '' }
@@ -471,16 +475,46 @@ export const screenExportsApi = {
   },
 }
 
-// The backend exposes user account data through its authorized screen export
-// contract. It does not currently expose a user CRUD API.
 export const userDirectoryApi = {
   getAll: async (params = {}) => {
-    const response = await request(withQuery(API_ENDPOINTS.exports.screen('users'), { Format: 'json', ...params }))
-    const rows = response?.data ?? response?.users ?? response
-    if (!Array.isArray(rows)) throw new Error('The user directory returned an unexpected response.')
-    return rows
+    const response = await request(withQuery(endpoint('/api/v1/admin/users'), params))
+    const rows = extractListResponse(response)
+    if (!rows) throw new Error('The user directory returned an unexpected response.')
+    return rows.map(row => {
+      const roles = row.roleNames ?? row.roles ?? row.roleCodes ?? (row.roleName ? [row.roleName] : [])
+      const accountStatus = row.accountStatus ?? row.statusLabel ?? (
+        row.deletedAt ? 'Deactivated' :
+          row.status === 1 || row.status === true || String(row.status).toLowerCase() === 'active' ? 'Active' :
+            row.mustChangePassword ? 'Pending Invitation' : 'Suspended'
+      )
+      return {
+        ...row,
+        roleId: row.roleId ?? row.roleIds?.[0] ?? '',
+        roleName: Array.isArray(roles) ? roles.join(', ') : String(roles || ''),
+        accountStatus,
+        academicYearIds: row.academicYearIds ?? [],
+        permissions: row.permissions ?? {},
+      }
+    })
   },
+  lookups: async collegeId => (await request(withQuery(endpoint('/api/v1/admin/users/lookups'), collegeId ? { collegeId } : {})))?.data,
+  onboardCollege: body => request(endpoint('/api/v1/admin/users/onboard-college'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
+  getRolePermissions: async roleId => (await request(endpoint(`/api/v1/access-governance/roles/${encodeURIComponent(roleId)}/permissions`)))?.data ?? {},
+  create: body => request(endpoint('/api/v1/admin/users'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
+  update: (id, body) => request(endpoint(`/api/v1/admin/users/${encodeURIComponent(id)}`), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
+  setStatus: (id, status) => request(endpoint(`/api/v1/admin/users/${encodeURIComponent(id)}/status`), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) }),
+  resendInvitation: id => request(endpoint(`/api/v1/admin/users/${encodeURIComponent(id)}/resend-invitation`), { method: 'POST' }),
+  resetPassword: id => request(endpoint(`/api/v1/admin/users/${encodeURIComponent(id)}/reset-password`), { method: 'POST' }),
+  activity: async id => (await request(endpoint(`/api/v1/admin/users/${encodeURIComponent(id)}/activity`)))?.data ?? [],
   exportCsv: params => screenExportsApi.download('users', { Format: 'csv', ...params }),
+}
+
+export const authAccessApi = {
+  get: async collegeId => (await request(withQuery(endpoint('/api/auth/me/access'), collegeId ? { collegeId } : {})))?.data,
+}
+
+export async function completeAccountSetup({ loginId, token, newPassword, confirmNewPassword }) {
+  return request(API_ENDPOINTS.auth.completeAccountSetup, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ loginId, token, newPassword, confirmNewPassword }) })
 }
 
 async function requestScreenFile(screen, action, params) {
@@ -501,12 +535,14 @@ async function readExportFile(url) {
 }
 
 const normalizeFrontendRole = (roleValue) => {
-  const rawRole = Array.isArray(roleValue) ? roleValue[0] : roleValue
+  const rawRole = Array.isArray(roleValue) ? roleValue.find(role => ['super_admin','superadmin','admin','college_admin','collegeadmin'].includes(String(role).trim().toLowerCase().replace(/[\s-]+/g, '_'))) || roleValue[0] : roleValue
   const normalized = String(rawRole || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
 
-  if (['admin', 'college_admin', 'super_admin'].includes(normalized)) {
+  if (['admin', 'college_admin', 'super_admin', 'collegeadmin', 'superadmin'].includes(normalized)) {
     return 'admin'
   }
+
+  if (['principal','hod','accountant','librarian','non_teaching','non_teaching_staff'].includes(normalized)) return 'staff'
 
   return normalized || 'student'
 }
@@ -532,7 +568,7 @@ export async function login({ identifier, password, rememberMe = false }) {
   }
   const body = await readBody(response)
   if (!response.ok || body?.success === false) {
-    if (response.status >= 500) notifyApiUnavailable({ status: response.status })
+    if (response.status >= 500) notifyApiUnavailable({ status: response.status, url: API_ENDPOINTS.auth.login, method: 'POST', body, response })
     const message = response.status === 401
       ? 'The email, mobile number, or password is incorrect.'
       : response.status === 429
@@ -553,6 +589,7 @@ export async function login({ identifier, password, rememberMe = false }) {
       role: normalizeFrontendRole(roleValue),
       collegeId: data.collegeId,
       mustChangePassword: data.mustChangePassword,
+      profileCompleted: data.profileCompleted !== false,
     },
   }
 }
@@ -571,14 +608,15 @@ const normalizeProfile = (source) => {
   const application = data.application && typeof data.application === 'object' ? data.application : {}
   const lastLoginAt = data.lastLoginAt ?? data.last_login_at ?? data.LastLoginAt ?? data.lastLogin ?? data.last_login ?? ''
   return {
-    id: data.userId ?? data.studentId ?? '', facultyId: data.facultyId ?? '', identifier: data.employeeUserId ?? data.studentCode ?? data.studentId ?? '', fullName: data.fullName ?? data.studentName ?? '',
+    id: data.userId ?? data.studentId ?? '', facultyId: data.facultyId ?? '', identifier: data.employeeUserId ?? data.studentCode ?? data.studentId ?? '', fullName: data.fullName ?? data.studentName ?? '', collegeName: data.collegeName ?? '', profileImagePath: data.profileImagePath ?? '',
     email: data.email ?? '', mobile: data.mobile ?? '', role: Array.isArray(data.roles) ? data.roles.join(', ') : String(data.role ?? ''),
     dateOfBirth: data.dateOfBirth ?? '', gender: data.gender ?? '', department: data.department ?? data.departmentName ?? '', departmentId: data.departmentId ?? '',
     designation: data.designation ?? '', houseNumber: data.houseNumber ?? data.currentHouseNumber ?? '', address: data.address ?? data.currentAddress ?? '', permanentHouseNumber: data.permanentHouseNumber ?? '', permanentAddress: data.permanentAddress ?? '', postalCode: data.postalCode ?? '',
     pincode: data.pincode ?? data.postalCode ?? '', city: data.city ?? '', district: data.district ?? '', state: data.state ?? '', permanentPincode: data.permanentPincode ?? '', permanentCity: data.permanentCity ?? '', permanentDistrict: data.permanentDistrict ?? '', permanentState: data.permanentState ?? '', bio: data.bio ?? data.aboutMe ?? '',
     lastLoginAt,
     updatedAt: data.updatedAt ?? '',
-    status: data.status ?? data.accountStatus ?? 'Active',
+    status: data.status ?? (data.accountStatus === 1 || data.accountStatus === undefined ? 'Active' : 'Inactive'),
+    accountStatus: data.accountStatus ?? 1, collegeId: data.collegeId ?? '', mustChangePassword: Boolean(data.mustChangePassword), profileCompleted: data.profileCompleted !== false,
     registrationNumber: data.registrationNumber ?? application.registrationNumber ?? application.number ?? '', admissionNumber: data.admissionNumber ?? application.admissionNumber ?? '',
     rollNumber: data.rollNumber ?? academic.rollNumber ?? '', course: data.course ?? data.courseName ?? academic.course ?? '', branch: data.branch ?? data.branchName ?? academic.branch ?? '',
     academicYear: data.academicYear ?? data.academicYearName ?? academic.academicYear ?? '', semester: data.semester ?? data.semesterName ?? academic.semester ?? '', section: data.section ?? data.sectionName ?? academic.section ?? '', batch: data.batch ?? academic.batch ?? '',
@@ -601,9 +639,6 @@ export const profileApi = {
         mobile: String(profile.mobile || '').trim(),
         dateOfBirth: profile.dateOfBirth || null,
         gender: profile.gender || null,
-        departmentId: profile.departmentId ? Number(profile.departmentId) : null,
-        department: String(profile.department || '').trim() || null,
-        designation: String(profile.designation || '').trim() || null,
         houseNumber: String(profile.houseNumber || '').trim() || null,
         address: String(profile.address || '').trim() || null,
         permanentHouseNumber: String(profile.permanentHouseNumber || '').trim() || null,
@@ -612,6 +647,7 @@ export const profileApi = {
         permanentCity: String(profile.permanentCity || '').trim() || null,
         permanentDistrict: String(profile.permanentDistrict || '').trim() || null,
         permanentState: String(profile.permanentState || '').trim() || null,
+        permanentCountry: String(profile.permanentCountry || '').trim() || null,
         pincode: String(profile.pincode || profile.postalCode || '').trim() || null,
         city: String(profile.city || '').trim() || null,
         district: String(profile.district || '').trim() || null,
@@ -620,6 +656,12 @@ export const profileApi = {
       }),
     })
     return normalizeProfile(response?.data || {})
+  },
+  uploadPhoto: async file => {
+    const form = new FormData()
+    form.append('file', file)
+    const response = await request(API_ENDPOINTS.profile.photo, { method: 'POST', body: form })
+    return response?.data?.profileImagePath || ''
   },
 }
 
@@ -659,14 +701,15 @@ const normalizeAcademicYearRecord = (year = {}) => {
   const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
   const dateCurrent = Boolean(startDate && endDate && todayKey >= String(startDate).slice(0, 10) && todayKey <= String(endDate).slice(0, 10))
   const hasActiveValue = rawActive !== undefined && rawActive !== null && rawActive !== ''
-  const isInactive = rawActive === false || String(rawActive ?? '').trim().toLowerCase() === 'false' || (hasActiveValue && Number(rawActive) === 0) || ['inactive', 'deactive', 'deactivated', 'disabled', 'archived'].includes(status)
-  const isCurrent = activeFlag || currentFlag || ['active', 'current', '1'].includes(status) || (!isInactive && dateCurrent)
+  const isInactive = rawActive === false || String(rawActive ?? '').trim().toLowerCase() === 'false' || (hasActiveValue && Number(rawActive) === 0) || ['0', 'false', 'inactive', 'deactive', 'deactivated', 'disabled', 'archived'].includes(status) || Number(year.isArchived ?? year.IsArchived) === 1 || Boolean(year.deletedAt ?? year.DeletedAt)
+  const isCurrent = !isInactive && (activeFlag || currentFlag || ['active', 'current', '1'].includes(status) || dateCurrent)
   return {
     ...year,
     id: id === null || id === undefined ? '' : String(id),
     academicYearId: id,
     name: String(name ?? '').trim(),
     academicYearName: String(name ?? '').trim(),
+    backendStatus: rawStatus,
     startDate,
     endDate,
     status: isCurrent ? 'Active' : isInactive ? 'Inactive' : rawStatus,
@@ -679,10 +722,12 @@ export const academicYearApi = {
   getAll: async (options = {}) => {
     const collegeId = selectedCollegeId()
     if (!collegeId) return []
-    const response = await request(API_ENDPOINTS.academicYears.list, options)
+    const response = await request(withQuery(API_ENDPOINTS.academicYears.list, { collegeId }), options)
     if (selectedCollegeId() !== collegeId) return []
     const years = listResponse(response).map(normalizeAcademicYearRecord)
     const scopedYears = createCollegeScope(collegeId)(years)
+    const allYearsUnmapped = years.length > 0 && years.every(year => !collegeField(year, 'college'))
+    if (allYearsUnmapped) return years
     if (!scopedYears.length && years.some(year => !collegeField(year, 'college'))) {
       throw new Error('Existing academic years have no college mapping. Apply the college academic-year database migration and update the backend before generating another year.')
     }
@@ -804,8 +849,8 @@ export const sectionAssignmentApi = {
   },
   assign: async (sectionId, assignment) => request(API_ENDPOINTS.sections.assignStudents(sectionId), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ studentIds: [Number(assignment.studentId)] }) }),
   assignMany: async (sectionId, studentIds) => request(API_ENDPOINTS.sections.assignStudents(sectionId), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ studentIds: [...new Set(studentIds.map(Number))] }) }),
-  remove: async (sectionId, assignmentId) => {
-    await request(API_ENDPOINTS.sections.student(sectionId, assignmentId), { method: 'DELETE' })
+  remove: async (sectionId, studentId) => {
+    await request(API_ENDPOINTS.sections.student(sectionId, studentId), { method: 'DELETE' })
   },
   listBySection: async (sectionId) => listResponse(await request(API_ENDPOINTS.sections.students(sectionId))),
   getStudentCandidates: async (sectionId, search = '') => listResponse(await request(withQuery(API_ENDPOINTS.sections.studentCandidates(sectionId), { search }))),
@@ -1012,6 +1057,24 @@ const studentAdmissionPayload = (form = {}) => {
   const fees = form.fees ?? {}
   const previous = form.previousEducation ?? {}
   const application = form.application ?? {}
+  // Canonical forms retain the original API fields alongside editable sections.
+  // The editable values must win, including an explicitly cleared selection.
+  form = { ...form }
+  for (const key of ['firstName', 'middleName', 'lastName', 'gender', 'bloodGroup', 'nationality']) {
+    if (Object.hasOwn(personal, key)) form[key] = personal[key]
+  }
+  if (Object.hasOwn(personal, 'dob')) form.dateOfBirth = personal.dob
+  if (Object.hasOwn(personal, 'aadhaar')) form.aadhaarNumber = personal.aadhaar
+  for (const key of ['academicYearId', 'departmentId', 'courseId', 'branchId', 'semesterId', 'sectionId', 'admissionType', 'quota', 'quotaOther', 'courseCode', 'branchCode', 'entryType', 'regulation', 'studentCategory']) {
+    if (Object.hasOwn(academic, key)) form[key] = academic[key]
+  }
+  if (Object.hasOwn(admission, 'collegeId')) form.collegeId = admission.collegeId
+  const { formData: savedFormData, ...currentForm } = form
+  const formData = { ...(savedFormData && typeof savedFormData === 'object' ? savedFormData : {}), ...currentForm }
+  const feeStructureId = [form.feeStructureId, fees.feeStructureId, fees.structureId]
+    .map(nullableNumericId).find(value => value !== undefined)
+  formData.feeStructureId = feeStructureId
+  if (formData.fees) formData.fees = { ...formData.fees, feeStructureId, structureId: feeStructureId }
   const photo = form.studentPhoto ?? form.photo ?? personal.photo ?? personal.photoUrl
   // Deployed admission procedures accept a URL (VARCHAR(500)), not base64.
   // Preserve inline uploads in formData. Send an explicit empty legacy field:
@@ -1120,7 +1183,7 @@ const studentAdmissionPayload = (form = {}) => {
     hostelRoomType: form.hostelRoomType ?? admission.hostelRoomType,
     transport: form.transport ?? admission.transport,
     transportRoute: form.transportRoute ?? admission.transportRoute,
-    feeStructureId: form.feeStructureId ?? fees.feeStructureId ?? fees.structureId,
+    feeStructureId,
     tuitionFee: form.tuitionFee ?? fees.tuitionFee,
     admissionFee: form.admissionFee ?? fees.admissionFee,
     scholarshipAmount: form.scholarshipAmount ?? fees.scholarshipAmount,
@@ -1130,21 +1193,21 @@ const studentAdmissionPayload = (form = {}) => {
     paymentPlan: form.paymentPlan ?? fees.paymentPlan,
     paymentStatus: form.paymentStatus ?? fees.paymentStatus,
     documentStatuses: form.documentStatuses ?? (form.documents ? Object.fromEntries(Object.entries(form.documents).filter(([, value]) => value && !Array.isArray(value)).map(([key, value]) => [key, typeof value === 'object' ? value.status ?? '' : value])) : undefined),
-    formData: form,
+    formData,
   })
 }
 
 const academicDetailsPayload = (form = {}) => compact({
-  collegeId: nullableNumericId(form.collegeId ?? form.academic?.collegeId ?? form.admission?.collegeId),
-  academicYearId: nullableNumericId(form.academicYearId ?? form.academic?.academicYearId),
-  departmentId: nullableNumericId(form.departmentId ?? form.academic?.departmentId),
-  courseId: nullableNumericId(form.courseId ?? form.academic?.courseId),
-  branchId: nullableNumericId(form.branchId ?? form.academic?.branchId),
-  semesterId: nullableNumericId(form.semesterId ?? form.academic?.semesterId),
-  sectionId: nullableNumericId(form.sectionId ?? form.academic?.sectionId),
-  admissionType: form.admissionType ?? form.academic?.admissionType,
-  quota: form.quota ?? form.academic?.quota,
-  quotaOther: form.quotaOther ?? form.academic?.quotaOther,
+  collegeId: nullableNumericId(form.admission?.collegeId ?? form.academic?.collegeId ?? form.collegeId),
+  academicYearId: nullableNumericId(form.academic?.academicYearId ?? form.academicYearId),
+  departmentId: nullableNumericId(form.academic?.departmentId ?? form.departmentId),
+  courseId: nullableNumericId(form.academic?.courseId ?? form.courseId),
+  branchId: nullableNumericId(form.academic?.branchId ?? form.branchId),
+  semesterId: nullableNumericId(form.academic?.semesterId ?? form.semesterId),
+  sectionId: nullableNumericId(form.academic?.sectionId ?? form.sectionId),
+  admissionType: form.academic?.admissionType ?? form.admissionType,
+  quota: form.academic?.quota ?? form.quota,
+  quotaOther: form.academic?.quotaOther ?? form.quotaOther,
   courseCode: form.courseCode ?? form.academic?.courseCode,
   branchCode: form.branchCode ?? form.academic?.branchCode,
   entryType: form.entryType ?? form.academic?.entryType,
@@ -1202,7 +1265,24 @@ export const studentAdmissionApi = {
   getAll: async (params) => markApiResult((listData(await request(withQuery(API_ENDPOINTS.studentAdmissions.list, params))) || []).map(normalizeAdmission)),
   getById: async (id) => normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.detail(requiredId(id, 'Admission ID')))),
   create: async (form) => normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(studentAdmissionPayload(form)) })),
-  update: async (id, form) => normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.update(requiredId(id, 'Admission ID')), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(studentAdmissionPayload(form)) })),
+  update: async (id, form, { preserveAcademicMapping = false } = {}) => {
+    const admissionId = requiredId(id, 'Admission ID')
+    if (preserveAcademicMapping) {
+      // Personal/contact saves must not reassign enrollment from a browser draft.
+      // Read failures stop the save instead of falling back to potentially stale IDs.
+      const saved = normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.detail(admissionId)))
+      const snapshot = typeof saved.formData === 'string' ? JSON.parse(saved.formData) : saved.formData
+      const academic = { ...form.academic, ...snapshot?.academic }
+      for (const key of ['academicYearId', 'departmentId', 'courseId', 'branchId', 'semesterId', 'sectionId', 'admissionType', 'entryType', 'regulation']) {
+        if (Object.hasOwn(saved, key)) academic[key] = saved[key] ?? ''
+      }
+      for (const [label, key] of [['academicYear', 'academicYearName'], ['course', 'courseName'], ['branch', 'branchName'], ['semester', 'semesterName'], ['section', 'sectionName']]) {
+        if (Object.hasOwn(saved, key)) academic[label] = saved[key] ?? ''
+      }
+      form = { ...form, academic, admission: { ...form.admission, collegeId: saved.collegeId ?? form.admission?.collegeId } }
+    }
+    return normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.update(admissionId), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(studentAdmissionPayload(form)) }))
+  },
   submit: async (id) => normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.submit(requiredId(id, 'Admission ID')), { method: 'POST' })),
 }
 export const studentAcademicDetailsApi = {
@@ -1336,6 +1416,9 @@ export const studentPreviousEducationApi = {
 export const studentFeeApi = {
   getSummary: async (id) => normalizeRecord(await request(API_ENDPOINTS.studentAdmissions.feeSummary(requiredId(id, 'Admission ID')))),
   getStructure: async (id) => normalizeRecord(await request(API_ENDPOINTS.studentAdmissions.feeStructure(requiredId(id, 'Admission ID')))),
+}
+export const admissionFeePlanApi = {
+  getMatching: async scope => listData(await request(withQuery(API_ENDPOINTS.studentAdmissions.matchingFeePlans, scope))),
 }
 
 // Contracts: Backend/DTOs/Fees/FeeCollectionDtos.cs. Reuse authentication,

@@ -1,0 +1,305 @@
+{
+  "database": "MySQL 8.0.46; disposable import of supplied dump",
+  "scope": "ADM002 login, college setup, permission and mapping regressions",
+  "results": [
+    {
+      "name": "Real ADM002 password login",
+      "passed": true
+    },
+    {
+      "name": "Reproduce college 92 denial before SQL repair",
+      "passed": true,
+      "detail": {
+        "status": 403,
+        "message": "Cross-college access is not permitted. An active college assignment is required."
+      }
+    },
+    {
+      "name": "SQL rerun creates no duplicate settings, mappings or grants",
+      "passed": true
+    },
+    {
+      "name": "Primary college and passwords preserved",
+      "passed": true
+    },
+    {
+      "name": "Previously revoked primary mapping preserved",
+      "passed": true
+    },
+    {
+      "name": "Live access includes college 92 using existing JWT",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "message": null
+      }
+    },
+    {
+      "name": "No Super Admin elevation",
+      "passed": true
+    },
+    {
+      "name": "List academic years in repaired college",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "message": "Academic years retrieved successfully."
+      }
+    },
+    {
+      "name": "Generate next academic year in repaired college 92",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "message": "Next academic year generated and activated successfully."
+      }
+    },
+    {
+      "name": "Existing college generation preserves its calendar",
+      "passed": true
+    },
+    {
+      "name": "Generate subsequent academic year",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "message": "Next academic year generated and activated successfully."
+      }
+    },
+    {
+      "name": "Next year follows previous end date",
+      "passed": true
+    },
+    {
+      "name": "Manually add academic year in college 92",
+      "passed": true,
+      "detail": {
+        "status": 201,
+        "message": "Academic year added successfully."
+      }
+    },
+    {
+      "name": "Query and body mismatch denied",
+      "passed": true,
+      "detail": {
+        "status": 400,
+        "message": "The query collegeId and body collegeId must match."
+      }
+    },
+    {
+      "name": "Unassigned unrelated college denied",
+      "passed": true,
+      "detail": {
+        "status": 403,
+        "message": "Cross-college access is not permitted. An active college assignment is required."
+      }
+    },
+    {
+      "name": "Duplicate college year name rejected",
+      "passed": true,
+      "detail": {
+        "status": 409,
+        "message": "Academic year '2035-36' already exists for college 92."
+      }
+    },
+    {
+      "name": "Create new college as College Admin",
+      "passed": true,
+      "detail": {
+        "status": 201,
+        "message": "College created successfully."
+      }
+    },
+    {
+      "name": "New college creator mapping exists",
+      "passed": true
+    },
+    {
+      "name": "Missing first-year start date is actionable",
+      "passed": true,
+      "detail": {
+        "status": 400,
+        "message": "StartDate is required to generate the first academic year for this college."
+      }
+    },
+    {
+      "name": "Generate first academic year immediately in new college",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "message": "Next academic year generated and activated successfully."
+      }
+    },
+    {
+      "name": "Add department in newly created college",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "message": "Department added successfully."
+      }
+    },
+    {
+      "name": "Create course in newly created college",
+      "passed": true,
+      "detail": {
+        "status": 201,
+        "message": "Course created successfully."
+      }
+    },
+    {
+      "name": "Create branch from new-college course without collegeId",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "message": "Branch created successfully."
+      }
+    },
+    {
+      "name": "Create semester in new college",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "message": "Semester added successfully"
+      }
+    },
+    {
+      "name": "Create section in new college",
+      "passed": true,
+      "detail": {
+        "status": 201,
+        "message": "Section created successfully."
+      }
+    },
+    {
+      "name": "Read roles within newly created college",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "message": null
+      }
+    },
+    {
+      "name": "Read governance for selected mapped college",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "message": "Roles, designations and staff access loaded successfully."
+      }
+    },
+    {
+      "name": "College Admin cannot create global privileged roles",
+      "passed": true,
+      "detail": {
+        "status": 403,
+        "message": ""
+      }
+    },
+    {
+      "name": "List courses selects new college",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "message": "Courses retrieved successfully."
+      }
+    },
+    {
+      "name": "Course list contains only selected college",
+      "passed": true
+    },
+    {
+      "name": "List branches selects new college",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "message": "Branches retrieved successfully."
+      }
+    },
+    {
+      "name": "Branch list excludes other college courses",
+      "passed": true
+    },
+    {
+      "name": "List semesters selects new college",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "message": "Semesters retrieved successfully"
+      }
+    },
+    {
+      "name": "Semester list excludes other colleges",
+      "passed": true
+    },
+    {
+      "name": "Mismatched branch course and college denied",
+      "passed": true,
+      "detail": {
+        "status": 403,
+        "message": "The selected academic records belong to different colleges."
+      }
+    },
+    {
+      "name": "Scoped create denial enforced with same JWT",
+      "passed": true,
+      "detail": {
+        "status": 403,
+        "message": "You do not have permission to perform this action."
+      }
+    },
+    {
+      "name": "Academic year dashboard uses academic_years grant",
+      "passed": true,
+      "detail": {
+        "status": 403,
+        "message": "You do not have permission to perform this action."
+      }
+    },
+    {
+      "name": "Revoked mapping denied with same JWT",
+      "passed": true,
+      "detail": {
+        "status": 403,
+        "message": "Cross-college access is not permitted. An active college assignment is required."
+      }
+    },
+    {
+      "name": "Revoked mapping denied by route ownership",
+      "passed": true,
+      "detail": {
+        "status": 403,
+        "message": "Cross-college access is not permitted. An active college assignment is required."
+      }
+    },
+    {
+      "name": "Create another college with restricted source ceiling",
+      "passed": true,
+      "detail": {
+        "status": 201,
+        "message": "College created successfully."
+      }
+    },
+    {
+      "name": "New college cannot expand creator ceiling",
+      "passed": true,
+      "detail": {
+        "status": 403,
+        "message": "You do not have permission to perform this action."
+      }
+    },
+    {
+      "name": "Provisioning failure returned as unsuccessful",
+      "passed": true,
+      "detail": {
+        "status": 400
+      }
+    },
+    {
+      "name": "College insert rolls back when mapping save fails",
+      "passed": true
+    },
+    {
+      "name": "All existing controller route attributes retained",
+      "passed": true
+    }
+  ]
+}

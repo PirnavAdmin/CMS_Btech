@@ -1,4 +1,4 @@
-﻿using BTech.Models;
+using BTech.Models;
 using BTech.Services.Interfaces;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -46,12 +46,11 @@ public string GenerateToken(
             // Validate College ID
             // -------------------------------------------------
 
-            bool isSuperAdmin =
-                roles.Any(r =>
-                    string.Equals(
-                        r,
-                        "SuperAdmin",
-                        StringComparison.OrdinalIgnoreCase));
+            // RoleRepository returns role_code values (for example SUPER_ADMIN),
+            // while older code checked only the display spelling "SuperAdmin".
+            // Normalize punctuation/case so supported Super Admin spellings match.
+            // This does not grant privileges to any other role.
+            bool isSuperAdmin = roles.Any(role => CanonicalRoleCode.Normalize(role) == "SUPER_ADMIN");
 
             // Every role except SuperAdmin must have college_id
             if (!isSuperAdmin && !user.college_id.HasValue)
@@ -80,7 +79,11 @@ public string GenerateToken(
 
         new Claim(
             "employeeUserId",
-            user.EmployeeUserId)
+            user.EmployeeUserId),
+
+        new Claim(
+            "mustChangePassword",
+            user.MustChangePassword ? "true" : "false")
     };
 
             // -------------------------------------------------
@@ -116,12 +119,31 @@ public string GenerateToken(
             // Roles
             // -------------------------------------------------
 
-            foreach (var role in roles)
+            foreach (var role in roles.Where(r => !string.IsNullOrWhiteSpace(r))
+                                         .Distinct(StringComparer.OrdinalIgnoreCase))
             {
-                claims.Add(
-                    new Claim(
-                        ClaimTypes.Role,
-                        role));
+                // Preserve the database role code/name for compatibility.
+                claims.Add(new Claim(ClaimTypes.Role, role));
+            }
+
+            // Emit the canonical code as well as legacy spellings for consumers.
+            foreach (var code in roles.Select(CanonicalRoleCode.Normalize).Where(code => code.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                if (!roles.Any(role => string.Equals(role, code, StringComparison.OrdinalIgnoreCase)))
+                    claims.Add(new Claim(ClaimTypes.Role, code));
+            }
+
+            // Add a canonical role claim for ASP.NET [Authorize(Roles = "SuperAdmin")]
+            // policies when the database supplies SUPER_ADMIN or "Super Admin".
+            // This is emitted only when the role repository actually returned
+            // an active Super Admin role for this user.
+            if (isSuperAdmin &&
+                !roles.Any(r => string.Equals(
+                    r,
+                    "SuperAdmin",
+                    StringComparison.OrdinalIgnoreCase)))
+            {
+                claims.Add(new Claim(ClaimTypes.Role, "SuperAdmin"));
             }
 
             // -------------------------------------------------

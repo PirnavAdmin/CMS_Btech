@@ -10,6 +10,9 @@ namespace BTech.Models
         [Column("student_id")]
         public long StudentId { get; set; }
 
+        [Column("user_id")]
+        public long? UserId { get; set; }
+
         [Column("admission_id")]
         public long? AdmissionId { get; set; }
 

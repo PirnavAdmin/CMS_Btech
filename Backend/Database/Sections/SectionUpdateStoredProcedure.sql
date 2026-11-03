@@ -1,14 +1,6 @@
--- =============================================================
--- MISSING SECTION UPDATE PROCEDURE
--- Required by SectionRepository.UpdateAsync; absent from dump3even.sql.
--- =============================================================
-
-USE `cms_btech`;
-
-DROP PROCEDURE IF EXISTS `sp_section_update`;
+DROP PROCEDURE IF EXISTS sp_section_update;
 DELIMITER $$
-
-CREATE PROCEDURE `sp_section_update`(
+CREATE PROCEDURE sp_section_update(
     IN p_section_id BIGINT,
     IN p_course_id BIGINT,
     IN p_branch_id BIGINT,
@@ -26,12 +18,11 @@ CREATE PROCEDURE `sp_section_update`(
 )
 BEGIN
     DECLARE v_college_id BIGINT DEFAULT NULL;
-    DECLARE v_department_id BIGINT DEFAULT NULL;
     DECLARE v_current_strength INT DEFAULT 0;
     DECLARE v_semester_number INT DEFAULT NULL;
 
-    SELECT s.`college_id`, s.`department_id`
-    INTO v_college_id, v_department_id
+    SELECT s.`college_id`
+    INTO v_college_id
     FROM `sections` s
     WHERE s.`section_id` = p_section_id
       AND s.`is_archived` = 0
@@ -41,8 +32,8 @@ BEGIN
     IF v_college_id IS NULL THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Section not found.';
     END IF;
-    IF NULLIF(TRIM(p_section_name), '') IS NULL
-       OR NULLIF(TRIM(p_section_code), '') IS NULL THEN
+    IF NULLIF(TRIM((p_section_name COLLATE utf8mb4_0900_ai_ci)), '') IS NULL
+       OR NULLIF(TRIM((p_section_code COLLATE utf8mb4_0900_ai_ci)), '') IS NULL THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Section name and section code are required.';
     END IF;
     IF p_capacity IS NULL OR p_capacity <= 0 THEN
@@ -50,20 +41,27 @@ BEGIN
     END IF;
 
     IF NOT EXISTS (
+        SELECT 1 FROM academicyears
+        WHERE academic_year_id = p_academic_year_id
+          AND college_id = v_college_id
+          AND status = 1 AND is_archived = 0 AND deleted_at IS NULL
+    ) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Activate the selected academic year for this college before changing the section academic mapping.';
+    END IF;
+
+    IF NOT EXISTS (
         SELECT 1 FROM `courses` c
         WHERE c.`course_id` = p_course_id
           AND c.`college_id` = v_college_id
-          AND c.`department_id` = v_department_id
           AND c.`status` = 1 AND c.`deleted_at` IS NULL
     ) THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Course does not belong to the section college and department.';
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Course does not belong to the section college.';
     END IF;
 
     IF NOT EXISTS (
         SELECT 1 FROM `branches` b
         WHERE b.`branch_id` = p_branch_id
           AND b.`course_id` = p_course_id
-          AND b.`department_id` = v_department_id
           AND b.`status` = 1 AND b.`deleted_at` IS NULL
     ) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Branch does not belong to the selected course.';
@@ -73,6 +71,7 @@ BEGIN
     INTO v_semester_number
     FROM `semesters` sem
     WHERE sem.`semester_id` = p_semester
+      AND sem.`academic_year_id` = p_academic_year_id
       AND sem.`course_id` = p_course_id
       AND sem.`branch_id` = p_branch_id
       AND sem.`status` = 1
@@ -80,7 +79,7 @@ BEGIN
     LIMIT 1;
 
     IF v_semester_number IS NULL THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Semester does not match the selected course and branch.';
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Semester does not match the selected course, branch and academic year.';
     END IF;
 
     IF p_class_teacher_employee_profile_id IS NOT NULL AND NOT EXISTS (
@@ -107,12 +106,12 @@ BEGIN
     IF EXISTS (
         SELECT 1 FROM `sections` duplicate_section
         WHERE duplicate_section.`section_id` <> p_section_id
+          AND duplicate_section.`college_id` = v_college_id
           AND duplicate_section.`academic_year_id` = p_academic_year_id
-          AND duplicate_section.`department_id` = v_department_id
           AND duplicate_section.`course_id` = p_course_id
           AND duplicate_section.`branch_id` = p_branch_id
           AND duplicate_section.`semester_id` = p_semester
-          AND LOWER(TRIM(duplicate_section.`section_code`)) = LOWER(TRIM(p_section_code))
+          AND LOWER(TRIM(duplicate_section.`section_code`)) COLLATE utf8mb4_0900_ai_ci = LOWER(TRIM((p_section_code COLLATE utf8mb4_0900_ai_ci)))
           AND duplicate_section.`is_archived` = 0
           AND duplicate_section.`deleted_at` IS NULL
     ) THEN
@@ -125,13 +124,13 @@ BEGIN
         `academic_year_id` = p_academic_year_id,
         `semester` = v_semester_number,
         `semester_id` = p_semester,
-        `section_name` = TRIM(p_section_name),
-        `section_code` = TRIM(p_section_code),
+        `section_name` = TRIM((p_section_name COLLATE utf8mb4_0900_ai_ci)),
+        `section_code` = TRIM((p_section_code COLLATE utf8mb4_0900_ai_ci)),
         `capacity` = p_capacity,
         `class_teacher_employee_profile_id` = p_class_teacher_employee_profile_id,
-        `room` = NULLIF(TRIM(p_room), ''),
-        `shift` = NULLIF(TRIM(p_shift), ''),
-        `section_type` = NULLIF(TRIM(p_section_type), ''),
+        `room` = NULLIF(TRIM((p_room COLLATE utf8mb4_0900_ai_ci)), ''),
+        `shift` = NULLIF(TRIM((p_shift COLLATE utf8mb4_0900_ai_ci)), ''),
+        `section_type` = NULLIF(TRIM((p_section_type COLLATE utf8mb4_0900_ai_ci)), ''),
         `status` = IF(COALESCE(p_status, 0) = 1, 1, 0),
         `updated_at` = UTC_TIMESTAMP(),
         `updated_by` = p_updated_by
@@ -141,5 +140,4 @@ BEGIN
 
     SELECT 1 AS `AffectedRows`;
 END$$
-
 DELIMITER ;

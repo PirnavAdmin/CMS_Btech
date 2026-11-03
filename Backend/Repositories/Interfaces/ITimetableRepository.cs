@@ -38,6 +38,8 @@ public interface ITimetableRepository
 
     Task<TimetableGenerationResultDto> GenerateAsync(long timetableId, GenerateTimetableRequest request, bool missingOnly, long? actorId, long? collegeId, bool isSuperAdmin);
     Task<TimetableValidationDto> ValidateAsync(long timetableId, long? collegeId, bool isSuperAdmin);
+    Task<TimetableRevisionCreatedDto> CreateRevisionAsync(long timetableId, CreateTimetableRevisionRequest request, long? actorId, long? collegeId, bool isSuperAdmin);
+    Task<PublishTimetableBatchResultDto> PublishBatchAsync(PublishTimetableBatchRequest request, long? actorId, long? collegeId, bool isSuperAdmin);
     Task PublishAsync(long timetableId, long? actorId, long? collegeId, bool isSuperAdmin);
     Task ReopenAsync(long timetableId, long? actorId, long? collegeId, bool isSuperAdmin);
 

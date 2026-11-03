@@ -370,6 +370,128 @@ ORDER BY attendance_date DESC, attendance_id DESC;";
         }
     }
 
+    [HttpGet("summary")]
+    public async Task<IActionResult> GetAttendanceSummary(
+    [FromQuery] long facultyId,
+    [FromQuery] int year,
+    [FromQuery] int month)
+    {
+        if (facultyId <= 0)
+        {
+            return BadRequest(new
+            {
+                success = false,
+                message = "Invalid faculty ID."
+            });
+        }
+
+        if (year < 2000 || year > 2100)
+        {
+            return BadRequest(new
+            {
+                success = false,
+                message = "Invalid year."
+            });
+        }
+
+        if (month < 1 || month > 12)
+        {
+            return BadRequest(new
+            {
+                success = false,
+                message = "Month must be between 1 and 12."
+            });
+        }
+
+        const string sql = @"
+SELECT
+    faculty_id AS FacultyId,
+    YEAR(attendance_date) AS Year,
+    MONTH(attendance_date) AS Month,
+    COUNT(*) AS TotalDays,
+    SUM(CASE
+        WHEN UPPER(status) = 'PRESENT' THEN 1
+        ELSE 0
+    END) AS PresentDays,
+    SUM(CASE
+        WHEN UPPER(status) = 'ABSENT' THEN 1
+        ELSE 0
+    END) AS AbsentDays,
+    SUM(CASE
+        WHEN UPPER(status) = 'LEAVE' THEN 1
+        ELSE 0
+    END) AS LeaveDays,
+    ROUND(
+        100.0 * SUM(
+            CASE
+                WHEN UPPER(status) = 'PRESENT' THEN 1
+                ELSE 0
+            END
+        ) / NULLIF(COUNT(*), 0),
+        2
+    ) AS AttendancePercentage
+FROM faculty_attendance
+WHERE faculty_id = @facultyId
+  AND YEAR(attendance_date) = @year
+  AND MONTH(attendance_date) = @month
+GROUP BY
+    faculty_id,
+    YEAR(attendance_date),
+    MONTH(attendance_date);";
+
+        try
+        {
+            await using var connection = Connection();
+            await connection.OpenAsync();
+
+            var result = await connection.QueryFirstOrDefaultAsync(
+                sql,
+                new
+                {
+                    facultyId,
+                    year,
+                    month
+                });
+
+            if (result == null)
+            {
+                return Ok(new
+                {
+                    success = true,
+                    message = "No attendance records found for the selected month.",
+                    data = new
+                    {
+                        facultyId,
+                        year,
+                        month,
+                        totalDays = 0,
+                        presentDays = 0,
+                        absentDays = 0,
+                        leaveDays = 0,
+                        attendancePercentage = 0
+                    }
+                });
+            }
+
+            return Ok(new
+            {
+                success = true,
+                message = "Faculty attendance summary retrieved successfully.",
+                data = result
+            });
+        }
+        catch (MySqlException ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                success = false,
+                message = "Unable to retrieve faculty attendance summary.",
+                error = ex.Message
+            });
+        }
+    }
+
+
     // Export DTO
     public class FacultyAttendanceExportRow
     {

@@ -54,7 +54,7 @@ BEGIN
     FROM sections s
     INNER JOIN colleges col ON col.college_id = s.college_id
     INNER JOIN academicyears ay ON ay.academic_year_id = s.academic_year_id
-    INNER JOIN departments d ON d.department_id = s.department_id
+    LEFT JOIN departments d ON d.department_id = s.department_id
     INNER JOIN courses c ON c.course_id = s.course_id
     INNER JOIN branches b ON b.branch_id = s.branch_id
     LEFT JOIN semesters sem ON sem.semester_id = s.semester_id

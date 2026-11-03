@@ -22,17 +22,19 @@ test('academic fee configuration retains three sections and validates before app
 })
 
 test('fee sidebar maps existing routes and contextual screens to one owning section', () => {
-  assert.deepEqual(feeNavigation.map(item => item.label), ['Overview', 'Fee Structures', 'Student Accounts'])
+  assert.deepEqual(feeNavigation.map(item => item.label), ['Fee Structure', 'Fee Management'])
   for (const item of feeNavigation) {
     assert.equal(feeNavigationItem(item.to), item)
     assert.equal(feeNavigationItem(`${item.to}/`), item)
-    assert.deepEqual(feeBreadcrumbs(item.to).map(c => c.label), ['Finance', 'Fee Management', item.label])
+    assert.equal(feeBreadcrumbs(item.to)[1].label, item.label)
   }
-  for (const [path, label] of [['/fees', 'Overview'], ['/fees/structures/create', 'Fee Structures'], ['/fees/structures/draft/edit', 'Fee Structures'], ['/fees/components', 'Fee Structures'], ['/fees/legacy', 'Fee Structures'], ['/fees/ledger/account', 'Student Accounts']]) {
+  for (const [path, label] of [['/fees', 'Fee Management'], ['/fees/overview', 'Fee Management'], ['/fees/students', 'Fee Management'], ['/fees/structures/create', 'Fee Structure'], ['/fees/structures/draft/edit', 'Fee Structure'], ['/fees/components', 'Fee Structure'], ['/fees/legacy', 'Fee Structure'], ['/fees/ledger/account', 'Fee Management'], ['/fees/collection', 'Fee Management'], ['/fees/receipts/receipt', 'Fee Management'], ['/fees/reports', 'Fee Management']]) {
     assert.equal(isFeeRoute(path), true)
     assert.equal(feeNavigationItem(path)?.label, label)
   }
-  for (const path of ['/fees/collection', '/fees/receipts/receipt', '/fees/refunds', '/fees/reports']) assert.equal(feeNavigationItem(path), null)
+  for (const [path, label] of [['/fees/overview', 'Overview'], ['/fees/students', 'Student Fees'], ['/fees/collection', 'Collect Payment'], ['/fees/receipts', 'Receipts & History'], ['/fees/reports', 'Reports']]) {
+    assert.equal(feeBreadcrumbs(path).at(-1).label, label)
+  }
   for (const path of ['/fees-other', '/dashboard', '/faculty/fees']) {
     assert.equal(isFeeRoute(path), false)
     assert.equal(feeNavigationItem(path), null)
@@ -43,21 +45,21 @@ test('fee sidebar maps existing routes and contextual screens to one owning sect
   for (const [type, label] of [['hostel', 'Hostel'], ['transport', 'Transport']]) {
     for (const [suffix, action] of [['create', 'Create'], ['saved-plan/edit', 'Edit']]) {
       const path = `/fees/structures/${type}/${suffix}`
-      assert.equal(feeNavigationItem(path)?.label, 'Fee Structures')
+      assert.equal(feeNavigationItem(path)?.label, 'Fee Structure')
       assert.equal(feeBreadcrumbs(path).at(-1).label, `${action} ${label} Fee Structure`)
     }
   }
   assert.equal(feeBreadcrumbs('/fees/ledger/account').at(-1).label, 'Student Financial Profile')
   assert.equal(feeNavigation.some(item => item.to === '/fees/components' || item.to === '/fees/refunds'), false)
-  assert.equal(feeNavigationItem('/fees/accounts')?.label, 'Student Accounts')
-  assert.equal(feeNavigationItem('/fees/structures//edit')?.label, 'Fee Structures')
-  assert.equal(feeBreadcrumbs('/fees/structures/').at(-1).label, 'Fee Structures')
+  assert.equal(feeNavigationItem('/fees/accounts')?.label, 'Fee Management')
+  assert.equal(feeNavigationItem('/fees/structures//edit')?.label, 'Fee Structure')
+  assert.equal(feeBreadcrumbs('/fees/structures/').at(-1).label, 'Fee Structure')
   assert.equal(studentAccountOperations.length, 3)
   for (const operation of studentAccountOperations) {
     assert.equal(feeNavigation.some(item => item.to === operation.to), false)
     for (const path of [operation.to, `${operation.to}/`]) {
-      assert.equal(feeNavigationItem(path)?.label, 'Student Accounts')
-      assert.deepEqual(feeBreadcrumbs(path).map(c => c.label), ['Finance', 'Fee Management', 'Student Accounts', operation.label])
+      assert.equal(feeNavigationItem(path)?.label, 'Fee Management')
+      assert.deepEqual(feeBreadcrumbs(path).map(c => c.label), ['Finance', 'Fee Management', 'Student Fees', operation.label])
     }
   }
 })
@@ -75,7 +77,7 @@ test('configuration presentation preserves workflow records, component totals an
   assert.equal(row.feePeriod, 'Per Academic Year')
   assert.deepEqual(componentTotals(row.feeComponents), { total: 1000, mandatory: 700, refundable: 200, optional: 100 })
   assert.equal(workflowAcademicRow({ ...structure, cycle: 'Semester-wise' }).feePeriod, 'Per Semester')
-  assert.equal(feeBreadcrumbs('/fees/legacy').at(-1).label, 'Fee Structures')
+  assert.equal(feeBreadcrumbs('/fees/legacy')[1].label, 'Fee Structure')
 })
 
 test('single total fee preserves approval, installment allocation and student balances without a master', () => {

@@ -4,6 +4,7 @@ using BTech.Data;
 using BTech.Models;
 using BTech.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using MySqlConnector;
 
 namespace BTech.Repositories.Implementations
 {
@@ -44,17 +45,39 @@ namespace BTech.Repositories.Implementations
                 "sp_course_get_by_id",
                 ("p_course_id", courseId));
 
-        public async Task<Course> AddAsync(Course course) =>
-            await ExecuteSingleAsync(
+        public async Task<Course> AddAsync(Course course)
+        {
+            try
+            {
+                return await ExecuteSingleAsync(
                 "sp_course_create",
                 CourseParameters(course, includeId: false))
-            ?? throw new InvalidOperationException(
+                ?? throw new InvalidOperationException(
                 "Course could not be created.");
+            }
+            catch (MySqlException ex) when (IsDuplicateCode(ex))
+            {
+                throw DuplicateCode(course, ex);
+            }
+        }
 
-        public Task<Course?> UpdateAsync(Course course) =>
-            ExecuteSingleAsync(
-                "sp_course_update",
-                CourseParameters(course, includeId: true));
+        public async Task<Course?> UpdateAsync(Course course)
+        {
+            try
+            {
+                return await ExecuteSingleAsync("sp_course_update", CourseParameters(course, includeId: true));
+            }
+            catch (MySqlException ex) when (IsDuplicateCode(ex))
+            {
+                throw DuplicateCode(course, ex);
+            }
+        }
+
+        private static bool IsDuplicateCode(MySqlException ex) => ex.Number == 1062 ||
+            (ex.SqlState == "45000" && ex.Message.StartsWith("Course code already exists", StringComparison.OrdinalIgnoreCase));
+
+        private static InvalidOperationException DuplicateCode(Course course, MySqlException ex) => new(
+            $"Course code '{course.CourseCode}' already exists in college {course.CollegeId}. Inactive and deleted records also reserve their codes.", ex);
 
         public Task<Course?> UpdateStatusAsync(
             long courseId,
@@ -67,13 +90,15 @@ namespace BTech.Repositories.Implementations
                 ("p_updated_by", updatedBy));
 
         public async Task<bool> ExistsCodeAsync(
+            long collegeId,
             string courseCode,
             long? excludeId = null)
         {
             var exists = false;
 
-            await WithCommandAsync("sp_course_code_exists", async command =>
+            await WithCommandAsync("sp_course_code_exists_in_college", async command =>
             {
+                AddParameter(command, "p_college_id", collegeId);
                 AddParameter(command, "p_course_code", courseCode);
                 AddParameter(command, "p_exclude_id", excludeId);
                 var value = await command.ExecuteScalarAsync();

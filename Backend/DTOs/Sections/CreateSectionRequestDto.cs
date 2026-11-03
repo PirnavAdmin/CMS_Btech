@@ -8,7 +8,7 @@ namespace BTech.DTOs.Sections
 
         public long AcademicYearId { get; set; }
 
-        public long DepartmentId { get; set; }
+        public long? DepartmentId { get; set; }
 
         public long CourseId { get; set; }
 

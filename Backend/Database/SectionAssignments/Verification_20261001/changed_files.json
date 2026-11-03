@@ -1,0 +1,9 @@
+{
+  "changedOriginalFiles": [
+    "DTOs/Sections/SectionAssignmentDtos.cs",
+    "Database/SectionAssignments/SectionAssignmentSetup.sql",
+    "Repositories/Implementations/SectionAssignmentRepository.cs",
+    "Services/Implementations/SectionAssignmentService.cs"
+  ],
+  "removedOriginalFiles": []
+}

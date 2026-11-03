@@ -1,0 +1,24 @@
+{
+  "changedExistingFiles": [
+    "CMS_BTech_Ticket172_173_ExamManagement_FULL_UPDATED/Repositories/Implementations/ExamManagementRepository.cs"
+  ],
+  "addedFiles": [
+    "Repositories/Implementations/ExamConflictGuard.cs",
+    "EXAM_CONFLICT_UPDATE_README.md",
+    "Verification/verify_exam_conflicts.py",
+    "Verification/ExamConflictUpdate_Verification.json",
+    "Verification/ExamConflictUpdate.patch"
+  ],
+  "originalFilesPreservedExceptListed": false,
+  "overlapSqlAssertionsPassed": 27,
+  "dotnetBuild": "not run: SDK unavailable",
+  "liveMySqlTests": "not run: MySQL unavailable",
+  "databaseMigrationRequired": false,
+  "omittedGeneratedFolders": [
+    ".vs",
+    "bin",
+    "obj",
+    ".git"
+  ],
+  "originalSourceFilesPreservedExceptListed": true
+}

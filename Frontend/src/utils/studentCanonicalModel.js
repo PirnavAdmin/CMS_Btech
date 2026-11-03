@@ -223,6 +223,7 @@ export const DOCUMENTS_CONFIG = [
 ]
 
 export const HOSTEL_FEES = {
+  'Single Sharing': 45000,
   'Single Room': 45000,
   'Double Sharing': 35000,
   'Triple Sharing': 28000,

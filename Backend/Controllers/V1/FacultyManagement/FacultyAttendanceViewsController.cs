@@ -386,7 +386,7 @@ ORDER BY f.faculty_id, a.attendance_date;";
                 })
                 .Select(group =>
                 {
-                    var facultyCategory = GetFacultyType(group.Key.EmploymentType, group.Key.Designation);
+                    var facultyCategory = GetFacultyType(group.Key.EmploymentType);
 
                     if (!MatchesFacultyType(facultyCategory, facultyType))
                         return null;
@@ -538,7 +538,7 @@ ORDER BY f.faculty_id, a.attendance_date;";
             facultyName = row.FacultyName,
             designation = row.Designation,
             department = row.Department,
-            facultyType = GetFacultyType(row.EmploymentType, row.Designation),
+            facultyType = GetFacultyType(row.EmploymentType),
             date = row.AttendanceDate?.ToString("yyyy-MM-dd"),
             status,
             statusCode = ToStatusCode(status),
@@ -602,21 +602,14 @@ ORDER BY f.faculty_id, a.attendance_date;";
         };
     }
 
-    private static string GetFacultyType(string? employmentType, string? designation = null)
+    private static string GetFacultyType(string? employmentType)
     {
         // The existing faculty table has employment_type, not a separate
         // employee_category column. Existing faculty records are treated as
         // Teaching unless the value explicitly identifies non-teaching staff.
         var value = (employmentType ?? string.Empty).Trim().ToLowerInvariant();
 
-        var role = (designation ?? string.Empty).Trim().ToLowerInvariant();
-        var nonTeachingDesignation = new[]
-        {
-            "librarian", "lab", "system", "network", "account", "administrat",
-            "office", "junior assistant", "store", "technical assistant", "clerk", "attender"
-        }.Any(keyword => role.Contains(keyword));
-
-        return value is "non-teaching" or "non_teaching" or "nonteaching" || nonTeachingDesignation
+        return value is "non-teaching" or "non_teaching" or "nonteaching"
             ? "Non-Teaching"
             : "Teaching";
     }

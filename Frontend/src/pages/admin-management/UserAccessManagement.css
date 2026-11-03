@@ -9,6 +9,59 @@
   color: var(--user-ink);
 }
 
+.user-directory__tabs { display:flex; gap:8px; padding:0 18px; border-bottom:1px solid var(--user-line); overflow:auto; }
+.user-directory__tabs button { padding:14px 12px; color:#60718a; background:transparent; border:0; border-bottom:2px solid transparent; font:inherit; font-weight:650; white-space:nowrap; cursor:pointer; }
+.user-directory__tabs button.is-active { color:#1765b3; border-bottom-color:#1765b3; }
+.user-directory__form-dialog { width:min(850px,100%); max-height:90vh; overflow:auto; }
+.user-directory__form-dialog form { display:grid; gap:18px; }
+.user-directory__wizard-steps { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+.user-directory__wizard-steps button { display:flex; align-items:center; gap:8px; min-width:0; padding:10px; border:1px solid var(--user-line); border-radius:9px; background:#fff; color:#687487; font:inherit; font-size:11px; text-align:left; }
+.user-directory__wizard-steps button b { display:grid; width:23px; height:23px; flex:none; place-items:center; border-radius:50%; background:#edf2f8; }
+.user-directory__wizard-steps button.is-active { border-color:#8bb8ee; color:#1c5c9f; background:#f2f8ff; }
+.user-directory__wizard-steps button.is-complete b { color:#fff; background:#258354; }
+.user-directory__permission-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+.user-directory__permission-toolbar .user-directory__search { flex:1 1 220px; }
+.user-directory__permission-summary,.user-directory__backend-note { color:var(--user-muted); font-size:12px; }
+.user-directory__backend-note { padding:10px 12px; border-left:3px solid #d3a74b; background:#fffaf0; }
+.user-directory__tree { display:grid; gap:8px; max-height:360px; overflow:auto; }
+.user-directory__tree-module { border:1px solid var(--user-line); border-radius:9px; }
+.user-directory__tree-module > header,.user-directory__tree-module > header label { display:flex; align-items:center; gap:10px; }
+.user-directory__tree-module > header { justify-content:space-between; padding:10px 12px; }
+.user-directory__tree-module > header label { margin:0; }
+.user-directory__tree-module small { color:var(--user-muted); }
+.user-directory__tree-module > header button { border:0; background:transparent; color:#315bd6; cursor:pointer; }
+.user-directory__tree-actions { display:flex; flex-wrap:wrap; gap:12px 20px; padding:10px 14px; border-top:1px solid var(--user-line); background:#f8fbff; }
+.user-directory__tree-actions label,.user-directory__scope-row { display:flex; align-items:center; gap:7px; color:#53647c; font-size:12px; text-transform:capitalize; }
+.user-directory__scope-label { display:block; margin:14px 0 8px; color:#53647c; font-size:12px; }
+.user-directory__review { display:grid; grid-template-columns:150px 1fr; gap:9px 14px; }
+.user-directory__review dt { color:var(--user-muted); }
+.user-directory__review dd { margin:0; color:var(--user-ink); font-weight:650; }
+.user-directory__form-dialog fieldset { margin:0; padding:16px; border:1px solid var(--user-line); border-radius:10px; }
+.user-directory__form-dialog legend { padding:0 6px; color:#28558e; font-size:13px; font-weight:750; }
+.user-directory__form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.user-directory__form-grid label { display:grid; gap:7px; color:#53647c; font-size:12px; font-weight:700; }
+.user-directory__form-grid input { width:100%; min-height:42px; padding:9px 11px; border:1px solid #d5dfec; border-radius:8px; font:inherit; }
+.user-directory__check-list { display:flex; flex-wrap:wrap; gap:12px 20px; }
+.user-directory__check-list label { display:flex; align-items:center; gap:8px; font-size:13px; }
+.user-directory__permission-wrap { max-height:260px; overflow:auto; }
+.user-directory__permission-wrap table { width:100%; border-collapse:collapse; font-size:12px; }
+.user-directory__permission-wrap th,.user-directory__permission-wrap td { padding:9px; border-bottom:1px solid var(--user-line); text-align:center; }
+.user-directory__permission-wrap th:first-child { text-align:left; text-transform:capitalize; }
+.user-directory__identity { display:flex; align-items:center; gap:11px; min-width:230px; }
+.user-directory__identity > div { display:grid; gap:4px; }
+.user-directory__identity small,.user-directory__subline { display:block; margin-top:4px; color:var(--user-muted); font-size:11px; }
+.user-directory__avatar { display:grid; width:38px; height:38px; flex:none; place-items:center; border-radius:50%; color:#185ca4; background:#e8f2ff; font-size:12px; font-weight:800; overflow:hidden; }
+.user-directory__avatar img { width:100%; height:100%; object-fit:cover; }
+.user-directory__actions { display:flex; align-items:center; gap:5px; }
+.user-directory__actions button { display:grid; width:32px; height:32px; place-items:center; border:1px solid var(--user-line); border-radius:7px; background:white; color:#315b8d; cursor:pointer; }
+.user-directory__actions select { width:85px; padding:6px; border:1px solid var(--user-line); border-radius:7px; color:#46566d; background:white; font-size:11px; }
+.user-directory__status.status-pending-invitation { color:#965d00; background:#fff6df; }
+.user-directory__status.status-suspended,.user-directory__status.status-deactivated { color:#a12f39; background:#fff0f0; }
+.user-directory__activity { display:grid; gap:10px; padding:0; list-style:none; }
+.user-directory__activity li { display:flex; justify-content:space-between; gap:12px; padding:11px; border:1px solid var(--user-line); border-radius:8px; }
+.user-directory__activity span { color:var(--user-muted); font-size:12px; }
+@media(max-width:720px) { .user-directory { padding:16px 12px 28px; } .user-directory__form-grid { grid-template-columns:1fr; } .user-directory__header { align-items:flex-start; flex-direction:column; } .user-directory__filters { flex-wrap:wrap; } .user-directory__filters > * { min-width:calc(50% - 8px); } .user-directory__activity li { flex-direction:column; } }
+
 .user-directory__header,
 .user-directory__header-actions,
 .user-directory__panel-heading,

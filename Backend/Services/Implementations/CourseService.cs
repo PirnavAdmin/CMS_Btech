@@ -48,9 +48,9 @@ namespace BTech.Services.Implementations
         {
             var collegeId = await ResolveCollegeIdAsync(dto.CollegeId, userId);
 
-            if (await _courseRepository.ExistsCodeAsync(dto.EffectiveCode))
+            if (await _courseRepository.ExistsCodeAsync(collegeId, dto.EffectiveCode))
                 throw new InvalidOperationException(
-                    $"Course code '{dto.EffectiveCode}' already exists.");
+                    $"Course code '{dto.EffectiveCode}' already exists in college {collegeId}. Inactive and deleted records also reserve their codes.");
 
             var course = BuildCourse(dto, collegeId);
             course.Status = 1;
@@ -72,11 +72,16 @@ namespace BTech.Services.Implementations
             if (existing == null)
                 return null;
 
-            if (await _courseRepository.ExistsCodeAsync(dto.EffectiveCode, courseId))
-                throw new InvalidOperationException(
-                    $"Course code '{dto.EffectiveCode}' already exists.");
-
             var collegeId = dto.CollegeId ?? existing.CollegeId;
+            if (collegeId <= 0)
+                throw new ArgumentException("CollegeId must be a positive number.");
+            if (collegeId != existing.CollegeId)
+                throw new ArgumentException("The course does not belong to the selected college. Moving a course between colleges is not supported by this endpoint.");
+
+            if (await _courseRepository.ExistsCodeAsync(collegeId, dto.EffectiveCode, courseId))
+                throw new InvalidOperationException(
+                    $"Course code '{dto.EffectiveCode}' already exists in college {collegeId}. Inactive and deleted records also reserve their codes.");
+
             var course = BuildCourse(dto, collegeId);
             course.CourseId = courseId;
             course.Status = existing.Status;
@@ -112,6 +117,8 @@ namespace BTech.Services.Implementations
             long? requestedCollegeId,
             long? userId)
         {
+            if (requestedCollegeId is <= 0)
+                throw new ArgumentException("CollegeId must be a positive number.");
             if (requestedCollegeId > 0)
                 return requestedCollegeId.Value;
 

@@ -2,6 +2,8 @@ using System.Data;
 using System.Data.Common;
 using System.Text.Json;
 using BTech.Data;
+using BTech.Exceptions;
+using MySqlConnector;
 using BTech.DTOs.Sections;
 using BTech.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -11,10 +13,12 @@ namespace BTech.Repositories.Implementations
     public class SectionAssignmentRepository : ISectionAssignmentRepository
     {
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<SectionAssignmentRepository> _logger;
 
-        public SectionAssignmentRepository(ApplicationDbContext context)
+        public SectionAssignmentRepository(ApplicationDbContext context, ILogger<SectionAssignmentRepository> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         public Task<ClassTeacherDto?> GetClassTeacherAsync(long sectionId) =>
@@ -34,6 +38,7 @@ namespace BTech.Repositories.Implementations
                     {
                         result.Add(new ClassTeacherCandidateDto
                         {
+                            FacultyId = reader.GetInt64(reader.GetOrdinal("FacultyId")),
                             EmployeeProfileId = reader.GetInt64(reader.GetOrdinal("EmployeeProfileId")),
                             UserId = reader.GetInt64(reader.GetOrdinal("UserId")),
                             EmployeeUserId = reader.GetString(reader.GetOrdinal("EmployeeUserId")),
@@ -49,39 +54,13 @@ namespace BTech.Repositories.Implementations
             return result;
         }
 
-        public async Task<ClassTeacherDto?> AssignClassTeacherAsync(long sectionId, long employeeProfileId, long updatedBy)
-        {
-            var connection = _context.Database.GetDbConnection();
-            var shouldClose = connection.State != ConnectionState.Open;
-            if (shouldClose)
-                await connection.OpenAsync();
-
-            try
-            {
-                await using var command = connection.CreateCommand();
-                command.CommandText = @"
-                    UPDATE sections
-                    SET class_teacher_employee_profile_id = @employee_profile_id,
-                        updated_at = UTC_TIMESTAMP(),
-                        updated_by = @updated_by
-                    WHERE section_id = @section_id
-                      AND deleted_at IS NULL;
-                ";
-                command.CommandType = CommandType.Text;
-                AddParameter(command, "@employee_profile_id", employeeProfileId);
-                AddParameter(command, "@updated_by", updatedBy);
-                AddParameter(command, "@section_id", sectionId);
-
-                await command.ExecuteNonQueryAsync();
-            }
-            finally
-            {
-                if (shouldClose)
-                    await connection.CloseAsync();
-            }
-
-            return await GetClassTeacherAsync(sectionId);
-        }
+        public Task<ClassTeacherDto?> AssignClassTeacherAsync(long sectionId, long employeeProfileId, long updatedBy) =>
+            ExecuteSingleAsync(
+                "sp_Section_AssignClassTeacher",
+                MapClassTeacher,
+                ("p_section_id", sectionId),
+                ("p_employee_profile_id", employeeProfileId),
+                ("p_updated_by", updatedBy));
 
         public async Task<bool> RemoveClassTeacherAsync(long sectionId, long updatedBy)
         {
@@ -110,6 +89,7 @@ namespace BTech.Repositories.Implementations
                         result.Add(new StudentCandidateDto
                         {
                             StudentId = reader.GetInt64(reader.GetOrdinal("StudentId")),
+                            AdmissionId = GetNullableInt64(reader, "AdmissionId"),
                             StudentCode = reader.GetString(reader.GetOrdinal("StudentCode")),
                             FullName = reader.GetString(reader.GetOrdinal("FullName")),
                             Email = GetNullableString(reader, "Email"),
@@ -242,62 +222,8 @@ namespace BTech.Repositories.Implementations
                 ("p_student_id", studentId),
                 ("p_removed_by", removedBy));
 
-            if (result == 1)
-                return true;
-
-            // The supplied frontend sends its assignment row ID after a
-            // server refresh. Preserve the existing student-ID contract and
-            // accept that assignment ID as a compatibility fallback.
-            var resolvedStudentId = await ResolveStudentIdAsync(
-                sectionId,
-                studentId);
-
-            if (!resolvedStudentId.HasValue || resolvedStudentId.Value == studentId)
-                return false;
-
-            result = await ExecuteScalarIntAsync(
-                "sp_Section_RemoveStudent",
-                ("p_section_id", sectionId),
-                ("p_student_id", resolvedStudentId.Value),
-                ("p_removed_by", removedBy));
-
+            // The route explicitly accepts StudentId. Never reinterpret another entity ID.
             return result == 1;
-        }
-
-        private async Task<long?> ResolveStudentIdAsync(
-            long sectionId,
-            long assignmentId)
-        {
-            var connection = _context.Database.GetDbConnection();
-            var shouldClose = connection.State != ConnectionState.Open;
-
-            if (shouldClose)
-                await connection.OpenAsync();
-
-            try
-            {
-                await using var command = connection.CreateCommand();
-                command.CommandText = @"
-                    SELECT student_id
-                    FROM student_section_assignments
-                    WHERE student_section_assignment_id = @assignment_id
-                      AND section_id = @section_id
-                      AND status = 1
-                    LIMIT 1;";
-                command.CommandType = CommandType.Text;
-                AddParameter(command, "@assignment_id", assignmentId);
-                AddParameter(command, "@section_id", sectionId);
-
-                var value = await command.ExecuteScalarAsync();
-                return value == null || value == DBNull.Value
-                    ? null
-                    : Convert.ToInt64(value);
-            }
-            finally
-            {
-                if (shouldClose)
-                    await connection.CloseAsync();
-            }
         }
 
         private async Task<T?> ExecuteSingleAsync<T>(
@@ -346,6 +272,7 @@ namespace BTech.Repositories.Implementations
 
             try
             {
+                _logger.LogInformation("Section allocation procedure started. Procedure={Procedure}", procedureName);
                 await using var command = connection.CreateCommand();
                 command.CommandText = procedureName;
                 command.CommandType = CommandType.StoredProcedure;
@@ -355,6 +282,17 @@ namespace BTech.Repositories.Implementations
 
                 await using var reader = await command.ExecuteReaderAsync();
                 await handler(reader);
+                _logger.LogInformation("Section allocation procedure completed. Procedure={Procedure}", procedureName);
+            }
+            catch (MySqlException ex) when (ex.Number == 1644)
+            {
+                _logger.LogWarning("Section allocation rejected. Procedure={Procedure}, Reason={Reason}", procedureName, ex.Message);
+                throw new BusinessException(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Section allocation procedure failed. Procedure={Procedure}", procedureName);
+                throw;
             }
             finally
             {

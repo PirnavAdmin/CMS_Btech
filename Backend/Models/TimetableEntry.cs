@@ -15,6 +15,9 @@ namespace BTech.Models
 
         public string DayOfWeek { get; set; } = string.Empty;
         public string? Classroom { get; set; }
+        public long? ClassroomId { get; set; }
+        public string GeneratedSource { get; set; } = "MANUAL";
+        public string? ScheduleGroupKey { get; set; }
 
         public string EntryType { get; set; } = "LECTURE";
 

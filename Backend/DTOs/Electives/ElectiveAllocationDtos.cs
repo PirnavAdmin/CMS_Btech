@@ -4,6 +4,9 @@ namespace BTech.DTOs.Electives
 {
     public class ElectiveAllocationCreateDto
     {
+        [Required]
+        public long SelectionId { get; set; }
+
         [StringLength(500)]
         public string? Remarks { get; set; }
     }

@@ -6,6 +6,7 @@ import { randomUUID } from 'node:crypto'
 import * as utils from '../utils/timetableUtils.js'
 import * as planner from '../utils/timetablePlanner.js'
 import * as periods from '../utils/timetablePeriods.js'
+import { contextOptions } from './timetable/timetableDomain.js'
 
 const source = readFileSync(new URL('./timetableService.js', import.meta.url), 'utf8').replace(/^import .*$/gm, '').replaceAll('export const ', 'const ')
 const scope = { academicYearId: '1', courseId: '2', branchId: '3', semesterId: '4', sectionId: '5' }
@@ -23,9 +24,19 @@ function setup() {
     facultySubjectAllocationApi: api([{ ...scope, facultyId: 7, subjectId: 6 }]),
     timetableEntryApi: { list: async () => { if (fail) throw new Error('Backend unavailable'); return backend } },
   })
-  vm.runInContext(`${source}\nthis.service = localTimetableService;`, context)
-  return { service: context.service, storage, backend, fail: () => { fail = true }, quota: () => { quota = true }, deactivateFaculty: () => { facultyActive = false } }
+  vm.runInContext(`${source}\nthis.service = localTimetableService; this.normalize = normalizeTimetableMasterRows;`, context)
+  return { service: context.service, normalize: context.normalize, storage, backend, fail: () => { fail = true }, quota: () => { quota = true }, deactivateFaculty: () => { facultyActive = false } }
 }
+test('active departments appear even when the selected course omits its department relationship', () => {
+  const { normalize } = setup()
+  const courses = normalize([{ CourseId: 3, CourseName: 'BTech', Status: 1 }], 'course')
+  const departments = normalize([
+    { DepartmentId: 2, DepartmentName: 'Engineering', Status: 1 },
+    { DepartmentId: 9, DepartmentName: 'Inactive', Status: 0 },
+  ], 'department')
+  const options = contextOptions({ years: [], courses, branches: [], departments, semesters: [] }, { courseId: '3' })
+  assert.deepEqual(options.departmentId.map(row => row.name), ['Engineering'])
+})
 test('create, save draft, edit, publish, reopen and remove operate on one set of records', async () => {
   const { service } = setup()
   const table = await service.create(scope, 'Section A')

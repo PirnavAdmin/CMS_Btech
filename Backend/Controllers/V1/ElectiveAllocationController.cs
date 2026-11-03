@@ -70,13 +70,15 @@ namespace BTech.Controllers.V1
                     StatusCodes.Status500InternalServerError,
                     new
                     {
-                        message = "An error occurred while retrieving elective allocations."
+                        message =
+                            "An error occurred while retrieving elective allocations."
                     });
             }
         }
 
         // ============================================================
         // POST: api/v1/elective-allocations/{selectionId}
+        // Existing endpoint - KEEP THIS
         // ============================================================
         [HttpPost("{selectionId:long}")]
         public async Task<IActionResult> Create(
@@ -157,6 +159,97 @@ namespace BTech.Controllers.V1
                     "Error creating elective allocation " +
                     "for selection {SelectionId}.",
                     selectionId);
+
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    new
+                    {
+                        message =
+                            "An error occurred while creating the elective allocation."
+                    });
+            }
+        }
+
+        // ============================================================
+        // POST: api/v1/electives/allocations
+        // Frontend-compatible endpoint
+        // ============================================================
+        [HttpPost("/api/v1/electives/allocations")]
+        public async Task<IActionResult> CreateFromFrontend(
+            [FromBody] ElectiveAllocationCreateDto request)
+        {
+            try
+            {
+                // Existing JWT claim name in this project is "collegeId".
+                var collegeIdClaim = User.FindFirst("collegeId")?.Value;
+
+                if (!long.TryParse(collegeIdClaim, out var collegeId) ||
+                    collegeId <= 0)
+                {
+                    return Unauthorized(new
+                    {
+                        message = "College information not found in token."
+                    });
+                }
+
+                // Existing JWT user ID claim.
+                var userIdClaim =
+                    User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (!long.TryParse(userIdClaim, out var allocatedBy) ||
+                    allocatedBy <= 0)
+                {
+                    return Unauthorized(new
+                    {
+                        message = "User information not found in token."
+                    });
+                }
+
+                // SelectionId now comes from the request body.
+                if (request == null || request.SelectionId <= 0)
+                {
+                    return BadRequest(new
+                    {
+                        message = "SelectionId must be greater than zero."
+                    });
+                }
+
+                var result = await _service.CreateAsync(
+                    collegeId,
+                    request.SelectionId,
+                    request,
+                    allocatedBy);
+
+                if (result == null)
+                {
+                    return BadRequest(new
+                    {
+                        message =
+                            "Elective allocation could not be created. " +
+                            "The selection may not exist, may not be approved, " +
+                            "or may already be allocated."
+                    });
+                }
+
+                return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Invalid request while creating elective allocation " +
+                    "from frontend.");
+
+                return BadRequest(new
+                {
+                    message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Error creating elective allocation from frontend.");
 
                 return StatusCode(
                     StatusCodes.Status500InternalServerError,

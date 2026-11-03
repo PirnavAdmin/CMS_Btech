@@ -1,0 +1,15 @@
+Existing files changed:
+DTOs/Sections/CreateSectionRequestDto.cs
+DTOs/Sections/SectionResponseDto.cs
+Database/Sections/SectionUpdateStoredProcedure.sql
+Database/Sql/Stored Procedures/Sections/sp_section_create.sql
+Database/Sql/Stored Procedures/Sections/sp_section_exists.sql
+Database/Sql/Stored Procedures/Sections/sp_section_get_all.sql
+Database/Sql/Stored Procedures/Sections/sp_section_get_by_id.sql
+Database/Sql/Stored Procedures/Sections/sp_section_search.sql
+Database/Sql/Stored Procedures/Sections/sp_section_update.sql
+Database/Sql/Stored Procedures/Sections/sp_section_update_details.sql
+Models/Section.cs
+Services/Implementations/SectionService.cs
+
+Added: deployment guide, verification report, this manifest, section trigger script, combined section SQL patch.

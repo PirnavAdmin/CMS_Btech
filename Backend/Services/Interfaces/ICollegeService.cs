@@ -4,7 +4,6 @@ namespace BTech.Services.Interfaces
 {
     public interface ICollegeService
     {
-        Task<CollegeDeactivationImpactDto> GetDeactivationImpactAsync(long collegeId);
         Task<IEnumerable<CollegeResponseDto>>
             GetAllCollegesAsync(
                 string? search = null,

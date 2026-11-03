@@ -22,6 +22,9 @@ namespace BTech.Controllers.V1
             _logger = logger;
         }
 
+        // ============================================================
+        // GET: api/v1/elective-approvals
+        // ============================================================
         /// <summary>
         /// Get elective approval records for the logged-in college.
         /// </summary>
@@ -66,6 +69,10 @@ namespace BTech.Controllers.V1
             }
         }
 
+        // ============================================================
+        // PUT: api/v1/elective-approvals/{selectionId}
+        // Existing endpoint - KEEP THIS
+        // ============================================================
         /// <summary>
         /// Approve or reject a student's elective selection.
         /// </summary>
@@ -100,6 +107,22 @@ namespace BTech.Controllers.V1
                     });
                 }
 
+                if (selectionId <= 0)
+                {
+                    return BadRequest(new
+                    {
+                        message = "SelectionId must be greater than zero."
+                    });
+                }
+
+                if (request == null)
+                {
+                    return BadRequest(new
+                    {
+                        message = "Approval request is required."
+                    });
+                }
+
                 var result = await _service.UpdateAsync(
                     collegeId,
                     selectionId,
@@ -128,6 +151,134 @@ namespace BTech.Controllers.V1
                 _logger.LogError(
                     ex,
                     "Error updating elective approval for SelectionId {SelectionId}.",
+                    selectionId);
+
+                throw;
+            }
+        }
+
+        // ============================================================
+        // PATCH:
+        // api/v1/electives/selections/{selectionId}/approval
+        //
+        // Frontend-compatible endpoint
+        // ============================================================
+        /// <summary>
+        /// Approve or reject a student's elective selection.
+        /// Frontend-compatible PATCH endpoint.
+        /// </summary>
+        [HttpPatch("/api/v1/electives/selections/{selectionId:long}/approval")]
+        public async Task<IActionResult> UpdateFromFrontend(
+            long selectionId,
+            [FromBody] ElectiveApprovalRequestDto request)
+        {
+            try
+            {
+                // ----------------------------------------------------
+                // Validate SelectionId
+                // ----------------------------------------------------
+                if (selectionId <= 0)
+                {
+                    return BadRequest(new
+                    {
+                        message = "SelectionId must be greater than zero."
+                    });
+                }
+
+                // ----------------------------------------------------
+                // Validate request
+                // ----------------------------------------------------
+                if (request == null)
+                {
+                    return BadRequest(new
+                    {
+                        message = "Approval request is required."
+                    });
+                }
+
+                // ----------------------------------------------------
+                // Get CollegeId from JWT
+                // ----------------------------------------------------
+                var collegeIdValue =
+                    User.FindFirst("collegeId")?.Value;
+
+                if (!long.TryParse(
+                        collegeIdValue,
+                        out var collegeId) ||
+                    collegeId <= 0)
+                {
+                    return Unauthorized(new
+                    {
+                        message =
+                            "College information not found in token."
+                    });
+                }
+
+                // ----------------------------------------------------
+                // Get UserId from JWT
+                // ----------------------------------------------------
+                var userIdValue =
+                    User.FindFirst(
+                        ClaimTypes.NameIdentifier)?.Value;
+
+                if (!long.TryParse(
+                        userIdValue,
+                        out var userId) ||
+                    userId <= 0)
+                {
+                    return Unauthorized(new
+                    {
+                        message =
+                            "User information not found in token."
+                    });
+                }
+
+                // ----------------------------------------------------
+                // Use existing approval service
+                // ----------------------------------------------------
+                var result = await _service.UpdateAsync(
+                    collegeId,
+                    selectionId,
+                    request,
+                    userId);
+
+                // ----------------------------------------------------
+                // Selection not found
+                // ----------------------------------------------------
+                if (result == null)
+                {
+                    return NotFound(new
+                    {
+                        message =
+                            "Elective selection not found."
+                    });
+                }
+
+                // ----------------------------------------------------
+                // Success
+                // ----------------------------------------------------
+                return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Invalid elective approval request for " +
+                    "SelectionId {SelectionId}.",
+                    selectionId);
+
+                return BadRequest(new
+                {
+                    message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Error updating elective approval through " +
+                    "frontend-compatible endpoint for " +
+                    "SelectionId {SelectionId}.",
                     selectionId);
 
                 throw;

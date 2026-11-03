@@ -1,0 +1,15 @@
+{
+  "original_file_count": 819,
+  "original_files_removed": 0,
+  "changed_original_files": [
+    "Backend/Controllers/V1/AcademicYearController.cs",
+    "Backend/DTOs/AcademicYear/AcademicYearResponseDto.cs",
+    "Backend/Database/Sections/SectionUpdateStoredProcedure.sql",
+    "Backend/Database/Sql/Stored Procedures/Sections/sp_section_create.sql",
+    "Backend/Database/Sql/Stored Procedures/Sections/sp_section_update.sql",
+    "Backend/Repositories/Implementations/AcademicYearRepository.cs",
+    "Backend/Repositories/Implementations/SectionRepository.cs",
+    "Backend/Services/Implementations/SectionService.cs"
+  ],
+  "frontend_files_modified": 0
+}

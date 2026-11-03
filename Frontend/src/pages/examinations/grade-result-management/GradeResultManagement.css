@@ -1155,9 +1155,9 @@
 }
 
 .grm-cgpa__svg-chart {
-  width: 100%;
-  min-width: 600px;
-  height: 210px;
+  width: auto;
+  min-width: 720px;
+  height: 280px;
   display: block;
 }
 
@@ -1669,6 +1669,12 @@
   border-bottom: 1px solid var(--border, #e2e8f0);
 }
 
+.grm-modal__empty-row {
+  padding: 24px !important;
+  color: var(--text-secondary, #64748b);
+  text-align: center;
+}
+
 .grm-modal__table input,
 .grm-modal__table select {
   width: 100%;
@@ -1779,6 +1785,13 @@
 
 .grm-modal__btn-primary:hover {
   background: #125aa8;
+}
+
+.grm-modal__btn-primary:disabled {
+  border-color: var(--border, #cbd5e1);
+  background: var(--surface-soft, #f1f5f9);
+  color: var(--text-secondary, #64748b);
+  cursor: not-allowed;
 }
 
 /* Grade Guide Table */
@@ -2197,6 +2210,47 @@
   border: 1px solid var(--border);
   border-radius: 7px;
   background: var(--surface);
+}
+
+/* Keep the gazette filters readable without labels crowding their selects. */
+#root .page-content .results-filter-panel .filter-disclosure__content-inner {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  align-items: end !important;
+  gap: 12px 16px !important;
+}
+
+#root .page-content .results-filter-panel .filter-disclosure__content-inner > .res-filter-label {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+  gap: 6px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  flex: initial !important;
+  margin: 0 !important;
+  white-space: nowrap;
+}
+
+#root .page-content .results-filter-panel .filter-disclosure__content-inner > .res-filter-label select {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  flex: initial !important;
+}
+
+@media (max-width: 850px) {
+  #root .page-content .results-filter-panel .filter-disclosure__content-inner {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  #root .page-content .results-filter-panel .filter-disclosure__content-inner {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* Tables */

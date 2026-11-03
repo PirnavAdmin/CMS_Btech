@@ -1,0 +1,41 @@
+Check,Result
+Original SQL dump imported into MySQL 8.0.46,PASS
+Subject SQL first execution,PASS
+Subject SQL repeat execution,PASS
+SQL preserves existing subject count,PASS
+Swagger generates without route conflicts,PASS
+Subject API requires authentication,PASS
+Screen subject directory,PASS
+Screen fields and textual status,PASS
+Legacy subject fields and numeric status preserved,PASS
+Academic dropdown lookups,PASS
+Create with exact screen-style strings and blanks,PASS
+Create persists all screen fields,PASS
+All three mapping tables written,PASS
+Subject detail round trip,PASS
+Case-insensitive duplicate rejected,PASS
+Edit accepts same code and persists changes,PASS
+"Search, filters and pagination",PASS
+Summary matches filtered data,PASS
+CSV export,PASS
+XLSX export,PASS
+Invalid branch mapping returns detailed 400,PASS
+Mismatched academic year returns detailed 400,PASS
+Invalid semester mapping returns detailed 400,PASS
+Negative credits returns detailed 400,PASS
+Invalid status returns detailed 400,PASS
+Rejected writes do not leave subjects,PASS
+Deactivate,PASS
+Reactivate with boolean status,PASS
+Full screen PUT status toggle,PASS
+Dependency check for unused subject,PASS
+Soft delete,PASS
+Deleted subject is hidden from detail,PASS
+Soft deletion retains database row,PASS
+Delete in-use subject blocked,PASS
+Deactivate in-use subject blocked,PASS
+Merged read endpoint /api/roles,PASS
+Merged read endpoint /api/v1/rooms,PASS
+Merged read endpoint /api/v1/timetable-management/classrooms,PASS
+Merged read endpoint /api/v1/timetable-management/timetables,PASS
+Merged read endpoint /api/v1/timetable-entries,PASS

@@ -143,9 +143,9 @@ namespace BTech.Services.Implementations
             {
                 _logger.LogInformation(
                     "SectionService: Creating section. " +
-                    "SectionCode={SectionCode}, UserId={UserId}",
+                    "SectionCode={SectionCode}, UserId={UserId}, CollegeId={CollegeId}, AcademicYearId={AcademicYearId}, SemesterId={SemesterId}",
                     request.SectionCode,
-                    userId);
+                    userId, request.CollegeId, request.AcademicYearId, request.SemesterId);
 
                 if (userId <= 0)
                 {
@@ -165,10 +165,10 @@ namespace BTech.Services.Implementations
                         "Academic year is required.");
                 }
 
-                if (request.DepartmentId <= 0)
+                if (request.DepartmentId.HasValue && request.DepartmentId.Value <= 0)
                 {
                     throw new BusinessException(
-                        "Department is required.");
+                        "Department ID must be positive when supplied, or null.");
                 }
 
                 if (request.CourseId <= 0)

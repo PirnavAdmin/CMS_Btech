@@ -6,12 +6,17 @@ export const hierarchy = ['academicYearId', 'courseId', 'departmentId', 'branchI
 export const academicLevel = row => key(row.academicLevel ?? row.yearOfStudy ?? row.studyYear ?? row.yearNumber ?? (Number(row.semesterNumber) > 0 ? Math.ceil(Number(row.semesterNumber) / 2) : ''))
 const related = (row, scope, fields) => fields.every(field => !row[field] || same(row[field], scope[field]))
 export function contextOptions(sources, scope) {
-  const branches = sources.branches.filter(row => active(row) && same(row.courseId, scope.courseId) && same(row.departmentId ?? sources.courses.find(course => same(course.id, row.courseId))?.departmentId, scope.departmentId))
+  const course = sources.courses.find(row => same(row.id, scope.courseId))
+  const branches = sources.branches.filter(row => {
+    if (!active(row) || !same(row.courseId, scope.courseId)) return false
+    const departmentId = row.departmentId ?? course?.departmentId
+    return !departmentId || same(departmentId, scope.departmentId)
+  })
   const semesters = sources.semesters.filter(row => active(row) && related(row, scope, ['academicYearId', 'courseId', 'branchId']))
   return {
     academicYearId: sources.years.filter(active),
     courseId: sources.courses.filter(active),
-    departmentId: sources.departments.filter(row => active(row) && (sources.courses.some(course => active(course) && same(course.id, scope.courseId) && same(course.departmentId, row.id)) || sources.branches.some(branch => active(branch) && same(branch.courseId, scope.courseId) && same(branch.departmentId, row.id)))),
+    departmentId: sources.departments.filter(active),
     branchId: branches,
     level: [...new Set(semesters.map(academicLevel).filter(Boolean))].sort().map(id => ({ id, name: /^\d+$/.test(id) ? `Year ${id}` : id })),
     semesterId: semesters.filter(row => academicLevel(row) === scope.level),

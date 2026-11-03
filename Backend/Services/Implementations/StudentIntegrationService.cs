@@ -14,6 +14,7 @@ namespace BTech.Services.Implementations
                 ".pdf", ".jpg", ".jpeg", ".png"
             };
 
+        private readonly BTech.Services.Fees.AdmissionFeePlanCoordinator _feePlans;
         private readonly string _connectionString;
         private readonly IWebHostEnvironment _environment;
         private readonly ILogger<StudentIntegrationService> _logger;
@@ -21,11 +22,12 @@ namespace BTech.Services.Implementations
         public StudentIntegrationService(
             IConfiguration configuration,
             IWebHostEnvironment environment,
-            ILogger<StudentIntegrationService> logger)
+            ILogger<StudentIntegrationService> logger, BTech.Services.Fees.AdmissionFeePlanCoordinator feePlans)
         {
             _connectionString = configuration.GetConnectionString("DefaultConnection")
                 ?? throw new InvalidOperationException("DefaultConnection is missing.");
             _environment = environment;
+            _feePlans = feePlans;
             _logger = logger;
         }
 
@@ -205,6 +207,16 @@ namespace BTech.Services.Implementations
         public async Task<AdmissionFeeSummaryDto?> GetFeeSummaryAsync(long admissionId)
         {
             ValidateId(admissionId, "admission");
+            var planSnapshot = await _feePlans.ReadAsync(admissionId);
+            if (planSnapshot != null)
+            {
+                var detail = await GetFeeStructureAsync(admissionId);
+                return new AdmissionFeeSummaryDto { AdmissionId = admissionId, AcademicFeePlan = planSnapshot,
+                    TuitionFee = detail!.TuitionFee, AdmissionFee = detail.AdmissionFee, HostelFee = detail.HostelFee,
+                    TransportationFee = detail.TransportationFee, OtherFee = detail.OtherFee,
+                    FirstYearTotal = detail.TotalFee, AmountPaid = detail.AmountPaid, BalanceAmount = detail.BalanceAmount,
+                    PaymentPlan = detail.PaymentPlan, PaymentStatus = detail.PaymentStatus, UpdatedAt = planSnapshot.AssignedAt };
+            }
             try
             {
                 _logger.LogInformation("Retrieving admission fee summary. AdmissionId={AdmissionId}", admissionId);
@@ -226,6 +238,27 @@ namespace BTech.Services.Implementations
         public async Task<AdmissionFeeStructureDetailDto?> GetFeeStructureAsync(long admissionId)
         {
             ValidateId(admissionId, "admission");
+            var planSnapshot = await _feePlans.ReadAsync(admissionId);
+            if (planSnapshot != null)
+            {
+                await _feePlans.GetAuthorizedAsync(admissionId);
+                var p = planSnapshot.Plan;
+                await using var legacy = CreateConnection();
+                var paid = await legacy.ExecuteScalarAsync<decimal?>("SELECT amount_paid FROM student_admission_fee_structures WHERE admission_id=@admissionId", new { admissionId }) ?? 0m;
+                decimal Amount(string code) => p.Components.Where(x => x.Code.Equals(code, StringComparison.OrdinalIgnoreCase)).Sum(x => x.Amount);
+                var tuition = Amount("TUITION_FEE"); var admission = Amount("ADMISSION_FEE");
+                var hostel = Amount("HOSTEL_FEE"); var transport = Amount("TRANSPORTATION_FEE");
+                return new AdmissionFeeStructureDetailDto { AdmissionId = admissionId, FeeStructureId = p.FeeStructureId,
+                    AcademicFeePlan = planSnapshot, AcademicYearId = p.AcademicYearId, CourseId = p.CourseId,
+                    BranchId = p.BranchId, SemesterId = p.SemesterId, Quota = p.Quota, StudentCategory = p.StudentCategory,
+                    AcademicContextValid = true, EffectiveDate = planSnapshot.AssignedAt, Source = "ACADEMIC_FEE_PLAN_SNAPSHOT",
+                    TuitionFee = tuition, AdmissionFee = admission, HostelFee = hostel, TransportationFee = transport,
+                    OtherFee = p.TotalAmount - tuition - admission - hostel - transport,
+                    TotalFee = p.TotalAmount, AmountPaid = paid, BalanceAmount = p.TotalAmount - paid,
+                    PaymentPlan = p.PaymentMode, PaymentStatus = paid >= p.TotalAmount ? "PAID" : paid > 0 ? "PARTIAL" : "PENDING",
+                    UpdatedAt = planSnapshot.AssignedAt, PaymentSchedule = p.Installments,
+                    FeeComponents = p.Components.Select(x => new AdmissionFeeComponentDto { ComponentCode = x.Code, Name = x.Name, Amount = x.Amount }).ToList() };
+            }
             try
             {
                 _logger.LogInformation("Retrieving assigned admission fee structure. AdmissionId={AdmissionId}", admissionId);
@@ -262,6 +295,7 @@ namespace BTech.Services.Implementations
             ValidateId(admissionId, "admission");
             ValidateActor(actorUserId);
             await using var connection = CreateConnection();
+            await BTech.Services.Fees.FeePlanLegacyGuard.EnsureNoSnapshotAsync(connection, admissionId);
             var result = await connection.QueryFirstOrDefaultAsync<AdmissionFeeSummaryDto>(
                 "sp_student_admission_fee_upsert",
                 new

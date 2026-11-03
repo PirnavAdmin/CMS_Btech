@@ -12,7 +12,7 @@ const fetchWithApiNotice = async (...args) => {
     notifyApiUnavailable()
     throw error
   }
-  if (response.status >= 500) notifyApiUnavailable({ status: response.status })
+  if (response.status >= 500) notifyApiUnavailable({ status: response.status, url: args[0], method: args[1]?.method || 'GET', response })
   return response
 }
 
@@ -23,7 +23,7 @@ export class AuthRequestError extends Error {
   }
 }
 
-const DEFAULT_API_BASE_URL = 'https://clarity-math-delouse.ngrok-free.dev'
+const DEFAULT_API_BASE_URL = 'https://abreast-curling-tutor.ngrok-free.dev'
 const authEndpoint = import.meta.env.DEV
   ? '/api/v1/auth/login'
   : (import.meta.env.VITE_AUTH_API_URL || `${String(import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '')}/api/v1/auth/login`)
@@ -124,7 +124,7 @@ export async function login({ identifier, password }, fallbackRole = ROLES.ADMIN
 
   if (!response.ok) {
     if (response.status >= 500) {
-      notifyApiUnavailable({ status: response.status })
+      notifyApiUnavailable({ status: response.status, url: authEndpoint, method: 'POST', response })
       throw new AuthRequestError(GENERIC_ERROR_MESSAGE)
     }
     throw new AuthRequestError()

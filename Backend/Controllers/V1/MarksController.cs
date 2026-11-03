@@ -37,6 +37,13 @@ public sealed class MarksController : ControllerBase
         => await Execute(() => _service.EditAsync(markId, request, UserId(), CollegeId(), IsSuperAdmin()),
             "Mark updated successfully.");
 
+    /// <summary>Soft-removes an owned, allocated DRAFT or REJECTED mark and retains its approval history.</summary>
+    [HttpDelete("{markId:long}")]
+    [Authorize(Roles = EntryRoles)]
+    public async Task<IActionResult> Delete(long markId)
+        => await Execute(() => _service.DeleteAsync(markId, UserId(), CollegeId(), IsSuperAdmin()),
+            "Mark removed successfully.");
+
     [HttpGet]
     public async Task<IActionResult> List([FromQuery] MarkListFilter filter)
         => await Execute(() => _service.ListAsync(filter, CollegeId(), IsSuperAdmin()),
@@ -343,6 +350,8 @@ public sealed class MarksController : ControllerBase
             MySqlException { Number: 30001 } => (400, "VALIDATION_ERROR", ex.Message),
             MySqlException { Number: 30002 } => (403, "FORBIDDEN", ex.Message),
             MySqlException { Number: 30003 } => (404, "NOT_FOUND", ex.Message),
+            MySqlException { Number: 30005 } => (409, "MARK_DELETE_CONFLICT", ex.Message),
+            MySqlException { Number: 1062 } => (409, "DUPLICATE_ACTIVE_MARK", "An active mark already exists for this student, subject and exam."),
             MySqlException { Number: 1205 or 1213 } => (409, "CONCURRENT_CHANGE", "Marks changed concurrently. Refresh and retry."),
             MySqlException { SqlState: "45000" } => (409, "WORKFLOW_CONFLICT", ex.Message),
             _ => (500, "MARKS_ERROR", "Unable to process marks request.")

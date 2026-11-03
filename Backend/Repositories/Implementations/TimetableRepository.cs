@@ -196,8 +196,7 @@ public sealed class TimetableRepository : ITimetableRepository
             p_academic_year_id = ay, p_course_id = course, p_branch_id = branch, p_semester_id = sem,
             p_section_id = section, p_status = status, p_college_id = college, p_is_super_admin = superAdmin ? 1 : 0
         }));
-        // SuperAdmin may select one college while retaining cross-college permissions.
-        return college.HasValue ? rows.Where(row => row.CollegeId == college.Value).ToList() : rows.AsList();
+        return rows.AsList();
     }
 
     public async Task<TimetableDetailDto?> GetTimetableAsync(long id, long? college, bool superAdmin)
@@ -344,6 +343,28 @@ public sealed class TimetableRepository : ITimetableRepository
         result.Conflicts = (await multi.ReadAsync<TimetableConflictDto>()).ToList();
         result.Unscheduled = (await multi.ReadAsync<TimetableUnscheduledDto>()).ToList();
         await multi.ReadAsync<WarningRow>();
+        return result;
+    }
+
+    public async Task<TimetableRevisionCreatedDto> CreateRevisionAsync(long id, CreateTimetableRevisionRequest request, long? actor, long? college, bool superAdmin)
+    {
+        await using var c = CreateConnection();
+        // The stored procedure owns the transaction to keep all copied rows atomic.
+        return await c.QuerySingleAsync<TimetableRevisionCreatedDto>(new CommandDefinition(
+            "sp_tt_revision_create", new { p_timetable_id=id, p_expected_revision=request.ExpectedRevision, p_reason=request.Reason.Trim(), p_actor_id=actor, p_college_id=college, p_is_super_admin=superAdmin ? 1 : 0 },
+            commandType: CommandType.StoredProcedure));
+    }
+
+    public async Task<PublishTimetableBatchResultDto> PublishBatchAsync(PublishTimetableBatchRequest request, long? actor, long? college, bool superAdmin)
+    {
+        await using var c = CreateConnection();
+        await c.OpenAsync();
+        var payload = Json(request.Items.Select(x => new { timetableId=x.TimetableId, expectedRevision=x.ExpectedRevision }).ToList());
+        // The stored procedure owns the transaction so all rows publish or none do.
+        var result = await c.QuerySingleAsync<PublishTimetableBatchResultDto>(new CommandDefinition(
+            "sp_tt_publish_batch", new { p_items_json=payload, p_actor_id=actor, p_college_id=college, p_is_super_admin=superAdmin ? 1 : 0 },
+            commandType: CommandType.StoredProcedure));
+        result.TimetableIds = request.Items.Select(x => x.TimetableId).ToArray();
         return result;
     }
 

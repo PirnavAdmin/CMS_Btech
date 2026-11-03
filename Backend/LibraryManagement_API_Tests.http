@@ -1,0 +1,77 @@
+@baseUrl = http://localhost:5084
+@token = REPLACE_WITH_LOGIN_TOKEN
+@collegeId = 1
+@bookId = 8
+@studentId = 2
+@issueId = REPLACE_WITH_CREATED_ISSUE_ID
+@fineId = REPLACE_WITH_CREATED_FINE_ID
+
+### List categories
+GET {{baseUrl}}/api/v1/library/categories?collegeId={{collegeId}}
+Authorization: Bearer {{token}}
+
+### List available books
+GET {{baseUrl}}/api/v1/library/books?collegeId={{collegeId}}&availableOnly=true
+Authorization: Bearer {{token}}
+
+### Create book (use an existing active category)
+POST {{baseUrl}}/api/v1/library/books
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"collegeId":1,"categoryId":1,"accessionNo":"HTTP-TEST-001","title":"HTTP Test Book","author":"Test Author","language":"English","totalCopies":2,"price":250,"status":true}
+
+### Issue (replace bookId and dates if needed)
+POST {{baseUrl}}/api/v1/library/issues
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"collegeId":1,"bookId":{{bookId}},"studentId":{{studentId}},"issueDate":"2026-10-08","dueDate":"2026-10-22","remarks":"HTTP test"}
+
+### Issue detail
+GET {{baseUrl}}/api/v1/library/issues/{{issueId}}?collegeId={{collegeId}}
+Authorization: Bearer {{token}}
+
+### Return once; repeating must return 409
+POST {{baseUrl}}/api/v1/library/issues/{{issueId}}/return?collegeId={{collegeId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"returnDate":"2026-10-08","remarks":"Returned"}
+
+### Returned books
+GET {{baseUrl}}/api/v1/library/returns?collegeId={{collegeId}}
+Authorization: Bearer {{token}}
+
+### Assess fine (replace issueId)
+POST {{baseUrl}}/api/v1/library/fines
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"collegeId":1,"issueId":{{issueId}},"fineReason":"Damaged cover","fineAmount":50,"assessedDate":"2026-10-08"}
+
+### Partial payment; new unique receipt required each time
+POST {{baseUrl}}/api/v1/library/fines/{{fineId}}/payments?collegeId={{collegeId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"amount":20,"paymentMethod":"CASH","receiptNo":"LIB-HTTP-20261008-001","paymentDate":"2026-10-08"}
+
+### Fine balance and receipts
+GET {{baseUrl}}/api/v1/library/fines/{{fineId}}?collegeId={{collegeId}}
+Authorization: Bearer {{token}}
+
+### Waive remaining balance (alternative to full payment)
+PATCH {{baseUrl}}/api/v1/library/fines/{{fineId}}/waive?collegeId={{collegeId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"reason":"Approved by administrator"}
+
+### Audit history
+GET {{baseUrl}}/api/v1/library/history?collegeId={{collegeId}}&issueId={{issueId}}
+Authorization: Bearer {{token}}
+
+### Student history
+GET {{baseUrl}}/api/v1/library/students/{{studentId}}/history?collegeId={{collegeId}}
+Authorization: Bearer {{token}}

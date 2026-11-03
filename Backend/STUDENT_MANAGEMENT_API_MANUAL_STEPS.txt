@@ -168,7 +168,7 @@ STEP 6 - Configure the connection string
 Open appsettings.json and set the local MySQL password:
 
 "DefaultConnection":
-"server=localhost;port=3306;database=cms_btech;user=root;password=YOUR_PASSWORD;"
+"server=localhost;port=3306;database=cms_btech;user=root;password=YOUR_LOCAL_PASSWORD;"
 
 Do not change the database name unless the dump was imported into a different
 schema. If the schema name changes, also update the USE statement in the

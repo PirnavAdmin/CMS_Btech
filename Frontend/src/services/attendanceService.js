@@ -49,6 +49,55 @@ class AttendanceService {
     })
   }
 
+  async getStudentAttendanceSummary({ collegeId, academicYearId, semesterId, sectionIds = [] }) {
+    const scopedSectionIds = [...new Set(sectionIds.filter(Boolean).map(String))]
+    if (!scopedSectionIds.length) return new Map()
+
+    const sessionsBySection = await Promise.all(scopedSectionIds.map(sectionId =>
+      studentAttendanceApi.list({ collegeId, academicYearId, semesterId, sectionId })
+    ))
+    const subjectScopes = new Map()
+    sessionsBySection.flat().forEach(session => {
+      if (String(session.sessionStatus || '').toUpperCase() === 'CANCELLED') return
+      const sectionId = session.sectionId
+      const subjectId = session.subjectId
+      if (sectionId && subjectId) subjectScopes.set(`${sectionId}:${subjectId}`, { sectionId, subjectId })
+    })
+
+    const reports = await Promise.all([...subjectScopes.values()].map(scope =>
+      studentAttendanceApi.getSubjectReport({
+        collegeId,
+        academicYearId,
+        semesterId,
+        sectionId: scope.sectionId,
+        subjectId: scope.subjectId,
+      })
+    ))
+
+    const totalsByStudent = new Map()
+    reports.forEach(report => {
+      const students = Array.isArray(report?.students) ? report.students : []
+      students.forEach(student => {
+        const studentId = student.studentId ?? student.id
+        const markedSessions = Number(student.markedSessions) || 0
+        if (!studentId || markedSessions <= 0) return
+
+        const totals = totalsByStudent.get(String(studentId)) || { markedSessions: 0, presentCount: 0 }
+        totals.markedSessions += markedSessions
+        totals.presentCount += Number(student.presentCount || 0) + Number(student.lateCount || 0)
+        totalsByStudent.set(String(studentId), totals)
+      })
+    })
+
+    return new Map([...totalsByStudent].map(([studentId, totals]) => [
+      studentId,
+      {
+        ...totals,
+        attendanceRate: Math.round((totals.presentCount / totals.markedSessions) * 100),
+      },
+    ]))
+  }
+
   async getStudentsForAttendance(scope) {
     const sectionId = scope?.sectionId
     if (!sectionId) return []

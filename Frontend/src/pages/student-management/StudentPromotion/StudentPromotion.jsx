@@ -17,6 +17,7 @@ import {
   FiAward,
   FiBookOpen,
   FiUser,
+  FiRefreshCw,
 } from 'react-icons/fi'
 import DashboardLayout from '../../../layouts/DashboardLayout'
 import PageHeader from '../../../components/PageHeader'
@@ -32,6 +33,7 @@ import { useAcademic } from '../../../context/AcademicContext'
 import { apiAssetUrl } from '../../../api/apiEndpoints'
 import promotionService from '../../../services/promotionService'
 import studentService from '../../../services/studentService'
+import attendanceService from '../../../services/attendanceService'
 import eventBus, { ERP_EVENTS } from '../../../services/eventBus'
 import './StudentPromotion.css'
 
@@ -288,7 +290,11 @@ export default function StudentPromotion() {
   const {
     activeAcademicYears,
     currentAcademicYear,
+    selectedCollegeId,
     activeCourses,
+    loading: academicLoading,
+    error: academicError,
+    refreshHierarchy,
     getBranchesForCourse,
     getSemestersForCourse,
     getSectionsForScope,
@@ -327,6 +333,25 @@ export default function StudentPromotion() {
     return getSemestersForCourse(courseId, true)
   }, [getSemestersForCourse, courseId])
 
+  useEffect(() => {
+    if (academicLoading) return
+    if (courseId && !activeCourses.some((course) => String(course.id) === String(courseId))) {
+      setCourseId('')
+      setSelectedBranchId('')
+      setSelectedSemesterNumber('')
+    }
+    if (selectedBranchId && !availableBranches.some((branch) => String(branch.id) === String(selectedBranchId))) {
+      setSelectedBranchId('')
+      setSelectedSemesterNumber('')
+    }
+    if (selectedSemesterNumber && !availableSemesters.some((semester) => String(semester.semesterNumber || semester.id) === String(selectedSemesterNumber))) {
+      setSelectedSemesterNumber('')
+    }
+    if (selectedAcademicYearId && !activeAcademicYears.some((year) => String(year.id ?? year.academicYearId) === String(selectedAcademicYearId))) {
+      setSelectedAcademicYearId('')
+    }
+  }, [academicLoading, activeCourses, availableBranches, availableSemesters, activeAcademicYears, courseId, selectedBranchId, selectedSemesterNumber, selectedAcademicYearId])
+
   const targetSections = useMemo(() => {
     return getSectionsForScope({
       academicYearId: targetAcademicYearId || selectedAcademicYearId,
@@ -340,7 +365,7 @@ export default function StudentPromotion() {
   const isDegreeReview = isSemester8
 
   // Load Promotion Scope Students & History
-  const loadPromotionData = useCallback(async () => {
+  const loadPromotionData = useCallback(async (forceRefresh = false) => {
     if (!selectedBranchId || !selectedAcademicYearId || !selectedSemesterNumber) {
       setStudents([])
       return
@@ -365,14 +390,84 @@ export default function StudentPromotion() {
         branch: selectedBranch?.name,
         branchCode: selectedBranch?.code,
         semester: selectedSemester?.semesterName,
+        forceRefresh,
+      })
+
+      const scopeSections = getSectionsForScope({
+        academicYearId: selectedAcademicYearId,
+        courseId,
+        branchId: selectedBranchId,
+        semesterId: selectedSemester?.id ?? selectedSemesterNumber,
+      }, true)
+      let sectionRosters = []
+      try {
+        sectionRosters = await Promise.all(scopeSections.map(async section => ({
+          section,
+          students: await attendanceService.getStudentsForAttendance({
+            collegeId: selectedCollegeId,
+            sectionId: section.id,
+          }),
+        })))
+      } catch (rosterError) {
+        showError(rosterError.message || 'Profiles loaded, but section-assigned students could not be loaded.')
+      }
+
+      let attendanceByStudent = new Map()
+      try {
+        attendanceByStudent = await attendanceService.getStudentAttendanceSummary({
+          collegeId: selectedCollegeId,
+          academicYearId: selectedAcademicYearId,
+          semesterId: selectedSemester?.id ?? selectedSemesterNumber,
+          sectionIds: scopeSections.map(section => section.id),
+        })
+      } catch (attendanceError) {
+        showError(attendanceError.message || 'Students loaded, but attendance details could not be loaded.')
+      }
+
+      const scopedProfiles = [...profiles]
+      const scopedProfileIds = new Set(scopedProfiles.map(profile => String(profile.studentId || profile.id)))
+      sectionRosters.forEach(({ section, students: roster }) => {
+        roster.forEach(student => {
+          const studentId = student.studentId || student.id
+          if (!studentId || scopedProfileIds.has(String(studentId))) return
+          scopedProfileIds.add(String(studentId))
+          scopedProfiles.push({
+            id: studentId,
+            studentId,
+            name: student.name,
+            fullName: student.name,
+            rollNumber: student.rollNumber,
+            registrationNumber: student.registrationNumber,
+            status: 'Active',
+            academic: {
+              course: selectedCourse?.name || '',
+              courseId,
+              branch: selectedBranch?.name || '',
+              branchId: selectedBranchId,
+              semester: selectedSemester?.semesterName || `Semester ${selectedSemesterNumber}`,
+              semesterId: selectedSemester?.id ?? selectedSemesterNumber,
+              section: section.name || section.sectionName || '',
+              sectionId: section.id,
+              academicYear: selectedYear?.name || '',
+              academicYearId: selectedAcademicYearId,
+              rollNumber: student.rollNumber,
+            },
+            personal: { fullName: student.name },
+          })
+        })
       })
 
       // Normalize into promotion directory candidate rows
-      const promotionCandidates = profiles.map((p) => {
+      const promotionCandidates = scopedProfiles.map((p) => {
         const acad = p.academic || {}
         const pers = p.personal || {}
         const semNum = Number(selectedSemesterNumber)
-        const isEligible = p.status !== 'Inactive' && (p.attendanceRate || 85) >= 75
+        const attendance = attendanceByStudent.get(String(p.studentId || p.id))
+        const profileAttendanceRate = p.attendanceRate === null || p.attendanceRate === undefined || p.attendanceRate === ''
+          ? null
+          : Number(p.attendanceRate)
+        const attendanceRate = attendance?.attendanceRate ?? (Number.isFinite(profileAttendanceRate) ? profileAttendanceRate : null)
+        const isEligible = p.status !== 'Inactive' && (attendanceRate ?? 85) >= 75
 
         const fullName =
           pers.fullName ||
@@ -397,6 +492,8 @@ export default function StudentPromotion() {
           section: acad.section || 'A',
           currentSemester: acad.semester || `Semester ${semNum}`,
           nextSemester: semNum >= 8 ? 'Graduation (Degree Conferred)' : `Semester ${semNum + 1}`,
+          attendanceRate,
+          attendanceSessions: attendance?.markedSessions ?? 0,
           creditsEarned: 24 * semNum,
           sgpa: '8.40',
           cgpa: '8.25',
@@ -488,7 +585,7 @@ export default function StudentPromotion() {
     } finally {
       setLoading((x) => ({ ...x, list: false }))
     }
-  }, [selectedBranchId, selectedAcademicYearId, selectedSemesterNumber, courseId, activeCourses, availableBranches, availableSemesters, activeAcademicYears])
+  }, [selectedBranchId, selectedAcademicYearId, selectedSemesterNumber, courseId, activeCourses, availableBranches, availableSemesters, activeAcademicYears, getSectionsForScope, selectedCollegeId])
 
   useEffect(() => {
     loadPromotionData()
@@ -496,10 +593,16 @@ export default function StudentPromotion() {
 
   // Invalidate on event
   useEffect(() => {
-    const unsub = eventBus.subscribe(ERP_EVENTS.PROMOTION_EXECUTED, () => {
+    const unsubscribePromotion = eventBus.subscribe(ERP_EVENTS.PROMOTION_EXECUTED, () => {
       loadPromotionData()
     })
-    return () => unsub()
+    const unsubscribeAttendance = eventBus.subscribe(ERP_EVENTS.ATTENDANCE_RECORDED, () => {
+      loadPromotionData(true)
+    })
+    return () => {
+      unsubscribePromotion()
+      unsubscribeAttendance()
+    }
   }, [loadPromotionData])
 
   // Directory filter & 5-row pagination
@@ -597,12 +700,30 @@ export default function StudentPromotion() {
 
         {/* Promotion Scope Selector Panel */}
         <section className="p-scope erp-card">
+          {(academicLoading || academicError || !activeCourses.length || !activeAcademicYears.length) && (
+            <div className={`p-scope-status ${academicError ? 'is-error' : ''}`} role={academicError ? 'alert' : 'status'}>
+              <span>
+                {academicLoading
+                  ? 'Loading courses and academic years…'
+                  : academicError || `No active ${[
+                    !activeCourses.length ? 'courses' : '',
+                    !activeAcademicYears.length ? 'academic years' : '',
+                  ].filter(Boolean).join(' or ')} are configured for this college yet.`}
+              </span>
+              {!academicLoading && (
+                <button type="button" onClick={refreshHierarchy} disabled={academicLoading}>
+                  <FiRefreshCw aria-hidden="true" /> Retry loading
+                </button>
+              )}
+            </div>
+          )}
           <div className="erp-form-grid">
             <div className="erp-form-group">
               <label>Course <span className="text-danger" style={{ color: '#dc2626' }}>*</span></label>
               <ProjectSelect
                 className="erp-select"
                 value={courseId}
+                disabled={academicLoading || !activeCourses.length}
                 onChange={(e) => {
                   setCourseId(e.target.value)
                   setSelectedBranchId('')
@@ -610,7 +731,7 @@ export default function StudentPromotion() {
                   setQuery('')
                 }}
               >
-                <option value="">Select Course</option>
+                <option value="">{academicLoading ? 'Loading courses…' : activeCourses.length ? 'Select Course' : 'No active courses available'}</option>
                 {activeCourses.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name} ({c.code})
@@ -624,14 +745,14 @@ export default function StudentPromotion() {
               <ProjectSelect
                 className="erp-select"
                 value={selectedBranchId}
-                disabled={!courseId}
+                disabled={academicLoading || !courseId || !availableBranches.length}
                 onChange={(e) => {
                   setSelectedBranchId(e.target.value)
                   setSelectedSemesterNumber('')
                   setQuery('')
                 }}
               >
-                <option value="">Select Branch</option>
+                <option value="">{!courseId ? 'Select a course first' : availableBranches.length ? 'Select Branch' : 'No active branches for this course'}</option>
                 {availableBranches.map((b) => (
                   <option key={b.id} value={b.id}>
                     {b.name} ({b.code})
@@ -645,12 +766,13 @@ export default function StudentPromotion() {
               <ProjectSelect
                 className="erp-select"
                 value={selectedAcademicYearId}
+                disabled={academicLoading || !activeAcademicYears.length}
                 onChange={(e) => {
                   setSelectedAcademicYearId(e.target.value)
                   setQuery('')
                 }}
               >
-                <option value="">Select Academic Year</option>
+                <option value="">{academicLoading ? 'Loading academic years…' : activeAcademicYears.length ? 'Select Academic Year' : 'No active academic years available'}</option>
                 {activeAcademicYears.map((y) => (
                   <option key={y.id} value={y.id}>
                     {y.name}
@@ -664,13 +786,13 @@ export default function StudentPromotion() {
               <ProjectSelect
                 className="erp-select"
                 value={selectedSemesterNumber}
-                disabled={!selectedBranchId}
+                disabled={academicLoading || !selectedBranchId || !availableSemesters.length}
                 onChange={(e) => {
                   setSelectedSemesterNumber(e.target.value)
                   setQuery('')
                 }}
               >
-                <option value="">Select Semester</option>
+                <option value="">{!selectedBranchId ? 'Select a branch first' : availableSemesters.length ? 'Select Semester' : 'No active semesters for this course'}</option>
                 {availableSemesters.map((s) => (
                   <option key={s.id} value={s.semesterNumber || s.id}>
                     {s.semesterName || `Semester ${s.semesterNumber || s.id}`}
@@ -797,6 +919,7 @@ export default function StudentPromotion() {
                           <th style={{ minWidth: '170px' }}>Current → Target</th>
                           <th className="table-center" style={{ width: '90px' }}>Credits</th>
                           <th className="table-center" style={{ width: '120px' }}>SGPA / CGPA</th>
+                          <th className="table-center" style={{ width: '110px' }}>Attendance</th>
                           <th className="table-center" style={{ width: '120px' }}>Eligibility</th>
                           <th className="table-center" style={{ width: '80px' }}>Action</th>
                         </tr>
@@ -804,7 +927,7 @@ export default function StudentPromotion() {
                       <tbody>
                         {paginatedCandidates.length === 0 ? (
                           <tr>
-                            <td colSpan={9} className="text-center py-6">
+                            <td colSpan={10} className="text-center py-6">
                               <p className="text-muted">No students found matching this scope.</p>
                             </td>
                           </tr>
@@ -848,6 +971,11 @@ export default function StudentPromotion() {
                               <td className="table-center" style={{ width: '90px' }}>{x.creditsEarned}</td>
                               <td className="table-center" style={{ width: '120px', whiteSpace: 'nowrap' }}>
                                 {x.sgpa} / {x.cgpa}
+                              </td>
+                              <td className="table-center" style={{ width: '110px' }}>
+                                {x.attendanceRate == null
+                                  ? 'Not recorded'
+                                  : `${x.attendanceRate}%${x.attendanceSessions ? ` (${x.attendanceSessions} sessions)` : ''}`}
                               </td>
                               <td className="table-center" style={{ width: '120px' }}>
                                 <StatusBadge

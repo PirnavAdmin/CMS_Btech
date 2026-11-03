@@ -21,6 +21,7 @@ namespace BTech.DTOs.Sections
 
     public class ClassTeacherCandidateDto
     {
+        public long FacultyId { get; set; }
         public long EmployeeProfileId { get; set; }
         public long UserId { get; set; }
         public string EmployeeUserId { get; set; } = string.Empty;
@@ -44,6 +45,7 @@ namespace BTech.DTOs.Sections
     public class StudentCandidateDto
     {
         public long StudentId { get; set; }
+        public long? AdmissionId { get; set; }
         public string StudentCode { get; set; } = string.Empty;
         public string FullName { get; set; } = string.Empty;
         public string? Email { get; set; }

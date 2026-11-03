@@ -1,4 +1,5 @@
 ﻿using BTech.Models;
+using BTech.DTOs.AdminGovernance;
 
 namespace BTech.Repositories.Interfaces
 {
@@ -10,6 +11,8 @@ namespace BTech.Repositories.Interfaces
             string roleName,
             string roleCode,
             string? description,
+            byte status,
+            Dictionary<string, PermissionActionsDto>? permissions,
             long? createdBy);
 
         Task<bool> UpdateAsync(
@@ -17,6 +20,8 @@ namespace BTech.Repositories.Interfaces
             string roleName,
             string roleCode,
             string? description,
+            byte status,
+            Dictionary<string, PermissionActionsDto>? permissions,
             long? updatedBy);
 
         Task<bool> DeactivateAsync(

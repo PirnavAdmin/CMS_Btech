@@ -152,7 +152,10 @@ export function matchingAdmissionFeeStructures(plans, academic = {}, admission =
     if (plan.collegeId && admission.collegeId && String(plan.collegeId) !== String(admission.collegeId)) return false
     if (!matches(plan, 'course') || !matches(plan, 'branch') || !matches(plan, 'academicYear')) return false
     if (plan.batch && normalized(plan.batch) !== normalized(admission.batch)) return false
-    if ((plan.cycle === 'Semester-wise' || plan.feePeriod === 'Per Semester') && !matches(plan, 'semester')) return false
+    // An unset semester should not hide semester-wise plans from the admission
+    // picker; callers can present those plans for an explicit choice.
+    if ((plan.cycle === 'Semester-wise' || plan.feePeriod === 'Per Semester') &&
+        (academic.semesterId || academic.semester) && !matches(plan, 'semester')) return false
     if (plan.applicableTo === 'Selected Category' && normalized(plan.category) !== normalized(academic.quota)) return false
     return true
   }).map(plan => ({
@@ -210,7 +213,8 @@ export function checkDuplicateStructure(existingStructures = [], candidate) {
     String(s.batch || '').trim().toLowerCase() === String(candidate.batch || '').trim().toLowerCase() &&
     (s.cycle || 'Yearly') === (candidate.cycle || 'Yearly') &&
     (candidate.cycle !== 'Semester-wise' || String(s.semesterId || '') === String(candidate.semesterId || '')) &&
-    (candidate.applicableTo === 'All Students' || s.applicableTo === 'All Students' || String(s.category || '') === String(candidate.category || ''))
+    (s.applicableTo || (s.category ? 'Selected Category' : 'All Students')) === (candidate.applicableTo || (candidate.category ? 'Selected Category' : 'All Students')) &&
+    String(s.category || '').trim().toLowerCase() === String(candidate.category || '').trim().toLowerCase()
   ) || null
 }
 
@@ -218,6 +222,8 @@ export const feeTransitions = { Draft: ['Pending Approval'], 'Pending Approval':
 export function saveWorkflowStructure(state, value, status, actor) {
   const previous = state.structures.find(s => s.id === value.id)
   if (previous && (previous.status !== 'Draft' || state.assignments.some(a => a.structureId === previous.id))) fail('Only unassigned drafts can be edited. Create a revision instead.')
+  const duplicate = checkDuplicateStructure(state.structures, value)
+  if (duplicate) fail(`A fee structure already exists for this academic year, course, branch, batch, billing cycle and category (${duplicate.name || duplicate.id}).`)
   if (!value.name.trim()) fail('Structure name is required to save a draft.')
   if (!['Draft', 'Pending Approval'].includes(status)) fail('Submit the draft for approval before publishing.')
   if (status !== 'Draft') {

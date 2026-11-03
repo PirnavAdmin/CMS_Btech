@@ -1,9 +1,11 @@
 import { GENERIC_ERROR_MESSAGE, userErrorMessage } from '../utils/userError.js'
 import { resolveCollegeLogo } from '../utils/collegeLogo'
 import { getAccessToken } from './auth'
+import { collegeRequest } from '../utils/collegeRequest.js'
 import { createApiUnavailableError, notifyApiUnavailable } from '../api/apiFailureNotice'
+import { selectedCollegeId } from '../utils/collegeScope.js'
 const cleanUrl = (url) => (url || "").replace(/\/+$/, "");
-const DEFAULT_API_BASE_URL = "https://clarity-math-delouse.ngrok-free.dev";
+const DEFAULT_API_BASE_URL = "https://abreast-curling-tutor.ngrok-free.dev";
 
 const friendlyValidationMessage = (errors) => {
   if (!errors || typeof errors !== "object") return "";
@@ -11,11 +13,28 @@ const friendlyValidationMessage = (errors) => {
   if (fields.some((field) => field.toLowerCase() === "principalemail")) return "Please enter a valid principal email address.";
   if (fields.some((field) => ["email", "collegeemail"].includes(field.toLowerCase()))) return "Please enter a valid official email address.";
   if (fields.some((field) => /contact|phone|mobile/i.test(field))) return "Please enter a valid contact number.";
-  return fields.length ? "Please check the entered college details and try again." : "";
+  for (const field of fields) {
+    const val = errors[field];
+    if (Array.isArray(val) && val.length > 0 && typeof val[0] === 'string' && val[0].trim()) {
+      return val[0].trim();
+    }
+    if (typeof val === 'string' && val.trim()) {
+      return val.trim();
+    }
+  }
+  return fields.length ? "Please check the entered details and try again." : "";
 };
 
 const getErrorMessage = (data, status) => {
-  if (status >= 500) return GENERIC_ERROR_MESSAGE;
+  if (status >= 500) {
+    if (data && typeof data === "object" && data.message && typeof data.message === "string") {
+      const msg = data.message.trim();
+      if (!/<!doctype|<html|ngrok|err_ngrok|https?:\/\//i.test(msg)) {
+        return data.correlationId ? `${msg} (Correlation ID: ${data.correlationId})` : msg;
+      }
+    }
+    return GENERIC_ERROR_MESSAGE;
+  }
   if (typeof data === "string") {
     const message = data.trim();
     try {
@@ -36,11 +55,11 @@ const getErrorMessage = (data, status) => {
     if (data.title && data.title !== "One or more validation errors occurred.") return data.title;
   }
   return {
-    400: "Please check the required college details and try again.",
+    400: "Please check the required details and try again.",
     401: "Your session has expired. Please sign in again.",
-    403: "You do not have permission to manage colleges.",
-    404: "College information is temporarily unavailable. Please try again later.",
-    409: "A college with these details already exists.",
+    403: "You do not have permission to perform this action.",
+    404: "Requested information is temporarily unavailable. Please try again later.",
+    409: "A record with these details already exists.",
   }[status] || "We couldn’t complete your request. Please try again.";
 };
 
@@ -49,27 +68,40 @@ const collegesBaseUrl = cleanUrl(import.meta.env.VITE_API_BASE_URL_COLLEGES) || 
 const academicBaseUrl = cleanUrl(import.meta.env.VITE_API_BASE_URL_ACADEMIC) || commonBaseUrl;
 const settingsBaseUrl = cleanUrl(import.meta.env.VITE_API_BASE_URL_SETTINGS) || commonBaseUrl;
 
-const createClient = (baseUrl, prefix) => {
+const createClient = (baseUrl, prefix, scopeCollege = false) => {
   const request = async (path, options = {}) => {
     const token = localStorage.getItem("btech-access-token") || sessionStorage.getItem("btech-access-token");
+    const scoped = scopeCollege
+      ? collegeRequest(`${baseUrl}${prefix}${path}`, options)
+      : { url: `${baseUrl}${prefix}${path}`, options };
     let response;
     try {
-      response = await fetch(`${baseUrl}${prefix}${path}`, {
-        ...options,
+      response = await fetch(scoped.url, {
+        ...scoped.options,
+        ...(scopeCollege && !options.method ? { cache: 'no-store' } : {}),
         headers: {
           ...(options.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
           "ngrok-skip-browser-warning": "true",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          ...options.headers,
+          ...scoped.options.headers,
         },
       });
     } catch {
       throw createApiUnavailableError();
     }
-    const contentType = response.headers.get("content-type") || "";
-    const data = contentType.includes("application/json") ? await response.json() : await response.text();
-    if (!response.ok) {
-      if (response.status >= 500) notifyApiUnavailable({ status: response.status });
+    let data;
+    if (response.status >= 500) {
+      notifyApiUnavailable({
+        status: response.status,
+        url: scoped.url,
+        method: options.method || 'GET',
+        response,
+      });
+    } else {
+      const contentType = response.headers.get("content-type") || "";
+      data = contentType.includes("application/json") ? await response.json() : await response.text();
+    }
+    if (!response.ok || data?.success === false) {
       const error = new Error(userErrorMessage(getErrorMessage(data, response.status), response.status));
       error.response = { data: response.status >= 500 ? { message: GENERIC_ERROR_MESSAGE } : data, status: response.status };
       throw error;
@@ -93,7 +125,11 @@ const API = createClient(collegesBaseUrl, "/api/v1");
 const COLLEGE_LOGO_API = createClient(collegesBaseUrl, "/api/College");
 const ACADEMIC_API = createClient(academicBaseUrl, "/api/v1");
 const SETTINGS_API = createClient(settingsBaseUrl, "/api");
-const SEMESTER_API = createClient(academicBaseUrl, "/api");
+const SEMESTER_API = createClient(academicBaseUrl, "/api", true);
+const academicParams = params => {
+  const collegeId = selectedCollegeId()
+  return collegeId ? { ...params, collegeId } : params
+}
 
 const COLLEGE_EXTENDED_PREFIX = "CMS_EXTENDED_V1:";
 
@@ -196,10 +232,21 @@ export const readCachedCollegeLogo = (identifier) => {
       localStorage.getItem(`pirnav-college-logo-${key}`) ||
       localStorage.getItem(`college-logo-${key}`) ||
       localStorage.getItem(`pirnav-college-logo-${cleanKey}`);
-    if (direct) return direct;
+    if (direct) {
+      if (/\/api\/College\/logo\//i.test(direct)) {
+        localStorage.removeItem(collegeLogoCacheKey(key));
+        localStorage.removeItem(collegeLogoCacheKey(cleanKey));
+        localStorage.removeItem(`pirnav-college-logo-${key}`);
+        localStorage.removeItem(`college-logo-${key}`);
+        return "";
+      }
+      return direct;
+    }
 
     const map = getLogosMap();
-    return map[key] || map[cleanKey] || map[key.toLowerCase()] || map[key.toUpperCase()] || "";
+    const val = map[key] || map[cleanKey] || map[key.toLowerCase()] || map[key.toUpperCase()] || "";
+    if (val && /\/api\/College\/logo\//i.test(val)) return "";
+    return val;
   } catch {
     return "";
   }
@@ -446,11 +493,11 @@ export const getCollegeDeactivationImpact = (id) => API.get(`/colleges/${id}/dea
 // -------------------------
 
 export const getDepartments = () => {
-  return ACADEMIC_API.get("/departments");
+  return ACADEMIC_API.get("/departments", { params: academicParams({}) });
 };
 
-export const searchDepartments = (search) => ACADEMIC_API.get("/departments/search", { params: { search } });
-export const getDepartmentsPaginated = (page = 1, pageSize = 5) => ACADEMIC_API.get("/departments/paginated", { params: { page, pageSize } });
+export const searchDepartments = (search) => ACADEMIC_API.get("/departments/search", { params: academicParams({ search }) });
+export const getDepartmentsPaginated = (page = 1, pageSize = 5) => ACADEMIC_API.get("/departments/paginated", { params: academicParams({ page, pageSize }) });
 
 export const getDepartmentById = (id) => {
   return ACADEMIC_API.get(`/departments/${id}`);
@@ -471,7 +518,7 @@ export const updateDepartmentStatus = (id, status) => {
 export const deleteDepartment = (id) => ACADEMIC_API.delete(`/departments/${id}`);
 
 // Semester management APIs (/api/semester)
-export const getSemesters = () => SEMESTER_API.get('/semester');
+export const getSemesters = (params = {}) => SEMESTER_API.get('/semester', { params: academicParams(params) });
 export const searchSemesters = (params = {}) => SEMESTER_API.get('/semester/search', { params });
 export const getSemesterById = (id) => SEMESTER_API.get(`/semester/${id}`);
 export const getSemesterSummary = () => SEMESTER_API.get('/semester/summary');
@@ -482,8 +529,8 @@ export const updateSemester = (id, data) => SEMESTER_API.put(`/semester/${id}`, 
 // COURSE APIs
 // -------------------------
 
-export const getCourses = () => {
-  return ACADEMIC_API.get("/courses");
+export const getCourses = (params = {}) => {
+  return ACADEMIC_API.get("/courses", { params: academicParams(params) });
 };
 
 export const getCourseById = (id) => {
@@ -593,7 +640,11 @@ const cleanParams = (params = {}) =>
   Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== ''));
 
 export const fetchExams = async (params = {}) => {
-  const body = (await ACADEMIC_API.get('/exams', { params: cleanParams(params) })).data;
+  const safeParams = { ...params };
+  if (safeParams.PageSize && Number(safeParams.PageSize) > 500) {
+    safeParams.PageSize = 500;
+  }
+  const body = (await ACADEMIC_API.get('/exams', { params: cleanParams(safeParams) })).data;
   return { items: body?.data ?? [], totalCount: body?.totalCount ?? 0 };
 };
 
@@ -614,7 +665,11 @@ export const updateScheduleApi = async (examId, scheduleId, payload) => (await A
 export const deleteScheduleApi = (examId, scheduleId) => ACADEMIC_API.delete(`/exams/${examId}/schedules/${scheduleId}`);
 
 export const fetchScheduleRows = async (params = {}) => {
-  const { items: exams } = await fetchExams(params);
+  const safeParams = { Page: 1, PageSize: 500, ...params };
+  if (safeParams.PageSize && Number(safeParams.PageSize) > 500) {
+    safeParams.PageSize = 500;
+  }
+  const { items: exams } = await fetchExams(safeParams);
   const lists = await Promise.all(
     exams.filter((e) => e.scheduleCount > 0).map(async (exam) => {
       const schedules = await fetchSchedules(exam.examId);

@@ -43,6 +43,8 @@ namespace BTech.Middleware
         public async Task InvokeAsync(HttpContext context)
         {
             if (!context.Request.Path.StartsWithSegments("/api") ||
+                context.Request.Path.StartsWithSegments("/api/v1/documents", StringComparison.OrdinalIgnoreCase) ||
+                context.Request.Path.StartsWithSegments("/api/v1/document-categories", StringComparison.OrdinalIgnoreCase) ||
                 !_configuration.GetValue("Logging:ApiTraffic:Enabled", true))
             {
                 await _next(context);

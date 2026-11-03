@@ -1,0 +1,33 @@
+using BTech.DTOs.Fees;
+using BTech.Services.Implementations;
+int checks=0;
+void Good(Action action) { action(); checks++; }
+void Bad(Action action) { try { action(); } catch (ArgumentException) { checks++; return; } catch (InvalidOperationException) { checks++; return; } throw new Exception("Expected validation failure"); }
+FeePaymentCreateRequest Payment(decimal fee=100m, decimal fine=0m, long? fineId=null, string mode="CASH", string? reference=null) => new() { StudentFeeId=1, FeeAmount=fee, FineAmount=fine, FineId=fineId, PaymentMode=mode, TransactionReference=reference };
+Good(()=>FeeCollectionValidation.Payment(Payment()));
+foreach(var mode in new[]{"CASH","UPI","CARD","BANK_TRANSFER","CHEQUE"}) Good(()=>FeeCollectionValidation.Payment(Payment(mode:mode,reference:"VALID-REFERENCE")));
+Good(()=>FeeCollectionValidation.Payment(Payment(fine:10m,fineId:2)));
+Good(()=>FeeCollectionValidation.Payment(Payment(mode:" upi ",reference:" REF ")));
+Good(()=>FeeCollectionValidation.Money(9999999999.99m,"amount"));
+Good(()=>FeeCollectionValidation.Money(0,"amount",true));
+Bad(()=>FeeCollectionValidation.Payment(Payment(fee:0)));
+Bad(()=>FeeCollectionValidation.Payment(Payment(fee:-1)));
+Bad(()=>FeeCollectionValidation.Payment(Payment(fee:1.001m)));
+Bad(()=>FeeCollectionValidation.Payment(Payment(fee:10000000000m)));
+Bad(()=>FeeCollectionValidation.Payment(Payment(fine:-1)));
+Bad(()=>FeeCollectionValidation.Payment(Payment(fine:1.001m,fineId:1)));
+Bad(()=>FeeCollectionValidation.Payment(Payment(fine:1,fineId:null)));
+Bad(()=>FeeCollectionValidation.Payment(Payment(fine:1,fineId:0)));
+Bad(()=>FeeCollectionValidation.Payment(Payment(fine:0,fineId:1)));
+Bad(()=>FeeCollectionValidation.Payment(Payment(mode:"CRYPTO")));
+Bad(()=>FeeCollectionValidation.Payment(Payment(mode:"UPI")));
+Bad(()=>FeeCollectionValidation.Payment(Payment(mode:"CARD",reference:" ")));
+Bad(()=>FeeCollectionValidation.Payment(Payment(fee:9999999999.99m,fine:1,fineId:1)));
+Bad(()=>FeeCollectionValidation.Payment(Payment(reference:new string('x',151))));
+FeeReceiptDto Receipt() => new() { ReceiptId=1, PaymentId=1, StudentId=1, ReceiptNumber="REC-1", PaymentCode="PAY-1", FeeAmount=100, FineAmount=10, TotalAmount=110, PaymentMode="CASH" };
+Good(()=>FeeCollectionValidation.Receipt(Receipt()));
+var broken=Receipt();broken.TotalAmount=109;Bad(()=>FeeCollectionValidation.Receipt(broken));
+var blank=Receipt();blank.ReceiptNumber=" ";Bad(()=>FeeCollectionValidation.Receipt(blank));
+var invalidMode=Receipt();invalidMode.PaymentMode="UPI";Bad(()=>FeeCollectionValidation.Receipt(invalidMode));
+var missingPayment=Receipt();missingPayment.PaymentId=0;Bad(()=>FeeCollectionValidation.Receipt(missingPayment));
+Console.WriteLine($"PASS: {checks} fee validation assertions against the production C# validator.");

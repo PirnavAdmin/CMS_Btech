@@ -6,12 +6,19 @@ import { active, same, completeScope, matchesScope, normalizeEntry, eligibleSubj
 import { generateTimetable, planningErrors, entryPlanningErrors, schedulingIssues } from '../utils/timetablePlanner'
 import { isTeachingPeriod } from '../utils/timetablePeriods'
 
-const master = (rows, kind) => {
+export const normalizeTimetableMasterRows = (rows, kind) => {
   const pascal = `${kind[0].toUpperCase()}${kind.slice(1)}`
   return rows.map(row => ({
     ...row,
     id: row[`${kind}Id`] ?? row[`${pascal}Id`] ?? row.id ?? row.Id,
     name: row[`${kind}Name`] ?? row[`${pascal}Name`] ?? row.name ?? row.Name ?? row.fullName ?? row.FullName ?? '',
+    status: row.status ?? row.Status,
+    isActive: row.isActive ?? row.IsActive,
+    active: row.active ?? row.Active,
+    ...Object.fromEntries(['academicYearId', 'courseId', 'departmentId', 'branchId', 'semesterId', 'sectionId'].map(field => [
+      field,
+      row[field] ?? row[`${field[0].toUpperCase()}${field.slice(1)}`],
+    ])),
   }))
 }
 export const timetableCapabilities = Object.freeze({ entries: true, createTimetable: false, createSlot: false, draft: false, publish: false, roomIds: false, calendar: false, facultyAvailability: false, storage: 'backend' })
@@ -21,7 +28,7 @@ export const timetableService = {
     const [years, courses, branches, semesters, sections, subjects, faculty, allocations] = await Promise.all([
       academicYearApi.getAll(), courseApi.getAll(), branchApi.getAll(), facultyMasterApi.getSemesters(), sectionApi.getAll(), facultyMasterApi.getSubjects(), facultyApi.getAll(), facultySubjectAllocationApi.getAll(),
     ])
-    return { years: master(years, 'academicYear'), courses: master(courses, 'course'), branches: master(branches, 'branch'), semesters: master(semesters, 'semester'), sections: master(sections, 'section'), subjects: master(subjects, 'subject'), faculty: master(faculty, 'faculty'), allocations }
+    return { years: normalizeTimetableMasterRows(years, 'academicYear'), courses: normalizeTimetableMasterRows(courses, 'course'), branches: normalizeTimetableMasterRows(branches, 'branch'), semesters: normalizeTimetableMasterRows(semesters, 'semester'), sections: normalizeTimetableMasterRows(sections, 'section'), subjects: normalizeTimetableMasterRows(subjects, 'subject'), faculty: normalizeTimetableMasterRows(faculty, 'faculty'), allocations }
   },
   async getStudents() {
     const [profiles, admissions] = await Promise.all([studentProfilesApi.getAll(), studentAdmissionApi.getAll()])

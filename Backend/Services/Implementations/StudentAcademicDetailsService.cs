@@ -1,4 +1,7 @@
 using BTech.DTOs.StudentAcademicDetails;
+using BTech.Data;
+using BTech.Services.Fees;
+using Microsoft.EntityFrameworkCore;
 using BTech.Models;
 using BTech.Repositories.Interfaces;
 using BTech.Services.Interfaces;
@@ -8,10 +11,14 @@ namespace BTech.Services.Implementations
     public class StudentAcademicDetailsService : IStudentAcademicDetailsService
     {
         private readonly IStudentAcademicDetailsRepository _repository;
+        private readonly ApplicationDbContext _db;
+        private readonly AdmissionFeePlanCoordinator _fees;
 
-        public StudentAcademicDetailsService(IStudentAcademicDetailsRepository repository)
+        public StudentAcademicDetailsService(IStudentAcademicDetailsRepository repository, ApplicationDbContext db, AdmissionFeePlanCoordinator fees)
         {
             _repository = repository;
+            _db = db;
+            _fees = fees;
         }
 
         public async Task<StudentAcademicDetailsResponseDto?> GetAsync(long admissionId)
@@ -65,7 +72,11 @@ namespace BTech.Services.Implementations
                 UpdatedBy = userId
             };
 
+            await using var transaction = await _db.Database.BeginTransactionAsync();
+            await _fees.AuthorizeExistingAsync(admissionId, "edit");
             var result = await _repository.UpdateAsync(entity);
+            await _fees.ValidateExistingScopeAsync(admissionId);
+            await transaction.CommitAsync();
             return result == null ? null : Map(result);
         }
 

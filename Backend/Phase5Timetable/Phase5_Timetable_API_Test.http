@@ -1,0 +1,125 @@
+@baseUrl = https://localhost:7174
+@token = PASTE_JWT_HERE
+@academicYearId = 2
+@courseId = 1
+@branchId = 1
+@semesterId = 2
+@sectionId = 2
+
+### 1) Automatic period setup (6 teaching periods + break + lunch)
+POST {{baseUrl}}/api/v1/timetable-management/periods/automatic
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "academicYearId": 2,
+  "startTime": "09:00",
+  "endTime": "16:00",
+  "periodDurationMinutes": 60,
+  "workingDays": ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"],
+  "breaks": [
+    { "type": "BREAK", "afterPeriod": 2, "durationMinutes": 15, "name": "Break" },
+    { "type": "LUNCH", "afterPeriod": 4, "durationMinutes": 45, "name": "Lunch" }
+  ]
+}
+
+### 2) Read periods
+GET {{baseUrl}}/api/v1/timetable-management/periods?academicYearId={{academicYearId}}
+Authorization: Bearer {{token}}
+
+### 3) Calendar + holiday setup
+PUT {{baseUrl}}/api/v1/timetable-management/calendar
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "academicYearId": 2,
+  "reviewed": true,
+  "workingDays": ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"],
+  "holidays": [
+    { "date": "2026-10-02", "type": "HOLIDAY", "description": "Approved holiday test" }
+  ]
+}
+
+### 4) Read classrooms (migration seeds Room 101 from existing data)
+GET {{baseUrl}}/api/v1/timetable-management/classrooms
+Authorization: Bearer {{token}}
+
+### 5) Create a new Phase-5 draft for Section 2 / Semester 2
+POST {{baseUrl}}/api/v1/timetable-management/timetables
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "academicYearId": 2,
+  "courseId": 1,
+  "branchId": 1,
+  "semesterId": 2,
+  "sectionId": 2,
+  "timetableName": "CSE Semester 2 Section B - Phase 5",
+  "effectiveFrom": "2026-09-01",
+  "effectiveTo": "2027-05-31"
+}
+
+# Copy the timetableId from the previous response.
+@timetableId = 2
+
+### 6) Get draft details
+GET {{baseUrl}}/api/v1/timetable-management/timetables/{{timetableId}}
+Authorization: Bearer {{token}}
+
+### 7) Weekly requirements (subjects 4 and 5 belong to CSE Semester 2 in supplied dump)
+PUT {{baseUrl}}/api/v1/timetable-management/timetables/{{timetableId}}/requirements
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "requirements": [
+    { "subjectId": 4, "periodsPerWeek": 3, "blockSize": 1 },
+    { "subjectId": 5, "periodsPerWeek": 3, "blockSize": 1 }
+  ]
+}
+
+### 8) Get requirements + faculty options
+GET {{baseUrl}}/api/v1/timetable-management/timetables/{{timetableId}}/requirements
+Authorization: Bearer {{token}}
+
+### IMPORTANT prerequisite for generation
+# The supplied dump has faculty_subject_allocations rows with subject_id NULL.
+# Link an existing/current allocation to the required subject(s) using your existing
+# faculty-subject-allocation API before expecting those subjects to auto-schedule.
+# The generator will intentionally return NO_FACULTY_ALLOCATION otherwise.
+
+### 9) Generate draft (structured unscheduled data is expected if faculty allocation is still missing)
+POST {{baseUrl}}/api/v1/timetable-management/timetables/{{timetableId}}/generate
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "replaceGenerated": false
+}
+
+### 10) Generate missing only (never removes manual entries)
+POST {{baseUrl}}/api/v1/timetable-management/timetables/{{timetableId}}/generate-missing
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "replaceGenerated": false
+}
+
+### 11) Validate draft
+POST {{baseUrl}}/api/v1/timetable-management/timetables/{{timetableId}}/validate
+Authorization: Bearer {{token}}
+
+### 12) Publish - succeeds only when validation has no blocking conflict/unscheduled requirement
+POST {{baseUrl}}/api/v1/timetable-management/timetables/{{timetableId}}/publish
+Authorization: Bearer {{token}}
+
+### 13) Published section view
+GET {{baseUrl}}/api/v1/timetable-management/views/section/2?academicYearId=2
+Authorization: Bearer {{token}}
+
+### 14) Holiday occurrence check - weekly template remains; date occurrence is suppressed
+GET {{baseUrl}}/api/v1/timetable-management/occurrences?date=2026-10-02&sectionId=2
+Authorization: Bearer {{token}}

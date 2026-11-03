@@ -40,7 +40,7 @@ namespace BTech.Services.Implementations
                 return await _repository.AssignClassTeacherAsync(sectionId, employeeProfileId, updatedBy)
                     ?? throw new BusinessException("Class teacher assignment failed.");
             }
-            catch (MySqlException ex)
+            catch (MySqlException ex) when (ex.Number == 1644)
             {
                 throw new BusinessException(ex.Message);
             }
@@ -54,7 +54,7 @@ namespace BTech.Services.Implementations
                 if (!await _repository.RemoveClassTeacherAsync(sectionId, updatedBy))
                     throw new BusinessException("Section not found or class teacher is already empty.");
             }
-            catch (MySqlException ex)
+            catch (MySqlException ex) when (ex.Number == 1644)
             {
                 throw new BusinessException(ex.Message);
             }
@@ -89,6 +89,8 @@ namespace BTech.Services.Implementations
                 throw new BusinessException("Select at least one student.");
             if (studentIds.Any(x => x <= 0))
                 throw new BusinessException("Invalid StudentId supplied.");
+            if (studentIds.Distinct().Count() != studentIds.Count)
+                throw new BusinessException("Duplicate StudentId in the assignment batch.");
             if (assignedBy <= 0)
                 throw new BusinessException("Invalid authenticated user.");
 
@@ -97,7 +99,7 @@ namespace BTech.Services.Implementations
                 return await _repository.AssignStudentsAsync(sectionId, studentIds, assignedBy)
                     ?? throw new BusinessException("Student assignment failed.");
             }
-            catch (MySqlException ex)
+            catch (MySqlException ex) when (ex.Number == 1644)
             {
                 throw new BusinessException(ex.Message);
             }
@@ -114,7 +116,7 @@ namespace BTech.Services.Implementations
                 if (!await _repository.RemoveStudentAsync(sectionId, studentId, removedBy))
                     throw new BusinessException("Active student-section assignment not found.");
             }
-            catch (MySqlException ex)
+            catch (MySqlException ex) when (ex.Number == 1644)
             {
                 throw new BusinessException(ex.Message);
             }

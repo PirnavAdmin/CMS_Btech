@@ -1,0 +1,18 @@
+{
+  "facultyCollegeMismatches": "16\t21\t1\t29\t87\t1\n11\t17\t82\t5\t1\t82",
+  "collegeIds": [
+    "1",
+    "81",
+    "82",
+    "83",
+    "84",
+    "85",
+    "86",
+    "87"
+  ],
+  "courses": "1\t1\tBTECH\t1\tNULL\n21\t1\tBSC\t0\tNULL\n22\t1\tGRAD\t1\tNULL",
+  "facultyMappings": "1\t9\t1\t1\t1\tNULL\n2\t10\t1\t2\t1\tNULL\n3\t11\t1\t3\t1\tNULL\n4\t12\t1\t4\t1\tNULL\n5\t13\t1\t5\t1\tNULL\n6\t2\t1\t3\t1\tNULL\n10\t16\t1\t1\t1\tNULL\n11\t17\t82\t5\t1\tNULL\n12\t18\t1\t1\t1\tNULL\n13\t19\t1\t1\t1\tNULL\n14\t20\t1\t1\t1\tNULL\n15\t15\t1\t5\t1\tNULL\n16\t21\t1\t29\t1\tNULL",
+  "facultyDuplicateUserGroups": "0",
+  "facultyInactiveOrDeleted": "0",
+  "leaveCL": "casual-leave\tCasual Leave\tCL\tActive"
+}

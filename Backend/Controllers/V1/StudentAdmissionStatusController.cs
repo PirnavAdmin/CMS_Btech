@@ -5,6 +5,9 @@ using BTech.Rules;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using BTech.Services.Interfaces;
+using Microsoft.Extensions.Logging;
+using System.Security.Cryptography;
 
 namespace BTech.Controllers.V1
 {
@@ -13,11 +16,17 @@ namespace BTech.Controllers.V1
     public class StudentAdmissionStatusController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IAccountSetupService _accountSetupService;
+        private readonly ILogger<StudentAdmissionStatusController> _logger;
 
         public StudentAdmissionStatusController(
-            ApplicationDbContext context)
+            ApplicationDbContext context,
+            IAccountSetupService accountSetupService,
+            ILogger<StudentAdmissionStatusController> logger)
         {
             _context = context;
+            _accountSetupService = accountSetupService;
+            _logger = logger;
         }
 
         // =========================================================
@@ -314,6 +323,47 @@ namespace BTech.Controllers.V1
 
             await transaction.CommitAsync();
 
+            var accountProvisioningStatus = "NotRequired";
+            var credentialDeliveryStatus = "NotAttempted";
+            if (newStatus == "Approved" && generatedStudentId.HasValue)
+            {
+                try
+                {
+                    var accountResult = await EnsureApprovedStudentAccountAsync(
+                        generatedStudentId.Value,
+                        admissionId);
+
+                    accountProvisioningStatus = accountResult.ProvisioningStatus;
+                    credentialDeliveryStatus = accountResult.HasEmail ? "NotRequired" : "FailedNoStudentEmail";
+
+                    if (accountResult.NeedsSetupLink && accountResult.HasEmail)
+                    {
+                        try
+                        {
+                            await _accountSetupService.SendSetupLinkAsync(
+                                accountResult.UserId,
+                                "student");
+                            credentialDeliveryStatus = "Sent";
+                        }
+                        catch (Exception emailException)
+                        {
+                            credentialDeliveryStatus = "FailedEmailDelivery";
+                            _logger.LogWarning(emailException,
+                                "Student account was provisioned but setup email delivery failed. AdmissionId={AdmissionId}, StudentId={StudentId}, UserId={UserId}",
+                                admissionId, generatedStudentId.Value, accountResult.UserId);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    accountProvisioningStatus = "Failed";
+                    credentialDeliveryStatus = "NotSentProvisioningFailed";
+                    _logger.LogError(ex,
+                        "Student admission was approved but account provisioning could not be completed. AdmissionId={AdmissionId}, StudentId={StudentId}",
+                        admissionId, generatedStudentId.Value);
+                }
+            }
+
             // -----------------------------------------------------
             // Response
             // -----------------------------------------------------
@@ -345,6 +395,8 @@ namespace BTech.Controllers.V1
                         newStatus,
 
                     studentId = generatedStudentId,
+                    accountProvisioningStatus,
+                    credentialDeliveryStatus,
 
                     allowedNextStatuses =
                         allowedNextStatuses,
@@ -400,6 +452,118 @@ WHERE sa.AdmissionId = @admissionId
             select.Parameters.Add(p);
             var value = await select.ExecuteScalarAsync();
             return value == null || value == DBNull.Value ? null : Convert.ToInt64(value);
+        }
+
+        private async Task<(long UserId, bool NeedsSetupLink, bool HasEmail, string ProvisioningStatus)>
+            EnsureApprovedStudentAccountAsync(long studentId, long admissionId)
+        {
+            await using var accountTransaction = await _context.Database.BeginTransactionAsync();
+
+            var student = await _context.Students.SingleOrDefaultAsync(s =>
+                s.StudentId == studentId && s.AdmissionId == admissionId && s.DeletedAt == null);
+            if (student == null)
+                throw new InvalidOperationException("Approved student record was not found.");
+
+            if (student.CollegeId <= 0 || student.AcademicYearId <= 0)
+                throw new InvalidOperationException("Student college and academic year must be configured before account provisioning.");
+
+            var collegeExists = await _context.Colleges.AnyAsync(c =>
+                c.CollegeId == student.CollegeId && c.DeletedAt == null && c.Status == 1);
+            if (!collegeExists)
+                throw new InvalidOperationException("Student's college is missing or inactive.");
+
+            var academicYearExists = await _context.AcademicYears.AnyAsync(y =>
+                y.AcademicYearId == student.AcademicYearId &&
+                y.CollegeId == student.CollegeId &&
+                y.DeletedAt == null &&
+                y.IsArchived == 0);
+            if (!academicYearExists)
+                throw new InvalidOperationException("Student academic year is missing, archived, or belongs to another college.");
+
+            var studentRole = await _context.Roles.SingleOrDefaultAsync(r =>
+                r.RoleCode == "STUDENT" && r.Status == 1 && r.DeletedAt == null);
+            if (studentRole == null)
+                throw new InvalidOperationException("Active STUDENT role is missing.");
+
+            User? user = null;
+            var createdNewAccount = false;
+            if (student.UserId.HasValue)
+            {
+                user = await _context.Users.SingleOrDefaultAsync(u =>
+                    u.user_id == student.UserId.Value);
+                if (user == null)
+                    throw new InvalidOperationException("Student.user_id points to a missing user account.");
+                if (user.Status != 1 || user.DeletedAt != null)
+                    throw new InvalidOperationException("The linked student user account is inactive or deleted.");
+                if (user.college_id.HasValue && user.college_id.Value != student.CollegeId)
+                    throw new InvalidOperationException("The linked student user belongs to another college.");
+                if (!user.college_id.HasValue)
+                {
+                    user.college_id = student.CollegeId;
+                    user.UpdatedAt = DateTime.UtcNow;
+                }
+            }
+            else
+            {
+                var loginId = student.StudentCode.Trim();
+                var email = student.Email?.Trim();
+                var mobile = student.Mobile?.Trim();
+                var collision = await _context.Users.AnyAsync(u => u.DeletedAt == null &&
+                    (u.EmployeeUserId == loginId ||
+                     (!string.IsNullOrWhiteSpace(email) && u.Email != null &&
+                      u.Email.ToLower() == email.ToLower()) ||
+                     (!string.IsNullOrWhiteSpace(mobile) && u.Mobile == mobile)));
+                if (collision)
+                    throw new InvalidOperationException("Student account provisioning was blocked because the login ID, email, or mobile already belongs to another user.");
+
+                var randomInitialSecret = Convert.ToBase64String(RandomNumberGenerator.GetBytes(48));
+                user = new User
+                {
+                    college_id = student.CollegeId,
+                    EmployeeUserId = loginId,
+                    FullName = student.FullName,
+                    Email = string.IsNullOrWhiteSpace(email) ? null : email,
+                    Mobile = string.IsNullOrWhiteSpace(mobile) ? null : mobile,
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(randomInitialSecret, workFactor: 12),
+                    MustChangePassword = true,
+                    Status = 1,
+                    CreatedAt = DateTime.UtcNow
+                };
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync();
+
+                student.UserId = user.user_id;
+                student.UpdatedAt = DateTime.UtcNow;
+                createdNewAccount = true;
+            }
+
+            var roleMapping = await _context.UserRoles.SingleOrDefaultAsync(r =>
+                r.UserId == user.user_id && r.RoleId == studentRole.Role_id);
+            if (roleMapping == null)
+            {
+                _context.UserRoles.Add(new UserRole
+                {
+                    UserId = user.user_id,
+                    RoleId = studentRole.Role_id,
+                    Status = 1,
+                    AssignedAt = DateTime.UtcNow
+                });
+            }
+            else if (roleMapping.Status != 1 || roleMapping.RemovedAt != null)
+            {
+                throw new InvalidOperationException("The linked student role is disabled. An administrator must review it before login.");
+            }
+
+            await _context.SaveChangesAsync();
+            await accountTransaction.CommitAsync();
+
+            var hasEmail = !string.IsNullOrWhiteSpace(user.Email);
+            var needsSetup = user.MustChangePassword && hasEmail;
+            var status = createdNewAccount
+                ? "Provisioned"
+                : needsSetup ? "ExistingAccountNeedsPasswordSetup" : "AlreadyProvisioned";
+
+            return (user.user_id, needsSetup, hasEmail, status);
         }
 
         private async Task EnsureParentFromAdmissionAsync(long studentId, StudentAdmission admission)

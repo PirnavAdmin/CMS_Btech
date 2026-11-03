@@ -1,0 +1,140 @@
+# Run on a test database restored from Dump2026oct09th(02).sql.
+# Replace tokens with real tokens obtained from your existing login API.
+@baseUrl = https://localhost:7174
+@staffToken = REPLACE_WITH_STAFF_TOKEN
+@facultyToken = REPLACE_WITH_FACULTY_TOKEN
+@studentToken = REPLACE_WITH_STUDENT_TOKEN
+@collegeId = 1
+@driveId = 3
+@studentId = 3
+@applicationId = REPLACE_WITH_RETURNED_APPLICATION_ID
+@selectionId = REPLACE_WITH_RETURNED_SELECTION_ID
+
+### 200: list existing drives; use actual IDs
+GET {{baseUrl}}/api/v1/placements/drives?collegeId={{collegeId}}
+Authorization: Bearer {{staffToken}}
+
+### 403: faculty role cannot manage placement workflows
+GET {{baseUrl}}/api/v1/placements/applications?collegeId={{collegeId}}
+Authorization: Bearer {{facultyToken}}
+
+### 403: student cannot submit through this staff API
+POST {{baseUrl}}/api/v1/placements/drives/{{driveId}}/applications?collegeId={{collegeId}}
+Authorization: Bearer {{studentToken}}
+Content-Type: application/json
+
+{"studentId":3,"coverLetter":"Interested in the Junior Software Developer position.","remarks":"Validation test"}
+
+### 401: missing token
+GET {{baseUrl}}/api/v1/placements/applications?collegeId={{collegeId}}
+
+### 404: drive 4 is absent from the supplied dump
+GET {{baseUrl}}/api/v1/placements/drives/4?collegeId={{collegeId}}
+Authorization: Bearer {{staffToken}}
+
+### 409: application before opening DRAFT drive 3 (run before the next two requests)
+POST {{baseUrl}}/api/v1/placements/drives/{{driveId}}/applications?collegeId={{collegeId}}
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{"studentId":3,"coverLetter":"Interested in the Junior Software Developer position.","remarks":"Validation test"}
+
+### 200: DRAFT -> PUBLISHED
+PATCH {{baseUrl}}/api/v1/placements/drives/{{driveId}}/status?collegeId={{collegeId}}
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{"status":"PUBLISHED"}
+
+### 200: PUBLISHED -> REGISTRATION_OPEN (before 2026-11-29 deadline)
+PATCH {{baseUrl}}/api/v1/placements/drives/{{driveId}}/status?collegeId={{collegeId}}
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{"status":"REGISTRATION_OPEN"}
+
+### 200: confirm existing eligibility for student 3
+GET {{baseUrl}}/api/v1/placements/drives/{{driveId}}/eligibility/{{studentId}}?collegeId={{collegeId}}
+Authorization: Bearer {{staffToken}}
+
+### 201: valid application; COPY response data.applicationId to variable above
+# Repeating this request should return 409 duplicate.
+POST {{baseUrl}}/api/v1/placements/drives/{{driveId}}/applications?collegeId={{collegeId}}
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{"studentId":3,"coverLetter":"Interested in the Junior Software Developer position.","remarks":"Application validation test"}
+
+### 400: invalid student ID
+POST {{baseUrl}}/api/v1/placements/drives/{{driveId}}/applications?collegeId={{collegeId}}
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{"studentId":0}
+
+### 409: APPLIED cannot jump to SHORTLISTED
+PATCH {{baseUrl}}/api/v1/placements/applications/{{applicationId}}/status?collegeId={{collegeId}}
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{"status":"SHORTLISTED"}
+
+### 200: APPLIED -> UNDER_REVIEW
+PATCH {{baseUrl}}/api/v1/placements/applications/{{applicationId}}/status?collegeId={{collegeId}}
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{"status":"UNDER_REVIEW"}
+
+### 200: UNDER_REVIEW -> SHORTLISTED
+PATCH {{baseUrl}}/api/v1/placements/applications/{{applicationId}}/status?collegeId={{collegeId}}
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{"status":"SHORTLISTED"}
+
+### 409: selection cannot skip interview progress/completed-passed rounds
+PUT {{baseUrl}}/api/v1/placements/applications/{{applicationId}}/selection?collegeId={{collegeId}}
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{"selectionStatus":"SELECTED","offeredJobTitle":"Junior Software Developer","offeredCtc":450000,"currencyCode":"INR","jobLocation":"Hyderabad"}
+
+### 200: hold selection; COPY response data.selectionId
+PUT {{baseUrl}}/api/v1/placements/applications/{{applicationId}}/selection?collegeId={{collegeId}}
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{"selectionStatus":"ON_HOLD","currencyCode":"INR","remarks":"Waiting for panel decision"}
+
+### 409: generic status cannot bypass held selection
+PATCH {{baseUrl}}/api/v1/placements/applications/{{applicationId}}/status?collegeId={{collegeId}}
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{"status":"SHORTLISTED"}
+
+### 200: resolve held selection through correct API
+PUT {{baseUrl}}/api/v1/placements/applications/{{applicationId}}/selection?collegeId={{collegeId}}
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{"selectionStatus":"REJECTED","currencyCode":"INR","remarks":"Validation test: final decision"}
+
+### 409: cannot overwrite a final decision
+PUT {{baseUrl}}/api/v1/placements/applications/{{applicationId}}/selection?collegeId={{collegeId}}
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{"selectionStatus":"ON_HOLD","currencyCode":"INR"}
+
+### 409: cannot issue an offer for rejected selection
+PATCH {{baseUrl}}/api/v1/placements/selections/{{selectionId}}/offer?collegeId={{collegeId}}
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{"offerStatus":"ISSUED"}
+
+### 409: rejected selection cannot join
+PATCH {{baseUrl}}/api/v1/placements/selections/{{selectionId}}/joined?collegeId={{collegeId}}
+Authorization: Bearer {{staffToken}}

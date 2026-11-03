@@ -1,0 +1,53 @@
+{
+  "scope": "Task 13 marks approval workflow; source and contract verification only",
+  "original_files_checked": 708,
+  "original_controller_files": 79,
+  "original_http_attributes": 490,
+  "changed_original_files": [
+    "Controllers/V1/MarksController.cs",
+    "DTOs/Marks/MarksManagementDtos.cs",
+    "Repositories/Implementations/MarksRepository.cs",
+    "Repositories/Interfaces/IMarksRepository.cs",
+    "Services/Implementations/MarksService.cs",
+    "Services/Interfaces/IMarksService.cs"
+  ],
+  "unrelated_changes": [],
+  "missing_original_files": [],
+  "removed_route_attributes": [],
+  "added_route_attributes": [
+    "Controllers/V1/MarksController.cs: [HttpPatch(\"approvals/{id:long}\")]"
+  ],
+  "preserved_existing_procedure_signatures": [
+    "sp_marks_approve",
+    "sp_marks_bulk_upload",
+    "sp_marks_entry_update",
+    "sp_marks_reject",
+    "sp_marks_submit"
+  ],
+  "procedure_signature_errors": [],
+  "sql_undeclared_variable_errors": [],
+  "workflow_procedures_defined": [
+    "sp_marks_assert_actor",
+    "sp_marks_assert_faculty_scope",
+    "sp_marks_assert_hod_scope",
+    "sp_marks_workflow_apply",
+    "sp_marks_submit",
+    "sp_marks_approve",
+    "sp_marks_reject",
+    "sp_marks_approval_decide",
+    "sp_marks_approval_pending_for_actor",
+    "sp_marks_approval_history_for_actor",
+    "sp_marks_entry_update",
+    "sp_marks_bulk_upload"
+  ],
+  "python_test_script_syntax": "PASS",
+  "mysql_integration_tests_included": 23,
+  "dotnet_build": "NOT RUN - execute dotnet build BTech.csproj -c Release with .NET 8 SDK",
+  "mysql_integration": "NOT RUN - execute test_mysql_workflow.py --run with MySQL 8",
+  "http_integration": "NOT RUN - execute Task13_Marks_Workflow.http against the running API",
+  "tool_availability": {
+    "dotnet": false,
+    "mysql": false
+  },
+  "static_verification": "PASS"
+}

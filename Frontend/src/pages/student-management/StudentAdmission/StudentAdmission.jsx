@@ -22,8 +22,9 @@ import FilterPanel from '../../../components/FilterPanel'
 import TablePagination, { PAGE_SIZE } from '../../../components/TablePagination'
 import CompactSummary from '../../../components/CompactSummary'
 import StatusBadge from '../../../components/StatusBadge'
-import { academicYearApi, branchApi, courseApi, lookupIndianPincode, studentAdmissionApi, studentAcademicDetailsApi, studentAdmissionStatusApi, studentDocumentApi, studentFeeApi, studentParentApi, studentPreviousEducationApi } from '../../../api/apiEndpoints'
-import { getOperationalAcademicYearOptions, resolveAcademicYearId } from '../../../utils/academicYearUtils'
+import { academicYearApi, admissionFeePlanApi, branchApi, courseApi, lookupIndianPincode, studentAdmissionApi, studentAcademicDetailsApi, studentAdmissionStatusApi, studentDocumentApi, studentFeeApi, studentParentApi, studentPreviousEducationApi } from '../../../api/apiEndpoints'
+import { getOperationalAcademicYearOptions } from '../../../utils/academicYearUtils'
+import { admissionSemesterOptions, admissionSemesterError, resetAdmissionAcademicDependents } from '../../../utils/admissionAcademicMapping'
 import { getColleges, getSemesters } from '../../../auth/collegeApi'
 import eventBus, { ERP_EVENTS } from '../../../services/eventBus'
 import {
@@ -49,11 +50,11 @@ import {
   tenDigitMobile,
 } from '../../../utils/studentCanonicalModel'
 import { useAcademic } from '../../../context/AcademicContext'
-import { readFeeWorkspace, readStructures, readHostelStructures, readTransportStructures, feeTotal, feeMoney } from '../../../services/feeStructureService'
+import { readFeeWorkspace, readStructures, readHostelStructures, readTransportStructures, matchingAdmissionFeeStructures, feeTotal, feeMoney } from '../../../services/feeStructureService'
 import './StudentAdmission.css'
 
 
-const STEPS = ['Basic Information', 'Contact & Address', 'Parent / Guardian', 'Academic Information', 'Previous Education', 'Admission Details', 'Fees', 'Documents Upload']
+const STEPS = ['Basic Information', 'Academic Information', 'Parent / Guardian', 'Contact & Address', 'Previous Education', 'Admission Details', 'Fees', 'Documents Upload']
 const STEP_ICONS = [FiUser, FiPhone, FiUsers, FiBookOpen, FiFileText, FiHome, FiInbox, FiUploadCloud]
 const STATUS = { DRAFT: 'Draft', PENDING: 'Pending', SUBMITTED: 'Submitted', APPLICATION_SUBMITTED: 'Submitted', UNDER_REVIEW: 'Under Review', VERIFIED: 'Verified', APPROVED: 'Approved', CORRECTION_REQUIRED: 'Correction Required', REJECTED: 'Rejected' }
 const normalizeStatus = raw => normalizeAdmissionStatus(raw)
@@ -92,6 +93,18 @@ const ADMISSION_TYPES = ['Regular / Counselling','Management','Spot Admission','
 const ADMISSION_QUOTAS = ['Government / Convener','Management','NRI','NRI Sponsored','Institutional','Other']
 const HOSTEL_FEES = HOSTEL_FEES_DEFAULT
 const TRANSPORT_FEES = { 'Route 1': 18000, 'Route 2': 22000, 'Route 3': 26000, 'Route 4': 30000 }
+const normalizeHostelRoomType = value => {
+  const label = String(value ?? '').trim().replace(/\s+/g, ' ')
+  const key = label.toLowerCase()
+  if (key === 'single sharing' || key === 'single') return 'Single Sharing'
+  if (key === 'double sharing' || key === 'double') return 'Double Sharing'
+  if (key === 'triple sharing' || key === 'triple') return 'Triple Sharing'
+  if (key === 'four sharing' || key === 'quadruple sharing' || key === 'four') return 'Four Sharing'
+  if (key === 'single room') return 'Single Room'
+  if (key === 'double room') return 'Double Room'
+  if (key === 'triple room') return 'Triple Room'
+  return label
+}
 
 const empty = () => createEmptyCanonicalStudent()
 
@@ -144,67 +157,38 @@ const display = value => formatDisplay(value)
 const money = value => formatMoney(value)
 const dateTime = value => formatDateTime(value)
 const quota = student => studentQuotaDisplay(student)
-const matchingFeeStructures = (academic = {}, admission = {}) => {
+const matchingFeeStructures = (academic = {}, admission = {}, serverPlans = []) => {
   const collegeId = admission.collegeId || academic.collegeId;
   let candidates = [];
   try {
     {
       const ws = readFeeWorkspace(collegeId);
       if (ws && Array.isArray(ws.structures)) {
-        candidates = [...ws.structures];
+        candidates = [...candidates, ...ws.structures];
       }
     }
   } catch {}
-  try {
-    const legacy = readStructures();
-    if (Array.isArray(legacy)) {
-      candidates = [...candidates, ...legacy];
-    }
-  } catch {}
+  try { candidates = [...candidates, ...readStructures(collegeId)]; } catch {}
+  // Prefer authoritative backend rows if a local legacy plan reuses the same ID.
+  if (Array.isArray(serverPlans)) candidates = [...candidates, ...serverPlans];
 
-  const activePlans = [...new Map(candidates.map(plan => [String(plan.id), plan])).values()].filter(s => {
-    if (!['Published', 'Active', 'Approved'].includes(s.status)) return false;
-    const cat = String(s.domain || s.category || s.facilityType || '').toLowerCase();
-    if (cat === 'hostel' || cat === 'transport') return false;
-    const name = String(s.name || s.planName || '').toLowerCase();
-    if ((name.includes('hostel') || name.includes('transport')) && (!s.courseId && !s.courseName && !s.branchId && !s.branchName)) return false;
-    return true;
-  });
-  if (!activePlans.length) return [];
-
-  const same = (a, b) => {
-    if (!a || !b) return false;
-    const sa = String(a).trim().toLowerCase();
-    const sb = String(b).trim().toLowerCase();
-    return sa === sb || sa.includes(sb) || sb.includes(sa);
+  // Admission uses the same exact scope matcher as fee-plan assignment. The
+  // admission wizard stores display names alongside IDs, so pass both forms.
+  const scopedAcademic = {
+    ...academic,
+    academicYear: academic.academicYear || academic.academicYearName,
+    course: academic.courseId || academic.course,
+    branch: academic.branchId || academic.branch,
+    semester: academic.semesterId || academic.semester,
+    quota: academic.quota || academic.studentCategory,
   };
-
-  return activePlans.filter(s => {
-    const sCourse = s.courseId || s.courseName;
-    const aCourse = academic.courseId || academic.course;
-    if (sCourse && aCourse && !same(sCourse, aCourse)) return false;
-
-    const sBranch = s.branchId || s.branchName;
-    const aBranch = academic.branchId || academic.branch;
-    if (sBranch && aBranch && !same(sBranch, aBranch)) return false;
-
-    const sYear = s.academicYearId || s.academicYearName;
-    const aYear = academic.academicYearId || academic.academicYear;
-    if (sYear && aYear) {
-      const matchYear = same(sYear, aYear) || String(sYear).slice(0, 4) === String(aYear).slice(0, 4);
-      if (!matchYear) return false;
-    }
-
-    if (s.batch && admission.batch && !same(s.batch, admission.batch)) {
-      return false;
-    }
-
-    if (s.applicableTo === 'Selected Category' && s.category && academic.quota && !same(s.category, academic.quota)) {
-      return false;
-    }
-
-    return true;
-  });
+  const uniquePlans = [...new Map(candidates.filter(plan => plan?.id != null).map(plan => [String(plan.id), plan])).values()];
+  const scope = { ...admission, collegeId }
+  const exactMatches = matchingAdmissionFeeStructures(uniquePlans, scopedAcademic, scope)
+  if (exactMatches.length || !(scopedAcademic.semesterId || scopedAcademic.semester)) return exactMatches
+  // Older admission records may retain an invalid semester ID. Keep the course,
+  // branch and year filter, then let the user choose from the available semesters.
+  return matchingAdmissionFeeStructures(uniquePlans, { ...scopedAcademic, semesterId: '', semester: '' }, scope)
 };
 const findMatchingFeeStructure = (academic, admission, selectedId) => {
   const plans = matchingFeeStructures(academic, admission);
@@ -487,7 +471,7 @@ const validDob = value => {
 const REQUIRED = ['personal.firstName','personal.lastName','personal.gender','personal.dob','personal.aadhaar','contact.mobile','contact.email','contact.currentAddress.line1','contact.currentAddress.town','contact.currentAddress.city','contact.currentAddress.district','contact.currentAddress.state','contact.currentAddress.pincode','academic.academicYear','academic.admissionType','academic.course','academic.branch','admission.collegeId']
 const requiredPaths = new Set(REQUIRED)
 const validationStep = path => {
-  const prefixes = ['personal.','contact.','parents.','academic.','previousEducation.','admission.','fees.','documents.']
+  const prefixes = ['personal.','academic.','parents.','contact.','previousEducation.','admission.','fees.','documents.']
   const index = prefixes.findIndex(prefix => path.startsWith(prefix))
   return index < 0 ? 0 : index
 }
@@ -1072,22 +1056,93 @@ function FeeSummary({ data }) {
 /* oxlint-disable-next-line react-hooks/exhaustive-deps -- update is intentionally triggered only when academic matching inputs change */
 function ApplicantFeeStructure({ data, update, error }) {
   const fees = data.fees || {}
-  const matchingPlans = matchingFeeStructures(data.academic, data.admission)
-  const matchedPlan = matchingPlans.find(plan => String(plan.id) === String(fees.structureId)) || matchingPlans[0]
+  const collegeId = Number(data.admission?.collegeId || data.academic?.collegeId)
+  const academicYearId = Number(data.academic?.academicYearId)
+  const courseId = Number(data.academic?.courseId)
+  const branchId = Number(data.academic?.branchId)
+  const semesterId = Number(data.academic?.semesterId || 0)
+  const batch = String(data.admission?.batch || data.academic?.batch || '').trim()
+  const quota = String(data.academic?.quota || '').trim()
+  const studentCategory = String(data.academic?.studentCategory || '').trim()
+  const [serverPlanState, setServerPlanState] = useState({ loading: false, plans: [], error: '' })
+
+  useEffect(() => {
+    let active = true
+    const scope = { collegeId, academicYearId, courseId, branchId, semesterId, batch, quota, studentCategory }
+    if (![collegeId, academicYearId, courseId, branchId].every(value => Number.isInteger(value) && value > 0) || !Number.isInteger(semesterId) || semesterId < 0 || !batch) {
+      setServerPlanState({ loading: false, plans: [], error: '' })
+      return () => { active = false }
+    }
+    setServerPlanState(current => ({ ...current, loading: true, error: '' }))
+    admissionFeePlanApi.getMatching(scope).then(rows => {
+      if (!active) return
+      const plans = (Array.isArray(rows) ? rows : []).map(plan => {
+        const id = String(plan.feeStructureId ?? plan.id ?? '')
+        const mode = String(plan.paymentMode ?? plan.plan ?? '').toUpperCase()
+        const paymentMode = /INSTALLMENT|TERM|SEMESTER/.test(mode) ? 'Term-wise Payment' : 'Full Payment'
+        const components = (Array.isArray(plan.components) ? plan.components : []).map(item => ({
+          ...item,
+          name: item.name ?? item.feeHeadName ?? item.componentName ?? item.code ?? 'Fee Component',
+          amount: Number(item.amount ?? item.feeAmount ?? 0),
+        }))
+        return {
+          ...plan,
+          id,
+          name: plan.name ?? plan.planName ?? plan.code ?? `Fee Plan ${id}`,
+          status: String(plan.status ?? '').toUpperCase() === 'PUBLISHED' ? 'Published' : plan.status,
+          amount: Number(plan.totalAmount ?? plan.amount ?? 0),
+          components,
+          installments: Array.isArray(plan.installments) ? plan.installments : [],
+          plan: paymentMode,
+          paymentPlan: { mode: paymentMode, installments: Array.isArray(plan.installments) ? plan.installments : [] },
+        }
+      }).filter(plan => plan.id)
+      setServerPlanState({ loading: false, plans, error: '' })
+    }).catch(fetchError => {
+      if (active) setServerPlanState({ loading: false, plans: [], error: fetchError.message || 'Unable to fetch published fee plans.' })
+    })
+    return () => { active = false }
+  }, [collegeId, academicYearId, courseId, branchId, semesterId, batch, quota, studentCategory])
+
+  const matchingPlans = matchingFeeStructures(data.academic, data.admission, serverPlanState.plans)
+  const assignedComponents = Array.isArray(fees.components) ? fees.components : Array.isArray(fees.feeComponents) ? fees.feeComponents : []
+  const hasAssignedPlan = /^\d+$/.test(String(fees.structureId ?? '')) &&
+    (assignedComponents.length > 0 || Number(fees.tuitionFee || 0) > 0 || Number(fees.totalFee || 0) > 0)
+  const currentAssignedPlan = hasAssignedPlan ? {
+    id: String(fees.structureId),
+    name: fees.structureName || fees.planName || 'Currently assigned fee plan',
+    status: 'Assigned',
+    amount: Number(fees.totalFee || fees.tuitionFee || 0),
+    components: assignedComponents,
+    installments: Array.isArray(fees.installments) ? fees.installments : [],
+    plan: fees.paymentPlan || 'Full Payment',
+  } : null
+  const availablePlans = currentAssignedPlan && !matchingPlans.some(plan => String(plan.id) === currentAssignedPlan.id)
+    ? [...matchingPlans, currentAssignedPlan]
+    : matchingPlans
+  const selectedPlan = availablePlans.find(plan => String(plan.id) === String(fees.structureId))
+  const planMatchesSelectedSemester = plan => {
+    const semesterSpecific = plan.cycle === 'Semester-wise' || plan.feePeriod === 'Per Semester' || String(plan.cycle || '').toUpperCase() === 'SEMESTER'
+    if (!semesterId || !semesterSpecific) return true
+    if (plan.semesterId != null && String(plan.semesterId)) return String(plan.semesterId) === String(semesterId)
+    return String(plan.semesterName || '').trim().toLowerCase() === String(data.academic?.semester || '').trim().toLowerCase()
+  }
+  const matchedPlan = selectedPlan || (availablePlans.length === 1 && planMatchesSelectedSemester(availablePlans[0]) ? availablePlans[0] : null)
   const planSelector = (
     <label className="sa-field">
       <span>Assign Fee Plan</span>
-      <ProjectSelect aria-label="Assign admission fee plan" value={matchedPlan?.id || ""} onChange={event => update("fees", { ...fees, configured: false, structureId: event.target.value })} disabled={!matchingPlans.length}>
-        {!matchingPlans.length && <option value="">No matching active fee plans</option>}
-        {matchingPlans.map(plan => <option key={plan.id} value={plan.id}>{plan.name || plan.planName} — {feeMoney(feeTotal(plan))}</option>)}
+      <ProjectSelect aria-label="Assign admission fee plan" value={matchedPlan?.id || ""} onChange={event => update("fees", { ...fees, configured: false, structureId: event.target.value })} disabled={!availablePlans.length}>
+        {availablePlans.length > 1 && !selectedPlan && <option value="">Select a fee plan</option>}
+        {!availablePlans.length && <option value="">{serverPlanState.loading ? 'Loading matching fee plans…' : 'No matching published fee plans'}</option>}
+        {availablePlans.map(plan => <option key={plan.id} value={plan.id}>{plan.name || plan.planName} — {feeMoney(feeTotal(plan))}{plan.status === 'Assigned' ? ' (currently assigned)' : ''}</option>)}
       </ProjectSelect>
-      <small>Select a plan matching this admission's academic details. <Link to="/fees/structures" target="_blank" rel="noopener noreferrer">Manage fee plans</Link></small>
+      <small>{serverPlanState.error && !availablePlans.length ? `Could not fetch published fee plans: ${serverPlanState.error}. ` : ''}{availablePlans.length > 1 && (!semesterId || availablePlans.some(plan => !planMatchesSelectedSemester(plan))) ? 'Choose the correct semester fee plan; select a valid semester in Academic Enrollment to narrow this list. ' : ''}{!serverPlanState.loading && !availablePlans.length ? 'Check that a published plan matches the selected college, academic year, course, branch, semester and batch. ' : ''}Select a plan matching this admission's academic details. <Link to="/fees/structures" target="_blank" rel="noopener noreferrer">Manage fee plans</Link></small>
     </label>
   )
 
   // Sync matched plan to form state if needed
   useEffect(() => {
-    if (matchedPlan && (!fees.configured || fees.structureId !== matchedPlan.id)) {
+    if (matchedPlan && (!fees.configured || String(fees.structureId) !== String(matchedPlan.id))) {
       const rawComps = Array.isArray(matchedPlan.components) ? matchedPlan.components : Array.isArray(matchedPlan.feeComponents) ? matchedPlan.feeComponents : []
       const components = rawComps.map(item => ({
         ...item,
@@ -1659,6 +1714,7 @@ function AdmissionForm() {
   useEffect(() => { dataRef.current = data }, [data])
   useEffect(() => { if (!data.application.date) setData(current => ({ ...current, application: { ...current.application, date: new Date().toISOString().slice(0, 10) } })) }, [data.application.date])
   useEffect(() => {
+    if (validId) return
     setData(current => {
       let next = current;
       if (!next.admission?.collegeId && globalCollegeId) {
@@ -1691,7 +1747,7 @@ function AdmissionForm() {
     if (preference && data.admission.hostelPreference !== preference) setData(current => ({ ...current, admission: { ...current.admission, hostelPreference: preference } }))
   }, [data.admission.hostel, data.admission.hostelPreference, data.personal.gender])
   const notify = (message, tone = 'success') => setToast({ message, tone })
-  useEffect(()=>{let active=true;Promise.all([academicYearApi.getAll(),courseApi.getAll(),branchApi.getAll(),getColleges(),getSemesters()]).then(([years,courses,branches,collegeResponse,semesterResponse])=>{if(!active)return;const list=response=>{let value=response;for(let depth=0;depth<5&&value&&typeof value==='object';depth+=1){if(Array.isArray(value))return value;const rows=value.items??value.content??value.results??value.records;if(Array.isArray(rows))return rows;value=value.data}return[]};const operationalYears = getOperationalAcademicYearOptions(years);setMasters({years: operationalYears, courses, branches, colleges:list(collegeResponse), semesters:list(semesterResponse)})}).catch(error=>notify(error.message||'Unable to load admission selections.','error'));return()=>{active=false}},[])
+  useEffect(()=>{let active=true;Promise.all([academicYearApi.getAll(),courseApi.getAll(),branchApi.getAll(),getColleges(),getSemesters()]).then(([years,courses,branches,collegeResponse,semesterResponse])=>{if(!active)return;const list=response=>{let value=response;for(let depth=0;depth<5&&value&&typeof value==='object';depth+=1){if(Array.isArray(value))return value;const rows=value.items??value.content??value.results??value.records;if(Array.isArray(rows))return rows;value=value.data}return[]};const operationalYears = getOperationalAcademicYearOptions(years);setMasters({loaded: true, years: operationalYears, courses, branches, colleges:list(collegeResponse), semesters:list(semesterResponse)})}).catch(error=>notify(error.message||'Unable to load admission selections.','error'));return()=>{active=false}},[])
   useEffect(() => {
     const courseId = data.academic.courseId
     let active = true
@@ -1795,14 +1851,26 @@ function AdmissionForm() {
           })
         : baseLoaded
 
-      setData({ ...finalLoaded, previewEditedFields: localDraft?.previewEditedFields ?? row.formData?.previewEditedFields })
+      // Browser drafts may predate a corrected enrollment or a changed global
+      // year. Restore the server's academic mapping as one consistent unit.
+      setData({
+        ...finalLoaded,
+        academic: baseLoaded.academic,
+        admission: { ...finalLoaded.admission, collegeId: baseLoaded.admission.collegeId, college: baseLoaded.admission.college },
+        previewEditedFields: localDraft?.previewEditedFields ?? row.formData?.previewEditedFields,
+      })
       setRecordIds(loadedIds)
     }).catch(error => notify(error.message || 'Unable to load this admission.', 'error'))
     return () => { active = false }
   }, [validId])
   const update = (path, value) => {
+    setSaveError('')
     setData(current => {
-      let next = setPath(current, path, value);
+      let next = resetAdmissionAcademicDependents(setPath(current, path, value), current, path);
+      if (path === 'academic.semesterId') {
+        const semester = masters.semesters.find(item => same(item.semesterId ?? item.id, value))
+        next.academic = { ...next.academic, semester: semester?.semesterName ?? semester?.name ?? '', sectionId: '', section: '', requiresSemesterSelection: Boolean(value || current.academic.semesterId || current.academic.requiresSemesterSelection) }
+      }
       if (current.previewEditedFields) next.previewEditedFields = { ...current.previewEditedFields, [path]: true };
       if (path === 'personal.gender') {
         if (next.admission.hostel === 'Yes') {
@@ -1866,7 +1934,7 @@ function AdmissionForm() {
       next.fees.totalFee = String(total);
       return next;
     });
-    setErrors(current => ({ ...current, [path]: '' }));
+    setErrors(current => ({ ...current, [path]: '', ...(path === 'academic.semesterId' ? { 'academic.semester': '' } : {}) }));
   }
   const currentPincode = data.contact.currentAddress.pincode, permanentPincode = data.contact.permanentAddress.pincode, sameAddress = data.contact.sameAddress
   const lastPinLookupRef = useRef({ current: '', permanent: '' })
@@ -1911,16 +1979,8 @@ function AdmissionForm() {
     }, 350)
     return () => { active = false; window.clearTimeout(timer) }
   }, [currentPincode, permanentPincode, sameAddress])
-  useEffect(() => {
-    if (!masters.years.length || !data.academic.academicYearId) return
-    const resolvedAcademicYearId = resolveAcademicYearId(masters.years, data.academic.academicYearId)
-    if (!data.academic.academicYearId || String(data.academic.academicYearId) !== String(resolvedAcademicYearId)) {
-      setData(current => ({
-        ...current,
-        academic: { ...current.academic, academicYearId: resolvedAcademicYearId, academicYear: masters.years.find(item => String(item.academicYearId ?? item.id) === String(resolvedAcademicYearId))?.academicYearName ?? masters.years.find(item => String(item.academicYearId ?? item.id) === String(resolvedAcademicYearId))?.name ?? current.academic.academicYear }
-      }))
-    }
-  }, [masters.years, data.academic.academicYearId])
+  // An existing admission keeps its enrollment year, even when that year is
+  // absent from the active-year list. Changing it would invalidate its semester.
 
   useEffect(() => {
     if (data.academic.admissionType === 'Lateral Entry') return
@@ -1928,7 +1988,10 @@ function AdmissionForm() {
     setData(current => ({ ...current, academic: { ...current.academic, quota: '', quotaOther: '' } }))
   }, [data.academic.admissionType, data.academic.quota, data.academic.quotaOther])
 
+  const semesterOptions = admissionSemesterOptions(masters.semesters, data.academic, data.admission.collegeId)
   const allErrors = validate(data)
+  const semesterError = masters.loaded ? admissionSemesterError(data.academic, semesterOptions) : ''
+  if (semesterError) allErrors['academic.semester'] = semesterError
   const getFieldError = (path) => errors[path] || (touched[path] ? allErrors[path] : (read(data, path) && allErrors[path] ? allErrors[path] : ''))
   const field = (path,label,options,type,readOnly,placeholder,disabled) => <Field {...{ data,path,label,options,type,readOnly,placeholder,disabled,update,markTouched }} error={getFieldError(path)} />
   const effectiveAddressErrors = Object.fromEntries(
@@ -1992,23 +2055,38 @@ function AdmissionForm() {
 
   const roomTypeOptions = useMemo(() => {
     const list = []
+    const seen = new Set()
+    const addRoomType = value => {
+      const name = normalizeHostelRoomType(value)
+      const key = name.toLowerCase()
+      if (name && !seen.has(key)) {
+        seen.add(key)
+        list.push(name)
+      }
+    }
     try {
       const hostelPlans = readHostelStructures(selectedCollegeId)
       if (Array.isArray(hostelPlans)) {
         hostelPlans.forEach(p => {
           if (Array.isArray(p.roomPricing)) {
-            p.roomPricing.forEach(r => {
-              const name = String(r.roomType || '').trim()
-              if (name && !list.includes(name)) list.push(name)
-            })
+            p.roomPricing.forEach(r => addRoomType(r.roomType))
           }
-          const pRoom = String(p.roomType || '').trim()
-          if (pRoom && !list.includes(pRoom)) list.push(pRoom)
+          addRoomType(p.roomType)
         })
       }
     } catch {}
-    return [...new Set([...list, ...Object.keys(HOSTEL_FEES)])]
-  }, [selectedCollegeId])
+    Object.keys(HOSTEL_FEES).forEach(addRoomType)
+    addRoomType(data.admission.hostelRoomType)
+    return list
+  }, [selectedCollegeId, data.admission.hostelRoomType])
+
+  useEffect(() => {
+    const roomType = data.admission.hostelRoomType
+    const normalized = normalizeHostelRoomType(roomType)
+    if (roomType && normalized !== roomType) {
+      setData(current => ({ ...current, admission: { ...current.admission, hostelRoomType: normalized } }))
+    }
+  }, [data.admission.hostelRoomType])
 
   const transportRouteOptions = useMemo(() => {
     const list = []
@@ -2049,23 +2127,28 @@ function AdmissionForm() {
     const masterError = errors[namePath] || ((touched[namePath] || touched[idPath] || read(data, idPath)) ? allErrors[namePath] : '');
     const branchField = idPath === 'academic.branchId'
     const placeholder = disabled ? 'Select Course first' : branchField && branchLoading ? 'Loading branches...' : branchField && !options.length ? branchLoadError ? 'Branches unavailable' : 'No branches configured' : `Select ${label}`
-    return <label className={`sa-field ${masterError?'invalid':''}`} htmlFor={id}><span>{label}<b> *</b></span><ProjectSelect id={id} value={read(data,idPath)||''} disabled={disabled || (branchField && branchLoading)} onChange={event=>{markTouched(namePath);markTouched(idPath);const option=options.find(item=>same(item.id,event.target.value));setData(current=>{let next=setPath(current,idPath,event.target.value);if(current.previewEditedFields)next.previewEditedFields={...current.previewEditedFields,[idPath]:true,[namePath]:true};next=setPath(next,namePath,option?.name||'');if(idPath==='academic.courseId')next=setPath(next,'academic.courseCode',option?.code||courseCodeFallback(option?.name));if(idPath==='academic.branchId')next=setPath(next,'academic.branchCode',option?.code||branchCodeFallback(option?.name));resets.forEach(([resetId,resetName])=>{next=setPath(next,resetId,'');next=setPath(next,resetName,'')});return next});setErrors(current=>({...current,[namePath]:''}))}} onBlur={() => { markTouched(namePath); markTouched(idPath) }}><option value="">{placeholder}</option>{options.map(option=><option key={option.id} value={option.id}>{option.name}{option.code ? ` (${option.code})` : ''}</option>)}</ProjectSelect>{branchField && !branchLoading && !options.length && <small role={branchLoadError?'alert':'status'}>{branchLoadError || 'Ask an administrator to add an active branch under this course.'}</small>}{masterError&&<small role="alert">{masterError}</small>}</label>
+    return <label className={`sa-field ${masterError?'invalid':''}`} htmlFor={id}><span>{label}<b> *</b></span><ProjectSelect id={id} value={read(data,idPath)||''} disabled={disabled || (branchField && branchLoading)} onChange={event=>{setSaveError('');markTouched(namePath);markTouched(idPath);const option=options.find(item=>same(item.id,event.target.value));setData(current=>{let next=setPath(current,idPath,event.target.value);if(current.previewEditedFields)next.previewEditedFields={...current.previewEditedFields,[idPath]:true,[namePath]:true};next=setPath(next,namePath,option?.name||'');if(idPath==='academic.courseId')next=setPath(next,'academic.courseCode',option?.code||courseCodeFallback(option?.name));if(idPath==='academic.branchId')next=setPath(next,'academic.branchCode',option?.code||branchCodeFallback(option?.name));resets.forEach(([resetId,resetName])=>{next=setPath(next,resetId,'');next=setPath(next,resetName,'')});return resetAdmissionAcademicDependents(next,current,idPath)});setErrors(current=>({...current,[namePath]:''}))}} onBlur={() => { markTouched(namePath); markTouched(idPath) }}><option value="">{placeholder}</option>{options.map(option=><option key={option.id} value={option.id}>{option.name}{option.code ? ` (${option.code})` : ''}</option>)}</ProjectSelect>{branchField && !branchLoading && !options.length && <small role={branchLoadError?'alert':'status'}>{branchLoadError || 'Ask an administrator to add an active branch under this course.'}</small>}{masterError&&<small role="alert">{masterError}</small>}</label>
   }
   const screens = [
     <Section key="identity" title="Student Identity" icon={FiUser} hint="Core identity and government identification details"><PhotoUpload data={data} update={update} notify={notify} />{field('personal.firstName','First Name')}{field('personal.middleName','Middle Name')}{field('personal.lastName','Last Name')}{field('personal.gender','Gender',['Female','Male','Non-binary'])}{field('personal.dob','Date of Birth',null,'date')}{field('personal.bloodGroup','Blood Group',['A+','A-','B+','B-','AB+','AB-','O+','O-'])}{field('personal.nationality','Nationality')}{field('personal.aadhaar','Aadhaar Number')}</Section>,
     <><Section title="Contact Information" icon={FiPhone}>{field('contact.mobile','Student Mobile')}{field('contact.alternateMobile','Alternate Mobile')}{field('contact.email','Student Email',null,'email')}{field('contact.alternateEmail','Alternate Email',null,'email')}</Section><Section title="Current Address" icon={FiHome}><AddressFields data={data} prefix="contact.currentAddress" update={update} errors={effectiveAddressErrors} markTouched={markTouched} />{pinStatus.current && <p className={`sa-pincode-status ${pinStatus.current.includes('filled') ? 'success' : ''}`}>{pinStatus.current}</p>}</Section><Section title="Permanent Address" icon={FiHome} action={<label className="sa-same-addr-check" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 650, color: 'var(--brand, #125AA8)' }}><input type="checkbox" checked={Boolean(data.contact.sameAddress)} onChange={event => update('contact.sameAddress', event.target.checked)} style={{ width: '15px', height: '15px', accentColor: 'var(--brand, #125AA8)', cursor: 'pointer' }} /><span>Same as current address</span></label>}>{!data.contact.sameAddress && <><AddressFields data={data} prefix="contact.permanentAddress" update={update} errors={effectiveAddressErrors} markTouched={markTouched} />{pinStatus.permanent && <p className={`sa-pincode-status ${pinStatus.permanent.includes('filled') ? 'success' : ''}`}>{pinStatus.permanent}</p>}</>}</Section></>,
     <><Section title="Father Details" icon={FiUsers} hint="Optional parent or guardian contact information.">{field('parents.father.name','Father Name')}{field('parents.father.mobile','Father Mobile')}{field('parents.father.email','Father Email',null,'email')}{field('parents.father.occupation','Father Occupation')}{field('parents.father.qualification','Father Qualification')}{field('parents.father.income','Father Annual Income',null,'number')}</Section><Section title="Mother Details" icon={FiUsers}>{field('parents.mother.name','Mother Name')}{field('parents.mother.mobile','Mother Mobile')}{field('parents.mother.email','Mother Email',null,'email')}{field('parents.mother.occupation','Mother Occupation')}{field('parents.mother.qualification','Mother Qualification')}{field('parents.mother.income','Mother Annual Income',null,'number')}</Section><Section title="Guardian Details" icon={FiUsers}>{field('parents.guardian.name','Guardian Name')}{field('parents.guardian.relationship','Relationship',['Father','Mother','Guardian','Other'])}{data.parents.guardian.relationship === 'Other' && field('parents.guardian.relationshipOther','Specify Relationship')}{field('parents.guardian.mobile','Guardian Mobile')}{field('parents.guardian.email','Guardian Email',null,'email')}{field('parents.guardian.occupation','Guardian Occupation')}{field('parents.guardian.qualification','Guardian Qualification')}{field('parents.guardian.income','Guardian Annual Income',null,'number')}{field('parents.primaryContact','Primary Contact',['Father','Mother','Guardian'])}{field('parents.emergencyMobile','Emergency Contact Mobile')}</Section></>,
-    <Section key="academic" title="Academic Enrollment" icon={FiBookOpen} hint="Review college and academic year, then select the available course and branch.">{field('academic.academicYear','Academic Year',null,'text',true)}{field('admission.college','Joining College',null,'text',true)}{field('academic.admissionType','Admission Type',ADMISSION_TYPES)}{data.academic.admissionType === 'Lateral Entry' && <>{field('academic.quota','Admission Quota',ADMISSION_QUOTAS)}{data.academic.quota === 'Other' && field('academic.quotaOther','Specify Admission Quota')}</>}{masterField('academic.course','academic.courseId','Course',courseOptions,!selectedCollegeId,[['academic.branchId','academic.branch']])}{field('academic.courseCode','Course Code',null,'text',true)}{masterField('academic.branch','academic.branchId','Branch',branchOptions,!data.academic.courseId)}{field('academic.branchCode','Branch Code',null,'text',true)}{field('academic.studentCategory','Student Category',['General','SC','ST','BC','EWS','Other'])}{field('academic.regulation','Regulation')}</Section>,
+    <Section key="academic" title="Academic Enrollment" icon={FiBookOpen} hint="Review college and academic year, then select the available course and branch.">{field('academic.academicYear','Academic Year',null,'text',true)}{field('admission.college','Joining College',null,'text',true)}{field('academic.admissionType','Admission Type',ADMISSION_TYPES)}{data.academic.admissionType === 'Lateral Entry' && <>{field('academic.quota','Admission Quota',ADMISSION_QUOTAS)}{data.academic.quota === 'Other' && field('academic.quotaOther','Specify Admission Quota')}</>}{masterField('academic.course','academic.courseId','Course',courseOptions,!selectedCollegeId,[['academic.branchId','academic.branch']])}{field('academic.courseCode','Course Code',null,'text',true)}{masterField('academic.branch','academic.branchId','Branch',branchOptions,!data.academic.courseId)}{field('academic.branchCode','Branch Code',null,'text',true)}<label className={`sa-field ${getFieldError('academic.semester') ? 'invalid' : ''}`}><span>Semester{data.academic.requiresSemesterSelection && <b> *</b>}</span><ProjectSelect value={data.academic.semesterId || ''} disabled={!masters.loaded || !data.academic.courseId || !data.academic.branchId} onChange={event => update('academic.semesterId', event.target.value)}><option value="">Select Semester</option>{data.academic.semesterId && !semesterOptions.some(item => same(item.id, data.academic.semesterId)) && <option value={data.academic.semesterId} disabled>{data.academic.semester || 'Saved semester'} (unavailable)</option>}{semesterOptions.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</ProjectSelect>{getFieldError('academic.semester') && <small role="alert">{getFieldError('academic.semester')}</small>}{masters.loaded && data.academic.branchId && !semesterOptions.length && <small>No matching semesters are configured. Ask an administrator to configure a semester for this course, branch and academic year.</small>}</label>{field('academic.studentCategory','Student Category',['General','SC','ST','BC','EWS','Other'])}{field('academic.regulation','Regulation')}</Section>,
     <><Section title="10th / SSC" icon={FiBookOpen} hint="Enter only the essential school details.">{field('previousEducation.tenth.board','Board')}{field('previousEducation.tenth.institution','School Name')}{field('previousEducation.tenth.passingYear','Year of Passing')}{field('previousEducation.tenth.score','Percentage (0-100)',null,'number')}</Section><Section title="Intermediate / Diploma" icon={FiBookOpen} hint="Enter only the essential qualifying-education details.">{field('previousEducation.intermediate.board','Board / University')}{field('previousEducation.intermediate.institution','College Name')}{field('previousEducation.intermediate.passingYear','Year of Passing')}{field('previousEducation.intermediate.stream','Stream',['MPC','Other'])}{data.previousEducation.intermediate.stream === 'Other' && field('previousEducation.intermediate.streamOther','Specify Stream')}{field('previousEducation.intermediate.score','Percentage (0-100)',null,'number')}</Section></>,
     <><Section title="Application Information" icon={FiFileText} hint="Registration details.">{field('application.number','Registration Number',null,'text',true)}{field('application.date','Registration Date',null,'date',false)}{field('admission.batch','Batch')}</Section><Section title="Student Services" icon={FiHome}>{field('admission.hostel','Hostel Required',['No','Yes'])}{data.admission.hostel === 'Yes' && <>{field('admission.hostelPreference','Hostel Preference',data.personal.gender === 'Male' ? ['Boys Hostel'] : data.personal.gender === 'Female' ? ['Girls Hostel'] : ['Boys Hostel','Girls Hostel'],undefined,data.personal.gender === 'Male' || data.personal.gender === 'Female')}{field('admission.hostelRoomType','Room Type / Beds',roomTypeOptions)}</>}{field('admission.transport','Transportation Required',['No','Yes'])}{data.admission.transport === 'Yes' && field('admission.transportRoute','Transport Route',transportRouteOptions)}</Section></>,
     <div key="fees"><ApplicantFeeStructure data={data} update={update} error={errors['fees.paymentPlan']} /></div>,
     <DocumentsUpload key="documents" data={data} update={update} errors={errors} notify={notify} />,
   ]
+  const screenOrder = [0, 3, 2, 1, 4, 5, 6, 7]
   const focusFirst = () => window.setTimeout(() => document.querySelector('.student-admission .sa-field.invalid :is(input,select)')?.focus({ preventScroll: false }), 0)
   const nextStep = async () => {
     if (savingStep) return
     setSaveError('')
-    const prefixes = [['personal.'],['contact.'],['parents.'],['academic.'],['previousEducation.'],['application.','admission.'],['fees.'],['documents.'],[]][step]
+    if (step === 1 && !masters.loaded) {
+      setSaveError('Academic selections have not loaded yet. Please retry after they load.')
+      return
+    }
+    const prefixes = [['personal.'],['academic.'],['parents.'],['contact.'],['previousEducation.'],['application.','admission.'],['fees.'],['documents.'],[]][step]
     const relevant = Object.fromEntries(Object.entries(allErrors).filter(([path]) => prefixes.some(prefix => path.startsWith(prefix))))
     setTouched(current => {
       const next = { ...current }
@@ -2087,12 +2170,12 @@ function AdmissionForm() {
         ids = idsFromApi(result)
         if (!ids.admissionId) throw new Error('The admission was created but no admission ID was returned.')
         setRecordIds(ids)
-      } else if ([0, 1, 5].includes(step)) result = await studentAdmissionApi.update(ids.admissionId, data)
+      } else if ([0, 3, 5].includes(step)) result = await studentAdmissionApi.update(ids.admissionId, data, { preserveAcademicMapping: true })
       else if (step === 2) {
         result = ids.studentId
           ? await studentParentApi.update(ids.studentId, data)
-          : await studentAdmissionApi.update(ids.admissionId, data)
-      } else if (step === 3) result = await studentAcademicDetailsApi.update(ids.admissionId, data)
+          : await studentAdmissionApi.update(ids.admissionId, data, { preserveAcademicMapping: true })
+      } else if (step === 1) result = await studentAcademicDetailsApi.update(ids.admissionId, data)
       else if (step === 4) result = await studentPreviousEducationApi.update(ids.admissionId, data)
       else if (step === 6) {
         if (!data.fees.paymentPlan) {
@@ -2134,7 +2217,12 @@ function AdmissionForm() {
         }
         setRecordIds(current => ({ admissionId: returnedIds.admissionId ?? current.admissionId, studentId: returnedIds.studentId ?? current.studentId, academicId: returnedIds.academicId ?? current.academicId }))
       }
-      notify(step === 7 && !ids.studentId ? 'Documents are ready to upload when the admission is submitted.' : 'Admission step saved successfully.', step === 7 && !ids.studentId ? 'info' : 'success')
+      notify(
+        step === 7 && !ids.studentId
+            ? 'Documents are ready to upload when the admission is submitted.'
+            : 'Admission step saved successfully.',
+        step === 7 && !ids.studentId ? 'info' : 'success',
+      )
       const next = Math.min(step + 1, STEPS.length - 1)
       setStep(next)
       if (!recordIds.admissionId) {
@@ -2333,7 +2421,7 @@ function AdmissionForm() {
           <WizardStepper step={step} setStep={setStep} />
           <form className="sa-wizard-card" onSubmit={event => event.preventDefault()} style={{ border: 'none', boxShadow: 'none', padding: 0 }}>
             <div className="erp-form-scroll-body">
-              {screens[step]}
+              {screens[screenOrder[step]]}
               {step === STEPS.length - 1 && (
                 <label className="sa-declaration">
                   <input type="checkbox" checked={declared} onChange={event => setDeclared(event.target.checked)} />
@@ -2343,6 +2431,7 @@ function AdmissionForm() {
             </div>
             <footer className="sa-wizard-actions erp-actions-bar">
               {saveError && <p role="alert" className="error">{saveError}</p>}
+              {saveError && /semester|course not found|branch.*invalid/i.test(saveError) && step !== 1 && <Button onClick={() => { setStep(1); setSaveError('') }}>Review academic details</Button>}
               <Button disabled={!step || submitting || savingStep} onClick={() => setStep(current => current - 1)}>
                 <FiArrowLeft /> Previous
               </Button>
@@ -2563,10 +2652,10 @@ function AdmissionForm() {
                   {(() => {
                     const SECTION_STEP_MAP = {
                       'Personal Information': 0,
-                      'Contact & Address': 1,
+                      'Contact & Address': 3,
                       'Parent / Guardian': 2,
-                      'Academic Details': 3,
-                      'Academic Information': 3,
+                      'Academic Details': 1,
+                      'Academic Information': 1,
                       'Previous Education': 4,
                       'Admission & Services': 5,
                       'Application Information': 5,
