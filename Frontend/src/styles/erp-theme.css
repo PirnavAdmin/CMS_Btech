@@ -753,6 +753,17 @@ html,body,#root{max-width:100%;overflow-x:hidden}
   display: inline-flex;
   align-items: center;
 }
+.export-control--direct > .export-button:first-child {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.export-control--direct > .export-button--toggle {
+  min-width: 34px;
+  margin-left: -1px;
+  padding-inline: 8px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
 .export-button {
   display: inline-flex;
   align-items: center;

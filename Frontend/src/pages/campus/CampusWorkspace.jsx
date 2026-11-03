@@ -1,4 +1,5 @@
 import { ProjectSelect as SearchableSelectImports_ProjectSelect } from '../../components/SearchableSelect'
+import { createPortal } from 'react-dom'
 import { useState as reactImports_useState, useMemo as reactImports_useMemo, useEffect as reactImports_useEffect } from 'react'
 import { NavLink as react_router_domImports_NavLink, useSearchParams as react_router_domImports_useSearchParams } from 'react-router-dom'
 import { FiPlus as fiImports_FiPlus, FiSearch as fiImports_FiSearch, FiFileText as fiImports_FiFileText, FiBook as fiImports_FiBook, FiBookOpen as fiImports_FiBookOpen, FiGrid as fiImports_FiGrid, FiList as fiImports_FiList, FiRefreshCw as fiImports_FiRefreshCw, FiCheckCircle as fiImports_FiCheckCircle, FiAlertTriangle as fiImports_FiAlertTriangle, FiClock as fiImports_FiClock, FiUser as fiImports_FiUser, FiUsers as fiImports_FiUsers, FiTag as fiImports_FiTag, FiDownload as fiImports_FiDownload, FiTrash2 as fiImports_FiTrash2, FiEdit3 as fiImports_FiEdit3, FiEye as fiImports_FiEye, FiMapPin as fiImports_FiMapPin, FiX as fiImports_FiX, FiCheck as fiImports_FiCheck, FiBookmark as fiImports_FiBookmark, FiBarChart2 as fiImports_FiBarChart2, FiTrendingUp as fiImports_FiTrendingUp, FiDollarSign as fiImports_FiDollarSign, FiCalendar as fiImports_FiCalendar, FiEdit2 as fiImports_FiEdit2, FiActivity as fiImports_FiActivity, FiCheckSquare as fiImports_FiCheckSquare, FiBriefcase as fiImports_FiBriefcase, FiAward as fiImports_FiAward, FiExternalLink as fiImports_FiExternalLink, FiMail as fiImports_FiMail, FiPhone as fiImports_FiPhone, FiGlobe as fiImports_FiGlobe } from 'react-icons/fi'
@@ -10,6 +11,7 @@ import { useAcademic as AcademicContextImports_useAcademic } from '../../context
 import { getUserRole as authImports_getUserRole } from '../../auth/auth'
 import { ROLES as rolesImports_ROLES } from '../../auth/roles'
 import { campusModules as campusModulesImports_campusModules, validateCampusDraft as campusModulesImports_validateCampusDraft } from '../../utils/campusModules'
+import { printResults as exportUtilsImports_printResults } from '../../utils/exportUtils'
 import FilterPanelImports_default from '../../components/FilterPanel'
 import ExportMenuImports_default from '../../components/ExportMenu'
 import academicServiceImports_default from '../../services/academicService'
@@ -162,6 +164,75 @@ const TablePagination = TablePaginationImports_default
 const useAcademic = AcademicContextImports_useAcademic
 const getUserRole = authImports_getUserRole
 const ROLES = rolesImports_ROLES
+const printResults = exportUtilsImports_printResults
+const ExportMenu = ExportMenuImports_default
+const libraryExportColumns = {
+  catalog: [
+    { label: 'Title', value: 'title' }, { label: 'Author', value: 'author' },
+    { label: 'ISBN', value: 'isbn' }, { label: 'Category', value: 'category' },
+    { label: 'Department', value: 'department' }, { label: 'Publisher', value: 'publisher' },
+    { label: 'Edition', value: 'edition' }, { label: 'Rack / Shelf', value: 'rack' },
+    { label: 'Total Copies', value: 'totalCopies' }, { label: 'Available Copies', value: 'availableCopies' },
+    { label: 'Call Number', value: 'callNumber' }, { label: 'Description', value: 'description' },
+  ],
+  copies: [
+    { label: 'Accession Number', value: 'accession' }, { label: 'Barcode', value: 'barcode' },
+    { label: 'Book Title', value: 'bookTitle' }, { label: 'Shelf', value: 'shelf' },
+    { label: 'Condition', value: 'condition' }, { label: 'Status', value: 'status' },
+    { label: 'Borrower', value: 'borrower' }, { label: 'Cost', value: 'cost' },
+  ],
+  circulation: [
+    { label: 'Borrower', value: 'borrowerName' }, { label: 'Borrower ID', value: 'borrowerId' },
+    { label: 'Borrower Type', value: 'borrowerType' }, { label: 'Book Title', value: 'bookTitle' },
+    { label: 'Accession Number', value: 'accession' }, { label: 'Barcode', value: 'barcode' },
+    { label: 'Issue Date', value: 'issueDate' }, { label: 'Due Date', value: 'dueDate' },
+    { label: 'Status', value: 'status' }, { label: 'Fine Accrued', value: 'fineAccrued' },
+  ],
+  borrowers: [
+    { label: 'Name', value: 'name' }, { label: 'ID', value: 'code' },
+    { label: 'Type', value: 'type' }, { label: 'Department', value: 'department' },
+    { label: 'Year / Role', value: 'year' }, { label: 'Email', value: 'email' },
+    { label: 'Active Loans', value: 'activeLoans' }, { label: 'Maximum Loans', value: 'maxLimit' },
+    { label: 'Status', value: 'status' }, { label: 'Pending Fines', value: 'finesPending' },
+  ],
+  reservations: [
+    { label: 'Borrower', value: 'borrowerName' }, { label: 'Borrower ID', value: 'borrowerId' },
+    { label: 'Book Title', value: 'bookTitle' }, { label: 'Requested On', value: 'requestedOn' },
+    { label: 'Queue Position', value: 'queuePosition' }, { label: 'Status', value: 'status' },
+    { label: 'Priority', value: 'priority' },
+  ],
+  fines: [
+    { label: 'Borrower', value: 'borrowerName' }, { label: 'Borrower ID', value: 'borrowerId' },
+    { label: 'Accession Number', value: 'accession' }, { label: 'Book Title', value: 'bookTitle' },
+    { label: 'Overdue Days', value: 'overdueDays' }, { label: 'Fine Amount', value: 'fineAmount' },
+    { label: 'Payment Status', value: 'paymentStatus' }, { label: 'Calculated On', value: 'calculatedOn' },
+  ],
+  reports: [
+    { label: 'Report Title', value: 'title' }, { label: 'Classification', value: 'type' },
+    { label: 'Audit Period', value: 'period' }, { label: 'Generated Date', value: 'generatedOn' },
+    { label: 'Issues', value: 'totalIssues' }, { label: 'Returns', value: 'totalReturns' },
+    { label: 'Compliance / Overdue', value: 'overdueRate' }, { label: 'Auditor', value: 'generatedBy' },
+  ],
+}
+
+function removeLibraryDemoRecords(data) {
+  const demoIds = new Set([
+    ...defaultBooks,
+    ...defaultCopies,
+    ...defaultCirculation,
+    ...defaultBorrowers,
+    ...defaultReservations,
+    ...defaultFines,
+    ...defaultReports,
+  ].map((record) => record.id))
+
+  return Object.fromEntries(
+    Object.entries(data).map(([key, records]) => [
+      key,
+      Array.isArray(records) ? records.filter((record) => !demoIds.has(record.id)) : records,
+    ])
+  )
+}
 
 function LibraryWorkspace() {
   const { selectedCollegeId, selectedAcademicYearId, selectedCollege } = useAcademic()
@@ -175,18 +246,18 @@ function LibraryWorkspace() {
   const [libraryData, setLibraryData] = useState(() => {
     try {
       const saved = localStorage.getItem(storageKey)
-      if (saved) return JSON.parse(saved)
+      if (saved) return removeLibraryDemoRecords(JSON.parse(saved))
     } catch {
       // ignore
     }
     return {
-      books: defaultBooks,
-      copies: defaultCopies,
-      circulation: defaultCirculation,
-      borrowers: defaultBorrowers,
-      reservations: defaultReservations,
-      fines: defaultFines,
-      reports: defaultReports,
+      books: [],
+      copies: [],
+      circulation: [],
+      borrowers: [],
+      reservations: [],
+      fines: [],
+      reports: [],
     }
   })
 
@@ -615,16 +686,26 @@ function LibraryWorkspace() {
     showToast(`Book issued to ${issueForm.borrowerName}. Due on ${newCirc.dueDate}.`)
   }
 
-  const handleExportData = () => {
-    const dataStr =
-      'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(currentList, null, 2))
-    const downloadAnchor = document.createElement('a')
-    downloadAnchor.setAttribute('href', dataStr)
-    downloadAnchor.setAttribute('download', `library-${activeTab}-export.json`)
-    document.body.appendChild(downloadAnchor)
-    downloadAnchor.click()
-    downloadAnchor.remove()
-    showToast(`Exported ${currentList.length} records to JSON.`)
+  const handleReportPdf = (report) => {
+    try {
+      printResults({
+        title: report.title,
+        scope: `${selectedCollege?.name || 'Main Campus Library'} · Academic Year ${selectedAcademicYearId || '2026-2027'}`,
+        rows: [report],
+        columns: [
+          { label: 'Report Title', value: 'title' },
+          { label: 'Classification', value: 'type' },
+          { label: 'Audit Period', value: 'period' },
+          { label: 'Generated Date', value: 'generatedOn' },
+          { label: 'Issues', value: 'totalIssues' },
+          { label: 'Returns', value: 'totalReturns' },
+          { label: 'Compliance / Overdue', value: 'overdueRate' },
+          { label: 'Auditor', value: 'generatedBy' },
+        ],
+      })
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Unable to open the report print preview.')
+    }
   }
 
   return (
@@ -657,15 +738,13 @@ function LibraryWorkspace() {
           />
 
           <div className="adv-library-header__actions">
-            <button
-              type="button"
-              className="adv-btn adv-btn--secondary"
-              onClick={handleExportData}
-              title="Export Current Tab Data"
-            >
-              <FiDownload />
-              <span>Export</span>
-            </button>
+            <ExportMenu
+              rows={currentList}
+              columns={libraryExportColumns[activeTab]}
+              filename={`library_${activeTab}`}
+              title={`Digital Library - ${activeTab.toUpperCase()}`}
+              directDownload
+            />
 
             {isAdmin && (
               <button
@@ -1831,7 +1910,7 @@ function LibraryWorkspace() {
                         <button
                           type="button"
                           className="adv-btn adv-btn--sm adv-btn--secondary"
-                          onClick={() => showToast(`Report "${rep.title}" downloaded (PDF format).`)}
+                          onClick={() => handleReportPdf(rep)}
                         >
                           <FiDownload /> PDF
                         </button>
@@ -2079,7 +2158,7 @@ function BookFormModal({ initialData, onClose, onSave }) {
     })
   }
 
-  return (
+  return createPortal((
     <div
       className="adv-modal-backdrop"
       onClick={(e) => {
@@ -2230,7 +2309,7 @@ function BookFormModal({ initialData, onClose, onSave }) {
         </form>
       </div>
     </div>
-  )
+  ), document.body)
 }
 
 // SUB-COMPONENT: QUICK ISSUE MODAL FORM
@@ -2849,6 +2928,34 @@ const minuteExportColumns = [
   { label: 'Decision Summary', value: 'decisionSummary' },
 ]
 
+const calendarExportColumns = [
+  { label: 'Activity Type', value: 'activityType' },
+  { label: 'Title', value: 'title' },
+  { label: 'Category', value: 'category' },
+  { label: 'Starts At', value: 'start' },
+  { label: 'Ends At', value: 'end' },
+  { label: 'Venue', value: 'venue' },
+  { label: 'Organizer', value: 'organizer' },
+  { label: 'Status', value: 'status' },
+]
+
+function removeMeetingsEventsDemoRecords(data) {
+  const demoIds = new Set([
+    ...defaultMeetings,
+    ...defaultEvents,
+    ...defaultRegistrations,
+    ...defaultAttendance,
+    ...defaultMinutes,
+  ].map(record => record.id))
+
+  return Object.fromEntries(
+    Object.entries(data).map(([key, records]) => [
+      key,
+      Array.isArray(records) ? records.filter(record => !demoIds.has(record.id)) : records,
+    ])
+  )
+}
+
 function MeetingsEventsWorkspace() {
   const { selectedCollegeId, selectedAcademicYearId } = useAcademic()
   const scope = `${selectedCollegeId || '1'}:${selectedAcademicYearId || '1'}`
@@ -2858,16 +2965,16 @@ function MeetingsEventsWorkspace() {
   const [data, setData] = useState(() => {
     try {
       const saved = localStorage.getItem(storageKey)
-      if (saved) return JSON.parse(saved)
+      if (saved) return removeMeetingsEventsDemoRecords(JSON.parse(saved))
     } catch {
       // fallback
     }
     return {
-      meetings: defaultMeetings,
-      events: defaultEvents,
-      registrations: defaultRegistrations,
-      attendance: defaultAttendance,
-      minutes: defaultMinutes,
+      meetings: [],
+      events: [],
+      registrations: [],
+      attendance: [],
+      minutes: [],
     }
   })
   const [departmentOptions, setDepartmentOptions] = useState([])
@@ -2927,9 +3034,6 @@ function MeetingsEventsWorkspace() {
   }, [data.meetings, data.events])
 
   const totalRegistrations = data.registrations.length
-  const actionItemsCompleted = data.minutes.filter(m => m.completed).length
-  const actionItemsTotal = data.minutes.length
-  const actionRate = actionItemsTotal ? Math.round((actionItemsCompleted / actionItemsTotal) * 100) : 100
 
   // Filtered dataset for active tab
   const filteredList = useMemo(() => {
@@ -2980,6 +3084,11 @@ function MeetingsEventsWorkspace() {
     return []
   }, [activeTab, data, searchQuery, statusFilter, categoryFilter])
 
+  const calendarExportRows = useMemo(() => [
+    ...data.meetings.map(item => ({ ...item, activityType: 'Meeting' })),
+    ...data.events.map(item => ({ ...item, activityType: 'Event' })),
+  ], [data.meetings, data.events])
+
   // Paginated dataset
   const totalPages = Math.max(1, Math.ceil(filteredList.length / pageSize))
   const paginatedList = useMemo(() => {
@@ -2990,6 +3099,7 @@ function MeetingsEventsWorkspace() {
   // Current export columns
   const currentExportColumns = useMemo(() => {
     switch (activeTab) {
+      case 'calendar': return calendarExportColumns
       case 'meetings': return meetingExportColumns
       case 'events': return eventExportColumns
       case 'registrations': return registrationExportColumns
@@ -2998,6 +3108,7 @@ function MeetingsEventsWorkspace() {
       default: return []
     }
   }, [activeTab])
+  const currentExportRows = activeTab === 'calendar' ? calendarExportRows : filteredList
 
   // Open modal for Create or Edit
   const openCreateModal = (type) => {
@@ -3264,7 +3375,7 @@ function MeetingsEventsWorkspace() {
         {/* Page Header (Stats in right top corner compactSummary) */}
         <PageHeader
           title="Meetings & Campus Events"
-          subtitle="Plan institutional council meets, manage campus hackathons & fests, monitor check-in attendance, and track action minutes."
+          subtitle="Plan institutional meetings, manage campus events, and coordinate participant registrations."
           breadcrumb={[
             { label: 'Digital Campus', link: '/meetings-events' },
             'Meetings & Events'
@@ -3273,7 +3384,6 @@ function MeetingsEventsWorkspace() {
             { label: 'Scheduled Gatherings', value: totalScheduled },
             { label: 'Upcoming This Month', value: upcomingCount },
             { label: 'Total Registrations', value: totalRegistrations },
-            { label: 'MoM Resolution', value: `${actionRate}%` },
           ]}
         />
 
@@ -3325,25 +3435,6 @@ function MeetingsEventsWorkspace() {
               <span className="mew-badge-count">{data.registrations.length}</span>
             </button>
 
-            <button
-              type="button"
-              className={activeTab === 'attendance' ? 'active' : ''}
-              onClick={() => handleSwitchTab('attendance')}
-            >
-              <FiClock />
-              <span>Attendance & Check-in</span>
-              <span className="mew-badge-count">{data.attendance.length}</span>
-            </button>
-
-            <button
-              type="button"
-              className={activeTab === 'minutes' ? 'active' : ''}
-              onClick={() => handleSwitchTab('minutes')}
-            >
-              <FiCheckSquare />
-              <span>Minutes & Actions</span>
-              <span className="mew-badge-count">{data.minutes.length}</span>
-            </button>
           </nav>
 
           <div className="mew-actions">
@@ -3409,12 +3500,13 @@ function MeetingsEventsWorkspace() {
             )}
 
             {/* Standard ERP ExportMenu component with CSV and Print / PDF options */}
-            {activeTab !== 'calendar' && <ExportMenu
-              rows={filteredList}
+            <ExportMenu
+              rows={currentExportRows}
               columns={currentExportColumns}
               filename={`meetings_events_${activeTab}`}
               title={`Meetings & Events - ${activeTab.toUpperCase()}`}
-            />}
+              directDownload
+            />
           </div>
         </div>
 
@@ -3564,6 +3656,7 @@ function MeetingsEventsWorkspace() {
                     <option value="Career">Career</option>
                     <option value="Networking">Networking</option>
                     <option value="Sports">Sports</option>
+                    <option value="Special Occasion">Special Occasion</option>
                   </>
                 )}
               </ProjectSelect>
@@ -4320,7 +4413,7 @@ function MeetingsEventsWorkspace() {
                       <datalist id="mew-event-title-options">{[...new Set(data.events.map(item => item.title).filter(Boolean))].map(title => <option key={title} value={title} />)}</datalist>
 
                       <div className="mew-form-row">
-                        <label className="mew-form-field">Responsible Department *<ProjectSelect required value={formData.department || ''} onChange={e => setFormData({ ...formData, department: e.target.value })}><option value="">Select responsible department</option>{formData.department && !departmentOptions.includes(formData.department) && <option value={formData.department}>{formData.department}</option>}{departmentOptions.map(name => <option key={name} value={name}>{name}</option>)}</ProjectSelect></label>
+                        <label className="mew-form-field">Responsible Department *<ProjectSelect forceCustom menuPlacement="bottom" required value={formData.department || ''} onChange={e => setFormData({ ...formData, department: e.target.value })}><option value="">Select responsible department</option>{formData.department && !departmentOptions.includes(formData.department) && <option value={formData.department}>{formData.department}</option>}{departmentOptions.map(name => <option key={name} value={name}>{name}</option>)}</ProjectSelect></label>
                         <label className="mew-form-field">Organizer<input value={formData.organizer || ''} onChange={e => setFormData({ ...formData, organizer: e.target.value })} placeholder="Organizer or coordinating unit" /></label>
                       </div>
 
@@ -4328,6 +4421,8 @@ function MeetingsEventsWorkspace() {
                         <label className="mew-form-field">
                           Category
                           <ProjectSelect
+                            forceCustom
+                            menuPlacement="bottom"
                             value={formData.category || 'Technical'}
                             onChange={e => setFormData({ ...formData, category: e.target.value })}
                           >
@@ -4336,6 +4431,7 @@ function MeetingsEventsWorkspace() {
                             <option value="Career">Career / Placement</option>
                             <option value="Networking">Networking / Alumni</option>
                             <option value="Sports">Sports</option>
+                            <option value="Special Occasion">Special Occasion</option>
                           </ProjectSelect>
                         </label>
 
@@ -4376,7 +4472,7 @@ function MeetingsEventsWorkspace() {
                       <div className="mew-form-row">
                         <label className="mew-form-field">
                           Venue *
-                          <ProjectSelect required value={formData.venue || ''} onChange={e => setFormData({ ...formData, venue: e.target.value })}>
+                          <ProjectSelect forceCustom menuPlacement="bottom" required value={formData.venue || ''} onChange={e => setFormData({ ...formData, venue: e.target.value })}>
                             <option value="">Select venue / room</option>
                             {formData.venue && !roomOptions.some(room => room.value === formData.venue) && <option value={formData.venue}>{formData.venue} (current venue)</option>}
                             {roomOptions.map(room => <option key={room.value} value={room.value}>{room.label}</option>)}
@@ -5196,19 +5292,39 @@ const interviewExportColumns = [
   { label: 'Feedback Notes', value: 'feedback' },
 ]
 
-const offerExportColumns = [
-  { label: 'Student Name', value: 'studentName' },
-  { label: 'Roll Number', value: 'rollNo' },
-  { label: 'Branch', value: 'branch' },
-  { label: 'Company', value: 'company' },
-  { label: 'Job Role', value: 'role' },
-  { label: 'CTC Package', value: 'ctc' },
-  { label: 'Offer Date', value: 'offerDate' },
-  { label: 'Acceptance Deadline', value: 'deadline' },
-  { label: 'Offer Letter Ref', value: 'offerLetterRef' },
-  { label: 'Posting Location', value: 'location' },
-  { label: 'Offer Status', value: 'status' },
-]
+function emptyPlacementStats() {
+  return {
+    totalEligible: 0,
+    totalPlaced: 0,
+    placementRate: 0,
+    averagePackage: '—',
+    highestPackage: '—',
+    medianPackage: '—',
+    totalOffers: 0,
+    branchStats: [],
+    tierBreakdown: [],
+  }
+}
+
+function removePlacementDemoRecords(data) {
+  const demoIds = new Set([
+    ...defaultDrives,
+    ...defaultCompanies,
+    ...defaultApplications,
+    ...defaultInterviews,
+    ...defaultOffers,
+  ].map(record => record.id))
+
+  return {
+    ...data,
+    drives: (Array.isArray(data.drives) ? data.drives : []).filter(record => !demoIds.has(record.id)),
+    companies: (Array.isArray(data.companies) ? data.companies : []).filter(record => !demoIds.has(record.id)),
+    applications: (Array.isArray(data.applications) ? data.applications : []).filter(record => !demoIds.has(record.id)),
+    interviews: (Array.isArray(data.interviews) ? data.interviews : []).filter(record => !demoIds.has(record.id)),
+    offers: (Array.isArray(data.offers) ? data.offers : []).filter(record => !demoIds.has(record.id)),
+    stats: emptyPlacementStats(),
+  }
+}
 
 function PlacementWorkspace() {
   const [activeTab, setActiveTab] = useState('drives') // drives | companies | applications | interviews | offers | reports
@@ -5225,17 +5341,17 @@ function PlacementWorkspace() {
   const [data, setData] = useState(() => {
     try {
       const saved = localStorage.getItem('CMS_BTECH_PLACEMENT_DATA_V1')
-      if (saved) return JSON.parse(saved)
+      if (saved) return removePlacementDemoRecords(JSON.parse(saved))
     } catch {
       // ignore
     }
     return {
-      drives: defaultDrives,
-      companies: defaultCompanies,
-      applications: defaultApplications,
-      interviews: defaultInterviews,
-      offers: defaultOffers,
-      stats: defaultPlacementStats,
+      drives: [],
+      companies: [],
+      applications: [],
+      interviews: [],
+      offers: [],
+      stats: emptyPlacementStats(),
     }
   })
 
@@ -5365,7 +5481,6 @@ function PlacementWorkspace() {
       case 'companies': return companyExportColumns
       case 'applications': return applicationExportColumns
       case 'interviews': return interviewExportColumns
-      case 'offers': return offerExportColumns
       default: return driveExportColumns
     }
   }, [activeTab])
@@ -5601,8 +5716,6 @@ function PlacementWorkspace() {
   const totalDrives = data.drives.length
   const activeDrivesCount = data.drives.filter(d => d.status === 'Active' || d.status === 'Upcoming').length
   const totalCompaniesCount = data.companies.length
-  const totalOffersCount = data.offers.length
-  const acceptedOffersCount = data.offers.filter(o => o.status === 'Accepted').length
 
   return (
     <DashboardLayout>
@@ -5610,7 +5723,7 @@ function PlacementWorkspace() {
         {/* Page Header (Stats in compactSummary top-right corner) */}
         <PageHeader
           title="Campus Placements & Corporate Relations"
-          subtitle="Coordinate campus recruitment drives, manage partner employers, monitor student applications & interview rounds, and record verified job offers."
+          subtitle="Coordinate campus recruitment drives, manage partner employers, monitor student applications, and schedule interview rounds."
           breadcrumb={[
             { label: 'Digital Campus', link: '/placement' },
             'Training & Placement Cell'
@@ -5618,9 +5731,6 @@ function PlacementWorkspace() {
           compactSummary={[
             { label: 'Active Drives', value: activeDrivesCount },
             { label: 'Corporate Partners', value: totalCompaniesCount },
-            { label: 'Offers Recorded', value: totalOffersCount },
-            { label: 'Placement Rate', value: `${data.stats.placementRate}%` },
-            { label: 'Highest Package', value: data.stats.highestPackage },
           ]}
         />
 
@@ -5674,24 +5784,6 @@ function PlacementWorkspace() {
               <span className="plw-badge-count">{data.interviews.length}</span>
             </button>
 
-            <button
-              type="button"
-              className={activeTab === 'offers' ? 'active' : ''}
-              onClick={() => handleSwitchTab('offers')}
-            >
-              <FiAward />
-              <span>Job Offers</span>
-              <span className="plw-badge-count">{data.offers.length}</span>
-            </button>
-
-            <button
-              type="button"
-              className={activeTab === 'reports' ? 'active' : ''}
-              onClick={() => handleSwitchTab('reports')}
-            >
-              <FiTrendingUp />
-              <span>Analytics</span>
-            </button>
           </nav>
 
           <div className="plw-actions">
@@ -5745,35 +5837,14 @@ function PlacementWorkspace() {
               </>
             )}
 
-            {activeTab === 'offers' && (
-              <>
-                <button
-                  type="button"
-                  className="grm-button grm-button--secondary"
-                  onClick={() => markAllOffers('Accepted')}
-                  title="Mark all candidates as Accepted"
-                >
-                  ✓ Mark All Accepted
-                </button>
-                <button
-                  type="button"
-                  className="grm-button grm-button--primary"
-                  onClick={() => openCreateModal('offer')}
-                >
-                  <FiPlus /> Record Job Offer
-                </button>
-              </>
-            )}
-
             {/* Standard ERP ExportMenu component with CSV and Print / PDF options */}
-            {activeTab !== 'reports' && (
-              <ExportMenu
-                rows={filteredList}
-                columns={currentExportColumns}
-                filename={`placement_${activeTab}`}
-                title={`Campus Placements - ${activeTab.toUpperCase()}`}
-              />
-            )}
+            <ExportMenu
+              rows={filteredList}
+              columns={currentExportColumns}
+              filename={`placement_${activeTab}`}
+              title={`Campus Placements - ${activeTab.toUpperCase()}`}
+              directDownload
+            />
           </div>
         </div>
 
@@ -6423,168 +6494,6 @@ function PlacementWorkspace() {
           </>
         )}
 
-        {/* TAB 5: Job Offers & Placements */}
-        {activeTab === 'offers' && (
-          <>
-            <div className="plw-table-wrap">
-              <table className="plw-table">
-                <thead>
-                  <tr>
-                    <th>Student Name & Roll No</th>
-                    <th>Branch</th>
-                    <th>Recruiter Company</th>
-                    <th>Offered Role</th>
-                    <th>CTC Package</th>
-                    <th>Offer Date & Deadline</th>
-                    <th>Offer Letter Ref</th>
-                    <th className="plw-th-status">Offer Status</th>
-                    <th style={{ textAlign: 'right' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedList.map(off => (
-                    <tr key={off.id}>
-                      <td>
-                        <strong>{off.studentName}</strong>
-                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{off.rollNo}</div>
-                      </td>
-                      <td><span className="campus-badge">{off.branch}</span></td>
-                      <td><strong>{off.company}</strong></td>
-                      <td>{off.role}</td>
-                      <td>
-                        <span className="plw-ctc-pill">{off.ctc}</span>
-                      </td>
-                      <td>
-                        <div>Issued: {off.offerDate}</div>
-                        <small style={{ color: 'var(--text-muted)' }}>Accept by: {off.deadline}</small>
-                      </td>
-                      <td>
-                        <code style={{ fontSize: '11px', background: 'var(--surface-soft)', padding: '2px 5px', borderRadius: '4px' }}>
-                          {off.offerLetterRef}
-                        </code>
-                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{off.location}</div>
-                      </td>
-                      <td className="plw-td-status">
-                        <div className="plw-status-radio-group" role="radiogroup" aria-label={`Offer status for ${off.studentName}`}>
-                          {['Accepted', 'Pending', 'Declined'].map((option) => (
-                            <label
-                              key={option}
-                              className={`plw-radio-chip plw-radio-chip--${option.toLowerCase()} ${off.status === option ? 'is-selected' : ''}`}
-                              title={`Mark as ${option}`}
-                            >
-                              <input
-                                type="radio"
-                                name={`offer-status-${off.id}`}
-                                value={option}
-                                checked={off.status === option}
-                                onChange={() => handleSetOfferStatus(off.id, option)}
-                              />
-                              <span className="plw-radio-circle" />
-                              <span className="plw-radio-text">{option}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <div className="plw-table-actions" style={{ justifyContent: 'flex-end' }}>
-                          <button
-                            type="button"
-                            className="plw-btn-icon plw-btn-icon--edit action-edit"
-                            onClick={() => openEditModal(off, 'offer')}
-                            title="Edit Job Offer"
-                          >
-                            <FiEdit2 />
-                          </button>
-                          <button
-                            type="button"
-                            className="plw-btn-icon plw-btn-icon--danger action-delete"
-                            onClick={() => requestDelete(off.id, 'offer', `${off.studentName} - ${off.company}`)}
-                            title="Remove Offer"
-                          >
-                            <FiTrash2 />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {!filteredList.length && (
-                    <tr>
-                      <td colSpan="9" style={{ textAlign: 'center', padding: '36px', color: 'var(--text-secondary)' }}>
-                        No job offers found matching query.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-            {filteredList.length > 0 && (
-              <TablePagination
-                page={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-              />
-            )}
-          </>
-        )}
-
-        {/* TAB 6: Placement Analytics & Insights */}
-        {activeTab === 'reports' && (
-          <div className="plw-analytics-grid">
-            <div className="plw-panel">
-              <div className="plw-panel-header">
-                <div>
-                  <h3>Branch-wise Placement Performance</h3>
-                  <small style={{ color: 'var(--text-secondary)' }}>Eligible student cohort vs verified job offers</small>
-                </div>
-                <span className="campus-badge" style={{ fontWeight: '700' }}>Overall: {data.stats.placementRate}% Placed</span>
-              </div>
-
-              <div style={{ display: 'grid', gap: '16px' }}>
-                {data.stats.branchStats.map(bs => (
-                  <div key={bs.branch} style={{ display: 'grid', gap: '6px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
-                      <span>
-                        <strong>{bs.branch} Engineering</strong> ({bs.placed}/{bs.eligible} students)
-                      </span>
-                      <span>
-                        Avg: <strong>{bs.avg}</strong> · Highest: <strong style={{ color: '#047857' }}>{bs.highest}</strong> · <strong>{bs.rate}%</strong>
-                      </span>
-                    </div>
-                    <div className="plw-branch-bar">
-                      <div className="plw-progress-track">
-                        <div className="plw-progress-fill" style={{ width: `${bs.rate}%` }} />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="plw-panel">
-              <div className="plw-panel-header">
-                <h3>CTC Package Tier Distribution</h3>
-              </div>
-
-              <div style={{ display: 'grid', gap: '12px' }}>
-                {data.stats.tierBreakdown.map(tb => (
-                  <div key={tb.tier} className="plw-tier-item">
-                    <div className="plw-tier-header">
-                      <span>{tb.tier}</span>
-                      <strong>{tb.offers} offers ({tb.percentage}%)</strong>
-                    </div>
-                    <div className="plw-tier-bar">
-                      <div className="plw-tier-progress" style={{ width: `${tb.percentage}%`, background: tb.color }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ marginTop: 'auto', padding: '12px', background: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe', fontSize: '12px', color: '#1e40af' }}>
-                <strong>Median Compensation:</strong> {data.stats.medianPackage} · <strong>Multiple Offers:</strong> 69 students hold &gt;1 offer.
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Modal Dialog for Create/Edit */}
         {modalMode && activeItem && (
@@ -7759,27 +7668,6 @@ const defaultOffers = [
   },
 ]
 
-const defaultPlacementStats = {
-  totalEligible: 420,
-  totalPlaced: 326,
-  placementRate: 77.6,
-  averagePackage: '₹ 7.8 LPA',
-  highestPackage: '₹ 44.0 LPA',
-  medianPackage: '₹ 6.5 LPA',
-  totalOffers: 395,
-  branchStats: [
-    { branch: 'CSE', eligible: 148, placed: 142, rate: 95.9, avg: '₹ 11.2 LPA', highest: '₹ 44.0 LPA' },
-    { branch: 'IT', eligible: 60, placed: 55, rate: 91.7, avg: '₹ 8.8 LPA', highest: '₹ 32.0 LPA' },
-    { branch: 'ECE', eligible: 92, placed: 78, rate: 84.8, avg: '₹ 7.4 LPA', highest: '₹ 24.5 LPA' },
-    { branch: 'MECH', eligible: 60, placed: 41, rate: 68.3, avg: '₹ 5.8 LPA', highest: '₹ 9.2 LPA' },
-    { branch: 'CIVIL', eligible: 60, placed: 36, rate: 60.0, avg: '₹ 5.2 LPA', highest: '₹ 7.5 LPA' },
-  ],
-  tierBreakdown: [
-    { tier: 'Super Dream (> ₹ 15 LPA)', offers: 48, percentage: 12.2, color: '#8b5cf6' },
-    { tier: 'Dream (₹ 8 - ₹ 15 LPA)', offers: 112, percentage: 28.4, color: '#3b82f6' },
-    { tier: 'Core / Standard (₹ 4 - ₹ 8 LPA)', offers: 235, percentage: 59.4, color: '#10b981' },
-  ],
-}
 
 return { default: PlacementWorkspace }
 })()
