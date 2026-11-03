@@ -2165,8 +2165,8 @@
 
 /* Public hero: campus photography is a blended watermark, never an app mockup. */
 .lp-page .lp-hero{
-  isolation:isolate;display:flex;width:100%;min-height:630px;margin:0;
-  padding:clamp(76px,9vw,116px) max(24px,calc((100vw - 1200px)/2));
+  isolation:isolate;display:flex;width:100%;min-height:0;height:auto;margin:0;
+  padding:32px max(24px,calc((100vw - 1200px)/2));
   align-items:center;overflow:hidden;color:#fff;background:#123F73;
 }
 .lp-page .lp-hero::before{
@@ -2182,17 +2182,17 @@
   background:linear-gradient(0deg,#123F73,transparent);pointer-events:none;
 }
 .lp-hero-content{width:min(54%,650px)}
-.lp-page .lp-hero .lp-eyebrow{color:#1769C2!important}
-.lp-page .lp-hero h1{color:#f8fafc;text-shadow:0 2px 24px rgba(0,0,0,.3)}
-.lp-page .lp-hero h1 span{color:#A9D3F7!important}
-.lp-page .lp-hero .lp-lead{margin-bottom:0;color:#e2e8f0;text-shadow:0 1px 14px rgba(0,0,0,.3)}
-.lp-page .lp-hero .lp-trust{margin-top:30px;color:#cbd5e1}
+.lp-page .lp-hero .lp-eyebrow{margin:0 0 8px;color:#1769C2!important;line-height:1.35;letter-spacing:.1em}
+.lp-page .lp-hero h1{color:#f8fafc;line-height:1.08;letter-spacing:-.035em;text-shadow:0 2px 24px rgba(0,0,0,.3)}
+.lp-page .lp-hero h1 span{color:#A9D3F7!important;line-height:1.12;letter-spacing:-.025em}
+.lp-page .lp-hero .lp-lead{margin:12px 0;color:#e2e8f0;line-height:1.5;text-shadow:0 1px 14px rgba(0,0,0,.3)}
+.lp-page .lp-hero .lp-trust{margin-top:12px;color:#cbd5e1;line-height:1.4}
 .lp-page .lp-hero .lp-trust svg{color:#A9D3F7}
 .lp-hero-actions .lp-button{background:#123F73!important;border:1px solid #1769C2!important;color:#ffffff!important;box-shadow:0 4px 14px rgba(16, 42, 76,.35)!important}
 .lp-hero-actions .lp-button:hover{background:#1769C2!important;color:#123F73!important;border-color:#1769C2!important}
 
 @media(max-width:900px){
-  .lp-page .lp-hero{min-height:570px;padding-block:72px}
+  .lp-page .lp-hero{min-height:0;padding-block:32px}
   .lp-page .lp-hero::before{background-image:
     linear-gradient(90deg,rgba(15,58,106,.99) 0%,rgba(18,63,115,.95) 48%,rgba(23,79,136,.84) 76%,rgba(43,120,197,.58) 100%),
     linear-gradient(0deg,rgba(15,58,106,.76),rgba(18,63,115,.26)),
@@ -2200,16 +2200,17 @@
   .lp-hero-content{width:min(64%,620px)}
 }
 @media(max-width:700px){
-  .lp-page .lp-hero{width:100%;min-height:540px;padding:68px 24px}
+  .lp-page .lp-hero{width:100%;min-height:0;padding:32px 24px}
   .lp-page .lp-hero::before{opacity:.78;background-image:
     linear-gradient(90deg,rgba(15,58,106,.98),rgba(18,63,115,.90)),
     linear-gradient(0deg,rgba(15,58,106,.82),rgba(18,63,115,.50)),
     url('../assets/college-campus-hero.png');background-position:62% center}
-  .lp-hero-content{width:100%;max-width:620px}
+  .lp-page .lp-hero-content{width:100%;max-width:620px;min-width:0}
   .lp-page .lp-hero .lp-trust{align-items:flex-start;flex-direction:row}
 }
 @media(max-width:430px){
-  .lp-page .lp-hero{min-height:500px;padding:58px 16px}
+  .lp-page .lp-hero{min-height:0;padding:28px 16px}
+  .lp-page .lp-hero h1{font-size:clamp(2.15rem,9vw,2.7rem)}
   .lp-page .lp-hero::before{opacity:.68;background-position:65% center}
   .lp-page .lp-hero .lp-trust{gap:8px 12px}
 }
@@ -2718,6 +2719,40 @@
 @media(min-width:1271px) { .lp-public .lp-nav .lp-mobile-navigation { display: none; } }
 @media(max-width:800px) { .lp-discovery-layout { grid-template-columns: 1fr; } .lp-public .lp-benefits>div,.lp-facility-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } .lp-public .lp-cta { flex-direction: column; align-items: flex-start; } }
 @media(max-width:560px) { .lp-public .lp-nav>div:first-child { width: calc(100% - 24px); gap: 8px; height: 76px; } .lp-public .lp-brand strong { max-width: 145px; font-size: .75rem; } .lp-public .lp-brand>i { display: none; } .lp-public .lp-actions { gap: 6px; } .lp-public .lp-button.small { padding: 0 10px; } .lp-public .lp-actions .public-theme-toggle { width: 34px; height: 34px; } .lp-public .lp-section { width: calc(100% - 32px); padding-block: 36px; } .lp-public .lp-benefits>div,.lp-facility-grid { grid-template-columns: 1fr; } .lp-public .lp-heading { grid-template-columns: 1fr; gap: 18px; } .lp-public .lp-hero-actions { flex-wrap: wrap; } .lp-public .lp-cta button { width: 100%; font-size: .8rem; padding: 12px; } .lp-public .lp-hero h1 { font-size: clamp(2.4rem,10vw,3.5rem); } }
+
+/* Consistent page gutters and section rhythm for the public homepage (hero excluded). */
+.lp-page.lp-public > .lp-section{
+  width:min(1500px,calc(100% - 100px));
+  padding-block:76px;
+}
+.lp-page.lp-public > .lp-cta{
+  width:min(1500px,calc(100% - 100px));
+  padding-block:64px;
+}
+.lp-page.lp-public .lp-heading{gap:32px}
+.lp-page.lp-public .lp-benefits>div,
+.lp-page.lp-public .lp-facility-grid{gap:24px;margin-top:40px}
+.lp-page.lp-public .lp-footer{padding:60px 0 28px}
+.lp-page.lp-public .lp-footer-top,
+.lp-page.lp-public .lp-footer-bottom{width:min(1500px,calc(100% - 100px));margin-inline:auto}
+
+@media(max-width:900px){
+  .lp-page.lp-public > .lp-section{width:calc(100% - 64px);padding-block:56px}
+  .lp-page.lp-public > .lp-cta{width:calc(100% - 64px);padding-block:52px}
+  .lp-page.lp-public .lp-footer{padding-block:44px 24px}
+  .lp-page.lp-public .lp-footer-top,
+  .lp-page.lp-public .lp-footer-bottom{width:calc(100% - 64px)}
+}
+@media(max-width:560px){
+  .lp-page.lp-public > .lp-section{width:calc(100% - 32px);padding-block:40px}
+  .lp-page.lp-public > .lp-cta{width:calc(100% - 32px);padding-block:40px}
+  .lp-page.lp-public .lp-heading{gap:24px}
+  .lp-page.lp-public .lp-benefits>div,
+  .lp-page.lp-public .lp-facility-grid{gap:20px;margin-top:32px}
+  .lp-page.lp-public .lp-footer{padding-block:32px 18px}
+  .lp-page.lp-public .lp-footer-top,
+  .lp-page.lp-public .lp-footer-bottom{width:calc(100% - 32px)}
+}
 @media(prefers-reduced-motion:reduce) { .lp-public *, .lp-public *::before { transition: none !important; animation: none !important; } }
 
 /* Public screens follow the shared navy and blue action palette. */
