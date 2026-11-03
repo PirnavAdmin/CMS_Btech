@@ -620,7 +620,8 @@
 .marks-management-marks-entry .marks-entry-page-header .erp-page-header__left { flex-basis: 340px; }
 .marks-management-marks-entry .marks-entry-page-header .erp-page-header__right { flex: 0 1 486px; }
 .marks-management-marks-entry .marks-entry-page-header .compact-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: 100%; border: 1px solid #d8e4f2; border-radius: 12px !important; background: var(--surface, #fff); box-shadow: 0 3px 12px rgb(24 63 106 / 5%) !important; }
-.marks-management-marks-entry .marks-entry-page-header .compact-summary__item { display: flex; min-width: 0 !important; min-height: 68px !important; align-items: center; padding: 8px 10px !important; border-color: #d8e4f2; }
+.marks-management-marks-entry .marks-entry-page-header .compact-summary__item { display: flex; min-width: 0 !important; min-height: 68px !important; align-items: center; padding: 8px 10px !important; border-right: 1px solid #d8e4f2; }
+.marks-management-marks-entry .marks-entry-page-header .compact-summary__item:last-child { border-right: 0; }
 .marks-management-marks-entry .marks-entry-page-header .compact-summary__item strong { color: #1769c2; font-size: 20px !important; line-height: 1.1 !important; }
 .marks-management-marks-entry .marks-entry-page-header .compact-summary__item--active strong { color: #00a978 !important; }
 .marks-management-marks-entry .marks-entry-page-header .compact-summary__item--inactive strong { color: #d8323d !important; }

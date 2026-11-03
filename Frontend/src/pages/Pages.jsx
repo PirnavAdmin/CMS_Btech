@@ -96,6 +96,7 @@ const FiChevronRight = fiImports_FiChevronRight
 const FiClock = fiImports_FiClock
 const FiExternalLink = fiImports_FiExternalLink
 const FiGrid = fiImports_FiGrid
+const FiHome = fiImports_FiHome
 const FiLayers = fiImports_FiLayers
 const FiPieChart = fiImports_FiPieChart
 const FiPlus = fiImports_FiPlus
