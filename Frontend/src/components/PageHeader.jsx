@@ -7,6 +7,8 @@ export default function PageHeader({
   title,
   subtitle,
   compactSummary,
+  primaryAction,
+  secondaryActions,
   children,
   className = '',
 }) {
@@ -48,7 +50,7 @@ export default function PageHeader({
         ) : (
           compactSummary
         )}
-        {children && <div className="erp-page-header__actions">{children}</div>}
+        {(primaryAction || secondaryActions || children) && <div className="erp-page-header__actions">{secondaryActions}{children}{primaryAction}</div>}
       </div>
     </header>
   )

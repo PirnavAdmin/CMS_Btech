@@ -192,3 +192,9 @@
   .user-directory__dialog dl { grid-template-columns: 1fr; }
   .user-access-mock__details { grid-template-columns: 1fr; }
 }
+.user-directory__recovery { margin: 12px 24px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-soft); }
+.user-directory__recovery .user-directory__button { margin: 4px 8px 4px 0; }
+.user-directory__invitation-actions { display: flex; flex-wrap: wrap; gap: 6px; min-width: 160px; }
+.user-directory__invitation-backdrop { z-index: 1300; }
+.user-directory__invitation-backdrop .user-directory__review { display: block; }
+.user-directory__invitation-backdrop .user-directory__review > div { display: grid; grid-template-columns: minmax(100px, 1fr) minmax(0, 2fr); gap: 12px; padding: 7px 0; overflow-wrap: anywhere; }

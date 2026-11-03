@@ -46,7 +46,7 @@ test('nested module URLs obey the same permissions and unknown routes are denied
   assert.equal(canViewScreen('/marks-management/edit-marks', 'faculty', { marks: { view: true } }), true)
   assert.equal(canViewScreen('/marks-management/edit-marks', 'faculty', {}), false)
   assert.equal(canViewScreen('/unknown', 'faculty', {}), false)
-  assert.equal(canViewScreen('/roles-designations', 'admin', {}), true)
+  assert.equal(canViewScreen('/roles-designations', 'admin', {}), false)
 })
 
 test('the current backend role DTO without permissions is identified as a configuration error', () => {

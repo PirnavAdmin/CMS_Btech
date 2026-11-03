@@ -1,13 +1,14 @@
+import ScreenPermissionBoundary from '../../auth/ScreenPermissionBoundary.jsx'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { getUserRole, isAuthenticated } from '../../auth/auth.js'
 import { isPortalPreview } from '../../auth/portalPreview.js'
 import { portalHome } from './portalNavigation.js'
 
-export default function PortalRoute({ roles }) {
+export default function PortalRoute({ roles, permissionCheckedByChild = false }) {
   const location = useLocation()
   if (!isAuthenticated()) return <Navigate to="/login" state={{ from: location }} replace />
   if (!roles.includes(getUserRole())) return <Navigate to="/unauthorized" replace />
-  return <Outlet />
+  return permissionCheckedByChild ? <Outlet /> : <ScreenPermissionBoundary><Outlet /></ScreenPermissionBoundary>
 }
 export function RoleDashboard({ children }) {
   const role = getUserRole()

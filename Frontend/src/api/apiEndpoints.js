@@ -1,3 +1,4 @@
+import { accountInvitationFailure, invitationDeliveryMessage } from '../utils/accountInvitationFailure.js'
 import { GENERIC_ERROR_MESSAGE, userErrorMessage } from '../utils/userError.js'
 import { collegeRequest } from '../utils/collegeRequest.js'
 import { selectedCollegeId, createCollegeScope, collegeField } from '../utils/collegeScope.js'
@@ -15,7 +16,7 @@ if (typeof window !== 'undefined' && window.localStorage) {
 }
 
 const normalizeBaseUrl = (value = '') => value.trim().replace(/\/+$/, '')
-const DEFAULT_API_BASE_URL = 'https://abreast-curling-tutor.ngrok-free.dev'
+const DEFAULT_API_BASE_URL = 'https://stagnant-craftily-paving.ngrok-free.dev'
 
 // Results endpoints are optional until the institution's result service is integrated.
 export const RESULTS_API_ENABLED = String(import.meta.env.VITE_RESULTS_API_ENABLED || '').toLowerCase() === 'true'
@@ -131,6 +132,14 @@ export const API_ENDPOINTS = Object.freeze({
     status: (id) => endpoint(`/api/v1/student-admissions/${id}/status`), submit: (id) => endpoint(`/api/v1/student-admissions/${id}/submit`),
     feeSummary: (id) => endpoint(`/api/v1/student-admissions/${id}/fee-summary`), feeStructure: (id) => endpoint(`/api/v1/student-admissions/${id}/fee-structure`),
     matchingFeePlans: endpoint('/api/v1/student-admissions/fee-plans'),
+  }),
+  academicFeePlans: Object.freeze({
+    list: endpoint('/api/v1/academic-fee-plans'),
+    create: endpoint('/api/v1/academic-fee-plans'),
+    submit: (id, collegeId) => withQuery(endpoint(`/api/v1/academic-fee-plans/${encodeURIComponent(id)}/submit`), { collegeId }),
+  }),
+  feeConfiguration: Object.freeze({
+    categories: endpoint('/api/v1/fee-categories'),
   }),
   studentAcademicInformation: Object.freeze({ detail: (id) => endpoint(`/api/v1/student-academic-information/${id}`), update: (id) => endpoint(`/api/v1/student-academic-information/${id}`) }),
   students: Object.freeze({
@@ -406,6 +415,15 @@ const request = async (url, options = {}, retried = false, bypassDedupe = false,
     if (!silentStatuses.includes(response.status)) {
       console.error('API request failed', { url, method: options.method || 'GET', status: response.status })
     }
+    const deliveryFailure = /\/api\/v1\/admin\/users\/(?:onboard-college|[0-9]+\/resend-invitation)(?:[?#]|$)/.test(url) ? accountInvitationFailure(body) : null
+    if (deliveryFailure) {
+      const error = new Error(invitationDeliveryMessage(deliveryFailure))
+      error.status = response.status
+      error.code = deliveryFailure.code
+      error.invitationFailure = deliveryFailure
+      error.correlationId = deliveryFailure.correlationId
+      throw error
+    }
     if (response.status >= 500) {
       if (!suppressApiFailureNotice) notifyApiUnavailable({ status: response.status, url, method, body, response })
       const genericMsg = typeof GENERIC_ERROR_MESSAGE !== 'undefined' ? GENERIC_ERROR_MESSAGE : 'Something went wrong. Please try again.'
@@ -428,6 +446,7 @@ const request = async (url, options = {}, retried = false, bypassDedupe = false,
     const backendMessage = validationMessage(body) || fallback
     const error = new Error(url.includes('/api/v1/timetable-management') ? backendMessage : (typeof userErrorMessage === 'function' ? userErrorMessage(backendMessage, response.status) : backendMessage))
     error.status = response.status
+    error.validationErrors = body?.errors && typeof body.errors === 'object' ? body.errors : undefined
     throw error
   }
   return body
@@ -503,6 +522,12 @@ export const userDirectoryApi = {
   create: body => request(endpoint('/api/v1/admin/users'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
   update: (id, body) => request(endpoint(`/api/v1/admin/users/${encodeURIComponent(id)}`), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
   setStatus: (id, status) => request(endpoint(`/api/v1/admin/users/${encodeURIComponent(id)}/status`), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) }),
+  invitations: async () => {
+    const response = await request(endpoint('/api/v1/admin/users/invitations'))
+    const rows = extractListResponse(response)
+    if (!rows) throw new Error('The invitation list returned an unexpected response.')
+    return rows
+  },
   resendInvitation: id => request(endpoint(`/api/v1/admin/users/${encodeURIComponent(id)}/resend-invitation`), { method: 'POST' }),
   resetPassword: id => request(endpoint(`/api/v1/admin/users/${encodeURIComponent(id)}/reset-password`), { method: 'POST' }),
   activity: async id => (await request(endpoint(`/api/v1/admin/users/${encodeURIComponent(id)}/activity`)))?.data ?? [],
@@ -514,7 +539,17 @@ export const authAccessApi = {
 }
 
 export async function completeAccountSetup({ loginId, token, newPassword, confirmNewPassword }) {
-  return request(API_ENDPOINTS.auth.completeAccountSetup, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ loginId, token, newPassword, confirmNewPassword }) })
+  // Public one-time-link operation: never attach an old account's session or
+  // refresh/sign out another session when an invitation is rejected.
+  let response
+  try {
+    response = await fetch(API_ENDPOINTS.auth.completeAccountSetup, { method: 'POST', headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' }, body: JSON.stringify({ loginId, token, newPassword, confirmNewPassword }) })
+  } catch { throw new AuthRequestError('Account setup could not be reached. Check your connection and try again.') }
+  const body = await readBody(response)
+  const unconfirmed = 'Account activation was not confirmed. Open the latest invitation email or ask your administrator to resend it.'
+  if (!response.ok || body?.success === false) throw new AuthRequestError(validationMessage(body) || unconfirmed, response.status)
+  if (body?.success !== true) throw new AuthRequestError(unconfirmed, response.status)
+  return body
 }
 
 async function requestScreenFile(screen, action, params) {
@@ -627,7 +662,7 @@ export const profileApi = {
   getProfile: async () => {
     const response = await request(API_ENDPOINTS.profile.get)
     if (!response?.data) throw new Error('We couldn’t load your profile right now. Please try again.')
-    return normalizeProfile(response.data)
+    return { ...normalizeProfile(response.data), profileCompleted: response.data.profileCompleted ?? response.data.isProfileCompleted }
   },
   updateProfile: async (profile) => {
     const response = await request(API_ENDPOINTS.profile.update, {
@@ -655,7 +690,8 @@ export const profileApi = {
         aboutMe: String(profile.bio || profile.aboutMe || '').trim() || null,
       }),
     })
-    return normalizeProfile(response?.data || {})
+    const data = response?.data || {}
+    return { ...normalizeProfile(data), profileCompleted: data.profileCompleted ?? data.isProfileCompleted }
   },
   uploadPhoto: async file => {
     const form = new FormData()
@@ -1419,6 +1455,16 @@ export const studentFeeApi = {
 }
 export const admissionFeePlanApi = {
   getMatching: async scope => listData(await request(withQuery(API_ENDPOINTS.studentAdmissions.matchingFeePlans, scope))),
+}
+
+export const academicFeePlanApi = {
+  list: async (collegeId, params = {}) => listData(await request(withQuery(API_ENDPOINTS.academicFeePlans.list, { collegeId, page: 1, pageSize: 100, ...params }))),
+  create: async body => dataResponse(await request(API_ENDPOINTS.academicFeePlans.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })),
+  submit: async (id, collegeId, expectedRevision) => dataResponse(await request(API_ENDPOINTS.academicFeePlans.submit(id, collegeId), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ expectedRevision }) })),
+}
+
+export const feeConfigurationApi = {
+  categories: async () => listData(await request(API_ENDPOINTS.feeConfiguration.categories)),
 }
 
 // Contracts: Backend/DTOs/Fees/FeeCollectionDtos.cs. Reuse authentication,

@@ -64,7 +64,7 @@ export default function AcademicContextSelect({ kind, compact = false }) {
       </ProjectSelect>
     </label>}
     {(error || context.error) && <div className={isCollege ? 'workspace-context-select__sidebar-error' : 'workspace-context-select__error'} role="alert">
-      {!isCollege && <span>{context.error ? 'Academic years unavailable' : `Unable to update ${label.toLowerCase()}`}</span>}
+      <span>{error || (isCollege ? 'College access unavailable. Please retry.' : 'Academic years unavailable')}</span>
     </div>}
     {!context.loading && !context.error && !items.length && <small>No {isCollege ? 'colleges' : 'academic years'} available.</small>}
     {applying && <small role="status">Updating...</small>}

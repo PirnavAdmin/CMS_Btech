@@ -1,0 +1,237 @@
+[
+  {
+    "file": "src/pages/admin-management/AdminManagement.jsx",
+    "referencedByInventory": true,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/admin-management/UserAccessManagement.jsx",
+    "referencedByInventory": true,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/admin-management/UserAccessMockWorkspace.jsx",
+    "referencedByInventory": false,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/attendance/Attendance.jsx",
+    "referencedByInventory": true,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/campus/CampusWorkspace.jsx",
+    "referencedByInventory": true,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/courseManagement/Course.jsx",
+    "referencedByInventory": true,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/credits-management/CreditsManagement.jsx",
+    "referencedByInventory": true,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/elective-management/ElectiveManagement.jsx",
+    "referencedByInventory": true,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/examinations/exam-timetable/ExamModule.jsx",
+    "referencedByInventory": true,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/examinations/examination-setup/ExaminationSetup.jsx",
+    "referencedByInventory": true,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/examinations/grade-result-management/GradeResultManagement.jsx",
+    "referencedByInventory": true,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/examinations/marks-management/MarksManagement.jsx",
+    "referencedByInventory": true,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/faculty/FacultyManagement.jsx",
+    "referencedByInventory": true,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/fees/FeeManagement.jsx",
+    "referencedByInventory": true,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/Pages.jsx",
+    "referencedByInventory": true,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/portals/AcademicPortal.jsx",
+    "referencedByInventory": true,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/portals/FacultyAttendance.jsx",
+    "referencedByInventory": false,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/portals/FacultyCampusPage.jsx",
+    "referencedByInventory": false,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/portals/FacultyProfile.jsx",
+    "referencedByInventory": false,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/portals/FacultyRestoredScreen.jsx",
+    "referencedByInventory": false,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/portals/FacultySelfAttendance.jsx",
+    "referencedByInventory": false,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/portals/PortalPreview.jsx",
+    "referencedByInventory": true,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/portals/StudentDashboard.jsx",
+    "referencedByInventory": false,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/portals/TeachingDashboard.jsx",
+    "referencedByInventory": false,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/portals/TeachingLeave.jsx",
+    "referencedByInventory": false,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/portals/TeachingMarks.jsx",
+    "referencedByInventory": false,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/portals/TeachingPortal.jsx",
+    "referencedByInventory": false,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/profile/MyProfile.jsx",
+    "referencedByInventory": true,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/section-management/SectionManagement.jsx",
+    "referencedByInventory": true,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/semester-management/SemesterManagement.jsx",
+    "referencedByInventory": true,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/settings/AcademicContextSettings.jsx",
+    "referencedByInventory": false,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/staff-portal/StaffAttendance.jsx",
+    "referencedByInventory": false,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/staff-portal/StaffDashboard.jsx",
+    "referencedByInventory": false,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/staff-portal/StaffDocuments.jsx",
+    "referencedByInventory": false,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/staff-portal/StaffDutyRoster.jsx",
+    "referencedByInventory": false,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/staff-portal/StaffLeave.jsx",
+    "referencedByInventory": false,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/staff-portal/StaffMeetings.jsx",
+    "referencedByInventory": false,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/staff-portal/StaffNotices.jsx",
+    "referencedByInventory": false,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/staff-portal/StaffPortal.jsx",
+    "referencedByInventory": true,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/staff-portal/StaffPortalLayout.jsx",
+    "referencedByInventory": true,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/staff-portal/StaffProfile.jsx",
+    "referencedByInventory": false,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/staff-portal/StaffTasks.jsx",
+    "referencedByInventory": false,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/student-management/StudentAdmission/StudentAdmission.jsx",
+    "referencedByInventory": true,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/student-management/StudentProfile/StudentProfile.jsx",
+    "referencedByInventory": true,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/student-management/StudentPromotion/StudentPromotion.jsx",
+    "referencedByInventory": true,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/subject-management/SubjectManagement.jsx",
+    "referencedByInventory": false,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/timetable/TimetableManagement.jsx",
+    "referencedByInventory": true,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  }
+]

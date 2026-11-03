@@ -1,4 +1,4 @@
-import { Link as react_router_domImports_Link, useNavigate as react_router_domImports_useNavigate, useSearchParams as react_router_domImports_useSearchParams } from 'react-router-dom'
+import { Link as react_router_domImports_Link, useNavigate as react_router_domImports_useNavigate, useSearchParams as react_router_domImports_useSearchParams, useLocation as react_router_domImports_useLocation } from 'react-router-dom'
 import { FiBookOpen as fiImports_FiBookOpen, FiLogIn as fiImports_FiLogIn, FiArrowLeft as fiImports_FiArrowLeft, FiActivity as fiImports_FiActivity, FiArrowRight as fiImports_FiArrowRight, FiAward as fiImports_FiAward, FiBarChart2 as fiImports_FiBarChart2, FiBriefcase as fiImports_FiBriefcase, FiCalendar as fiImports_FiCalendar, FiCheckCircle as fiImports_FiCheckCircle, FiChevronRight as fiImports_FiChevronRight, FiClock as fiImports_FiClock, FiExternalLink as fiImports_FiExternalLink, FiGrid as fiImports_FiGrid, FiLayers as fiImports_FiLayers, FiPieChart as fiImports_FiPieChart, FiPlus as fiImports_FiPlus, FiRefreshCw as fiImports_FiRefreshCw, FiSearch as fiImports_FiSearch, FiSliders as fiImports_FiSliders, FiStar as fiImports_FiStar, FiTrendingUp as fiImports_FiTrendingUp, FiUser as fiImports_FiUser, FiUserCheck as fiImports_FiUserCheck, FiUserPlus as fiImports_FiUserPlus, FiUsers as fiImports_FiUsers, FiZap as fiImports_FiZap, FiEye as fiImports_FiEye, FiEyeOff as fiImports_FiEyeOff, FiCheck as fiImports_FiCheck, FiHome as fiImports_FiHome, FiMenu as fiImports_FiMenu, FiTool as fiImports_FiTool, FiX as fiImports_FiX, FiBell as fiImports_FiBell, FiFileText as fiImports_FiFileText } from 'react-icons/fi'
 import college_campus_hero_pngImports_default from '../assets/college-campus-hero.png'
 import useCollegeStateImports_default from '../hooks/useCollegeState'
@@ -28,51 +28,85 @@ const Link = react_router_domImports_Link
 const useNavigate = react_router_domImports_useNavigate
 const useSearchParams = react_router_domImports_useSearchParams
 const FiBookOpen = fiImports_FiBookOpen
-const FiLogIn = fiImports_FiLogIn
 const FiArrowLeft = fiImports_FiArrowLeft
+const FiCheckCircle = fiImports_FiCheckCircle
+const FiArrowRight = fiImports_FiArrowRight
+const FiEye = fiImports_FiEye
+const FiEyeOff = fiImports_FiEyeOff
 const campusHero = college_campus_hero_pngImports_default
 
 function ActivateAccount() {
-  const [params] = useSearchParams()
+  const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
-  const [loginId, setLoginId] = reactImports_useState(params.get('loginId') || '')
-  const [token, setToken] = reactImports_useState(params.get('token') || '')
+  const [invitation, setInvitation] = reactImports_useState(() => ({ loginId: (params.get('loginId') || '').trim(), token: (params.get('token') || '').trim() }))
   const [password, setPassword] = reactImports_useState('')
   const [confirmPassword, setConfirmPassword] = reactImports_useState('')
+  const [visible, setVisible] = reactImports_useState(false)
+  const [confirmVisible, setConfirmVisible] = reactImports_useState(false)
+  const [errors, setErrors] = reactImports_useState({})
   const [error, setError] = reactImports_useState('')
   const [busy, setBusy] = reactImports_useState(false)
   const [complete, setComplete] = reactImports_useState(false)
+  const lock = reactImports_useRef(false)
+  const validLink = Boolean(invitation.loginId && invitation.token)
   const submit = async event => {
     event.preventDefault()
-    if (password !== confirmPassword) { setError('Passwords do not match.'); return }
-    setBusy(true); setError('')
-    try { await apiEndpointsImports_completeAccountSetup({ loginId: loginId.trim(), token: token.trim(), newPassword: password, confirmNewPassword: confirmPassword }); setComplete(true) }
-    catch (reason) { setError(reason?.message || 'The setup link could not be verified. Request a new invitation from your administrator.') }
-    finally { setBusy(false) }
+    if (lock.current || !validLink) return
+    const next = {}
+    if (!password.trim() || password.length < 12) next.password = 'Use at least 12 characters for your password.'
+    else if (new TextEncoder().encode(password).length > 72) next.password = 'Password must not exceed 72 UTF-8 bytes. Use fewer characters.'
+    if (!confirmPassword) next.confirmPassword = 'Confirm your new password.'
+    else if (password !== confirmPassword) next.confirmPassword = 'Passwords do not match.'
+    setErrors(next); setError('')
+    if (Object.keys(next).length) return
+    lock.current = true; setBusy(true)
+    try {
+      await apiEndpointsImports_completeAccountSetup({ loginId: invitation.loginId, token: invitation.token, newPassword: password, confirmNewPassword: confirmPassword })
+      setComplete(true); setPassword(''); setConfirmPassword('')
+      setInvitation(current => ({ ...current, token: '' }))
+      setParams({}, { replace: true })
+    } catch (reason) {
+      setError(reason?.message || 'The setup link could not be verified. Ask your administrator to resend your invitation.')
+    } finally { lock.current = false; setBusy(false) }
   }
-  return <main className="admin-login pirnav-login">
+  const continueToLogin = () => navigate('/login', { replace: true, state: { identifier: invitation.loginId } })
+  return <main className="admin-login pirnav-login account-setup">
     <section className="login-intro pirnav-login__campus" aria-label="Pirnav Engineering College digital campus">
       <img className="pirnav-login__campus-image" src={campusHero} alt="Pirnav Engineering College campus" />
       <div className="pirnav-login__campus-shade" />
-      <div className="login-intro__content"><header className="brand"><span className="brand__mark"><FiBookOpen /></span><span className="brand__name"><strong>Pirnav Engineering College</strong><small>Digital Campus Management Portal</small></span></header></div>
-    </section>
-    <section className="login-panel">
-      <div className="login-form">
-        <div className="pirnav-form-brand"><span><FiBookOpen /></span><div><strong>Pirnav Engineering College</strong><small>Digital Campus Management Portal</small></div></div>
-        {complete ? <><header><h2>Account activated</h2><p>Your password is set and your account is ready.</p></header><button className="sign-in-button" type="button" onClick={() => navigate('/login', { state: { identifier: loginId } })}><FiLogIn /> Continue to Sign In</button></> : <><header><h2>Complete account setup</h2><p>Verify your invitation and choose a secure password.</p></header><form onSubmit={submit}>
-          {!params.get('loginId') && <label>Login ID<input autoComplete="username" value={loginId} onChange={event => setLoginId(event.target.value)} required /></label>}
-          {!params.get('token') && <label>Invitation token<input value={token} onChange={event => setToken(event.target.value)} required /></label>}
-          <label>New password<input type="password" autoComplete="new-password" minLength={12} value={password} onChange={event => setPassword(event.target.value)} required /></label>
-          <label>Confirm password<input type="password" autoComplete="new-password" minLength={12} value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} required /></label>
-          {error && <p className="access-note" role="alert">{error}</p>}
-          <button className="sign-in-button" type="submit" disabled={busy}>{busy ? 'Activating…' : 'Set Password & Activate'}</button>
-        </form></>}
-        <Link className="text-button back-to-login" to="/login"><FiArrowLeft /> Back to Sign In</Link>
+      <div className="login-intro__pattern" aria-hidden="true" />
+      <div className="login-intro__content">
+        <header className="brand"><span className="brand__mark"><FiBookOpen /></span><span className="brand__name"><strong>Pirnav Engineering College</strong><small>Digital Campus Management Portal</small></span></header>
+        <div className="intro-copy"><p className="eyebrow">Secure campus access</p><h1>Welcome to your digital campus</h1><p>Complete your account setup to access your college workspace.</p></div>
+        <p className="copyright">Pirnav Engineering College <span>|</span> College Management System</p>
       </div>
+    </section>
+    <section className="login-panel" aria-labelledby="account-setup-title">
+      <div className="login-public-actions"><ThemeToggleImports_default /><Link className="login-home-link" to="/"><FiArrowLeft aria-hidden="true" /> Home</Link></div>
+      {complete ? <div className="login-form account-setup__success" role="status">
+        <FiCheckCircle aria-hidden="true" />
+        <header><h2 id="account-setup-title">Account activated</h2><p>Your password has been set. Sign in with your registered email or login ID and new password. No OTP is needed.</p></header>
+        <p className="account-setup__identity">Login ID: <strong>{invitation.loginId}</strong></p>
+        <button className="sign-in-button" type="button" onClick={continueToLogin}>Continue to Sign In <FiArrowRight aria-hidden="true" /></button>
+      </div> : !validLink ? <div className="login-form">
+        <header><h2 id="account-setup-title">Open your invitation link</h2><p>This link is incomplete. Open the full account setup link in your invitation email, or ask your administrator to resend it.</p></header>
+        <Link className="account-setup__back" to="/login"><FiArrowLeft aria-hidden="true" /> Back to Sign In</Link>
+      </div> : <form className="login-form account-setup__form" onSubmit={submit} noValidate aria-busy={busy}>
+        <header><p className="pirnav-greeting">Account invitation</p><h2 id="account-setup-title">Complete account setup</h2><p>Choose your password to activate your invited account.</p></header>
+        <p className="account-setup__notice">Your email link is a one-time verification. The server checks it when you activate your account.</p>
+        <label htmlFor="setup-login-id"><span>Login ID</span><input id="setup-login-id" type="text" autoComplete="username" value={invitation.loginId} readOnly /></label>
+        <label htmlFor="setup-password"><span>New password</span><span className="password-input"><input id="setup-password" type={visible ? 'text' : 'password'} autoComplete="new-password" placeholder="Create a secure password" value={password} onChange={event => { setPassword(event.target.value); setErrors(current => ({ ...current, password: '' })) }} required aria-invalid={Boolean(errors.password)} aria-describedby={errors.password ? 'setup-password-help setup-password-error' : 'setup-password-help'} /><button className="password-toggle" type="button" aria-label={visible ? 'Hide new password' : 'Show new password'} onClick={() => setVisible(value => !value)}>{visible ? <FiEyeOff aria-hidden="true" /> : <FiEye aria-hidden="true" />}</button></span></label>
+        <p className="account-setup__help" id="setup-password-help">At least 12 characters; maximum 72 UTF-8 bytes.</p>
+        {errors.password && <p className="field-error" id="setup-password-error" role="alert">{errors.password}</p>}
+        <label htmlFor="setup-confirm"><span>Confirm password</span><span className="password-input"><input id="setup-confirm" type={confirmVisible ? 'text' : 'password'} autoComplete="new-password" placeholder="Re-enter your password" value={confirmPassword} onChange={event => { setConfirmPassword(event.target.value); setErrors(current => ({ ...current, confirmPassword: '' })) }} required aria-invalid={Boolean(errors.confirmPassword)} aria-describedby={errors.confirmPassword ? 'setup-confirm-error' : undefined} /><button className="password-toggle" type="button" aria-label={confirmVisible ? 'Hide confirm password' : 'Show confirm password'} onClick={() => setConfirmVisible(value => !value)}>{confirmVisible ? <FiEyeOff aria-hidden="true" /> : <FiEye aria-hidden="true" />}</button></span></label>
+        {errors.confirmPassword && <p className="field-error" id="setup-confirm-error" role="alert">{errors.confirmPassword}</p>}
+        {error && <div className="form-error" role="alert"><p>{error}</p><p>If this invitation has expired or was already used, ask your administrator to resend it or sign in with your existing password.</p></div>}
+        <button className="sign-in-button" type="submit" disabled={busy}>{busy ? 'Activating account...' : 'Set Password & Activate'} <FiArrowRight aria-hidden="true" /></button>
+        <Link className="account-setup__back" to="/login"><FiArrowLeft aria-hidden="true" /> Back to Sign In</Link>
+      </form>}
     </section>
   </main>
 }
-
 return { default: ActivateAccount }
 })()
 
@@ -1718,9 +1752,10 @@ const validateContact = (input) => {
 
 function Login() {
   const navigate = useNavigate()
+  const location = react_router_domImports_useLocation()
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(() => localStorage.getItem('btech-remember-me') === 'true')
-  const [values, setValues] = useState(() => ({ identifier: localStorage.getItem('btech-remember-me') === 'true' ? localStorage.getItem('btech-remembered-identifier') || '' : '', password: '' }))
+  const [values, setValues] = useState(() => ({ identifier: location.state?.identifier || (localStorage.getItem('btech-remember-me') === 'true' ? localStorage.getItem('btech-remembered-identifier') || '' : ''), password: '' }))
   const [errors, setErrors] = useState({ identifier: '', password: '' })
   const [touched, setTouched] = useState({})
   const [loginSubmitted, setLoginSubmitted] = useState(false)

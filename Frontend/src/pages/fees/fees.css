@@ -4267,6 +4267,29 @@
 #root .fm-page .fm-detail-banner { background: linear-gradient(115deg,#172554,#37306b); }
 #root .fm-page .fm-detail-section { border: 1px solid var(--fm-border); box-shadow: var(--fm-shadow); border-radius: 12px; }
 #root .fm-page .fm-detail-page .cm-profile-grid { gap: 14px; }
+#root .fm-page .fm-quota-configurations,
+#root .fm-page .fm-config-fee-overrides { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; padding: 14px; border: 1px solid var(--fm-border); border-radius: 10px; background: var(--fm-surface); }
+#root .fm-page .fm-quota-config-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+#root .fm-page .fm-quota-config-heading h3 { margin: 0; color: var(--fm-text); font-size: 13px; }
+#root .fm-page .fm-quota-config-heading p { margin: 4px 0 0; color: var(--fm-muted); font-size: 11px; line-height: 1.45; }
+#root .fm-page .fm-quota-config-row { display: grid; grid-template-columns: 28px minmax(130px,1fr) minmax(130px,1fr) auto; align-items: end; gap: 10px; padding: 10px; border: 1px solid var(--fm-border); border-radius: 9px; background: var(--fm-soft); }
+#root .fm-page .fm-config-index { align-self: center; display: grid; place-items: center; width: 25px; height: 25px; border-radius: 7px; background: var(--fm-primary-light); color: var(--fm-primary); font-size: 10px; font-weight: 750; }
+#root .fm-page .fm-config-actions { display: flex; align-items: center; gap: 6px; }
+#root .fm-page .fm-config-actions .erp-btn { min-height: 35px; padding: 6px 9px; font-size: 11px; }
+#root .fm-page .fm-contract-note { display: flex; align-items: flex-start; gap: 8px; padding: 10px; border-radius: 8px; background: var(--fm-soft); color: var(--fm-muted); font-size: 11px; line-height: 1.5; }
+#root .fm-page .fm-contract-note svg { flex: 0 0 auto; margin-top: 1px; color: var(--fm-primary); }
+#root .fm-page .fm-config-override-row { display: grid; grid-template-columns: minmax(120px,1fr) minmax(150px,240px) auto; align-items: end; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--fm-border); color: var(--fm-text); font-size: 12px; }
+#root .fm-page .fm-config-override-row > strong { align-self: center; white-space: nowrap; }
+#root .fm-page .fm-config-schedule-select { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 10px; margin: 10px 0; }
+#root .fm-page .fm-config-schedule-select small { flex-basis: 100%; color: var(--fm-muted); font-size: 11px; }
+#root .fm-page .fm-preview-config-control { padding: 10px 16px 0; }
+#root .fm-page .fm-save-results { display: flex; flex-direction: column; gap: 7px; padding: 12px; border: 1px solid var(--fm-border); border-radius: 9px; background: var(--fm-soft); color: var(--fm-text); font-size: 11px; }
+#root .fm-page .fm-save-results h3 { margin: 0 0 2px; font-size: 12px; }
+#root .fm-page .fm-save-results > div { display: flex; justify-content: space-between; gap: 12px; padding-top: 6px; border-top: 1px solid var(--fm-border); }
+#root .fm-page .fm-save-results strong { text-align: right; }
+#root .fm-page .fm-save-results.is-success { border-color: #86efac; }
+#root .fm-page .fm-save-results.has-failures { border-color: #fca5a5; }
+#root .fm-page .fm-save-results p { margin: 4px 0 0; color: var(--fm-muted); }
 :root[data-theme="dark"] #root .fm-page { --fm-primary-light: #292340; --fm-soft: #20283b; --fm-surface: #182235; --fm-border: #35405a; }
 :root[data-theme="dark"] #root .fm-page :is(.fm-summary-card,.fm-chart-empty,.fm-empty-state,.fm-plan-empty-state) { background: var(--fm-surface); }
 :root[data-theme="dark"] #root .fm-page :is(.fm-dialog__header,.fm-live-preview__header,.fm-table thead th,.fm-tab-btn.active) { background: #292340 !important; color: #ede9fe !important; }
@@ -4274,6 +4297,17 @@
 @media (max-width: 1200px) {
   #root .fm-page .fm-create-layout { grid-template-columns: minmax(0,1fr) 260px; }
   #root .fm-page .fm-summary-card { padding: 14px; }
+}
+@media (max-width: 760px) {
+  #root .fm-page .fm-quota-config-heading { align-items: flex-start; flex-direction: column; }
+  #root .fm-page .fm-quota-config-row { grid-template-columns: 26px minmax(0,1fr); }
+  #root .fm-page .fm-quota-config-row .fs-field { grid-column: 2; }
+  #root .fm-page .fm-config-actions { grid-column: 2; flex-wrap: wrap; }
+  #root .fm-page .fm-config-override-row { grid-template-columns: minmax(0,1fr) auto; }
+  #root .fm-page .fm-config-override-row .fs-field { grid-column: 1 / -1; grid-row: 2; }
+  #root .fm-page .fm-config-schedule-select { align-items: stretch; flex-direction: column; }
+  #root .fm-page .fm-save-results > div { flex-direction: column; gap: 3px; }
+  #root .fm-page .fm-save-results strong { text-align: left; }
 }
 @media (max-width: 1000px) {
   #root .fm-page .fm-overview-grid { grid-template-columns: minmax(0,1fr); }
@@ -4426,3 +4460,26 @@
   #root .fm-page .fm-reports-workspace .course-toolbar > :is(select,input) { flex: 1 1 100%; max-width: none; }
   #root .fm-page .fm-report-context { align-items: flex-start; flex-direction: column; }
 }
+/* Academic fee creation: scoped layout, shared theme tokens, portal dropdowns. */
+#root .fm-page .fm-academic-plan-editor .fm-applicability-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 14px; }
+#root .fm-page .fm-academic-plan-editor .fs-field { min-width: 0; }
+#root .fm-page .fm-academic-plan-editor .fm-quota-config-row { grid-template-columns: 24px minmax(0,1fr) minmax(0,1fr); }
+#root .fm-page .fm-academic-plan-editor .fm-config-actions { grid-column: 2 / -1; justify-content: flex-end; flex-wrap: wrap; }
+#root .fm-page .fm-academic-plan-editor .fm-config-validation { grid-column: 1 / -1; margin: 0; color: var(--danger, #dc2626); font-size: 12px; }
+#root .fm-page .fm-academic-plan-editor .fm-scope-status { color: var(--fm-muted); font-size: 12px; }
+#root .fm-page .fm-academic-plan-editor .fm-scope-status:empty { display: none; }
+#root .fm-page .fm-academic-plan-editor .fm-plan-form-tabs { flex-wrap: wrap; }
+#root .fm-page .fm-academic-plan-editor .fm-tab-btn { white-space: normal; text-align: left; }
+@media (max-width: 1200px) {
+  #root .fm-page .fm-academic-plan-editor .fm-applicability-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+@media (max-width: 650px) {
+  #root .fm-page .fm-academic-plan-editor .fm-applicability-grid { grid-template-columns: minmax(0,1fr); }
+  #root .fm-page .fm-academic-plan-editor .fm-quota-config-row { grid-template-columns: minmax(0,1fr); }
+  #root .fm-page .fm-academic-plan-editor .fm-quota-config-row > * { grid-column: 1; }
+}
+#root .fm-page .fm-academic-plan-editor .fm-quota-choice { display: grid; gap: 8px; min-width: 0; }
+#root .fm-page .fm-academic-plan-editor .fm-quota-config-row { align-items: start; }
+#root .fm-page .fm-academic-plan-editor .fm-quota-choice > .fs-field { grid-column: 1; }
+#root .fm-page .fm-academic-plan-editor .fm-quota-card-breakdown { grid-column: 1 / -1; min-width: 0; padding-top: 12px; border-top: 1px solid var(--fm-border); }
+#root .fm-page .fm-academic-plan-editor .fm-quota-card-breakdown h4 { margin: 0 0 10px; color: var(--fm-text); font-size: 13px; }

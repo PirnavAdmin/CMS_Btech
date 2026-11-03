@@ -1,3 +1,4 @@
+import ScreenPermissionBoundary from '../auth/ScreenPermissionBoundary.jsx'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { getUserRole, isAuthenticated } from '../auth/auth'
 
@@ -23,5 +24,5 @@ export default function ProtectedRoute({ allowedRoles = [] }) {
     return <Navigate to="/unauthorized" replace />
   }
 
-  return <Outlet />
+  return <ScreenPermissionBoundary><Outlet /></ScreenPermissionBoundary>
 }

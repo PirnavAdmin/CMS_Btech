@@ -3,6 +3,7 @@ import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { FiHome, FiCalendar, FiCheckCircle, FiArrowRight, FiPlusCircle } from 'react-icons/fi'
 import { useAcademic } from '../context/AcademicContext'
+import { useScreenAccess } from '../auth/ScreenAccess.jsx'
 import './ContextGuard.css'
 
 const SETUP_ROUTES = [
@@ -14,6 +15,7 @@ const SETUP_ROUTES = [
 
 export default function ContextGuard({ children }) {
   const location = useLocation()
+  const { canView, canAction } = useScreenAccess()
   const {
     loading,
     colleges,
@@ -112,9 +114,9 @@ export default function ContextGuard({ children }) {
             ) : (
               <div className="context-guard-empty-box">
                 <span>No colleges found.</span>
-                <Link to="/college-institution-management/add" className="context-guard-link-btn">
+                {canAction('/college-institution-management/add', 'create') && <Link to="/college-institution-management/add" className="context-guard-link-btn">
                   <FiPlusCircle /> Add College
-                </Link>
+                </Link>}
               </div>
             )}
           </label>
@@ -141,9 +143,9 @@ export default function ContextGuard({ children }) {
             ) : (
               <div className="context-guard-empty-box">
                 <span>No academic years found.</span>
-                <Link to="/academic-year-management" className="context-guard-link-btn">
+                {canView('/academic-year-management') && <Link to="/academic-year-management" className="context-guard-link-btn">
                   <FiPlusCircle /> Manage Academic Years
-                </Link>
+                </Link>}
               </div>
             )}
           </label>

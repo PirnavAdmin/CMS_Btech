@@ -1,3 +1,4 @@
+import { ADMISSION_QUOTAS } from '../../../utils/admissionQuotaOptions'
 import { ProjectSelect } from '../../../components/SearchableSelect'
 import { Link } from 'react-router-dom'
 
@@ -90,7 +91,7 @@ const DETAIL_TABS_APPROVAL = [
 ]
 const DOCUMENTS = DOCUMENTS_CONFIG
 const ADMISSION_TYPES = ['Regular / Counselling','Management','Spot Admission','Lateral Entry','Transfer','Direct Admission','Re-Admission','International Admission']
-const ADMISSION_QUOTAS = ['Government / Convener','Management','NRI','NRI Sponsored','Institutional','Other']
+
 const HOSTEL_FEES = HOSTEL_FEES_DEFAULT
 const TRANSPORT_FEES = { 'Route 1': 18000, 'Route 2': 22000, 'Route 3': 26000, 'Route 4': 30000 }
 const normalizeHostelRoomType = value => {

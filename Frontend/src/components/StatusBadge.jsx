@@ -25,7 +25,7 @@ export default function StatusBadge({
   className = '',
 }) {
   const displayVal = children ?? value ?? status ?? ''
-  if (!displayVal && displayVal !== 0) return null
+  if (displayVal === '' || displayVal === null || displayVal === undefined) return null
 
   const key = tone ? String(tone).toLowerCase() : normalizeStatusKey(displayVal)
   const label = typeof displayVal === 'boolean'

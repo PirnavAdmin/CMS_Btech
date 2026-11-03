@@ -11,6 +11,7 @@ import { ExamTimetable, CreateExamTimetable, ExamScheduleList, DepartmentExamSch
 import { MarksManagement, MarksEntry, BulkMarksUpload, EditMarks, StudentMarks, SubjectMarksReport, MarksApproval } from './pages/examinations/marks-management/MarksManagement'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
+import ScreenPermissionBoundary from './auth/ScreenPermissionBoundary.jsx'
 import PortalRoute, { RoleDashboard, RoleAlias } from './components/portals/PortalRoute.jsx'
 import { facultyRouteByPath } from './features/faculty/routeConfig.js'
 const AcademicPortal = lazy(() => import('./pages/portals/AcademicPortal.jsx'))
@@ -183,7 +184,7 @@ export default function App() {
           <Route path="/register" element={<Register />} />
 
           <Route path="/portal-preview" element={<PortalPreview />} />
-          <Route path="/dashboard" element={<RoleDashboard><AcademicProvider><Dashboard /></AcademicProvider></RoleDashboard>} />
+          <Route path="/dashboard" element={<RoleDashboard><AcademicProvider><ScreenPermissionBoundary><Dashboard /></ScreenPermissionBoundary></AcademicProvider></RoleDashboard>} />
           <Route path="/faculty-portal/session-expired" element={<FacultyRouteErrorBoundary><FacultySessionExpiredPage /></FacultyRouteErrorBoundary>} />
           <Route element={<PortalRoute roles={[ROLES.FACULTY]} />}>
             <Route path="/faculty-portal" element={<Navigate to="/faculty-portal/dashboard" replace />} />
@@ -200,7 +201,7 @@ export default function App() {
             <Route path="/user-access" element={<UserAccessManagement />} />
           </Route>
           {/* Existing administrator screens retain their URLs and components. */}
-          <Route element={<PortalRoute roles={[ROLES.ADMIN]} />}>
+          <Route element={<PortalRoute roles={[ROLES.ADMIN]} permissionCheckedByChild />}>
           <Route
             element={
               <AcademicProvider>

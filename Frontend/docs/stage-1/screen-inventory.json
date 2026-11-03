@@ -1,0 +1,4023 @@
+{
+  "method": "JSX Route source scan plus existing portal configs and audited pathname dispatchers; not a runtime reachability assertion. Rows retain redirect aliases and duplicate declarations.",
+  "duplicates": [
+    {
+      "route": "/roles-designations",
+      "sources": [
+        "src/App.jsx:312",
+        "src/App.jsx:330"
+      ]
+    }
+  ],
+  "screens": [
+    {
+      "moduleId": "landing",
+      "moduleName": "Landing Page",
+      "route": "/",
+      "component": "LandingPage",
+      "componentFile": "src/pages/Pages.jsx",
+      "source": "src/App.jsx:180",
+      "permission": null,
+      "roles": [],
+      "guard": "No role guard declared here",
+      "scope": "public",
+      "dependencies": [],
+      "icon": "house",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "authentication",
+      "moduleName": "Authentication",
+      "route": "/login",
+      "component": "Login",
+      "componentFile": "src/pages/Pages.jsx",
+      "source": "src/App.jsx:181",
+      "permission": null,
+      "roles": [],
+      "guard": "No role guard declared here",
+      "scope": "public",
+      "dependencies": [],
+      "icon": "log-in",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "authentication",
+      "moduleName": "Authentication",
+      "route": "/activate-account",
+      "component": "ActivateAccount",
+      "componentFile": "src/pages/Pages.jsx",
+      "source": "src/App.jsx:182",
+      "permission": null,
+      "roles": [],
+      "guard": "No role guard declared here",
+      "scope": "public",
+      "dependencies": [],
+      "icon": "log-in",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "authentication",
+      "moduleName": "Authentication",
+      "route": "/register",
+      "component": "Register",
+      "componentFile": "src/pages/Pages.jsx",
+      "source": "src/App.jsx:183",
+      "permission": null,
+      "roles": [],
+      "guard": "No role guard declared here",
+      "scope": "public",
+      "dependencies": [],
+      "icon": "log-in",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "portal_preview",
+      "moduleName": "Portal Preview",
+      "route": "/portal-preview",
+      "component": "PortalPreview",
+      "componentFile": "src/pages/portals/PortalPreview.jsx",
+      "source": "src/App.jsx:185",
+      "permission": null,
+      "roles": [],
+      "guard": "No role guard declared here",
+      "scope": "public",
+      "dependencies": [],
+      "icon": "scan-eye",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "dashboard",
+      "moduleName": "Dashboard",
+      "route": "/dashboard",
+      "component": "Dashboard",
+      "componentFile": "src/pages/Pages.jsx",
+      "source": "src/App.jsx:186",
+      "permission": "dashboard",
+      "roles": [
+        "admin",
+        "faculty",
+        "student",
+        "staff"
+      ],
+      "guard": "RoleDashboard",
+      "scope": "platform-and-college",
+      "dependencies": [],
+      "icon": "layout-dashboard",
+      "uiPattern": "Dashboard",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "faculty_portal",
+      "moduleName": "Faculty Portal",
+      "route": "/faculty-portal/session-expired",
+      "component": "FacultySessionExpiredPage",
+      "componentFile": "src/features/faculty/FacultySessionExpiredPage.jsx",
+      "source": "src/App.jsx:187",
+      "permission": null,
+      "roles": [],
+      "guard": "No role guard declared here",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "presentation",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "faculty_portal",
+      "moduleName": "Faculty Portal",
+      "route": "/faculty-portal",
+      "component": "Navigate",
+      "componentFile": "react-router-dom",
+      "source": "src/App.jsx:189",
+      "permission": null,
+      "roles": [
+        "faculty"
+      ],
+      "guard": "PortalRoute",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "presentation",
+      "uiPattern": "Redirect",
+      "redirect": "/faculty-portal/dashboard",
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "faculty_portal",
+      "moduleName": "Faculty Portal",
+      "route": "/faculty-portal/dashboard",
+      "component": "FacultyDashboardPage",
+      "componentFile": "src/features/faculty/dashboard/pages/FacultyDashboardPage.jsx",
+      "source": "src/App.jsx:190",
+      "permission": null,
+      "roles": [
+        "faculty"
+      ],
+      "guard": "PortalRoute",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "presentation",
+      "uiPattern": "Dashboard",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "faculty_portal",
+      "moduleName": "Faculty Portal",
+      "route": "/faculty-portal/:screen?",
+      "component": "FacultyWorkspacePage",
+      "componentFile": "src/features/faculty/FacultyWorkspacePage.jsx",
+      "source": "src/App.jsx:191",
+      "permission": null,
+      "roles": [
+        "faculty"
+      ],
+      "guard": "PortalRoute",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "presentation",
+      "uiPattern": "View / route-dependent",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "student_portal",
+      "moduleName": "Student Portal",
+      "route": "/student-portal/:screen?",
+      "component": "AcademicPortal",
+      "componentFile": "src/pages/portals/AcademicPortal.jsx",
+      "source": "src/App.jsx:194",
+      "permission": null,
+      "roles": [
+        "student"
+      ],
+      "guard": "PortalRoute",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "graduation-cap",
+      "uiPattern": "View / route-dependent",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "staff_portal",
+      "moduleName": "Staff Portal",
+      "route": "/staff-portal/:screen?",
+      "component": "StaffPortal",
+      "componentFile": "src/pages/staff-portal/StaffPortal.jsx",
+      "source": "src/App.jsx:197",
+      "permission": null,
+      "roles": [
+        "staff"
+      ],
+      "guard": "PortalRoute",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "id-card",
+      "uiPattern": "View / route-dependent",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "user_access",
+      "moduleName": "User Access Management",
+      "route": "/user-access",
+      "component": "UserAccessManagement",
+      "componentFile": "src/pages/admin-management/UserAccessManagement.jsx",
+      "source": "src/App.jsx:200",
+      "permission": "roles_permissions",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute",
+      "scope": "platform-and-college",
+      "dependencies": [],
+      "icon": "shield-check",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "library",
+      "moduleName": "Library",
+      "route": "/library",
+      "component": "LibraryWorkspace",
+      "componentFile": "src/pages/campus/CampusWorkspace.jsx",
+      "source": "src/App.jsx:215",
+      "permission": "library",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "library-big",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "meetings_events",
+      "moduleName": "Meetings / Events",
+      "route": "/meetings-events",
+      "component": "MeetingsEventsWorkspace",
+      "componentFile": "src/pages/campus/CampusWorkspace.jsx",
+      "source": "src/App.jsx:216",
+      "permission": "meetings_events",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "calendar-check",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "placement",
+      "moduleName": "Placement",
+      "route": "/placement",
+      "component": "PlacementWorkspace",
+      "componentFile": "src/pages/campus/CampusWorkspace.jsx",
+      "source": "src/App.jsx:217",
+      "permission": "placement",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "building-2",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "results",
+      "moduleName": "Grades System and Results",
+      "route": "/results",
+      "component": "ResultGeneration",
+      "componentFile": "src/pages/examinations/grade-result-management/GradeResultManagement.jsx",
+      "source": "src/App.jsx:218",
+      "permission": "results",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "medal",
+      "uiPattern": "Report / List",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "results",
+      "moduleName": "Grades System and Results",
+      "route": "/results/semester-result",
+      "component": "SemesterResult",
+      "componentFile": "src/pages/examinations/grade-result-management/GradeResultManagement.jsx",
+      "source": "src/App.jsx:219",
+      "permission": "results",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "medal",
+      "uiPattern": "Report / List",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "results",
+      "moduleName": "Grades System and Results",
+      "route": "/results/department-result",
+      "component": "DepartmentResult",
+      "componentFile": "src/pages/examinations/grade-result-management/GradeResultManagement.jsx",
+      "source": "src/App.jsx:220",
+      "permission": "results",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "medal",
+      "uiPattern": "Report / List",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "results",
+      "moduleName": "Grades System and Results",
+      "route": "/results/consolidated-marks-memo",
+      "component": "ConsolidatedMarksMemo",
+      "componentFile": "src/pages/examinations/grade-result-management/GradeResultManagement.jsx",
+      "source": "src/App.jsx:221",
+      "permission": "results",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "medal",
+      "uiPattern": "Report / List",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "results",
+      "moduleName": "Grades System and Results",
+      "route": "/results/backlog-report",
+      "component": "BacklogReport",
+      "componentFile": "src/pages/examinations/grade-result-management/GradeResultManagement.jsx",
+      "source": "src/App.jsx:222",
+      "permission": "results",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "medal",
+      "uiPattern": "Report / List",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "results",
+      "moduleName": "Grades System and Results",
+      "route": "/results/student-result",
+      "component": "StudentResult",
+      "componentFile": "src/pages/examinations/grade-result-management/GradeResultManagement.jsx",
+      "source": "src/App.jsx:223",
+      "permission": "results",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "medal",
+      "uiPattern": "Report / List",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "my_profile",
+      "moduleName": "My Profile",
+      "route": "/my-profile",
+      "component": "MyProfile",
+      "componentFile": "src/pages/profile/MyProfile.jsx",
+      "source": "src/App.jsx:224",
+      "permission": "my_profile",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "user-round",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "academic_settings",
+      "moduleName": "Settings",
+      "route": "/settings",
+      "component": "Settings",
+      "componentFile": "src/pages/profile/MyProfile.jsx",
+      "source": "src/App.jsx:225",
+      "permission": "academic_settings",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "settings",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "academic_settings",
+      "moduleName": "Settings",
+      "route": "/settings/academic-context",
+      "component": "Settings",
+      "componentFile": "src/pages/profile/MyProfile.jsx",
+      "source": "src/App.jsx:226",
+      "permission": "academic_settings",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "settings",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "faculty_directory",
+      "moduleName": "Faculty Directory",
+      "route": "/faculty/*",
+      "component": "FacultyManagement",
+      "componentFile": "src/pages/faculty/FacultyManagement.jsx",
+      "source": "src/App.jsx:229",
+      "permission": "faculty_directory",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "briefcase-business",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "faculty_leaves",
+      "moduleName": "Leave Management",
+      "route": "/faculty/leave-management",
+      "component": "FacultyLeaveManagement",
+      "componentFile": "src/pages/faculty/FacultyManagement.jsx",
+      "source": "src/App.jsx:230",
+      "permission": "faculty_leaves",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "calendar-clock",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "faculty_payroll",
+      "moduleName": "Faculty Payroll",
+      "route": "/faculty/payroll",
+      "component": "Payroll",
+      "componentFile": "src/pages/faculty/FacultyManagement.jsx",
+      "source": "src/App.jsx:231",
+      "permission": "faculty_payroll",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "banknote",
+      "uiPattern": "Report / List",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "student_attendance",
+      "moduleName": "Student Attendance",
+      "route": "/attendance/*",
+      "component": "Navigate",
+      "componentFile": "react-router-dom",
+      "source": "src/App.jsx:235",
+      "permission": "student_attendance",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "academicYear",
+        "course",
+        "branch",
+        "semester",
+        "section"
+      ],
+      "icon": "list-checks",
+      "uiPattern": "Redirect",
+      "redirect": "/student-management/attendance",
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "examinations",
+      "moduleName": "Exam Management",
+      "route": "/exam/student-schedule",
+      "component": "StudentExamSchedule",
+      "componentFile": "src/pages/examinations/exam-timetable/ExamModule.jsx",
+      "source": "src/App.jsx:238",
+      "permission": "examinations",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "file-pen-line",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "examinations",
+      "moduleName": "Exam Management",
+      "route": "/exam/create",
+      "component": "CreateExamTimetable",
+      "componentFile": "src/pages/examinations/exam-timetable/ExamModule.jsx",
+      "source": "src/App.jsx:242",
+      "permission": "examinations",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "file-pen-line",
+      "uiPattern": "Form",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "examinations",
+      "moduleName": "Exam Management",
+      "route": "/exam/department-schedule",
+      "component": "DepartmentExamSchedule",
+      "componentFile": "src/pages/examinations/exam-timetable/ExamModule.jsx",
+      "source": "src/App.jsx:243",
+      "permission": "examinations",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "file-pen-line",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "examinations",
+      "moduleName": "Exam Management",
+      "route": "/exam/schedules",
+      "component": "ExamScheduleList",
+      "componentFile": "src/pages/examinations/exam-timetable/ExamModule.jsx",
+      "source": "src/App.jsx:244",
+      "permission": "examinations",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "file-pen-line",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "examinations",
+      "moduleName": "Exam Management",
+      "route": "/exam/timetable",
+      "component": "ExamTimetable",
+      "componentFile": "src/pages/examinations/exam-timetable/ExamModule.jsx",
+      "source": "src/App.jsx:245",
+      "permission": "examinations",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "file-pen-line",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "examinations",
+      "moduleName": "Exam Management",
+      "route": "/exam/hall-allocation",
+      "component": "HallAllocation",
+      "componentFile": "src/pages/examinations/exam-timetable/ExamModule.jsx",
+      "source": "src/App.jsx:246",
+      "permission": "examinations",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "file-pen-line",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "examinations",
+      "moduleName": "Exam Management",
+      "route": "/exam/configuration",
+      "component": "ExamConfiguration",
+      "componentFile": "src/pages/examinations/exam-timetable/ExamModule.jsx",
+      "source": "src/App.jsx:247",
+      "permission": "examinations",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "file-pen-line",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "examinations",
+      "moduleName": "Exam Management",
+      "route": "/examination/completed-exams",
+      "component": "CompletedExams",
+      "componentFile": "src/pages/examinations/exam-timetable/ExamModule.jsx",
+      "source": "src/App.jsx:248",
+      "permission": "examinations",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "file-pen-line",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "examinations",
+      "moduleName": "Exam Management",
+      "route": "/examination/completed-exams/:examId",
+      "component": "CompletedExams",
+      "componentFile": "src/pages/examinations/exam-timetable/ExamModule.jsx",
+      "source": "src/App.jsx:249",
+      "permission": "examinations",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "file-pen-line",
+      "uiPattern": "View / route-dependent",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "examinations",
+      "moduleName": "Exam Management",
+      "route": "/examination-setup/*",
+      "component": "ExaminationSetup",
+      "componentFile": "src/pages/examinations/examination-setup/ExaminationSetup.jsx",
+      "source": "src/App.jsx:250",
+      "permission": "examinations",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "file-pen-line",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "examinations",
+      "moduleName": "Exam Management",
+      "route": "/examination-setup/examination-list",
+      "component": "ExaminationList",
+      "componentFile": "src/pages/examinations/examination-setup/ExaminationSetup.jsx",
+      "source": "src/App.jsx:251",
+      "permission": "examinations",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "file-pen-line",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "examinations",
+      "moduleName": "Exam Management",
+      "route": "/examination-setup/create-examination",
+      "component": "CreateExamination",
+      "componentFile": "src/pages/examinations/examination-setup/ExaminationSetup.jsx",
+      "source": "src/App.jsx:252",
+      "permission": "examinations",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "file-pen-line",
+      "uiPattern": "Form",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "examinations",
+      "moduleName": "Exam Management",
+      "route": "/examination-setup/exam-type",
+      "component": "ExamType",
+      "componentFile": "src/pages/examinations/examination-setup/ExaminationSetup.jsx",
+      "source": "src/App.jsx:253",
+      "permission": "examinations",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "file-pen-line",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "examinations",
+      "moduleName": "Exam Management",
+      "route": "/examination-setup/exam-schedule",
+      "component": "ExamSchedule",
+      "componentFile": "src/pages/examinations/examination-setup/ExaminationSetup.jsx",
+      "source": "src/App.jsx:254",
+      "permission": "examinations",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "file-pen-line",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "examinations",
+      "moduleName": "Exam Management",
+      "route": "/examination-setup/exam-rules",
+      "component": "ExamRules",
+      "componentFile": "src/pages/examinations/examination-setup/ExaminationSetup.jsx",
+      "source": "src/App.jsx:255",
+      "permission": "examinations",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "file-pen-line",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "examinations",
+      "moduleName": "Exam Management",
+      "route": "/exam-timetable/*",
+      "component": "ExamTimetable",
+      "componentFile": "src/pages/examinations/exam-timetable/ExamModule.jsx",
+      "source": "src/App.jsx:256",
+      "permission": "examinations",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "file-pen-line",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "examinations",
+      "moduleName": "Exam Management",
+      "route": "/exam-timetable/create-exam-timetable",
+      "component": "CreateExamTimetable",
+      "componentFile": "src/pages/examinations/exam-timetable/ExamModule.jsx",
+      "source": "src/App.jsx:257",
+      "permission": "examinations",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "file-pen-line",
+      "uiPattern": "Form",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "examinations",
+      "moduleName": "Exam Management",
+      "route": "/exam-timetable/exam-schedule-list",
+      "component": "ExamScheduleList",
+      "componentFile": "src/pages/examinations/exam-timetable/ExamModule.jsx",
+      "source": "src/App.jsx:258",
+      "permission": "examinations",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "file-pen-line",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "examinations",
+      "moduleName": "Exam Management",
+      "route": "/exam-timetable/department-exam-schedule",
+      "component": "DepartmentExamSchedule",
+      "componentFile": "src/pages/examinations/exam-timetable/ExamModule.jsx",
+      "source": "src/App.jsx:259",
+      "permission": "examinations",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "file-pen-line",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "examinations",
+      "moduleName": "Exam Management",
+      "route": "/exam-timetable/student-exam-schedule",
+      "component": "StudentExamSchedule",
+      "componentFile": "src/pages/examinations/exam-timetable/ExamModule.jsx",
+      "source": "src/App.jsx:260",
+      "permission": "examinations",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "file-pen-line",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "examinations",
+      "moduleName": "Exam Management",
+      "route": "/exam-timetable/hall-allocation",
+      "component": "HallAllocation",
+      "componentFile": "src/pages/examinations/exam-timetable/ExamModule.jsx",
+      "source": "src/App.jsx:261",
+      "permission": "examinations",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "file-pen-line",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "marks",
+      "moduleName": "Marks Management",
+      "route": "/marks-management",
+      "component": "Navigate",
+      "componentFile": "react-router-dom",
+      "source": "src/App.jsx:262",
+      "permission": "marks",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "chart-no-axes-column",
+      "uiPattern": "Redirect",
+      "redirect": "/marks-management/marks-entry",
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "marks",
+      "moduleName": "Marks Management",
+      "route": "/marks-management/*",
+      "component": "MarksManagement",
+      "componentFile": "src/pages/examinations/marks-management/MarksManagement.jsx",
+      "source": "src/App.jsx:263",
+      "permission": "marks",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "chart-no-axes-column",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "marks",
+      "moduleName": "Marks Management",
+      "route": "/marks-management/marks-entry",
+      "component": "MarksEntry",
+      "componentFile": "src/pages/examinations/marks-management/MarksManagement.jsx",
+      "source": "src/App.jsx:264",
+      "permission": "marks",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "chart-no-axes-column",
+      "uiPattern": "Form",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "marks",
+      "moduleName": "Marks Management",
+      "route": "/marks-management/bulk-marks-upload",
+      "component": "BulkMarksUpload",
+      "componentFile": "src/pages/examinations/marks-management/MarksManagement.jsx",
+      "source": "src/App.jsx:265",
+      "permission": "marks",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "chart-no-axes-column",
+      "uiPattern": "Form",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "marks",
+      "moduleName": "Marks Management",
+      "route": "/marks-management/edit-marks",
+      "component": "EditMarks",
+      "componentFile": "src/pages/examinations/marks-management/MarksManagement.jsx",
+      "source": "src/App.jsx:266",
+      "permission": "marks",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "chart-no-axes-column",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "marks",
+      "moduleName": "Marks Management",
+      "route": "/marks-management/student-marks",
+      "component": "StudentMarks",
+      "componentFile": "src/pages/examinations/marks-management/MarksManagement.jsx",
+      "source": "src/App.jsx:267",
+      "permission": "marks",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "chart-no-axes-column",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "marks",
+      "moduleName": "Marks Management",
+      "route": "/marks-management/subject-marks-report",
+      "component": "SubjectMarksReport",
+      "componentFile": "src/pages/examinations/marks-management/MarksManagement.jsx",
+      "source": "src/App.jsx:268",
+      "permission": "marks",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "chart-no-axes-column",
+      "uiPattern": "Report / List",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "marks",
+      "moduleName": "Marks Management",
+      "route": "/marks-management/marks-approval",
+      "component": "MarksApproval",
+      "componentFile": "src/pages/examinations/marks-management/MarksManagement.jsx",
+      "source": "src/App.jsx:269",
+      "permission": "marks",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "chart-no-axes-column",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "results",
+      "moduleName": "Grades System and Results",
+      "route": "/grade-result-management",
+      "component": "GradeResultManagement",
+      "componentFile": "src/pages/examinations/grade-result-management/GradeResultManagement.jsx",
+      "source": "src/App.jsx:270",
+      "permission": "results",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "medal",
+      "uiPattern": "Report / List",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "results",
+      "moduleName": "Grades System and Results",
+      "route": "/grade-result-management/grade-configuration",
+      "component": "GradeConfiguration",
+      "componentFile": "src/pages/examinations/grade-result-management/GradeResultManagement.jsx",
+      "source": "src/App.jsx:271",
+      "permission": "results",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "medal",
+      "uiPattern": "Report / List",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "results",
+      "moduleName": "Grades System and Results",
+      "route": "/grade-result-management/cgpa-calculator",
+      "component": "CGPACalculatorPage",
+      "componentFile": "src/pages/examinations/grade-result-management/GradeResultManagement.jsx",
+      "source": "src/App.jsx:272",
+      "permission": "results",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "medal",
+      "uiPattern": "Report / List",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "results",
+      "moduleName": "Grades System and Results",
+      "route": "/grade-result-management/result-generation",
+      "component": "Navigate",
+      "componentFile": "react-router-dom",
+      "source": "src/App.jsx:273",
+      "permission": "results",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "medal",
+      "uiPattern": "Redirect",
+      "redirect": "/results",
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "results",
+      "moduleName": "Grades System and Results",
+      "route": "/grade-result-management/semester-result",
+      "component": "Navigate",
+      "componentFile": "react-router-dom",
+      "source": "src/App.jsx:274",
+      "permission": "results",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "medal",
+      "uiPattern": "Redirect",
+      "redirect": "/results/semester-result",
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "results",
+      "moduleName": "Grades System and Results",
+      "route": "/grade-result-management/department-result",
+      "component": "Navigate",
+      "componentFile": "react-router-dom",
+      "source": "src/App.jsx:275",
+      "permission": "results",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "medal",
+      "uiPattern": "Redirect",
+      "redirect": "/results/department-result",
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "results",
+      "moduleName": "Grades System and Results",
+      "route": "/grade-result-management/consolidated-marks-memo",
+      "component": "Navigate",
+      "componentFile": "react-router-dom",
+      "source": "src/App.jsx:276",
+      "permission": "results",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "medal",
+      "uiPattern": "Redirect",
+      "redirect": "/results/consolidated-marks-memo",
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "results",
+      "moduleName": "Grades System and Results",
+      "route": "/grade-result-management/backlog-report",
+      "component": "Navigate",
+      "componentFile": "react-router-dom",
+      "source": "src/App.jsx:277",
+      "permission": "results",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "medal",
+      "uiPattern": "Redirect",
+      "redirect": "/results/backlog-report",
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "results",
+      "moduleName": "Grades System and Results",
+      "route": "/grade-result-management/student-result",
+      "component": "Navigate",
+      "componentFile": "react-router-dom",
+      "source": "src/App.jsx:278",
+      "permission": "results",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "medal",
+      "uiPattern": "Redirect",
+      "redirect": "/results/student-result",
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "results",
+      "moduleName": "Grades System and Results",
+      "route": "/grade-result-management/*",
+      "component": "GradeResultManagement",
+      "componentFile": "src/pages/examinations/grade-result-management/GradeResultManagement.jsx",
+      "source": "src/App.jsx:279",
+      "permission": "results",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "medal",
+      "uiPattern": "Report / List",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "colleges",
+      "moduleName": "Colleges",
+      "route": "/college-institution-management",
+      "component": "CollegeInstitutionManagement",
+      "componentFile": "src/pages/admin-management/AdminManagement.jsx",
+      "source": "src/App.jsx:283",
+      "permission": "colleges",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "platform",
+      "dependencies": [],
+      "icon": "landmark",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "colleges",
+      "moduleName": "Colleges",
+      "route": "/college-institution-management/add",
+      "component": "AddCollege",
+      "componentFile": "src/pages/admin-management/AdminManagement.jsx",
+      "source": "src/App.jsx:284",
+      "permission": "colleges",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "platform",
+      "dependencies": [],
+      "icon": "landmark",
+      "uiPattern": "Form",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "academic_years",
+      "moduleName": "Academic Years",
+      "route": "/academic-year-management",
+      "component": "AcademicYearManagement",
+      "componentFile": "src/pages/admin-management/AdminManagement.jsx",
+      "source": "src/App.jsx:285",
+      "permission": "academic_years",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "calendar-range",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "academic_years",
+      "moduleName": "Academic Years",
+      "route": "/academic-year-management/:id",
+      "component": "AcademicYearManagement",
+      "componentFile": "src/pages/admin-management/AdminManagement.jsx",
+      "source": "src/App.jsx:286",
+      "permission": "academic_years",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "calendar-range",
+      "uiPattern": "View / route-dependent",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "departments",
+      "moduleName": "Departments",
+      "route": "/department-management",
+      "component": "DepartmentManagement",
+      "componentFile": "src/pages/admin-management/AdminManagement.jsx",
+      "source": "src/App.jsx:287",
+      "permission": "departments",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "network",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "departments",
+      "moduleName": "Departments",
+      "route": "/department-management/:id",
+      "component": "DepartmentManagement",
+      "componentFile": "src/pages/admin-management/AdminManagement.jsx",
+      "source": "src/App.jsx:288",
+      "permission": "departments",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "network",
+      "uiPattern": "View / route-dependent",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "courses",
+      "moduleName": "Courses",
+      "route": "/courses",
+      "component": "Course",
+      "componentFile": "src/pages/courseManagement/Course.jsx",
+      "source": "src/App.jsx:289",
+      "permission": "courses",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "book-open",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "courses",
+      "moduleName": "Courses",
+      "route": "/courses/add",
+      "component": "Course",
+      "componentFile": "src/pages/courseManagement/Course.jsx",
+      "source": "src/App.jsx:290",
+      "permission": "courses",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "book-open",
+      "uiPattern": "Form",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "courses",
+      "moduleName": "Courses",
+      "route": "/courses/:id/edit",
+      "component": "Course",
+      "componentFile": "src/pages/courseManagement/Course.jsx",
+      "source": "src/App.jsx:291",
+      "permission": "courses",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "book-open",
+      "uiPattern": "Form",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "courses",
+      "moduleName": "Courses",
+      "route": "/courses/:id",
+      "component": "Course",
+      "componentFile": "src/pages/courseManagement/Course.jsx",
+      "source": "src/App.jsx:292",
+      "permission": "courses",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "book-open",
+      "uiPattern": "View / route-dependent",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "courses",
+      "moduleName": "Courses",
+      "route": "/courses/structure",
+      "component": "CourseStructure",
+      "componentFile": "src/pages/courseManagement/Course.jsx",
+      "source": "src/App.jsx:293",
+      "permission": "courses",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "book-open",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "branches",
+      "moduleName": "Branches",
+      "route": "/branches",
+      "component": "Branch",
+      "componentFile": "src/pages/courseManagement/Course.jsx",
+      "source": "src/App.jsx:294",
+      "permission": "branches",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "course"
+      ],
+      "icon": "git-branch",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "branches",
+      "moduleName": "Branches",
+      "route": "/branches/add",
+      "component": "Branch",
+      "componentFile": "src/pages/courseManagement/Course.jsx",
+      "source": "src/App.jsx:295",
+      "permission": "branches",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "course"
+      ],
+      "icon": "git-branch",
+      "uiPattern": "Form",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "branches",
+      "moduleName": "Branches",
+      "route": "/branches/:id/edit",
+      "component": "Branch",
+      "componentFile": "src/pages/courseManagement/Course.jsx",
+      "source": "src/App.jsx:296",
+      "permission": "branches",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "course"
+      ],
+      "icon": "git-branch",
+      "uiPattern": "Form",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "branches",
+      "moduleName": "Branches",
+      "route": "/branches/:id",
+      "component": "Branch",
+      "componentFile": "src/pages/courseManagement/Course.jsx",
+      "source": "src/App.jsx:297",
+      "permission": "branches",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "course"
+      ],
+      "icon": "git-branch",
+      "uiPattern": "View / route-dependent",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "semesters",
+      "moduleName": "Semesters",
+      "route": "/semester-management",
+      "component": "SemesterManagement",
+      "componentFile": "src/pages/semester-management/SemesterManagement.jsx",
+      "source": "src/App.jsx:298",
+      "permission": "semesters",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "course",
+        "branch"
+      ],
+      "icon": "layers-3",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "semesters",
+      "moduleName": "Semesters",
+      "route": "/semester-management/add",
+      "component": "SemesterManagement",
+      "componentFile": "src/pages/semester-management/SemesterManagement.jsx",
+      "source": "src/App.jsx:299",
+      "permission": "semesters",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "course",
+        "branch"
+      ],
+      "icon": "layers-3",
+      "uiPattern": "Form",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "semesters",
+      "moduleName": "Semesters",
+      "route": "/semester-management/:id/edit",
+      "component": "SemesterManagement",
+      "componentFile": "src/pages/semester-management/SemesterManagement.jsx",
+      "source": "src/App.jsx:300",
+      "permission": "semesters",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "course",
+        "branch"
+      ],
+      "icon": "layers-3",
+      "uiPattern": "Form",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "semesters",
+      "moduleName": "Semesters",
+      "route": "/semester-management/:id",
+      "component": "SemesterManagement",
+      "componentFile": "src/pages/semester-management/SemesterManagement.jsx",
+      "source": "src/App.jsx:301",
+      "permission": "semesters",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "course",
+        "branch"
+      ],
+      "icon": "layers-3",
+      "uiPattern": "View / route-dependent",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "sections",
+      "moduleName": "Sections",
+      "route": "/section-management",
+      "component": "SectionManagement",
+      "componentFile": "src/pages/section-management/SectionManagement.jsx",
+      "source": "src/App.jsx:302",
+      "permission": "sections",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "academicYear",
+        "course",
+        "branch",
+        "semester"
+      ],
+      "icon": "users-round",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "sections",
+      "moduleName": "Sections",
+      "route": "/section-management/add",
+      "component": "SectionManagement",
+      "componentFile": "src/pages/section-management/SectionManagement.jsx",
+      "source": "src/App.jsx:303",
+      "permission": "sections",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "academicYear",
+        "course",
+        "branch",
+        "semester"
+      ],
+      "icon": "users-round",
+      "uiPattern": "Form",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "sections",
+      "moduleName": "Sections",
+      "route": "/section-management/:id/edit",
+      "component": "SectionManagement",
+      "componentFile": "src/pages/section-management/SectionManagement.jsx",
+      "source": "src/App.jsx:304",
+      "permission": "sections",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "academicYear",
+        "course",
+        "branch",
+        "semester"
+      ],
+      "icon": "users-round",
+      "uiPattern": "Form",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "sections",
+      "moduleName": "Sections",
+      "route": "/section-management/:id",
+      "component": "SectionManagement",
+      "componentFile": "src/pages/section-management/SectionManagement.jsx",
+      "source": "src/App.jsx:305",
+      "permission": "sections",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "academicYear",
+        "course",
+        "branch",
+        "semester"
+      ],
+      "icon": "users-round",
+      "uiPattern": "View / route-dependent",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "rooms",
+      "moduleName": "Rooms & Classrooms",
+      "route": "/rooms-management",
+      "component": "RoomsManagement",
+      "componentFile": "src/pages/admin-management/AdminManagement.jsx",
+      "source": "src/App.jsx:306",
+      "permission": "rooms",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "door-open",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "rooms",
+      "moduleName": "Rooms & Classrooms",
+      "route": "/rooms-management/add",
+      "component": "RoomsManagement",
+      "componentFile": "src/pages/admin-management/AdminManagement.jsx",
+      "source": "src/App.jsx:307",
+      "permission": "rooms",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "door-open",
+      "uiPattern": "Form",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "rooms",
+      "moduleName": "Rooms & Classrooms",
+      "route": "/rooms-management/:roomId/edit",
+      "component": "RoomsManagement",
+      "componentFile": "src/pages/admin-management/AdminManagement.jsx",
+      "source": "src/App.jsx:308",
+      "permission": "rooms",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "door-open",
+      "uiPattern": "Form",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "rooms",
+      "moduleName": "Rooms & Classrooms",
+      "route": "/rooms-management/:roomId",
+      "component": "RoomsManagement",
+      "componentFile": "src/pages/admin-management/AdminManagement.jsx",
+      "source": "src/App.jsx:309",
+      "permission": "rooms",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "door-open",
+      "uiPattern": "View / route-dependent",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "rooms",
+      "moduleName": "Rooms & Classrooms",
+      "route": "/rooms",
+      "component": "RoomsManagement",
+      "componentFile": "src/pages/admin-management/AdminManagement.jsx",
+      "source": "src/App.jsx:310",
+      "permission": "rooms",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "door-open",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "rooms",
+      "moduleName": "Rooms & Classrooms",
+      "route": "/rooms/:roomId",
+      "component": "RoomsManagement",
+      "componentFile": "src/pages/admin-management/AdminManagement.jsx",
+      "source": "src/App.jsx:311",
+      "permission": "rooms",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "door-open",
+      "uiPattern": "View / route-dependent",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "roles_permissions",
+      "moduleName": "Roles & Designations",
+      "route": "/roles-designations",
+      "component": "RolesAndDesignations",
+      "componentFile": "src/pages/admin-management/AdminManagement.jsx",
+      "source": "src/App.jsx:312",
+      "permission": "roles_permissions",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "platform-and-college",
+      "dependencies": [],
+      "icon": "key-round",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "subjects",
+      "moduleName": "Subject Management",
+      "route": "/subject-management",
+      "component": "SubjectManagement",
+      "componentFile": "src/App.jsx",
+      "source": "src/App.jsx:313",
+      "permission": "subjects",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "notebook-tabs",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "subjects",
+      "moduleName": "Subject Management",
+      "route": "/subject-management/:id",
+      "component": "SubjectDetailsPage",
+      "componentFile": "src/App.jsx",
+      "source": "src/App.jsx:314",
+      "permission": "subjects",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "notebook-tabs",
+      "uiPattern": "View / route-dependent",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "credits",
+      "moduleName": "Credits Management",
+      "route": "/credits-management",
+      "component": "CreditsManagement",
+      "componentFile": "src/pages/credits-management/CreditsManagement.jsx",
+      "source": "src/App.jsx:315",
+      "permission": "credits",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "award",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "timetable",
+      "moduleName": "Timetable Management",
+      "route": "/timetable",
+      "component": "TimetableManagement",
+      "componentFile": "src/pages/timetable/TimetableManagement.jsx",
+      "source": "src/App.jsx:316",
+      "permission": "timetable",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "academicYear",
+        "course",
+        "branch",
+        "semester",
+        "section"
+      ],
+      "icon": "calendar-days",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "electives",
+      "moduleName": "Elective Management",
+      "route": "/elective-management",
+      "component": "ElectiveManagement",
+      "componentFile": "src/pages/elective-management/ElectiveManagement.jsx",
+      "source": "src/App.jsx:317",
+      "permission": "electives",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "list-todo",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "student_admissions",
+      "moduleName": "Student Admissions",
+      "route": "/student-management/admissions",
+      "component": "StudentAdmission",
+      "componentFile": "src/pages/student-management/StudentAdmission/StudentAdmission.jsx",
+      "source": "src/App.jsx:318",
+      "permission": "student_admissions",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "academicYear",
+        "course",
+        "branch",
+        "semester"
+      ],
+      "icon": "user-round-plus",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "student_admissions",
+      "moduleName": "Student Admissions",
+      "route": "/student-management/admissions/new",
+      "component": "StudentAdmission",
+      "componentFile": "src/pages/student-management/StudentAdmission/StudentAdmission.jsx",
+      "source": "src/App.jsx:319",
+      "permission": "student_admissions",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "academicYear",
+        "course",
+        "branch",
+        "semester"
+      ],
+      "icon": "user-round-plus",
+      "uiPattern": "Form",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "student_admissions",
+      "moduleName": "Student Admissions",
+      "route": "/student-management/admissions/add",
+      "component": "StudentAdmission",
+      "componentFile": "src/pages/student-management/StudentAdmission/StudentAdmission.jsx",
+      "source": "src/App.jsx:320",
+      "permission": "student_admissions",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "academicYear",
+        "course",
+        "branch",
+        "semester"
+      ],
+      "icon": "user-round-plus",
+      "uiPattern": "Form",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "student_admissions",
+      "moduleName": "Student Admissions",
+      "route": "/student-management/admissions/:id/edit",
+      "component": "StudentAdmission",
+      "componentFile": "src/pages/student-management/StudentAdmission/StudentAdmission.jsx",
+      "source": "src/App.jsx:321",
+      "permission": "student_admissions",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "academicYear",
+        "course",
+        "branch",
+        "semester"
+      ],
+      "icon": "user-round-plus",
+      "uiPattern": "Form",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "student_admissions",
+      "moduleName": "Student Admissions",
+      "route": "/student-management/admissions/:id/approval",
+      "component": "StudentAdmission",
+      "componentFile": "src/pages/student-management/StudentAdmission/StudentAdmission.jsx",
+      "source": "src/App.jsx:322",
+      "permission": "student_admissions",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "academicYear",
+        "course",
+        "branch",
+        "semester"
+      ],
+      "icon": "user-round-plus",
+      "uiPattern": "Form",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "student_admissions",
+      "moduleName": "Student Admissions",
+      "route": "/student-management/admissions/:id",
+      "component": "StudentAdmission",
+      "componentFile": "src/pages/student-management/StudentAdmission/StudentAdmission.jsx",
+      "source": "src/App.jsx:323",
+      "permission": "student_admissions",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "academicYear",
+        "course",
+        "branch",
+        "semester"
+      ],
+      "icon": "user-round-plus",
+      "uiPattern": "View / route-dependent",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "student_profiles",
+      "moduleName": "Student Profiles",
+      "route": "/student-management/profiles",
+      "component": "StudentProfile",
+      "componentFile": "src/pages/student-management/StudentProfile/StudentProfile.jsx",
+      "source": "src/App.jsx:324",
+      "permission": "student_profiles",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "contact-round",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "student_profiles",
+      "moduleName": "Student Profiles",
+      "route": "/student-management/profiles/:id",
+      "component": "StudentProfile",
+      "componentFile": "src/pages/student-management/StudentProfile/StudentProfile.jsx",
+      "source": "src/App.jsx:325",
+      "permission": "student_profiles",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "contact-round",
+      "uiPattern": "View / route-dependent",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "student_attendance",
+      "moduleName": "Student Attendance",
+      "route": "/student-management/attendance/sessions/:sessionId",
+      "component": "AttendanceSessionDetails",
+      "componentFile": "src/pages/attendance/Attendance.jsx",
+      "source": "src/App.jsx:326",
+      "permission": "student_attendance",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "academicYear",
+        "course",
+        "branch",
+        "semester",
+        "section"
+      ],
+      "icon": "list-checks",
+      "uiPattern": "View / route-dependent",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "student_attendance",
+      "moduleName": "Student Attendance",
+      "route": "/student-management/attendance/*",
+      "component": "Attendance",
+      "componentFile": "src/pages/attendance/Attendance.jsx",
+      "source": "src/App.jsx:327",
+      "permission": "student_attendance",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "academicYear",
+        "course",
+        "branch",
+        "semester",
+        "section"
+      ],
+      "icon": "list-checks",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "student_promotions",
+      "moduleName": "Student Promotions",
+      "route": "/student-management/promotions",
+      "component": "StudentPromotion",
+      "componentFile": "src/pages/student-management/StudentPromotion/StudentPromotion.jsx",
+      "source": "src/App.jsx:328",
+      "permission": "student_promotions",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "academicYear"
+      ],
+      "icon": "trending-up",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "fee_management",
+      "moduleName": "Fee Management",
+      "route": "/fees/*",
+      "component": "Fees",
+      "componentFile": "src/pages/fees/FeeManagement.jsx",
+      "source": "src/App.jsx:329",
+      "permission": "fees",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "receipt-indian-rupee",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "roles_permissions",
+      "moduleName": "Roles & Designations",
+      "route": "/roles-designations",
+      "component": "RolesAndDesignations",
+      "componentFile": "src/pages/admin-management/AdminManagement.jsx",
+      "source": "src/App.jsx:330",
+      "permission": "roles_permissions",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "platform-and-college",
+      "dependencies": [],
+      "icon": "key-round",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "roles_permissions",
+      "moduleName": "Roles & Designations",
+      "route": "/roles-permissions",
+      "component": "RolesAndDesignations",
+      "componentFile": "src/pages/admin-management/AdminManagement.jsx",
+      "source": "src/App.jsx:331",
+      "permission": "roles_permissions",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "platform-and-college",
+      "dependencies": [],
+      "icon": "key-round",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "my_subjects",
+      "moduleName": "My Subjects",
+      "route": "/my-subjects",
+      "component": "RoleAlias",
+      "componentFile": "src/App.jsx",
+      "source": "src/App.jsx:336",
+      "permission": null,
+      "roles": [
+        "faculty",
+        "student"
+      ],
+      "guard": "PortalRoute",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "book-marked",
+      "uiPattern": "Redirect",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "unauthorized",
+      "moduleName": "Unauthorized",
+      "route": "/unauthorized",
+      "component": "Unauthorized",
+      "componentFile": "src/pages/Pages.jsx",
+      "source": "src/App.jsx:340",
+      "permission": null,
+      "roles": [],
+      "guard": "No role guard declared here",
+      "scope": "public",
+      "dependencies": [],
+      "icon": "shield-alert",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "landing",
+      "moduleName": "Landing Page",
+      "route": "*",
+      "component": "Navigate",
+      "componentFile": "react-router-dom",
+      "source": "src/App.jsx:343",
+      "permission": null,
+      "roles": [],
+      "guard": "No role guard declared here",
+      "scope": "public",
+      "dependencies": [],
+      "icon": "house",
+      "uiPattern": "Redirect",
+      "redirect": "/",
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "fee_management",
+      "moduleName": "Fee Management",
+      "route": "/fees",
+      "component": "Navigate",
+      "componentFile": "src/pages/fees/FeeManagement.jsx",
+      "source": "src/pages/fees/FeeManagement.jsx:7438",
+      "permission": "fees",
+      "roles": [
+        "admin"
+      ],
+      "guard": "App.jsx PortalRoute + ProtectedRoute (admin)",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "receipt-indian-rupee",
+      "uiPattern": "Redirect",
+      "redirect": "/fees/overview",
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "fee_management",
+      "moduleName": "Fee Management",
+      "route": "/fees/overview",
+      "component": "ServerFeeCollection",
+      "componentFile": "src/pages/fees/FeeManagement.jsx",
+      "source": "src/pages/fees/FeeManagement.jsx:7441",
+      "permission": "fees",
+      "roles": [
+        "admin"
+      ],
+      "guard": "App.jsx PortalRoute + ProtectedRoute (admin)",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "receipt-indian-rupee",
+      "uiPattern": "Dashboard",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "fee_structures",
+      "moduleName": "Fee Structure",
+      "route": "/fees/structures",
+      "component": "FeeStructureConfiguration",
+      "componentFile": "src/pages/fees/FeeManagement.jsx",
+      "source": "src/pages/fees/FeeManagement.jsx:7453",
+      "permission": "fees",
+      "roles": [
+        "admin"
+      ],
+      "guard": "App.jsx PortalRoute + ProtectedRoute (admin)",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "academicYear",
+        "course",
+        "branch",
+        "batch",
+        "semester"
+      ],
+      "icon": "wallet-cards",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "fee_structures",
+      "moduleName": "Fee Structure",
+      "route": "/fees/components",
+      "component": "Navigate",
+      "componentFile": "src/pages/fees/FeeManagement.jsx",
+      "source": "src/pages/fees/FeeManagement.jsx:7467",
+      "permission": "fees",
+      "roles": [
+        "admin"
+      ],
+      "guard": "App.jsx PortalRoute + ProtectedRoute (admin)",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "academicYear",
+        "course",
+        "branch",
+        "batch",
+        "semester"
+      ],
+      "icon": "wallet-cards",
+      "uiPattern": "Redirect",
+      "redirect": "/fees/structures",
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "fee_structures",
+      "moduleName": "Fee Structure",
+      "route": "/fees/structures/create",
+      "component": "CreateAcademicFeePlan",
+      "componentFile": "src/pages/fees/FeeManagement.jsx",
+      "source": "src/pages/fees/FeeManagement.jsx:7471",
+      "permission": "fees",
+      "roles": [
+        "admin"
+      ],
+      "guard": "App.jsx PortalRoute + ProtectedRoute (admin)",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "academicYear",
+        "course",
+        "branch",
+        "batch",
+        "semester"
+      ],
+      "icon": "wallet-cards",
+      "uiPattern": "Form",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "fee_structures",
+      "moduleName": "Fee Structure",
+      "route": "/fees/structures/:structureId/edit",
+      "component": "CreateAcademicFeePlan",
+      "componentFile": "src/pages/fees/FeeManagement.jsx",
+      "source": "src/pages/fees/FeeManagement.jsx:7508",
+      "permission": "fees",
+      "roles": [
+        "admin"
+      ],
+      "guard": "App.jsx PortalRoute + ProtectedRoute (admin)",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "academicYear",
+        "course",
+        "branch",
+        "batch",
+        "semester"
+      ],
+      "icon": "wallet-cards",
+      "uiPattern": "Form",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "fee_structures",
+      "moduleName": "Fee Structure",
+      "route": "/fees/structures/:structureId/view",
+      "component": "FeeStructureConfiguration",
+      "componentFile": "src/pages/fees/FeeManagement.jsx",
+      "source": "src/pages/fees/FeeManagement.jsx:7529",
+      "permission": "fees",
+      "roles": [
+        "admin"
+      ],
+      "guard": "App.jsx PortalRoute + ProtectedRoute (admin)",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "academicYear",
+        "course",
+        "branch",
+        "batch",
+        "semester"
+      ],
+      "icon": "wallet-cards",
+      "uiPattern": "View / route-dependent",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "fee_structures",
+      "moduleName": "Fee Structure",
+      "route": "/fees/structures/hostel",
+      "component": null,
+      "componentFile": null,
+      "source": "src/pages/fees/FeeManagement.jsx:7531",
+      "permission": "fees",
+      "roles": [
+        "admin"
+      ],
+      "guard": "App.jsx PortalRoute + ProtectedRoute (admin)",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "academicYear"
+      ],
+      "icon": "wallet-cards",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "nested-container"
+    },
+    {
+      "moduleId": "fee_structures",
+      "moduleName": "Fee Structure",
+      "route": "/fees/structures/transport",
+      "component": null,
+      "componentFile": null,
+      "source": "src/pages/fees/FeeManagement.jsx:7531",
+      "permission": "fees",
+      "roles": [
+        "admin"
+      ],
+      "guard": "App.jsx PortalRoute + ProtectedRoute (admin)",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "academicYear"
+      ],
+      "icon": "wallet-cards",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "nested-container"
+    },
+    {
+      "moduleId": "fee_structures",
+      "moduleName": "Fee Structure",
+      "route": "/fees/structures/hostel/:facilityId/view",
+      "component": "FeeStructureConfiguration",
+      "componentFile": "src/pages/fees/FeeManagement.jsx",
+      "source": "src/pages/fees/FeeManagement.jsx:7531",
+      "permission": "fees",
+      "roles": [
+        "admin"
+      ],
+      "guard": "App.jsx PortalRoute + ProtectedRoute (admin)",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "academicYear"
+      ],
+      "icon": "wallet-cards",
+      "uiPattern": "View / route-dependent",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "fee_structures",
+      "moduleName": "Fee Structure",
+      "route": "/fees/structures/transport/:facilityId/view",
+      "component": "FeeStructureConfiguration",
+      "componentFile": "src/pages/fees/FeeManagement.jsx",
+      "source": "src/pages/fees/FeeManagement.jsx:7531",
+      "permission": "fees",
+      "roles": [
+        "admin"
+      ],
+      "guard": "App.jsx PortalRoute + ProtectedRoute (admin)",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "academicYear"
+      ],
+      "icon": "wallet-cards",
+      "uiPattern": "View / route-dependent",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "fee_structures",
+      "moduleName": "Fee Structure",
+      "route": "/fees/structures/hostel/create",
+      "component": "FeeStructureConfiguration",
+      "componentFile": "src/pages/fees/FeeManagement.jsx",
+      "source": "src/pages/fees/FeeManagement.jsx:7532",
+      "permission": "fees",
+      "roles": [
+        "admin"
+      ],
+      "guard": "App.jsx PortalRoute + ProtectedRoute (admin)",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "academicYear"
+      ],
+      "icon": "wallet-cards",
+      "uiPattern": "Form",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "fee_structures",
+      "moduleName": "Fee Structure",
+      "route": "/fees/structures/transport/create",
+      "component": "FeeStructureConfiguration",
+      "componentFile": "src/pages/fees/FeeManagement.jsx",
+      "source": "src/pages/fees/FeeManagement.jsx:7532",
+      "permission": "fees",
+      "roles": [
+        "admin"
+      ],
+      "guard": "App.jsx PortalRoute + ProtectedRoute (admin)",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "academicYear"
+      ],
+      "icon": "wallet-cards",
+      "uiPattern": "Form",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "fee_structures",
+      "moduleName": "Fee Structure",
+      "route": "/fees/structures/hostel/:facilityId/edit",
+      "component": "FeeStructureConfiguration",
+      "componentFile": "src/pages/fees/FeeManagement.jsx",
+      "source": "src/pages/fees/FeeManagement.jsx:7536",
+      "permission": "fees",
+      "roles": [
+        "admin"
+      ],
+      "guard": "App.jsx PortalRoute + ProtectedRoute (admin)",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "academicYear"
+      ],
+      "icon": "wallet-cards",
+      "uiPattern": "Form",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "fee_structures",
+      "moduleName": "Fee Structure",
+      "route": "/fees/structures/transport/:facilityId/edit",
+      "component": "FeeStructureConfiguration",
+      "componentFile": "src/pages/fees/FeeManagement.jsx",
+      "source": "src/pages/fees/FeeManagement.jsx:7536",
+      "permission": "fees",
+      "roles": [
+        "admin"
+      ],
+      "guard": "App.jsx PortalRoute + ProtectedRoute (admin)",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "academicYear"
+      ],
+      "icon": "wallet-cards",
+      "uiPattern": "Form",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "fee_management",
+      "moduleName": "Fee Management",
+      "route": "/fees/students",
+      "component": "StudentFees",
+      "componentFile": "src/pages/fees/FeeManagement.jsx",
+      "source": "src/pages/fees/FeeManagement.jsx:7544",
+      "permission": "fees",
+      "roles": [
+        "admin"
+      ],
+      "guard": "App.jsx PortalRoute + ProtectedRoute (admin)",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "receipt-indian-rupee",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "fee_management",
+      "moduleName": "Fee Management",
+      "route": "/fees/accounts/:studentId",
+      "component": "StudentFeeDetails",
+      "componentFile": "src/pages/fees/FeeManagement.jsx",
+      "source": "src/pages/fees/FeeManagement.jsx:7557",
+      "permission": "fees",
+      "roles": [
+        "admin"
+      ],
+      "guard": "App.jsx PortalRoute + ProtectedRoute (admin)",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "receipt-indian-rupee",
+      "uiPattern": "View / route-dependent",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "fee_management",
+      "moduleName": "Fee Management",
+      "route": "/fees/ledger/:assignmentId",
+      "component": "StudentFeeDetails",
+      "componentFile": "src/pages/fees/FeeManagement.jsx",
+      "source": "src/pages/fees/FeeManagement.jsx:7567",
+      "permission": "fees",
+      "roles": [
+        "admin"
+      ],
+      "guard": "App.jsx PortalRoute + ProtectedRoute (admin)",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "receipt-indian-rupee",
+      "uiPattern": "View / route-dependent",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "fee_management",
+      "moduleName": "Fee Management",
+      "route": "/fees/assignments",
+      "component": "AssignFeePlan",
+      "componentFile": "src/pages/fees/FeeManagement.jsx",
+      "source": "src/pages/fees/FeeManagement.jsx:7577",
+      "permission": "fees",
+      "roles": [
+        "admin"
+      ],
+      "guard": "App.jsx PortalRoute + ProtectedRoute (admin)",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "receipt-indian-rupee",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "fee_management",
+      "moduleName": "Fee Management",
+      "route": "/fees/concessions",
+      "component": "Navigate",
+      "componentFile": "src/pages/fees/FeeManagement.jsx",
+      "source": "src/pages/fees/FeeManagement.jsx:7590",
+      "permission": "fees",
+      "roles": [
+        "admin"
+      ],
+      "guard": "App.jsx PortalRoute + ProtectedRoute (admin)",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "receipt-indian-rupee",
+      "uiPattern": "Redirect",
+      "redirect": "/fees/students",
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "fee_management",
+      "moduleName": "Fee Management",
+      "route": "/fees/dues",
+      "component": "Dues",
+      "componentFile": "src/pages/fees/FeeManagement.jsx",
+      "source": "src/pages/fees/FeeManagement.jsx:7591",
+      "permission": "fees",
+      "roles": [
+        "admin"
+      ],
+      "guard": "App.jsx PortalRoute + ProtectedRoute (admin)",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "receipt-indian-rupee",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "fee_management",
+      "moduleName": "Fee Management",
+      "route": "/fees/receipts",
+      "component": "ServerFeeCollection",
+      "componentFile": "src/pages/fees/FeeManagement.jsx",
+      "source": "src/pages/fees/FeeManagement.jsx:7594",
+      "permission": "fees",
+      "roles": [
+        "admin"
+      ],
+      "guard": "App.jsx PortalRoute + ProtectedRoute (admin)",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "receipt-indian-rupee",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "fee_management",
+      "moduleName": "Fee Management",
+      "route": "/fees/collection",
+      "component": "ServerFeeCollection",
+      "componentFile": "src/pages/fees/FeeManagement.jsx",
+      "source": "src/pages/fees/FeeManagement.jsx:7598",
+      "permission": "fees",
+      "roles": [
+        "admin"
+      ],
+      "guard": "App.jsx PortalRoute + ProtectedRoute (admin)",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "receipt-indian-rupee",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "fee_management",
+      "moduleName": "Fee Management",
+      "route": "/fees/refunds",
+      "component": "Navigate",
+      "componentFile": "src/pages/fees/FeeManagement.jsx",
+      "source": "src/pages/fees/FeeManagement.jsx:7602",
+      "permission": "fees",
+      "roles": [
+        "admin"
+      ],
+      "guard": "App.jsx PortalRoute + ProtectedRoute (admin)",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "receipt-indian-rupee",
+      "uiPattern": "Redirect",
+      "redirect": "/fees/students",
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "fee_management",
+      "moduleName": "Fee Management",
+      "route": "/fees/reports",
+      "component": "ServerFeeCollection",
+      "componentFile": "src/pages/fees/FeeManagement.jsx",
+      "source": "src/pages/fees/FeeManagement.jsx:7605",
+      "permission": "fees",
+      "roles": [
+        "admin"
+      ],
+      "guard": "App.jsx PortalRoute + ProtectedRoute (admin)",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "receipt-indian-rupee",
+      "uiPattern": "Report / List",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "fee_management",
+      "moduleName": "Fee Management",
+      "route": "/fees/*",
+      "component": "Navigate",
+      "componentFile": "src/pages/fees/FeeManagement.jsx",
+      "source": "src/pages/fees/FeeManagement.jsx:7610",
+      "permission": "fees",
+      "roles": [
+        "admin"
+      ],
+      "guard": "App.jsx PortalRoute + ProtectedRoute (admin)",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "receipt-indian-rupee",
+      "uiPattern": "Redirect",
+      "redirect": "/fees/overview",
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "fee_structures",
+      "moduleName": "Fee Structure",
+      "route": "/fees/legacy",
+      "component": "Navigate",
+      "componentFile": "src/pages/fees/FeeManagement.jsx",
+      "source": "src/pages/fees/FeeManagement.jsx:7621",
+      "permission": "fees",
+      "roles": [
+        "admin"
+      ],
+      "guard": "App.jsx PortalRoute + ProtectedRoute (admin)",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "academicYear",
+        "course",
+        "branch",
+        "batch",
+        "semester"
+      ],
+      "icon": "wallet-cards",
+      "uiPattern": "Redirect",
+      "redirect": "/fees/structures",
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "fee_management",
+      "moduleName": "Fee Management",
+      "route": "/fees/*",
+      "component": "FeeWorkspace",
+      "componentFile": "src/pages/fees/FeeManagement.jsx",
+      "source": "src/pages/fees/FeeManagement.jsx:7622",
+      "permission": "fees",
+      "roles": [
+        "admin"
+      ],
+      "guard": "App.jsx PortalRoute + ProtectedRoute (admin)",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "receipt-indian-rupee",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "faculty_portal",
+      "moduleName": "Faculty Portal",
+      "route": "/faculty-portal/events",
+      "component": "FacultyWorkspacePage",
+      "componentFile": "src/features/faculty/FacultyWorkspacePage.jsx",
+      "source": "src/features/faculty/routeConfig.js",
+      "permission": null,
+      "roles": [
+        "faculty"
+      ],
+      "guard": "PortalRoute + existing useScreenAccess/personal-workspace rules",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiCalendar",
+      "uiPattern": "Workspace",
+      "kind": "configured-screen",
+      "title": "Campus Events"
+    },
+    {
+      "moduleId": "faculty_portal",
+      "moduleName": "Faculty Portal",
+      "route": "/faculty-portal/placements",
+      "component": "FacultyWorkspacePage",
+      "componentFile": "src/features/faculty/FacultyWorkspacePage.jsx",
+      "source": "src/features/faculty/routeConfig.js",
+      "permission": null,
+      "roles": [
+        "faculty"
+      ],
+      "guard": "PortalRoute + existing useScreenAccess/personal-workspace rules",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiBriefcase",
+      "uiPattern": "Workspace",
+      "kind": "configured-screen",
+      "title": "Placement Coordination"
+    },
+    {
+      "moduleId": "faculty_portal",
+      "moduleName": "Faculty Portal",
+      "route": "/faculty-portal/dashboard",
+      "component": "FacultyDashboardPage",
+      "componentFile": "src/features/faculty/dashboard/pages/FacultyDashboardPage.jsx",
+      "source": "src/features/faculty/routeConfig.js",
+      "permission": "dashboard",
+      "roles": [
+        "faculty"
+      ],
+      "guard": "PortalRoute + existing useScreenAccess/personal-workspace rules",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiGrid",
+      "uiPattern": "Dashboard",
+      "kind": "configured-screen",
+      "title": "Dashboard"
+    },
+    {
+      "moduleId": "faculty_portal",
+      "moduleName": "Faculty Portal",
+      "route": "/faculty-portal/students",
+      "component": "FacultyWorkspacePage",
+      "componentFile": "src/features/faculty/FacultyWorkspacePage.jsx",
+      "source": "src/features/faculty/routeConfig.js",
+      "permission": "student_profiles",
+      "roles": [
+        "faculty"
+      ],
+      "guard": "PortalRoute + existing useScreenAccess/personal-workspace rules",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiUsers",
+      "uiPattern": "Workspace",
+      "kind": "configured-screen",
+      "title": "My Students"
+    },
+    {
+      "moduleId": "faculty_portal",
+      "moduleName": "Faculty Portal",
+      "route": "/faculty-portal/subjects",
+      "component": "FacultyWorkspacePage",
+      "componentFile": "src/features/faculty/FacultyWorkspacePage.jsx",
+      "source": "src/features/faculty/routeConfig.js",
+      "permission": "subjects",
+      "roles": [
+        "faculty"
+      ],
+      "guard": "PortalRoute + existing useScreenAccess/personal-workspace rules",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiBook",
+      "uiPattern": "Workspace",
+      "kind": "configured-screen",
+      "title": "My Subjects"
+    },
+    {
+      "moduleId": "faculty_portal",
+      "moduleName": "Faculty Portal",
+      "route": "/faculty-portal/attendance",
+      "component": "FacultyWorkspacePage",
+      "componentFile": "src/features/faculty/FacultyWorkspacePage.jsx",
+      "source": "src/features/faculty/routeConfig.js",
+      "permission": "student_attendance",
+      "roles": [
+        "faculty"
+      ],
+      "guard": "PortalRoute + existing useScreenAccess/personal-workspace rules",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiCheckSquare",
+      "uiPattern": "Workspace",
+      "kind": "configured-screen",
+      "title": "Attendance Management"
+    },
+    {
+      "moduleId": "faculty_portal",
+      "moduleName": "Faculty Portal",
+      "route": "/faculty-portal/my-attendance",
+      "component": "FacultyWorkspacePage",
+      "componentFile": "src/features/faculty/FacultyWorkspacePage.jsx",
+      "source": "src/features/faculty/routeConfig.js",
+      "permission": "faculty_attendance",
+      "roles": [
+        "faculty"
+      ],
+      "guard": "PortalRoute + existing useScreenAccess/personal-workspace rules",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiClock",
+      "uiPattern": "Workspace",
+      "kind": "configured-screen",
+      "title": "My Attendance"
+    },
+    {
+      "moduleId": "faculty_portal",
+      "moduleName": "Faculty Portal",
+      "route": "/faculty-portal/marks",
+      "component": "FacultyWorkspacePage",
+      "componentFile": "src/features/faculty/FacultyWorkspacePage.jsx",
+      "source": "src/features/faculty/routeConfig.js",
+      "permission": "marks",
+      "roles": [
+        "faculty"
+      ],
+      "guard": "PortalRoute + existing useScreenAccess/personal-workspace rules",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiEdit3",
+      "uiPattern": "Workspace",
+      "kind": "configured-screen",
+      "title": "Marks Entry"
+    },
+    {
+      "moduleId": "faculty_portal",
+      "moduleName": "Faculty Portal",
+      "route": "/faculty-portal/timetable",
+      "component": "FacultyWorkspacePage",
+      "componentFile": "src/features/faculty/FacultyWorkspacePage.jsx",
+      "source": "src/features/faculty/routeConfig.js",
+      "permission": "timetable",
+      "roles": [
+        "faculty"
+      ],
+      "guard": "PortalRoute + existing useScreenAccess/personal-workspace rules",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiCalendar",
+      "uiPattern": "Workspace",
+      "kind": "configured-screen",
+      "title": "My Timetable"
+    },
+    {
+      "moduleId": "faculty_portal",
+      "moduleName": "Faculty Portal",
+      "route": "/faculty-portal/exams",
+      "component": "FacultyWorkspacePage",
+      "componentFile": "src/features/faculty/FacultyWorkspacePage.jsx",
+      "source": "src/features/faculty/routeConfig.js",
+      "permission": null,
+      "roles": [
+        "faculty"
+      ],
+      "guard": "PortalRoute + existing useScreenAccess/personal-workspace rules",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiGrid",
+      "uiPattern": "Workspace",
+      "kind": "configured-screen",
+      "title": "Exams"
+    },
+    {
+      "moduleId": "faculty_portal",
+      "moduleName": "Faculty Portal",
+      "route": "/faculty-portal/electives",
+      "component": "FacultyWorkspacePage",
+      "componentFile": "src/features/faculty/FacultyWorkspacePage.jsx",
+      "source": "src/features/faculty/routeConfig.js",
+      "permission": null,
+      "roles": [
+        "faculty"
+      ],
+      "guard": "PortalRoute + existing useScreenAccess/personal-workspace rules",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiGrid",
+      "uiPattern": "Workspace",
+      "kind": "configured-screen",
+      "title": "Elective Approvals"
+    },
+    {
+      "moduleId": "faculty_portal",
+      "moduleName": "Faculty Portal",
+      "route": "/faculty-portal/documents",
+      "component": "FacultyWorkspacePage",
+      "componentFile": "src/features/faculty/FacultyWorkspacePage.jsx",
+      "source": "src/features/faculty/routeConfig.js",
+      "permission": null,
+      "roles": [
+        "faculty"
+      ],
+      "guard": "PortalRoute + existing useScreenAccess/personal-workspace rules",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiGrid",
+      "uiPattern": "Workspace",
+      "kind": "configured-screen",
+      "title": "Documents"
+    },
+    {
+      "moduleId": "faculty_portal",
+      "moduleName": "Faculty Portal",
+      "route": "/faculty-portal/meetings",
+      "component": "FacultyWorkspacePage",
+      "componentFile": "src/features/faculty/FacultyWorkspacePage.jsx",
+      "source": "src/features/faculty/routeConfig.js",
+      "permission": null,
+      "roles": [
+        "faculty"
+      ],
+      "guard": "PortalRoute + existing useScreenAccess/personal-workspace rules",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiCalendar",
+      "uiPattern": "Workspace",
+      "kind": "configured-screen",
+      "title": "Meetings & Events"
+    },
+    {
+      "moduleId": "faculty_portal",
+      "moduleName": "Faculty Portal",
+      "route": "/faculty-portal/profile",
+      "component": "FacultyWorkspacePage",
+      "componentFile": "src/features/faculty/FacultyWorkspacePage.jsx",
+      "source": "src/features/faculty/routeConfig.js",
+      "permission": "my_profile",
+      "roles": [
+        "faculty"
+      ],
+      "guard": "PortalRoute + existing useScreenAccess/personal-workspace rules",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiUser",
+      "uiPattern": "Workspace",
+      "kind": "configured-screen",
+      "title": "My Profile"
+    },
+    {
+      "moduleId": "faculty_portal",
+      "moduleName": "Faculty Portal",
+      "route": "/faculty-portal/notifications",
+      "component": "FacultyWorkspacePage",
+      "componentFile": "src/features/faculty/FacultyWorkspacePage.jsx",
+      "source": "src/features/faculty/routeConfig.js",
+      "permission": "notifications",
+      "roles": [
+        "faculty"
+      ],
+      "guard": "PortalRoute + existing useScreenAccess/personal-workspace rules",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiBell",
+      "uiPattern": "Workspace",
+      "kind": "configured-screen",
+      "title": "Notifications"
+    },
+    {
+      "moduleId": "faculty_portal",
+      "moduleName": "Faculty Portal",
+      "route": "/faculty-portal/materials",
+      "component": "FacultyWorkspacePage",
+      "componentFile": "src/features/faculty/FacultyWorkspacePage.jsx",
+      "source": "src/features/faculty/routeConfig.js",
+      "permission": "materials",
+      "roles": [
+        "faculty"
+      ],
+      "guard": "PortalRoute + existing useScreenAccess/personal-workspace rules",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiBookOpen",
+      "uiPattern": "Workspace",
+      "kind": "configured-screen",
+      "title": "Study Materials"
+    },
+    {
+      "moduleId": "faculty_portal",
+      "moduleName": "Faculty Portal",
+      "route": "/faculty-portal/leave",
+      "component": "FacultyWorkspacePage",
+      "componentFile": "src/features/faculty/FacultyWorkspacePage.jsx",
+      "source": "src/features/faculty/routeConfig.js",
+      "permission": "faculty_leaves",
+      "roles": [
+        "faculty"
+      ],
+      "guard": "PortalRoute + existing useScreenAccess/personal-workspace rules",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiCalendar",
+      "uiPattern": "Workspace",
+      "kind": "configured-screen",
+      "title": "Leave Management"
+    },
+    {
+      "moduleId": "student_portal",
+      "moduleName": "Student Portal",
+      "route": "/student-portal/dashboard",
+      "component": "AcademicPortal",
+      "componentFile": "src/pages/portals/AcademicPortal.jsx",
+      "source": "src/components/portals/portalNavigation.js",
+      "permission": "dashboard",
+      "roles": [
+        "student"
+      ],
+      "guard": "PortalRoute + existing useScreenAccess screen mapping; no invented blanket permission",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiGrid",
+      "uiPattern": "Dashboard",
+      "kind": "configured-screen",
+      "title": "Dashboard"
+    },
+    {
+      "moduleId": "student_portal",
+      "moduleName": "Student Portal",
+      "route": "/student-portal/profile",
+      "component": "AcademicPortal",
+      "componentFile": "src/pages/portals/AcademicPortal.jsx",
+      "source": "src/components/portals/portalNavigation.js",
+      "permission": "my_profile",
+      "roles": [
+        "student"
+      ],
+      "guard": "PortalRoute + existing useScreenAccess screen mapping; no invented blanket permission",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiUser",
+      "uiPattern": "Workspace",
+      "kind": "configured-screen",
+      "title": "My Profile"
+    },
+    {
+      "moduleId": "student_portal",
+      "moduleName": "Student Portal",
+      "route": "/student-portal/subjects",
+      "component": "AcademicPortal",
+      "componentFile": "src/pages/portals/AcademicPortal.jsx",
+      "source": "src/components/portals/portalNavigation.js",
+      "permission": "subjects",
+      "roles": [
+        "student"
+      ],
+      "guard": "PortalRoute + existing useScreenAccess screen mapping; no invented blanket permission",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiBook",
+      "uiPattern": "Workspace",
+      "kind": "configured-screen",
+      "title": "My Subjects"
+    },
+    {
+      "moduleId": "student_portal",
+      "moduleName": "Student Portal",
+      "route": "/student-portal/attendance",
+      "component": "AcademicPortal",
+      "componentFile": "src/pages/portals/AcademicPortal.jsx",
+      "source": "src/components/portals/portalNavigation.js",
+      "permission": "student_attendance",
+      "roles": [
+        "student"
+      ],
+      "guard": "PortalRoute + existing useScreenAccess screen mapping; no invented blanket permission",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiCheckSquare",
+      "uiPattern": "Workspace",
+      "kind": "configured-screen",
+      "title": "My Attendance"
+    },
+    {
+      "moduleId": "student_portal",
+      "moduleName": "Student Portal",
+      "route": "/student-portal/results",
+      "component": "AcademicPortal",
+      "componentFile": "src/pages/portals/AcademicPortal.jsx",
+      "source": "src/components/portals/portalNavigation.js",
+      "permission": "results",
+      "roles": [
+        "student"
+      ],
+      "guard": "PortalRoute + existing useScreenAccess screen mapping; no invented blanket permission",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiFileText",
+      "uiPattern": "Workspace",
+      "kind": "configured-screen",
+      "title": "My Results"
+    },
+    {
+      "moduleId": "student_portal",
+      "moduleName": "Student Portal",
+      "route": "/student-portal/timetable",
+      "component": "AcademicPortal",
+      "componentFile": "src/pages/portals/AcademicPortal.jsx",
+      "source": "src/components/portals/portalNavigation.js",
+      "permission": "timetable",
+      "roles": [
+        "student"
+      ],
+      "guard": "PortalRoute + existing useScreenAccess screen mapping; no invented blanket permission",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiCalendar",
+      "uiPattern": "Workspace",
+      "kind": "configured-screen",
+      "title": "My Timetable"
+    },
+    {
+      "moduleId": "student_portal",
+      "moduleName": "Student Portal",
+      "route": "/student-portal/materials",
+      "component": "AcademicPortal",
+      "componentFile": "src/pages/portals/AcademicPortal.jsx",
+      "source": "src/components/portals/portalNavigation.js",
+      "permission": "materials",
+      "roles": [
+        "student"
+      ],
+      "guard": "PortalRoute + existing useScreenAccess screen mapping; no invented blanket permission",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiBookOpen",
+      "uiPattern": "Workspace",
+      "kind": "configured-screen",
+      "title": "Study Materials"
+    },
+    {
+      "moduleId": "student_portal",
+      "moduleName": "Student Portal",
+      "route": "/student-portal/fees",
+      "component": "AcademicPortal",
+      "componentFile": "src/pages/portals/AcademicPortal.jsx",
+      "source": "src/components/portals/portalNavigation.js",
+      "permission": "fees",
+      "roles": [
+        "student"
+      ],
+      "guard": "PortalRoute + existing useScreenAccess screen mapping; no invented blanket permission",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiCreditCard",
+      "uiPattern": "Workspace",
+      "kind": "configured-screen",
+      "title": "Fee Details"
+    },
+    {
+      "moduleId": "student_portal",
+      "moduleName": "Student Portal",
+      "route": "/student-portal/notifications",
+      "component": "AcademicPortal",
+      "componentFile": "src/pages/portals/AcademicPortal.jsx",
+      "source": "src/components/portals/portalNavigation.js",
+      "permission": "notifications",
+      "roles": [
+        "student"
+      ],
+      "guard": "PortalRoute + existing useScreenAccess screen mapping; no invented blanket permission",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiBell",
+      "uiPattern": "Workspace",
+      "kind": "configured-screen",
+      "title": "Notifications"
+    },
+    {
+      "moduleId": "staff_portal",
+      "moduleName": "Staff Portal",
+      "route": "/staff-portal/dashboard",
+      "component": "StaffPortal",
+      "componentFile": "src/pages/staff-portal/StaffPortal.jsx",
+      "source": "src/pages/staff-portal/StaffPortalLayout.jsx",
+      "permission": null,
+      "roles": [
+        "staff"
+      ],
+      "guard": "PortalRoute + existing personal-workspace rules",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiGrid",
+      "uiPattern": "Dashboard",
+      "kind": "configured-screen",
+      "title": "Dashboard"
+    },
+    {
+      "moduleId": "staff_portal",
+      "moduleName": "Staff Portal",
+      "route": "/staff-portal/my-profile",
+      "component": "StaffPortal",
+      "componentFile": "src/pages/staff-portal/StaffPortal.jsx",
+      "source": "src/pages/staff-portal/StaffPortalLayout.jsx",
+      "permission": null,
+      "roles": [
+        "staff"
+      ],
+      "guard": "PortalRoute + existing personal-workspace rules",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiUser",
+      "uiPattern": "Workspace",
+      "kind": "configured-screen",
+      "title": "My Profile"
+    },
+    {
+      "moduleId": "staff_portal",
+      "moduleName": "Staff Portal",
+      "route": "/staff-portal/my-attendance",
+      "component": "StaffPortal",
+      "componentFile": "src/pages/staff-portal/StaffPortal.jsx",
+      "source": "src/pages/staff-portal/StaffPortalLayout.jsx",
+      "permission": null,
+      "roles": [
+        "staff"
+      ],
+      "guard": "PortalRoute + existing personal-workspace rules",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiCheckSquare",
+      "uiPattern": "Workspace",
+      "kind": "configured-screen",
+      "title": "My Attendance"
+    },
+    {
+      "moduleId": "staff_portal",
+      "moduleName": "Staff Portal",
+      "route": "/staff-portal/leave",
+      "component": "StaffPortal",
+      "componentFile": "src/pages/staff-portal/StaffPortal.jsx",
+      "source": "src/pages/staff-portal/StaffPortalLayout.jsx",
+      "permission": null,
+      "roles": [
+        "staff"
+      ],
+      "guard": "PortalRoute + existing personal-workspace rules",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiCalendar",
+      "uiPattern": "Workspace",
+      "kind": "configured-screen",
+      "title": "Leave Management"
+    },
+    {
+      "moduleId": "staff_portal",
+      "moduleName": "Staff Portal",
+      "route": "/staff-portal/duty-roster",
+      "component": "StaffPortal",
+      "componentFile": "src/pages/staff-portal/StaffPortal.jsx",
+      "source": "src/pages/staff-portal/StaffPortalLayout.jsx",
+      "permission": null,
+      "roles": [
+        "staff"
+      ],
+      "guard": "PortalRoute + existing personal-workspace rules",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiClock",
+      "uiPattern": "Workspace",
+      "kind": "configured-screen",
+      "title": "Duty Roster"
+    },
+    {
+      "moduleId": "staff_portal",
+      "moduleName": "Staff Portal",
+      "route": "/staff-portal/tasks",
+      "component": "StaffPortal",
+      "componentFile": "src/pages/staff-portal/StaffPortal.jsx",
+      "source": "src/pages/staff-portal/StaffPortalLayout.jsx",
+      "permission": null,
+      "roles": [
+        "staff"
+      ],
+      "guard": "PortalRoute + existing personal-workspace rules",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiCheckCircle",
+      "uiPattern": "Workspace",
+      "kind": "configured-screen",
+      "title": "My Tasks"
+    },
+    {
+      "moduleId": "staff_portal",
+      "moduleName": "Staff Portal",
+      "route": "/staff-portal/notices",
+      "component": "StaffPortal",
+      "componentFile": "src/pages/staff-portal/StaffPortal.jsx",
+      "source": "src/pages/staff-portal/StaffPortalLayout.jsx",
+      "permission": null,
+      "roles": [
+        "staff"
+      ],
+      "guard": "PortalRoute + existing personal-workspace rules",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiBell",
+      "uiPattern": "Workspace",
+      "kind": "configured-screen",
+      "title": "Notices"
+    },
+    {
+      "moduleId": "staff_portal",
+      "moduleName": "Staff Portal",
+      "route": "/staff-portal/meetings-events",
+      "component": "StaffPortal",
+      "componentFile": "src/pages/staff-portal/StaffPortal.jsx",
+      "source": "src/pages/staff-portal/StaffPortalLayout.jsx",
+      "permission": null,
+      "roles": [
+        "staff"
+      ],
+      "guard": "PortalRoute + existing personal-workspace rules",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiUsers",
+      "uiPattern": "Workspace",
+      "kind": "configured-screen",
+      "title": "Meetings and Events"
+    },
+    {
+      "moduleId": "staff_portal",
+      "moduleName": "Staff Portal",
+      "route": "/staff-portal/documents",
+      "component": "StaffPortal",
+      "componentFile": "src/pages/staff-portal/StaffPortal.jsx",
+      "source": "src/pages/staff-portal/StaffPortalLayout.jsx",
+      "permission": null,
+      "roles": [
+        "staff"
+      ],
+      "guard": "PortalRoute + existing personal-workspace rules",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "FiFileText",
+      "uiPattern": "Workspace",
+      "kind": "configured-screen",
+      "title": "My Documents"
+    },
+    {
+      "moduleId": "faculty_directory",
+      "moduleName": "Faculty Directory",
+      "route": "/faculty/new",
+      "component": "FacultyManagement",
+      "componentFile": "src/pages/faculty/FacultyManagement.jsx",
+      "source": "src/pages/faculty/FacultyManagement.jsx",
+      "permission": "faculty_directory",
+      "roles": [
+        "admin"
+      ],
+      "guard": "Inherited App.jsx route guard + pathname dispatcher",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "briefcase-business",
+      "uiPattern": "Form",
+      "kind": "pathname-dispatch"
+    },
+    {
+      "moduleId": "faculty_directory",
+      "moduleName": "Faculty Directory",
+      "route": "/faculty/:id",
+      "component": "FacultyManagement",
+      "componentFile": "src/pages/faculty/FacultyManagement.jsx",
+      "source": "src/pages/faculty/FacultyManagement.jsx",
+      "permission": "faculty_directory",
+      "roles": [
+        "admin"
+      ],
+      "guard": "Inherited App.jsx route guard + pathname dispatcher",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "briefcase-business",
+      "uiPattern": "View / route-dependent",
+      "kind": "pathname-dispatch"
+    },
+    {
+      "moduleId": "faculty_directory",
+      "moduleName": "Faculty Directory",
+      "route": "/faculty/:id/edit",
+      "component": "FacultyManagement",
+      "componentFile": "src/pages/faculty/FacultyManagement.jsx",
+      "source": "src/pages/faculty/FacultyManagement.jsx",
+      "permission": "faculty_directory",
+      "roles": [
+        "admin"
+      ],
+      "guard": "Inherited App.jsx route guard + pathname dispatcher",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "briefcase-business",
+      "uiPattern": "Form",
+      "kind": "pathname-dispatch"
+    },
+    {
+      "moduleId": "faculty_attendance",
+      "moduleName": "Faculty Attendance",
+      "route": "/faculty/attendance",
+      "component": "FacultyManagement",
+      "componentFile": "src/pages/faculty/FacultyManagement.jsx",
+      "source": "src/pages/faculty/FacultyManagement.jsx",
+      "permission": "faculty_attendance",
+      "roles": [
+        "admin"
+      ],
+      "guard": "Inherited App.jsx route guard + pathname dispatcher",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "clipboard-check",
+      "uiPattern": "List / Workspace",
+      "kind": "pathname-dispatch"
+    },
+    {
+      "moduleId": "faculty_directory",
+      "moduleName": "Faculty Directory",
+      "route": "/faculty/advisors",
+      "component": "Navigate",
+      "componentFile": "src/pages/faculty/FacultyManagement.jsx",
+      "source": "src/pages/faculty/FacultyManagement.jsx",
+      "permission": "faculty_directory",
+      "roles": [
+        "admin"
+      ],
+      "guard": "Inherited App.jsx route guard + pathname dispatcher",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "briefcase-business",
+      "uiPattern": "Redirect",
+      "kind": "pathname-dispatch"
+    },
+    {
+      "moduleId": "faculty_directory",
+      "moduleName": "Faculty Directory",
+      "route": "/faculty/subjects",
+      "component": "Navigate",
+      "componentFile": "src/pages/faculty/FacultyManagement.jsx",
+      "source": "src/pages/faculty/FacultyManagement.jsx",
+      "permission": "faculty_directory",
+      "roles": [
+        "admin"
+      ],
+      "guard": "Inherited App.jsx route guard + pathname dispatcher",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "briefcase-business",
+      "uiPattern": "Redirect",
+      "kind": "pathname-dispatch"
+    },
+    {
+      "moduleId": "student_attendance",
+      "moduleName": "Student Attendance",
+      "route": "/student-management/attendance/take",
+      "component": "Attendance",
+      "componentFile": "src/pages/attendance/Attendance.jsx",
+      "source": "src/pages/attendance/Attendance.jsx",
+      "permission": "student_attendance",
+      "roles": [
+        "admin"
+      ],
+      "guard": "Inherited App.jsx route guard + pathname dispatcher",
+      "scope": "college",
+      "dependencies": [
+        "college",
+        "academicYear",
+        "course",
+        "branch",
+        "semester",
+        "section"
+      ],
+      "icon": "list-checks",
+      "uiPattern": "Form",
+      "kind": "pathname-dispatch"
+    },
+    {
+      "moduleId": "staff_portal",
+      "moduleName": "Staff Portal",
+      "route": "/staff-portal/profile",
+      "component": "StaffPortal",
+      "componentFile": "src/pages/staff-portal/StaffPortal.jsx",
+      "source": "src/pages/staff-portal/StaffPortal.jsx",
+      "permission": null,
+      "roles": [
+        "staff"
+      ],
+      "guard": "Inherited App.jsx route guard + pathname dispatcher",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "id-card",
+      "uiPattern": "List / Workspace",
+      "kind": "pathname-dispatch"
+    },
+    {
+      "moduleId": "staff_portal",
+      "moduleName": "Staff Portal",
+      "route": "/staff-portal/attendance",
+      "component": "StaffPortal",
+      "componentFile": "src/pages/staff-portal/StaffPortal.jsx",
+      "source": "src/pages/staff-portal/StaffPortal.jsx",
+      "permission": null,
+      "roles": [
+        "staff"
+      ],
+      "guard": "Inherited App.jsx route guard + pathname dispatcher",
+      "scope": "assigned-college",
+      "dependencies": [],
+      "icon": "id-card",
+      "uiPattern": "List / Workspace",
+      "kind": "pathname-dispatch"
+    }
+  ]
+}

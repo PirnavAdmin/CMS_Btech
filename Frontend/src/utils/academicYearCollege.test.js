@@ -16,6 +16,7 @@ test('academic year directory excludes old college records even when API ignores
   ]) {
     let years, loading
     const context = vm.createContext({ selectedCollegeId: collegeId, readSelectedCollegeId: () => collegeId, createCollegeScope,
+      loadRequest: { current: 0 }, setLoadError() {},
       academicYearApi: { getAll: async () => response }, newestFirst: (_key, rows) => rows, mapYear: row => row,
       setYears: rows => { years = rows }, setExportLoading: value => { loading = value },
       eventBus: { emit() {} }, ERP_EVENTS: { ACADEMIC_UPDATED: 'academic' }, setNotice: message => assert.fail(message),

@@ -41,3 +41,11 @@ test('college impact includes faculty and rejects invalid verification responses
   assert.throws(() => normalizeCollegeImpact({ facultyCount: -1 }))
   assert.equal(await countCollegeFaculty(async () => [{ collegeId: 1 }, { collegeId: 2 }], 1), 1)
 })
+
+test('stale mutation bodies cannot cross the selected college', () => {
+ for (const key of ['collegeId', 'CollegeId']) assert.throws(() => collegeRequest('/api/v1/rooms', { method: 'POST', body: JSON.stringify({ [key]: 7 }) }, '8'), /college changed/)
+ assert.throws(() => collegeRequest('/api/v1/academic-fee-plans', { method: 'POST', body: JSON.stringify({ collegeId: 7 }) }, '8'), /college changed/)
+ const valid = collegeRequest('/api/v1/rooms', { method: 'PATCH', body: JSON.stringify({ collegeId: 8, roomName: 'Lab' }) }, '8')
+ assert.equal(JSON.parse(valid.options.body).collegeId, 8)
+ assert.equal(collegeRequest('/api/v1/rooms', { method: 'POST', body: 'not-json' }, '8').options.body, 'not-json')
+})

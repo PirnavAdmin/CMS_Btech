@@ -1,3 +1,4 @@
+import { ADMISSION_QUOTAS } from '../../utils/admissionQuotaOptions'
 import '../admin-management/AdminManagement.css'
 import './fees.css'
 import { ProjectSelect } from '../../components/SearchableSelect'
@@ -99,11 +100,11 @@ function feeHeadsError(rows) {
   if (rows.some(row => !validFeeHeadAmount(row.amount))) return "Fee heads require positive amounts with at most two decimal places.";
   return "";
 }
-function FeeBreakdownEditor({ category, rows, onChange, total, frequency = "Yearly", suggestions = [] }) {
+function FeeBreakdownEditor({ category, rows, onChange, total, frequency = "Yearly", suggestions = [], academicSuggestionsOnly = false }) {
   const listId = external0.useId();
   const [customRows, setCustomRows] = external0.useState([]);
   const academic = category === 'Academic';
-  const academicHeads = [...new Set(['Tuition Fee', 'Admission Fee', 'Examination Fee', 'Library Fee', 'Laboratory Fee', 'Development Fee', 'Registration Fee', 'Sports Fee', 'Student Activity Fee', 'Caution Deposit', ...suggestions.map(head => head.name).filter(Boolean)])];
+  const academicHeads = [...new Set([...(academicSuggestionsOnly ? [] : ['Tuition Fee', 'Admission Fee', 'Examination Fee', 'Library Fee', 'Laboratory Fee', 'Development Fee', 'Registration Fee', 'Sports Fee', 'Student Activity Fee', 'Caution Deposit']), ...rows.map(head => head.name), ...suggestions.map(head => head.name)].filter(Boolean))];
   const hostel = category === 'Hostel';
   const hostelHeads = [...new Set(['Hostel Accommodation Fee', 'Mess Fee', 'Hostel Admission Fee', 'Security Deposit', 'Laundry Fee', 'Electricity Charges', 'Water Charges', ...rows.map(head => head.name).filter(Boolean), ...suggestions.map(head => head.name).filter(Boolean)])];
   const feeHeadOptions = hostel ? hostelHeads : academicHeads;
@@ -302,6 +303,7 @@ export const FeeStructureWizardModule = (() => {
     FiAlertTriangle,
     FiArrowLeft,
     FiCheck,
+    FiCopy,
     FiPlus,
     FiTrash2,
     FiX,
@@ -606,7 +608,7 @@ export const FeeStructureWizardModule = (() => {
     );
   }
 
-  function FeePlanPreview({ title, groups, total, status = "Draft", hasContent = true }) {
+  function FeePlanPreview({ title, groups, total, status = "Draft", hasContent = true, controls = null }) {
     const visibleGroups = groups.map(group => ({ ...group, rows: group.rows.filter(([name, value]) => name && value !== "" && value != null) })).filter(group => group.rows.length);
     return (
       <aside className="fm-live-preview" aria-label="Live Preview">
@@ -617,6 +619,7 @@ export const FeeStructureWizardModule = (() => {
           </div>
           <FeeBadge value={status} />
         </header>
+        {controls}
         <div className="fm-live-preview__body">
           {!hasContent ? <div className="fm-preview-placeholder"><external3.FiFileText aria-hidden="true" /><strong>Your fee plan preview</strong><p>Enter plan details to see the live preview here.</p></div> : <>
           {total > 0 && <div className="fm-preview-amount"><span>Plan total</span><strong>{feeMoney(total)}</strong><h3>{title}</h3></div>}
@@ -760,29 +763,83 @@ export const FeeStructureWizardModule = (() => {
     components = [],
     existingStructures = [],
     students = [],
+    collegeId,
     close,
     save,
   }) {
-    const [s, set] = useState(() => ({ ...structuredClone(value), plan: value.plan === "Installments" ? "Installment Plan" : value.plan }));
+    const legacyLocalEdit = Boolean(value.id);
+    const academicContext = AcademicContextModule.useAcademic();
+    const [nameEdited, setNameEdited] = useState(Boolean(value.name));
+    const [s, set] = useState(() => ({ ...structuredClone(value), cycle: value.id ? value.cycle : "Semester-wise", plan: value.plan === "Installments" ? "Installment Plan" : value.plan }));
     const [error, setError] = useState("");
+    const [configurations, setConfigurations] = useState(() => [{ id: uid("CFG"), quota: value.quota || value.category || "", studentCategory: value.studentCategory || "", components: structuredClone(value.components || []), overrides: {}, schedule: null }]);
+    const [customQuotaIds, setCustomQuotaIds] = useState([]);
+    const [previewConfigId, setPreviewConfigId] = useState("");
+    const [scheduleTarget, setScheduleTarget] = useState("common");
+    const [feeCategories, setFeeCategories] = useState([]);
+    const [serverPlans, setServerPlans] = useState([]);
+    const [saveResults, setSaveResults] = useState([]);
+    const [saving, setSaving] = useState(false);
+    const [submissionComplete, setSubmissionComplete] = useState(false);
+    const [pendingStatus, setPendingStatus] = useState("Draft");
+    const completedSavesRef = useRef({});
+    const planBatchTokenRef = useRef(null);
+    if (!planBatchTokenRef.current) planBatchTokenRef.current = uid("BATCH").replace(/[^a-zA-Z0-9]/g, "").slice(-8).toUpperCase();
+    const [plansLoaded, setPlansLoaded] = useState(Boolean(value.id));
     const [previewStarted, setPreviewStarted] = useState(Boolean(value.id));
     const [previewFields, setPreviewFields] = useState({});
     const [advancedOpen, setAdvancedOpen] = useState(true);
     const [formTab, setFormTab] = useState("applicability");
     const formTabId = useId();
-    const formTabs = [["applicability", "Academic Details"], ["breakdown", "Fee Breakdown"], ["schedule", "Payment Schedule"]];
+    const formTabs = [["applicability", "Academic Details"], ["breakdown", "Fee Breakdown"], ["schedule", "Payment Schedule & Final Review"]];
+
+    useEffect(() => {
+      if (legacyLocalEdit) { setPlansLoaded(true); return undefined; }
+      let active = true;
+      setPlansLoaded(false);
+      setFeeCategories([]);
+      setServerPlans([]);
+      Promise.all([
+        apiEndpointsModule.feeConfigurationApi.categories(),
+        collegeId ? apiEndpointsModule.academicFeePlanApi.list(collegeId) : Promise.resolve([]),
+      ]).then(([categories, plans]) => {
+        if (!active) return;
+        setFeeCategories(Array.isArray(categories) ? categories : []);
+        setServerPlans(Array.isArray(plans) ? plans : []);
+        setPlansLoaded(true);
+      }).catch(reason => { if (active) setError(reason.message || "Could not load fee category and existing fee plan data."); });
+      return () => { active = false; };
+    }, [collegeId, legacyLocalEdit]);
+
+    useEffect(() => {
+      if (configurations.length && !configurations.some(row => row.id === previewConfigId)) setPreviewConfigId(configurations[0].id);
+      if (scheduleTarget !== "common" && !configurations.some(row => row.id === scheduleTarget)) setScheduleTarget("common");
+    }, [configurations, previewConfigId, scheduleTarget]);
+
+    const previewConfig = configurations.find(row => row.id === previewConfigId) || configurations[0];
+    const configPatch = (id, change) => {
+      setPreviewStarted(true);
+      setPreviewConfigId(id);
+      setError("");
+      setConfigurations(current => current.map(row => row.id === id ? { ...row, ...change } : row));
+    };
+    const duplicateConfig = config => configurations.some(other => other.id !== config.id && other.quota.trim().toLowerCase() === config.quota.trim().toLowerCase() && other.studentCategory.trim().toLowerCase() === config.studentCategory.trim().toLowerCase());
+    const configAmount = (config, component) => Number(config?.overrides?.[component.masterId || component.id || component.name] ?? component.amount) || 0;
+    const headsFor = config => config?.components || s.components;
+    const totalFor = config => rupees(headsFor(config).reduce((sum, component) => sum + cents(configAmount(config, component)), 0) - cents(s.discount || 0));
+    const quotaValues = [...new Set([...ADMISSION_QUOTAS, ...serverPlans.map(row => row.quota)]
+      .filter(value => value && !["other", "others"].includes(String(value).trim().toLowerCase())))];
+    const studentCategoryValues = [...new Set(serverPlans.map(row => row.studentCategory).filter(Boolean))];
 
     const patch = (change) => {
       setPreviewStarted(true);
       setPreviewFields(current => ({ ...current, ...Object.fromEntries(Object.keys(change).map(key => [key, true])) }));
       set((curr) => {
         const next = { ...curr, ...change };
-        if (Object.hasOwn(change, "courseId") || Object.hasOwn(change, "academicYearId")) {
-          next.batch = calculatedFeeBatch(
-            masters.years.find(year => String(year.id) === String(next.academicYearId)),
-            masters.courses.find(course => String(course.id) === String(next.courseId))
-          );
-        }
+        const hierarchy = ["academicYearId", "courseId", "branchId", "batch", "semesterId"];
+        const parent = hierarchy.findIndex(key => Object.hasOwn(change, key));
+        if (parent >= 0) hierarchy.slice(parent + 1).forEach(key => { next[key] = ""; });
+        if (Object.hasOwn(change, "cycle")) next.semesterId = "";
         return next;
       });
       setError("");
@@ -797,33 +854,36 @@ export const FeeStructureWizardModule = (() => {
         (!r.branchId || String(r.branchId) === String(s.branchId)) &&
         (!r.academicYearId || String(r.academicYearId) === String(s.academicYearId))
     );
-    const generatedBatch = calculatedFeeBatch(
-      masters.years.find(year => String(year.id) === String(s.academicYearId)),
-      masters.courses.find(course => String(course.id) === String(s.courseId))
-    );
+    // Only cohorts already stored by the server are selectable.
+    const batches = [...new Set([...(masters.batchScopes || []), ...serverPlans]
+      .filter(row => s.courseId && s.branchId && String(row.courseId) === String(s.courseId) && String(row.branchId) === String(s.branchId))
+      .map(row => row.batch).filter(Boolean))];
+    const suggestedName = [masters.courses.find(row => String(row.id) === String(s.courseId))?.name,
+      branches.find(row => String(row.id) === String(s.branchId))?.name, s.batch,
+      semesters.find(row => String(row.id) === String(s.semesterId))?.name,
+      masters.years.find(row => String(row.id) === String(s.academicYearId))?.name].filter(Boolean).join(" · ");
     useEffect(() => {
-      if (generatedBatch) set(current => current.batch ? current : { ...current, batch: generatedBatch });
-    }, [generatedBatch]);
+      if (!nameEdited) set(current => current.name === suggestedName.slice(0, 100) ? current : { ...current, name: suggestedName.slice(0, 100) });
+    }, [suggestedName, nameEdited]);
+    useEffect(() => {
+      if (academicContext.loading || legacyLocalEdit) return;
+      set(current => {
+        const invalid = !masters.years.some(row => String(row.id) === String(current.academicYearId)) ? "academicYearId"
+          : current.courseId && !masters.courses.some(row => String(row.id) === String(current.courseId)) ? "courseId"
+          : current.branchId && !branches.some(row => String(row.id) === String(current.branchId)) ? "branchId"
+          : plansLoaded && current.batch && !batches.includes(current.batch) ? "batch"
+          : current.semesterId && !semesters.some(row => String(row.id) === String(current.semesterId)) ? "semesterId" : "";
+        if (!invalid || !current[invalid]) return current;
+        const hierarchy = ["academicYearId", "courseId", "branchId", "batch", "semesterId"];
+        return { ...current, ...Object.fromEntries(hierarchy.slice(hierarchy.indexOf(invalid)).map(key => [key, ""])) };
+      });
+    }, [academicContext.loading, collegeId, masters.years, masters.courses, branches, batches, semesters, plansLoaded, legacyLocalEdit]);
 
-    const existingBatches = masters.batchScopes
-      ? [
-          ...new Set(
-            masters.batchScopes
-              .filter(
-                (r) =>
-                  (!s.courseId || String(r.courseId) === String(s.courseId)) &&
-                  (!s.branchId || String(r.branchId) === String(s.branchId)) &&
-                  (!r.academicYearId ||
-                    String(r.academicYearId) === String(s.academicYearId))
-              )
-              .map((r) => r.batch)
-              .filter(Boolean)
-          ),
-        ]
-      : masters.batches || [];
-    const batches = [...new Set([generatedBatch, s.batch, ...existingBatches].filter(Boolean))];
-
-    const total = feeTotal(s);
+    const total = legacyLocalEdit ? feeTotal(s) : totalFor(configurations[0]);
+    const previewHeads = legacyLocalEdit ? s.components : headsFor(previewConfig);
+    const previewSchedule = previewConfig?.schedule || s;
+    const previewTotal = previewConfig ? totalFor(previewConfig) : total;
+    const scheduleConfig = configurations.find(row => row.id === scheduleTarget) || configurations[0];
     const scheduled = s.installments.reduce(
       (sum, i) => sum + (Number(i.amount) || 0),
       0
@@ -832,33 +892,72 @@ export const FeeStructureWizardModule = (() => {
 
     const validate = (targetStatus, step = "schedule") => {
       if (!s.academicYearId || !masters.years.some(year => String(year.id) === String(s.academicYearId))) return "Select an active academic year.";
-      if (!s.courseId) return "Select a program / course.";
-      if (!s.branchId) return "Select a branch.";
-      if (!s.batch?.trim()) return "Select a batch.";
-      if (s.applicableTo === "Selected Category" && !s.category)
-        return "Select a student category / quota.";
-      if (s.cycle === "Semester-wise" && !s.semesterId) return "Select a semester.";
-      if (step === "applicability") return "";
-
-      const breakdownError = feeHeadsError(s.components);
-      if (breakdownError) return breakdownError;
-      if (step === "breakdown") return s.components.length ? "" : "Add at least one fee head.";
-      if (targetStatus !== "Draft") {
-        if (!s.components.length)
-          return "Add at least one charge to the fee breakdown.";
-        if (s.components.some((c) => !Number(c.amount) || Number(c.amount) <= 0))
-          return "All charges must have positive amounts.";
-
-        if (s.plan === "Full Payment") {
-          if (!s.dueDate) return "Select a payment due date.";
-        } else {
-          if (!s.installments.length)
-            return "Add at least one installment to the payment schedule.";
-          if (s.installments.some((i) => !i.dueDate || !Number(i.amount)))
-            return "Every installment requires a due date and amount.";
-          if (Math.abs(remaining) > 0.01)
-            return `Payment installments must equal total fee. Remaining balance is ${feeMoney(remaining)}.`;
+      if (academicContext.loading || academicContext.error) return academicContext.error || "Academic options are loading.";
+      if (!s.name?.trim()) return "Enter a fee plan name.";
+      if (!masters.courses.some(row => String(row.id) === String(s.courseId))) return "Select a valid course.";
+      if (!s.branchId || !branches.some(row => String(row.id) === String(s.branchId))) return "Select a valid branch.";
+      if (!s.batch?.trim() || (!legacyLocalEdit && !batches.includes(s.batch))) return "Select a valid admission batch.";
+      if (legacyLocalEdit) {
+        if (s.applicableTo === "Selected Category" && !s.category) return "Select a student category / quota.";
+        if (s.cycle === "Semester-wise" && !s.semesterId) return "Select a semester.";
+        if (step === "applicability") return "";
+        const oldBreakdownError = feeHeadsError(s.components);
+        if (oldBreakdownError) return oldBreakdownError;
+        if (step === "breakdown") return s.components.length ? "" : "Add at least one fee head.";
+        if (targetStatus !== "Draft") {
+          if (s.plan === "Full Payment" && !s.dueDate) return "Select a payment due date.";
+          if (s.plan !== "Full Payment" && (!s.installments.length || s.installments.some(row => !row.dueDate || !Number(row.amount)) || Math.abs(remaining) > 0.01)) return "Payment installments must have dates and equal the total fee.";
         }
+        return "";
+      }
+      if (s.cycle !== "Semester-wise") return "Annual applicability cannot be represented without a semester-specific record by the current API.";
+      if (!s.semesterId || !semesters.some(row => String(row.id) === String(s.semesterId))) return "Select a semester. The fee-plan API requires semester scope for every billing cycle.";
+      if (!plansLoaded) return "Existing fee plans are still loading. Wait a moment and retry.";
+
+      if (step === "applicability") return "";
+      if (!configurations.length) return "Add at least one quota / category configuration.";
+      const keys = new Set();
+      for (const config of configurations) {
+        if (customQuotaIds.includes(config.id) && !config.quota.trim()) return "Enter the admission quota name for Others.";
+        if (config.quota.length > 100 || config.studentCategory.length > 100) return "Quota and category must be at most 100 characters.";
+        const key = `${config.quota.trim().toLocaleLowerCase()}|${config.studentCategory.trim().toLocaleLowerCase()}`;
+        if (keys.has(key)) return `Duplicate quota / category combination: ${config.quota} + ${config.studentCategory}.`;
+        keys.add(key);
+        const matched = [...serverPlans, ...existingStructures].some(plan =>
+          String(plan.academicYearId || "") === String(s.academicYearId) &&
+          String(plan.courseId || "") === String(s.courseId) &&
+          String(plan.branchId || "") === String(s.branchId) &&
+          String(plan.semesterId || "") === String(s.semesterId) &&
+          String(plan.batch || "").trim().toLowerCase() === String(s.batch || "").trim().toLowerCase() &&
+          String(plan.quota || "").trim().toLowerCase() === key.split("|")[0] &&
+          String(plan.studentCategory || "").trim().toLowerCase() === key.split("|")[1] &&
+          !["ARCHIVED", "Archived"].includes(plan.status) && String(plan.feeStructureId || plan.id || "") !== String(value.id || "")
+        );
+        if (matched && !completedSavesRef.current[config.id]) return `A fee plan already exists for ${config.quota} + ${config.studentCategory} in this academic scope.`;
+      }
+      if (!s.feeCategoryId || !feeCategories.some(row => String(row.id) === String(s.feeCategoryId))) return "Select a financial fee category in Fee Breakdown.";
+      if (Number(s.discount || 0) > 0) return "The current academic fee-plan API does not support concession amounts. Remove the concession before saving.";
+      for (const config of configurations) {
+        if (!headsFor(config).length) return "Add at least one fee head for every quota / category configuration.";
+        const headError = feeHeadsError(headsFor(config));
+        if (headError) return headError;
+        const amount = totalFor(config);
+        if (!Number.isFinite(amount) || amount <= 0) return `Enter a positive total fee for ${config.quota} + ${config.studentCategory}.`;
+      }
+
+      if (step === "breakdown") return "";
+      if ((s.grace && Number(s.grace) !== 0) || s.penaltyType !== "None" || (s.maximumPenalty !== "" && s.maximumPenalty != null)) return "Late fee and grace rules cannot be saved by the academic fee-plan API.";
+      if (!s.effectiveFrom || !s.effectiveTo) return "Set both effective dates. The fee-plan API requires a validity period.";
+      if (s.effectiveTo < s.effectiveFrom) return "Effective To cannot precede Effective From.";
+      for (const config of configurations) {
+        const amount = totalFor(config);
+        const schedule = config.schedule || s;
+        const installments = schedule.plan === "Full Payment" ? [{ amount, dueDate: schedule.dueDate }] : schedule.installments;
+        if (schedule.plan === "Installment Plan" && installments.length < 2) return "Add at least two installments.";
+        if (installments.some((row, index) => !validFeeDate(row.dueDate) || row.dueDate < s.effectiveFrom || row.dueDate > s.effectiveTo || !validFeeHeadAmount(row.amount) || (index > 0 && row.dueDate < installments[index - 1].dueDate))) return "Payment dates must be chronological and within the effective period; amounts must be positive with at most two decimal places.";
+        if (headsFor(config).some(component => !Number.isFinite(configAmount(config, component)) || configAmount(config, component) < 0 || Math.abs(configAmount(config, component) * 100 - cents(configAmount(config, component))) > 0.00001)) return "Fee overrides must be non-negative amounts with at most two decimal places.";
+        if (schedule.plan === "Full Payment" && !schedule.dueDate) return `Choose a due date for ${config.quota} + ${config.studentCategory}.`;
+        if (schedule.plan !== "Full Payment" && (!installments?.length || installments.some(row => !row.dueDate || !Number(row.amount)) || Math.abs(installments.reduce((sum, row) => sum + Number(row.amount || 0), 0) - amount) > 0.009)) return `Installments for ${config.quota} + ${config.studentCategory} must total ${feeMoney(amount)}.`;
       }
       return "";
     };
@@ -877,12 +976,11 @@ export const FeeStructureWizardModule = (() => {
     };
 
     const handleSubmit = async (targetStatus) => {
+      if (saving) return;
       const err = validate(targetStatus);
       if (err) {
         setError(err);
-        if (!s.academicYearId || !masters.years.some(year => String(year.id) === String(s.academicYearId)) || !s.courseId || !s.branchId || !s.batch?.trim() || (s.applicableTo === "Selected Category" && !s.category)) setFormTab("applicability");
-        else if (/fee head|charge|breakdown/i.test(err)) setFormTab("breakdown");
-        else setFormTab("schedule");
+        setFormTab(validate(targetStatus, "applicability") ? "applicability" : validate(targetStatus, "breakdown") ? "breakdown" : "schedule");
         return;
       }
       // Populate names
@@ -891,20 +989,105 @@ export const FeeStructureWizardModule = (() => {
         status: targetStatus,
         academicYearName:
           masters.years.find((y) => String(y.id) === String(s.academicYearId))
-            ?.name || s.academicYearName,
+            ?.name,
         courseName:
           masters.courses.find((c) => String(c.id) === String(s.courseId))
-            ?.name || s.courseName,
+            ?.name,
         branchName:
           masters.branches.find((b) => String(b.id) === String(s.branchId))
-            ?.name || s.branchName,
+            ?.name,
         name:
           s.name?.trim() ||
           `${masters.courses.find((c) => String(c.id) === String(s.courseId))?.name || "Program"} ${masters.branches.find((b) => String(b.id) === String(s.branchId))?.name || "Branch"} ${s.batch || ""}`.trim(),
       };
-      try { await save(payload, targetStatus); }
-      catch (reason) { setError(reason.message || "Unable to save the fee plan."); }
+      setSaving(true);
+      setSaveResults([]);
+      setSubmissionComplete(false);
+      try {
+        if (legacyLocalEdit) { await save(payload, targetStatus); return; }
+        const planNameBase = payload.name;
+        const results = [];
+        const livePlans = await apiEndpointsModule.academicFeePlanApi.list(collegeId);
+        setServerPlans(Array.isArray(livePlans) ? livePlans : []);
+        for (const [index, config] of configurations.entries()) {
+          let saved = completedSavesRef.current[config.id];
+          try {
+            if (!saved) {
+              const slug = text => String(text || "").normalize("NFKD").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "").toUpperCase();
+              const pairHash = [...`${config.quota.trim().toLowerCase()}|${config.studentCategory.trim().toLowerCase()}`].reduce((hash, character) => ((hash * 31) + character.charCodeAt(0)) >>> 0, 7).toString(36).toUpperCase();
+              const code = `AFP-${slug(s.academicYearId).slice(-5)}-${slug(s.courseId).slice(0, 5)}-${slug(s.branchId).slice(0, 5)}-${slug(s.semesterId).slice(-4)}-${slug(config.quota).slice(0, 12)}-${slug(config.studentCategory).slice(0, 12)}-${pairHash}-${planBatchTokenRef.current}-${index + 1}`.slice(0, 80);
+              const sameScope = row => String(row.academicYearId || "") === String(s.academicYearId) && String(row.courseId || "") === String(s.courseId) && String(row.branchId || "") === String(s.branchId) && String(row.semesterId || "") === String(s.semesterId) && String(row.batch || "").trim().toLowerCase() === String(s.batch || "").trim().toLowerCase() && String(row.quota || "").trim().toLowerCase() === config.quota.trim().toLowerCase() && String(row.studentCategory || "").trim().toLowerCase() === config.studentCategory.trim().toLowerCase() && !["ARCHIVED", "Archived"].includes(row.status);
+              const existingSameCode = livePlans.find(row => row.code === code && sameScope(row));
+              if (existingSameCode) {
+                saved = existingSameCode;
+                completedSavesRef.current[config.id] = saved;
+              } else if (livePlans.some(sameScope)) {
+                throw new Error(`A fee plan already exists for ${config.quota} + ${config.studentCategory}; it was not duplicated.`);
+              }
+              if (saved) {
+                // A previous request may have committed even if its response was lost.
+              } else {
+              const configTotal = totalFor(config);
+              const schedule = config.schedule || s;
+              const installmentRows = schedule.plan === "Full Payment"
+                ? [{ number: 1, dueDate: schedule.dueDate, amount: configTotal }]
+                : schedule.installments.map((row, installmentIndex) => ({ number: installmentIndex + 1, dueDate: row.dueDate, amount: Number(row.amount) }));
+              const body = {
+                collegeId: Number(collegeId), code, name: `${planNameBase} · ${config.quota} · ${config.studentCategory}`.slice(0, 150),
+                academicYearId: Number(s.academicYearId), courseId: Number(s.courseId), branchId: Number(s.branchId), semesterId: Number(s.semesterId),
+                feeCategoryId: Number(s.feeCategoryId), batch: s.batch.trim(), quota: config.quota.trim(), studentCategory: config.studentCategory.trim(),
+                cycle: s.cycle === "Semester-wise" ? "SEMESTER" : "ANNUAL", paymentMode: schedule.plan === "Installment Plan" ? "INSTALLMENTS" : "FULL_PAYMENT", currencyCode: "INR",
+                effectiveFrom: s.effectiveFrom, effectiveTo: s.effectiveTo, dueDate: schedule.plan === "Full Payment" ? schedule.dueDate : installmentRows.at(-1)?.dueDate,
+                totalAmount: configTotal.toFixed(2),
+                components: headsFor(config).map((component, componentIndex) => ({
+                  code: String(component.code || component.masterId || component.id || component.name || `COMPONENT-${componentIndex + 1}`).normalize("NFKD").replace(/[^a-zA-Z0-9_-]+/g, "_").slice(0, 50),
+                  name: String(component.name || `Fee component ${componentIndex + 1}`).trim().slice(0, 150), amount: configAmount(config, component).toFixed(2),
+                })),
+                installments: installmentRows.map(row => ({ number: row.number, dueDate: row.dueDate, amount: Number(row.amount).toFixed(2) })),
+              };
+              saved = await apiEndpointsModule.academicFeePlanApi.create(body);
+              completedSavesRef.current[config.id] = saved;
+              }
+            }
+            if (saved?.feeStructureId) {
+              const latestVersion = livePlans.find(row => String(row.feeStructureId) === String(saved.feeStructureId));
+              if (latestVersion) saved = latestVersion;
+            }
+            if (targetStatus !== "Draft" && String(saved.status || "").toUpperCase() === "DRAFT") {
+              saved = await apiEndpointsModule.academicFeePlanApi.submit(saved.feeStructureId, collegeId, saved.revision);
+              completedSavesRef.current[config.id] = saved;
+            }
+            results.push({ configuration: `${config.quota} + ${config.studentCategory}`, feeStructureId: saved.feeStructureId, status: saved.status, success: true });
+          } catch (reason) {
+            results.push({ configuration: `${config.quota} + ${config.studentCategory}`, success: false, message: reason.message || "Save failed." });
+          }
+        }
+        setSaveResults(results);
+        const failed = results.filter(row => !row.success);
+        if (failed.length) { const reason = new Error(`${failed.length} of ${configurations.length} fee configurations failed. Successful records are listed below; retry to continue without recreating them.`); reason.saveResults = results; throw reason; }
+        setPendingStatus(targetStatus);
+        setSubmissionComplete(true);
+      }
+      catch (reason) {
+        if (reason.saveResults) setSaveResults(reason.saveResults);
+        setError(reason.message || "Unable to save the fee plan.");
+      } finally { setSaving(false); }
     };
+
+    const finishSubmission = async () => {
+      if (!submissionComplete || saving) return;
+      setSaving(true);
+      try { await save({ ...s, ...payloadNames() }, pendingStatus, configurations, configurations.map(config => completedSavesRef.current[config.id]).filter(Boolean)); }
+      catch (reason) { setError(reason.message || "The fee plans were saved, but the local list could not be refreshed."); }
+      finally { setSaving(false); }
+    };
+
+    const payloadNames = () => ({
+      academicYearName: masters.years.find(y => String(y.id) === String(s.academicYearId))?.name,
+      courseName: masters.courses.find(c => String(c.id) === String(s.courseId))?.name,
+      branchName: masters.branches.find(b => String(b.id) === String(s.branchId))?.name,
+      name: s.name?.trim() || `${masters.courses.find(c => String(c.id) === String(s.courseId))?.name || "Program"} ${masters.branches.find(b => String(b.id) === String(s.branchId))?.name || "Branch"} ${s.batch || ""}`.trim(),
+    });
 
     return (
       <div className="fm-create-plan-container fm-academic-plan-editor">
@@ -927,6 +1110,7 @@ export const FeeStructureWizardModule = (() => {
             <span>{error}</span>
           </div>
         )}
+        {saveResults.length > 0 && <section className={`fm-save-results ${saveResults.every(row => row.success) ? "is-success" : "has-failures"}`} aria-live="polite"><h3>{saveResults.every(row => row.success) ? "Backend save results" : "Partial save results"}</h3>{saveResults.map((row, index) => <div key={`${row.configuration}-${index}`}><span>{row.configuration}</span><strong>{row.success ? `${row.status} · ID ${row.feeStructureId}` : row.message}</strong></div>)}{submissionComplete && <p>Every fee plan was confirmed by the backend. Review the results above, then return to the Fee Structure List.</p>}</section>}
         <div className="fm-tabs-bar fm-plan-form-tabs" role="tablist" aria-label="Fee plan configuration">
           {formTabs.map(([key, label], index) => <button key={key} type="button" role="tab" id={formTabId + "-tab-" + key} aria-controls={formTabId + "-panel-" + key} aria-selected={formTab === key} tabIndex={formTab === key ? 0 : -1} className={"fm-tab-btn " + (formTab === key ? "active" : "")} onClick={() => changeFormTab(key)} onKeyDown={event => {
             let next;
@@ -942,89 +1126,99 @@ export const FeeStructureWizardModule = (() => {
         <div className="fm-create-form-body">
           {/* SECTION 1: Who should pay this fee? */}
           <section className="fm-form-section" hidden={formTab !== "applicability"} role="tabpanel" id={formTabId + "-panel-applicability"} aria-labelledby={formTabId + "-tab-applicability"} tabIndex={0}>
-            <FeeSectionHeading number="01" title="Academic Details" description="Choose the student group this fee applies to." />
+            <FeeSectionHeading number="01" title="Academic Fee Configuration" description="Choose the academic scope. Configure quotas and their fees in the next step." />
 
             <div className="fm-form-grid fm-applicability-grid">
               <FeeSelect
-                label="Academic Year *"
+                label="Academic Year *" disabled={!collegeId || academicContext.loading}
                 value={s.academicYearId || ""}
                 options={[{ id: "", name: "Select Academic Year" }, ...masters.years]}
                 onChange={(academicYearId) => patch({ academicYearId })}
               />
 
               <FeeSelect
-                label="Program / Course *"
+                label="Course *" disabled={!s.academicYearId || academicContext.loading}
                 value={s.courseId || ""}
                 options={[{ id: "", name: "Select Course / Program" }, ...masters.courses]}
                 onChange={(courseId) => patch({ courseId, branchId: "", semesterId: "" })}
               />
 
               <FeeSelect
-                label="Branch *"
+                label="Branch *" disabled={!s.courseId || academicContext.loading || !branches.length}
                 value={s.branchId || ""}
                 options={[{ id: "", name: "Select Branch" }, ...branches]}
                 onChange={(branchId) => patch({ branchId, semesterId: "" })}
               />
 
               <FeeSelect
-                label="Batch *"
+                label="Admission Batch *" disabled={!s.branchId || !plansLoaded || !batches.length}
                 value={s.batch || ""}
                 options={[{ id: "", name: "Select Batch" }, ...batches.map((b) => ({ id: b, name: b }))]}
                 onChange={(batch) => patch({ batch })}
               />
 
-              <FeeSelect
-                label="Student Category / Quota"
-                value={s.category || ""}
-                options={[
-                  { id: "", name: "All Students" },
-                  { id: "Convener", name: "Convener Quota" },
-                  { id: "Management", name: "Management Quota" },
-                  { id: "NRI", name: "NRI Quota" },
-                  { id: "Lateral Entry", name: "Lateral Entry" },
-                  { id: "Sports", name: "Sports Quota" },
-                ]}
-                onChange={(category) =>
-                  patch({
-                    category,
-                    applicableTo: category ? "Selected Category" : "All Students",
-                  })
-                }
-              />
+              {(!legacyLocalEdit || s.cycle === "Semester-wise") && <FeeSelect
+                label="Applicable Semester *" disabled={!s.batch || !semesters.length}
+                value={s.semesterId || ""}
+                options={[{ id: "", name: "Select Semester" }, ...semesters]}
+                onChange={(semesterId) => patch({ semesterId })}
+              />}
 
-              <FeeSelect
-                label="Billing Cycle"
-                value={s.cycle || "Yearly"}
-                options={[
-                  { id: "Yearly", name: "Yearly (Per Academic Year)" },
-                  { id: "Semester-wise", name: "Semester-wise" },
-                ]}
-                onChange={(cycle) => patch({ cycle, semesterId: "" })}
-              />
+              <FeeSelect label="Fee Applicability Period *" value={s.cycle} options={legacyLocalEdit ? [{ id: "Yearly", name: "Annual" }, { id: "Semester-wise", name: "Semester" }] : [{ id: "Semester-wise", name: "Semester" }]} onChange={cycle => patch({ cycle })} />
+              <FeeInput label="Fee Plan Name *" value={s.name || ""} maxLength={100} placeholder="Suggested from academic details" onChange={name => { setNameEdited(Boolean(name)); patch({ name }); }} />
 
-              {s.cycle === "Semester-wise" && (
-                <FeeSelect
-                  label="Semester *"
-                  value={s.semesterId || ""}
-                  options={[{ id: "", name: "Select Semester" }, ...semesters]}
-                  onChange={(semesterId) => patch({ semesterId })}
-                />
-              )}
             </div>
+            <p className="fm-contract-note" role="note">Annual applicability and year-of-study scope are unavailable: the fee-plan API matches a single semester. Configure payment installments in Step 3.</p>
+            {academicContext.loading && <p role="status">Loading academic options…</p>}
+            {academicContext.error && <p role="alert" className="fm-error-banner">{academicContext.error}</p>}
+            {!academicContext.loading && <p className="fm-scope-status" role="status">{!masters.years.length ? "No active academic years for this college." : s.academicYearId && !masters.courses.length ? "No courses available." : s.courseId && !branches.length ? "No branches for this course." : s.branchId && plansLoaded && !batches.length ? "No admission batches found in existing admissions or fee plans for this course and branch." : s.batch && !semesters.length ? "No semesters available for this academic scope." : ""}</p>}
+            {legacyLocalEdit && <div className="fm-form-grid"><FeeInput label="Student Category / Quota" value={s.category || ""} placeholder="Leave blank for all students" onChange={category => patch({ category, applicableTo: category ? "Selected Category" : "All Students" })} /></div>}
           </section>
 
           {/* SECTION 2: What should they pay? */}
           <section className="fm-form-section" hidden={formTab !== "breakdown"} role="tabpanel" id={formTabId + "-panel-breakdown"} aria-labelledby={formTabId + "-tab-breakdown"} tabIndex={0}>
-            <FeeSectionHeading number="02" title="Academic Fee Breakdown" description="Select a fee head or choose Others to add a new one." />
+            <FeeSectionHeading number="02" title="Academic Fee Breakdown" description="Configure fee components and amounts separately from student eligibility." />
+            <div className="fm-form-grid">{!legacyLocalEdit && <FeeSelect
+                label="Financial Fee Category *"
+                value={s.feeCategoryId || ""}
+                options={[{ id: "", name: "Select fee category" }, ...feeCategories.map(row => ({ id: String(row.id), name: row.name }))]}
+                onChange={(feeCategoryId) => patch({ feeCategoryId })}
+                disabled={!feeCategories.length}
+              />}</div>
+            {!legacyLocalEdit && plansLoaded && !feeCategories.length && <p role="status">No financial fee categories available. A backend fee category is required to save.</p>}
 
-            <FeeBreakdownEditor category="Academic" frequency={s.cycle} rows={s.components} onChange={components => patch({ components })} total={total} suggestions={components.filter(head => head.status === "Active" && academicFeeComponent(head))} />
+            {legacyLocalEdit ? <FeeBreakdownEditor academicSuggestionsOnly category="Academic" frequency={s.cycle} rows={s.components} onChange={components => patch({ components })} total={total} suggestions={components.filter(head => head.status === "Active" && academicFeeComponent(head))} /> : <section className="fm-quota-configurations" aria-labelledby="fm-quota-config-title">
+              <div className="fm-quota-config-heading"><div><h3 id="fm-quota-config-title">Quota &amp; Category Fee Configurations</h3><p>Add a quota and category, then enter its fee breakdown below. Each configuration has its own fee heads, amounts and total. Blank eligibility values apply to all students.</p></div><button type="button" className="erp-btn erp-btn--secondary" onClick={() => { const row = { id: uid("CFG"), quota: "", studentCategory: "", components: [], overrides: {}, schedule: null }; setConfigurations(current => [...current, row]); setPreviewConfigId(row.id); }}><FiPlus /> Add Quota / Category</button></div>
+
+              <datalist id="fm-existing-category-values">{studentCategoryValues.map(option => <option key={option} value={option} />)}</datalist>
+              {configurations.map((config, index) => <div className="fm-quota-config-row" key={config.id} role="group" aria-label={"Quota fee configuration " + (index + 1)}>
+                {duplicateConfig(config) && <p className="fm-config-validation" role="alert">Duplicate quota and category combination. Edit the copied values before continuing.</p>}
+                <span className="fm-config-index">{String(index + 1).padStart(2, "0")}</span>
+                <div className="fm-quota-choice">
+                  <FeeSelect label="Admission Quota" value={customQuotaIds.includes(config.id) || (config.quota && !quotaValues.includes(config.quota)) ? "__other__" : config.quota} options={[{ id: "", name: "All quotas" }, ...quotaValues.map(quota => ({ id: quota, name: quota })), { id: "__other__", name: "Others (enter manually)" }]} onChange={quota => {
+                    setCustomQuotaIds(current => quota === "__other__" ? [...new Set([...current, config.id])] : current.filter(id => id !== config.id));
+                    configPatch(config.id, { quota: quota === "__other__" ? "" : quota });
+                  }} />
+                  {(customQuotaIds.includes(config.id) || (config.quota && !quotaValues.includes(config.quota))) && <FeeInput label="Specify Admission Quota *" maxLength={100} value={config.quota} placeholder="Enter quota name" onChange={quota => configPatch(config.id, { quota })} />}
+                </div>
+                <FeeInput label="Student Category" maxLength={100} value={config.studentCategory} list="fm-existing-category-values" placeholder="Enter student category" onChange={studentCategory => configPatch(config.id, { studentCategory })} />
+                <div className="fm-config-actions"><button type="button" className="erp-btn erp-btn--secondary" onClick={() => { const copy = { ...config, id: uid("CFG"), components: structuredClone(headsFor(config)), overrides: { ...config.overrides }, schedule: config.schedule ? structuredClone(config.schedule) : null }; setConfigurations(current => [...current, copy]); if (customQuotaIds.includes(config.id)) setCustomQuotaIds(current => [...current, copy.id]); setPreviewConfigId(copy.id); }}><FiCopy /> Copy</button><button type="button" className="erp-btn erp-btn--secondary" disabled={configurations.length <= 1} onClick={() => { setConfigurations(current => current.filter(row => row.id !== config.id)); setCustomQuotaIds(current => current.filter(id => id !== config.id)); }}><FiTrash2 /> Remove</button></div>
+                <div className="fm-quota-card-breakdown">
+                  <h4>Fee Breakdown — {config.quota || "All quotas"}{config.studentCategory ? " / " + config.studentCategory : ""}</h4>
+                  <FeeBreakdownEditor academicSuggestionsOnly category="Academic" frequency={s.cycle} rows={headsFor(config).map(component => ({ ...component, amount: config.overrides?.[component.masterId || component.id || component.name] ?? component.amount }))} onChange={rows => configPatch(config.id, { components: rows, overrides: {} })} total={totalFor(config)} suggestions={components.filter(head => head.status === "Active" && academicFeeComponent(head))} />
+                </div>
+              </div>)}
+              <div className="fm-contract-note" role="note"><FiAlertTriangle /><span>The current fee-plan API does not define an Admission Type field. It will not be saved or used as a matching condition. Lateral Entry remains an admission type, separate from quota.</span></div>
+            </section>}
           </section>
 
           {/* SECTION 3: When should they pay? */}
           <section className="fm-form-section" hidden={formTab !== "schedule"} role="tabpanel" id={formTabId + "-panel-schedule"} aria-labelledby={formTabId + "-tab-schedule"} tabIndex={0}>
             <FeeSectionHeading number="03" title="Payment Schedule" description="Choose full payment or scheduled installments." />
 
-            <FeePaymentScheduleEditor value={s} onChange={patch} total={total} />
+            {!legacyLocalEdit && <div className="fm-config-schedule-select"><FeeSelect label="Payment schedule for" value={scheduleTarget} options={[{ id: "common", name: "Shared schedule" }, ...configurations.map((row, index) => ({ id: row.id, name: `${row.quota || `Configuration ${index + 1}`} · ${row.studentCategory || "Category not set"}` }))]} onChange={setScheduleTarget} /><small>The shared due date applies to every configuration. For installments, amounts shown use the first configuration total; customize the schedule for configurations with different totals.</small></div>}
+            <FeePaymentScheduleEditor value={legacyLocalEdit || scheduleTarget === "common" ? s : (scheduleConfig?.schedule || s)} onChange={change => legacyLocalEdit || scheduleTarget === "common" ? patch(change) : scheduleConfig && configPatch(scheduleConfig.id, { schedule: { ...(scheduleConfig.schedule || structuredClone(s)), ...change } })} total={legacyLocalEdit || scheduleTarget === "common" ? total : (scheduleConfig ? totalFor(scheduleConfig) : total)} />
+            {!legacyLocalEdit && scheduleTarget !== "common" && scheduleConfig && <button type="button" className="erp-btn erp-btn--secondary" onClick={() => configPatch(scheduleConfig.id, { schedule: null })}>Use shared schedule</button>}
           </section>
 
           {/* Advanced Options (Collapsible) */}
@@ -1035,12 +1229,14 @@ export const FeeStructureWizardModule = (() => {
               aria-expanded={advancedOpen}
               onClick={() => setAdvancedOpen((o) => !o)}
             >
-              <span>Advanced Options (Grace Period, Late Fees &amp; Penalty Rules)</span>
+              <span>{legacyLocalEdit ? "Advanced Options (Grace Period, Late Fees & Penalty Rules)" : "Plan Validity"}</span>
               {advancedOpen ? <FiChevronDown /> : <FiChevronRight />}
             </button>
 
+            {!legacyLocalEdit && <p className="fm-contract-note">Set the validity period for all payment due dates. Grace periods and late-fee rules are not supported by this API.</p>}
             {advancedOpen && (
               <div className="fm-form-grid fm-advanced-content">
+                {legacyLocalEdit && <>
                 <FeeInput
                   label="Grace Period (days)"
                   type="number"
@@ -1082,15 +1278,16 @@ export const FeeStructureWizardModule = (() => {
                   </>
                 )}
 
+                </>}
                 <FeeInput
-                  label="Effective From"
+                  label="Effective From *"
                   type="date"
                   value={s.effectiveFrom || ""}
                   onChange={(effectiveFrom) => patch({ effectiveFrom })}
                 />
 
                 <FeeInput
-                  label="Effective To (optional)"
+                  label="Effective To *"
                   type="date"
                   value={s.effectiveTo || ""}
                   onChange={(effectiveTo) => patch({ effectiveTo })}
@@ -1115,42 +1312,50 @@ export const FeeStructureWizardModule = (() => {
             <button
               type="button"
               className="erp-btn erp-btn--secondary"
+              disabled={saving || submissionComplete}
               onClick={() => handleSubmit("Draft")}
             >
-              Save Draft
+              {saving ? "Saving configurations…" : "Save Draft"}
             </button>
-            {formTab === 'schedule' && <button
+            {submissionComplete && <button type="button" className="erp-btn erp-btn--primary" onClick={finishSubmission} disabled={saving}>{saving ? "Refreshing list…" : "Return to Fee Structure List"}</button>}
+            {formTab === 'schedule' && !submissionComplete && <button
               type="button"
               className="erp-btn erp-btn--primary"
+              disabled={saving}
               onClick={() => handleSubmit("Pending Approval")}
             >
-              Submit for Approval
+              {saving ? "Saving configurations…" : "Submit for Approval"}
             </button>}
           </div>
         </footer>
         </div>
         <FeePlanPreview
           hasContent={previewStarted}
-          title={s.name || "Academic Fee Plan"}
+          title={previewConfig ? `${previewConfig.quota || "Quota"} · ${previewConfig.studentCategory || "Student category"}` : (s.name || "Academic Fee Plan")}
           status={s.status}
-          total={total}
+          total={previewTotal}
+          controls={<div className="fm-preview-config-control"><FeeSelect label="Preview configuration" value={previewConfig?.id || ""} options={configurations.map((row, index) => ({ id: row.id, name: `${row.quota || `Configuration ${index + 1}`} · ${row.studentCategory || "Category not set"}` }))} onChange={setPreviewConfigId} /></div>}
           groups={[
             { label: "Academic Details", rows: [
+              ["Fee Plan Name", s.name],
               ["Plan Type", "Academic Fee"],
-              ["Academic Year", masters.years.find(y => String(y.id) === String(s.academicYearId))?.name || s.academicYearName],
-              ["Course", masters.courses.find(c => String(c.id) === String(s.courseId))?.name || s.courseName],
-              ["Branch", masters.branches.find(b => String(b.id) === String(s.branchId))?.name || s.branchName],
+              ["Academic Year", masters.years.find(y => String(y.id) === String(s.academicYearId))?.name],
+              ["Course", masters.courses.find(c => String(c.id) === String(s.courseId))?.name],
+              ["Branch", masters.branches.find(b => String(b.id) === String(s.branchId))?.name],
               ["Batch", s.batch],
-              ["Fee Cycle", s.cycle],
-              ["Semester", s.semesterId ? masters.semesters.find(item => String(item.id) === String(s.semesterId))?.name || s.semesterName : ""],
-              ["Category", s.applicableTo === "Selected Category" ? s.category : "All Students"],
+              ["Configurations", configurations.length],
+              ["Admission Quota", previewConfig?.quota],
+              ["Student Category", previewConfig?.studentCategory],
+              ["Admission Type", "Not supported by the current API"],
+              ["Fee Applicability Period", s.cycle === "Semester-wise" ? "Semester" : "Annual"],
+              ["Semester", masters.semesters.find(item => String(item.id) === String(s.semesterId))?.name],
             ] },
-            { label: "Fee Breakdown", rows: s.components.length
-              ? feeHeadPreviewRows(s.components, feeMoney)
+            { label: "Fee Breakdown", rows: previewHeads.length
+              ? feeHeadPreviewRows(previewHeads.map(component => ({ ...component, amount: previewConfig ? configAmount(previewConfig, component) : component.amount })), feeMoney)
               : [] },
-            { label: "Payment", rows: s.plan === "Full Payment"
-              ? [["Payment Type", "Pay in Full"], ["Due Date", s.dueDate], ["Amount", total > 0 ? feeMoney(total) : ""]]
-              : [["Payment Type", `${s.installments.length} Installments`], ...s.installments.map((i, index) => [
+            { label: "Payment", rows: previewSchedule.plan === "Full Payment"
+              ? [["Payment Type", "Pay in Full"], ["Due Date", previewSchedule.dueDate], ["Amount", previewTotal > 0 ? feeMoney(previewTotal) : ""]]
+              : [["Payment Type", `${previewSchedule.installments.length} Installments`], ...previewSchedule.installments.map((i, index) => [
                 i.name || `Payment ${index + 1}`,
                 <><strong>{i.amount === "" ? "Amount not entered" : feeMoney(i.amount)}</strong><small>{i.dueDate || "Date not selected"}</small></>,
               ])] },
@@ -7267,7 +7472,8 @@ export const FeeManagementModule = (() => {
               path="structures/create"
               element={
                 <CreateAcademicFeePlan
-                  key={pathname}
+                  key={`${pathname}:${academic.selectedCollegeId}`}
+                  collegeId={academic.selectedCollegeId}
                   value={{
                     ...newFeeStructure(filter.academicYearId),
                     academicYearName:
@@ -7278,8 +7484,22 @@ export const FeeManagementModule = (() => {
                   components={state.components}
                   students={students}
                   close={() => navigate("/fees/structures")}
-                  save={(form, status) => {
-                    commit(saveAcademicPlanWithHeads(state, form, status));
+                  save={(form, status, configurations, savedPlans) => {
+                    const rows = savedPlans.map(plan => ({
+                      ...newFeeStructure(String(plan.academicYearId)),
+                      id: String(plan.feeStructureId), name: plan.name, code: plan.code,
+                      status: String(plan.status).toUpperCase() === "SUBMITTED" ? "Pending Approval" : "Draft",
+                      collegeId: String(plan.collegeId), academicYearId: String(plan.academicYearId), courseId: String(plan.courseId), branchId: String(plan.branchId), semesterId: String(plan.semesterId), batch: plan.batch,
+                      quota: plan.quota || "", studentCategory: plan.studentCategory || "", category: plan.quota || "", applicableTo: "Selected Category",
+                      cycle: plan.cycle === "SEMESTER" ? "Semester-wise" : "Yearly", plan: plan.paymentMode === "INSTALLMENTS" ? "Installment Plan" : "Full Payment",
+                      feeCategoryId: plan.feeCategoryId, effectiveFrom: String(plan.effectiveFrom || "").slice(0, 10), effectiveTo: String(plan.effectiveTo || "").slice(0, 10), dueDate: String(plan.dueDate || "").slice(0, 10), discount: 0,
+                      components: (plan.components || []).map(component => ({ masterId: component.code, code: component.code, name: component.name, amount: Number(component.amount), category: "Academic", mandatory: true, refundable: false, recurring: true, frequency: plan.cycle })),
+                      installments: (plan.installments || []).map(row => ({ id: `API-${row.number}`, name: `Payment ${row.number}`, amount: Number(row.amount), dueDate: String(row.dueDate || "").slice(0, 10) })),
+                      workflowStructure: true, backendRevision: plan.revision, backendVersion: plan.version,
+                    }));
+                    const byId = new Map(state.structures.map(row => [String(row.id), row]));
+                    rows.forEach(row => byId.set(String(row.id), row));
+                    commit({ ...state, structures: [...byId.values()] });
                     navigate("/fees/structures");
                   }}
                 />
@@ -7289,7 +7509,7 @@ export const FeeManagementModule = (() => {
               path="structures/:structureId/edit"
               element={
                 <CreateAcademicFeePlan
-                  key={pathname}
+                  key={`${pathname}:${academic.selectedCollegeId}`}
                   value={
                     state.structures.find(
                       (s) => s.id === window.location.pathname.split("/")[3]

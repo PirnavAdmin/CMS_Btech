@@ -1,9 +1,12 @@
-import { Children, cloneElement, isValidElement, useState } from 'react'
+import { Children, cloneElement, isValidElement, useId, useState } from 'react'
 import { FiChevronDown, FiFilter, FiRotateCcw } from 'react-icons/fi'
 import './FilterPanel.css'
 
 export default function FilterPanel({
   children,
+  search,
+  filters,
+  appliedFilters = [],
   active = false,
   onClear,
   showClearWhenOpen = false,
@@ -14,16 +17,18 @@ export default function FilterPanel({
   hideClear = false
 }) {
   const [open, setOpen] = useState(false)
+  const contentId = useId()
+  const explicitSlots = search !== undefined || filters !== undefined
   const nodes = Children.toArray(children)
   const primary = nodes[0]
   const primaryChildren = isValidElement(primary) ? Children.toArray(primary.props.children) : []
   // A search label owns both its icon and input. Split only toolbar
   // containers, otherwise the input is incorrectly moved into Filters.
   const splitPrimary = isValidElement(primary) && primary.type !== 'label' && primaryChildren.length > 0
-  const search = splitPrimary
+  const searchNode = explicitSlots ? search : splitPrimary
     ? cloneElement(primary, {}, primaryChildren[0])
     : primary
-  const filterNodes = [
+  const filterNodes = explicitSlots ? Children.toArray(filters) : [
     ...(splitPrimary && primaryChildren.length > 1
       ? [cloneElement(primary, {}, primaryChildren.slice(1))]
       : []),
@@ -34,7 +39,7 @@ export default function FilterPanel({
   return (
     <section className={`filter-disclosure ${open ? 'open' : ''} ${className}`}>
       <div className="filter-disclosure__bar">
-        <div className="filter-disclosure__search">{search}</div>
+        <div className="filter-disclosure__search">{searchNode}</div>
         {leadingActions}
         {hasFilterFields && (
           <button
@@ -42,18 +47,21 @@ export default function FilterPanel({
             className={`filter-disclosure__toggle ${toggleClassName}`.trim()}
             onClick={() => setOpen((value) => !value)}
             aria-expanded={open}
+            aria-controls={contentId}
           >
             <FiFilter /> Filters{active && <i aria-label="Filters applied" />}
             <FiChevronDown className="filter-disclosure__chevron" />
           </button>
         )}
         {actions}
+        {appliedFilters.length > 0 && <span className="filter-disclosure__applied" role="status">Applied: {appliedFilters.join(', ')}</span>}
+        {explicitSlots && !hideClear && onClear && active && <button type="button" className="filter-disclosure__clear-btn" onClick={onClear}><FiRotateCcw aria-hidden="true" /> Clear Filters</button>}
       </div>
       {open && hasFilterFields && (
-        <div className="filter-disclosure__content">
+        <div className="filter-disclosure__content" id={contentId}>
           <div className="filter-disclosure__content-inner">
             {filterNodes}
-            {!hideClear && onClear && active && (
+            {!explicitSlots && !hideClear && onClear && active && (
               <button
                 type="button"
                 className="filter-disclosure__clear-btn"

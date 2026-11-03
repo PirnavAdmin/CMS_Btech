@@ -1,3 +1,5 @@
+import { findModuleForPath } from '../config/moduleRegistry.js'
+import { hasModuleAction } from './collegeAuthorization.js'
 const key = value => String(value || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
 const granted = value => value === true || value === 1 || value === 'true' || value === '1'
 
@@ -53,31 +55,31 @@ export function assignedPermissions(rows, roles) {
 }
 
 const portalModules = { dashboard: 'dashboard', profile: 'my_profile', notifications: 'notifications', students: 'student_profiles', subjects: 'subjects', attendance: 'student_attendance', 'my-attendance': 'faculty_attendance', marks: 'marks', results: 'results', timetable: 'timetable', materials: 'materials', leave: 'faculty_leaves', fees: 'fees' }
-const routes = [
-  ['/faculty/attendance', 'faculty_attendance'], ['/faculty/leave-management', 'faculty_leaves'], ['/faculty/payroll', 'faculty_payroll'], ['/faculty', 'faculty_directory'],
-  ['/student-management/admissions', 'student_admissions'], ['/student-management/profiles', 'student_profiles'], ['/student-management/attendance', 'student_attendance'], ['/student-management/promotions', 'student_promotions'],
-  ['/college-institution-management', 'colleges'], ['/academic-year-management', 'academic_years'], ['/department-management', 'departments'], ['/courses', 'courses'], ['/branches', 'branches'], ['/semester-management', 'semesters'], ['/section-management', 'sections'], ['/rooms-management', 'rooms'], ['/rooms', 'rooms'],
-  ['/subject-management', 'subjects'], ['/credits-management', 'credits'], ['/elective-management', 'electives'], ['/timetable', 'timetable'], ['/marks-management', 'marks'], ['/grade-result-management', 'results'], ['/results', 'results'], ['/exam', 'examinations'], ['/exam-timetable', 'examinations'], ['/examination-setup', 'examinations'], ['/examination', 'examinations'], ['/fees', 'fees'], ['/roles-', 'roles_permissions'], ['/settings', 'academic_settings'], ['/library', 'library'], ['/meetings-events', 'meetings_events'], ['/placement', 'placement'],
-]
-
 export const additionalScreens = [
   ['/subject-management', 'Subject Management'], ['/timetable', 'Timetable Management'], ['/student-management/profiles', 'Student Profiles'], ['/student-management/attendance', 'Student Attendance'], ['/marks-management/marks-entry', 'Marks Management'], ['/faculty/leave-management', 'Faculty Leave Management'],
   ['/college-institution-management', 'Colleges'], ['/academic-year-management', 'Academic Years'], ['/department-management', 'Departments'], ['/courses', 'Courses'], ['/branches', 'Branches'], ['/semester-management', 'Semesters'], ['/section-management', 'Sections'], ['/rooms-management', 'Rooms & Classrooms'],
   ['/faculty', 'Faculty Directory'], ['/faculty/attendance', 'Faculty Attendance'], ['/faculty/payroll', 'Faculty Payroll'], ['/student-management/admissions', 'Student Admissions'], ['/student-management/promotions', 'Student Promotions'], ['/credits-management', 'Credits'], ['/elective-management', 'Electives'], ['/examination-setup', 'Examination Setup'], ['/exam-timetable', 'Exam Timetable'], ['/results', 'Official Results'], ['/grade-result-management', 'Grade Management'], ['/fees', 'Fee Management'], ['/library', 'Library'], ['/meetings-events', 'Meetings / Events'], ['/placement', 'Placement'], ['/roles-designations', 'Roles & Designations'], ['/settings', 'Settings'],
 ]
 
-export function canViewScreen(path, role, permissions) {
-  if (role === 'admin') return true
-  if (isPersonalWorkspace(path, role)) return true
+export function permissionModuleForScreen(path) {
   const portal = path.match(/^\/(faculty|student|staff)-portal(?:\/([^/]+))?\/?$/)
-  if (portal) {
-    if (portal[1] !== role) return false
-    const screen = portal[2] || 'dashboard'
-    return permissions[portalModules[screen]]?.view === true
-  }
-  if (role === 'student') return false
-  if (path === '/dashboard') return permissions.dashboard?.view === true
-  if (path === '/my-profile') return permissions.my_profile?.view === true
-  const module = routes.find(([prefix]) => path === prefix || path.startsWith(`${prefix}/`) || (prefix.endsWith('-') && path.startsWith(prefix)))?.[1]
-  return Boolean(module && permissions[module]?.view === true)
+  return portal ? portalModules[portal[2] || 'dashboard'] || null : findModuleForPath(path)?.permission?.module || null
+}
+export function canViewScreen(path, role, permissions = {}, access = {}) {
+  if (!['admin', 'faculty', 'student', 'staff'].includes(role)) return false
+  if (isPersonalWorkspace(path, role)) return true
+  // Own-profile access is necessary for the existing first-login completion flow.
+  if (path === '/my-profile') return true
+  const portal = path.match(/^\/(faculty|student|staff)-portal(?:\/([^/]+))?\/?$/)
+  if (portal && portal[1] !== role) return false
+  if (!portal && role === 'student' && path !== '/my-subjects') return false
+  if (path === '/my-subjects') return ['faculty', 'student'].includes(role) && hasModuleAction({ ...access, permissions }, 'subjects')
+  return hasModuleAction({ ...access, permissions }, permissionModuleForScreen(path))
+}
+
+export function requiredActionForScreen(path) {
+  const pathname = String(path || '').split(/[?#]/)[0]
+  if (/\/(?:create(?:-[^/]+)?|add|new)(?:\/|$)/.test(pathname)) return 'create'
+  if (/\/(?:edit(?:-[^/]+)?)(?:\/|$)/.test(pathname)) return 'edit'
+  return 'view'
 }

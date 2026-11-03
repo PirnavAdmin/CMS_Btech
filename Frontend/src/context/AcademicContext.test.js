@@ -13,6 +13,8 @@ test('resolves college before scoped requests and retains details when academic 
   const scoped = async (rows = []) => { assert.equal(stored, '7'); return rows }
   const context = vm.createContext({
     storedCollegeId: () => stored, hierarchyRequest: { current: 0 },
+    getAccessToken: () => 'test-token', requestEffectiveAccess: async () => ({ isSuperAdmin: true, collegeId: 7 }),
+    canSelectCollege: () => true, setCollegeAuthorization() {}, setCollegeAccessSnapshot() {},
     academicService: {
       getColleges: async () => [college],
       getAcademicYears: async () => { assert.equal(stored, '7'); throw new Error('Unavailable') },

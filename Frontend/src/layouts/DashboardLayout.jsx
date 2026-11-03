@@ -1,9 +1,11 @@
+import { useScreenAccess } from '../auth/ScreenAccess.jsx'
+import { MODULE_REGISTRY } from '../config/moduleRegistry.js'
 import useToastState from '../hooks/useToastState'
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { FiAlertCircle, FiLock, FiLogOut, FiMoon, FiSearch, FiSun, FiUser, FiX } from 'react-icons/fi'
 import { getUserRole, signOut } from '../auth/auth'
-import { changePassword, profileApi, authAccessApi } from '../api/apiEndpoints'
+import { changePassword, profileApi } from '../api/apiEndpoints'
 import Sidebar from '../components/Sidebar'
 import { feeBreadcrumbs } from '../utils/feeNavigation'
 import HeaderAcademicYear from '../components/HeaderAcademicYear'
@@ -109,7 +111,7 @@ export default function DashboardLayout({ children }) {
     name: localStorage.getItem('btech-user-name') || sessionStorage.getItem('btech-user-name') || '',
     identifier: localStorage.getItem('btech-user-id') || sessionStorage.getItem('btech-user-id') || '',
   }))
-  const [effectiveAccess, setEffectiveAccess] = useState(null)
+  const { canView } = useScreenAccess()
   const [theme, setTheme] = useState(() => localStorage.getItem('pirnav-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'))
 
   const userRole = getUserRole() || 'user'
@@ -161,28 +163,9 @@ export default function DashboardLayout({ children }) {
     return () => { active = false }
   }, [])
 
-  useEffect(() => {
-    let active = true
-    authAccessApi.get().then(access => { if (active) setEffectiveAccess(access) }).catch(() => { if (active) setEffectiveAccess(null) })
-    return () => { active = false }
-  }, [])
-
-  const globalLinks = [
-    ['Dashboard', '/dashboard', 'dashboard'], ['Colleges', '/college-institution-management', 'colleges'], ['Academic Years', '/academic-year-management', 'academic_years'],
-    ['Departments', '/department-management', 'departments'], ['Courses', '/courses', 'courses'], ['Branches', '/branches', 'branches'], ['Semesters', '/semester-management', 'semesters'],
-    ['Sections', '/section-management', 'sections'], ['Rooms & Classrooms', '/rooms-management', 'rooms'], ['Fee Structure', '/fees/structures', 'fees'], ['Fee Management', '/fees/overview', 'fees'],
-    ['Faculty Directory', '/faculty', 'faculty_directory'], ['Faculty Attendance', '/faculty/attendance', 'faculty_attendance'],
-    ['Leave Management', '/faculty/leave-management', 'faculty_leaves'], ['Faculty Payroll', '/faculty/payroll', 'faculty_payroll'], ['Student Admissions', '/student-management/admissions', 'student_admissions'],
-    ['Student Profiles', '/student-management/profiles', 'student_profiles'], ['Student Attendance', '/student-management/attendance', 'student_attendance'], ['Student Promotions', '/student-management/promotions', 'student_promotions'],
-    ['Subject Management', '/subject-management', 'subjects'], ['Credits Management', '/credits-management', 'credits'], ['Elective Management', '/elective-management', 'electives'], ['Timetable Management', '/timetable', 'timetable'],
-    ['Exam Management', '/examination-setup', 'examinations'], ['Marks Management', '/marks-management/marks-entry', 'marks'], ['Grades System and Results', '/grade-result-management/grade-configuration', 'results'],
-    ['Library', '/library', 'library'], ['Meetings / Events', '/meetings-events', 'meetings_events'], ['Placement', '/placement', 'placement'], ['User Access Management', '/user-access', 'roles_permissions'],
-    ['Roles & Designations', '/roles-designations', 'roles_permissions'], ['My Profile', '/my-profile', 'my_profile'],
-  ]
-  const globalResults = globalQuery.trim() ? globalLinks.filter(([label, , module]) =>
-    label.toLowerCase().includes(globalQuery.trim().toLowerCase()) &&
-    (module === 'my_profile' || effectiveAccess?.isSuperAdmin || effectiveAccess?.permissions?.[module]?.view === true || (userRole === 'admin' && effectiveAccess == null))
-  ).slice(0, 10) : []
+  const globalLinks = MODULE_REGISTRY.filter(module => module.navigation || module.id === 'my_profile')
+  const globalResults = globalQuery.trim() ? globalLinks.filter(module => module.label.toLowerCase().includes(globalQuery.trim().toLowerCase()) && canView(module.path))
+    .slice(0, 10).map(module => [module.label, module.path, module.permission?.module]) : []
   const rules = useMemo(
     () => requirements(values.newPassword),
     [values.newPassword]

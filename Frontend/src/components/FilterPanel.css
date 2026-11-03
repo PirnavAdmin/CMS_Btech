@@ -1,3 +1,6 @@
+.filter-disclosure__applied { font-size: .75rem; color: var(--text-secondary); overflow-wrap: anywhere; }
+.filter-disclosure__bar:has(.filter-disclosure__applied) { flex-wrap: wrap; }
+@media (max-width: 640px) { .filter-disclosure__applied { flex-basis: 100%; } }
 .filter-disclosure {
   margin: 12px 0;
   border: 1px solid #D4E3F3 !important;

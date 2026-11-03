@@ -6455,3 +6455,7 @@
     grid-template-columns: 1fr;
   }
 }
+.ay .modal .ay-editor { height: auto; }
+.ay .modal .ay-editor .erp-form-scroll-body { padding: 12px 0 0; overflow: visible; }
+.ay .modal .ay-editor .erp-form-field > label { margin-top: 0; }
+.ay .modal .ay-editor .erp-actions-bar { padding: 16px 0 0; margin-top: 12px; }

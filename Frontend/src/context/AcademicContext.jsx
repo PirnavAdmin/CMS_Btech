@@ -1,9 +1,11 @@
+import { requestEffectiveAccess } from '../auth/accessRequests.js'
+import { canSelectCollege } from '../auth/collegeAuthorization.js'
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import academicService, { filterActiveOnly } from '../services/academicService'
 import eventBus, { ERP_EVENTS } from '../services/eventBus'
 import { getActiveAcademicYears } from '../utils/academicYearUtils'
 import { createCollegeScope, selectedCollegeId as storedCollegeId } from '../utils/collegeScope'
-import { getUserCollegeId, getUserRole } from '../auth/auth'
+import { getAccessToken, getUserCollegeId, getUserRole } from '../auth/auth'
 
 const CONTEXT_STORAGE_KEY = 'pirnav_academic_context'
 
@@ -62,6 +64,9 @@ export const AcademicProvider = ({ children }) => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const hierarchyRequest = useRef(0)
+  const contextChangeRequest = useRef(0)
+  const [collegeAuthorization, setCollegeAuthorization] = useState(null)
+  const [collegeAccessSnapshot, setCollegeAccessSnapshot] = useState(null)
 
   // Stored working context IDs
   const [selectedCollegeId, setSelectedCollegeId] = useState(() => readStoredContext().collegeId)
@@ -69,18 +74,24 @@ export const AcademicProvider = ({ children }) => {
 
   const loadHierarchy = useCallback(async () => {
     let requestedCollegeId = storedCollegeId()
-    let completedCollegeId = requestedCollegeId
     const requestId = ++hierarchyRequest.current
+    const requestToken = getAccessToken()
     try {
       setLoading(true)
       setError(null)
+      setCollegeAccessSnapshot(null)
+      setAcademicYears([]); setDepartments([]); setCourses([]); setBranches([]); setSemesters([]); setSections([])
+      if (!requestToken) throw new Error('Sign in to load college access.')
+      const authorization = await requestEffectiveAccess()
+      if (requestId !== hierarchyRequest.current || getAccessToken() !== requestToken) return
+      setCollegeAuthorization(authorization)
       // Resolve the college before requesting any college-scoped resources.
       const cols = await academicService.getColleges(false)
-      if (requestId !== hierarchyRequest.current || storedCollegeId() !== requestedCollegeId) return
+      if (requestId !== hierarchyRequest.current || storedCollegeId() !== requestedCollegeId || getAccessToken() !== requestToken) return
       if (cols?.loadError) throw new Error('College details could not be loaded. Please retry.')
       const isAdmin = getUserRole() === 'admin'
       const assignedCollege = isAdmin ? '' : getUserCollegeId()
-      const safeColleges = (cols || []).filter(row => !assignedCollege || String(row.id ?? row.collegeId) === assignedCollege)
+      const safeColleges = (cols || []).filter(row => canSelectCollege(authorization, row.id ?? row.collegeId, getUserCollegeId()) && (!assignedCollege || String(row.id ?? row.collegeId) === assignedCollege))
       setColleges(safeColleges)
       const available = filterActiveOnly(safeColleges)
       const college = available.find(row => String(row.id ?? row.collegeId) === requestedCollegeId)
@@ -90,11 +101,13 @@ export const AcademicProvider = ({ children }) => {
       if (initialCollegeId !== requestedCollegeId) {
         saveStoredContext(initialCollegeId, '')
         requestedCollegeId = initialCollegeId
-        completedCollegeId = initialCollegeId
         setAcademicYears([])
         setSelectedAcademicYearId('')
       }
       setSelectedCollegeId(initialCollegeId)
+      const scopedAccess = initialCollegeId && String(authorization.collegeId ?? '') !== initialCollegeId ? await requestEffectiveAccess(initialCollegeId) : authorization
+      if (requestId !== hierarchyRequest.current || storedCollegeId() !== requestedCollegeId || getAccessToken() !== requestToken) return
+      setCollegeAccessSnapshot({ token: requestToken, collegeId: initialCollegeId, value: scopedAccess })
       const results = await Promise.allSettled([
         academicService.getAcademicYears(false),
         academicService.getDepartments(false),
@@ -105,7 +118,7 @@ export const AcademicProvider = ({ children }) => {
       ])
       const [years, depts, crss, brns, sems, secs] = results.map(result =>
         result.status === 'fulfilled' ? result.value : Object.assign([], { loadError: true }))
-      if (requestId !== hierarchyRequest.current) return
+      if (requestId !== hierarchyRequest.current || getAccessToken() !== requestToken) return
 
       if (storedCollegeId() !== requestedCollegeId) return
 
@@ -136,7 +149,9 @@ export const AcademicProvider = ({ children }) => {
       // by inferred ownership drops every year in that response, leaving the
       // header selector at “Not Configured”. The API is already scoped by the
       // selected college context, so preserve its rows here.
-      const safeYears = createCollegeScope(resolvedColId)(years || [])
+      const yearRows = Array.isArray(years) ? years : []
+      const hasOwnership = yearRows.some(row => row.collegeId != null || row.CollegeId != null || row.college_id != null)
+      const safeYears = hasOwnership ? createCollegeScope(resolvedColId)(yearRows) : yearRows
       setAcademicYears(safeYears)
 
       // Validate or resolve default Academic Year
@@ -150,15 +165,15 @@ export const AcademicProvider = ({ children }) => {
       setSelectedAcademicYearId(resolvedYearId)
 
       // Persist validated context
-      completedCollegeId = resolvedColId
       saveStoredContext(resolvedColId, resolvedYearId)
     } catch (err) {
+      if (getAccessToken() !== requestToken) return
       if (storedCollegeId() !== requestedCollegeId) return
       if (requestId !== hierarchyRequest.current) return
       setError('Academic configuration could not be loaded. Please retry.')
       console.warn('Error loading academic hierarchy context:', err)
     } finally {
-      if (requestId === hierarchyRequest.current && storedCollegeId() === completedCollegeId) setLoading(false)
+      if (requestId === hierarchyRequest.current) setLoading(false)
     }
   }, [])
 
@@ -168,7 +183,15 @@ export const AcademicProvider = ({ children }) => {
       academicService.clearCache()
       loadHierarchy()
     })
-    return () => unsubscribe()
+    const syncStorage = event => {
+      if (event.key && !['pirnav_academic_context', 'pirnav-selected-college-id', 'selected_college_id', 'pirnav-selected-academic-year-id'].includes(event.key)) return
+      const stored = readStoredContext()
+      setSelectedCollegeId(stored.collegeId); setSelectedAcademicYearId(stored.academicYearId)
+      academicService.clearCache()
+      loadHierarchy()
+    }
+    window.addEventListener('storage', syncStorage)
+    return () => { hierarchyRequest.current++; contextChangeRequest.current++; unsubscribe(); window.removeEventListener('storage', syncStorage) }
   }, [loadHierarchy])
 
   const scopeRecords = useMemo(() => {
@@ -194,12 +217,12 @@ export const AcademicProvider = ({ children }) => {
 
   const selectedCollege = useMemo(() => {
     const availableColleges = filterActiveOnly(colleges)
-    return availableColleges.find(c => String(c.id ?? c.collegeId) === String(selectedCollegeId)) || availableColleges[0] || null
+    return availableColleges.find(c => String(c.id ?? c.collegeId) === String(selectedCollegeId)) || null
   }, [colleges, selectedCollegeId])
 
   const selectedAcademicYear = useMemo(() => {
-    return academicYears.find(y => String(y.id ?? y.academicYearId) === String(selectedAcademicYearId)) || currentAcademicYear
-  }, [academicYears, selectedAcademicYearId, currentAcademicYear])
+    return academicYears.find(y => String(y.id ?? y.academicYearId) === String(selectedAcademicYearId)) || null
+  }, [academicYears, selectedAcademicYearId])
 
   const isHistoricalYear = Boolean(
     currentAcademicYear &&
@@ -216,11 +239,20 @@ export const AcademicProvider = ({ children }) => {
     const assignedCollege = isAdmin ? '' : getUserCollegeId()
     if (assignedCollege && String(newCollegeId) !== assignedCollege) throw new Error('Select the college assigned to your account.')
     const colId = String(newCollegeId ?? '')
+    if (!collegeAuthorization || !canSelectCollege(collegeAuthorization, colId, getUserCollegeId()) || !filterActiveOnly(colleges).some(row => String(row.id ?? row.collegeId) === colId)) throw new Error('An active authorized college assignment is required.')
+    const changeId = ++contextChangeRequest.current
+    const changeToken = getAccessToken()
+    const verifiedAccess = await requestEffectiveAccess(colId)
+    if (changeId !== contextChangeRequest.current || changeToken !== getAccessToken()) return { success: false, cancelled: true }
     const collegeChanged = colId !== String(readStoredContext().collegeId || '')
     const yrId = collegeChanged ? '' : String(newAcademicYearId ?? '')
+    if (yrId && !academicYears.some(row => String(row.id ?? row.academicYearId) === yrId)) throw new Error('Select an academic year belonging to the current college.')
 
+    hierarchyRequest.current++
+    setLoading(true)
+    setCollegeAccessSnapshot({ token: getAccessToken(), collegeId: colId, value: verifiedAccess })
     setSelectedCollegeId(colId)
-    if (collegeChanged) setAcademicYears([])
+    if (collegeChanged) { setAcademicYears([]); setDepartments([]); setCourses([]); setBranches([]); setSemesters([]); setSections([]) }
     setSelectedAcademicYearId(yrId)
     saveStoredContext(colId, yrId)
 
@@ -247,7 +279,7 @@ export const AcademicProvider = ({ children }) => {
       college: targetCol,
       academicYear: targetYr,
     }
-  }, [colleges, academicYears])
+  }, [colleges, academicYears, collegeAuthorization])
 
   // Context-scoped Cascading helpers
   const getCoursesForDepartment = useCallback((departmentId, activeOnly = true) => {
@@ -302,6 +334,7 @@ export const AcademicProvider = ({ children }) => {
 
   const value = {
     scopeRecords,
+    collegeAccess: collegeAccessSnapshot?.token === getAccessToken() && collegeAccessSnapshot?.collegeId === selectedCollegeId ? collegeAccessSnapshot.value : null,
     loading,
     error,
     isContextReady,

@@ -6,7 +6,7 @@ import { FiEdit2 as fiImports_FiEdit2, FiMail as fiImports_FiMail, FiMapPin as f
 import DashboardLayoutImports_default from '../../layouts/DashboardLayout'
 import { lookupIndianPincode as apiEndpointsImports_lookupIndianPincode, profileApi as apiEndpointsImports_profileApi } from '../../api/apiEndpoints'
 import { getDepartments as collegeApiImports_getDepartments } from '../../auth/collegeApi'
-import { getUserRole as authImports_getUserRole } from '../../auth/auth'
+import { getUserRole as authImports_getUserRole, signOut as authImports_signOut } from '../../auth/auth'
 import { ROLES as rolesImports_ROLES } from '../../auth/roles'
 import { Navigate as react_router_domImports_Navigate, useSearchParams as react_router_domImports_useSearchParams, useNavigate as react_router_domImports_useNavigate } from 'react-router-dom'
 import './MyProfile.css'
@@ -19,6 +19,8 @@ const useToastState = useToastStateImports_default
 const useEffect = reactImports_useEffect
 const useRef = reactImports_useRef
 const useState = reactImports_useState
+const useSearchParams = react_router_domImports_useSearchParams
+const useNavigate = react_router_domImports_useNavigate
 const FiEdit2 = fiImports_FiEdit2
 const FiMail = fiImports_FiMail
 const FiMapPin = fiImports_FiMapPin
@@ -31,10 +33,18 @@ const lookupIndianPincode = apiEndpointsImports_lookupIndianPincode
 const profileApi = apiEndpointsImports_profileApi
 const getDepartments = collegeApiImports_getDepartments
 const getUserRole = authImports_getUserRole
+const signOut = authImports_signOut
 const ROLES = rolesImports_ROLES
 
 const emptyForm = { fullName: '', email: '', mobile: '', dateOfBirth: '', gender: '', departmentId: '', designation: '', houseNumber: '', address: '', permanentHouseNumber: '', permanentAddress: '', sameAsCurrentAddress: false, pincode: '', city: '', district: '', state: '', permanentPincode: '', permanentCity: '', permanentDistrict: '', permanentState: '', bio: '' }
 const emptyErrors = {}
+const profileFieldLabel = (field) => ({ fullName: 'Full name', email: 'Email address', mobile: 'Mobile number', houseNumber: 'Current house number', pincode: 'Current PIN code', permanentHouseNumber: 'Permanent house number', permanentPincode: 'Permanent PIN code' })[field] || field.replace(/([A-Z])/g, ' $1')
+const profileErrorMessage = (error, fallback) => {
+  if (error?.status === 401) return 'Your session has expired. Please sign in again.'
+  if (error?.status >= 500) return 'Profile information is temporarily unavailable.'
+  const message = String(error?.message || '').trim()
+  return /\/api\/v\d+|\b(?:GET|POST|PUT|PATCH|DELETE)\b/i.test(message) ? fallback : message || fallback
+}
 const display = (value) => value === null || value === undefined || String(value).trim() === '' ? '-' : value
 const formatLastLogin = (value) => {
   if (!value) return '-'
@@ -72,6 +82,8 @@ function MyProfile() {
   const [queryParams] = useSearchParams()
   const navigate = useNavigate()
   const forceProfileSetup = queryParams.get('setup') === '1' || queryParams.get('profileSetup') === '1'
+  const passwordSetupPending = queryParams.get('setup') === '1' && [localStorage, sessionStorage].some((storage) => storage.getItem('btech-must-change-password') === 'true')
+  const sessionProfileIncomplete = [localStorage, sessionStorage].some((storage) => storage.getItem('btech-profile-completed') === 'false')
   const isStudent = getUserRole() === ROLES.STUDENT
   const [profile, setProfile] = useState(null)
   const [departments, setDepartments] = useState([])
@@ -84,11 +96,12 @@ function MyProfile() {
   const [photoUploading, setPhotoUploading] = useState(false)
   const [pincodeStatus, setPincodeStatus] = useState({ current: '', permanent: '' })
   const closeButtonRef = useRef(null)
+  const mandatorySetup = !passwordSetupPending && (profile?.profileCompleted === false || (forceProfileSetup && profile?.profileCompleted == null && sessionProfileIncomplete))
 
   const loadProfile = async () => {
     setLoading(true); setFeedback(null)
-    try { setProfile(await profileApi.getProfile()) }
-    catch (error) { setProfile(null); setFeedback({ type: 'error', message: error.message || 'Unable to load profile information.' }) }
+    try { const loadedProfile = await profileApi.getProfile(); setProfile(loadedProfile); if (queryParams.get('profileSetup') === '1' && loadedProfile.profileCompleted === true) navigate('/my-profile', { replace: true }) }
+    catch (error) { setProfile(null); setFeedback({ type: 'error', message: profileErrorMessage(error, 'Unable to load profile information.') }) }
     finally { setLoading(false) }
   }
   useEffect(() => { loadProfile() }, [])
@@ -110,8 +123,17 @@ function MyProfile() {
   }, [feedback, setFeedback])
 
   const openEdit = () => { setEditForm({ fullName: profile.fullName || '', email: profile.email || '', mobile: profile.mobile || '', dateOfBirth: profile.dateOfBirth ? String(profile.dateOfBirth).slice(0, 10) : '', gender: profile.gender || '', houseNumber: profile.houseNumber || '', address: profile.address || '', permanentHouseNumber: profile.permanentHouseNumber || '', permanentAddress: profile.permanentAddress || '', sameAsCurrentAddress: false, pincode: profile.pincode || profile.postalCode || '', city: profile.city || '', district: profile.district || '', state: profile.state || '', permanentPincode: profile.permanentPincode || '', permanentCity: profile.permanentCity || '', permanentDistrict: profile.permanentDistrict || '', permanentState: profile.permanentState || '', bio: profile.bio || '' }); setErrors({}); setPincodeStatus({ current: '', permanent: '' }); setFeedback(null); setEditOpen(true) }
-  useEffect(() => { if (forceProfileSetup && profile && profile.profileCompleted === false && !editOpen) openEdit() }, [forceProfileSetup, profile, editOpen])
-  const closeEdit = () => { if (!saving) { setEditOpen(false); setErrors({}); setPincodeStatus({ current: '', permanent: '' }); setEditForm(emptyForm) } }
+  useEffect(() => { if (mandatorySetup && profile && !editOpen) openEdit() }, [mandatorySetup, profile, editOpen])
+  useEffect(() => {
+    if (!editOpen) return
+    const title = document.getElementById('profile-edit-title')
+    const subtitle = title?.parentElement?.querySelector('span')
+    if (title) title.textContent = mandatorySetup ? 'Complete Your Profile' : 'Edit Profile'
+    if (subtitle) subtitle.textContent = mandatorySetup ? 'Please complete your profile to continue using the college management system.' : 'Update your personal, institutional, contact, and address information.'
+    const closeButton = document.querySelector('.profile-edit-dialog .profile-modal-close')
+    if (closeButton) closeButton.hidden = mandatorySetup
+  }, [editOpen, mandatorySetup])
+  const closeEdit = () => { if (!saving && !mandatorySetup) { setEditOpen(false); setErrors({}); setPincodeStatus({ current: '', permanent: '' }); setEditForm(emptyForm) } }
   const uploadProfilePhoto = async event => { const file = event.target.files?.[0]; if (!file) return; setPhotoUploading(true); setFeedback(null); try { const profileImagePath = await profileApi.uploadPhoto(file); setProfile(current => ({ ...current, profileImagePath })); setFeedback({ type: 'success', message: 'Profile photo updated.' }) } catch (error) { setFeedback({ type: 'error', message: error.message || 'Profile photo could not be uploaded.' }) } finally { setPhotoUploading(false); event.target.value = '' } }
   useEffect(() => {
     if (!editOpen) return undefined
@@ -124,32 +146,54 @@ function MyProfile() {
   }, [editOpen, saving])
   const update = async (event) => { const name = event.target.name, pinField=['pincode','permanentPincode'].includes(name), value = event.target.type === 'checkbox' ? event.target.checked : name === 'mobile' || pinField ? event.target.value.replace(/\D/g, '').slice(0, pinField ? 6 : 10) : event.target.value; let next = { ...editForm, [name]: value }; if (name === 'sameAsCurrentAddress') { next = value ? { ...next, permanentHouseNumber: next.houseNumber, permanentAddress: next.address, permanentPincode: next.pincode, permanentCity: next.city, permanentDistrict: next.district, permanentState: next.state } : { ...next, permanentHouseNumber: '', permanentAddress: '', permanentPincode: '', permanentCity: '', permanentDistrict: '', permanentState: '' }; setPincodeStatus(current => ({ ...current, permanent: '' })) } if(next.sameAsCurrentAddress){const map={houseNumber:'permanentHouseNumber',address:'permanentAddress',pincode:'permanentPincode',city:'permanentCity',district:'permanentDistrict',state:'permanentState'};if(map[name])next[map[name]]=value} setEditForm(next); setErrors(validate(next)); setFeedback(null); if (pinField) { const key=name === 'pincode'?'current':'permanent'; setPincodeStatus(current=>({...current,[key]:''})); if (/^\d{6}$/.test(value)) { setPincodeStatus(current=>({...current,[key]:'Finding location...'})); try { const location = await lookupIndianPincode(value); setEditForm((current) => name === 'pincode' ? ({ ...current, ...location, ...(current.sameAsCurrentAddress ? { permanentPincode:value, permanentCity:location.city || '', permanentDistrict:location.district || '', permanentState:location.state || '' } : {}) }) : ({ ...current, permanentCity:location.city || '', permanentDistrict:location.district || '', permanentState:location.state || '' })); setPincodeStatus(current=>({...current,[key]:'City, district and state filled automatically.'})) } catch (error) { setPincodeStatus(current=>({...current,[key]:error.message || 'PIN lookup failed. Enter the location manually.'})) } } } }
   const save = async (event) => {
-    event.preventDefault(); const nextErrors = validate(editForm); setErrors(nextErrors); if (saving) return; if (Object.keys(nextErrors).length) { showWarning('Correct the highlighted profile fields.'); return }
+    event.preventDefault(); const nextErrors = validate(editForm); setErrors(nextErrors); if (saving) return; if (Object.keys(nextErrors).length) { const field = Object.keys(nextErrors)[0]; setFeedback({ type: 'error', message: `${profileFieldLabel(field)}: ${nextErrors[field]}` }); return }
     setSaving(true); setFeedback(null)
-    const payload = { ...editForm }
     try {
-      await profileApi.updateProfile(payload)
+      await profileApi.updateProfile(editForm)
       const updatedProfile = await profileApi.getProfile()
       setProfile(updatedProfile)
-      setEditOpen(false)
-      if (forceProfileSetup && updatedProfile.profileCompleted) {
-        localStorage.setItem('btech-profile-completed', 'true')
-        sessionStorage.setItem('btech-profile-completed', 'true')
-        navigate('/dashboard', { replace: true })
+      const savedFields = ['fullName', 'email', 'mobile', 'houseNumber', 'address', 'pincode', 'city', 'district', 'state', 'permanentHouseNumber', 'permanentAddress', 'permanentPincode', 'permanentCity', 'permanentDistrict', 'permanentState']
+      const fieldsPersisted = savedFields.every((field) => String(updatedProfile[field] || '').trim() === String(editForm[field] || '').trim())
+      if (!fieldsPersisted) {
+        setFeedback({ type: 'error', message: 'Your profile could not be verified after saving. Please try again.' })
+        return
       }
+      if (mandatorySetup && updatedProfile.profileCompleted !== true) {
+        setFeedback({ type: 'error', message: 'Your profile was saved, but setup completion could not be confirmed. Please contact your administrator.' })
+        return
+      }
+      setEditOpen(false)
+      const authStorage = [localStorage, sessionStorage].find((storage) => storage.getItem('btech-authenticated') === 'true')
+      authStorage?.setItem('btech-user-name', String(updatedProfile.fullName || '').trim())
+      if (updatedProfile.profileCompleted === true) {
+        authStorage?.setItem('btech-profile-completed', 'true')
+        if (mandatorySetup) navigate('/dashboard', { replace: true })
+      }
+      window.dispatchEvent(new CustomEvent('btech-profile-updated', { detail: { fullName: updatedProfile.fullName || '' } }))
       setFeedback({ type: 'success', message: 'Profile updated successfully.' })
       window.setTimeout(() => setFeedback(null), 2000)
     } catch (error) {
-      setFeedback({ type: 'error', message: error.message || 'Profile changes could not be saved.' })
+      const fieldErrors = Object.entries(error.validationErrors || {}).reduce((result, [field, messages]) => {
+        const key = field.charAt(0).toLowerCase() + field.slice(1)
+        const message = Array.isArray(messages) ? messages[0] : messages
+        if (typeof message === 'string' && key in editForm) result[key] = message
+        return result
+      }, {})
+      if (Object.keys(fieldErrors).length) setErrors((current) => ({ ...current, ...fieldErrors }))
+      const firstField = Object.keys(fieldErrors)[0]
+      const fieldMessage = firstField && !/\/api\/v\d+|\b(?:GET|POST|PUT|PATCH|DELETE)\b/i.test(fieldErrors[firstField]) ? `${profileFieldLabel(firstField)}: ${fieldErrors[firstField]}` : null
+      const message = fieldMessage || (error.status === 401 ? 'Your session has expired. Please sign in again.' : error.status === 400 || error.status === 422 ? 'Please review the highlighted profile details.' : error.status >= 500 ? 'Profile update is temporarily unavailable.' : 'Unable to save your profile. Please try again.')
+      setFeedback({ type: 'error', message })
     } finally { setSaving(false) }
   }
+  const logout = () => { signOut(); navigate('/login', { replace: true }) }
 
   if (loading) return <DashboardLayout><main className="profile-page" data-export-record><div className="profile-state"><span className="profile-spinner" /><h2>Loading your profile</h2><p>Please wait while we retrieve your information.</p></div></main></DashboardLayout>
   if (!profile) return <DashboardLayout><main className="profile-page" data-export-record><div className="profile-state error"><section className="profile-error-card" role="alert"><h2>Profile unavailable</h2><p>{feedback?.message || 'Unable to load profile information.'}</p><button type="button" className="profile-button" onClick={loadProfile}>Try Again</button></section></div></main></DashboardLayout>
 
   return <DashboardLayout><main className="profile-page" data-export-record>
-    <header className="profile-heading"><div><p className="profile-eyebrow">{isStudent ? 'Student dashboard' : 'Account'}</p><h1>My Profile</h1><p>{isStudent ? 'View your personal details and current academic information.' : 'Review your saved identity and account information.'}</p></div><button type="button" className="profile-button" onClick={openEdit}><FiEdit2 className="module-action-icon module-action-icon--edit" /> Edit Profile</button></header>
-    {forceProfileSetup && <div className="profile-feedback" role="status">Complete your profile setup to continue. Your college, department, role, and permissions remain managed by your administrator.</div>}
+    <header className="profile-heading"><div><p className="profile-eyebrow">{isStudent ? 'Student dashboard' : 'Account'}</p><h1>My Profile</h1><p>{isStudent ? 'View your personal details and current academic information.' : 'Review your saved identity and account information.'}</p></div>{mandatorySetup ? <button type="button" className="profile-button profile-setup-logout" onClick={logout}>Log out</button> : <button type="button" className="profile-button" onClick={openEdit}><FiEdit2 className="module-action-icon module-action-icon--edit" /> Edit Profile</button>}</header>
+    {mandatorySetup && <div className="profile-feedback" role="status">Complete your profile setup to continue. Your college, department, role, and permissions remain managed by your administrator.</div>}
     {feedback && <div className={`profile-feedback ${feedback.type}`} role={feedback.type === 'error' ? 'alert' : 'status'}>{feedback.message}</div>}
     <section className="profile-overview"><div className="profile-identity"><div className="profile-avatar" aria-hidden="true">{profile.profileImagePath ? <img src={profile.profileImagePath} alt="" /> : initials(profile.fullName)}</div><div><h2 className="profile-name">{display(profile.fullName)}</h2><p className="profile-email">{display(profile.email)}</p><span className="profile-role"><FiShield /> {isStudent ? 'Student' : display(profile.role)}</span></div></div><dl className="profile-facts"><div><dt>{isStudent ? 'Admission Number' : 'Employee ID'}</dt><dd>{display(isStudent ? profile.admissionNumber || profile.identifier : profile.identifier)}</dd></div><div><dt>{isStudent ? 'Course / Branch' : 'Last Login'}</dt><dd>{display(isStudent ? [profile.course, profile.branch].filter(Boolean).join(' - ') : formatLastLogin(profile.lastLoginAt))}</dd></div><div><dt>Account Status</dt><dd className="profile-status"><i /> {display(profile.status)}</dd></div></dl></section>
     <section className="profile-preview-section profile-details-card">
@@ -179,8 +223,6 @@ return { default: MyProfile }
 // Settings screen and private helpers.
 const SettingsScreen = (() => {
 const Navigate = react_router_domImports_Navigate
-const useSearchParams = react_router_domImports_useSearchParams
-const useNavigate = react_router_domImports_useNavigate
 
 // Preserve existing bookmarks; workspace selection now lives in the shell.
 function Settings() {

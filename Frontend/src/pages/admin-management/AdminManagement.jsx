@@ -1,3 +1,6 @@
+import DataTable from '../../components/DataTable'
+import AsyncState from '../../components/AsyncState'
+import FormLayout, { FormField, FormGroup } from '../../components/FormLayout'
 import DirectoryEmptyStateImports_default from '../../components/DirectoryEmptyState'
 import { facultyForCollege } from '../../utils/departmentFaculty.js'
 import { newestFirst as newestFirstImports_newestFirst, rememberCreated as newestFirstImports_rememberCreated } from '../../utils/newestFirst'
@@ -37,7 +40,6 @@ import { selectedCollegeId as readSelectedCollegeId, createCollegeScope } from '
 
 // AcademicYearManagement screen and private helpers.
 const AcademicYearManagementScreen = (() => {
-const DirectoryEmptyState = DirectoryEmptyStateImports_default
 const newestFirst = newestFirstImports_newestFirst
 const rememberCreated = newestFirstImports_rememberCreated
 const showWarning = toastImports_showWarning
@@ -53,7 +55,6 @@ const PageHeader = PageHeaderImports_default
 const StatusBadge = StatusBadgeImports_default
 const FilterPanel = FilterPanelImports_default
 const PAGE_SIZE = TablePaginationImports_PAGE_SIZE
-const TablePagination = TablePaginationImports_default
 const StatusConfirmDialog = StatusConfirmDialogImports_default
 const InfoCard = InfoCardImports_default
 const academicYearApi = apiEndpointsImports_academicYearApi
@@ -136,6 +137,7 @@ const autoStatus = (a, b) => {
   if (isNaN(start.getTime()) || isNaN(end.getTime())) return 'UPCOMING';
   return now() < start ? 'UPCOMING' : now() > end ? 'ARCHIVED' : 'ACTIVE';
 };
+const dateOnly = (value) => `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
 const nextCycle = (year) => {
   if (!year) return null;
   const start = d(year.endDate);
@@ -145,8 +147,8 @@ const nextCycle = (year) => {
   end.setDate(end.getDate() - 1);
   return {
     name: `${start.getFullYear()} - ${end.getFullYear()}`,
-    startDate: start.toISOString().slice(0, 10),
-    endDate: end.toISOString().slice(0, 10),
+    startDate: dateOnly(start),
+    endDate: dateOnly(end),
     status: 'UPCOMING',
     autoActivate: false,
   };
@@ -215,6 +217,7 @@ const mapYear = (x) => {
 
 function AcademicYear() {
   const { selectedCollegeId, selectedCollege, loading: contextLoading } = AcademicContextImports_useAcademic();
+  const loadRequest = reactImports_useRef(0);
   const [years, setYears] = useState([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('ALL');
@@ -226,6 +229,7 @@ function AcademicYear() {
   const [, setNoticeValue] = useToastState('', 'success');
   const [noticeTone, setNoticeTone] = useState('info');
   const [exportLoading, setExportLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [saving, setSaving] = useState(false);
   const [firstYearStart, setFirstYearStart] = useState(() => {
     const today = new Date();
@@ -246,6 +250,8 @@ function AcademicYear() {
   };
 
   const loadYears = async () => {
+    const requestId = ++loadRequest.current;
+    setLoadError('');
     if (!selectedCollegeId) {
       setYears([]);
       setExportLoading(false);
@@ -254,15 +260,16 @@ function AcademicYear() {
     setExportLoading(true);
     try {
       const data = await academicYearApi.getAll();
-      if (String(selectedCollegeId) !== readSelectedCollegeId()) return;
+      if (requestId !== loadRequest.current || String(selectedCollegeId) !== readSelectedCollegeId()) return;
       const list = Array.isArray(data) ? data : data?.records || data?.items || [];
       const scoped = createCollegeScope(selectedCollegeId)(list);
       setYears(newestFirst('academic-years', scoped).map(mapYear));
-      eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED);
     } catch (error) {
+      if (requestId !== loadRequest.current || String(selectedCollegeId) !== readSelectedCollegeId()) return;
+      setLoadError(error.message || 'Unable to load academic years.');
       setNotice(error.message || 'Unable to load academic years.', 'error');
     } finally {
-      setExportLoading(false);
+      if (requestId === loadRequest.current) setExportLoading(false);
     }
   };
 
@@ -270,6 +277,7 @@ function AcademicYear() {
     setYears([]);
     close();
     loadYears();
+    return () => { loadRequest.current++; };
   }, [selectedCollegeId]);
 
   const active = years.find((x) => x.status === 'ACTIVE' || isPresentYear(x));
@@ -287,8 +295,7 @@ function AcademicYear() {
     const end = new Date(start);
     end.setFullYear(end.getFullYear() + 1);
     end.setDate(end.getDate() - 1);
-    const localDate = (value) => `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
-    return { name: `${start.getFullYear()} - ${end.getFullYear()}`, startDate: firstYearStart, endDate: localDate(end), autoActivate: false };
+    return { name: `${start.getFullYear()} - ${end.getFullYear()}`, startDate: firstYearStart, endDate: dateOnly(end), autoActivate: false };
   })();
 
   const shown = useMemo(
@@ -301,9 +308,6 @@ function AcademicYear() {
     [years, search, filter]
   );
 
-  const totalPages = Math.max(1, Math.ceil(shown.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const pageRows = shown.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   useEffect(() => setPage(1), [search, filter]);
 
   const openAdd = () => {
@@ -392,6 +396,7 @@ function AcademicYear() {
       setNotice(`${item.name} has been ${selected ? 'updated' : 'created'} successfully.`, 'success');
       close();
       await loadYears();
+      eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED);
     } catch (error) {
       setErrors({ form: error.message || 'Unable to save the academic year.' });
     } finally {
@@ -412,6 +417,7 @@ function AcademicYear() {
       setNotice(`${year.name} has been ${targetStatus === 'ACTIVE' ? 'activated' : 'archived'} successfully.`, 'success');
       setConfirmStatus(null);
       await loadYears();
+      eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED);
     } catch (error) {
       setNotice(error.message || 'Unable to update academic year status.', 'error');
     } finally {
@@ -450,6 +456,7 @@ function AcademicYear() {
         setSearch(''); setFilter('ALL'); setPage(1);
         setNotice(`${item.name} was generated successfully.`, 'success');
         await loadYears();
+        eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED);
       } catch (error) {
         setErrors({ form: error.status === 403
           ? `Access denied for ${selectedCollege?.name || selectedCollege?.collegeName || 'the selected college'} (ID: ${selectedCollegeId}). An administrator must verify your college assignment and access on the server.`
@@ -581,7 +588,7 @@ function AcademicYear() {
                     filename="academic-years"
                     loading={exportLoading || noticeTone === 'error'}
                   />
-                  <button type="button" className="cm-button secondary" disabled={!selectedCollegeId || contextLoading || exportLoading} onClick={() => setModal('generate')}>
+                  <button type="button" className="cm-button secondary" disabled={!selectedCollegeId || contextLoading || exportLoading || Boolean(loadError)} onClick={() => setModal('generate')}>
                     {generationBase ? 'Generate Next Year' : 'Generate Academic Year'}
                   </button>
                   <button type="button" className="cm-button" disabled={!selectedCollegeId || contextLoading} onClick={openAdd}>
@@ -592,13 +599,9 @@ function AcademicYear() {
 
               <FilterPanel
                 active={Boolean(search || filter !== 'ALL')}
-                onClear={() => {
-                  setSearch('');
-                  setFilter('ALL');
-                  setPage(1);
-                }}
-              >
-                <div className="course-toolbar">
+                appliedFilters={[search && `Search: ${search}`, filter !== 'ALL' && filter].filter(Boolean)}
+                onClear={() => { setSearch(''); setFilter('ALL'); setPage(1); }}
+                search={
                   <label className="course-search">
                     <FiSearch />
                     <input
@@ -608,6 +611,8 @@ function AcademicYear() {
                       placeholder="Search year title or status..."
                     />
                   </label>
+                }
+                filters={
                   <div className="erp-filter-buttons" role="group" aria-label="Academic year status">
                     {['ALL', ...states].map((x) => (
                       <button
@@ -621,43 +626,27 @@ function AcademicYear() {
                       </button>
                     ))}
                   </div>
-                </div>
-              </FilterPanel>
+                }
+              />
 
-              <div className="erp-table-responsive">
-                <table className="erp-table">
-                  <thead>
-                    <tr>
-                      <th className="table-center" style={{ minWidth: '180px' }}>Academic Year</th>
-                      <th className="table-center" style={{ width: '130px' }}>Start Date</th>
-                      <th className="table-center" style={{ width: '130px' }}>End Date</th>
-                      <th className="table-center" style={{ width: '120px' }}>Status</th>
-                      <th className="table-center" style={{ width: '120px' }}>Duration</th>
-                      <th className="table-center" style={{ width: '140px' }}>Auto Activation</th>
-                      <th className="table-center" style={{ width: '140px' }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pageRows.map((x) => (
-                      <tr key={x.id}>
-                        <td className="table-center" style={{ minWidth: '180px' }}>
-                          <button
-                            type="button"
-                            className="ay-name-link table-cell-truncate"
-                            title={`Click to view details for ${x.name || 'Academic Year'}`}
-                            onClick={() => openView(x)}
-                          >
-                            {x.name}
-                          </button>
-                        </td>
-                        <td className="table-center" style={{ width: '130px' }}>{formatDate(x.startDate)}</td>
-                        <td className="table-center" style={{ width: '130px' }}>{formatDate(x.endDate)}</td>
-                        <td className="table-center" style={{ width: '120px' }}>
-                          <StatusBadge value={x.status} />
-                        </td>
-                        <td className="table-center" style={{ width: '120px' }}>{duration(x.startDate, x.endDate)} days</td>
-                        <td className="table-center" style={{ width: '140px' }}>{x.autoActivate ? 'Enabled' : 'Manual'}</td>
-                        <td className="table-center" style={{ width: '140px' }}>
+              <DataTable
+                key={selectedCollegeId || 'unselected'}
+                caption="Academic year directory"
+                rows={shown}
+                columns={[
+                  { key: 'name', label: 'Academic Year', className: 'table-center', sortable: true, render: x => <button type="button" className="ay-name-link table-cell-truncate" title={`Click to view details for ${x.name || 'Academic Year'}`} onClick={() => openView(x)}>{x.name}</button> },
+                  { key: 'startDate', label: 'Start Date', className: 'table-center', width: '130px', sortable: true, render: x => formatDate(x.startDate) },
+                  { key: 'endDate', label: 'End Date', className: 'table-center', width: '130px', sortable: true, render: x => formatDate(x.endDate) },
+                  { key: 'status', label: 'Status', className: 'table-center', width: '120px', sortable: true, render: x => <StatusBadge value={x.status} /> },
+                  { key: 'duration', label: 'Duration', className: 'table-center', width: '120px', sortable: true, sortValue: x => duration(x.startDate, x.endDate), render: x => `${duration(x.startDate, x.endDate)} days` },
+                  { key: 'autoActivate', label: 'Auto Activation', className: 'table-center', width: '140px', render: x => x.autoActivate ? 'Enabled' : 'Manual' },
+                ]}
+                pagination={{ page, pageSize: PAGE_SIZE, onPageChange: setPage }}
+                loading={(contextLoading || exportLoading) && 'Loading academic years...'}
+                error={loadError}
+                onRetry={loadYears}
+                emptyState={<AsyncState status="empty" title={!selectedCollegeId ? 'Select a college to view academic years.' : 'No academic years found.'} />}
+                rowActions={x => (
                           <div className="erp-row-actions table-actions-group">
                             <button
                               type="button"
@@ -692,23 +681,8 @@ function AcademicYear() {
                               </button>
                             )}
                           </div>
-                        </td>
-                      </tr>
-                    ))}
-                    {!shown.length && (
-                      <tr>
-                        <td colSpan="7" style={{ textAlign: 'center', padding: '32px' }}>
-                          <DirectoryEmptyState title="No academic years found." actionLabel="Add Academic Year" onAction={openAdd} />
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {!!shown.length && (
-                <TablePagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />
-              )}
+                )}
+              />
             </section>
           </>
         )}
@@ -721,62 +695,23 @@ function AcademicYear() {
                 <FiX aria-hidden="true" />
               </button>
               <h2 id="form-title">{modal === 'add' ? 'Add Academic Year' : 'Edit Academic Year'}</h2>
-              <form onSubmit={save} noValidate>
+              <FormLayout className="ay-editor" onSubmit={save} noValidate busy={saving} error={errors.form} actions={<>
+                <button type="button" className="erp-btn erp-btn--secondary" onClick={close}>Cancel</button>
+                <button type="submit" className="erp-btn erp-btn--primary" disabled={saving}>{saving ? 'Saving...' : modal === 'add' ? 'Add Academic Year' : 'Save Changes'}</button>
+              </>}>
                 <p>College: <strong>{selectedCollege?.name || selectedCollege?.collegeName || 'Selected college'}</strong></p>
-                <label>
-                  <span>Academic Year Title <b className="required-mark">*</b></span>
-                  <input
-                    autoFocus
-                    placeholder="e.g. 2025 - 2026"
-                    value={form.name}
-                    onChange={(e) => setForm((x) => ({ ...x, name: e.target.value }))}
-                  />
-                  {errors.name && (
-                    <em className="field-error" role="alert">
-                      {errors.name}
-                    </em>
-                  )}
-                </label>
-                <div className="formgrid">
-                  <label>
-                    <span>Start Date <b className="required-mark">*</b></span>
-                    <input
-                      type="date"
-                      value={form.startDate}
-                      onChange={(e) => setForm((x) => ({ ...x, startDate: e.target.value }))}
-                    />
-                    {errors.startDate && (
-                      <em className="field-error" role="alert">
-                        {errors.startDate}
-                      </em>
-                    )}
-                  </label>
-                  <label>
-                    <span>End Date <b className="required-mark">*</b></span>
-                    <input
-                      type="date"
-                      value={form.endDate}
-                      onChange={(e) => setForm((x) => ({ ...x, endDate: e.target.value }))}
-                    />
-                    {errors.endDate && (
-                      <em className="field-error" role="alert">
-                        {errors.endDate}
-                      </em>
-                    )}
-                  </label>
-                </div>
-                {errors.range && (
-                  <em className="field-error" role="alert">
-                    {errors.range}
-                  </em>
-                )}
-                {errors.form && (
-                  <em className="field-error" role="alert">
-                    {errors.form}
-                  </em>
-                )}
+                <FormGroup>
+                  <FormField label="Academic Year Title" required error={errors.name} className="erp-form-field--full">
+                    <input autoFocus placeholder="e.g. 2025 - 2026" value={form.name} onChange={e => setForm(x => ({ ...x, name: e.target.value }))} />
+                  </FormField>
+                  <FormField label="Start Date" required error={errors.startDate}>
+                    <input type="date" value={form.startDate} onChange={e => setForm(x => ({ ...x, startDate: e.target.value }))} />
+                  </FormField>
+                  <FormField label="End Date" required error={errors.endDate}>
+                    <input type="date" value={form.endDate} onChange={e => setForm(x => ({ ...x, endDate: e.target.value }))} />
+                  </FormField>
                 {modal === 'add' && (
-                  <label className="toggle">
+                  <label className="toggle erp-form-field--full">
                     <input
                       type="checkbox"
                       checked={form.autoActivate}
@@ -786,15 +721,10 @@ function AcademicYear() {
                     <small>Display preference only; manual status confirmation applies.</small>
                   </label>
                 )}
-                <footer>
-                  <button type="button" className="erp-btn erp-btn--secondary" onClick={close}>
-                    Cancel
-                  </button>
-                  <button type="submit" className="erp-btn erp-btn--primary" disabled={saving}>
-                    {saving ? 'Saving...' : modal === 'add' ? 'Add Academic Year' : 'Save Changes'}
-                  </button>
-                </footer>
-              </form>
+
+                </FormGroup>
+                {errors.range && <p className="field-error" role="alert">{errors.range}</p>}
+              </FormLayout>
             </section>
           </div>
         )}
@@ -3445,9 +3375,6 @@ function DepartmentManagement() {
     [scopedItems, query, statusFilter]
   );
 
-  const totalPages = Math.max(1, Math.ceil(visible.length / itemsPerPage));
-  const currentPageClamped = Math.min(Math.max(currentPage, 1), totalPages);
-  const pageItems = visible.slice((currentPageClamped - 1) * itemsPerPage, currentPageClamped * itemsPerPage);
   const countSource = scopedAllDepartments.length ? scopedAllDepartments : scopedItems;
   const activeCount = countSource.filter((item) => item.status === 'Active').length;
   const inactiveCount = countSource.filter((item) => item.status === 'Inactive').length;
@@ -3807,13 +3734,9 @@ function DepartmentManagement() {
 
               <FilterPanel
                 active={Boolean(query || statusFilter)}
-                onClear={() => {
-                  setQuery('');
-                  setStatusFilter('');
-                  setCurrentPage(1);
-                }}
-              >
-                <div className="course-toolbar">
+                appliedFilters={[query && `Search: ${query}`, statusFilter].filter(Boolean)}
+                onClear={() => { setQuery(''); setStatusFilter(''); setCurrentPage(1); }}
+                search={
                   <label className="course-search">
                     <FiSearch />
                     <input
@@ -3826,6 +3749,8 @@ function DepartmentManagement() {
                       aria-label="Search departments"
                     />
                   </label>
+                }
+                filters={
                   <ProjectSelect
                     aria-label="Status"
                     value={statusFilter}
@@ -3838,70 +3763,25 @@ function DepartmentManagement() {
                     <option value="Active">Active</option>
                     <option value="Inactive">Inactive</option>
                   </ProjectSelect>
-                </div>
-              </FilterPanel>
+                }
+              />
 
-              {isLoading ? (
-                <p className="department-no-results">Loading departments...</p>
-              ) : error ? (
-                <div className="department-no-results department-no-results--error" role="alert">
-                  <p className="department-error">
-                    {error}
-                  </p>
-                  <button type="button" className="erp-btn erp-btn--secondary" onClick={() => loadDepartments(query)}>
-                    Retry
-                  </button>
-                </div>
-              ) : !items.length ? (
-                <div className="department-no-results">
-                  <p>No departments have been added yet.</p>
-                  <button
-                    type="button"
-                    className="erp-btn erp-btn--primary"
-                    onClick={() => {
-                      setForm(empty);
-                      setScreen('form');
-                    }}
-                  >
-                    Add Department
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <div className="erp-table-responsive department-table-wrap">
-                    <table className="erp-table">
-                      <thead>
-                        <tr>
-                          <th className="col-name table-center" style={{ width: '32%' }}>Department</th>
-                          <th className="col-code table-center" style={{ width: '120px' }}>Code</th>
-                          <th className="col-hod table-center" style={{ width: '26%' }}>Head / In-Charge</th>
-                          <th className="col-status table-center" style={{ width: '130px' }}>Status</th>
-                          <th className="col-actions table-center" style={{ width: '130px' }}>Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {pageItems.map((item) => (
-                          <tr key={item.id}>
-                            <td className="col-name table-center">
-                              <button
-                                type="button"
-                                className="dept-name-link table-cell-truncate"
-                                title={`Click to view details for ${item.name}`}
-                                onClick={() => loadDetail(item, 'details')}
-                              >
-                                {item.name}
-                              </button>
-                            </td>
-                            <td className="col-code table-center">
-                              <code>{item.code || '-'}</code>
-                            </td>
-                            <td className="col-hod table-center">
-                              <span className="table-cell-truncate" title={item.hod || 'Unassigned'}>{item.hod || '-'}</span>
-                            </td>
-                            <td className="col-status table-center">
-                              <StatusBadge value={item.status} />
-                            </td>
-                            <td className="col-actions table-center">
+              <DataTable
+                caption="Department directory"
+                columns={[
+                  { key: 'name', label: 'Department', className: 'col-name table-center', width: '32%', sortable: true, render: item => <button type="button" className="dept-name-link table-cell-truncate" title={`Click to view details for ${item.name}`} onClick={() => loadDetail(item, 'details')}>{item.name}</button> },
+                  { key: 'code', label: 'Code', className: 'col-code table-center', width: '120px', sortable: true, render: item => <code>{item.code || '-'}</code> },
+                  { key: 'hod', label: 'Head / In-Charge', className: 'col-hod table-center', width: '26%', sortable: true, render: item => <span className="table-cell-truncate" title={item.hod || 'Unassigned'}>{item.hod || '-'}</span> },
+                  { key: 'status', label: 'Status', className: 'col-status table-center', width: '130px', sortable: true, render: item => <StatusBadge value={item.status} /> },
+                ]}
+                rows={visible}
+                pagination={{ page: currentPage, pageSize: itemsPerPage, onPageChange: setCurrentPage }}
+                loading={isLoading && 'Loading departments...'}
+                error={error}
+                onRetry={() => loadDepartments(query)}
+                className="department-table-wrap"
+                emptyState={<AsyncState status="empty" title={items.length ? 'No departments found.' : 'No departments have been added yet.'} action={!items.length && <button type="button" className="erp-btn erp-btn--primary" onClick={() => { setForm({ ...empty, collegeId: selectedCollegeId || '', collegeNumericId: selectedCollegeId || '' }); setScreen('form'); }}>Add Department</button>} />}
+                rowActions={item => (
                               <div className="erp-row-actions table-actions-group">
                                 <button
                                   type="button"
@@ -3935,42 +3815,8 @@ function DepartmentManagement() {
                                   )}
                                 </button>
                               </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  {!visible.length && (
-                    <DirectoryEmptyState title="No departments found." actionLabel="Add Department" onAction={() => { setForm(empty); setScreen('form'); }} />
-                  )}
-                  {!!visible.length && (
-                    <div className="erp-table-pagination-wrap">
-                      <div className="department-pagination">
-                        <div className="pagination-controls">
-                          <button
-                            className="pagination-btn"
-                            onClick={() => setCurrentPage((v) => Math.max(v - 1, 1))}
-                            disabled={currentPageClamped === 1}
-                          >
-                            Previous
-                          </button>
-                          <span className="pagination-status">
-                            Page {currentPageClamped} of {totalPages}
-                          </span>
-                          <button
-                            className="pagination-btn"
-                            onClick={() => setCurrentPage((v) => Math.min(v + 1, totalPages))}
-                            disabled={currentPageClamped === totalPages}
-                          >
-                            Next
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
+                )}
+              />
             </section>
           </>
         )}
@@ -3980,102 +3826,42 @@ function DepartmentManagement() {
             <PageHeader
               title={form.id ? 'Edit Department' : 'Add Department'}
               subtitle="Enter the department information, code, college association, and status."
-            >
-              <button type="button" className="erp-btn erp-btn--secondary" onClick={closeToList}>
+              secondaryActions={<button type="button" className="erp-btn erp-btn--secondary" onClick={closeToList}>
                 <FiArrowLeft /> Back
-              </button>
-            </PageHeader>
+              </button>}
+            />
 
             <div className="erp-two-column-layout">
               <section className="erp-card-main">
-                <form onSubmit={save} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                  <div className="erp-form-scroll-body">
-                    <div className="department-form-grid">
-                      <label>
-                        <span>
-                          Department Name <b className="required-mark">*</b>
-                        </span>
-                        <input
-                          value={form.name}
-                          onChange={(e) => setForm({ ...form, name: e.target.value.replace(/[0-9]/g, '') })}
-                          placeholder="e.g. Computer Science & Engineering"
-                          required
-                        />
-                      </label>
-
-                      <label>
-                        <span>
-                          Department Code <b className="required-mark">*</b>
-                        </span>
-                        <input
-                          value={form.code}
-                          onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
-                          placeholder="e.g. CSE"
-                          required
-                        />
-                      </label>
-
-                      <label>
-                        <span>
-                          Status <b className="required-mark">*</b>
-                        </span>
-                        <ProjectSelect
-                          required
-                          value={form.status}
-                          onChange={(e) => setForm({ ...form, status: e.target.value })}
-                        >
-                          <option value="">Select Status</option>
-                          <option value="Active">Active</option>
-                          <option value="Inactive">Inactive</option>
-                        </ProjectSelect>
-                      </label>
-
-                      <label>
-                        <span>Start Date</span>
-                        <input
-                          type="date"
-                          value={form.startDate || ''}
-                          onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-                        />
-                      </label>
-
-                      <label>
-                        <span>End Date</span>
-                        <input
-                          type="date"
-                          value={form.endDate || ''}
-                          onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-                        />
-                      </label>
-
-                      <label className="full-width">
-                        <span>Description</span>
-                        <textarea
-                          value={form.description}
-                          onChange={(e) => setForm({ ...form, description: e.target.value })}
-                          placeholder="Describe this organizational department..."
-                          rows={2}
-                        />
-                      </label>
-                    </div>
-
-                    {isDetailsLoading && <p className="department-no-results">Loading department details...</p>}
-                    {error && (
-                      <p className="department-error" role="alert" style={{ marginTop: '10px' }}>
-                        {error}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="erp-actions-bar">
+                <FormLayout onSubmit={save} busy={isSaving} error={error} actions={<>
                     <button type="button" className="erp-btn erp-btn--secondary" onClick={closeToList} disabled={isSaving}>
                       Cancel
                     </button>
                     <button type="submit" className="erp-btn erp-btn--primary" disabled={isSaving}>
                       {isSaving ? 'Saving...' : form.id ? 'Save Changes' : 'Create Department'}
                     </button>
-                  </div>
-                </form>
+
+                </>}>
+                  <FormGroup title="Department Information">
+                    <FormField label="Department Name" required>
+                      <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value.replace(/[0-9]/g, '') })} placeholder="e.g. Computer Science & Engineering" />
+                    </FormField>
+                    <FormField label="Department Code" required>
+                      <input value={form.code} onChange={e => setForm({ ...form, code: e.target.value.toUpperCase() })} placeholder="e.g. CSE" />
+                    </FormField>
+                    <FormField label="Status" required>
+                      <ProjectSelect value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
+                        <option value="">Select Status</option>
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                      </ProjectSelect>
+                    </FormField>
+                    <FormField label="Start Date"><input type="date" value={form.startDate || ''} onChange={e => setForm({ ...form, startDate: e.target.value })} /></FormField>
+                    <FormField label="End Date"><input type="date" value={form.endDate || ''} onChange={e => setForm({ ...form, endDate: e.target.value })} /></FormField>
+                    <FormField label="Description" className="erp-form-field--full"><textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Describe this organizational department..." rows={2} /></FormField>
+                  </FormGroup>
+                  {isDetailsLoading && <AsyncState status="loading" title="Loading department details..." />}
+                </FormLayout>
               </section>
 
               <aside className="college-live-preview" aria-label="Department preview">

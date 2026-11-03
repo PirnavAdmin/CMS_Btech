@@ -516,3 +516,19 @@
 :root #root .sidebar .sidebar-navigation .sidebar-link:hover > svg:first-child {
   filter: brightness(1.18) drop-shadow(0 0 7px currentColor);
 }
+/* Stage 1: module glyphs inherit existing readable link colors in both themes.
+   Scope this override to the main sidebar; keep role portal styling unchanged. */
+:root #root .sidebar.sidebar--module-icons .sidebar-navigation .sidebar-link > svg:first-child {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  stroke-width: 1.8;
+  color: inherit !important;
+  filter: none !important;
+  background: none;
+}
+/* Access loading/error messages stay readable on the existing sidebar surface. */
+#root .sidebar .sidebar-access-state { margin: 12px 14px; color: inherit; font-size: 12px; line-height: 1.5; }
+#root .sidebar .sidebar-access-state p { margin: 0 0 8px; }
+#root .sidebar .sidebar-access-state button { padding: 5px 9px; border: 1px solid currentColor; border-radius: var(--radius-sm, 8px); background: transparent; color: inherit; font: inherit; }
+#root .sidebar.is-collapsed .sidebar-access-state { margin-inline: 4px; overflow-wrap: anywhere; font-size: 10px; text-align: center; }

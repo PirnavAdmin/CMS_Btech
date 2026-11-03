@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "audit:navigation": "node scripts/audit-navigation.mjs",
+    "test:architecture": "node --test src/config/moduleRegistry.test.js && vitest run src/config/navigation.vitest.test.jsx",
     "build": "vite build",
     "lint": "oxlint",
     "test": "vitest run && node --test",

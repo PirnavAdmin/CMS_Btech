@@ -1,79 +1,38 @@
-import { useCallback, useEffect, useState } from 'react'
-import { roleApi } from '../api/apiEndpoints.js'
-import { getAuthStorage, getUserRole } from './auth.js'
+import { useCallback, useContext, useEffect, useState } from 'react'
+import AcademicContext from '../context/AcademicContext.jsx'
+import { getAccessToken, getUserRole } from './auth.js'
 import { isPortalPreview } from './portalPreview.js'
-import { canViewScreen, requireAssignedPermissions } from './screenPermissions.js'
-
-const roleAliases = {
-  faculty: ['faculty', 'teaching_faculty'],
-  staff: ['staff', 'non_teaching', 'non_teaching_staff'],
-  student: ['student'],
-  admin: ['admin', 'college_admin', 'super_admin'],
-}
-
-const permissionRequests = new Map()
-
-function roleNames(role) {
-  const normalized = String(role || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
-  return [...new Set([normalized, ...(roleAliases[normalized] || [])].filter(Boolean))]
-}
-
-function identityKey(role) {
-  const storage = getAuthStorage()
-  let userId = '', collegeId = ''
-  try {
-    userId = storage?.getItem('btech-user-id') || ''
-    collegeId = storage?.getItem('btech-user-college-id') || ''
-  } catch { /* Storage can be unavailable in restricted browser contexts. */ }
-  return `${role}:${userId}:${collegeId}`
-}
-
-function loadPermissions(role, key) {
-  let request = permissionRequests.get(key)
-  if (!request) {
-    request = roleApi.getAll().then(rows => requireAssignedPermissions(rows, roleNames(role)))
-    permissionRequests.set(key, request)
-    request.catch(() => permissionRequests.delete(key))
-  }
-  return request
-}
+import { canViewScreen, isPersonalWorkspace, permissionModuleForScreen } from './screenPermissions.js'
+import { hasModuleAction } from './collegeAuthorization.js'
+import { selectedCollegeId as storedCollegeId } from '../utils/collegeScope.js'
+import eventBus, { ERP_EVENTS } from '../services/eventBus.js'
+import useCollegeAccess from '../hooks/useCollegeAccess.js'
+const EMPTY_PERMISSIONS = Object.freeze({})
 
 export function useScreenAccess() {
-  const role = getUserRole()
-  const key = identityKey(role)
-  const preview = isPortalPreview()
-  const [permissions, setPermissions] = useState({})
-  const [loading, setLoading] = useState(Boolean(role && role !== 'admin' && !preview))
-  const [error, setError] = useState(null)
-
+  const academic = useContext(AcademicContext)
+  const [stored, setStored] = useState(() => storedCollegeId())
   useEffect(() => {
-    let active = true
-    if (!role || role === 'admin' || preview) {
-      setPermissions({})
-      setError(null)
-      setLoading(false)
-      return () => { active = false }
-    }
-
-    setLoading(true)
-    loadPermissions(role, key)
-      .then(next => {
-        if (active) {
-          setPermissions(next)
-          setError(null)
-        }
-      })
-      .catch(reason => {
-        if (active) {
-          setPermissions({})
-          setError(reason instanceof Error ? reason : new Error(String(reason)))
-        }
-      })
-      .finally(() => { if (active) setLoading(false) })
-
-    return () => { active = false }
-  }, [key, preview, role])
-
-  const canView = useCallback(path => canViewScreen(String(path || ''), role, permissions), [permissions, role])
-  return { canView, permissions, loading, error }
+    const update = () => setStored(storedCollegeId())
+    const unsubscribe = eventBus.subscribe(ERP_EVENTS.ACADEMIC_UPDATED, update)
+    window.addEventListener('storage', update)
+    return () => { unsubscribe(); window.removeEventListener('storage', update) }
+  }, [])
+  const role = getUserRole()
+  const collegeId = academic?.selectedCollegeId ?? stored
+  const result = useCollegeAccess({ token: getAccessToken(), collegeId, collegeLoading: academic?.loading || false, providedAccess: academic?.collegeAccess || null })
+  const access = result.access
+  const permissions = access?.permissions || EMPTY_PERMISSIONS
+  const preview = isPortalPreview()
+  const canView = useCallback(path => {
+    path = String(path || '')
+    if (isPersonalWorkspace(path, role) || (path === '/my-profile' && role)) return true
+    // Retain the existing explicit development preview for known personal portal
+    // pages only. Preview never grants a shared administrative module or action.
+    if (preview && path.startsWith(`/${role}-portal/`)) return Boolean(permissionModuleForScreen(path))
+    return result.status === 'ready' && canViewScreen(path, role, permissions, access)
+  }, [role, preview, result.status, permissions, access])
+  const canAction = useCallback((path, action = 'view') => action === 'view' ? canView(path) :
+    !preview && result.status === 'ready' && canView(path) && hasModuleAction(access, permissionModuleForScreen(path), action), [canView, preview, result.status, access])
+  return { ...result, canView, canAction, permissions, collegeId, loading: result.status === 'loading', error: result.status === 'error' ? new Error('Account access could not be loaded.') : null }
 }

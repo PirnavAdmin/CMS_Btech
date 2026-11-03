@@ -1,0 +1,52 @@
+import { LayoutDashboard, Landmark, CalendarRange, GraduationCap, Network, BookOpen, GitBranch, Layers3, UsersRound, DoorOpen, WalletCards, ReceiptIndianRupee, BriefcaseBusiness, ClipboardCheck, CalendarClock, Banknote, UserRoundPlus, ContactRound, ListChecks, TrendingUp, NotebookTabs, Award, ListTodo, CalendarDays, FilePenLine, ChartNoAxesColumn, Medal, LibraryBig, CalendarCheck, Building2, ShieldCheck, KeyRound, UserRound, Settings, BookMarked, Presentation, IdCard, LogIn, House, ShieldAlert, ScanEye, FileCheck2, CircleHelp } from 'lucide-react'
+import { MODULE_BY_ID } from './moduleRegistry.js'
+
+// Static named imports keep the supported icon set explicit and tree-shakeable.
+export const ICON_REGISTRY = Object.freeze({
+  'layout-dashboard': LayoutDashboard,
+  'landmark': Landmark,
+  'calendar-range': CalendarRange,
+  'graduation-cap': GraduationCap,
+  'network': Network,
+  'book-open': BookOpen,
+  'git-branch': GitBranch,
+  'layers-3': Layers3,
+  'users-round': UsersRound,
+  'door-open': DoorOpen,
+  'wallet-cards': WalletCards,
+  'receipt-indian-rupee': ReceiptIndianRupee,
+  'briefcase-business': BriefcaseBusiness,
+  'clipboard-check': ClipboardCheck,
+  'calendar-clock': CalendarClock,
+  'banknote': Banknote,
+  'user-round-plus': UserRoundPlus,
+  'contact-round': ContactRound,
+  'list-checks': ListChecks,
+  'trending-up': TrendingUp,
+  'notebook-tabs': NotebookTabs,
+  'award': Award,
+  'list-todo': ListTodo,
+  'calendar-days': CalendarDays,
+  'file-pen-line': FilePenLine,
+  'chart-no-axes-column': ChartNoAxesColumn,
+  'medal': Medal,
+  'library-big': LibraryBig,
+  'calendar-check': CalendarCheck,
+  'building-2': Building2,
+  'shield-check': ShieldCheck,
+  'key-round': KeyRound,
+  'user-round': UserRound,
+  'settings': Settings,
+  'book-marked': BookMarked,
+  'presentation': Presentation,
+  'id-card': IdCard,
+  'log-in': LogIn,
+  'house': House,
+  'shield-alert': ShieldAlert,
+  'scan-eye': ScanEye,
+  'file-check-2': FileCheck2,
+  'circle-help': CircleHelp,
+})
+export const getIcon = id => Object.hasOwn(ICON_REGISTRY, id) ? ICON_REGISTRY[id] : CircleHelp
+export const getModuleIcon = moduleId => getIcon(MODULE_BY_ID[moduleId]?.icon)
+

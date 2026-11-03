@@ -18,6 +18,7 @@ export function normalizeLoginSession(response) {
       employeeUserId: user.employeeUserId ?? session.employeeUserId,
       collegeId: user.collegeId ?? session.collegeId,
       mustChangePassword: user.mustChangePassword ?? session.mustChangePassword,
+      profileCompleted: user.profileCompleted ?? session.profileCompleted,
     },
   }
 }

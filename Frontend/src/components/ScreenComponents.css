@@ -1,0 +1,20 @@
+.erp-data-table { max-width: 100%; overflow-x: auto; }
+.erp-data-table > table { width: 100%; }
+.erp-data-table__sort { border: 0; padding: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.erp-data-table:focus-visible, .erp-data-table__sort:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.erp-visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.erp-async-state { padding: 24px 16px; text-align: center; color: var(--text-secondary); }
+.erp-async-state p { margin: 0 0 12px; }
+.erp-form-layout { display: flex; flex-direction: column; height: 100%; min-width: 0; }
+.erp-form-group { border: 0; margin: 0; padding: 0; min-width: 0; }
+.erp-form-group + .erp-form-group { margin-top: 16px; }
+.erp-form-group legend { margin-bottom: 10px; color: var(--text-primary); font-weight: 650; }
+.erp-form-group__description { color: var(--text-muted); margin: 0 0 10px; }
+.erp-form-group__fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 20px; }
+.erp-form-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.erp-form-field > label { display: block; margin: 0; color: var(--text-primary); font-size: .8rem; font-weight: 600; }
+.erp-form-field > :is(input, select, textarea) { width: 100%; box-sizing: border-box; background: var(--surface); color: var(--text-primary); border: 1px solid var(--border); border-radius: var(--radius-sm, 6px); padding: 8px 10px; font: inherit; }
+.erp-form-field > small { color: var(--text-muted); }
+.erp-form-field--full { grid-column: 1 / -1; }
+.erp-form-layout .erp-form-layout__error { color: var(--error-text); }
+@media (max-width: 640px) { .erp-form-group__fields { grid-template-columns: minmax(0, 1fr); } }
