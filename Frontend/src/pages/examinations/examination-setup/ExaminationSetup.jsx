@@ -1,3 +1,4 @@
+import LiveExaminationWorkspace from '../LiveExaminationWorkspace'
 import { ProjectSelect as SearchableSelectImports_ProjectSelect } from '../../../components/SearchableSelect'
 import { useEffect as reactImports_useEffect, useState as reactImports_useState, useMemo as reactImports_useMemo, useRef as reactImports_useRef, useCallback as reactImports_useCallback } from 'react'
 import { Link as react_router_domImports_Link, useLocation as react_router_domImports_useLocation, useNavigate as react_router_domImports_useNavigate } from 'react-router-dom'
@@ -734,10 +735,10 @@ function ExamType() {
 return { default: ExamType }
 })()
 
-export const CreateExamination = CreateExaminationScreen.default
-export const ExaminationSetup = ExaminationSetupScreen.default
-export const ExaminationList = ExaminationListScreen.default
-export const ExamRules = ExamRulesScreen.default
-export const ExamSchedule = ExamScheduleScreen.default
-export const ExamType = ExamTypeScreen.default
+export const CreateExamination = () => <LiveExaminationWorkspace screen="create-examination" />
+export const ExaminationSetup = () => <LiveExaminationWorkspace screen="examination-list" />
+export const ExaminationList = () => <LiveExaminationWorkspace screen="examination-list" />
+export const ExamRules = () => <LiveExaminationWorkspace screen="exam-rules" />
+export const ExamSchedule = () => <LiveExaminationWorkspace screen="exam-schedule" />
+export const ExamType = () => <LiveExaminationWorkspace screen="exam-type" />
 export default ExaminationSetup

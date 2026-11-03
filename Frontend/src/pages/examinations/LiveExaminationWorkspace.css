@@ -1,0 +1,24 @@
+.examination-setup--connected .examination-setup__toolbar{display:flex;align-items:center;justify-content:flex-start;flex-wrap:wrap;gap:12px;padding:16px}
+.examination-setup--connected .examination-setup__toolbar>input{flex:1 1 240px;max-width:480px;min-width:0;min-height:42px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text-primary)}
+.examination-setup--connected .examination-setup__toolbar>.examination-setup__primary{margin-left:auto}
+.examination-setup--connected .examination-setup__summary{margin:0}
+.examination-setup--connected .campus-notice{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin:0;padding:14px 16px;border:1px solid var(--border);border-radius:10px;background:var(--surface);font-size:14px;line-height:1.5}
+.examination-setup--connected .campus-notice p{margin:6px 0}
+.examination-setup--connected .campus-notice details{margin-top:6px}
+.examination-setup--connected .campus-notice[role=alert]{border-left:4px solid #c2413b}
+.examination-setup--connected .campus-notice button{flex-shrink:0;min-height:36px;padding:6px 12px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--brand);cursor:pointer}
+.examination-setup--connected .campus-notice a{display:inline-block;margin-top:8px}
+.examination-setup--connected .examination-setup__modal{width:min(760px,calc(100vw - 32px));max-height:90vh;overflow:auto}
+.examination-setup--connected .examination-setup__modal>.examination-setup__form{padding:20px}
+.examination-setup--connected .examination-setup__field-hint{display:block;margin-top:5px;color:var(--text-secondary);font-size:12px;line-height:1.5}
+.examination-setup--connected input[aria-invalid=true]{border-color:#b45309}
+.examination-setup--connected .examination-setup__form-feedback{grid-column:1/-1;margin:0;padding:10px 12px;border:1px solid #f3d5a5;border-radius:8px;background:var(--surface-soft);color:var(--text-primary);font-size:13px}
+.examination-setup--connected .examination-setup__filter-panel{margin:0;border-radius:0!important;border-top:0!important;border-right:0!important;border-left:0!important}
+.examination-setup--connected .examination-setup__filter-fields{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 12px;flex:1;min-width:0}
+/* Shared filter controls have a flex basis intended for horizontal rows.
+   Grid labels prevent that basis from becoming a tall vertical input. */
+.examination-setup--connected .examination-setup__filter-fields>label{display:grid!important;grid-template-rows:16px 36px;align-content:start;gap:5px;flex:0 1 180px!important;width:180px!important;min-width:160px!important;max-width:220px!important;height:auto!important;color:var(--text-secondary);font-size:12px;font-weight:600;line-height:16px}
+.examination-setup--connected .examination-setup__filter-fields>label>:is(input,select,.project-select),
+.examination-setup--connected .examination-setup__filter-fields :is(.searchable-select,.searchable-select__trigger){flex:none!important;width:100%!important;min-width:0!important;max-width:100%!important;height:36px!important;min-height:36px!important;max-height:36px!important;box-sizing:border-box}
+@media(max-width:640px){.examination-setup--connected .examination-setup__filter-fields>label{flex-basis:100%!important;width:100%!important;min-width:0!important;max-width:100%!important}}
+@media(max-width:700px){.examination-setup--connected .examination-setup__header{grid-template-columns:1fr}.examination-setup--connected .examination-setup__toolbar>.examination-setup__primary{margin-left:0}.examination-setup--connected .examination-setup__form{grid-template-columns:1fr}}

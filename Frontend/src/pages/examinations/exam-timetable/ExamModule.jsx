@@ -1,3 +1,4 @@
+import LiveExaminationWorkspace from '../LiveExaminationWorkspace'
 import { ProjectSelect as SearchableSelectImports_ProjectSelect } from '../../../components/SearchableSelect'
 import ModuleAvailabilityImports_default from '../../../components/ModuleAvailability'
 import { useEffect as reactImports_useEffect, useMemo as reactImports_useMemo, useState as reactImports_useState, useCallback as reactImports_useCallback } from 'react'
@@ -844,13 +845,13 @@ function StudentExamSchedule() { return <ExamModule screen="student" /> }
 return { default: StudentExamSchedule }
 })()
 
-export const ExamModule = ExamModuleScreen.default
-export const CompletedExams = CompletedExamsScreen.default
-export const CreateExamTimetable = CreateExamTimetableScreen.default
-export const DepartmentExamSchedule = DepartmentExamScheduleScreen.default
-export const ExamConfiguration = ExamConfigurationScreen.default
-export const ExamScheduleList = ExamScheduleListScreen.default
-export const ExamTimetable = ExamTimetableScreen.default
-export const HallAllocation = HallAllocationScreen.default
-export const StudentExamSchedule = StudentExamScheduleScreen.default
+export const ExamModule = () => <LiveExaminationWorkspace screen="timetable" timetable={true} />
+export const CompletedExams = () => <LiveExaminationWorkspace screen="completed" timetable={true} />
+export const CreateExamTimetable = () => <LiveExaminationWorkspace screen="create" timetable={true} />
+export const DepartmentExamSchedule = () => <LiveExaminationWorkspace screen="department" timetable={true} />
+export const ExamConfiguration = () => <LiveExaminationWorkspace screen="exam-type" timetable={false} />
+export const ExamScheduleList = () => <LiveExaminationWorkspace screen="list" timetable={true} />
+export const ExamTimetable = () => <LiveExaminationWorkspace screen="timetable" timetable={true} />
+export const HallAllocation = () => <LiveExaminationWorkspace screen="halls" timetable={true} />
+export const StudentExamSchedule = () => <LiveExaminationWorkspace screen="student" timetable={true} />
 export default ExamModule

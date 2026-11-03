@@ -1,3 +1,5 @@
+import * as gradeApi from '../../../services/scopedModulesService'
+import ScopedModuleNotice from '../../../components/ScopedModuleNotice'
 import * as pageDependency0 from 'react-router-dom'
 import * as pageDependency1 from 'react-icons/fi'
 import * as pageDependency2 from 'react'
@@ -199,8 +201,13 @@ function Workspace({ screen, academic, scope }) {
     slug: screen,
   }
   const policyKey = `cms-grade-policy:${scope}`
-  const [bands, setBands] = useState(() => readBands(policyKey))
-  const [savedBands, setSavedBands] = useState(() => readBands(policyKey))
+  const [bands, setBands] = useState(defaultBands)
+  const [savedBands, setSavedBands] = useState(defaultBands)
+  const [backendPolicy, setBackendPolicy] = useState(null)
+  const [policyLoading, setPolicyLoading] = useState(true)
+  const [policyLoaded, setPolicyLoaded] = useState(false)
+  const [publishing, setPublishing] = useState(false)
+  const [refreshVersion, setRefreshVersion] = useState(0)
   const [sheets, setSheets] = useState([])
   const [loading, setLoading] = useState(screen !== 'grade-configuration')
   const [error, setError] = useState('')
@@ -225,6 +232,25 @@ function Workspace({ screen, academic, scope }) {
   const branches = academic.activeBranches || academic.branches || []
   const semesters = academic.activeSemesters || academic.semesters || []
   const configuration = screen === 'grade-configuration'
+  useEffect(() => {
+    if (!configuration) return
+    if (academic.loading || !selectedCollegeId || !selectedAcademicYearId) {
+      setPolicyLoading(false)
+      setPolicyLoaded(false)
+      return
+    }
+    let current = true
+    setError('')
+    setPolicyLoading(true)
+    setPolicyLoaded(false)
+    gradeApi.loadGradePolicy({ collegeId: selectedCollegeId, academicYearId: selectedAcademicYearId }).then(policy => {
+      if (!current) return
+      setBackendPolicy(policy)
+      setPolicyLoaded(true)
+      if (policy?.bands && !validateBands(policy.bands)) { setBands(policy.bands); setSavedBands(policy.bands) }
+    }).catch(reason => { if (current) setError(reason.message) }).finally(() => { if (current) setPolicyLoading(false) })
+    return () => { current = false }
+  }, [configuration, academic.loading, selectedCollegeId, selectedAcademicYearId, refreshVersion])
 
   useEffect(() => {
     setPage(1)
@@ -237,20 +263,26 @@ function Workspace({ screen, academic, scope }) {
 
   useEffect(() => {
     if (configuration) return
+    if (academic.loading || !selectedCollegeId || !selectedAcademicYearId) {
+      setLoading(false)
+      setSheets([])
+      return
+    }
     let current = true
+    setError('')
     setLoading(true)
-    resultsService
-      .getResults({
+    gradeApi
+      .loadOfficialResults({
         collegeId: selectedCollegeId || undefined,
         academicYearId: selectedAcademicYearId || undefined,
       })
       .then((data) => {
         if (current) setSheets(Array.isArray(data) ? data : [])
       })
-      .catch(() => {
+      .catch(reason => {
         if (current) {
           setSheets([])
-          setError('Unable to load results. Loaded local records.')
+          setError(reason.message || 'Unable to load institutional results. Please refresh and try again.')
         }
       })
       .finally(() => {
@@ -259,7 +291,7 @@ function Workspace({ screen, academic, scope }) {
     return () => {
       current = false
     }
-  }, [configuration, selectedCollegeId, selectedAcademicYearId])
+  }, [configuration, academic.loading, selectedCollegeId, selectedAcademicYearId, refreshVersion])
 
   const rows = useMemo(() => {
     const scoped = scopeRecords(sheets)
@@ -469,10 +501,14 @@ function Workspace({ screen, academic, scope }) {
     { label: 'Result Status', key: 'status' },
   ]
 
-  const handlePublish = () => {
-    setPublished(true)
-    setNotice('Official Results Gazette successfully published to Student Portal.')
-    setTimeout(() => setNotice(''), 5000)
+  const handlePublish = async () => {
+    if (publishing) return
+    setError(''); setNotice(''); setPublishing(true)
+    try {
+      if (!sheets.length) throw new Error('No institutional results are available to publish.')
+      await gradeApi.call('results/publish', { method: 'POST', body: { collegeId: gradeApi.requireId(selectedCollegeId, 'college'), academicYearId: gradeApi.requireId(selectedAcademicYearId, 'academic year'), sheets } })
+      setPublished(true); setNotice('Official results published successfully.')
+    } catch (reason) { setError(reason.message) } finally { setPublishing(false) }
   }
 
   return (
@@ -559,12 +595,8 @@ function Workspace({ screen, academic, scope }) {
           <span>{notice}</span>
         </div>
       )}
-      {error && (
-        <div className="res-error" role="alert">
-          <FiAlertTriangle />
-          <span>{error}</span>
-        </div>
-      )}
+      {(!selectedCollegeId || !selectedAcademicYearId || academic.loading) && <p className="campus-notice" role="status">{academic.loading ? 'Loading college configuration…' : 'Select a college and active academic year to load institutional records.'}</p>}
+      {error && <ScopedModuleNotice state={{error,loading:configuration ? policyLoading : loading,saving:publishing}} onRetry={async () => setRefreshVersion(value=>value+1)} />}
 
       {/* ========================================================================= */}
       {/* 1. PUBLISH & GAZETTE VIEW (/results)                                     */}
@@ -590,6 +622,7 @@ function Workspace({ screen, academic, scope }) {
                 type="button"
                 className="res-btn res-btn--primary"
                 onClick={handlePublish}
+                disabled={loading || publishing || !sheets.length}
               >
                 <FiCheck /> {published ? 'Re-publish Gazette' : 'Publish to Student Portal'}
               </button>
@@ -1448,10 +1481,11 @@ function Workspace({ screen, academic, scope }) {
       {/* ========================================================================= */}
       {configuration && (
         <div className="res-section">
-          <GradePolicyLab bands={bands} savedBands={savedBands} actions={<GradePolicyEditor bands={savedBands} onSave={next => {
-            localStorage.setItem(policyKey, JSON.stringify(next))
-            setBands(next)
-            setSavedBands(next)
+          {policyLoading ? <p role="status">Loading institutional grade policy…</p> : !backendPolicy && <p role="status">Default bands are shown for preview. Save a policy to configure institutional grades.</p>}
+          <GradePolicyLab bands={bands} savedBands={savedBands} actions={<GradePolicyEditor bands={savedBands} onSave={async next => {
+            if (policyLoading || !policyLoaded) throw new Error('The institutional policy must load successfully before saving. Refresh and try again.')
+            const policy = await gradeApi.saveGradePolicy({ collegeId: gradeApi.requireId(selectedCollegeId, 'college'), academicYearId: gradeApi.requireId(selectedAcademicYearId, 'academic year') }, next, backendPolicy)
+            setBackendPolicy(policy); setBands(next); setSavedBands(next); setNotice('Grade policy saved successfully.')
           }} />} />
         </div>
       )}
@@ -1626,10 +1660,10 @@ function GradePolicyEditor({ bands, onSave }) {
     setDraft(current => editing === null ? [...current, row] : current.map((item, index) => index === editing ? row : item))
     setForm(null); setEditing(null); setError('')
   }
-  const save = () => {
+  const save = async () => {
     const issue = validateBands(draft)
     if (issue) { setError(issue); return }
-    try { onSave(draft); setOpen(false) } catch (reason) { setError(reason.message || 'Unable to save policy.') }
+    try { await onSave(draft); setOpen(false) } catch (reason) { setError(reason.message || 'Unable to save policy.') }
   }
   return <>
     <div className="grade-editor-launch"><button type="button" onClick={() => { setDraft(bands.map(row => ({ ...row }))); setForm(null); setError(''); setOpen(true) }}><FiPlus aria-hidden="true" /> Manage Grades</button></div>
@@ -1686,7 +1720,7 @@ function GradePolicyLab({ bands, savedBands, actions }) {
       {unsaved && savedGrade && <div className="grm-lab-comparison"><span>Saved policy at this score</span><strong>{savedGrade.grade} / {savedGrade.points} points / {savedGrade.pass ? 'Passed' : 'Failed'}</strong><small>Save your edited policy to use it in Result Generation.</small></div>}
     </section><section className="grm-lab-section"><div className="grm-lab-heading"><span>02</span><div><h4>Understand grade ranges</h4><p>{issue ? 'Resolve policy issues to view coverage.' : `${bands.length} bands / full coverage${passBand ? ` / passing begins at ${passBand.min}%` : ' / no passing bands'}`}</p></div></div>
       {issue ? <p className="grm-policy-issue">{issue}</p> : <><div className="grm-policy-scale" aria-label="Grade percentage bands">{sorted.map(band => <div key={band.grade} style={{ flexGrow: Number(band.max) - Number(band.min) }} className={`${band.pass ? 'is-pass' : 'is-fail'} ${grade?.grade === band.grade ? 'is-current' : ''}`} title={`${band.grade}: ${band.min}% to ${band.max}%`}><span>{band.grade}</span></div>)}</div><div className="grm-scale-labels"><span>0%</span><span>50%</span><span>100%</span></div><div className="grm-lab-ranges"><div className="grm-lab-range-head"><span>Grade</span><span>Percentage range</span><span>Points</span></div>{sorted.map(band => <div key={band.grade} className={`grm-lab-range-row ${grade?.grade === band.grade ? 'is-current' : ''}`}><span>{band.grade}{grade?.grade === band.grade && <small>Current</small>}</span><span>{band.min}% &le; score {Number(band.max) === 100 ? '\u2264' : '<'} {band.max}%</span><strong>{band.points}</strong></div>)}</div></>}
-    </section></div><div className="grm-lab-footnote"><FiInfo /><span>Simulator uses current editor values. Result Generation uses the saved local policy. Preview does not change official results.</span></div>
+    </section></div><div className="grm-lab-footnote"><FiInfo /><span>Simulator uses current editor values. Result Generation uses the saved institutional policy. Preview does not change official results.</span></div>
   </section>
 }
 
@@ -1842,6 +1876,7 @@ function readRows(storageKey) {
 }
 
 function CGPACalculator({ storageKey }) {
+  const academic = pageDependency10.useAcademic()
   const [rows, setRows] = useState(() => readRows(storageKey))
   const [savedAt, setSavedAt] = useState(() => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
   const [resetConfirm, setResetConfirm] = useState(false)
@@ -1881,7 +1916,7 @@ function CGPACalculator({ storageKey }) {
   // Load available student records from resultsService for optional quick-import
   useEffect(() => {
     let active = true
-    resultsService.getResults().then(sheets => {
+    gradeApi.loadOfficialResults({ collegeId: academic.selectedCollegeId, academicYearId: academic.selectedAcademicYearId }).then(sheets => {
       if (!active || !Array.isArray(sheets)) return
       const map = new Map()
       sheets.forEach(sheet => {
@@ -2113,7 +2148,7 @@ function CGPACalculator({ storageKey }) {
     setSelectedStudentId(studentId)
     if (!studentId) return
     try {
-      const allSheets = await resultsService.getResults()
+      const allSheets = await gradeApi.loadOfficialResults({ collegeId: academic.selectedCollegeId, academicYearId: academic.selectedAcademicYearId })
       const studentRecords = allSheets.flatMap(sheet => {
         const records = Array.isArray(sheet.records) ? sheet.records : [sheet]
         return records

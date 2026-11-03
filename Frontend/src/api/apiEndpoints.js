@@ -15,7 +15,7 @@ if (typeof window !== 'undefined' && window.localStorage) {
 }
 
 const normalizeBaseUrl = (value = '') => value.trim().replace(/\/+$/, '')
-const DEFAULT_API_BASE_URL = 'https://abreast-curling-tutor.ngrok-free.dev'
+const DEFAULT_API_BASE_URL = 'https://clarity-math-delouse.ngrok-free.dev'
 
 // Results endpoints are optional until the institution's result service is integrated.
 export const RESULTS_API_ENABLED = String(import.meta.env.VITE_RESULTS_API_ENABLED || '').toLowerCase() === 'true'
@@ -441,6 +441,8 @@ const withQuery = (url, params = {}) => {
   const query = new URLSearchParams(Object.entries(params || {}).filter(([, value]) => value !== '' && value !== undefined && value !== null))
   return query.size ? `${url}?${query}` : url
 }
+// Reuse authenticated transport in the campus and examination integrations.
+export { request as authenticatedRequest }
 const dataResponse = (response) => response?.data?.data ?? response?.data ?? response ?? null
 const listData = (response) => listResponse(response)
 

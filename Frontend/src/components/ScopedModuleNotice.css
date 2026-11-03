@@ -1,0 +1,5 @@
+.scoped-module-notice{margin:0;font-size:14px;font-weight:500}
+.scoped-module-notice__action{display:inline-block;margin-left:10px;padding:0;border:0;background:transparent;color:inherit;font:inherit;text-decoration:underline;cursor:pointer}
+.scoped-module-status{display:flex;align-items:center;gap:8px;margin:0;padding:4px 0;color:var(--text-secondary);font-size:13px;line-height:1.5}
+.scoped-module-status>svg{flex-shrink:0;width:16px;height:16px}
+.scoped-module-status>button{display:grid;place-items:center;padding:4px;border:0;background:transparent;color:var(--brand);cursor:pointer}
