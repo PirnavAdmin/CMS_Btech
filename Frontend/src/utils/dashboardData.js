@@ -1,4 +1,4 @@
-﻿export const sameId = (a, b) => a != null && b != null && String(a) === String(b)
+export const sameId = (a, b) => a != null && b != null && String(a) === String(b)
 export const recordId = row => row.id ?? row.admissionId ?? row.applicationNumber ?? row.applicationNo
 export const field = (row, key) => row[key] ?? row.academic?.[key] ?? row.admission?.[key]
 export const statusOf = row => String(row.status ?? row.currentStatus ?? '').trim().toUpperCase().replace(/[ -]+/g, '_')

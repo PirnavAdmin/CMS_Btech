@@ -1,8 +1,11 @@
+import ScopedModuleNotice from '../../components/ScopedModuleNotice'
+import * as campusApi from '../../services/scopedModulesService'
+import useScopedModule from '../../services/useScopedModule'
 import { ProjectSelect as SearchableSelectImports_ProjectSelect } from '../../components/SearchableSelect'
 import { createPortal } from 'react-dom'
 import { useState as reactImports_useState, useMemo as reactImports_useMemo, useEffect as reactImports_useEffect } from 'react'
 import { NavLink as react_router_domImports_NavLink, useSearchParams as react_router_domImports_useSearchParams } from 'react-router-dom'
-import { FiPlus as fiImports_FiPlus, FiSearch as fiImports_FiSearch, FiFileText as fiImports_FiFileText, FiBook as fiImports_FiBook, FiBookOpen as fiImports_FiBookOpen, FiGrid as fiImports_FiGrid, FiList as fiImports_FiList, FiRefreshCw as fiImports_FiRefreshCw, FiCheckCircle as fiImports_FiCheckCircle, FiAlertTriangle as fiImports_FiAlertTriangle, FiClock as fiImports_FiClock, FiUser as fiImports_FiUser, FiUsers as fiImports_FiUsers, FiTag as fiImports_FiTag, FiDownload as fiImports_FiDownload, FiTrash2 as fiImports_FiTrash2, FiEdit3 as fiImports_FiEdit3, FiEye as fiImports_FiEye, FiMapPin as fiImports_FiMapPin, FiX as fiImports_FiX, FiCheck as fiImports_FiCheck, FiBookmark as fiImports_FiBookmark, FiBarChart2 as fiImports_FiBarChart2, FiTrendingUp as fiImports_FiTrendingUp, FiDollarSign as fiImports_FiDollarSign, FiCalendar as fiImports_FiCalendar, FiEdit2 as fiImports_FiEdit2, FiActivity as fiImports_FiActivity, FiCheckSquare as fiImports_FiCheckSquare, FiBriefcase as fiImports_FiBriefcase, FiAward as fiImports_FiAward, FiExternalLink as fiImports_FiExternalLink, FiMail as fiImports_FiMail, FiPhone as fiImports_FiPhone, FiGlobe as fiImports_FiGlobe } from 'react-icons/fi'
+import { FiPlus, FiSearch, FiFileText, FiBook, FiBookOpen, FiGrid, FiList, FiRefreshCw, FiCheckCircle, FiAlertTriangle, FiClock, FiUser, FiUsers, FiTag, FiDownload, FiTrash2, FiEdit3, FiEye, FiMapPin, FiX, FiCheck, FiBookmark, FiBarChart2, FiTrendingUp, FiDollarSign, FiCalendar, FiEdit2, FiActivity, FiCheckSquare, FiBriefcase, FiAward, FiExternalLink, FiMail, FiPhone, FiGlobe } from 'react-icons/fi'
 import DashboardLayoutImports_default from '../../layouts/DashboardLayout'
 import PageHeaderImports_default from '../../components/PageHeader'
 import EmptyStateImports_default from '../../components/EmptyState'
@@ -29,9 +32,6 @@ const ProjectSelect = SearchableSelectImports_ProjectSelect
 const useState = reactImports_useState
 const NavLink = react_router_domImports_NavLink
 const useSearchParams = react_router_domImports_useSearchParams
-const FiPlus = fiImports_FiPlus
-const FiSearch = fiImports_FiSearch
-const FiFileText = fiImports_FiFileText
 const DashboardLayout = DashboardLayoutImports_default
 const PageHeader = PageHeaderImports_default
 const EmptyState = EmptyStateImports_default
@@ -134,30 +134,6 @@ const ProjectSelect = SearchableSelectImports_ProjectSelect
 const useState = reactImports_useState
 const useMemo = reactImports_useMemo
 const useEffect = reactImports_useEffect
-const FiBook = fiImports_FiBook
-const FiBookOpen = fiImports_FiBookOpen
-const FiSearch = fiImports_FiSearch
-const FiPlus = fiImports_FiPlus
-const FiGrid = fiImports_FiGrid
-const FiList = fiImports_FiList
-const FiRefreshCw = fiImports_FiRefreshCw
-const FiCheckCircle = fiImports_FiCheckCircle
-const FiAlertTriangle = fiImports_FiAlertTriangle
-const FiClock = fiImports_FiClock
-const FiUser = fiImports_FiUser
-const FiUsers = fiImports_FiUsers
-const FiTag = fiImports_FiTag
-const FiDownload = fiImports_FiDownload
-const FiTrash2 = fiImports_FiTrash2
-const FiEdit3 = fiImports_FiEdit3
-const FiEye = fiImports_FiEye
-const FiMapPin = fiImports_FiMapPin
-const FiX = fiImports_FiX
-const FiCheck = fiImports_FiCheck
-const FiBookmark = fiImports_FiBookmark
-const FiBarChart2 = fiImports_FiBarChart2
-const FiTrendingUp = fiImports_FiTrendingUp
-const FiDollarSign = fiImports_FiDollarSign
 const DashboardLayout = DashboardLayoutImports_default
 const PageHeader = PageHeaderImports_default
 const TablePagination = TablePaginationImports_default
@@ -235,6 +211,7 @@ function removeLibraryDemoRecords(data) {
 }
 
 function LibraryWorkspace() {
+  const [activeTab, setActiveTab] = useState('catalog')
   const { selectedCollegeId, selectedAcademicYearId, selectedCollege } = useAcademic()
   const userRole = getUserRole()
   const isAdmin = userRole === ROLES.ADMIN
@@ -242,36 +219,12 @@ function LibraryWorkspace() {
   const scopeKey = `${selectedCollegeId || 'default'}:${selectedAcademicYearId || '2026-2027'}`
   const storageKey = `cms-library-advanced-data:${scopeKey}`
 
-  // Persistent Library state
-  const [libraryData, setLibraryData] = useState(() => {
-    try {
-      const saved = localStorage.getItem(storageKey)
-      if (saved) return removeLibraryDemoRecords(JSON.parse(saved))
-    } catch {
-      // ignore
-    }
-    return {
-      books: [],
-      copies: [],
-      circulation: [],
-      borrowers: [],
-      reservations: [],
-      fines: [],
-      reports: [],
-    }
-  })
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(libraryData))
-    } catch {
-      // ignore quota
-    }
-  }, [libraryData, storageKey])
+  const apiScope = { collegeId: selectedCollegeId, academicYearId: selectedAcademicYearId, enabled: Boolean(selectedCollegeId), resource: ({catalog:'books',circulation:'issues',borrowers:'students',fines:'fines'})[activeTab] }
+  const { data: libraryData, reload: reloadApi, state: apiState, mutate: mutateApi } = useScopedModule(campusApi.loadLibrary, apiScope, { books: [], categories: [], copies: [], circulation: [], borrowers: [], reservations: [], fines: [], reports: [] })
 
   // Active sub-module tab matching original tabs:
   // 'catalog' | 'copies' | 'circulation' | 'borrowers' | 'reservations' | 'fines' | 'reports'
-  const [activeTab, setActiveTab] = useState('catalog')
+
   const [viewMode, setViewMode] = useState('grid') // 'grid' | 'table'
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('All Categories')
@@ -282,6 +235,7 @@ function LibraryWorkspace() {
 
   // Notification Banner & Toasts
   const [toastMessage, setToastMessage] = useState('')
+  const [payment, setPayment] = useState(null)
   const [workspaceMode, setWorkspaceMode] = useState('live') // 'live' | 'draft'
 
   const showToast = (msg) => {
@@ -327,9 +281,9 @@ function LibraryWorkspace() {
     return libraryData.books.filter((book) => {
       const matchQuery =
         !q ||
-        book.title.toLowerCase().includes(q) ||
-        book.author.toLowerCase().includes(q) ||
-        book.isbn.toLowerCase().includes(q) ||
+        String(book.title ?? "").toLowerCase().includes(q) ||
+        String(book.author ?? "").toLowerCase().includes(q) ||
+        String(book.isbn ?? "").toLowerCase().includes(q) ||
         book.subject?.toLowerCase().includes(q) ||
         book.callNumber?.toLowerCase().includes(q)
 
@@ -354,11 +308,11 @@ function LibraryWorkspace() {
     return libraryData.copies.filter((copy) => {
       return (
         !q ||
-        copy.accession.toLowerCase().includes(q) ||
-        copy.barcode.toLowerCase().includes(q) ||
-        copy.bookTitle.toLowerCase().includes(q) ||
-        copy.shelf.toLowerCase().includes(q) ||
-        (copy.borrower && copy.borrower.toLowerCase().includes(q))
+        String(copy.accession ?? "").toLowerCase().includes(q) ||
+        String(copy.barcode ?? "").toLowerCase().includes(q) ||
+        String(copy.bookTitle ?? "").toLowerCase().includes(q) ||
+        String(copy.shelf ?? "").toLowerCase().includes(q) ||
+        (copy.borrower && String(copy.borrower ?? "").toLowerCase().includes(q))
       )
     })
   }, [libraryData.copies, searchQuery])
@@ -369,10 +323,10 @@ function LibraryWorkspace() {
     return libraryData.circulation.filter((c) => {
       return (
         !q ||
-        c.borrowerName.toLowerCase().includes(q) ||
-        c.borrowerId.toLowerCase().includes(q) ||
-        c.bookTitle.toLowerCase().includes(q) ||
-        c.accession.toLowerCase().includes(q)
+        String(c.borrowerName ?? "").toLowerCase().includes(q) ||
+        String(c.borrowerId ?? "").toLowerCase().includes(q) ||
+        String(c.bookTitle ?? "").toLowerCase().includes(q) ||
+        String(c.accession ?? "").toLowerCase().includes(q)
       )
     })
   }, [libraryData.circulation, searchQuery])
@@ -383,10 +337,10 @@ function LibraryWorkspace() {
     return libraryData.borrowers.filter((b) => {
       return (
         !q ||
-        b.name.toLowerCase().includes(q) ||
-        b.code.toLowerCase().includes(q) ||
-        b.department.toLowerCase().includes(q) ||
-        b.email.toLowerCase().includes(q)
+        String(b.name ?? "").toLowerCase().includes(q) ||
+        String(b.code ?? "").toLowerCase().includes(q) ||
+        String(b.department ?? "").toLowerCase().includes(q) ||
+        String(b.email ?? "").toLowerCase().includes(q)
       )
     })
   }, [libraryData.borrowers, searchQuery])
@@ -397,9 +351,9 @@ function LibraryWorkspace() {
     return libraryData.reservations.filter((r) => {
       return (
         !q ||
-        r.borrowerName.toLowerCase().includes(q) ||
-        r.borrowerId.toLowerCase().includes(q) ||
-        r.bookTitle.toLowerCase().includes(q)
+        String(r.borrowerName ?? "").toLowerCase().includes(q) ||
+        String(r.borrowerId ?? "").toLowerCase().includes(q) ||
+        String(r.bookTitle ?? "").toLowerCase().includes(q)
       )
     })
   }, [libraryData.reservations, searchQuery])
@@ -410,10 +364,10 @@ function LibraryWorkspace() {
     return libraryData.fines.filter((f) => {
       return (
         !q ||
-        f.borrowerName.toLowerCase().includes(q) ||
-        f.borrowerId.toLowerCase().includes(q) ||
-        f.bookTitle.toLowerCase().includes(q) ||
-        f.accession.toLowerCase().includes(q)
+        String(f.borrowerName ?? "").toLowerCase().includes(q) ||
+        String(f.borrowerId ?? "").toLowerCase().includes(q) ||
+        String(f.bookTitle ?? "").toLowerCase().includes(q) ||
+        String(f.accession ?? "").toLowerCase().includes(q)
       )
     })
   }, [libraryData.fines, searchQuery])
@@ -465,225 +419,31 @@ function LibraryWorkspace() {
     setCurrentPage(1)
   }
 
-  const handleReturnBook = (circId) => {
-    const target = libraryData.circulation.find((c) => c.id === circId)
-    if (!target) return
-
-    setLibraryData((prev) => {
-      // 1. Remove from circulation
-      const updatedCirc = prev.circulation.filter((c) => c.id !== circId)
-
-      // 2. Increment book availableCopies
-      const updatedBooks = prev.books.map((b) => {
-        if (b.title === target.bookTitle) {
-          return {
-            ...b,
-            availableCopies: Math.min(b.totalCopies, b.availableCopies + 1),
-            issuedCopies: Math.max(0, b.issuedCopies - 1),
-          }
-        }
-        return b
-      })
-
-      // 3. Mark copy available
-      const updatedCopies = prev.copies.map((cp) => {
-        if (cp.accession === target.accession) {
-          return { ...cp, status: 'Available', borrower: null }
-        }
-        return cp
-      })
-
-      // 4. Update borrower active loans
-      const updatedBorrowers = prev.borrowers.map((bor) => {
-        if (bor.code === target.borrowerId) {
-          return { ...bor, activeLoans: Math.max(0, bor.activeLoans - 1) }
-        }
-        return bor
-      })
-
-      return {
-        ...prev,
-        circulation: updatedCirc,
-        books: updatedBooks,
-        copies: updatedCopies,
-        borrowers: updatedBorrowers,
-      }
-    })
-
-    showToast(`Book "${target.bookTitle}" (${target.accession}) marked as returned successfully!`)
+  const handleReturnBook = async circId => {
+    if (await mutateApi(() => campusApi.call(`library/issues/${campusApi.requireId(circId)}/return`, { method: 'POST', query: { collegeId: selectedCollegeId }, body: { returnDate: new Date().toISOString() } }))) showToast('Book returned successfully.')
   }
 
-  const handleRenewBook = (circId) => {
-    setLibraryData((prev) => {
-      const updatedCirc = prev.circulation.map((c) => {
-        if (c.id === circId) {
-          const currentDue = new Date(c.dueDate)
-          currentDue.setDate(currentDue.getDate() + 14)
-          return {
-            ...c,
-            dueDate: currentDue.toISOString().split('T')[0],
-            renewCount: (c.renewCount || 0) + 1,
-            status: 'Active',
-            fineAccrued: 0,
-          }
-        }
-        return c
-      })
-      return { ...prev, circulation: updatedCirc }
-    })
-    showToast('Book loan extended by 14 days.')
+  const handleRenewBook = () => showToast('Book renewal is not supported by the current library API.')
+
+  const handlePayFine = id => { const fine = libraryData.fines.find(f => f.id === id); if (fine) setPayment({ id, amount: fine.balance, paymentMethod: 'Cash', receiptNo: '' }) }
+  const submitFinePayment = async e => {
+    e.preventDefault()
+    if (await mutateApi(() => campusApi.call(`library/fines/${campusApi.requireId(payment.id)}/payments`, {method:'POST',query:{collegeId:selectedCollegeId},body:{amount:Number(payment.amount),paymentMethod:payment.paymentMethod,receiptNo:payment.receiptNo,paymentDate:new Date().toISOString()}}))) {setPayment(null);showToast('Payment recorded successfully.')}
   }
 
-  const handlePayFine = (fineId) => {
-    setLibraryData((prev) => {
-      const updatedFines = prev.fines.map((f) => {
-        if (f.id === fineId) {
-          return { ...f, paymentStatus: 'Paid' }
-        }
-        return f
-      })
-      return { ...prev, fines: updatedFines }
-    })
-    showToast('Fine marked as paid and receipt generated.')
-  }
-
-  const handleSaveBook = (bookForm) => {
-    if (editingBook) {
-      // Edit
-      setLibraryData((prev) => {
-        const updatedBooks = prev.books.map((b) => (b.id === editingBook.id ? { ...b, ...bookForm } : b))
-        return { ...prev, books: updatedBooks }
-      })
-      showToast(`Updated "${bookForm.title}" successfully.`)
-    } else {
-      // Create New
-      const newBookId = `book-${Date.now().toString().slice(-4)}`
-      const newBook = {
-        id: newBookId,
-        ...bookForm,
-        rating: 4.8,
-        coverColor: '#1e3a8a',
-        accentColor: '#3b82f6',
-        issuedCopies: 0,
-        availableCopies: Number(bookForm.totalCopies || 1),
-        totalCopies: Number(bookForm.totalCopies || 1),
-      }
-
-      // Automatically generate copies
-      const newCopies = []
-      for (let i = 1; i <= newBook.totalCopies; i++) {
-        newCopies.push({
-          id: `copy-${Date.now().toString().slice(-4)}-${i}`,
-          bookId: newBookId,
-          accession: `ACC-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-          barcode: `BC${Math.floor(9000000 + Math.random() * 1000000)}`,
-          bookTitle: newBook.title,
-          shelf: newBook.rack || 'General Stacks',
-          condition: 'Mint',
-          status: 'Available',
-          cost: 1500,
-        })
-      }
-
-      setLibraryData((prev) => ({
-        ...prev,
-        books: [newBook, ...prev.books],
-        copies: [...newCopies, ...prev.copies],
-      }))
-      showToast(`Added "${newBook.title}" with ${newBook.totalCopies} physical copies to the catalog!`)
+  const handleSaveBook = async bookForm => {
+    if (await mutateApi(() => campusApi.saveBook(bookForm, editingBook, apiScope, libraryData.categories))) {
+      showToast('Book saved successfully.'); setAddBookModal(false); setEditingBook(null)
     }
-
-    setAddBookModal(false)
-    setEditingBook(null)
   }
 
-  const handleDeleteBook = (bookId) => {
-    setLibraryData((prev) => {
-      const target = prev.books.find((b) => b.id === bookId)
-      return {
-        ...prev,
-        books: prev.books.filter((b) => b.id !== bookId),
-        copies: prev.copies.filter((cp) => cp.bookId !== bookId && cp.bookTitle !== target?.title),
-      }
-    })
-    setDeleteBookTarget(null)
-    showToast('Book removed from library catalog.')
+  const handleDeleteBook = async bookId => {
+    if (await mutateApi(() => campusApi.call(`library/books/${campusApi.requireId(bookId)}`, { method: 'DELETE', query: { collegeId: selectedCollegeId } }))) { setDeleteBookTarget(null); showToast('Book deleted successfully.') }
   }
 
-  const handleIssueBook = (issueForm) => {
-    const book = libraryData.books.find((b) => b.id === issueForm.bookId)
-    if (!book || book.availableCopies <= 0) {
-      showToast('No copies available to issue.')
-      return
-    }
-
-    const availableCopy = libraryData.copies.find(
-      (c) => c.bookTitle === book.title && c.status === 'Available'
-    ) || {
-      accession: `ACC-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-      barcode: `BC${Math.floor(9000000 + Math.random() * 1000000)}`,
-    }
-
-    const today = new Date()
-    const due = new Date()
-    due.setDate(today.getDate() + (issueForm.borrowerType === 'Faculty' ? 30 : 14))
-
-    const newCirc = {
-      id: `circ-${Date.now()}`,
-      borrowerName: issueForm.borrowerName,
-      borrowerId: issueForm.borrowerId,
-      borrowerType: issueForm.borrowerType,
-      bookTitle: book.title,
-      accession: availableCopy.accession,
-      barcode: availableCopy.barcode,
-      issueDate: today.toISOString().split('T')[0],
-      dueDate: due.toISOString().split('T')[0],
-      status: 'Active',
-      renewCount: 0,
-      fineAccrued: 0,
-    }
-
-    setLibraryData((prev) => {
-      const updatedBooks = prev.books.map((b) => {
-        if (b.id === book.id) {
-          return {
-            ...b,
-            availableCopies: Math.max(0, b.availableCopies - 1),
-            issuedCopies: b.issuedCopies + 1,
-          }
-        }
-        return b
-      })
-
-      const updatedCopies = prev.copies.map((cp) => {
-        if (cp.accession === availableCopy.accession) {
-          return {
-            ...cp,
-            status: 'Issued',
-            borrower: `${issueForm.borrowerName} (${issueForm.borrowerId})`,
-          }
-        }
-        return cp
-      })
-
-      const updatedBorrowers = prev.borrowers.map((bor) => {
-        if (bor.code === issueForm.borrowerId) {
-          return { ...bor, activeLoans: bor.activeLoans + 1 }
-        }
-        return bor
-      })
-
-      return {
-        ...prev,
-        circulation: [newCirc, ...prev.circulation],
-        books: updatedBooks,
-        copies: updatedCopies,
-        borrowers: updatedBorrowers,
-      }
-    })
-
-    setIssueModalBook(null)
-    showToast(`Book issued to ${issueForm.borrowerName}. Due on ${newCirc.dueDate}.`)
+  const handleIssueBook = async form => {
+    const borrower = libraryData.borrowers.find(b => b.code === form.borrowerId)
+    if (await mutateApi(() => campusApi.call('library/issues', { method: 'POST', body: { collegeId: campusApi.requireId(selectedCollegeId, 'college'), bookId: campusApi.requireId(form.bookId, 'book'), studentId: campusApi.requireId(borrower?.id, 'student'), issueDate: form.issueDate, dueDate: form.dueDate } }))) { setIssueModalBook(null); showToast('Book issued successfully.') }
   }
 
   const handleReportPdf = (report) => {
@@ -709,7 +469,7 @@ function LibraryWorkspace() {
   }
 
   return (
-    <DashboardLayout>
+    <DashboardLayout><ScopedModuleNotice state={apiState} data={libraryData} resource={({catalog: 'books', circulation: 'issues', borrowers: 'students', fines: 'fines', reports: 'issues'})[activeTab]} onRetry={reloadApi} />
       <div className="adv-library-workspace">
         {/* Toast Alert */}
         {toastMessage && (
@@ -771,7 +531,7 @@ function LibraryWorkspace() {
             <div className="adv-kpi-card__body">
               <span className="adv-kpi-card__label">Catalog Volumes</span>
               <div className="adv-kpi-card__value">
-                <strong>{totalBooksCount}</strong>
+                <strong>{libraryData.resourceErrors?.books ? '—' : totalBooksCount}</strong>
                 <small className="adv-kpi-card__sub">{totalPhysicalCopies} Total Copies</small>
               </div>
               <div className="adv-kpi-card__badge">
@@ -787,7 +547,7 @@ function LibraryWorkspace() {
             <div className="adv-kpi-card__body">
               <span className="adv-kpi-card__label">Active Circulation</span>
               <div className="adv-kpi-card__value">
-                <strong>{activeCirculationCount}</strong>
+                <strong>{libraryData.resourceErrors?.issues ? '—' : activeCirculationCount}</strong>
                 <small className="adv-kpi-card__sub">Currently On Loan</small>
               </div>
               <div className="adv-kpi-card__badge">
@@ -819,7 +579,7 @@ function LibraryWorkspace() {
             <div className="adv-kpi-card__body">
               <span className="adv-kpi-card__label">Registered Borrowers</span>
               <div className="adv-kpi-card__value">
-                <strong>{activeBorrowersCount}</strong>
+                <strong>{libraryData.resourceErrors?.students ? '—' : activeBorrowersCount}</strong>
                 <small className="adv-kpi-card__sub">Students & Faculty</small>
               </div>
               <div className="adv-kpi-card__badge">
@@ -841,7 +601,7 @@ function LibraryWorkspace() {
               </strong>
               <p>
                 {workspaceMode === 'live'
-                  ? 'Connected to Central Campus Repository · Real-time inventory sync with Barcode & Accession Tracking.'
+                  ? 'Catalog, issue, return and fine records are loaded from the library service.'
                   : 'Local drafting workspace · Prepare catalog entries, simulate accession tags, and verify shelf allocation.'}
               </p>
             </div>
@@ -851,7 +611,7 @@ function LibraryWorkspace() {
               type="button"
               className="adv-mode-toggle-btn"
               onClick={() => {
-                const nextMode = workspaceMode === 'live' ? 'draft' : 'live'
+                const nextMode = 'live'
                 setWorkspaceMode(nextMode)
                 showToast(`Switched to ${nextMode === 'live' ? 'Live ILMS' : 'Draft Sandbox'} mode.`)
               }}
@@ -866,12 +626,11 @@ function LibraryWorkspace() {
               type="button"
               className="adv-btn-text"
               onClick={() => {
-                localStorage.removeItem(storageKey)
-                window.location.reload()
+                reloadApi().catch(() => {})
               }}
-              title="Reset records to default catalog"
+              title="Refresh institutional records"
             >
-              Reset Sample Data
+              Refresh Records
             </button>
           </div>
         </div>
@@ -885,7 +644,7 @@ function LibraryWorkspace() {
           >
             <FiBook />
             <span>Book Catalog</span>
-            <span className="adv-tab-count">{totalBooksCount}</span>
+            <span className="adv-tab-count">{libraryData.resourceErrors?.books ? '—' : totalBooksCount}</span>
           </button>
 
           <button
@@ -905,7 +664,7 @@ function LibraryWorkspace() {
           >
             <FiRefreshCw />
             <span>Issue & Return</span>
-            <span className="adv-tab-count">{activeCirculationCount}</span>
+            <span className="adv-tab-count">{libraryData.resourceErrors?.issues ? '—' : activeCirculationCount}</span>
           </button>
 
           <button
@@ -915,7 +674,7 @@ function LibraryWorkspace() {
           >
             <FiUsers />
             <span>Borrowers</span>
-            <span className="adv-tab-count">{activeBorrowersCount}</span>
+            <span className="adv-tab-count">{libraryData.resourceErrors?.students ? '—' : activeBorrowersCount}</span>
           </button>
 
           <button
@@ -1057,7 +816,7 @@ function LibraryWorkspace() {
           <div className="adv-content-section">
             <div className="adv-section-meta">
               <span>
-                Showing <strong>{filteredBooks.length}</strong> of {totalBooksCount} catalog titles
+                Showing <strong>{filteredBooks.length}</strong> of {libraryData.resourceErrors?.books ? '—' : totalBooksCount} catalog titles
               </span>
               {selectedCategory !== 'All Categories' && (
                 <span className="adv-filter-chip">
@@ -1099,7 +858,7 @@ function LibraryWorkspace() {
                         <div className="adv-book-card__cover-content">
                           <span className="adv-book-card__dept-tag">{book.department || 'ENG'}</span>
                           <h4 className="adv-book-card__cover-title">{book.title}</h4>
-                          <p className="adv-book-card__cover-author">{book.author.split(',')[0]}</p>
+                          <p className="adv-book-card__cover-author">{String(book.author || '').split(',')[0]}</p>
                           <div className="adv-book-card__cover-footer">
                             <span>{book.edition}</span>
                             <span className="adv-book-card__call">{book.callNumber}</span>
@@ -1385,7 +1144,7 @@ function LibraryWorkspace() {
                       </td>
                       <td>
                         <span
-                          className={`adv-condition-pill adv-condition-pill--${copy.condition.toLowerCase()}`}
+                          className={`adv-condition-pill adv-condition-pill--${String(copy.condition ?? "").toLowerCase()}`}
                         >
                           {copy.condition}
                         </span>
@@ -1691,10 +1450,7 @@ function LibraryWorkspace() {
                           type="button"
                           className="adv-btn adv-btn--sm adv-btn--secondary"
                           onClick={() => {
-                            setLibraryData((prev) => ({
-                              ...prev,
-                              reservations: prev.reservations.filter((r) => r.id !== res.id),
-                            }))
+                            showToast('Reservations are not supported by the current library API.')
                             showToast('Hold request fulfilled / cancelled.')
                           }}
                         >
@@ -1756,7 +1512,7 @@ function LibraryWorkspace() {
                       </td>
                       <td>
                         <strong>₹{fine.fineAmount}</strong>
-                        <small className="adv-block adv-muted">(₹5 / day rate)</small>
+                        <small className="adv-block adv-muted">Balance: ₹{fine.balance}</small>
                       </td>
                       <td>{fine.calculatedOn}</td>
                       <td>
@@ -1780,7 +1536,7 @@ function LibraryWorkspace() {
                             Collect Payment
                           </button>
                         ) : (
-                          <span className="adv-receipt-tag">Receipt #REC-{fine.id.slice(-3)}</span>
+                          <span className="adv-receipt-tag">{fine.paymentStatus}</span>
                         )}
                       </td>
                     </tr>
@@ -1801,76 +1557,7 @@ function LibraryWorkspace() {
         {/* TAB 7: REPORTS & ANALYTICS */}
         {activeTab === 'reports' && (
           <div className="adv-content-section">
-            <div className="adv-analytics-grid">
-              <div className="adv-analytics-card">
-                <h4>Top Borrowed Engineering Titles</h4>
-                <div className="adv-analytics-list">
-                  <div className="adv-analytics-item">
-                    <div className="adv-analytics-item__meta">
-                      <span>Introduction to Algorithms (CLRS)</span>
-                      <strong>142 Loans</strong>
-                    </div>
-                    <div className="adv-analytics-bar">
-                      <div className="adv-analytics-bar__fill" style={{ width: '92%' }} />
-                    </div>
-                  </div>
-                  <div className="adv-analytics-item">
-                    <div className="adv-analytics-item__meta">
-                      <span>Operating System Concepts (Silberschatz)</span>
-                      <strong>118 Loans</strong>
-                    </div>
-                    <div className="adv-analytics-bar">
-                      <div className="adv-analytics-bar__fill" style={{ width: '78%' }} />
-                    </div>
-                  </div>
-                  <div className="adv-analytics-item">
-                    <div className="adv-analytics-item__meta">
-                      <span>Artificial Intelligence: A Modern Approach</span>
-                      <strong>95 Loans</strong>
-                    </div>
-                    <div className="adv-analytics-bar">
-                      <div className="adv-analytics-bar__fill" style={{ width: '64%' }} />
-                    </div>
-                  </div>
-                  <div className="adv-analytics-item">
-                    <div className="adv-analytics-item__meta">
-                      <span>Database System Concepts (Korth)</span>
-                      <strong>82 Loans</strong>
-                    </div>
-                    <div className="adv-analytics-bar">
-                      <div className="adv-analytics-bar__fill" style={{ width: '56%' }} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="adv-analytics-card">
-                <h4>Department Utilization Breakdown</h4>
-                <div className="adv-dept-stats">
-                  <div className="adv-dept-stat-box">
-                    <span>CSE & AIML</span>
-                    <strong>48.4%</strong>
-                    <small>1,750 Loans</small>
-                  </div>
-                  <div className="adv-dept-stat-box">
-                    <span>ECE</span>
-                    <strong>22.1%</strong>
-                    <small>800 Loans</small>
-                  </div>
-                  <div className="adv-dept-stat-box">
-                    <span>MECH & CIVIL</span>
-                    <strong>16.5%</strong>
-                    <small>600 Loans</small>
-                  </div>
-                  <div className="adv-dept-stat-box">
-                    <span>EEE & H&S</span>
-                    <strong>13.0%</strong>
-                    <small>470 Loans</small>
-                  </div>
-                </div>
-              </div>
-            </div>
-
+            <div className="adv-analytics-grid"><div className="adv-analytics-card"><h4>Circulation Summary</h4><p>{libraryData.circulation.length} issue records · {libraryData.circulation.filter(i => i.status === 'Returned').length} returned</p></div><div className="adv-analytics-card"><h4>Fine Summary</h4><p>Outstanding balance: ₹{libraryData.fines.reduce((sum,f) => sum+Number(f.balance || 0),0).toFixed(2)}</p></div></div>
             <div className="adv-table-card" style={{ marginTop: '24px' }}>
               <div className="adv-table-card__header">
                 <h3>Institutional Circulation & Audit Reports</h3>
@@ -1924,6 +1611,7 @@ function LibraryWorkspace() {
           </div>
         )}
 
+        {payment && <div className="adv-modal-backdrop"><section className="adv-modal adv-modal--sm" role="dialog" aria-label="Collect fine payment"><form onSubmit={submitFinePayment}><div className="adv-modal__body"><h2>Collect Fine Payment</h2><label className="adv-form-field">Amount<input required type="number" min="0.01" step="0.01" value={payment.amount} onChange={e => setPayment({...payment,amount:e.target.value})} /></label><label className="adv-form-field">Payment Method<input required value={payment.paymentMethod} onChange={e => setPayment({...payment,paymentMethod:e.target.value})} /></label><label className="adv-form-field">Receipt Number<input required value={payment.receiptNo} onChange={e => setPayment({...payment,receiptNo:e.target.value})} /></label>{apiState.saveError && <p role="alert">Unable to record the payment. Check the payment details and try again.</p>}</div><footer className="adv-modal__footer"><button type="button" onClick={() => setPayment(null)}>Cancel</button><button type="submit" disabled={apiState.saving}>Record Payment</button></footer></form></section></div>}
         {/* MODAL: BOOK DETAILS DRAWER / MODAL */}
         {bookDetailModal && (
           <div
@@ -1957,7 +1645,7 @@ function LibraryWorkspace() {
                     <div className="adv-detail-cover__content">
                       <span>{bookDetailModal.department}</span>
                       <h4>{bookDetailModal.title}</h4>
-                      <small>{bookDetailModal.author.split(',')[0]}</small>
+                      <small>{String(bookDetailModal.author || '').split(',')[0]}</small>
                     </div>
                   </div>
 
@@ -2052,7 +1740,7 @@ function LibraryWorkspace() {
 
         {/* MODAL: ADD / EDIT BOOK */}
         {addBookModal && (
-          <BookFormModal
+          <BookFormModal categories={libraryData.categories}
             initialData={editingBook}
             onClose={() => {
               setAddBookModal(false)
@@ -2122,11 +1810,13 @@ function LibraryWorkspace() {
 }
 
 // SUB-COMPONENT: ADD/EDIT BOOK MODAL FORM
-function BookFormModal({ initialData, onClose, onSave }) {
+function BookFormModal({ initialData, onClose, onSave, categories = [] }) {
   const [title, setTitle] = useState(initialData?.title || '')
   const [author, setAuthor] = useState(initialData?.author || '')
   const [isbn, setIsbn] = useState(initialData?.isbn || '')
-  const [category, setCategory] = useState(initialData?.category || 'Computer Science & AI')
+  const [category, setCategory] = useState(initialData?.category || categories[0]?.categoryName || '')
+  const [accessionNo, setAccessionNo] = useState(initialData?.accessionNo || '')
+  const [language, setLanguage] = useState(initialData?.language || 'English')
   const [department, setDepartment] = useState(initialData?.department || 'CSE')
   const [publisher, setPublisher] = useState(initialData?.publisher || '')
   const [edition, setEdition] = useState(initialData?.edition || '1st Edition')
@@ -2144,6 +1834,7 @@ function BookFormModal({ initialData, onClose, onSave }) {
     }
 
     onSave({
+      accessionNo: accessionNo.trim(), language: language.trim(),
       title: title.trim(),
       author: author.trim(),
       isbn: isbn.trim(),
@@ -2173,7 +1864,7 @@ function BookFormModal({ initialData, onClose, onSave }) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit}><label className="adv-field"><span>Accession number *</span><input required value={accessionNo} onChange={e => setAccessionNo(e.target.value)} /></label><label className="adv-field"><span>Language *</span><input required value={language} onChange={e => setLanguage(e.target.value)} /></label>
           <div className="adv-modal__body adv-form-grid">
             {error && <div className="adv-form-error">{error}</div>}
 
@@ -2225,15 +1916,7 @@ function BookFormModal({ initialData, onClose, onSave }) {
 
             <div className="adv-form-field">
               <label>Category</label>
-              <ProjectSelect value={category} onChange={(e) => setCategory(e.target.value)}>
-                {libraryCategories
-                  .filter((c) => c !== 'All Categories')
-                  .map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-              </ProjectSelect>
+              <ProjectSelect value={category} onChange={e => setCategory(e.target.value)}>{categories.map(c => <option key={c.categoryId} value={c.categoryName}>{c.categoryName}</option>)}</ProjectSelect>
             </div>
 
             <div className="adv-form-field">
@@ -2316,6 +1999,8 @@ function BookFormModal({ initialData, onClose, onSave }) {
 function IssueBookModal({ book, borrowers, onClose, onIssue }) {
   const [selectedBorrowerId, setSelectedBorrowerId] = useState(borrowers[0]?.code || '')
   const [borrowerType, setBorrowerType] = useState('Student')
+  const [issueDate, setIssueDate] = useState(new Date().toISOString().slice(0,10))
+  const [dueDate, setDueDate] = useState('')
 
   const borrower = borrowers.find((b) => b.code === selectedBorrowerId) || borrowers[0]
 
@@ -2323,7 +2008,7 @@ function IssueBookModal({ book, borrowers, onClose, onIssue }) {
     e.preventDefault()
     if (!borrower) return
     onIssue({
-      bookId: book.id,
+      bookId: book.id, issueDate, dueDate,
       borrowerName: borrower.name,
       borrowerId: borrower.code,
       borrowerType: borrower.type,
@@ -2345,7 +2030,7 @@ function IssueBookModal({ book, borrowers, onClose, onIssue }) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit}><label className="adv-field"><span>Issue date *</span><input type="date" required value={issueDate} onChange={e => setIssueDate(e.target.value)} /></label><label className="adv-field"><span>Due date *</span><input type="date" required min={issueDate} value={dueDate} onChange={e => setDueDate(e.target.value)} /></label>
           <div className="adv-modal__body">
             <div className="adv-issue-book-card">
               <span className="adv-category-badge">{book.category}</span>
@@ -2845,21 +2530,6 @@ const ProjectSelect = SearchableSelectImports_ProjectSelect
 const useState = reactImports_useState
 const useMemo = reactImports_useMemo
 const useEffect = reactImports_useEffect
-const FiCalendar = fiImports_FiCalendar
-const FiClock = fiImports_FiClock
-const FiMapPin = fiImports_FiMapPin
-const FiUser = fiImports_FiUser
-const FiUsers = fiImports_FiUsers
-const FiCheckCircle = fiImports_FiCheckCircle
-const FiPlus = fiImports_FiPlus
-const FiSearch = fiImports_FiSearch
-const FiGrid = fiImports_FiGrid
-const FiList = fiImports_FiList
-const FiTrash2 = fiImports_FiTrash2
-const FiEdit2 = fiImports_FiEdit2
-const FiActivity = fiImports_FiActivity
-const FiCheckSquare = fiImports_FiCheckSquare
-const FiX = fiImports_FiX
 const DashboardLayout = DashboardLayoutImports_default
 const PageHeader = PageHeaderImports_default
 const ExportMenu = ExportMenuImports_default
@@ -2957,26 +2627,14 @@ function removeMeetingsEventsDemoRecords(data) {
 }
 
 function MeetingsEventsWorkspace() {
+  const [activeTab, setActiveTab] = useState('calendar')
   const { selectedCollegeId, selectedAcademicYearId } = useAcademic()
   const scope = `${selectedCollegeId || '1'}:${selectedAcademicYearId || '1'}`
   const storageKey = `cms-meetings-events-data:${scope}`
 
-  // Persistent state per college & academic year
-  const [data, setData] = useState(() => {
-    try {
-      const saved = localStorage.getItem(storageKey)
-      if (saved) return removeMeetingsEventsDemoRecords(JSON.parse(saved))
-    } catch {
-      // fallback
-    }
-    return {
-      meetings: [],
-      events: [],
-      registrations: [],
-      attendance: [],
-      minutes: [],
-    }
-  })
+  const apiScope = { collegeId: selectedCollegeId, academicYearId: selectedAcademicYearId, enabled: Boolean(selectedCollegeId), resource: activeTab === 'calendar' ? undefined : activeTab }
+  const { data, reload: reloadApi, state: apiState, mutate: mutateApi } = useScopedModule(campusApi.loadMeetingsEvents, apiScope, { meetings: [], events: [], registrations: [], attendance: [], minutes: [] })
+
   const [departmentOptions, setDepartmentOptions] = useState([])
   const [roomOptions, setRoomOptions] = useState([])
 
@@ -2990,16 +2648,10 @@ function MeetingsEventsWorkspace() {
     return () => { active = false }
   }, [scope])
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(data))
-    } catch {
-      // ignore quota
-    }
-  }, [data, storageKey])
+
 
   // Active tab: 'meetings' | 'events' | 'registrations' | 'attendance' | 'minutes'
-  const [activeTab, setActiveTab] = useState('calendar')
+
   const [viewMode, setViewMode] = useState('grid') // 'grid' | 'table'
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
@@ -3041,7 +2693,7 @@ function MeetingsEventsWorkspace() {
 
     if (activeTab === 'meetings') {
       return data.meetings.filter(item => {
-        const matchQ = !q || item.title.toLowerCase().includes(q) || item.venue.toLowerCase().includes(q) || item.organizer.toLowerCase().includes(q)
+        const matchQ = !q || String(item.title ?? "").toLowerCase().includes(q) || String(item.venue ?? "").toLowerCase().includes(q) || String(item.organizer ?? "").toLowerCase().includes(q)
         const matchStatus = statusFilter === 'ALL' || item.status === statusFilter
         const matchCat = categoryFilter === 'ALL' || item.category === categoryFilter
         return matchQ && matchStatus && matchCat
@@ -3050,7 +2702,7 @@ function MeetingsEventsWorkspace() {
 
     if (activeTab === 'events') {
       return data.events.filter(item => {
-        const matchQ = !q || item.title.toLowerCase().includes(q) || item.venue.toLowerCase().includes(q) || item.organizer.toLowerCase().includes(q)
+        const matchQ = !q || String(item.title ?? "").toLowerCase().includes(q) || String(item.venue ?? "").toLowerCase().includes(q) || String(item.organizer ?? "").toLowerCase().includes(q)
         const matchStatus = statusFilter === 'ALL' || item.status === statusFilter
         const matchCat = categoryFilter === 'ALL' || item.category === categoryFilter
         return matchQ && matchStatus && matchCat
@@ -3059,7 +2711,7 @@ function MeetingsEventsWorkspace() {
 
     if (activeTab === 'registrations') {
       return data.registrations.filter(item => {
-        const matchQ = !q || item.studentName.toLowerCase().includes(q) || item.rollNumber.toLowerCase().includes(q) || item.eventTitle.toLowerCase().includes(q) || item.department.toLowerCase().includes(q)
+        const matchQ = !q || String(item.studentName ?? "").toLowerCase().includes(q) || String(item.rollNumber ?? "").toLowerCase().includes(q) || String(item.eventTitle ?? "").toLowerCase().includes(q) || String(item.department ?? "").toLowerCase().includes(q)
         const matchStatus = statusFilter === 'ALL' || item.status === statusFilter
         return matchQ && matchStatus
       })
@@ -3067,7 +2719,7 @@ function MeetingsEventsWorkspace() {
 
     if (activeTab === 'attendance') {
       return data.attendance.filter(item => {
-        const matchQ = !q || item.participantName.toLowerCase().includes(q) || item.activityTitle.toLowerCase().includes(q) || item.department.toLowerCase().includes(q)
+        const matchQ = !q || String(item.participantName ?? "").toLowerCase().includes(q) || String(item.activityTitle ?? "").toLowerCase().includes(q) || String(item.department ?? "").toLowerCase().includes(q)
         const matchStatus = statusFilter === 'ALL' || item.status === statusFilter
         return matchQ && matchStatus
       })
@@ -3075,7 +2727,7 @@ function MeetingsEventsWorkspace() {
 
     if (activeTab === 'minutes') {
       return data.minutes.filter(item => {
-        const matchQ = !q || item.meetingTitle.toLowerCase().includes(q) || item.actionItem.toLowerCase().includes(q) || item.owner.toLowerCase().includes(q)
+        const matchQ = !q || String(item.meetingTitle ?? "").toLowerCase().includes(q) || String(item.actionItem ?? "").toLowerCase().includes(q) || String(item.owner ?? "").toLowerCase().includes(q)
         const matchStatus = statusFilter === 'ALL' || (statusFilter === 'COMPLETED' ? item.completed : !item.completed)
         return matchQ && matchStatus
       })
@@ -3148,7 +2800,7 @@ function MeetingsEventsWorkspace() {
         eventId: data.events[0]?.id || '',
         eventTitle: data.events[0]?.title || '',
         studentName: '',
-        rollNumber: '',
+        rollNumber: '', studentId: '',
         department: 'Computer Science and Engineering',
         year: '3rd Year',
         status: 'Confirmed',
@@ -3156,6 +2808,7 @@ function MeetingsEventsWorkspace() {
       })
     } else if (type === 'minute') {
       setFormData({
+        meetingId: data.meetings[0]?.id || '',
         meetingTitle: data.meetings[0]?.title || '',
         meetingDate: new Date().toISOString().slice(0, 10),
         decisionSummary: '',
@@ -3177,93 +2830,11 @@ function MeetingsEventsWorkspace() {
     setModalOpen(true)
   }
 
-  const handleSaveModal = (e) => {
+  const handleSaveModal = async e => {
     e.preventDefault()
-    if (modalType === 'meeting' || modalType === 'event') {
-      const start = new Date(formData.start)
-      const end = new Date(formData.end)
-      if (!formData.title?.trim() || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
-        setModalError('Enter a title and a valid end time later than the start time.')
-        return
-      }
-      const venue = String(formData.venue || '').trim().toLowerCase()
-      const hasVenue = venue && !/^https?:\/\//.test(venue)
-      if (hasVenue) {
-        const scheduled = [
-          ...data.meetings.filter(item => item.status !== 'Cancelled').map(item => ({ ...item, kind: 'meeting' })),
-          ...data.events.filter(item => item.status !== 'Cancelled').map(item => ({ ...item, kind: 'event' })),
-        ]
-        const conflict = scheduled.find(item => {
-          if (editingItem?.id === item.id && modalType === item.kind) return false
-          if (String(item.venue || '').trim().toLowerCase() !== venue) return false
-          const existingStart = new Date(item.start)
-          const existingEnd = new Date(item.end)
-          return !Number.isNaN(existingStart.getTime()) && !Number.isNaN(existingEnd.getTime()) && start < existingEnd && end > existingStart
-        })
-        if (conflict) {
-          setModalError(`Venue conflict: “${conflict.title}” already uses ${formData.venue} from ${new Date(conflict.start).toLocaleString()} to ${new Date(conflict.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`)
-          return
-        }
-      }
-    }
+    if ((modalType === 'meeting' || modalType === 'event') && (!formData.title?.trim() || !formData.start || !formData.end || new Date(formData.end) <= new Date(formData.start))) { setModalError('Enter a title and an end time later than the start time.'); return }
     setModalError('')
-    if (modalType === 'meeting') {
-      const itemToSave = {
-        ...formData,
-        id: editingItem ? editingItem.id : `meet-${Date.now()}`,
-      }
-      setData(prev => ({
-        ...prev,
-        meetings: editingItem
-          ? prev.meetings.map(m => m.id === editingItem.id ? itemToSave : m)
-          : [itemToSave, ...prev.meetings],
-      }))
-      setNotice(`Meeting "${itemToSave.title}" ${editingItem ? 'updated' : 'scheduled'} successfully.`)
-    } else if (modalType === 'event') {
-      const itemToSave = {
-        ...formData,
-        id: editingItem ? editingItem.id : `evt-${Date.now()}`,
-        capacity: Number(formData.capacity) || 100,
-        registeredCount: Number(formData.registeredCount) || 0,
-      }
-      setData(prev => ({
-        ...prev,
-        events: editingItem
-          ? prev.events.map(ev => ev.id === editingItem.id ? itemToSave : ev)
-          : [itemToSave, ...prev.events],
-      }))
-      setNotice(`Event "${itemToSave.title}" ${editingItem ? 'updated' : 'created'} successfully.`)
-    } else if (modalType === 'registration') {
-      const targetEvent = data.events.find(ev => ev.id === formData.eventId)
-      const itemToSave = {
-        ...formData,
-        id: editingItem ? editingItem.id : `reg-${Date.now()}`,
-        eventTitle: targetEvent ? targetEvent.title : formData.eventTitle,
-        registeredAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
-      }
-      setData(prev => ({
-        ...prev,
-        registrations: editingItem
-          ? prev.registrations.map(r => r.id === editingItem.id ? itemToSave : r)
-          : [itemToSave, ...prev.registrations],
-      }))
-      setNotice(`Participant "${itemToSave.studentName}" registered successfully.`)
-    } else if (modalType === 'minute') {
-      const itemToSave = {
-        ...formData,
-        id: editingItem ? editingItem.id : `mom-${Date.now()}`,
-      }
-      setData(prev => ({
-        ...prev,
-        minutes: editingItem
-          ? prev.minutes.map(m => m.id === editingItem.id ? itemToSave : m)
-          : [itemToSave, ...prev.minutes],
-      }))
-      setNotice(`Action item "${itemToSave.actionItem.slice(0, 30)}..." saved.`)
-    }
-
-    setModalOpen(false)
-    setTimeout(() => setNotice(''), 4000)
+    if (await mutateApi(() => campusApi.saveMeetingEvent(modalType, formData, editingItem, apiScope))) { setModalOpen(false); setNotice('Record saved successfully.') }
   }
 
   // Request Delete with popup
@@ -3272,65 +2843,22 @@ function MeetingsEventsWorkspace() {
   }
 
   // Confirm delete from popup
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deleteTarget) return
-    const { id, type, title } = deleteTarget
-    if (type === 'meeting') {
-      setData(prev => ({ ...prev, meetings: prev.meetings.filter(m => m.id !== id) }))
-    } else if (type === 'event') {
-      setData(prev => ({ ...prev, events: prev.events.filter(ev => ev.id !== id) }))
-    } else if (type === 'registration') {
-      setData(prev => ({ ...prev, registrations: prev.registrations.filter(r => r.id !== id) }))
-    } else if (type === 'attendance') {
-      setData(prev => ({ ...prev, attendance: prev.attendance.filter(a => a.id !== id) }))
-    } else if (type === 'minute') {
-      setData(prev => ({ ...prev, minutes: prev.minutes.filter(m => m.id !== id) }))
-    }
-    setDeleteTarget(null)
-    setNotice(`"${title || 'Record'}" deleted successfully.`)
-    setTimeout(() => setNotice(''), 4000)
+    const { id, type } = deleteTarget
+    const collection = { meeting: 'meetings', event: 'events', registration: 'registrations', attendance: 'attendance', minute: 'minutes' }[type]
+    const item = data[collection]?.find(r => r.id === id)
+    if (!item) return
+    const path = type === 'meeting' ? `meetings/${item.id}` : type === 'event' ? `events/${item.id}` : type === 'registration' ? `events/${item.eventId}/registrations/${item.apiId}` : `meetings/${item.meetingId}/${type === 'minute' ? 'minutes' : 'attendance'}/${item.apiId}`
+    if (await mutateApi(() => campusApi.call(path, { method: 'DELETE', query: { collegeId: selectedCollegeId } }))) { setDeleteTarget(null); setNotice('Record deleted successfully.') }
   }
 
   // Direct attendance status setter
-  const handleSetAttendanceStatus = (attId, newStatus) => {
-    setData(prev => ({
-      ...prev,
-      attendance: prev.attendance.map(a => {
-        if (a.id !== attId) return a
-        const checkIn = newStatus === 'Present' || newStatus === 'Late'
-          ? (a.checkInTime && a.checkInTime !== '—' ? a.checkInTime : new Date().toISOString().slice(0, 16).replace('T', ' '))
-          : '—'
-        return { ...a, status: newStatus, checkInTime: checkIn }
-      }),
-    }))
-  }
+  const saveAttendance = (item, status) => campusApi.call(`meetings/${item.meetingId}/attendance`, { method: 'PUT', body: { participantId: item.participantId, attendanceStatus: status.toUpperCase(), checkInAt: ['Present','Late'].includes(status) ? new Date().toISOString() : null } })
+  const handleSetAttendanceStatus = (id, status) => { const item = data.attendance.find(a => a.id === id); if (item) mutateApi(() => saveAttendance(item, status)) }
+  const markAllAttendance = status => mutateApi(async () => { for (const item of data.attendance) await saveAttendance(item, status) })
+  const toggleActionItemDone = () => setNotice('Action completion has no matching API; minutes can be edited and saved.')
 
-  const markAllAttendance = (statusToSet) => {
-    setData(prev => ({
-      ...prev,
-      attendance: prev.attendance.map(a => {
-        const checkIn = statusToSet === 'Present' || statusToSet === 'Late'
-          ? new Date().toISOString().slice(0, 16).replace('T', ' ')
-          : '—'
-        return { ...a, status: statusToSet, checkInTime: checkIn }
-      }),
-    }))
-    setNotice(`All participants marked as "${statusToSet}".`)
-    setTimeout(() => setNotice(''), 4000)
-  }
-
-  // Quick 1-click toggle action item completed
-  const toggleActionItemDone = (minId) => {
-    setData(prev => ({
-      ...prev,
-      minutes: prev.minutes.map(m => {
-        if (m.id !== minId) return m
-        return { ...m, completed: !m.completed }
-      }),
-    }))
-  }
-
-  // Helper date formatter
   const formatDateBadge = (dateStr) => {
     if (!dateStr) return { month: 'OCT', day: '15' }
     const d = new Date(dateStr)
@@ -3370,7 +2898,7 @@ function MeetingsEventsWorkspace() {
   }
 
   return (
-    <DashboardLayout>
+    <DashboardLayout><ScopedModuleNotice state={apiState} data={data} resource={activeTab === 'calendar' ? 'meetings' : activeTab} onRetry={reloadApi} />
       <div className="mew-workspace">
         {/* Page Header (Stats in right top corner compactSummary) */}
         <PageHeader
@@ -3412,7 +2940,7 @@ function MeetingsEventsWorkspace() {
             >
               <FiCalendar />
               <span>Meetings</span>
-              <span className="mew-badge-count">{data.meetings.length}</span>
+              <span className="mew-badge-count">{data.resourceErrors?.meetings ? '—' : data.meetings.length}</span>
             </button>
 
             <button
@@ -3422,7 +2950,7 @@ function MeetingsEventsWorkspace() {
             >
               <FiActivity />
               <span>Events</span>
-              <span className="mew-badge-count">{data.events.length}</span>
+              <span className="mew-badge-count">{data.resourceErrors?.events ? '—' : data.events.length}</span>
             </button>
 
             <button
@@ -3432,7 +2960,7 @@ function MeetingsEventsWorkspace() {
             >
               <FiUsers />
               <span>Registrations</span>
-              <span className="mew-badge-count">{data.registrations.length}</span>
+              <span className="mew-badge-count">{data.resourceErrors?.registrations ? '—' : data.registrations.length}</span>
             </button>
 
           </nav>
@@ -4504,7 +4032,7 @@ function MeetingsEventsWorkspace() {
 
                   {/* Registration Form */}
                   {modalType === 'registration' && (
-                    <>
+                    <><label className="mew-form-field">Student ID *<input type="number" min="1" required value={formData.studentId || ''} onChange={e => setFormData({...formData,studentId:e.target.value})} /></label>
                       <label className="mew-form-field">
                         Select Campus Event *
                         <ProjectSelect
@@ -4576,7 +4104,7 @@ function MeetingsEventsWorkspace() {
 
                   {/* Minutes Form */}
                   {modalType === 'minute' && (
-                    <>
+                    <><label className="mew-form-field">Meeting *<ProjectSelect required value={formData.meetingId || ''} onChange={e => setFormData({...formData,meetingId:e.target.value,meetingTitle:data.meetings.find(m => m.id===e.target.value)?.title || ''})}><option value="">Select meeting</option>{data.meetings.map(m => <option key={m.id} value={m.id}>{m.title}</option>)}</ProjectSelect></label>
                       <label className="mew-form-field">
                         Related Meeting *
                         <input
@@ -5202,30 +4730,6 @@ const ProjectSelect = SearchableSelectImports_ProjectSelect
 const useState = reactImports_useState
 const useMemo = reactImports_useMemo
 const useEffect = reactImports_useEffect
-const FiBriefcase = fiImports_FiBriefcase
-const FiCalendar = fiImports_FiCalendar
-const FiClock = fiImports_FiClock
-const FiMapPin = fiImports_FiMapPin
-const FiUser = fiImports_FiUser
-const FiUsers = fiImports_FiUsers
-const FiCheckCircle = fiImports_FiCheckCircle
-const FiPlus = fiImports_FiPlus
-const FiSearch = fiImports_FiSearch
-const FiGrid = fiImports_FiGrid
-const FiList = fiImports_FiList
-const FiTrash2 = fiImports_FiTrash2
-const FiEdit2 = fiImports_FiEdit2
-const FiAward = fiImports_FiAward
-const FiFileText = fiImports_FiFileText
-const FiTrendingUp = fiImports_FiTrendingUp
-const FiCheckSquare = fiImports_FiCheckSquare
-const FiX = fiImports_FiX
-const FiExternalLink = fiImports_FiExternalLink
-const FiMail = fiImports_FiMail
-const FiPhone = fiImports_FiPhone
-const FiGlobe = fiImports_FiGlobe
-const FiDollarSign = fiImports_FiDollarSign
-const FiAlertTriangle = fiImports_FiAlertTriangle
 const DashboardLayout = DashboardLayoutImports_default
 const PageHeader = PageHeaderImports_default
 const ExportMenu = ExportMenuImports_default
@@ -5327,7 +4831,10 @@ function removePlacementDemoRecords(data) {
 }
 
 function PlacementWorkspace() {
-  const [activeTab, setActiveTab] = useState('drives') // drives | companies | applications | interviews | offers | reports
+  const [activeTab, setActiveTab] = useState('drives')
+  const { selectedCollegeId, selectedAcademicYearId } = AcademicContextImports_useAcademic()
+  const apiScope = { collegeId: selectedCollegeId, academicYearId: selectedAcademicYearId, enabled: Boolean(selectedCollegeId), resource: activeTab }
+ // drives | companies | applications | interviews | offers | reports
   const [viewMode, setViewMode] = useState('grid') // grid | table (for drives)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
@@ -5337,31 +4844,7 @@ function PlacementWorkspace() {
   const [pageSize, setPageSize] = useState(10)
   const [notice, setNotice] = useState('')
 
-  // Local Storage persistence
-  const [data, setData] = useState(() => {
-    try {
-      const saved = localStorage.getItem('CMS_BTECH_PLACEMENT_DATA_V1')
-      if (saved) return removePlacementDemoRecords(JSON.parse(saved))
-    } catch {
-      // ignore
-    }
-    return {
-      drives: [],
-      companies: [],
-      applications: [],
-      interviews: [],
-      offers: [],
-      stats: emptyPlacementStats(),
-    }
-  })
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('CMS_BTECH_PLACEMENT_DATA_V1', JSON.stringify(data))
-    } catch {
-      // ignore
-    }
-  }, [data])
+  const { data, reload: reloadApi, state: apiState, mutate: mutateApi } = useScopedModule(campusApi.loadPlacements, apiScope, { drives: [], companies: [], applications: [], interviews: [], offers: [] })
 
   // Modals state
   const [modalMode, setModalMode] = useState(null) // 'create' | 'edit'
@@ -5400,10 +4883,10 @@ function PlacementWorkspace() {
     if (activeTab === 'drives') {
       return data.drives.filter(item => {
         const matchQ = !q ||
-          item.title.toLowerCase().includes(q) ||
-          item.company.toLowerCase().includes(q) ||
-          item.role.toLowerCase().includes(q) ||
-          item.venue.toLowerCase().includes(q)
+          String(item.title ?? "").toLowerCase().includes(q) ||
+          String(item.company ?? "").toLowerCase().includes(q) ||
+          String(item.role ?? "").toLowerCase().includes(q) ||
+          String(item.venue ?? "").toLowerCase().includes(q)
         const matchStatus = statusFilter === 'ALL' || item.status === statusFilter
         const matchTier = tierFilter === 'ALL' || item.tier === tierFilter
         return matchQ && matchStatus && matchTier
@@ -5413,10 +4896,10 @@ function PlacementWorkspace() {
     if (activeTab === 'companies') {
       return data.companies.filter(item => {
         const matchQ = !q ||
-          item.name.toLowerCase().includes(q) ||
-          item.industry.toLowerCase().includes(q) ||
-          item.contactPerson.toLowerCase().includes(q) ||
-          item.contactEmail.toLowerCase().includes(q)
+          String(item.name ?? "").toLowerCase().includes(q) ||
+          String(item.industry ?? "").toLowerCase().includes(q) ||
+          String(item.contactPerson ?? "").toLowerCase().includes(q) ||
+          String(item.contactEmail ?? "").toLowerCase().includes(q)
         const matchStatus = statusFilter === 'ALL' || item.status === statusFilter
         const matchTier = tierFilter === 'ALL' || item.tier === tierFilter
         return matchQ && matchStatus && matchTier
@@ -5426,10 +4909,10 @@ function PlacementWorkspace() {
     if (activeTab === 'applications') {
       return data.applications.filter(item => {
         const matchQ = !q ||
-          item.studentName.toLowerCase().includes(q) ||
-          item.rollNo.toLowerCase().includes(q) ||
-          item.company.toLowerCase().includes(q) ||
-          item.role.toLowerCase().includes(q)
+          String(item.studentName ?? "").toLowerCase().includes(q) ||
+          String(item.rollNo ?? "").toLowerCase().includes(q) ||
+          String(item.company ?? "").toLowerCase().includes(q) ||
+          String(item.role ?? "").toLowerCase().includes(q)
         const matchStatus = statusFilter === 'ALL' || item.status === statusFilter
         const matchBranch = branchFilter === 'ALL' || item.branch === branchFilter
         return matchQ && matchStatus && matchBranch
@@ -5439,10 +4922,10 @@ function PlacementWorkspace() {
     if (activeTab === 'interviews') {
       return data.interviews.filter(item => {
         const matchQ = !q ||
-          item.candidateName.toLowerCase().includes(q) ||
-          item.rollNo.toLowerCase().includes(q) ||
-          item.company.toLowerCase().includes(q) ||
-          item.roundType.toLowerCase().includes(q)
+          String(item.candidateName ?? "").toLowerCase().includes(q) ||
+          String(item.rollNo ?? "").toLowerCase().includes(q) ||
+          String(item.company ?? "").toLowerCase().includes(q) ||
+          String(item.roundType ?? "").toLowerCase().includes(q)
         const matchStatus = statusFilter === 'ALL' || item.status === statusFilter
         const matchBranch = branchFilter === 'ALL' || item.branch === branchFilter
         return matchQ && matchStatus && matchBranch
@@ -5452,11 +4935,11 @@ function PlacementWorkspace() {
     if (activeTab === 'offers') {
       return data.offers.filter(item => {
         const matchQ = !q ||
-          item.studentName.toLowerCase().includes(q) ||
-          item.rollNo.toLowerCase().includes(q) ||
-          item.company.toLowerCase().includes(q) ||
-          item.role.toLowerCase().includes(q) ||
-          item.offerLetterRef.toLowerCase().includes(q)
+          String(item.studentName ?? "").toLowerCase().includes(q) ||
+          String(item.rollNo ?? "").toLowerCase().includes(q) ||
+          String(item.company ?? "").toLowerCase().includes(q) ||
+          String(item.role ?? "").toLowerCase().includes(q) ||
+          String(item.offerLetterRef ?? "").toLowerCase().includes(q)
         const matchStatus = statusFilter === 'ALL' || item.status === statusFilter
         const matchBranch = branchFilter === 'ALL' || item.branch === branchFilter
         return matchQ && matchStatus && matchBranch
@@ -5503,7 +4986,7 @@ function PlacementWorkspace() {
         venue: 'Campus Auditorium & Virtual',
         eligibility: 'B.Tech CSE, IT, ECE · Min 7.5 CGPA',
         rounds: 'Online Coding Test, Technical Interview, HR Round',
-        status: 'Upcoming',
+        status: 'Draft',
         eligibleBranches: ['CSE', 'IT'],
         applicantsCount: 0,
         shortlistedCount: 0,
@@ -5531,7 +5014,7 @@ function PlacementWorkspace() {
     } else if (type === 'application') {
       setActiveItem({
         id: `APP-${Date.now().toString().slice(-4)}`,
-        studentName: '',
+        studentName: '', studentId: '',
         rollNo: '21B81A0501',
         branch: 'CSE',
         cgpa: 8.0,
@@ -5587,70 +5070,10 @@ function PlacementWorkspace() {
     setActiveItem({ ...item })
   }
 
-  const handleSaveModal = (e) => {
+  const handleSaveModal = async e => {
     e.preventDefault()
     if (!activeItem) return
-
-    if (modalType === 'drive') {
-      setData(prev => {
-        const exists = prev.drives.some(d => d.id === activeItem.id)
-        return {
-          ...prev,
-          drives: exists
-            ? prev.drives.map(d => d.id === activeItem.id ? activeItem : d)
-            : [activeItem, ...prev.drives],
-        }
-      })
-      setNotice(`Recruitment drive "${activeItem.title}" saved successfully.`)
-    } else if (modalType === 'company') {
-      setData(prev => {
-        const exists = prev.companies.some(c => c.id === activeItem.id)
-        return {
-          ...prev,
-          companies: exists
-            ? prev.companies.map(c => c.id === activeItem.id ? activeItem : c)
-            : [activeItem, ...prev.companies],
-        }
-      })
-      setNotice(`Partner company "${activeItem.name}" updated successfully.`)
-    } else if (modalType === 'application') {
-      setData(prev => {
-        const exists = prev.applications.some(a => a.id === activeItem.id)
-        return {
-          ...prev,
-          applications: exists
-            ? prev.applications.map(a => a.id === activeItem.id ? activeItem : a)
-            : [activeItem, ...prev.applications],
-        }
-      })
-      setNotice(`Student application for "${activeItem.studentName}" updated successfully.`)
-    } else if (modalType === 'interview') {
-      setData(prev => {
-        const exists = prev.interviews.some(i => i.id === activeItem.id)
-        return {
-          ...prev,
-          interviews: exists
-            ? prev.interviews.map(i => i.id === activeItem.id ? activeItem : i)
-            : [activeItem, ...prev.interviews],
-        }
-      })
-      setNotice(`Interview round for "${activeItem.candidateName}" updated.`)
-    } else if (modalType === 'offer') {
-      setData(prev => {
-        const exists = prev.offers.some(o => o.id === activeItem.id)
-        return {
-          ...prev,
-          offers: exists
-            ? prev.offers.map(o => o.id === activeItem.id ? activeItem : o)
-            : [activeItem, ...prev.offers],
-        }
-      })
-      setNotice(`Job offer for "${activeItem.studentName}" saved successfully.`)
-    }
-
-    setModalMode(null)
-    setActiveItem(null)
-    setTimeout(() => setNotice(''), 4000)
+    if (await mutateApi(() => campusApi.savePlacement(modalType, activeItem, modalMode === 'edit', apiScope, data))) { setModalMode(null); setActiveItem(null); setNotice('Record saved successfully.') }
   }
 
   // Delete Handlers
@@ -5658,67 +5081,30 @@ function PlacementWorkspace() {
     setDeleteTarget({ id, type, label })
   }
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deleteTarget) return
-    const { id, type, label } = deleteTarget
-
-    if (type === 'drive') {
-      setData(prev => ({ ...prev, drives: prev.drives.filter(d => d.id !== id) }))
-    } else if (type === 'company') {
-      setData(prev => ({ ...prev, companies: prev.companies.filter(c => c.id !== id) }))
-    } else if (type === 'application') {
-      setData(prev => ({ ...prev, applications: prev.applications.filter(a => a.id !== id) }))
-    } else if (type === 'interview') {
-      setData(prev => ({ ...prev, interviews: prev.interviews.filter(i => i.id !== id) }))
-    } else if (type === 'offer') {
-      setData(prev => ({ ...prev, offers: prev.offers.filter(o => o.id !== id) }))
-    }
-
-    setDeleteTarget(null)
-    setNotice(`"${label || 'Record'}" deleted successfully.`)
-    setTimeout(() => setNotice(''), 4000)
+    const { id, type } = deleteTarget
+    if (!['drive', 'company', 'interview'].includes(type)) { setNotice('This record has no matching delete API.'); setDeleteTarget(null); return }
+    const key = { drive: 'drives', company: 'companies', interview: 'interviews' }[type]
+    if (await mutateApi(() => campusApi.call(`placements/${key}/${campusApi.requireId(id)}`, { method: 'DELETE', query: { collegeId: selectedCollegeId } }))) { setDeleteTarget(null); setNotice('Record deleted successfully.') }
   }
-
-  // Direct status setters
-  const handleSetInterviewStatus = (intId, newStatus) => {
-    setData(prev => ({
-      ...prev,
-      interviews: prev.interviews.map(i => i.id === intId ? { ...i, status: newStatus } : i)
-    }))
+  const saveInterviewStatus = (id, status) => {
+    if (!['Cleared','Eliminated'].includes(status)) throw new Error('Only interview results can be recorded here. Edit a scheduled interview to change its details.')
+    return campusApi.call(`placements/interviews/${campusApi.requireId(id)}/result`,{method:'POST',query:{collegeId:selectedCollegeId},body:{interviewResult:status==='Cleared'?'PASSED':'FAILED',completedAt:new Date().toISOString()}})
   }
-
-  const markAllInterviews = (statusToSet) => {
-    setData(prev => ({
-      ...prev,
-      interviews: prev.interviews.map(i => ({ ...i, status: statusToSet }))
-    }))
-    setNotice(`All interviews marked as "${statusToSet}".`)
-    setTimeout(() => setNotice(''), 4000)
-  }
-
-  const handleSetOfferStatus = (offerId, newStatus) => {
-    setData(prev => ({
-      ...prev,
-      offers: prev.offers.map(o => o.id === offerId ? { ...o, status: newStatus } : o)
-    }))
-  }
-
-  const markAllOffers = (statusToSet) => {
-    setData(prev => ({
-      ...prev,
-      offers: prev.offers.map(o => ({ ...o, status: statusToSet }))
-    }))
-    setNotice(`All job offers marked as "${statusToSet}".`)
-    setTimeout(() => setNotice(''), 4000)
-  }
+  const saveOfferStatus = (id, status) => campusApi.call(`placements/selections/${campusApi.requireId(id)}/offer`, { method: 'PATCH', body: { offerStatus: campusApi.statusCode(status) }, query: { collegeId: selectedCollegeId } })
+  const handleSetInterviewStatus = (id, status) => mutateApi(() => saveInterviewStatus(id, status))
+  const handleSetOfferStatus = (id, status) => mutateApi(() => saveOfferStatus(id, status))
+  const markAllInterviews = status => mutateApi(async () => { for (const row of data.interviews) await saveInterviewStatus(row.id, status) })
+  const markAllOffers = status => mutateApi(async () => { for (const row of data.offers) await saveOfferStatus(row.id, status) })
 
   // KPI Calculations
   const totalDrives = data.drives.length
-  const activeDrivesCount = data.drives.filter(d => d.status === 'Active' || d.status === 'Upcoming').length
+  const activeDrivesCount = data.drives.filter(d => ['Published','Registration Open','Registration Closed','Ongoing'].includes(d.status)).length
   const totalCompaniesCount = data.companies.length
 
   return (
-    <DashboardLayout>
+    <DashboardLayout><ScopedModuleNotice state={apiState} data={data} resource={activeTab} onRetry={reloadApi} />
       <div className="plw-workspace">
         {/* Page Header (Stats in compactSummary top-right corner) */}
         <PageHeader
@@ -5729,8 +5115,8 @@ function PlacementWorkspace() {
             'Training & Placement Cell'
           ]}
           compactSummary={[
-            { label: 'Active Drives', value: activeDrivesCount },
-            { label: 'Corporate Partners', value: totalCompaniesCount },
+            { label: 'Active Drives', value: data.resourceErrors?.drives ? '—' : activeDrivesCount },
+            { label: 'Corporate Partners', value: data.resourceErrors?.companies ? '—' : totalCompaniesCount },
           ]}
         />
 
@@ -5751,7 +5137,7 @@ function PlacementWorkspace() {
             >
               <FiBriefcase />
               <span>Drives</span>
-              <span className="plw-badge-count">{data.drives.length}</span>
+              <span className="plw-badge-count">{data.resourceErrors?.drives ? '—' : data.drives.length}</span>
             </button>
 
             <button
@@ -5761,7 +5147,7 @@ function PlacementWorkspace() {
             >
               <FiGlobe />
               <span>Companies</span>
-              <span className="plw-badge-count">{data.companies.length}</span>
+              <span className="plw-badge-count">{data.resourceErrors?.companies ? '—' : data.companies.length}</span>
             </button>
 
             <button
@@ -5771,7 +5157,7 @@ function PlacementWorkspace() {
             >
               <FiUsers />
               <span>Applications</span>
-              <span className="plw-badge-count">{data.applications.length}</span>
+              <span className="plw-badge-count">{data.resourceErrors?.applications ? '—' : data.applications.length}</span>
             </button>
 
             <button
@@ -5781,7 +5167,7 @@ function PlacementWorkspace() {
             >
               <FiClock />
               <span>Interviews</span>
-              <span className="plw-badge-count">{data.interviews.length}</span>
+              <span className="plw-badge-count">{data.resourceErrors?.interviews ? '—' : data.interviews.length}</span>
             </button>
 
           </nav>
@@ -5950,7 +5336,7 @@ function PlacementWorkspace() {
                   <>
                     <option value="Applied">Applied</option>
                     <option value="Shortlisted">Shortlisted</option>
-                    <option value="Interviewing">Interviewing</option>
+                    <option value="Under Review">Under Review</option>
                     <option value="Selected">Selected</option>
                     <option value="Rejected">Rejected</option>
                   </>
@@ -6028,7 +5414,7 @@ function PlacementWorkspace() {
                           <p className="plw-card-role">{drive.role}</p>
                         </div>
                       </div>
-                      <span className={`plw-tier-chip plw-tier--${drive.tier.toLowerCase().replace(' ', '-')}`}>
+                      <span className={`plw-tier-chip plw-tier--${String(drive.tier || '').toLowerCase().replace(' ', '-')}`}>
                         {drive.tier}
                       </span>
                     </div>
@@ -6037,7 +5423,7 @@ function PlacementWorkspace() {
                       <span className="plw-ctc-pill">
                         <FiDollarSign /> {drive.ctc}
                       </span>
-                      <span className={`plw-status-chip plw-status--${drive.status.toLowerCase()}`}>
+                      <span className={`plw-status-chip plw-status--${String(drive.status ?? "").toLowerCase()}`}>
                         {drive.status}
                       </span>
                     </div>
@@ -6139,7 +5525,7 @@ function PlacementWorkspace() {
                         </td>
                         <td>
                           <div><strong>{drive.role}</strong></div>
-                          <span className={`plw-tier-chip plw-tier--${drive.tier.toLowerCase().replace(' ', '-')}`}>
+                          <span className={`plw-tier-chip plw-tier--${String(drive.tier || '').toLowerCase().replace(' ', '-')}`}>
                             {drive.tier}
                           </span>
                         </td>
@@ -6156,7 +5542,7 @@ function PlacementWorkspace() {
                           </div>
                         </td>
                         <td>
-                          <span className={`plw-status-chip plw-status--${drive.status.toLowerCase()}`}>
+                          <span className={`plw-status-chip plw-status--${String(drive.status ?? "").toLowerCase()}`}>
                             {drive.status}
                           </span>
                         </td>
@@ -6239,7 +5625,7 @@ function PlacementWorkspace() {
                       </td>
                       <td>{comp.industry}</td>
                       <td>
-                        <span className={`plw-tier-chip plw-tier--${comp.tier.toLowerCase().replace(' ', '-')}`}>
+                        <span className={`plw-tier-chip plw-tier--${String(comp.tier || '').toLowerCase().replace(' ', '-')}`}>
                           {comp.tier}
                         </span>
                       </td>
@@ -6339,7 +5725,7 @@ function PlacementWorkspace() {
                         <span style={{ fontSize: '12px', fontWeight: '600', color: '#1e40af' }}>{app.currentRound}</span>
                       </td>
                       <td>
-                        <span className={`plw-status-chip plw-status--${app.status.toLowerCase()}`}>
+                        <span className={`plw-status-chip plw-status--${String(app.status ?? "").toLowerCase()}`}>
                           {app.status}
                         </span>
                       </td>
@@ -6574,8 +5960,8 @@ function PlacementWorkspace() {
                           <input
                             required
                             type="text"
-                            value={activeItem.ctc}
-                            onChange={e => setActiveItem({ ...activeItem, ctc: e.target.value })}
+                            value={activeItem.ctcNum}
+                            onChange={e => setActiveItem({ ...activeItem, ctcNum: e.target.value, ctc: `₹ ${e.target.value} LPA` })}
                             placeholder="e.g. ₹ 44.0 LPA"
                           />
                         </label>
@@ -6606,9 +5992,7 @@ function PlacementWorkspace() {
                             value={activeItem.status}
                             onChange={e => setActiveItem({ ...activeItem, status: e.target.value })}
                           >
-                            <option value="Upcoming">Upcoming</option>
-                            <option value="Active">Active</option>
-                            <option value="Completed">Completed</option>
+                            {['Draft','Published','Registration Open','Registration Closed','Ongoing','Completed','Cancelled'].map(value => <option key={value} value={value}>{value}</option>)}
                           </ProjectSelect>
                         </label>
                       </div>
@@ -6721,7 +6105,7 @@ function PlacementWorkspace() {
                   {modalType === 'application' && (
                     <>
                       <div className="plw-form-row">
-                        <label className="plw-form-field">
+                        <label><span>Student ID *</span><input type="number" min="1" required value={activeItem.studentId || ''} onChange={e => setActiveItem(prev => ({ ...prev, studentId: e.target.value }))} /></label><label className="plw-form-field">
                           Student Full Name *
                           <input
                             required
@@ -6940,8 +6324,8 @@ function PlacementWorkspace() {
                           <input
                             required
                             type="text"
-                            value={activeItem.ctc}
-                            onChange={e => setActiveItem({ ...activeItem, ctc: e.target.value })}
+                            value={activeItem.ctcNum}
+                            onChange={e => setActiveItem({ ...activeItem, ctcNum: e.target.value, ctc: `₹ ${e.target.value} LPA` })}
                             placeholder="e.g. ₹ 16.5 LPA"
                           />
                         </label>
@@ -7673,7 +7057,10 @@ return { default: PlacementWorkspace }
 })()
 
 export const CampusWorkspace = CampusWorkspaceScreen.default
-export const LibraryWorkspace = LibraryWorkspaceScreen.default
-export const MeetingsEventsWorkspace = MeetingsEventsWorkspaceScreen.default
-export const PlacementWorkspace = PlacementWorkspaceScreen.default
+export function LibraryWorkspace() {
+  const a = AcademicContextImports_useAcademic(); const Screen = LibraryWorkspaceScreen.default; return <Screen key={`${a.selectedCollegeId}:${a.selectedAcademicYearId}`} /> }
+export function MeetingsEventsWorkspace() {
+  const a = AcademicContextImports_useAcademic(); const Screen = MeetingsEventsWorkspaceScreen.default; return <Screen key={`${a.selectedCollegeId}:${a.selectedAcademicYearId}`} /> }
+export function PlacementWorkspace() {
+  const a = AcademicContextImports_useAcademic(); const Screen = PlacementWorkspaceScreen.default; return <Screen key={`${a.selectedCollegeId}:${a.selectedAcademicYearId}`} /> }
 export default CampusWorkspace

@@ -7,7 +7,7 @@ import { MyProfile, Settings } from './pages/profile/MyProfile'
 import { Attendance, AttendanceSessionDetails } from './pages/attendance/Attendance'
 import { FacultyManagement, FacultyLeaveManagement, Payroll } from './pages/faculty/FacultyManagement'
 import { ExaminationSetup, ExaminationList, CreateExamination, ExamType, ExamSchedule, ExamRules } from './pages/examinations/examination-setup/ExaminationSetup'
-import { ExamTimetable, CreateExamTimetable, ExamScheduleList, DepartmentExamSchedule, StudentExamSchedule, HallAllocation, ExamConfiguration, CompletedExams } from './pages/examinations/exam-timetable/ExamModule'
+import { ExamTimetable, ExamScheduleList, DepartmentExamSchedule, StudentExamSchedule, HallAllocation, ExamConfiguration, CompletedExams } from './pages/examinations/exam-timetable/ExamModule'
 import { MarksManagement, MarksEntry, BulkMarksUpload, EditMarks, StudentMarks, SubjectMarksReport, MarksApproval } from './pages/examinations/marks-management/MarksManagement'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -239,7 +239,7 @@ export default function App() {
               </Route>
 
               <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN]} />}>
-              <Route path="/exam/create" element={<CreateExamTimetable />} />
+              <Route path="/exam/create" element={<Navigate to="/exam/timetable" replace />} />
               <Route path="/exam/department-schedule" element={<DepartmentExamSchedule />} />
               <Route path="/exam/schedules" element={<ExamScheduleList />} />
               <Route path="/exam/timetable" element={<ExamTimetable />} />
@@ -254,7 +254,7 @@ export default function App() {
               <Route path="/examination-setup/exam-schedule" element={<ExamSchedule />} />
               <Route path="/examination-setup/exam-rules" element={<ExamRules />} />
               <Route path="/exam-timetable/*" element={<ExamTimetable />} />
-              <Route path="/exam-timetable/create-exam-timetable" element={<CreateExamTimetable />} />
+              <Route path="/exam-timetable/create-exam-timetable" element={<Navigate to="/exam/timetable" replace />} />
               <Route path="/exam-timetable/exam-schedule-list" element={<ExamScheduleList />} />
               <Route path="/exam-timetable/department-exam-schedule" element={<DepartmentExamSchedule />} />
               <Route path="/exam-timetable/student-exam-schedule" element={<StudentExamSchedule />} />

@@ -1,4 +1,4 @@
-﻿import { usePortalData } from '../../hooks/usePortalData.js'
+import { usePortalData } from '../../hooks/usePortalData.js'
 import { useState } from 'react'
 import { adminService } from '../../services/portals/adminService.js'
 import { useAcademic } from '../../context/AcademicContext.jsx'

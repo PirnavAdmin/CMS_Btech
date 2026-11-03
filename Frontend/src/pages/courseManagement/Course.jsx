@@ -6,7 +6,7 @@ import ExportMenuImports_default, { PrintDetailsButton as ExportMenuImports_Prin
 import { branchColumns as exportColumnsImports_branchColumns, courseColumns as exportColumnsImports_courseColumns, structureColumns as exportColumnsImports_structureColumns } from '../../utils/exportColumns'
 import { cloneElement as reactImports_cloneElement, useEffect as reactImports_useEffect, useMemo as reactImports_useMemo, useRef as reactImports_useRef, useState as reactImports_useState } from 'react'
 import { Link as react_router_domImports_Link, useNavigate as react_router_domImports_useNavigate, useParams as react_router_domImports_useParams, useSearchParams as react_router_domImports_useSearchParams } from 'react-router-dom'
-import { FiAlertCircle as fiImports_FiAlertCircle, FiArrowLeft as fiImports_FiArrowLeft, FiEdit2 as fiImports_FiEdit2, FiEye as fiImports_FiEye, FiFilter as fiImports_FiFilter, FiGitBranch as fiImports_FiGitBranch, FiLayers as fiImports_FiLayers, FiPlus as fiImports_FiPlus, FiSearch as fiImports_FiSearch, FiTarget as fiImports_FiTarget, FiToggleLeft as fiImports_FiToggleLeft, FiToggleRight as fiImports_FiToggleRight, FiUsers as fiImports_FiUsers, FiBookOpen as fiImports_FiBookOpen } from 'react-icons/fi'
+import { FiAlertCircle, FiArrowLeft, FiEdit2, FiEye, FiFilter, FiGitBranch, FiLayers, FiPlus, FiSearch, FiTarget, FiToggleLeft, FiToggleRight, FiUsers, FiBookOpen } from 'react-icons/fi'
 import DashboardLayoutImports_default from '../../layouts/DashboardLayout'
 import FilterPanelImports_default from '../../components/FilterPanel'
 import TablePaginationImports_default, { PAGE_SIZE as TablePaginationImports_PAGE_SIZE } from '../../components/TablePagination'
@@ -46,19 +46,6 @@ const Link = react_router_domImports_Link
 const useNavigate = react_router_domImports_useNavigate
 const useParams = react_router_domImports_useParams
 const useSearchParams = react_router_domImports_useSearchParams
-const FiAlertCircle = fiImports_FiAlertCircle
-const FiArrowLeft = fiImports_FiArrowLeft
-const FiEdit2 = fiImports_FiEdit2
-const FiEye = fiImports_FiEye
-const FiFilter = fiImports_FiFilter
-const FiGitBranch = fiImports_FiGitBranch
-const FiLayers = fiImports_FiLayers
-const FiPlus = fiImports_FiPlus
-const FiSearch = fiImports_FiSearch
-const FiTarget = fiImports_FiTarget
-const FiToggleLeft = fiImports_FiToggleLeft
-const FiToggleRight = fiImports_FiToggleRight
-const FiUsers = fiImports_FiUsers
 const DashboardLayout = DashboardLayoutImports_default
 const FilterPanel = FilterPanelImports_default
 const SearchableSelect = SearchableSelectImports_default
@@ -901,17 +888,6 @@ const useState = reactImports_useState
 const Link = react_router_domImports_Link
 const useParams = react_router_domImports_useParams
 const useNavigate = react_router_domImports_useNavigate
-const FiArrowLeft = fiImports_FiArrowLeft
-const FiBookOpen = fiImports_FiBookOpen
-const FiEdit2 = fiImports_FiEdit2
-const FiEye = fiImports_FiEye
-const FiFilter = fiImports_FiFilter
-const FiLayers = fiImports_FiLayers
-const FiPlus = fiImports_FiPlus
-const FiSearch = fiImports_FiSearch
-const FiToggleLeft = fiImports_FiToggleLeft
-const FiToggleRight = fiImports_FiToggleRight
-const FiUsers = fiImports_FiUsers
 const DashboardLayout = DashboardLayoutImports_default
 const FilterPanel = FilterPanelImports_default
 const SearchableSelect = SearchableSelectImports_default

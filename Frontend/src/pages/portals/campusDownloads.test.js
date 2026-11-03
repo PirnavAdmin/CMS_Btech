@@ -1,4 +1,4 @@
-﻿import test from 'node:test'
+import test from 'node:test'
 import assert from 'node:assert/strict'
 import { eventCalendar, mentoringCsv } from './campusDownloads.js'
 import { facultyNavigation, facultySidebarKeys } from '../../components/portals/portalNavigation.js'

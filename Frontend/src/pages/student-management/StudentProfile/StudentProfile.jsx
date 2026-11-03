@@ -89,23 +89,7 @@ import { approvedStudentProfiles, isApprovedAdmission } from '../../../utils/app
 import ExportMenu, { PrintDetailsButton } from '../../../components/ExportMenu'
 import { profileColumns } from '../../../utils/exportColumns'
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  FiAlertCircle,
-  FiArrowLeft,
-  FiBookOpen,
-  FiCheckCircle,
-  FiChevronLeft,
-  FiChevronRight,
-  FiEdit2,
-  FiFileText,
-  FiFilter,
-  FiRefreshCw,
-  FiSave,
-  FiSearch,
-  FiUser,
-  FiUsers,
-  FiX,
-} from "react-icons/fi";
+import { FiAlertCircle, FiArrowLeft, FiBookOpen, FiCheckCircle, FiChevronLeft, FiChevronRight, FiEdit2, FiFileText, FiFilter, FiRefreshCw, FiSave, FiSearch, FiUser, FiUsers, FiX } from "react-icons/fi";
 import InfoCard from "../../../components/InfoCard";
 import StatusBadge from "../../../components/StatusBadge";
 import DashboardLayout from "../../../layouts/DashboardLayout";

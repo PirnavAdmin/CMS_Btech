@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+﻿import { useEffect, useRef, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { FiAward, FiBook, FiBookOpen, FiBriefcase, FiCalendar, FiCheckCircle, FiCheckSquare, FiChevronDown, FiChevronLeft, FiChevronRight, FiCreditCard, FiEdit3, FiFileText, FiGitBranch, FiGrid, FiHome, FiLayers, FiShield, FiTrendingUp, FiUser, FiUserPlus, FiUsers, FiX } from 'react-icons/fi'
+import { Award as FiAward, Book as FiBook, BookOpen as FiBookOpen, Briefcase as FiBriefcase, Calendar as FiCalendar, CheckCircle as FiCheckCircle, CheckSquare as FiCheckSquare, ChevronDown as FiChevronDown, ChevronLeft as FiChevronLeft, ChevronRight as FiChevronRight, CreditCard as FiCreditCard, Edit3 as FiEdit3, FileText as FiFileText, GitBranch as FiGitBranch, Grid as FiGrid, Home as FiHome, Layers as FiLayers, Shield as FiShield, TrendingUp as FiTrendingUp, User as FiUser, UserPlus as FiUserPlus, Users as FiUsers, X as FiX } from 'lucide-react'
 import { getUserRole, getAccessToken } from '../auth/auth'
 import { authAccessApi } from '../api/apiEndpoints'
 import { useEffect as useReactEffect, useState as useReactState } from 'react'
@@ -187,8 +187,8 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
         <button className="sidebar-close" onClick={onClose} aria-label="Close navigation"><FiX /></button>
       </div>
       <nav ref={navigationRef} onScroll={rememberScrollPosition} className="sidebar-navigation">
-        <p className="sidebar-section-label">Dashboard</p>
-        {canView('dashboard') && <Item to="/dashboard" icon={FiHome} tone="blue" onNavigate={onClose}>Dashboard</Item>}
+        <p className="sidebar-section-label">Overview</p>
+        {canView('dashboard') && <Item to="/dashboard" icon={FiHome} tone="blue" onNavigate={onClose}>Overview</Item>}
         {userRole === ROLES.ADMIN && <>
           <p className="sidebar-section-label">College & Academic Setup</p>
           {academicLinks.filter(link => canView(link.module)).map(link => <Item {...link} key={link.to} onNavigate={onClose}>{link.label}</Item>)}

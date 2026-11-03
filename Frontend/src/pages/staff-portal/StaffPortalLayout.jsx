@@ -1,27 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import {
-  FiBell,
-  FiBookOpen,
-  FiCalendar,
-  FiCheckCircle,
-  FiCheckSquare,
-  FiChevronDown,
-  FiChevronLeft,
-  FiChevronRight,
-  FiClock,
-  FiFileText,
-  FiGrid,
-  FiLock,
-  FiLogOut,
-  FiMenu,
-  FiMoon,
-  FiSearch,
-  FiSun,
-  FiUser,
-  FiUsers,
-  FiX,
-} from 'react-icons/fi'
+import { FiBell, FiBookOpen, FiCalendar, FiCheckCircle, FiCheckSquare, FiChevronDown, FiChevronLeft, FiChevronRight, FiClock, FiFileText, FiGrid, FiLock, FiLogOut, FiMenu, FiMoon, FiSearch, FiSun, FiUser, FiUsers, FiX } from 'react-icons/fi'
 import '../../layouts/DashboardLayout.css'
 import '../../layouts/AccountMenu.css'
 import '../../components/Sidebar.css'
