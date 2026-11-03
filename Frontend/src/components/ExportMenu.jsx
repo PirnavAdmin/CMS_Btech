@@ -17,7 +17,7 @@ const columnsFromSections = (rows, sectionsForRecord) => {
   }))
 }
 
-export default function ExportMenu({ rows = [], columns, filename, title, loading = false, scope = 'Current filtered results', unavailable = '', mode = 'list', recordSections, reportType = '', onDownload, allowEmpty = false, printLabel = 'Print / Save as PDF' }) {
+export default function ExportMenu({ rows = [], columns, filename, title, loading = false, scope = 'Current filtered results', unavailable = '', mode = 'list', recordSections, reportType = '', onDownload, allowEmpty = false, directDownload = false, printLabel = 'Print / Save as PDF' }) {
   const [open, setOpen] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -40,10 +40,12 @@ export default function ExportMenu({ rows = [], columns, filename, title, loadin
   const selectedSections = () => Array.isArray(recordSections) ? cleanRecordSections(recordSections) : readVisibleRecordSections(root.current?.closest('[data-export-record]'))
   const downloadRecord = () => exportToCsv(singleRecordCsvOptions(selectedSections(), filename))
   const printRecord = () => printSingleRecord({ title, sections: selectedSections() })
+  const download = () => run(single ? downloadRecord : onDownload || exportToCsv, single ? 'Record downloaded successfully' : `${csvLabel} downloaded successfully`)
   const csvLabel = reportLabel || 'CSV'
-  return <div className="export-control" ref={root} data-no-print onKeyDown={event => { if (event.key === 'Escape') { setOpen(false); trigger.current?.focus() } }}>
-    <button className="export-button" type="button" ref={trigger} disabled={disabled} aria-expanded={open && !disabled} aria-controls={id} aria-label={`Export ${title}`} title={unavailable || (loading ? 'Loading records...' : rows.length ? scope : 'No records available to export.')} onClick={() => setOpen(value => !value)}><FiDownload aria-hidden="true" /> Export <FiChevronDown aria-hidden="true" /></button>
-    {open && !disabled && <div className="export-options" id={id}><small>{single ? 'Current record only' : `${scope} (${rows.length})`}</small><button type="button" disabled={!single && !onDownload && !hasMappedRows} onClick={() => run(single ? downloadRecord : onDownload || exportToCsv, single ? 'Record downloaded successfully' : `${csvLabel} downloaded successfully`)}><FiDownload aria-hidden="true" /> {reportLabel ? `Download ${reportLabel}` : 'Download CSV'}</button><button type="button" disabled={!single && (!rows.length || !exportColumns?.length)} onClick={() => run(single ? printRecord : printResults, 'Print preview opened. Choose Print or Save as PDF in your browser.')}><FiPrinter aria-hidden="true" /> {printLabel}</button></div>}
+  return <div className={`export-control${directDownload ? ' export-control--direct' : ''}`} ref={root} data-no-print onKeyDown={event => { if (event.key === 'Escape') { setOpen(false); trigger.current?.focus() } }}>
+    <button className="export-button" type="button" ref={trigger} disabled={disabled} aria-expanded={directDownload ? undefined : open && !disabled} aria-controls={id} aria-label={`Export ${title}`} title={unavailable || (loading ? 'Loading records...' : rows.length ? scope : 'No records available to export.')} onClick={directDownload ? download : () => setOpen(value => !value)}><FiDownload aria-hidden="true" /> Export{!directDownload && <FiChevronDown aria-hidden="true" />}</button>
+    {directDownload && <button className="export-button export-button--toggle" type="button" disabled={disabled} aria-expanded={open && !disabled} aria-controls={id} aria-label={`More export options for ${title}`} title="More export options" onClick={() => setOpen(value => !value)}><FiChevronDown aria-hidden="true" /></button>}
+    {open && !disabled && <div className="export-options" id={id}><small>{single ? 'Current record only' : `${scope} (${rows.length})`}</small>{!directDownload && <button type="button" disabled={!single && !onDownload && !hasMappedRows} onClick={download}><FiDownload aria-hidden="true" /> {reportLabel ? `Download ${reportLabel}` : 'Download CSV'}</button>}<button type="button" disabled={!single && (!rows.length || !exportColumns?.length)} onClick={() => run(single ? printRecord : printResults, 'Print preview opened. Choose Print or Save as PDF in your browser.') }><FiPrinter aria-hidden="true" /> {printLabel}</button></div>}
     {busy && <span role="status">Preparing download...</span>}
     {error && <span className="export-error" role="alert">{error}</span>}
   </div>

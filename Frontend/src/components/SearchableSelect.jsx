@@ -40,6 +40,7 @@ export default function SearchableSelect({
   required = false,
   className = '',
   menuClassName = '',
+  menuPlacement = 'auto',
   triggerProps = {},
   noOptionsMessage = 'No matching options found.',
   getOptionLabel = (option) => typeof option === 'string' || typeof option === 'number' ? String(option) : option?.label || option?.name || option?.title || '',
@@ -84,7 +85,7 @@ export default function SearchableSelect({
       const viewportWidth = viewport?.width || window.innerWidth
       setMenuStyle(selectPlacement(rect, {
         top: viewportTop, left: viewportLeft, height: viewportHeight, width: viewportWidth,
-      }, window.innerHeight))
+      }, window.innerHeight, menuPlacement))
     }
     const onScroll = event => {
       if (!menuRef.current?.contains(event.target)) position()
@@ -100,7 +101,7 @@ export default function SearchableSelect({
       window.visualViewport?.removeEventListener('resize', position)
       window.visualViewport?.removeEventListener('scroll', position)
     }
-  }, [open, options, query, loading])
+  }, [open, options, query, loading, menuPlacement])
 
   useEffect(() => {
     if (!open) return undefined
@@ -265,11 +266,11 @@ export default function SearchableSelect({
   )
 }
 
-function selectPlacement(rect, viewport, windowHeight) {
+function selectPlacement(rect, viewport, windowHeight, placement = 'auto') {
   const padding = 8, gap = 4
   const below = Math.max(0, viewport.top + viewport.height - rect.bottom - padding - gap)
   const above = Math.max(0, rect.top - viewport.top - padding - gap)
-  const opensAbove = below < 140 && above > below
+  const opensAbove = placement !== 'bottom' && below < 140 && above > below
   const width = Math.min(rect.width, Math.max(0, viewport.width - padding * 2))
   return {
     top: opensAbove ? undefined : Math.round(rect.bottom + gap),
@@ -300,13 +301,13 @@ export function selectOptions(children, inheritedDisabled = false) {
 
 // Retain the native control for form submission and existing React event handlers.
 // Small lists and multi-select listboxes keep their existing native behavior.
-export function ProjectSelect({ children, ...props }) {
+export function ProjectSelect({ children, forceCustom = false, menuPlacement = 'auto', ...props }) {
   const nativeRef = useRef(null)
   const wrapperRef = useRef(null)
   const [uncontrolledValue, setUncontrolledValue] = useState(props.defaultValue ?? '')
   const options = selectOptions(children)
-  const searchable = !props.multiple && (!props.size || Number(props.size) === 1)
-    && options.filter(option => option.value !== '').length >= 8
+  const searchable = forceCustom || (!props.multiple && (!props.size || Number(props.size) === 1)
+    && options.filter(option => option.value !== '').length >= 8)
   const selectedValue = props.value ?? uncontrolledValue
   useEffect(() => {
     const native = nativeRef.current
@@ -323,6 +324,7 @@ export function ProjectSelect({ children, ...props }) {
     <SearchableSelect
       label={props['aria-label'] || props.name || options.find(option => !option.value)?.label || 'Select an option'}
       value={selectedValue} options={options} disabled={props.disabled} required={props.required}
+      menuPlacement={menuPlacement}
       error={props['aria-invalid'] === true || props['aria-invalid'] === 'true'}
       placeholder={options.find(option => !option.value)?.label || 'Select an option'}
       triggerProps={{ id: props.id, name: props.name, 'aria-labelledby': props['aria-labelledby'], 'aria-describedby': props['aria-describedby'], onBlur: props.onBlur }}
