@@ -663,7 +663,7 @@ function Form() {
       <Link className="cm-button secondary" to="/branches"><FiArrowLeft /> Back</Link>
     </Header>
     <Notice>{error}</Notice>
-    <form onSubmit={submit} className="branch-form-layout">
+    <form onSubmit={submit} className="branch-form-layout" data-without-live-preview="true">
       <section className="cm-panel branch-form">
         <nav className="branch-steps"><button type="button" className={step === 0 ? 'active' : ''} onClick={() => setStep(0)}><b>1</b>Branch Details</button><button type="button" className={step === 1 ? 'active' : ''} onClick={nextStep}><b>2</b>Branch Configuration</button></nav>
         {step === 0 && <section className="branch-step-content">
@@ -676,77 +676,7 @@ function Form() {
         </section>}
         {step === 1 && <section className="branch-step-content"><h2>Branch Configuration</h2><div className="branch-structure-summary"><h3>Course Structure</h3>{courseStructureLoading ? <p>Loading course structure...</p> : <><div><span>Duration</span><strong>{selectedCourse?.durationValue ? `${selectedCourse.durationValue} Years` : ''}</strong></div><div><span>Total Semesters</span><strong>{selectedCourse?.totalSemesters || ''}</strong></div></>}</div><div className="cm-form-grid"><Field label="Approved Intake *" error={getFieldError('intakeCapacity')}><input type="number" min="1" value={value.intakeCapacity} onChange={(event) => update('intakeCapacity', event.target.value)} placeholder="Enter approved intake" /></Field><Field label="Status *" error={getFieldError('status')}><ProjectSelect value={value.status} onChange={(event) => update('status', event.target.value)}><option value="" disabled>Select Status</option><option value="Active">Active</option><option value="Inactive">Inactive</option></ProjectSelect></Field></div><div className="branch-form-actions"><button type="button" className="cm-button secondary" onClick={() => setStep(0)}>Back</button><button type="submit" className="cm-button" disabled={saving || courseStructureLoading}>{saving ? 'Saving...' : id ? 'Update Branch' : 'Create Branch'}</button></div></section>}
       </section>
-      <aside className="cm-panel course-preview branch-course-preview" aria-label="Branch preview">
-        <header className="preview-top-bar">
-          <span className="preview-live-tag">
-            <span className="live-dot" /> LIVE PREVIEW
-          </span>
-          <span className="preview-sync-hint">Real-time sync</span>
-        </header>
-        <div className="preview-body-container">
-          {(() => {
-            const sections = [
-              {
-                title: 'Branch Details',
-                fields: [
-                  ['Branch Name', value.branchName],
-                  ['Branch Code', value.branchCode],
-                  ['Course', selectedCourse?.name],
-                  ['Branch Type', value.branchType],
-                  ['Specialization', value.specialization],
-                  ['Short Name', value.shortName],
-                  ['Pattern', selectedCourse?.academicPattern || 'Semester System'],
-                  ['Approved Intake', value.intakeCapacity ? String(value.intakeCapacity) : ''],
-                  ['Start Date', value.startDate],
-                  ['End Date', value.endDate],
-                  ['Status', value.status || 'Active'],
-                ],
-              },
-            ].map((sec) => ({
-              ...sec,
-              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '-'),
-            })).filter((sec) => sec.fields.length > 0)
-
-            if (sections.length === 0) {
-              return (
-                <div className="preview-empty-hint">
-                  <span>Enter details in the form to preview here in real time.</span>
-                </div>
-              )
-            }
-
-            return (
-              <>
-                <div className="preview-hero">
-                  <div className="preview-hero-badge">
-                    {value.branchCode ? value.branchCode.slice(0, 4).toUpperCase() : 'BR'}
-                  </div>
-                  <div className="preview-hero-details">
-                    <h3 className="preview-course-title">{value.branchName.trim() || 'Branch Preview'}</h3>
-                    <p className="preview-course-meta">
-                      {selectedCourse?.name || ''}
-                      {value.branchType ? ` \u00B7 ${value.branchType}` : ''}
-                    </p>
-                  </div>
-                </div>
-                {sections.map((sec) => (
-                  <div key={sec.title} className="preview-section-group">
-                    <span className="preview-section-title">{sec.title}</span>
-                    <div className="preview-kv-grid">
-                      {sec.fields.map(([label, text]) => (
-                        <div key={label} className="preview-kv-item">
-                          <span className="kv-label">{label}</span>
-                          <strong className="kv-val" title={String(text).trim()}>{String(text).trim()}</strong>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </>
-            )
-          })()}
-        </div>
-      </aside>
+      <></>
     </form>
   </Page>
 }
@@ -1470,7 +1400,7 @@ function CourseForm() {
   return <Page><Header title={id ? 'Edit B.Tech Course' : 'Add B.Tech Course'} text="Create a focused B.Tech undergraduate course."><Link className="cm-button secondary" to="/courses"><FiArrowLeft /> Back</Link></Header>
 
     {error && <p className="cm-error" role="alert">{error} <button type="button" className="cm-button secondary" disabled={isSaving} onClick={load}>Reload options</button></p>}
-    <div className="course-form-layout">
+    <div className="course-form-layout" data-without-live-preview="true">
       <section className="cm-panel course-form">
         <div className="course-form-scroll">
           <section><h2>Course Identity</h2><div className="cm-form-grid">
@@ -1489,75 +1419,7 @@ function CourseForm() {
         </div>
         <footer><button type="button" className="cm-button" disabled={isSaving || saved} onClick={submit}>{isSaving ? 'Saving...' : id ? 'Save Changes' : 'Create Course'}</button></footer>
       </section>
-      <aside className="course-preview" aria-label="Course preview">
-        <header className="preview-top-bar">
-          <span className="preview-live-tag">
-            <span className="live-dot" /> LIVE PREVIEW
-          </span>
-          <span className="preview-sync-hint">Real-time sync</span>
-        </header>
-        <div className="preview-body-container">
-          {(() => {
-            const sections = [
-              {
-                title: 'Course Overview',
-                fields: [
-                  ['Course Name', value.name],
-                  ['Course Code', value.code],
-                  ['Short Name', value.shortName],
-                  ['Duration', value.durationValue ? `${value.durationValue} Years` : ''],
-                  ['Total Semesters', value.semesters ? `${value.semesters} Semesters` : ''],
-                  ['Pattern', 'Semester System'],
-                  ['Start Date', value.startDate],
-                  ['End Date', value.endDate],
-                  ['Status', value.status || 'Active'],
-                ],
-              },
-            ].map((sec) => ({
-              ...sec,
-              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '-'),
-            })).filter((sec) => sec.fields.length > 0)
-
-            if (sections.length === 0) {
-              return (
-                <div className="preview-empty-hint">
-                  <span>Enter details in the form to preview here in real time.</span>
-                </div>
-              )
-            }
-
-            return (
-              <>
-                <div className="preview-hero">
-                  <div className="preview-hero-badge">
-                    {value.code ? value.code.slice(0, 4).toUpperCase() : 'BTECH'}
-                  </div>
-                  <div className="preview-hero-details">
-                    <h3 className="preview-course-title">{value.name.trim() || 'Course Preview'}</h3>
-                    <p className="preview-course-meta">
-                      {value.durationValue ? `${value.durationValue} Years` : ''}
-                      {value.semesters ? `   ${value.semesters} Semesters` : ''}
-                    </p>
-                  </div>
-                </div>
-                {sections.map((sec) => (
-                  <div key={sec.title} className="preview-section-group">
-                    <span className="preview-section-title">{sec.title}</span>
-                    <div className="preview-kv-grid">
-                      {sec.fields.map(([label, text]) => (
-                        <div key={label} className="preview-kv-item">
-                          <span className="kv-label">{label}</span>
-                          <strong className="kv-val" title={String(text).trim()}>{String(text).trim()}</strong>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </>
-            )
-          })()}
-        </div>
-      </aside>
+      <></>
     </div>
   </Page>
 }

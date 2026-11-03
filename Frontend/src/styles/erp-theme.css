@@ -2430,3 +2430,13 @@ td.col-actions,
   background: rgba(255, 255, 255, 0.25) !important;
   color: #FFFFFF !important;
 }
+[data-without-live-preview="true"] {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+[data-without-live-preview="true"] > :only-child {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  flex: 1 1 100%;
+}

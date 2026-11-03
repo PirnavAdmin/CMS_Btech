@@ -608,39 +608,7 @@ export const FeeStructureWizardModule = (() => {
     );
   }
 
-  function FeePlanPreview({ title, groups, total, status = "Draft", hasContent = true, controls = null }) {
-    const visibleGroups = groups.map(group => ({ ...group, rows: group.rows.filter(([name, value]) => name && value !== "" && value != null) })).filter(group => group.rows.length);
-    return (
-      <aside className="fm-live-preview" aria-label="Live Preview">
-        <header className="fm-live-preview__header">
-          <div>
-            <h2>Live Preview</h2>
-            <p>Updates as you configure the fee plan.</p>
-          </div>
-          <FeeBadge value={status} />
-        </header>
-        {controls}
-        <div className="fm-live-preview__body">
-          {!hasContent ? <div className="fm-preview-placeholder"><external3.FiFileText aria-hidden="true" /><strong>Your fee plan preview</strong><p>Enter plan details to see the live preview here.</p></div> : <>
-          {total > 0 && <div className="fm-preview-amount"><span>Plan total</span><strong>{feeMoney(total)}</strong><h3>{title}</h3></div>}
-          {visibleGroups.map(({ label, rows }) => (
-            <section className="fm-preview-section" key={label}>
-              <h4>{label}</h4>
-              <dl>
-                {rows.map(([name, value], index) => (
-                  <div key={`${name}-${index}`}>
-                    <dt>{name}</dt>
-                    <dd>{value}</dd>
-                  </div>
-                ))}
-              </dl>
-            </section>
-          ))}
-          </>}
-        </div>
-      </aside>
-    );
-  }
+
 
   function FeeRowActions({ children }) {
     const id = useId(), popover = useRef(null), trigger = useRef(null);
@@ -1102,7 +1070,7 @@ export const FeeStructureWizardModule = (() => {
           </button>
         </header>
 
-        <div className="fm-create-layout">
+        <div className="fm-create-layout" data-without-live-preview="true">
         <div className="fm-create-form-panel">
         {error && (
           <div className="fm-error-banner" role="alert">
@@ -1329,45 +1297,7 @@ export const FeeStructureWizardModule = (() => {
           </div>
         </footer>
         </div>
-        <FeePlanPreview
-          hasContent={previewStarted}
-          title={previewConfig ? `${previewConfig.quota || "Quota"} · ${previewConfig.studentCategory || "Student category"}` : (s.name || "Academic Fee Plan")}
-          status={s.status}
-          total={previewTotal}
-          controls={<div className="fm-preview-config-control"><FeeSelect label="Preview configuration" value={previewConfig?.id || ""} options={configurations.map((row, index) => ({ id: row.id, name: `${row.quota || `Configuration ${index + 1}`} · ${row.studentCategory || "Category not set"}` }))} onChange={setPreviewConfigId} /></div>}
-          groups={[
-            { label: "Academic Details", rows: [
-              ["Fee Plan Name", s.name],
-              ["Plan Type", "Academic Fee"],
-              ["Academic Year", masters.years.find(y => String(y.id) === String(s.academicYearId))?.name],
-              ["Course", masters.courses.find(c => String(c.id) === String(s.courseId))?.name],
-              ["Branch", masters.branches.find(b => String(b.id) === String(s.branchId))?.name],
-              ["Batch", s.batch],
-              ["Configurations", configurations.length],
-              ["Admission Quota", previewConfig?.quota],
-              ["Student Category", previewConfig?.studentCategory],
-              ["Admission Type", "Not supported by the current API"],
-              ["Fee Applicability Period", s.cycle === "Semester-wise" ? "Semester" : "Annual"],
-              ["Semester", masters.semesters.find(item => String(item.id) === String(s.semesterId))?.name],
-            ] },
-            { label: "Fee Breakdown", rows: previewHeads.length
-              ? feeHeadPreviewRows(previewHeads.map(component => ({ ...component, amount: previewConfig ? configAmount(previewConfig, component) : component.amount })), feeMoney)
-              : [] },
-            { label: "Payment", rows: previewSchedule.plan === "Full Payment"
-              ? [["Payment Type", "Pay in Full"], ["Due Date", previewSchedule.dueDate], ["Amount", previewTotal > 0 ? feeMoney(previewTotal) : ""]]
-              : [["Payment Type", `${previewSchedule.installments.length} Installments`], ...previewSchedule.installments.map((i, index) => [
-                i.name || `Payment ${index + 1}`,
-                <><strong>{i.amount === "" ? "Amount not entered" : feeMoney(i.amount)}</strong><small>{i.dueDate || "Date not selected"}</small></>,
-              ])] },
-            { label: "Advanced Rules & Validity", rows: [
-              ["Grace Period (days)", value.id || previewFields.grace ? s.grace : ""],
-              ["Penalty Type", value.id || previewFields.penaltyType ? s.penaltyType : ""],
-              ["Penalty Value", s.penaltyType !== "None" && (value.id || previewFields.penaltyValue) ? s.penaltyType === "Percentage" ? s.penaltyValue + "%" : feeMoney(s.penaltyValue) : ""],
-              ["Maximum Penalty", s.penaltyType !== "None" && s.maximumPenalty !== "" && s.maximumPenalty != null ? feeMoney(s.maximumPenalty) : ""],
-              ["Effective From", s.effectiveFrom], ["Effective To", s.effectiveTo],
-            ] },
-          ]}
-        />
+        <></>
         </div>
 
 
@@ -1403,9 +1333,6 @@ export const FeeStructureWizardModule = (() => {
     get FeeReview() {
       return FeeReview;
     },
-    get FeePlanPreview() {
-      return FeePlanPreview;
-    },
     get FeeRowActions() {
       return FeeRowActions;
     },
@@ -1438,7 +1365,7 @@ export const FeeStructureModule = (() => {
   } = external3;
   const { default: PageHeader } = PageHeaderModule;
   const { default: FilterPanel } = FilterPanelModule;
-  const { FeeInput, FeeSelect, FeeBadge, FeeDialog, FeeTable, FeeReview, FeePlanPreview, FeeRowActions } =
+  const { FeeInput, FeeSelect, FeeBadge, FeeDialog, FeeTable, FeeReview, FeeRowActions } =
     FeeStructureWizardModule;
   const { default: ExportMenu } = ExportMenuModule;
   const {
@@ -1591,7 +1518,7 @@ export const FeeStructureModule = (() => {
           </div>
         </header>
 
-        <div className="fm-create-layout">
+        <div className="fm-create-layout" data-without-live-preview="true">
         <div className="fm-create-form-panel">
 
         <div className="fm-tabs-bar fm-plan-form-tabs" role="tablist" aria-label={category + " fee plan configuration"}>{tabs.map(([key, label], index) => <button key={key} type="button" role="tab" id={tabId + "-tab-" + key} aria-controls={tabId + "-panel-" + key} aria-selected={formTab === key} tabIndex={formTab === key ? 0 : -1} className={"fm-tab-btn " + (formTab === key ? "active" : "") + (stepComplete(key) && formTab !== key ? " complete" : "")} onClick={() => { setError(""); setFormTab(key); }} onKeyDown={event => {
@@ -1726,31 +1653,7 @@ export const FeeStructureModule = (() => {
           </div>
         </footer>
         </div>
-        <FeePlanPreview
-          hasContent={previewStarted}
-          title={hostel ? "Hostel Fee Plan" : "Transport Fee Plan"}
-          status={form.status}
-          total={total}
-          groups={hostel ? [
-            {label:"Hostel Details",rows:[["Hostel",form.hostelName],["Academic Year",masters.years.find(year => String(year.id) === String(form.academicYearId))?.name || form.academicYearName],["Hostel Type",form.hostelType],["Mess Plan",form.messPlan],["Fee Cycle",form.frequency],["Fee Inclusions",form.componentsText],["Effective From",form.effectiveFrom],["Effective To",form.effectiveTo]]},
-            ...form.roomPricing.map(room => ({label:room.roomType || "Room Category",rows:[["Occupancy",room.occupancy],["AC Category",room.acType],...(room.components || []).filter(head => head.name?.trim() && String(head.amount ?? "").trim()).map(head => [head.name.trim(), money(head.amount)]),["Category Total",hostelRoomTotal(room)>0?money(hostelRoomTotal(room)):""],["Payment Mode",room.plan],["Due Date",room.dueDate],...(room.installments || []).filter(item => String(item.amount ?? "").trim() || item.dueDate).map((item,index) => [item.name || "Payment " + (index+1),(String(item.amount ?? "").trim() ? money(item.amount) : "")+" / "+(item.dueDate || "")])]}))
-          ] : [
-            { label: hostel ? "Accommodation Details" : "Transport Details", rows: [
-              ["Plan Type", hostel ? "Hostel Fee" : "Transport Fee"],
-              ["Academic Year", masters.years.find(y => String(y.id) === String(form.academicYearId))?.name || form.academicYearName],
-              ...(hostel
-                ? [["Hostel", form.hostelName], ["Hostel Type", form.hostelType], ["Room / Occupancy", form.roomType], ["AC Category", form.acType], ["Mess Plan", form.messPlan]]
-                : [["Route", form.route], ["Route Code", form.routeCode], ["Boarding Stop", form.pickupPoint], ["Distance", form.distance ? `${form.distance} km` : ""]]),
-            ] },
-            { label: category + " Fee Breakdown", rows: form.components.length ? feeHeadPreviewRows(form.components, money) : [] },
-            { label: "Payment", rows: [
-              ["Fee Cycle", form.frequency],
-              ["Payment Type", form.plan === "Full Payment" ? "Pay in Full" : form.plan === "Installment Plan" ? "Installments" : ""],
-              ...(form.plan === "Full Payment" ? [["Due Date", form.dueDate], ["Amount", total > 0 ? money(total) : ""]] : form.installments.map((row, index) => [row.name || "Payment " + (index + 1), <><strong>{money(row.amount)}</strong><small>{row.dueDate || "Date not selected"}</small></>])),
-              ["Effective From", form.effectiveFrom], ["Effective To", form.effectiveTo],
-            ] },
-          ]}
-        />
+        <></>
         </div>
       </div>
     );

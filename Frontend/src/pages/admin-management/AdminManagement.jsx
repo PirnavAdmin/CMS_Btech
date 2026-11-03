@@ -1328,7 +1328,7 @@ function AddCollege() {
   return <DashboardLayout><main className="add-college">
     <header className="ac-page-header"><div><h1>{editId ? 'Edit College' : 'Add College'}</h1><p>{editId ? 'Update the college information below.' : 'Create and configure a new college in the college management system.'}</p><span className="ac-draft-progress">Draft progress: <b>{progress}%</b></span></div><button className="ac-back" type="button" onClick={requestLeave}><FiArrowLeft aria-hidden="true" />Back</button></header>
     {loadingCollege && <div className="ac-notice" role="status">Loading college details...</div>}
-    <div className="college-form-layout">
+    <div className="college-form-layout" data-without-live-preview="true">
       <form className="college-form-main" onSubmit={(event) => event.preventDefault()} noValidate>
         <nav ref={tabsNavRef} className="ac-tabs erp-tabs-bar" aria-label="College form sections" role="tablist">
           {FORM_TABS.map((tab, index) => {
@@ -1440,109 +1440,7 @@ function AddCollege() {
         </footer>
       </form>
 
-      <aside className="college-live-preview" aria-label="College live preview">
-        <header className="preview-top-bar">
-          <span className="preview-live-tag">
-            <span className="live-dot" /> LIVE PREVIEW
-          </span>
-          <span className="preview-sync-hint">Real-time sync</span>
-        </header>
-        <div className="preview-body-container">
-          <div className="preview-hero">
-            {values.logo ? (
-              <img src={values.logo} alt="College Logo" className="college-preview-logo" />
-            ) : (
-              <div className="preview-hero-badge">
-                {values.collegeCode ? values.collegeCode.slice(0, 4).toUpperCase() : (values.collegeName ? values.collegeName.slice(0, 4).toUpperCase() : 'COL')}
-              </div>
-            )}
-            <div className="preview-hero-details">
-              <h3 className="preview-course-title">{values.collegeName.trim() || 'College name preview'}</h3>
-              {([values.collegeCode, values.collegeType === 'Other' ? values.collegeTypeOther : values.collegeType, values.universityName].some((value) => String(value || '').trim())) && (
-                <p className="preview-course-meta">{[values.collegeCode, values.collegeType === 'Other' ? values.collegeTypeOther : values.collegeType, values.universityName].filter((value) => String(value || '').trim()).join(' - ')}</p>
-              ) || <p className="preview-course-meta">College code, type, and university will appear here.</p>}
-            </div>
-          </div>
-
-          {(() => {
-            const collegeTypeDisplay = values.collegeType === 'Other' ? values.collegeTypeOther : values.collegeType
-            const hasAddressInput = [values.addressLine1, values.addressLine2, values.area, values.district, values.city, values.state, values.pincode].some((v) => String(v || '').trim())
-            const sections = [
-              {
-                title: 'College Information',
-                fields: [
-                  ['College Name', values.collegeName],
-                  ['College Code', values.collegeCode],
-                  ['College Type', collegeTypeDisplay],
-                  ['University', values.universityName],
-                  ['Start Date', values.startDate],
-                  ['End Date', values.endDate],
-                ],
-              },
-              {
-                title: 'Address & Location',
-                fields: [
-                  ['Address Line 1', values.addressLine1],
-                  ['Landmark', values.addressLine2],
-                  ['Area / Post Office', values.area],
-                  ['District', values.district],
-                  ['City', values.city],
-                  ['State', values.state],
-                  ['Pincode', values.pincode],
-                  ['Country', hasAddressInput ? values.country : ''],
-                ],
-              },
-              {
-                title: 'Contact Information',
-                fields: [
-                  ['Official Contact', values.contactNumber],
-                  ['Alternate Contact', values.alternateContactNumber],
-                  ['Official Email', values.email],
-                  ['Website', values.website],
-                ],
-              },
-              {
-                title: 'Administration',
-                fields: [
-                  ['Principal Name', values.principalName],
-                  ['Principal Email', values.principalEmail],
-                  ['Principal Contact', values.principalContact],
-                ],
-              },
-              {
-                title: 'Accreditation Details',
-                fields: [
-                  ['Accreditation Status', values.accreditationStatus],
-                  ['Accreditation Body', values.accreditationBody],
-                  ['Accreditation Grade', values.accreditationGrade],
-                  ['Accreditation Number', values.accreditationNumber],
-                  ['Valid From', values.validFrom],
-                  ['Valid Until', values.validUntil],
-                ],
-              },
-            ].map((sec) => ({
-              ...sec,
-              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== ''),
-            })).filter((sec) => sec.fields.length > 0)
-
-            if (sections.length === 0) return <div className="preview-empty-hint">Start entering college details. Your live preview updates as you fill in the form.</div>
-
-            return sections.map((sec) => (
-              <div key={sec.title} className="preview-section-group">
-                <span className="preview-section-title">{sec.title}</span>
-                <div className="preview-kv-grid">
-                  {sec.fields.map(([label, text]) => (
-                    <div key={label} className="preview-kv-item">
-                      <span className="kv-label">{label}</span>
-                      <strong className="kv-val" title={String(text).trim()}>{String(text).trim()}</strong>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))
-          })()}
-        </div>
-      </aside>
+      <></>
     </div>
 
     {dialog === 'reset' && <Dialog title="Reset College Form?" onClose={() => setDialog(null)} actions={<><button className="ac-secondary" onClick={() => setDialog(null)}>Cancel</button><button className="ac-danger-btn" onClick={reset}>Reset</button></>}><p>All entered information will be cleared.</p></Dialog>}
@@ -3798,7 +3696,7 @@ function DepartmentManagement() {
               </button>}
             />
 
-            <div className="erp-two-column-layout">
+            <div className="erp-two-column-layout" data-without-live-preview="true">
               <section className="erp-card-main">
                 <FormLayout onSubmit={save} busy={isSaving} error={error} actions={<>
                     <button type="button" className="erp-btn erp-btn--secondary" onClick={closeToList} disabled={isSaving}>
@@ -3831,68 +3729,7 @@ function DepartmentManagement() {
                 </FormLayout>
               </section>
 
-              <aside className="college-live-preview" aria-label="Department preview">
-                <header className="preview-top-bar">
-                  <span className="preview-live-tag">
-                    <span className="live-dot" /> LIVE PREVIEW
-                  </span>
-                  <span className="preview-sync-hint">Real-time sync</span>
-                </header>
-                <div className="preview-body-container">
-                  <div className="preview-hero">
-                    <div className="preview-hero-badge">
-                      {form.code ? form.code.slice(0, 4).toUpperCase() : (form.name ? form.name.slice(0, 4).toUpperCase() : 'DEPT')}
-                    </div>
-                    <div className="preview-hero-details">
-                      <h3 className="preview-course-title">{form.name.trim() || 'Department Preview'}</h3>
-                      <p className="preview-course-meta">
-                        {[form.code, form.status || (form.name ? 'Active' : '')].filter(Boolean).join('   ') || 'Department details'}
-                      </p>
-                    </div>
-                  </div>
-
-                  {(() => {
-                    const sections = [
-                      {
-                        title: 'Department Details',
-                        fields: [
-                          ['Department Name', form.name],
-                          ['Department Code', form.code],
-                          ['Status', form.name || form.code ? form.status || 'Active' : ''],
-                          ['Start Date', form.startDate],
-                          ['End Date', form.endDate],
-                          ['Description', form.description],
-                        ],
-                      },
-                    ].map((sec) => ({
-                      ...sec,
-                      fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '-'),
-                    })).filter((sec) => sec.fields.length > 0)
-
-                    if (sections.length === 0) {
-                      return (
-                        <div className="preview-empty-hint">
-                          <span>Enter details in the form to preview here in real time.</span>
-                        </div>
-                      )
-                    }
-
-                    return sections.map((sec) => (
-                      <div key={sec.title} className="preview-section-group">
-                        <span className="preview-section-title">{sec.title}</span>
-                        <div className="preview-kv-grid">
-                          {sec.fields.map(([label, text]) => (
-                            <div key={label} className="preview-kv-item" style={label === 'Description' ? { gridColumn: 'span 2' } : {}}>
-                              <span className="kv-label">{label}</span>
-                              <strong className="kv-val" title={String(text).trim()}>{String(text).trim()}</strong>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))
-                  })()}
-                </div>
-              </aside>
+              <></>
             </div>
           </div>
         )}
@@ -7873,7 +7710,7 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
           <button type="button" className="rooms-cancel-btn rooms-form-back-btn" onClick={closeForm}><FiArrowLeft aria-hidden="true" />Back</button>
         </PageHeader>
         {!editingRoom ? <EmptyState title={roomsLoaded ? 'Room not found' : 'Loading room...'} /> : (
-          <div className="rooms-form-layout">
+          <div className="rooms-form-layout" data-without-live-preview="true">
             <section className="rooms-editor-panel" aria-label="Room details">
               <form onSubmit={handleSaveRoom}>
                 <div className="rooms-modal-body">
@@ -8080,27 +7917,7 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
                 </div>
               </form>
             </section>
-            <aside className="rooms-live-preview" aria-label="Room live preview">
-              <header><span className="rooms-preview-dot" /> LIVE PREVIEW</header>
-              <div className="rooms-preview-content">
-                <div className="rooms-preview-identity">
-                  {(editingRoom.roomName?.trim() || editingRoom.roomNumber?.trim() || editingRoom.roomType) && <div className="rooms-preview-icon"><FiGrid /></div>}
-                  <div>
-                    {editingRoom.roomName?.trim() && <h2>{editingRoom.roomName.trim()}</h2>}
-                    {[editingRoom.roomNumber, editingRoom.roomType].some(value => String(value || '').trim()) && <p>{[editingRoom.roomNumber, editingRoom.roomType].filter(value => String(value || '').trim()).join(' · ')}</p>}
-                  </div>
-                </div>
-                {editingRoom.status && <div className="rooms-preview-status"><StatusBadge status={editingRoom.status} /></div>}
-                <dl>{[
-                  ['Building Block', editingRoom.buildingBlock],
-                  ['Floor', editingRoom.floor],
-                  ['Seating Capacity', editingRoom.capacity ? editingRoom.capacity + ' seats' : ''],
-                  ['Allocated Section', editingRoom.assignedSection],
-                ].filter(([, value]) => String(value || '').trim()).map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
-                {editingRoom.facilities?.length > 0 && <><h3>Facilities & Equipment</h3><div className="rooms-preview-facilities">{editingRoom.facilities.map(item => <span key={item}><FiCheck /> {item}</span>)}</div></>}
-                {editingRoom.description?.trim() && <><h3>Remarks / Notes</h3><p className="rooms-preview-notes">{editingRoom.description}</p></>}
-              </div>
-            </aside>
+            <></>
           </div>
         )}
       </div>

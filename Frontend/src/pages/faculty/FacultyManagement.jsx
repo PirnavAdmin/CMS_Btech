@@ -1030,7 +1030,7 @@ function TypeDialog({ item = {}, onClose, onSave, page = false }) {
   };
   return (
     <Modal title={item.id ? 'Edit Leave Type' : 'Add Leave Type'} onClose={onClose} page={page}>
-      <div className={page ? 'flm-type-layout' : 'flm-type-modal-layout'}>
+      <div className={page ? 'flm-type-layout' : 'flm-type-modal-layout'} data-without-live-preview="true">
         <Form className={page ? 'flm-config-form flm-type-form-card' : undefined}>
           <Input label="Leave Type Name *" value={data.name} onChange={value => setData({ ...data, name: value })} />
           <Input label="Leave Code *" value={data.code} onChange={value => setData({ ...data, code: value })} />
@@ -1042,51 +1042,7 @@ function TypeDialog({ item = {}, onClose, onSave, page = false }) {
             <button type="button" className="approve-action" onClick={save}>Save Leave Type</button>
           </Footer>
         </Form>
-        <aside className="sm-preview" aria-label="Leave Type Live Preview" style={{ marginTop: '12px' }}>
-          <header className="preview-top-bar" style={{ marginBottom: '8px' }}>
-            <span className="preview-live-tag"><span className="live-dot" /> LIVE PREVIEW</span>
-            <span className="preview-sync-hint">Real-time sync</span>
-          </header>
-          {(() => {
-            const sections = [
-              {
-                title: 'Leave Type Summary',
-                fields: [
-                  ['Leave Type', data.name],
-                  ['Code', data.code],
-                  ['Pay Category', data.payCategory],
-                  ['Status', data.status],
-                  ['Description', data.description],
-                ],
-              },
-            ].map(sec => ({
-              ...sec,
-              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '-'),
-            })).filter(sec => sec.fields.length > 0)
-
-            if (sections.length === 0) {
-              return (
-                <div className="preview-empty-hint">
-                  <span>Enter details in the form to preview here in real time.</span>
-                </div>
-              )
-            }
-
-            return sections.map(sec => (
-              <div key={sec.title} className="preview-section-group">
-                <span className="preview-section-title">{sec.title}</span>
-                <div className="preview-kv-grid">
-                  {sec.fields.map(([label, text]) => (
-                    <div key={label} className="preview-kv-item" style={label === 'Description' ? { gridColumn: 'span 2' } : {}}>
-                      <span className="kv-label">{label}</span>
-                      <strong className="kv-val" title={String(text).trim()}>{String(text).trim()}</strong>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))
-          })()}
-        </aside>
+        <></>
       </div>
       {error && <p className="flm-error">{error}</p>}
     </Modal>
@@ -1355,57 +1311,7 @@ function RequestLeaveDialog({ faculty, leaveTypes, policies, onClose, onSave }) 
           <span>Reason <b className="required-mark">*</b></span>
           <textarea value={data.reason} onChange={e => setData({ ...data, reason: e.target.value })} placeholder="Reason for leave request..." />
         </label>
-        <aside className="sm-preview" aria-label="Leave Request Live Preview" style={{ marginTop: '12px' }}>
-          <header className="preview-top-bar" style={{ marginBottom: '8px' }}>
-            <span className="preview-live-tag"><span className="live-dot" /> LIVE PREVIEW</span>
-            <span className="preview-sync-hint">Real-time sync</span>
-          </header>
-          {(() => {
-            const facultyName = selectedFaculty?.fullName || selectedFaculty?.name
-            const typeName = leaveTypes.find(t => String(t.id) === String(data.leaveTypeId))?.name
-            const policyName = policies.find(p => String(p.id) === String(data.policyId))?.name
-            const period = [data.fromDate, data.toDate].filter(Boolean).join(' to ')
-
-            const sections = [
-              {
-                title: 'Leave Request Summary',
-                fields: [
-                  ['Faculty Member', facultyName],
-                  ['Leave Type', typeName],
-                  ['Policy', policyName],
-                  ['Leave Period', period],
-                  ['Total Days', data.days ? `${data.days} Days` : ''],
-                  ['Reason', data.reason],
-                ],
-              },
-            ].map(sec => ({
-              ...sec,
-              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '-'),
-            })).filter(sec => sec.fields.length > 0)
-
-            if (sections.length === 0) {
-              return (
-                <div className="preview-empty-hint">
-                  <span>Enter details in the form to preview here in real time.</span>
-                </div>
-              )
-            }
-
-            return sections.map(sec => (
-              <div key={sec.title} className="preview-section-group">
-                <span className="preview-section-title">{sec.title}</span>
-                <div className="preview-kv-grid">
-                  {sec.fields.map(([label, text]) => (
-                    <div key={label} className="preview-kv-item" style={label === 'Reason' ? { gridColumn: 'span 2' } : {}}>
-                      <span className="kv-label">{label}</span>
-                      <strong className="kv-val" title={String(text).trim()}>{String(text).trim()}</strong>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))
-          })()}
-        </aside>
+        <></>
       </Form>
       {error && <p className="flm-error">{error}</p>}
       <Footer>
@@ -3460,7 +3366,7 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], 
   const isStepOptional = (section && !section.fields.some(([, , , required]) => required)) || isDocumentsStep
 
   return (
-    <div className="erp-two-column-layout">
+    <div className="erp-two-column-layout" data-without-live-preview="true">
       <div className="erp-card-main">
         <form className="fm-panel fm-form" ref={formRef} onSubmit={next} noValidate style={{ border: 'none', boxShadow: 'none', padding: 0 }}>
           <nav className="erp-tabs-bar ac-tabs fm-stepper" aria-label="Faculty form steps">
@@ -3539,131 +3445,7 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], 
         </form>
       </div>
 
-      <aside className="preview-card" aria-label="Faculty Live Preview">
-        <header className="preview-top-bar">
-          <span className="preview-live-tag">
-            <span className="live-dot" /> LIVE PREVIEW
-          </span>
-          <span className="preview-sync-hint">Real-time sync</span>
-        </header>
-
-        <div className="preview-body-container">
-          {(() => {
-            const selectedCollege = collegeOptions.find(c => String(c.value ?? c.id) === String(data.collegeId))
-            const collegeName = selectedCollege?.label || selectedCollege?.name || data.collegeName || ''
-            const selectedDept = departmentOptions.find(d => String(d.value ?? d.id) === String(data.departmentId || data.department))
-            const deptName = selectedDept?.label || selectedDept?.name || data.department || data.departmentName || ''
-
-            const isNT = data.employeeCategory === 'Non-Teaching'
-            const idLabel = isNT ? 'Staff ID' : 'Faculty ID'
-            const previewHeroTitle = data.fullName || (isNT ? 'Staff Preview' : 'Faculty Preview')
-
-            const qualDisplay = data.qualification === 'Other' && data.qualificationOther ? `Other (${data.qualificationOther})` : data.qualification
-            const catDisplay = ['Other', 'Others'].includes(data.employeeCategory) ? (data.employeeCategoryOther ? `Other (${data.employeeCategoryOther})` : 'Other') : (data.employeeCategory || 'Teaching')
-
-            const previewSections = [
-              {
-                title: 'Personal Details',
-                fields: [
-                  [isNT ? 'Staff Full Name' : 'Full Name', data.fullName],
-                  ['Gender', data.gender],
-                  ['Date of Birth', data.dob || data.dateOfBirth],
-                  ['Mobile Number', data.mobile || data.phoneNumber],
-                  ['Email', data.email || data.officialEmail],
-                ],
-              },
-              {
-                title: 'Employment Details',
-                fields: [
-                  [idLabel, data.employeeId || formatFacultyDisplayCode(data, collegeOptions, faculty)],
-                  ['Category', catDisplay],
-                  ['Designation', data.designation],
-                  ['Department', deptName],
-                  ['College / Campus', collegeName],
-                  ['Date of Joining', data.joiningDate || data.dateOfJoining],
-                  ['Employment Type', data.employmentType],
-                  ['Teaching Experience', !isNT && Number(data.teachingExperience) > 0 ? `${data.teachingExperience} Years` : ''],
-                  ['Total Experience', Number(data.experience) > 0 ? `${data.experience} Years` : ''],
-                  ['Status', data.employmentStatus],
-                ],
-              },
-              {
-                title: 'Academic Details',
-                fields: [
-                  ['Highest Qualification', qualDisplay],
-                  ['Specialization', data.specialization],
-                  ['University / Institution', data.university],
-                  ['Year of Passing', data.passingYear],
-                  ['Teaching Experience', !isNT && Number(data.teachingExperience) > 0 ? `${data.teachingExperience} Years` : ''],
-                  ['Industry Experience', Number(data.industryExperience) > 0 ? `${data.industryExperience} Years` : ''],
-                ],
-              },
-              {
-                title: 'Contact Details',
-                fields: [
-                  ['Alternate Mobile', data.alternateMobile],
-                  ['Personal Email', data.personalEmail],
-                  ['Address', [data.address, data.city, data.state, data.pincode].filter(Boolean).join(', ') || data.address],
-                  ['Emergency Contact', [data.emergencyName, data.relationship, data.emergencyMobile].filter(Boolean).join(' | ') || data.emergencyMobile],
-                ],
-              },
-              {
-                title: 'Documents',
-                fields: FACULTY_DOCUMENTS.flatMap(([key, label]) => {
-                  const doc = data.documents?.[key]
-                  const status = typeof doc === 'string'
-                    ? doc
-                    : doc?.status || (doc?.uploaded ? 'Submitted' : '')
-                  return status === 'Submitted' || status === 'Pending'
-                    ? [[label, status, 'document']]
-                    : []
-                }),
-              },
-            ].map(sec => ({
-              ...sec,
-              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '—' && String(val).trim() !== '0 Years' && String(val).trim() !== '0'),
-            })).filter(sec => sec.fields.length > 0)
-
-            if (previewSections.length === 0) {
-              return (
-                <div className="preview-empty-hint">
-                  <span>Enter details in the form to preview here in real time.</span>
-                </div>
-              )
-            }
-
-            return (
-              <>
-                <div className="preview-hero" style={{ marginBottom: '14px' }}>
-                  <Avatar faculty={data} large />
-                  <div className="preview-hero-details">
-                    <h3 className="preview-course-title" style={{ margin: 0 }}>{previewHeroTitle}</h3>
-                    <p className="preview-course-meta" style={{ margin: '2px 0 0', color: '#64748B', fontSize: '0.78rem' }}>
-                      {[data.employeeId, data.designation, deptName, data.employmentStatus || 'Working'].filter(Boolean).join(' \u00B7 ')}
-                    </p>
-                  </div>
-                </div>
-                {previewSections.map(sec => (
-                  <div key={sec.title} className="preview-section-group" style={{ marginBottom: '12px' }}>
-                    <span className="preview-section-title">{sec.title}</span>
-                    <div className="preview-kv-grid">
-                      {sec.fields.map(([label, text, valueType]) => (
-                        <div key={label} className="preview-kv-item">
-                          <span className="kv-label">{label}</span>
-                          <strong
-                            className={`kv-val${valueType === 'document' && text === 'Pending' ? ' is-pending' : ''}`}
-                            title={String(text).trim()}
-                          >{String(text).trim()}</strong>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </>
-            )
-          })()}
-        </div>
-      </aside>
+      <></>
     </div>
   )
 }

@@ -372,7 +372,7 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
   };
 
   return (
-    <div className="erp-two-column-layout sm-editor-layout">
+    <div className="erp-two-column-layout sm-editor-layout" data-without-live-preview="true">
       <div className="erp-card-main">
         <div className="erp-tabs-bar">
           {tabs.map((t, idx) => (
@@ -500,96 +500,7 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
         </form>
       </div>
 
-      <aside className="preview-card" aria-label="Subject live preview">
-        <header className="preview-top-bar">
-          <span className="preview-live-tag">
-            <span className="live-dot" /> LIVE PREVIEW
-          </span>
-          <span className="preview-sync-hint">Real-time sync</span>
-        </header>
-
-        <div className="preview-body-container">
-          {(() => {
-            const yearName = entityName(masters.years, form.academicYearId, '')
-            const courseName = selectedCourse ? `${selectedCourse.name}${selectedCourse.code ? ` (${selectedCourse.code})` : ''}` : ''
-            const branchName = selectedBranch ? `${selectedBranch.name}${selectedBranch.code ? ` (${selectedBranch.code})` : ''}` : ''
-            const semName = [formLevel, selected?.semesterName || selected?.name].filter(Boolean).join(' - ')
-
-            const sections = [
-              {
-                title: 'Academic Mapping',
-                fields: [
-                  ['Academic Year', yearName],
-                  ['Course', courseName],
-                  ['Branch', branchName],
-                  ['Level & Semester', semName],
-                ],
-              },
-              {
-                title: 'Subject Details',
-                fields: [
-                  ['Subject Code', form.subjectCode],
-                  ['Subject Name', form.subjectName],
-                  ['Elective Type', form.electiveType],
-                  ['Subject Type', formatSubjectType(form.subjectType)],
-                  ['Credits', form.credits !== '' ? `${form.credits} Credits` : ''],
-                  ['Status', form.status || 'Active'],
-                ],
-              },
-              {
-                title: 'Hours & Marks Configuration',
-                fields: [
-                  ['Lecture Hours', form.lectureHours !== '' && form.lectureHours != null ? `${form.lectureHours} hrs` : ''],
-                  ['Tutorial Hours', form.tutorialHours !== '' && form.tutorialHours != null ? `${form.tutorialHours} hrs` : ''],
-                  ['Practical Hours', form.practicalHours !== '' && form.practicalHours != null ? `${form.practicalHours} hrs` : ''],
-                  ['Internal Marks', form.internalMarks !== '' && form.internalMarks != null ? String(form.internalMarks) : ''],
-                  ['External Marks', form.externalMarks !== '' && form.externalMarks != null ? String(form.externalMarks) : ''],
-                ],
-              },
-            ].map(sec => ({
-              ...sec,
-              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '-'),
-            })).filter(sec => sec.fields.length > 0)
-
-            if (sections.length === 0) {
-              return (
-                <div className="preview-empty-hint">
-                  <span>Enter details in the form to preview here in real time.</span>
-                </div>
-              )
-            }
-
-            return (
-              <>
-                <div className="preview-hero" style={{ marginBottom: '14px' }}>
-                  <div className="preview-hero-badge">
-                    {form.subjectCode ? form.subjectCode.slice(0, 4).toUpperCase() : 'SUB'}
-                  </div>
-                  <div className="preview-hero-details">
-                    <h3 className="preview-course-title" style={{ margin: 0 }}>{form.subjectName || 'Subject Preview'}</h3>
-                    <p className="preview-course-meta" style={{ margin: '2px 0 0', color: '#64748B', fontSize: '0.78rem' }}>
-                      {[form.subjectCode, formatSubjectType(form.subjectType), form.credits !== '' && `${form.credits} Credits`, form.status || 'Active'].filter(Boolean).join(' - ')}
-                    </p>
-                  </div>
-                </div>
-                {sections.map(sec => (
-                  <div key={sec.title} className="preview-section-group" style={{ marginBottom: '12px' }}>
-                    <span className="preview-section-title">{sec.title}</span>
-                    <div className="preview-kv-grid">
-                      {sec.fields.map(([label, text]) => (
-                        <div key={label} className="preview-kv-item">
-                          <span className="kv-label">{label}</span>
-                          <strong className="kv-val" title={String(text).trim()}>{String(text).trim()}</strong>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </>
-            )
-          })()}
-        </div>
-      </aside>
+      <></>
     </div>
   );
 }

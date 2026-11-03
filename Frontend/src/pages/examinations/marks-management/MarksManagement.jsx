@@ -3669,7 +3669,7 @@ function MarksEntry() {
                     <p className="marks-section-student-message" role="status">No students are assigned to this section. Assign students in Section Management before entering marks.</p>
                   )}
 
-                  <div className="marks-entry-form__body">
+                  <div className="marks-entry-form__body" data-without-live-preview="true">
                     <div className="marks-entry-form__grid">
                       {[
                         [
@@ -4057,89 +4057,7 @@ function MarksEntry() {
                       )}
                     </div>
 
-                    <aside className="marks-entry-form__preview">
-                      <div className="marks-entry-form__preview-head">
-                        <span className="marks-entry-live-dot" />
-
-                        Live Preview
-
-                        <small>
-                          Updates as you type
-                        </small>
-                      </div>
-
-                      <h4>
-                        {assessment.subject ||
-                          'New Assessment'}
-                      </h4>
-
-                      <dl>
-                        {[
-                          [
-                            'Academic Year',
-                            assessment.academicYear,
-                          ],
-                          [
-                            'Course / Branch',
-                            [
-                              assessment.course && `${assessment.course}${selectedCourseCode ? ` (${selectedCourseCode})` : ''}`,
-                              assessment.branch && `${assessment.branch}${selectedBranchCode ? ` (${selectedBranchCode})` : ''}`,
-                            ]
-                              .filter(Boolean)
-                              .join(' / '),
-                          ],
-                          [
-                            'Semester',
-                            assessment.semester,
-                          ],
-                          [
-                            'Section',
-                            assessment.section,
-                          ],
-                          [
-                            'Registration Number',
-                            assessment.registrationNumber,
-                          ],
-                          [
-                            'Student Name',
-                            assessment.studentName,
-                          ],
-                          [
-                            'Faculty Name',
-                            assessment.facultyName,
-                          ],
-                          [
-                            'Subject Code',
-                            assessment.subjectCode,
-                          ],
-                          [
-                            'Exam',
-                            assessment.examType,
-                          ],
-                          [
-                            'Assessment',
-                            assessment.assessmentType,
-                          ],
-                          [
-                            'Exam Date',
-                            assessment.examDate,
-                          ],
-                          [
-                            'Maximum / Passing',
-                            `${assessment.maximumMarks} / ${assessment.passingMarks}`,
-                          ],
-                        ].map(
-                          ([label, value]) => (
-                            <div key={label}>
-                              <dt>{label}</dt>
-                              <dd>
-                                {value || '—'}
-                              </dd>
-                            </div>
-                          )
-                        )}
-                      </dl>
-                    </aside>
+                    <></>
                   </div>
 
                   <div className="marks-entry-form__footer">
