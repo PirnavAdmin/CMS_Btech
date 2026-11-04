@@ -1236,12 +1236,7 @@ label > b,
   color: var(--text-primary) !important;
 }
 
-/* AddCollege Live Preview & Draft Progress Dark Mode Fixes */
-:root[data-theme="dark"] .college-live-preview {
-  background-color: var(--surface) !important;
-  border-color: var(--border-strong) !important;
-}
-
+/* Preview surfaces and college draft progress dark mode fixes */
 :root[data-theme="dark"] .preview-hero,
 :root[data-theme="dark"] .preview-kv-item {
   background-color: var(--surface-soft) !important;
