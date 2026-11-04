@@ -123,6 +123,9 @@
 .user-directory__pagination { padding: 14px 20px; border-top: 1px solid var(--user-line); color: #6d7889; font-size: 12px; }
 .user-directory__pagination > div { justify-content: flex-end; }
 .user-directory__pagination button { min-height: 32px; padding: 0 10px; font-size: 11px; }
+.user-directory__pagination-controls { flex-wrap: wrap; }
+.user-directory__pagination-controls label { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.user-directory__pagination-controls select { min-height: 32px; padding: 0 8px; border: 1px solid #dce3ec; border-radius: 7px; background: #fff; color: #344054; font: inherit; font-size: 11px; }
 .user-directory__loading,.user-directory__empty,.user-directory__error { display: grid; justify-items: center; gap: 10px; padding: 52px 20px; color: var(--user-muted); text-align: center; font-size: 13px; }
 .user-directory__empty h3,.user-directory__error strong { margin: 0; color: var(--user-ink); font-size: 15px; }
 .user-directory__empty p,.user-directory__error span { margin: 0; }

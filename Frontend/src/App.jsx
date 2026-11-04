@@ -197,7 +197,7 @@ export default function App() {
           <Route element={<PortalRoute roles={[ROLES.STAFF]} />}>
             <Route path="/staff-portal/:screen?" element={<StaffPortal />} />
           </Route>
-          <Route element={<PortalRoute roles={[ROLES.ADMIN]} />}>
+          <Route element={<AcademicProvider><PortalRoute roles={[ROLES.ADMIN]} /></AcademicProvider>}>
             <Route path="/user-access" element={<UserAccessManagement />} />
           </Route>
           {/* Existing administrator screens retain their URLs and components. */}

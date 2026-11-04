@@ -3,6 +3,7 @@ import AsyncState from '../../components/AsyncState'
 import FormLayout, { FormField, FormGroup } from '../../components/FormLayout'
 import DirectoryEmptyStateImports_default from '../../components/DirectoryEmptyState'
 import { facultyForCollege } from '../../utils/departmentFaculty.js'
+import { getUserCollegeId } from '../../auth/auth.js'
 import { newestFirst as newestFirstImports_newestFirst, rememberCreated as newestFirstImports_rememberCreated } from '../../utils/newestFirst'
 import { showWarning as toastImports_showWarning, showSuccess as toastImports_showSuccess, showError as toastImports_showError } from '../../utils/toast'
 import useToastStateImports_default from '../../hooks/useToastState'
@@ -29,6 +30,7 @@ import { normalizeCollegeImpact as collegeImpactImports_normalizeCollegeImpact, 
 import CompactSummaryImports_default from '../../components/CompactSummary'
 import facultyServiceImports_default, { normalizeFaculty as facultyServiceImports_normalizeFaculty } from '../../services/facultyService'
 import { useAcademic as AcademicContextImports_useAcademic } from '../../context/AcademicContext'
+import { useScreenAccess as screenAccessImports_useScreenAccess } from '../../auth/ScreenAccess'
 import useCollegeStateImports_default from '../../hooks/useCollegeState'
 import { collegeStorageKey as collegeScopeImports_collegeStorageKey } from '../../utils/collegeScope.js'
 import academicServiceImports_default from '../../services/academicService'
@@ -828,7 +830,7 @@ const TAB_FIELDS = {
 }
 const initialValues = {
   collegeName: '', collegeCode: '', collegeType: '', collegeTypeOther: '', universityName: '', logo: '', logoName: '',
-  addressLine1: '', addressLine2: '', area: '', district: '', city: '', state: '', pincode: '', country: 'India',
+  addressLine1: '', addressLine2: '', area: '', district: '', city: '', state: '', pincode: '', country: '',
   contactNumber: '', alternateContactNumber: '', email: '', website: '',
   principalName: '', principalEmail: '', principalContact: '',
   accreditationBody: '', accreditationStatus: '', accreditationGrade: '',
@@ -928,8 +930,13 @@ function Dialog({ title, children, actions, onClose, labelledBy = 'ac-dialog-tit
 
 function AddCollege() {
   const navigate = useNavigate()
+  const { collegeAccess, loading: contextLoading } = AcademicContextImports_useAcademic()
+  const { access: effectiveAccess, loading: accessLoading } = screenAccessImports_useScreenAccess()
   const [searchParams] = useSearchParams()
   const editId = searchParams.get('edit')
+  const assignedCollegeId = getUserCollegeId()
+  const isSuperAdmin = collegeAccess?.isSuperAdmin === true || effectiveAccess?.isSuperAdmin === true
+  const isOutsideAssignedCollege = !isSuperAdmin && Boolean(assignedCollegeId && editId && String(editId) !== String(assignedCollegeId))
   const fileRef = useRef(null)
   const logoObjectUrlRef = useRef('')
   const tabsNavRef = useRef(null)
@@ -1008,6 +1015,7 @@ function AddCollege() {
     setLogoFile(null)
     setRemoveExistingLogo(false)
     setPendingLogoCollegeId(null)
+    if (contextLoading || accessLoading || (!collegeAccess && !effectiveAccess)) return undefined
     if (!editId) {
       originalEditValues.current = null
       setValues({ ...initialValues })
@@ -1017,6 +1025,11 @@ function AddCollege() {
     getCollegeById(editId).then((response) => {
       if (!active) return
       const record = unwrapCollegeRecord(response)
+      const recordCreatorId = record.createdBy ?? record.CreatedBy
+      if (isOutsideAssignedCollege && String(recordCreatorId ?? '') !== String(effectiveAccess?.userId ?? '')) {
+        navigate('/college-institution-management', { replace: true })
+        return
+      }
       const addressRecord = record.addressDetails ?? record.addressInfo ?? {}
       const contactRecord = record.contactDetails ?? record.contactInfo ?? {}
       const principalRecord = record.administration ?? record.principalDetails ?? {}
@@ -1037,7 +1050,7 @@ function AddCollege() {
         (record.collegeName ? readCachedCollegeDates(record.collegeName) : null) || {}
       const loadedStartDate = dateInputValue(record.startDate ?? record.StartDate ?? record.start_date ?? extended.startDate ?? cachedDates?.startDate)
       const loadedEndDate = dateInputValue(record.endDate ?? record.EndDate ?? record.end_date ?? extended.endDate ?? cachedDates?.endDate)
-      const loadedValues = { ...initialValues, collegeName: record.name ?? record.collegeName ?? record.CollegeName ?? '', collegeCode: record.code ?? record.collegeCode ?? record.CollegeCode ?? '', collegeType: rawType && !isKnownType ? 'Other' : rawType, collegeTypeOther: rawType && !isKnownType ? rawType : '', universityName: record.university ?? record.universityName ?? record.UniversityName ?? '', startDate: loadedStartDate, endDate: loadedEndDate, addressLine1: record.addressLine1 ?? addressRecord.addressLine1 ?? addressParts[0] ?? '', addressLine2: record.addressLine2 ?? addressRecord.addressLine2 ?? addressParts.slice(1).join(', '), area: record.area ?? addressRecord.area ?? extended.area ?? '', district: record.district ?? addressRecord.district ?? extended.district ?? '', city: record.city ?? addressRecord.city ?? record.City ?? '', state: record.state ?? addressRecord.state ?? record.State ?? '', pincode: String(record.pincode ?? addressRecord.pincode ?? record.Pincode ?? ''), country: record.country ?? addressRecord.country ?? 'India', contactNumber: String(record.contact ?? record.contactNumber ?? record.phoneNumber ?? record.mobile ?? record.phone ?? contactRecord.contactNumber ?? contactRecord.phoneNumber ?? contactRecord.mobile ?? contactRecord.phone ?? record.Contact ?? ''), alternateContactNumber: String(record.alternateContact ?? record.alternateContactNumber ?? record.alternatePhoneNumber ?? contactRecord.alternateContactNumber ?? extended.alternateContactNumber ?? ''), email: record.email ?? record.collegeEmail ?? contactRecord.email ?? record.Email ?? '', website: record.website ?? record.Website ?? contactRecord.website ?? contactRecord.Website ?? '', principalName: record.principal ?? record.principalName ?? principalRecord.principalName ?? record.PrincipalName ?? '', principalEmail: record.principalEmail ?? principalRecord.principalEmail ?? extended.principalEmail ?? '', principalContact: String(record.principalContact ?? record.principalPhone ?? principalRecord.principalContact ?? extended.principalContact ?? ''), accreditationBody: record.accreditationBody ?? accreditationRecord.body ?? accreditationRecord.accreditationBody ?? extended.accreditationBody ?? '', accreditationStatus: record.accreditationStatus ?? accreditationRecord.status ?? '', accreditationGrade: record.accreditationGrade ?? accreditationRecord.grade ?? extended.accreditationGrade ?? '', accreditationNumber: record.accreditationNumber ?? accreditationRecord.number ?? extended.accreditationNumber ?? '', validFrom: dateInputValue(record.validFrom ?? record.accreditationValidFrom ?? accreditationRecord.validFrom ?? extended.validFrom), validUntil: dateInputValue(record.validUntil ?? record.accreditationValidUntil ?? accreditationRecord.validUntil ?? extended.validUntil), logo: resolvedLogo, logoName: record.logoName ?? extended.logoName ?? '' }
+      const loadedValues = { ...initialValues, collegeName: record.name ?? record.collegeName ?? record.CollegeName ?? '', collegeCode: record.code ?? record.collegeCode ?? record.CollegeCode ?? '', collegeType: rawType && !isKnownType ? 'Other' : rawType, collegeTypeOther: rawType && !isKnownType ? rawType : '', universityName: record.university ?? record.universityName ?? record.UniversityName ?? '', startDate: loadedStartDate, endDate: loadedEndDate, addressLine1: record.addressLine1 ?? addressRecord.addressLine1 ?? addressParts[0] ?? '', addressLine2: record.addressLine2 ?? addressRecord.addressLine2 ?? addressParts.slice(1).join(', '), area: record.area ?? addressRecord.area ?? extended.area ?? '', district: record.district ?? addressRecord.district ?? extended.district ?? '', city: record.city ?? addressRecord.city ?? record.City ?? '', state: record.state ?? addressRecord.state ?? record.State ?? '', pincode: String(record.pincode ?? addressRecord.pincode ?? record.Pincode ?? ''), country: record.country ?? addressRecord.country ?? '', contactNumber: String(record.contact ?? record.contactNumber ?? record.phoneNumber ?? record.mobile ?? record.phone ?? contactRecord.contactNumber ?? contactRecord.phoneNumber ?? contactRecord.mobile ?? contactRecord.phone ?? record.Contact ?? ''), alternateContactNumber: String(record.alternateContact ?? record.alternateContactNumber ?? record.alternatePhoneNumber ?? contactRecord.alternateContactNumber ?? extended.alternateContactNumber ?? ''), email: record.email ?? record.collegeEmail ?? contactRecord.email ?? record.Email ?? '', website: record.website ?? record.Website ?? contactRecord.website ?? contactRecord.Website ?? '', principalName: record.principal ?? record.principalName ?? principalRecord.principalName ?? record.PrincipalName ?? '', principalEmail: record.principalEmail ?? principalRecord.principalEmail ?? extended.principalEmail ?? '', principalContact: String(record.principalContact ?? record.principalPhone ?? principalRecord.principalContact ?? extended.principalContact ?? ''), accreditationBody: record.accreditationBody ?? accreditationRecord.body ?? accreditationRecord.accreditationBody ?? extended.accreditationBody ?? '', accreditationStatus: record.accreditationStatus ?? accreditationRecord.status ?? '', accreditationGrade: record.accreditationGrade ?? accreditationRecord.grade ?? extended.accreditationGrade ?? '', accreditationNumber: record.accreditationNumber ?? accreditationRecord.number ?? extended.accreditationNumber ?? '', validFrom: dateInputValue(record.validFrom ?? record.accreditationValidFrom ?? accreditationRecord.validFrom ?? extended.validFrom), validUntil: dateInputValue(record.validUntil ?? record.accreditationValidUntil ?? accreditationRecord.validUntil ?? extended.validUntil), logo: resolvedLogo, logoName: record.logoName ?? extended.logoName ?? '' }
       setValues(loadedValues)
       originalEditValues.current = loadedValues
       if (logoUrl && isBackendCollegeLogo(logoUrl)) {
@@ -1062,7 +1075,7 @@ function AddCollege() {
         logoObjectUrlRef.current = ''
       }
     }
-  }, [editId, setNotice])
+  }, [editId, isOutsideAssignedCollege, navigate, setNotice, contextLoading, accessLoading, collegeAccess, effectiveAccess])
 
   useEffect(() => {
     if (!dirty) return
@@ -1518,7 +1531,7 @@ const emptyCollege = {
   id: null,
   name: '',
   code: '',
-  type: COLLEGE_TYPES[0],
+  type: '',
   university: '',
   address: '',
   city: '',
@@ -1727,9 +1740,10 @@ const mapCollege = (record) => {
   }
   return ({
   id,
+  createdBy: record.createdBy ?? record.CreatedBy ?? '',
   name: record.name ?? record.collegeName ?? record.CollegeName ?? '',
   code: record.code ?? record.collegeCode ?? record.CollegeCode ?? '',
-  type: record.type ?? record.collegeType ?? record.CollegeType ?? record.institutionType ?? COLLEGE_TYPES[0],
+  type: record.type ?? record.collegeType ?? record.CollegeType ?? record.institutionType ?? '',
   university: record.university ?? record.universityName ?? record.UniversityName ?? '',
   startDate,
   endDate,
@@ -1902,6 +1916,13 @@ const mapRecordToForm = (record) => ({
 
 function CollegeInstitutionManagement({ initialView = 'list' }) {
   const navigate = useNavigate()
+  const { collegeAccess } = AcademicContextImports_useAcademic()
+  const { access: effectiveAccess } = screenAccessImports_useScreenAccess()
+  const assignedCollegeId = getUserCollegeId()
+  const isSuperAdmin = collegeAccess?.isSuperAdmin === true || effectiveAccess?.isSuperAdmin === true
+  const isAssignedCollegeAdmin = !isSuperAdmin && Boolean(assignedCollegeId)
+  const currentUserId = effectiveAccess?.userId == null ? '' : String(effectiveAccess.userId)
+  const canManageCollege = (college) => isSuperAdmin || String(college.id) === String(assignedCollegeId) || (currentUserId && String(college.createdBy) === currentUserId)
   const [colleges, setColleges] = useState([])
   const [isCollegesLoading, setIsCollegesLoading] = useState(true)
   const [collegeError, setCollegeError] = useToastState('', 'error')
@@ -1950,8 +1971,9 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
   const refreshCollegeSummary = async () => {
     try {
       const response = await getColleges()
-      const records = newestFirst('colleges', getCollegeRecords(response?.data ?? response)).map(mapCollege)
-      const summary = deriveCollegeSummary(response?.data ?? response, records)
+      const loadedRecords = newestFirst('colleges', getCollegeRecords(response?.data ?? response)).map(mapCollege)
+      const records = isAssignedCollegeAdmin ? loadedRecords.filter(canManageCollege) : loadedRecords
+      const summary = deriveCollegeSummary(isAssignedCollegeAdmin ? null : response?.data ?? response, records)
       setCollegeSummary({
         total: summary.total,
         active: summary.active,
@@ -1971,6 +1993,7 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
     (!statusFilter || college.status === statusFilter)
   )
   const availableCollegeTypes = [...new Set(colleges.map((college) => college.type).filter(Boolean))]
+  const visibleCollegeDraft = collegeDraft
 
   // Calculate pagination details
   const totalPages = Math.max(1, Math.ceil(filteredColleges.length / itemsPerPage))
@@ -1987,11 +2010,12 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
     setCollegeError('')
     try {
       const response = term.trim() ? await searchColleges(term.trim()) : await getColleges()
-      const records = newestFirst('colleges', getCollegeRecords(response?.data ?? response)).map(mapCollege)
+      const loadedRecords = newestFirst('colleges', getCollegeRecords(response?.data ?? response)).map(mapCollege)
+      const records = isAssignedCollegeAdmin ? loadedRecords.filter(canManageCollege) : loadedRecords
       setColleges(newestFirst('colleges', records))
 
       if (!term.trim()) {
-        const summary = deriveCollegeSummary(response?.data ?? response, records)
+        const summary = deriveCollegeSummary(isAssignedCollegeAdmin ? null : response?.data ?? response, records)
         setCollegeSummary({
           total: summary.total,
           active: summary.active,
@@ -2071,6 +2095,10 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
   }
 
   const openEdit = async (college) => {
+    if (!canManageCollege(college)) {
+      setCollegeError('You can only edit colleges assigned to or created by your account.')
+      return
+    }
     navigate(`/college-institution-management/add?edit=${encodeURIComponent(college.id)}`)
   }
 
@@ -2373,9 +2401,9 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
                   Retry
                 </button>
               </div>
-            ) : filteredColleges.length === 0 && !collegeDraft?.values ? (
+            ) : filteredColleges.length === 0 && !visibleCollegeDraft?.values ? (
               <div className="cm-empty">
-                <p>No colleges found.</p>
+                <p>{isAssignedCollegeAdmin ? 'No assigned or created colleges were found.' : 'No colleges found.'}</p>
                 <button type="button" className="cm-primary-btn" onClick={openAdd}>
                   <Plus aria-hidden="true" /> Add your first college
                 </button>
@@ -2395,7 +2423,7 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {collegeDraft?.values && (
+                      {visibleCollegeDraft?.values && (
                         <tr className="cm-draft-row">
                           <td className="col-logo table-center"><span className="cm-draft-row__mark">D</span></td>
                           <td className="col-name table-left">
@@ -2454,7 +2482,7 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
                               >
                                 <EditIcon />
                               </button>
-                              <button
+                              {canManageCollege(college) && <button
                                 type="button"
                                 className={`table-action-btn cm-action-icon-btn cm-status-action ${college.status === 'active' ? 'action-activate cm-success' : 'action-deactivate cm-danger'}`}
                                 title={college.status === 'active' ? `Deactivate ${college.name}` : `Activate ${college.name}`}
@@ -2462,7 +2490,7 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
                                 onClick={() => toggleStatus(college)}
                               >
                                 {college.status === 'active' ? <FiToggleRight data-status="active" /> : <FiToggleLeft data-status="inactive" />}
-                              </button>
+                              </button>}
                             </div>
                           </td>
                         </tr>
