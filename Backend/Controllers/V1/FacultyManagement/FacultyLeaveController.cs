@@ -28,7 +28,7 @@ public class FacultyLeaveController : ControllerBase
     }
 
     [HttpGet("requests")]
-    public async Task<IActionResult> GetRequests([FromQuery] string? search, [FromQuery] string? facultyType, [FromQuery] string? department, [FromQuery] string? status, [FromQuery] long? collegeId)
+    public async Task<IActionResult> GetRequests([FromQuery] string? search, [FromQuery] string? facultyType, [FromQuery] string? department, [FromQuery] string? status)
     {
         const string sql = @"
 SELECT r.leave_request_id AS id, r.request_code AS requestId, r.faculty_id AS facultyId,
@@ -40,17 +40,16 @@ SELECT r.leave_request_id AS id, r.request_code AS requestId, r.faculty_id AS fa
        t.name AS leaveTypeName, t.code AS leaveTypeCode, p.name AS policyName
 FROM faculty_leave_requests r
 JOIN faculty f ON f.faculty_id = r.faculty_id
-LEFT JOIN departments d ON d.department_id = f.department_id
+JOIN departments d ON d.department_id = f.department_id
 LEFT JOIN faculty_leave_types t ON t.leave_type_id = r.leave_type_id
 LEFT JOIN faculty_leave_policies p ON p.policy_id = r.policy_id
 WHERE f.deleted_at IS NULL
-  AND (@collegeId IS NULL OR f.college_id=@collegeId)
   AND (@status IS NULL OR r.status = @status)
   AND (@facultyType IS NULL OR (CASE WHEN UPPER(COALESCE(f.employment_type,'')) LIKE '%NON%' THEN 'Non-Teaching' ELSE 'Teaching' END) = @facultyType)
   AND (@department IS NULL OR d.department_name = @department)
   AND (@search IS NULL OR r.request_code LIKE CONCAT('%',@search,'%') OR f.faculty_name LIKE CONCAT('%',@search,'%') OR f.faculty_code LIKE CONCAT('%',@search,'%') OR t.name LIKE CONCAT('%',@search,'%'))
 ORDER BY r.applied_on DESC, r.leave_request_id DESC;";
-        return await Query(sql, new { search = Null(search), facultyType = Null(facultyType), department = Null(department), status = Null(status), collegeId }, "Leave requests retrieved successfully.");
+        return await Query(sql, new { search = Null(search), facultyType = Null(facultyType), department = Null(department), status = Null(status) }, "Leave requests retrieved successfully.");
     }
 
     [HttpGet("requests/{id:long}")]
@@ -65,7 +64,7 @@ SELECT r.leave_request_id AS id, r.request_code AS requestId, r.faculty_id AS fa
        d.department_name AS department, t.name AS leaveTypeName, t.code AS leaveTypeCode, p.name AS policyName
 FROM faculty_leave_requests r
 JOIN faculty f ON f.faculty_id=r.faculty_id
-LEFT JOIN departments d ON d.department_id=f.department_id
+JOIN departments d ON d.department_id=f.department_id
 LEFT JOIN faculty_leave_types t ON t.leave_type_id=r.leave_type_id
 LEFT JOIN faculty_leave_policies p ON p.policy_id=r.policy_id
 WHERE r.leave_request_id=@id LIMIT 1;";
@@ -142,7 +141,7 @@ WHERE r.leave_request_id=@id LIMIT 1;";
     }
 
     [HttpGet("history")]
-    public async Task<IActionResult> History([FromQuery] string? search,[FromQuery] string? facultyType,[FromQuery] string? department,[FromQuery] string? status,[FromQuery] long? collegeId)
+    public async Task<IActionResult> History([FromQuery] string? search,[FromQuery] string? facultyType,[FromQuery] string? department,[FromQuery] string? status)
     {
         const string sql = @"
 SELECT r.leave_request_id AS id, r.request_code AS requestId, r.faculty_id AS facultyId,
@@ -152,21 +151,20 @@ SELECT r.leave_request_id AS id, r.request_code AS requestId, r.faculty_id AS fa
        d.department_name AS department, t.name AS leaveTypeName, t.code AS leaveTypeCode, p.name AS policyName
 FROM faculty_leave_requests r
 JOIN faculty f ON f.faculty_id=r.faculty_id
-LEFT JOIN departments d ON d.department_id=f.department_id
+JOIN departments d ON d.department_id=f.department_id
 LEFT JOIN faculty_leave_types t ON t.leave_type_id=r.leave_type_id
 LEFT JOIN faculty_leave_policies p ON p.policy_id=r.policy_id
 WHERE r.status IN ('Approved','Rejected','Cancelled')
-  AND (@collegeId IS NULL OR f.college_id=@collegeId)
   AND (@status IS NULL OR r.status=@status)
   AND (@facultyType IS NULL OR (CASE WHEN UPPER(COALESCE(f.employment_type,'')) LIKE '%NON%' THEN 'Non-Teaching' ELSE 'Teaching' END)=@facultyType)
   AND (@department IS NULL OR d.department_name=@department)
   AND (@search IS NULL OR r.request_code LIKE CONCAT('%',@search,'%') OR f.faculty_name LIKE CONCAT('%',@search,'%') OR f.faculty_code LIKE CONCAT('%',@search,'%') OR t.name LIKE CONCAT('%',@search,'%'))
 ORDER BY r.decision_date DESC, r.leave_request_id DESC;";
-        return await Query(sql,new { search=Null(search), facultyType=Null(facultyType), department=Null(department), status=Null(status), collegeId },"Leave history retrieved successfully.");
+        return await Query(sql,new { search=Null(search), facultyType=Null(facultyType), department=Null(department), status=Null(status) },"Leave history retrieved successfully.");
     }
 
     [HttpGet("balances")]
-    public async Task<IActionResult> Balances([FromQuery] long? facultyId,[FromQuery] string? department,[FromQuery] string? facultyType,[FromQuery] string? search,[FromQuery] long? collegeId)
+    public async Task<IActionResult> Balances([FromQuery] long? facultyId,[FromQuery] string? department,[FromQuery] string? facultyType,[FromQuery] string? search)
     {
         const string sql=@"
 SELECT f.faculty_id AS facultyId,f.faculty_code AS employeeId,f.faculty_name AS fullName,f.designation,d.department_name AS department,
@@ -174,18 +172,18 @@ SELECT f.faculty_id AS facultyId,f.faculty_code AS employeeId,f.faculty_name AS 
        p.policy_id AS policyId,p.name AS policyName,t.leave_type_id AS leaveTypeId,t.name AS leaveTypeName,t.code AS leaveTypeCode,t.pay_category AS payCategory,
        e.entitlement,COALESCE(SUM(CASE WHEN r.status='Approved' THEN r.days ELSE 0 END),0) AS used,
        COALESCE(SUM(CASE WHEN r.status='Pending' THEN r.days ELSE 0 END),0) AS pending
-FROM faculty f LEFT JOIN departments d ON d.department_id=f.department_id
+FROM faculty f JOIN departments d ON d.department_id=f.department_id
 LEFT JOIN faculty_leave_policies p ON p.status='Active' AND p.from_date<=CURDATE() AND p.to_date>=CURDATE()
   AND " + PolicyFacultyScopeSql + @"
 LEFT JOIN faculty_leave_policy_entitlements e ON e.policy_id=p.policy_id
 LEFT JOIN faculty_leave_types t ON t.leave_type_id=e.leave_type_id AND (t.college_id IS NULL OR t.college_id=f.college_id)
 LEFT JOIN faculty_leave_requests r ON r.faculty_id=f.faculty_id AND r.policy_id=p.policy_id AND r.leave_type_id=t.leave_type_id
-WHERE f.deleted_at IS NULL AND (@collegeId IS NULL OR f.college_id=@collegeId) AND (e.leave_type_id IS NULL OR t.leave_type_id IS NOT NULL) AND (@facultyId IS NULL OR f.faculty_id=@facultyId) AND (@department IS NULL OR d.department_name=@department)
+WHERE f.deleted_at IS NULL AND (e.leave_type_id IS NULL OR t.leave_type_id IS NOT NULL) AND (@facultyId IS NULL OR f.faculty_id=@facultyId) AND (@department IS NULL OR d.department_name=@department)
 AND (@facultyType IS NULL OR (CASE WHEN UPPER(COALESCE(f.employment_type,'')) LIKE '%NON%' THEN 'Non-Teaching' ELSE 'Teaching' END)=@facultyType)
 AND (@search IS NULL OR f.faculty_name LIKE CONCAT('%',@search,'%') OR f.faculty_code LIKE CONCAT('%',@search,'%'))
 GROUP BY f.faculty_id,f.faculty_code,f.faculty_name,f.designation,d.department_name,employeeCategory,p.policy_id,p.name,t.leave_type_id,t.name,t.code,t.pay_category,e.entitlement
 ORDER BY f.faculty_name,t.name;";
-        return await Query(sql,new{facultyId,department=Null(department),facultyType=Null(facultyType),search=Null(search),collegeId},"Leave balances retrieved successfully.");
+        return await Query(sql,new{facultyId,department=Null(department),facultyType=Null(facultyType),search=Null(search)},"Leave balances retrieved successfully.");
     }
 
     [HttpGet("types")]
@@ -194,11 +192,11 @@ ORDER BY f.faculty_name,t.name;";
     {
         if (collegeId is <= 0)
             return BadRequest(new { success = false, message = "CollegeId must be a positive number." });
-        // A selected college sees its own types and shared legacy types, never another college's records.
+        // No college filter preserves the existing administrative list, including legacy shared types.
         return await Query(@"SELECT leave_type_id AS id, college_id AS collegeId, name, code,
             category, pay_category AS payCategory, description, status
             FROM faculty_leave_types
-            WHERE (@collegeId IS NULL OR college_id IS NULL OR college_id=@collegeId)
+            WHERE (@collegeId IS NULL OR college_id=@collegeId)
               AND (@status IS NULL OR status=@status)
               AND (@search IS NULL OR name LIKE CONCAT('%',@search,'%') OR code LIKE CONCAT('%',@search,'%'))
             ORDER BY name", new { collegeId, status=Null(status), search=Null(search) },
@@ -295,8 +293,7 @@ ORDER BY f.faculty_name,t.name;";
     [HttpGet("policies")]
     public async Task<IActionResult> Policies([FromQuery] string? search, [FromQuery] string? status,
         [FromQuery] long? collegeId, [FromQuery] string? academicYear,
-        [FromQuery] string? applicableTo, [FromQuery] long? departmentId, [FromQuery] long? branchId,
-        [FromQuery] string? leaveTypeId)
+        [FromQuery] string? applicableTo, [FromQuery] long? departmentId, [FromQuery] long? branchId)
     {
         try
         {
@@ -304,75 +301,26 @@ ORDER BY f.faculty_name,t.name;";
             if (departmentId is <= 0 || branchId is <= 0) throw new ArgumentException("Scope IDs must be positive numbers.");
             var year=string.IsNullOrWhiteSpace(academicYear) ? null : NormalizePolicyYear(academicYear);
             var employeeType=string.IsNullOrWhiteSpace(applicableTo) ? null : NormalizePolicyType(applicableTo);
-            const string sql = @"SELECT p.policy_id AS Id,p.college_id AS CollegeId,p.name AS Name,
-                p.academic_year AS AcademicYear,p.applicable_to AS ApplicableTo,
-                p.department_id AS DepartmentId,d.department_name AS DepartmentName,
-                p.branch_id AS BranchId,b.branch_name AS BranchName,
-                p.from_date AS FromDate,p.to_date AS ToDate,p.status AS Status,
-                e.leave_type_id AS EntitlementTypeId,t.name AS EntitlementTypeName,
-                t.code AS EntitlementTypeCode,t.pay_category AS EntitlementPayCategory,
-                e.entitlement AS Entitlement,e.max_days AS MaxDays,e.carry_forward AS CarryForward,
-                e.max_carry_forward AS MaxCarryForward,e.document_required AS DocumentRequired
+            return await Query(@"SELECT p.policy_id AS id,p.college_id AS collegeId,p.name,
+                p.academic_year AS academicYear,p.applicable_to AS applicableTo,
+                p.department_id AS departmentId,d.department_name AS departmentName,
+                p.branch_id AS branchId,b.branch_name AS branchName,
+                p.from_date AS `from`,p.to_date AS `to`,p.status,
+                (SELECT COUNT(*) FROM faculty_leave_policy_entitlements e WHERE e.policy_id=p.policy_id) AS leaveTypes
                 FROM faculty_leave_policies p
                 LEFT JOIN departments d ON d.department_id=p.department_id
                 LEFT JOIN branches b ON b.branch_id=p.branch_id
-                LEFT JOIN faculty_leave_policy_entitlements e ON e.policy_id=p.policy_id
-                LEFT JOIN faculty_leave_types t ON t.leave_type_id=e.leave_type_id
                 WHERE (@collegeId IS NULL OR p.college_id=@collegeId)
                   AND (@year IS NULL OR fn_flp_academic_year_key(p.academic_year)=@year)
                   AND (@employeeType IS NULL OR fn_flp_employee_type(p.applicable_to)='Both' OR @employeeType='Both' OR fn_flp_employee_type(p.applicable_to)=@employeeType)
                   AND (@departmentId IS NULL OR p.department_id IS NULL OR p.department_id=@departmentId)
                   AND (@branchId IS NULL OR p.branch_id IS NULL OR p.branch_id=@branchId)
                   AND (@status IS NULL OR p.status=@status)
-                  AND (@leaveTypeId IS NULL OR EXISTS(
-                    SELECT 1 FROM faculty_leave_policy_entitlements filterEntitlement
-                    WHERE filterEntitlement.policy_id=p.policy_id
-                      AND filterEntitlement.leave_type_id=@leaveTypeId))
                   AND (@search IS NULL OR p.name LIKE CONCAT('%',@search,'%'))
-                ORDER BY p.from_date DESC,p.name,e.leave_type_id;";
-
-            await using var connection = Connection();
-            await connection.OpenAsync();
-            var rows = (await connection.QueryAsync<LeavePolicyListRow>(sql, new {
-                collegeId,year,employeeType,departmentId,branchId,status=Null(status),
-                leaveTypeId=string.IsNullOrWhiteSpace(leaveTypeId) ? null : leaveTypeId.Trim(),
-                search=Null(search)
-            })).ToList();
-            var policies = rows.GroupBy(row => row.Id).Select(group => {
-                var policy = group.First();
-                var entitlements = group.Where(row => !string.IsNullOrWhiteSpace(row.EntitlementTypeId))
-                    .Select(row => new {
-                        leaveTypeId = row.EntitlementTypeId,
-                        leaveTypeName = row.EntitlementTypeName,
-                        leaveTypeCode = row.EntitlementTypeCode,
-                        payCategory = row.EntitlementPayCategory,
-                        entitlement = row.Entitlement,
-                        maxDays = row.MaxDays,
-                        carryForward = row.CarryForward,
-                        maxCarryForward = row.MaxCarryForward,
-                        documentRequired = row.DocumentRequired
-                    }).ToList();
-                return new {
-                    id = policy.Id,
-                    collegeId = policy.CollegeId,
-                    name = policy.Name,
-                    academicYear = policy.AcademicYear,
-                    applicableTo = policy.ApplicableTo,
-                    departmentId = policy.DepartmentId,
-                    departmentName = policy.DepartmentName,
-                    branchId = policy.BranchId,
-                    branchName = policy.BranchName,
-                    from = policy.FromDate,
-                    to = policy.ToDate,
-                    status = policy.Status,
-                    leaveTypes = entitlements.Count,
-                    entitlements
-                };
-            }).ToList();
-            return Ok(new { success=true, message="Leave policies retrieved successfully.", data=policies });
+                ORDER BY p.from_date DESC,p.name", new {collegeId,year,employeeType,departmentId,branchId,status=Null(status),search=Null(search)},
+                "Leave policies retrieved successfully.");
         }
         catch (ArgumentException ex) { return BadRequest(new {success=false,message=ex.Message}); }
-        catch (MySqlException ex) { return DbError(ex); }
     }
 
     [HttpPost("policies")]
@@ -589,30 +537,6 @@ ORDER BY f.faculty_name,t.name;";
         public DateTime FromDate {get;set;}
         public DateTime ToDate {get;set;}
         public string Status {get;set;}="Draft";
-    }
-    private sealed class LeavePolicyListRow
-    {
-        public string Id { get; set; } = "";
-        public long CollegeId { get; set; }
-        public string Name { get; set; } = "";
-        public string AcademicYear { get; set; } = "";
-        public string ApplicableTo { get; set; } = "";
-        public long? DepartmentId { get; set; }
-        public string? DepartmentName { get; set; }
-        public long? BranchId { get; set; }
-        public string? BranchName { get; set; }
-        public DateTime FromDate { get; set; }
-        public DateTime ToDate { get; set; }
-        public string Status { get; set; } = "";
-        public string? EntitlementTypeId { get; set; }
-        public string? EntitlementTypeName { get; set; }
-        public string? EntitlementTypeCode { get; set; }
-        public string? EntitlementPayCategory { get; set; }
-        public decimal? Entitlement { get; set; }
-        public decimal? MaxDays { get; set; }
-        public bool CarryForward { get; set; }
-        public decimal? MaxCarryForward { get; set; }
-        public bool DocumentRequired { get; set; }
     }
     private sealed class LeavePolicyConflict : LeavePolicyState
     {

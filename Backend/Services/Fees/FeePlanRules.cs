@@ -31,14 +31,6 @@ public static class FeePlanRules
         Require(q.Quota?.Length is not > 100 && q.StudentCategory?.Length is not > 100, "quota and studentCategory must be at most 100 characters.");
     }
 
-    public static void ValidatePickerScope(AdmissionFeePlanQuery q)
-    {
-        Require(q.CollegeId > 0 && q.AcademicYearId > 0 && q.CourseId > 0 && q.BranchId > 0 && q.SemesterId >= 0,
-            "collegeId, academicYearId, courseId and branchId must be positive server IDs; semesterId may be omitted to list plans for every semester.");
-        Require(Clean(q.Batch) is { Length: <= 50 }, "batch is required and must be at most 50 characters.");
-        Require(q.Quota?.Length is not > 100 && q.StudentCategory?.Length is not > 100, "quota and studentCategory must be at most 100 characters.");
-    }
-
     public static void Validate(AcademicFeePlanRequest p)
     {
         ValidateScope(Scope(p));
@@ -110,7 +102,7 @@ public static class FeePlanRules
 
     public static bool Matches(AcademicFeePlanRequest p, AdmissionFeePlanQuery q) =>
         p.CollegeId == q.CollegeId && p.AcademicYearId == q.AcademicYearId && p.CourseId == q.CourseId &&
-        p.BranchId == q.BranchId && (q.SemesterId <= 0 || p.SemesterId == q.SemesterId) && Same(p.Batch, q.Batch) &&
+        p.BranchId == q.BranchId && p.SemesterId == q.SemesterId && Same(p.Batch, q.Batch) &&
         (Clean(p.Quota) == null || Same(p.Quota, q.Quota)) &&
         (Clean(p.StudentCategory) == null || Same(p.StudentCategory, q.StudentCategory));
 

@@ -1,7 +1,9 @@
-﻿namespace BTech.Models
+namespace BTech.Models
 {
     public class SmtpSettings
     {
+        public string SecurityMode { get; set; } = "StartTls";
+
         public string Host { get; set; } = string.Empty;
 
         public int Port { get; set; }

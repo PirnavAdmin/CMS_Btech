@@ -1,0 +1,41 @@
+{
+  "build": "cms-backend-20261103-invitation-diagnostics-r10",
+  "date": "2026-11-03",
+  "backend_build": {
+    "passed": true,
+    "sdk": "8.0.427",
+    "errors": 0,
+    "warnings": 4,
+    "warning_scope": "Pre-existing OtpController, FacultyController and EventStore warnings"
+  },
+  "unit_suites": {
+    "AccountInvitations": "passed",
+    "PasswordSetupUrl": "passed",
+    "ResetPasswordRoute": "passed",
+    "SmtpDiagnostics": {
+      "passed": true,
+      "checks": 14
+    }
+  },
+  "mysql_component_suite": "passed",
+  "integration_checks_passed": 55,
+  "tracked_http_requests": 60,
+  "controlled_inbox_received": 11,
+  "mysql_version": "8.0.46",
+  "sql_patch_repeated": 2,
+  "existing_business_and_token_values_preserved_during_patch": true,
+  "frontend_tests_and_build": "Not run: frontend source not supplied",
+  "live_endpoint_observation": {
+    "url": "https://stagnant-craftily-paving.ngrok-free.dev",
+    "anonymous_invitations_status": 401,
+    "observed_build": "cms-backend-20261103-invitation-recovery-r9",
+    "swagger_routes_present": true
+  },
+  "real_invitation_sent": false,
+  "live_database_changed": false,
+  "live_configuration_changed": false,
+  "deployed_by_this_task": false,
+  "exact_live_smtp_cause_verified": false,
+  "sender_verification_and_inbox_delivery": "Unverified",
+  "credentials_in_delivered_appsettings": false
+}

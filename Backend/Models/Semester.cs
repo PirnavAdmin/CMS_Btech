@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BTech.Models
 {
@@ -10,7 +10,7 @@ namespace BTech.Models
 
         public long BranchId { get; set; }
 
-        public long? AcademicYearId { get; set; }
+        public long AcademicYearId { get; set; }
 
         public int SemesterNumber { get; set; }
 
@@ -42,6 +42,9 @@ namespace BTech.Models
 
         [NotMapped]
         public string? CourseName => Course?.CourseName;
+
+        [NotMapped]
+        public long? CollegeId => Course?.CollegeId;
 
         [NotMapped]
         public string? BranchName => Branch?.BranchName;

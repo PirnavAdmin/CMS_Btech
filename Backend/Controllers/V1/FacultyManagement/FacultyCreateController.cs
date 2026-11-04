@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using BTech.Data;
 using BTech.DTOs.Faculty;
 using BTech.Helpers;
+using BTech.Middleware;
 using BTech.Models;
 using BTech.Services;
 using BTech.Services.Interfaces;
@@ -21,17 +22,42 @@ public class FacultyCreateController : ControllerBase
     private readonly IEmailService _emailService;
     private readonly IAccountSetupService _accountSetupService;
     private readonly ILogger<FacultyCreateController> _logger;
-    private readonly IWebHostEnvironment _environment;
+    private readonly FacultyAccountResolver _accounts;
 
     public FacultyCreateController(ApplicationDbContext context, IEmailService emailService,
         IAccountSetupService accountSetupService,
-        ILogger<FacultyCreateController> logger, IWebHostEnvironment environment)
+        ILogger<FacultyCreateController> logger, FacultyAccountResolver accounts)
     {
         _context=context;
         _emailService=emailService;
         _accountSetupService=accountSetupService;
         _logger=logger;
-        _environment=environment;
+        _accounts=accounts;
+    }
+
+    [HttpPost("account-lookup")]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public async Task<IActionResult> LookupAccount([FromBody] FacultyAccountLookupRequest request,
+        [FromQuery] long? collegeId, CancellationToken ct)
+    {
+        Response.Headers.CacheControl = "no-store";
+        try
+        {
+            var selected = CollegeSelection.Resolve(collegeId, request.CollegeId);
+            var scopeError = ResolveCollegeScope(selected, requireAdmin: true, out var authorizedCollege);
+            if (scopeError is not null) return scopeError;
+            if (!await _context.Colleges.AsNoTracking().AnyAsync(c => c.CollegeId == authorizedCollege
+                && c.Status == 1 && c.DeletedAt == null, ct))
+                return BadRequest(new { success=false, code="COLLEGE_UNAVAILABLE", message="Active college not found." });
+            var result = await _accounts.LookupAsync(authorizedCollege, request.Email, request.Mobile, ct);
+            _logger.LogInformation("Faculty account lookup. ActorId={ActorId}, CollegeId={CollegeId}, MatchCode={MatchCode}, CandidateCount={Count}",
+                GetCurrentUserId(), authorizedCollege, result.MatchCode, result.Items.Count);
+            return Ok(new { success=true, data=result });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { success=false, code="INVALID_COLLEGE_SCOPE", message=ex.Message });
+        }
     }
 
     [HttpPost]
@@ -39,8 +65,10 @@ public class FacultyCreateController : ControllerBase
     {
         try
         {
-            request.CollegeId=CollegeSelection.Resolve(collegeId, request.CollegeId == 0 ? null : request.CollegeId)
-                ?? throw new ArgumentException("CollegeId is required.");
+            var selected=CollegeSelection.Resolve(collegeId, request.CollegeId == 0 ? null : request.CollegeId);
+            var scopeError=ResolveCollegeScope(selected, requireAdmin: request.UserId > 0, out var authorizedCollege);
+            if (scopeError is not null) return scopeError;
+            request.CollegeId=authorizedCollege;
             return await CreateCore(request);
         }
         catch (ArgumentException ex)
@@ -53,11 +81,20 @@ public class FacultyCreateController : ControllerBase
             _context.ChangeTracker.Clear();
             _logger.LogWarning("Concurrent faculty/user uniqueness conflict. RequestedUserId={UserId}, CollegeId={CollegeId}, CorrelationId={CorrelationId}",
                 request.UserId,request.CollegeId,HttpContext.TraceIdentifier);
-            var email=request.OfficialEmail.Trim().ToLowerInvariant();
-            var resolved=request.UserId > 0 ? request.UserId : await _context.Users
-                .Where(u => u.Email == email).Select(u => u.user_id).FirstOrDefaultAsync();
-            var conflict=await _context.Faculties.AsNoTracking().FirstOrDefaultAsync(f => f.UserId == resolved);
-            if (conflict is not null) return LinkConflict(conflict,request.UserId,request.CollegeId,"concurrent-create");
+            var matches=await _accounts.FindContactsAsync(request.OfficialEmail,request.Mobile,HttpContext.RequestAborted);
+            if (request.UserId > 0)
+            {
+                var selected=await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.user_id == request.UserId
+                    && u.college_id == request.CollegeId && u.DeletedAt == null);
+                if (selected is not null)
+                {
+                    var conflict=await _context.Faculties.AsNoTracking().FirstOrDefaultAsync(f => f.UserId == selected.user_id);
+                    if (conflict is not null) return LinkConflict(conflict,request.UserId,request.CollegeId,"concurrent-create");
+                }
+            }
+            else if (matches.Any) return ContactConflict(matches);
+            if (await _context.Faculties.AsNoTracking().AnyAsync(f => f.FacultyCode == request.FacultyCode.Trim()))
+                return Conflict(new { success=false, code="FACULTY_CODE_EXISTS", message="Faculty code already exists. Use another code." });
             return Conflict(new { success=false, code="FACULTY_UNIQUE_CONFLICT",
                 message="Faculty code, employee ID, email or mobile already exists. Check the existing account before retrying.",
                 correlationId=HttpContext.TraceIdentifier });
@@ -71,7 +108,7 @@ public class FacultyCreateController : ControllerBase
         var facultyCode=request.FacultyCode.Trim();
         if (request.UserId < 0 || request.DepartmentId <= 0 || string.IsNullOrWhiteSpace(request.FacultyName)
             || facultyCode.Length == 0 || mobile.Length == 0)
-            return BadRequest(new { success=false, message="Valid userId, department, faculty code, faculty name and mobile are required. Use userId 0 to create or resolve an account." });
+            return BadRequest(new { success=false, message="Valid userId, department, faculty code, faculty name and mobile are required. Use userId 0 only for a new account, or explicitly select an existing account using account-lookup." });
         _logger.LogInformation("Faculty create requested. RequestedUserId={UserId}, CollegeId={CollegeId}, DepartmentId={DepartmentId}",
             request.UserId,request.CollegeId,request.DepartmentId);
 
@@ -85,37 +122,37 @@ public class FacultyCreateController : ControllerBase
             return Conflict(new { success=false, code="FACULTY_CODE_EXISTS", message="Faculty code already exists, including inactive or deleted records." });
 
         // User and faculty must commit together. Failed linking must not leave an orphan account.
-        await using var transaction=await _context.Database.BeginTransactionAsync();
+        await using var transaction=await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted);
         User? user;
-        var resolution=request.UserId > 0 ? "userId" : "email-and-mobile";
+        var resolution=request.UserId > 0 ? "explicit-selection" : "new-account";
         if (request.UserId == 0)
         {
-            // Do not silently select the first email OR mobile match. Both supplied contacts
-            // must identify the same account before it can be automatically reused.
-            var emailUser=await _context.Users.FirstOrDefaultAsync(x => x.Email == officialEmail);
-            var mobileUser=await _context.Users.FirstOrDefaultAsync(x => x.Mobile == mobile);
-            if (emailUser is not null && mobileUser is not null && emailUser.user_id != mobileUser.user_id)
-                return IdentityConflict("The email and mobile belong to different user accounts. Correct the details or select the intended userId.",emailUser.user_id,"different-accounts");
-            user=emailUser ?? mobileUser;
-            if (user is not null && (emailUser is null || mobileUser is null))
-                return IdentityConflict("Only one contact matches an existing account. The backend will not automatically reuse it. Correct the email/mobile or select the intended userId.",user.user_id,emailUser is null ? "mobile-only" : "email-only");
+            var matches=await _accounts.FindContactsAsync(officialEmail,mobile,HttpContext.RequestAborted);
+            if (matches.Any) return ContactConflict(matches);
+            user=null;
         }
         else
         {
-            user=await _context.Users.FirstOrDefaultAsync(x => x.user_id == request.UserId);
-            if (user is null) return BadRequest(new { success=false, message="User not found." });
+            // Serialize linking with contact edits, deactivation and college reassignment.
+            // Materialize before LINQ to avoid composing SQL after FOR UPDATE.
+            user=(await _context.Users.FromSqlInterpolated($"SELECT * FROM users WHERE user_id={request.UserId} AND college_id={request.CollegeId} FOR UPDATE")
+                .AsNoTracking().ToListAsync(HttpContext.RequestAborted)).SingleOrDefault();
+            if (user is null || user.DeletedAt.HasValue)
+                return IdentityConflict("USER_ACCOUNT_UNAVAILABLE", "The selected account is unavailable in the active college. Look up an account in this college.");
         }
         if (user is not null)
         {
             // Keep the database's established global uq_faculty_user_id contract.
             var existing=await _context.Faculties.AsNoTracking().FirstOrDefaultAsync(x => x.UserId == user.user_id);
             if (existing is not null) return LinkConflict(existing,request.UserId,request.CollegeId,resolution);
-            if (user.DeletedAt.HasValue || user.Status != 1)
-                return IdentityConflict("The selected user is inactive or deleted. Restore/reactivate the existing account before linking it.",user.user_id,resolution);
-            if (user.college_id.HasValue && user.college_id != request.CollegeId)
-                return IdentityConflict("The selected user belongs to a different college. Select an account for this college.",user.user_id,resolution);
-            if (!string.Equals(user.Email?.Trim(),officialEmail,StringComparison.OrdinalIgnoreCase) || user.Mobile?.Trim() != mobile)
-                return IdentityConflict("The submitted email/mobile do not match the selected userId. Verify the selected account.",user.user_id,resolution);
+            if (user.Status != 1)
+                return IdentityConflict("USER_INACTIVE", "The selected account is inactive. Reactivate it through account management before linking.");
+            if (string.IsNullOrWhiteSpace(user.Email) || string.IsNullOrWhiteSpace(user.Mobile))
+                return IdentityConflict("USER_CONTACTS_INCOMPLETE", "The selected account must have both email and mobile saved before linking. Faculty creation cannot add or correct account contacts. Select another eligible account or resolve its contacts separately.");
+            if (!FacultyAccountResolver.ContactsMatch(user,officialEmail,mobile))
+                return IdentityConflict("USER_CONTACT_MISMATCH", "Submit the selected account's canonical email and mobile from account-lookup. Faculty creation cannot change account contacts.");
+            officialEmail=user.Email!;
+            mobile=user.Mobile!;
         }
         else
         {
@@ -232,6 +269,10 @@ public class FacultyCreateController : ControllerBase
           officialEmail =
   faculty.OfficialEmail,
 
+          mobile = faculty.Mobile,
+
+          accountResolution = resolution,
+
           designation =
   faculty.Designation,
 
@@ -257,17 +298,44 @@ public class FacultyCreateController : ControllerBase
         return Conflict(new { success=false, code="FACULTY_USER_ALREADY_LINKED",
             message=$"This user is already linked to a faculty record ({state}). The current system allows one faculty record per user across all colleges. Use the existing record or select a different user.",
             correlationId=HttpContext.TraceIdentifier,
-            conflict=_environment.IsDevelopment() ? new { requestedUserId, userId=faculty.UserId,
-                facultyId=faculty.FacultyId, requestedCollegeId=collegeId, collegeId=faculty.CollegeId,
-                status=faculty.Status, deletedAt=faculty.DeletedAt, matchedBy=resolution } : null });
+            nextAction="Use the existing faculty record, or select another eligible account." });
     }
 
-    private IActionResult IdentityConflict(string message, long userId, string matchedBy)
+    private IActionResult ContactConflict(FacultyAccountResolver.ContactMatches matches) =>
+        IdentityConflict(matches.Code, FacultyAccountResolver.ConflictMessage(matches.Code));
+
+    private IActionResult IdentityConflict(string code, string message)
     {
-        _logger.LogWarning("Faculty identity conflict. UserId={UserId}, MatchedBy={MatchedBy}", userId,matchedBy);
-        return Conflict(new { success=false, code="USER_IDENTITY_CONFLICT", message,
+        _logger.LogWarning("Faculty identity conflict. Code={Code}, CollegeId={CollegeId}", code,
+            HttpContext.Items[ModulePermissionMiddleware.CurrentCollegeItem]);
+        return Conflict(new { success=false, code, message,
             correlationId=HttpContext.TraceIdentifier,
-            conflict=_environment.IsDevelopment() ? new { userId, matchedBy } : null });
+            nextAction="POST /api/v1/faculty/account-lookup, explicitly select an eligible account, and resubmit its userId and canonical contacts." });
+    }
+
+    private IActionResult? ResolveCollegeScope(long? selected, bool requireAdmin, out long collegeId)
+    {
+        collegeId=0;
+        // Only consume the live middleware snapshot; JWT roles/college claims alone are insufficient.
+        if (User.Identity?.IsAuthenticated != true
+            || HttpContext.Items[ModulePermissionMiddleware.SuperAdminItem] is not bool superAdmin
+            || HttpContext.Items[ModulePermissionMiddleware.ActiveRolesItem] is not HashSet<string> roles)
+            return StatusCode(403, new { success=false, code="FACULTY_SCOPE_REQUIRED", message="A verified college scope is required." });
+        if (!superAdmin && (roles.Contains("STUDENT") || (requireAdmin && !roles.Contains("COLLEGE_ADMIN"))))
+            return StatusCode(403, new { success=false, code="FACULTY_ACCOUNT_RESOLUTION_FORBIDDEN", message="College Admin access is required to look up or link existing accounts." });
+        if (superAdmin)
+        {
+            if (selected is null or <= 0)
+                return BadRequest(new { success=false, code="COLLEGE_REQUIRED", message="Select a college for this operation." });
+            collegeId=selected.Value;
+            return null;
+        }
+        if (CollegeRequestScope.GetCollegeId(HttpContext) is not long activeCollege || activeCollege <= 0)
+            return StatusCode(403, new { success=false, code="FACULTY_SCOPE_REQUIRED", message="An active college assignment is required." });
+        if (selected.HasValue && selected != activeCollege)
+            return StatusCode(403, new { success=false, code="COLLEGE_SCOPE_MISMATCH", message="Select the active college. Cross-college access is not permitted." });
+        collegeId=activeCollege;
+        return null;
     }
 
     private static string GenerateTemporaryPassword()

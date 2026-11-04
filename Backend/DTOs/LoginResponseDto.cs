@@ -27,6 +27,10 @@ namespace BTech.DTOs
         // REMEMBER ME
         public bool RememberMe { get; set; }
 
+        public bool ProfileCompleted { get; set; }
+        public bool AcademicYearRestricted { get; set; }
+        public long[] AssignedAcademicYearIds { get; set; } = [];
+
         public bool MustChangePassword { get; set; }
     }
 }

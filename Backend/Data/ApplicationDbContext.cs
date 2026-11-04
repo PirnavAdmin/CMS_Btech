@@ -217,6 +217,11 @@ namespace BTech.Data
                     .HasMaxLength(255)
                     .IsRequired();
 
+                entity.Property(x => x.ProfileCompleted).HasColumnName("profile_completed");
+                entity.Property(x => x.InternalIdentifier).HasColumnName("internal_identifier");
+                entity.Property(x => x.AcademicYearRestricted).HasColumnName("academic_year_restricted");
+                entity.Property(x => x.AccessVersion).HasColumnName("access_version");
+
                 entity.Property(x => x.MustChangePassword)
                     .HasColumnName("must_change_password")
                     .HasDefaultValue(false);
@@ -1325,7 +1330,8 @@ namespace BTech.Data
                     .IsRequired();
 
                 semesterEntity.Property(x => x.AcademicYearId)
-                    .HasColumnName("academic_year_id");
+                    .HasColumnName("academic_year_id")
+                    .IsRequired();
 
                 semesterEntity.Property(x => x.SemesterNumber)
                     .HasColumnName("semester_number")
@@ -1379,8 +1385,7 @@ namespace BTech.Data
                 semesterEntity.HasOne(x => x.AcademicYear)
                     .WithMany()
                     .HasForeignKey(x => x.AcademicYearId)
-                    .OnDelete(DeleteBehavior.Restrict)
-                    .IsRequired(false);
+                    .OnDelete(DeleteBehavior.Restrict);
 
                 semesterEntity.HasIndex(x => x.CourseId);
                 semesterEntity.HasIndex(x => x.BranchId);

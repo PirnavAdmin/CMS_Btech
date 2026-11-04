@@ -1,0 +1,51 @@
+{
+  "changed": [
+    "Backend/Configure_CMS_SMTP_Development.ps1",
+    "Backend/DTOs/Profile/ProfileResponseDto.cs",
+    "Backend/Middleware/ExceptionMiddleware.cs",
+    "Backend/Middleware/ModulePermissionMiddleware.cs",
+    "Backend/Program.cs",
+    "Backend/Services/BackendBuild.cs",
+    "Backend/Services/Implementations/EmailService.cs",
+    "Backend/Services/Implementations/ProfileService.cs",
+    "Backend/Services/Invitations/MySqlAccountInvitationStore.cs",
+    "Backend/Services/Invitations/SmtpConfiguration.cs",
+    "Backend/Services/Invitations/UserAccessSchema.cs",
+    "Backend/UserAccess/AccountReadinessMiddleware.cs",
+    "Backend/UserAccess/Requests.cs",
+    "Backend/UserAccess/UserAccessController.cs",
+    "Backend/UserAccess/UserAccessInvitations.cs",
+    "Backend/UserAccess/UserAccessService.cs",
+    "Backend/UserAccess/UserAccountRequestException.cs",
+    "Backend/appsettings.json",
+    "Package_Validation.json",
+    "READ_FIRST.md",
+    "SMTP_Authentication_Check/README.md"
+  ],
+  "new": [
+    "Backend/Controllers/V1/SmtpDiagnosticsController.cs",
+    "Backend/Database/AdminManagement/User_Access_Invitation_Diagnostics_R10.sql",
+    "Backend/INVITATION_DIAGNOSTICS_R10_README.md",
+    "Backend/Services/Invitations/InvitationPolicy.cs",
+    "Backend/Services/Invitations/SafeSmtpTrace.cs",
+    "Backend/Services/Invitations/SmtpRuntimeDiagnostics.cs",
+    "Backend/Tests/SmtpDiagnostics/Program.cs",
+    "Backend/Tests/SmtpDiagnostics/SmtpDiagnostics.Tests.csproj",
+    "Backend/Verification/Invitations/R10_AccountInvitations_Tests.txt",
+    "Backend/Verification/Invitations/R10_Build.txt",
+    "Backend/Verification/Invitations/R10_Changed_Files.json",
+    "Backend/Verification/Invitations/R10_HTTP_Test_Results.json",
+    "Backend/Verification/Invitations/R10_PasswordSetupUrl_Tests.txt",
+    "Backend/Verification/Invitations/R10_ResetPasswordRoute_Tests.txt",
+    "Backend/Verification/Invitations/R10_Route_Preservation.json",
+    "Backend/Verification/Invitations/R10_SmtpDiagnostics_Tests.txt",
+    "Backend/Verification/Invitations/R10_Validation.json",
+    "Backend/Verification/Invitations/run_isolated_r10.py"
+  ],
+  "excluded_generated_or_sensitive_files": [
+    "bin",
+    "obj",
+    "Logs",
+    "test-password-hash.txt"
+  ]
+}

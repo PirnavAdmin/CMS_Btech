@@ -39,16 +39,19 @@ public sealed class AuthAccessController : ControllerBase
         if (!long.TryParse(userIdValue, out var userId) || userId <= 0)
             return Unauthorized(new { success = false, message = "A valid user identity is required." });
 
+        var dependency = "access-snapshot/database-connection";
         try
         {
             await using var connection = new MySqlConnection(_connectionString);
             await connection.OpenAsync(cancellationToken);
+            dependency = "access-snapshot/active-account/users";
             var account = await connection.QuerySingleOrDefaultAsync<AccountRow>(new CommandDefinition(
-                "SELECT college_id AS CollegeId FROM users WHERE user_id=@userId AND status=1 AND deleted_at IS NULL LIMIT 1;",
+                "SELECT college_id AS CollegeId,profile_completed AS ProfileCompleted,academic_year_restricted AS AcademicYearRestricted FROM users WHERE user_id=@userId AND status=1 AND deleted_at IS NULL LIMIT 1;",
                 new { userId }, cancellationToken: cancellationToken));
             if (account is null)
                 return Unauthorized(new { success = false, message = "The account is inactive or no longer exists." });
 
+            dependency = "access-snapshot/active-roles/user_roles+roles";
             var roleCodes = (await connection.QueryAsync<string>(new CommandDefinition("""
                 SELECT DISTINCT UPPER(TRIM(r.role_code))
                 FROM user_roles ur INNER JOIN roles r ON r.role_id=ur.role_id
@@ -60,6 +63,7 @@ public sealed class AuthAccessController : ControllerBase
             if (roleCodes.Count == 0)
                 return StatusCode(StatusCodes.Status403Forbidden, new { success = false, message = "No active role is assigned." });
 
+            dependency = "access-snapshot/college-mapping/college_user_mappings+college_settings+colleges";
             var mappedCollegeIds = (await connection.QueryAsync<long>(new CommandDefinition("""
                 SELECT DISTINCT cs.college_id FROM college_user_mappings m
                 JOIN college_settings cs ON cs.college_setting_id=m.college_setting_id
@@ -83,6 +87,7 @@ public sealed class AuthAccessController : ControllerBase
             }
             else
             {
+                dependency = "access-snapshot/role-permissions/permission_modules+role_permissions";
                 var permissions = await connection.QueryAsync<PermissionRow>(new CommandDefinition("""
                     SELECT rp.module_key AS ModuleKey,
                            MAX(CASE WHEN rp.can_view=1 THEN 1 ELSE 0 END) AS CanView,
@@ -123,6 +128,21 @@ public sealed class AuthAccessController : ControllerBase
                 foreach (var key in matrix.Keys.Where(k => !allowed.Contains(k)).ToList()) matrix[key] = new PermissionActionsDto();
             }
 
+            dependency = "access-snapshot/user-year-access/user_academic_year_access";
+            var assignedAcademicYearIds = (await connection.QueryAsync<long>(new CommandDefinition(
+                "SELECT academic_year_id FROM user_academic_year_access WHERE user_id=@userId ORDER BY academic_year_id",new{userId},cancellationToken:cancellationToken))).ToArray();
+            if (!isSuperAdmin)
+            {
+                dependency = "access-snapshot/user-permissions/user_module_permissions";
+                var userOverrides=await connection.QueryAsync<PermissionRow>(new CommandDefinition(
+                    "SELECT module_key AS ModuleKey,can_view AS CanView,can_create AS CanCreate,can_edit AS CanEdit,can_delete AS CanDelete,can_export AS CanExport FROM user_module_permissions WHERE user_id=@userId AND college_id=@collegeId",
+                    new{userId,collegeId=effectiveCollegeId},cancellationToken:cancellationToken));
+                foreach(var p in userOverrides)
+                {
+                    if(!matrix.TryGetValue(p.ModuleKey,out var target))continue;
+                    target.View &= p.CanView==1;target.Create &= p.CanCreate==1;target.Edit &= p.CanEdit==1;target.Delete &= p.CanDelete==1;target.Export &= p.CanExport==1;
+                }
+            }
             var rolePermission = matrix.GetValueOrDefault("roles_permissions") ?? new PermissionActionsDto();
             var canManageAccess = isSuperAdmin || (isCollegeAdmin && rolePermission.View && (rolePermission.Create || rolePermission.Edit));
             var canDelegateAccess = isSuperAdmin || (isCollegeAdmin && rolePermission.View && rolePermission.Create && rolePermission.Edit);
@@ -135,6 +155,9 @@ public sealed class AuthAccessController : ControllerBase
                 data = new
                 {
                     userId,
+                    profileCompleted = account.ProfileCompleted,
+                    academicYearRestricted = account.AcademicYearRestricted,
+                    assignedAcademicYearIds,
                     roleCodes,
                     collegeId = effectiveCollegeId,
                     primaryCollegeId = account.CollegeId,
@@ -149,7 +172,7 @@ public sealed class AuthAccessController : ControllerBase
                     roleClaimTypes = User.Identities.Select(i => i.RoleClaimType).Distinct().ToArray(),
                     tokenRoleCodes = User.Identities.SelectMany(i => i.FindAll(i.RoleClaimType)).Select(c => CanonicalRoleCode.Normalize(c.Value)).Distinct().ToArray(),
                     tokenCollegeId = User.FindFirstValue("collegeId"),
-                    buildId = "cms-backend-20261030-admin-college-setup",
+                    buildId = BackendBuild.Id,
                     buildModuleId = typeof(AuthAccessController).Assembly.ManifestModule.ModuleVersionId.ToString(),
                     permissions = matrix,
                     canManageAccess,
@@ -161,13 +184,13 @@ public sealed class AuthAccessController : ControllerBase
         }
         catch (MySqlException ex)
         {
-            _logger.LogError(ex, "Failed to load effective permissions for UserId={UserId}", userId);
-            return StatusCode(StatusCodes.Status503ServiceUnavailable,
-                new { success = false, message = "Authorization data is temporarily unavailable." });
+            // Let centralized middleware retain actionable diagnostics and correlation.
+            // Returning an action 503 here would be replaced by ApiErrorSanitizationFilter.
+            throw new AuthorizationDependencyException(ex, dependency, _connectionString);
         }
     }
 
-    private sealed class AccountRow { public long? CollegeId { get; set; } }
+    private sealed class AccountRow { public long? CollegeId { get; set; } public bool ProfileCompleted {get;set;} public bool AcademicYearRestricted {get;set;} }
     private sealed class PermissionRow
     {
         public string ModuleKey { get; set; } = string.Empty;

@@ -3,6 +3,7 @@ using System.Data.Common;
 using BTech.Data;
 using BTech.DTOs.College;
 using BTech.Models;
+using BTech.Services;
 using BTech.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -15,35 +16,36 @@ namespace BTech.Repositories.Implementations
     public class CollegeRepository : ICollegeRepository
     {
         private readonly ApplicationDbContext _context;
+        private readonly IHttpContextAccessor _http;
+        private CollegeManagementScope Scope => CollegeManagementScope.From(_http.HttpContext);
 
         public CollegeRepository(
-            ApplicationDbContext context)
+            ApplicationDbContext context, IHttpContextAccessor http)
         {
             _context = context;
+            _http = http;
         }
 
         // =====================================================
         // GET BY ID
         // =====================================================
 
-        public Task<College?> GetByIdAsync(
+        public async Task<College?> GetByIdAsync(
             long collegeId)
         {
-            return ExecuteSingleAsync(
-                "sp_College_GetById",
-                ("p_college_id", collegeId));
+            var result = await ExecuteSingleAsync("sp_College_GetById", ("p_college_id", collegeId));
+            return result != null && Scope.CanAccess(result) ? result : null;
         }
 
         // =====================================================
         // GET BY CODE
         // =====================================================
 
-        public Task<College?> GetByCodeAsync(
+        public async Task<College?> GetByCodeAsync(
             string collegeCode)
         {
-            return ExecuteSingleAsync(
-                "sp_College_GetByCode",
-                ("p_college_code", collegeCode));
+            var result = await ExecuteSingleAsync("sp_College_GetByCode", ("p_college_code", collegeCode));
+            return result != null && Scope.CanAccess(result) ? result : null;
         }
 
         // =====================================================
@@ -58,9 +60,10 @@ namespace BTech.Repositories.Implementations
                 new List<College>();
 
             await WithCommandAsync(
-                "sp_College_GetAll",
+                "sp_College_GetAllVisible",
                 async command =>
                 {
+                    AddScopeParameters(command);
                     AddParameter(
                         command,
                         "p_search",
@@ -99,9 +102,10 @@ namespace BTech.Repositories.Implementations
             var totalCount = 0;
 
             await WithCommandAsync(
-                "sp_College_Search",
+                "sp_College_SearchVisible",
                 async command =>
                 {
+                    AddScopeParameters(command);
                     AddParameter(
                         command,
                         "p_query",
@@ -212,6 +216,7 @@ namespace BTech.Repositories.Implementations
         public async Task UpdateAsync(
             College college)
         {
+            if (!Scope.CanAccess(college)) throw new UnauthorizedAccessException();
             var updated =
                 await ExecuteSingleAsync(
                     "sp_College_Update",
@@ -234,12 +239,13 @@ namespace BTech.Repositories.Implementations
         // UPDATE STATUS
         // =====================================================
 
-        public Task<College?> UpdateStatusAsync(
+        public async Task<College?> UpdateStatusAsync(
             long collegeId,
             sbyte status,
             long? updatedBy)
         {
-            return ExecuteSingleAsync(
+            if (await GetByIdAsync(collegeId) == null) return null;
+            return await ExecuteSingleAsync(
                 "sp_College_UpdateStatus",
                 ("p_college_id", collegeId),
                 ("p_status", status),
@@ -255,6 +261,7 @@ namespace BTech.Repositories.Implementations
             long collegeId,
             long? deletedBy)
         {
+            if (await GetByIdAsync(collegeId) == null) return false;
             var deleted = false;
 
             await WithCommandAsync(
@@ -402,6 +409,15 @@ namespace BTech.Repositories.Implementations
         // =====================================================
         // PARAMETER HELPER
         // =====================================================
+
+        private void AddScopeParameters(DbCommand command)
+        {
+            var scope = Scope;
+            AddParameter(command, "p_actor_user_id", scope.UserId);
+            AddParameter(command, "p_assigned_college_id", scope.AssignedCollegeId);
+            AddParameter(command, "p_allow_creator", scope.IsCollegeAdmin);
+            AddParameter(command, "p_unrestricted", scope.IsSuperAdmin);
+        }
 
         private static void AddParameter(
             DbCommand command,

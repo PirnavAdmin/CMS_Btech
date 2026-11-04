@@ -1,4 +1,4 @@
-﻿using BTech.Data;
+using BTech.Data;
 using BTech.Middleware;
 using BTech.Logging;
 using BTech.Filters;
@@ -31,6 +31,29 @@ builder.Services.AddControllers(options =>
     options.Filters.AddService<ApiErrorSanitizationFilter>();
 });
 
+builder.Services.Configure<Microsoft.AspNetCore.Mvc.ApiBehaviorOptions>(options =>
+{
+    var fallback = options.InvalidModelStateResponseFactory;
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        if (!context.HttpContext.Request.Path.StartsWithSegments("/api/semester")) return fallback(context);
+        var errors = context.ModelState.Where(x => x.Value?.Errors.Count > 0).ToDictionary(
+            x => x.Key, x => x.Value!.Errors.Select(e => string.IsNullOrEmpty(e.ErrorMessage)
+                ? "Invalid JSON value." : e.ErrorMessage).ToArray());
+        var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<BTech.Controllers.SemesterController>>();
+        logger.LogWarning("Semester model binding rejected. Method={Method}, Path={Path}, StatusCode=400, CorrelationId={CorrelationId}, ValidationErrors={ValidationErrors}",
+            context.HttpContext.Request.Method, context.HttpContext.Request.Path,
+            context.HttpContext.TraceIdentifier, System.Text.Json.JsonSerializer.Serialize(errors));
+        return new Microsoft.AspNetCore.Mvc.BadRequestObjectResult(new
+        {
+            success = false, message = "Invalid semester request: " + string.Join("; ", errors.SelectMany(e => e.Value.Select(v => e.Key + ": " + v))),
+            statusCode = 400, route = context.HttpContext.Request.Path.Value,
+            correlationId = context.HttpContext.TraceIdentifier, errors
+        });
+    };
+});
+
+builder.Services.AddScoped<SemesterRequestDiagnosticsFilter>();
 builder.Services.AddScoped<ApiErrorSanitizationFilter>();
 builder.Services.AddHttpContextAccessor();
 
@@ -110,7 +133,8 @@ builder.Services.AddCors(options =>
             .WithExposedHeaders(
                 "Content-Disposition",
                 "X-Correlation-ID",
-                "X-Total-Count");
+                "X-Total-Count",
+                "X-CMS-Build");
     });
 });
 
@@ -687,6 +711,7 @@ builder.Services.AddScoped<IMeetingManagementService, MeetingManagementService>(
 // Read SMTP settings from appsettings.json
 builder.Services.Configure<SmtpSettings>(
     builder.Configuration.GetSection("SmtpSettings"));
+builder.Services.AddSingleton<BTech.Services.Invitations.SmtpRuntimeDiagnostics>();
 
 // Register email service
 builder.Services.AddScoped<
@@ -694,6 +719,10 @@ builder.Services.AddScoped<
     EmailService>();
 
 builder.Services.AddScoped<IAccountSetupService, AccountSetupService>();
+builder.Services.AddScoped<FacultyAccountResolver>();
+builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
+builder.Services.AddScoped<BTech.Services.Invitations.IAccountInvitationStore, BTech.Services.Invitations.MySqlAccountInvitationStore>();
+builder.Services.AddScoped<BTech.Services.Invitations.AccountInvitationService>();
 
 
 // ============================================================
@@ -833,7 +862,29 @@ builder.Services.AddScoped<BTech.Services.Fees.FeePlanAccess>();
 builder.Services.AddScoped<BTech.Services.Fees.AcademicFeePlanService>();
 builder.Services.AddScoped<BTech.Services.Fees.AdmissionFeePlanCoordinator>();
 
+builder.Services.AddScoped<BTech.UserAccess.UserAccessService>();
+
 var app = builder.Build();
+
+// Report the actual runtime database and prerequisite state without exposing secrets.
+var runtimeDb = new MySqlConnector.MySqlConnectionStringBuilder(connectionString);
+app.Logger.LogInformation("CMS runtime. Build={Build}, Environment={Environment}, Server={Server}, Port={Port}, Database={Database}, SmtpHostConfigured={SmtpHostConfigured}, SmtpCredentialsConfigured={SmtpCredentialsConfigured}",
+    BackendBuild.Id, app.Environment.EnvironmentName, runtimeDb.Server, runtimeDb.Port, runtimeDb.Database,
+    !string.IsNullOrWhiteSpace(app.Configuration["SmtpSettings:Host"]),
+    !string.IsNullOrWhiteSpace(app.Configuration["SmtpSettings:Username"]) && !string.IsNullOrWhiteSpace(app.Configuration["SmtpSettings:Password"]));
+try
+{
+    await using var schemaConnection = new MySqlConnector.MySqlConnection(connectionString);
+    await schemaConnection.OpenAsync();
+    await BTech.Services.Invitations.UserAccessSchema.RequireAsync(schemaConnection,app.Logger,"startup");
+    app.Logger.LogInformation("User access schema verified. Database={Database}, Build={Build}",schemaConnection.Database,BackendBuild.Id);
+}
+catch(Exception ex) when(ex is MySqlConnector.MySqlException or BTech.Services.Invitations.UserAccessSchemaException)
+{
+    app.Logger.LogError("User access prerequisites unavailable. Database={Database}, Category={Category}, MySqlCode={MySqlCode}. Apply {Migration} before onboarding.",
+        runtimeDb.Database,ex.GetType().Name,(ex as MySqlConnector.MySqlException)?.Number,BTech.Services.Invitations.UserAccessSchema.Migration);
+}
+
 
 
 // ============================================================
@@ -860,6 +911,15 @@ app.UseHttpsRedirection();
 // EXCEPTION MIDDLEWARE
 // ============================================================
 
+app.Use(async (context, next) =>
+{
+    context.Response.OnStarting(() =>
+    {
+        context.Response.Headers["X-CMS-Build"] = BackendBuild.Id;
+        return Task.CompletedTask;
+    });
+    await next();
+});
 app.UseMiddleware<RequestLoggingMiddleware>();
 
 // Logs request/response data for every API call to the command prompt.
@@ -917,10 +977,12 @@ app.Use(async (context, next) =>
 // ============================================================
 
 app.UseAuthorization();
+app.UseMiddleware<BTech.UserAccess.AccountReadinessMiddleware>();
 
 // Live database-backed module/action authorization. Evaluated on every request,
 // so role-permission updates affect existing JWT sessions without re-login.
 app.UseMiddleware<BTech.Middleware.ModulePermissionMiddleware>();
+app.UseMiddleware<BTech.UserAccess.UserYearScopeMiddleware>();
 
 // ============================================================
 // CONTROLLERS

@@ -1,0 +1,85 @@
+{
+  "frontend_changes": false,
+  "files": [
+    {
+      "path": "Controllers/V1/AdminUsersController.cs",
+      "change": "modified",
+      "sha256": "483265e5866e870c91ef76e0cbe8ed4e922af7f8bc0445feee95723822db2fb9"
+    },
+    {
+      "path": "Database/AdminManagement/User_Access_Invitation_Recovery_R9.sql",
+      "change": "added",
+      "sha256": "537e9f3de2968c5710414ec5a71ccf48afeffd97bea6b9c9783cf2317ef60eeb"
+    },
+    {
+      "path": "INVITATION_RECOVERY_R9_README.md",
+      "change": "added",
+      "sha256": "f49bce621d50ad4cba353938d13289145e268152fe8a8a6e607f2c44c73b90fb"
+    },
+    {
+      "path": "Middleware/ExceptionMiddleware.cs",
+      "change": "modified",
+      "sha256": "9fe9739bf4c410d196a94d3dc64d48692d0e5842cb4a92018716588d4bec2efb"
+    },
+    {
+      "path": "START_HERE_FULL_REPLACEMENT.md",
+      "change": "modified",
+      "sha256": "1cd48d50b823e41571d2fc97773793deb8e7627a95bc4d807625e4223c2f1a5a"
+    },
+    {
+      "path": "Services/BackendBuild.cs",
+      "change": "modified",
+      "sha256": "b76c86ae0c40303be9c42389e0f255fa398d81b2bb4383c3437bce0c95d04608"
+    },
+    {
+      "path": "Services/Invitations/UserAccessSchema.cs",
+      "change": "modified",
+      "sha256": "ebeee59ed74874d1a9428fbf89e2f4923d2f1a28545e730e8ff50a4175529a27"
+    },
+    {
+      "path": "UserAccess/Requests.cs",
+      "change": "modified",
+      "sha256": "99d4a8a6057eb15ba1416108b41545e8a6b577ba7f963dbc2d0ab0e50af08cc1"
+    },
+    {
+      "path": "UserAccess/UserAccessController.cs",
+      "change": "modified",
+      "sha256": "111f14d34057a2b1130b79f021bd84a1cfbbe9349aee7e6694dd398f25dd415c"
+    },
+    {
+      "path": "UserAccess/UserAccessInvitations.cs",
+      "change": "added",
+      "sha256": "83f0f0a227fbc5b6bbb0a63ffe970d604db3caefd6b6d09d36dad8b34ba78de2"
+    },
+    {
+      "path": "UserAccess/UserAccessService.cs",
+      "change": "modified",
+      "sha256": "3e898e1124baa4a2f9775e3335edc393f20da4b1c2468cd2e7e8706d18fe615e"
+    },
+    {
+      "path": "Verification/Invitations/R9_Frontend_Integrity.json",
+      "change": "added",
+      "sha256": "4f18492c20431d49689080a7e9fac32a566acb52f2842014eb04ffaddcfa550b"
+    },
+    {
+      "path": "Verification/Invitations/R9_HTTP_Test_Results.json",
+      "change": "added",
+      "sha256": "342e772508588c9d9ea7a5f7f37890730d0fc11043fad658cb6a714da7b60a1b"
+    },
+    {
+      "path": "Verification/Invitations/R9_Route_Preservation.json",
+      "change": "added",
+      "sha256": "e8fd1f7aa2c0b4eaba0950405f5ebcfe825e7cba1ad434c9f8ddb1d523b818f4"
+    },
+    {
+      "path": "Verification/Invitations/R9_Validation.json",
+      "change": "added",
+      "sha256": "a0c2b437bb6c3c27a8a57a9acade137a471239e6a84626eaab71ec279d977d12"
+    },
+    {
+      "path": "Verification/Invitations/run_isolated_r9.py",
+      "change": "added",
+      "sha256": "968babf5af1c667cc78a6ecb092600264cfa4fedf4b71ae5d6a6eaddbd5a29cb"
+    }
+  ]
+}

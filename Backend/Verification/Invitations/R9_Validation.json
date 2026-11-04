@@ -1,0 +1,23 @@
+{
+  "build": "cms-backend-20261103-invitation-recovery-r9",
+  "backend_build_errors": 0,
+  "pre_existing_warnings": 4,
+  "backend_http_integration_checks_passed": 45,
+  "http_requests": 51,
+  "controlled_inbox_received": 9,
+  "frontend_invitation_tests_passed": 7,
+  "frontend_profile_session_tests_passed": 2,
+  "frontend_build": "passed",
+  "frontend_source_files_changed": 0,
+  "frontend_original_files_checked": 405,
+  "sql_patch_repeated_twice": true,
+  "existing_database_records_preserved_by_patch": true,
+  "existing_user_41_recovery_test": {
+    "method": "POST",
+    "path": "/api/v1/admin/users/41/resend-invitation",
+    "status": 200,
+    "correlationId": "58c92ee584eb4e9f80ddf58cb5f9fc85"
+  },
+  "live_environment_updated": false,
+  "real_external_smtp_account_verified": false
+}

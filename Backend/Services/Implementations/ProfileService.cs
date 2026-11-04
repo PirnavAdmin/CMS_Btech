@@ -8,6 +8,7 @@ using Dapper;
 using DocumentFormat.OpenXml.Drawing;
 using DocumentFormat.OpenXml.InkML;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Hosting;
 using System.Data;
 
@@ -80,7 +81,10 @@ namespace BTech.Services
                 var response = new ProfileResponseDto
                 {
                     UserId = user.user_id,
-                    EmployeeUserId = user.EmployeeUserId,
+                    CollegeId = user.college_id,
+                    Country = employeeProfile?.Country,
+                    ProfileCompleted = user.ProfileCompleted,
+                    EmployeeUserId = user.InternalIdentifier ? string.Empty : user.EmployeeUserId,
                     FullName = user.FullName,
                     Email = user.Email,
                     Mobile = user.Mobile,
@@ -96,7 +100,7 @@ namespace BTech.Services
                         employeeProfile?.DepartmentId,
 
                     DepartmentName =
-                        employeeProfile?.Department?.DepartmentName,
+                        employeeProfile?.DepartmentName,
 
                     Designation =
                         employeeProfile?.Designation,
@@ -273,6 +277,35 @@ namespace BTech.Services
                     }
                 }
 
+                if (user.college_id.HasValue)
+                {
+                    var college = await _context.Colleges.AsNoTracking().FirstOrDefaultAsync(
+                        c => c.CollegeId == user.college_id.Value && c.DeletedAt == null);
+                    if (college != null)
+                    {
+                        response.CollegeName = college.CollegeName;
+                        response.AssignedOrganization = new AssignedOrganizationResponseDto
+                        {
+                            CollegeId = college.CollegeId, CollegeName = college.CollegeName,
+                            CollegeCode = college.CollegeCode, CollegeType = college.CollegeType,
+                            UniversityName = college.UniversityName, OfficialEmail = college.Email,
+                            OfficialPhone = college.Phone ?? college.Mobile, Address = college.AddressLine1,
+                            AddressLine2 = college.AddressLine2, City = college.City, District = college.District,
+                            State = college.State, Country = college.Country, Pincode = college.Pincode,
+                            Website = college.Website
+                        };
+                    }
+                }
+
+                // Derive employee completion from saved fields, even if the legacy
+                // users.profile_completed cache is stale. Student rules stay unchanged.
+                if (EmployeeProfileCompletion.AppliesTo(roles))
+                {
+                    response.ProfileCompleted = employeeProfile is { Status: 1 } &&
+                        EmployeeProfileCompletion.IsComplete(
+                            user.FullName, user.Email, user.Mobile, employeeProfile.HouseNumber);
+                }
+
                 return response;
             }
             catch (Exception ex)
@@ -296,6 +329,10 @@ namespace BTech.Services
                 long? changedBy = null)
         {
             var actorUserId = changedBy ?? userId;
+            if (actorUserId != userId) throw new UnauthorizedAccessException("Profile updates are limited to the current account.");
+            if (request.AboutMe != null && request.Bio != null && request.AboutMe != request.Bio)
+                return (false, "bio and aboutMe must match when both are supplied.", null);
+            request.AboutMe ??= request.Bio;
 
             _logger.LogInformation(
                 "Profile update started. UserId={UserId}, ChangedBy={ChangedBy}",
@@ -305,11 +342,7 @@ namespace BTech.Services
             try
             {
                 // ============================================================
-                // 1. Load the current profile ONCE.
-                //
-                // IMPORTANT:
-                // We do not start a manual EF transaction here and we do not
-                // call GetProfileAsync() again after SaveChangesAsync().
+                // 1. Load the current profile for PATCH merging and audit comparison.
                 // ============================================================
 
                 var beforeProfile =
@@ -445,6 +478,21 @@ namespace BTech.Services
                     }
                 }
 
+                College? assignedCollege = null;
+                if (request.AssignedOrganization is { } organization)
+                {
+                    var roles = beforeProfile.Roles.Select(CanonicalRoleCode.Normalize).ToHashSet();
+                    if (!roles.Contains("COLLEGE_ADMIN") || roles.Contains("STUDENT"))
+                        throw new BTech.Exceptions.ForbiddenException("Only College Admin can update assigned organization details.");
+                    var account = await _userRepository.GetProfileByIdAsync(userId);
+                    if (account?.college_id is not > 0 ||
+                        (organization.CollegeId.HasValue && organization.CollegeId != account.college_id))
+                        throw new BTech.Exceptions.ForbiddenException("Only the assigned college may be updated.");
+                    assignedCollege = await _context.Colleges.FirstOrDefaultAsync(
+                        c => c.CollegeId == account.college_id.Value && c.DeletedAt == null);
+                    if (assignedCollege == null) return (false, "Assigned college not found.", null);
+                }
+
                 // ============================================================
                 // 4. Determine whether employee profile fields were supplied
                 // ============================================================
@@ -467,12 +515,12 @@ namespace BTech.Services
                     request.PermanentCity != null ||
                     request.PermanentDistrict != null ||
                     request.PermanentState != null ||
-                    request.PermanentCountry != null;
+                    request.PermanentCountry != null || request.Country != null;
 
                 if (fullName == null &&
                     email == null &&
                     mobile == null &&
-                    !hasEmployeeProfileData)
+                    !hasEmployeeProfileData && assignedCollege == null)
                 {
                     return (
                         false,
@@ -484,9 +532,26 @@ namespace BTech.Services
                 // 5. Update users table
                 // ============================================================
 
-                if (fullName != null ||
-                    email != null ||
-                    mobile != null)
+                await using var transaction = await _context.Database.BeginTransactionAsync();
+                if (assignedCollege != null && request.AssignedOrganization is { } org)
+                {
+                    assignedCollege.CollegeType = org.CollegeType ?? assignedCollege.CollegeType;
+                    assignedCollege.UniversityName = org.UniversityName ?? assignedCollege.UniversityName;
+                    assignedCollege.Email = org.OfficialEmail ?? assignedCollege.Email;
+                    assignedCollege.Phone = org.OfficialPhone ?? assignedCollege.Phone;
+                    assignedCollege.AddressLine1 = org.Address ?? assignedCollege.AddressLine1;
+                    assignedCollege.AddressLine2 = org.AddressLine2 ?? assignedCollege.AddressLine2;
+                    assignedCollege.City = org.City ?? assignedCollege.City;
+                    assignedCollege.District = org.District ?? assignedCollege.District;
+                    assignedCollege.State = org.State ?? assignedCollege.State;
+                    assignedCollege.Country = org.Country ?? assignedCollege.Country;
+                    assignedCollege.Pincode = org.Pincode ?? assignedCollege.Pincode;
+                    assignedCollege.Website = org.Website ?? assignedCollege.Website;
+                    assignedCollege.UpdatedBy = actorUserId;
+                    assignedCollege.UpdatedAt = DateTime.UtcNow;
+                    await _context.SaveChangesAsync();
+                }
+                if (fullName != null || email != null || mobile != null)
                 {
                     var updated =
                         await _userRepository
@@ -513,6 +578,16 @@ namespace BTech.Services
 
                 if (hasEmployeeProfileData)
                 {
+                    // First profile saves may have no employee_profiles row yet.
+                    // Create only the current active user's row; never revive deleted rows.
+                    if (EmployeeProfileCompletion.AppliesTo(beforeProfile.Roles))
+                    {
+                        await _context.Database.ExecuteSqlInterpolatedAsync($@"
+                            INSERT INTO employee_profiles(user_id,status,created_by)
+                            SELECT user_id,1,{actorUserId} FROM users u
+                            WHERE u.user_id={userId} AND u.status=1 AND u.deleted_at IS NULL
+                            ON DUPLICATE KEY UPDATE user_id=VALUES(user_id)");
+                    }
                     var updated =
                         await _employeeProfileRepository.UpdateAsync(
                             userId,
@@ -559,142 +634,23 @@ namespace BTech.Services
                     }
                 }
 
-                // ============================================================
-                // 7. Get roles
-                //
-                // This is kept because roles are needed in the response.
-                // ============================================================
+                // Read back persisted values so PATCH, GET and login apply the
+                // same completion rule. Never report unsaved request fields as complete.
+                var updatedProfile = await GetProfileAsync(userId);
+                if (updatedProfile == null)
+                {
+                    return (false, "User profile not found after update.", null);
+                }
 
-                var roles =
-                    await _userRoleRepository
-                        .GetRoleCodesByUserIdAsync(userId);
-
-                // ============================================================
-                // 8. IMPORTANT FIX
-                //
-                // DO NOT call:
-                //
-                // var updatedProfile = await GetProfileAsync(userId);
-                //
-                // The profile was already loaded above. Build the response
-                // from the existing values and PATCH values.
-                // ============================================================
-
-                var updatedProfile =
-                    new ProfileResponseDto
-                    {
-                        UserId =
-                            beforeProfile.UserId,
-
-                        EmployeeUserId =
-                            beforeProfile.EmployeeUserId,
-
-                        FullName =
-                            fullName ??
-                            beforeProfile.FullName,
-
-                        Email =
-                            email ??
-                            beforeProfile.Email,
-
-                        Mobile =
-                            mobile ??
-                            beforeProfile.Mobile,
-
-                        Roles =
-                            roles,
-
-                        DateOfBirth =
-                            request.DateOfBirth ??
-                            beforeProfile.DateOfBirth,
-
-                        Gender =
-                            request.Gender ??
-                            beforeProfile.Gender,
-
-                        DepartmentId =
-                            request.DepartmentId ??
-                            beforeProfile.DepartmentId,
-
-                        // DepartmentName is retained from the loaded
-                        // profile. The department itself has already
-                        // been validated above.
-                        DepartmentName =
-                            beforeProfile.DepartmentName,
-
-                        Designation =
-                            request.Designation ??
-                            beforeProfile.Designation,
-
-                        Address =
-                            request.Address ??
-                            beforeProfile.Address,
-
-                        HouseNumber =
-                            request.HouseNumber ??
-                            beforeProfile.HouseNumber,
-
-                        PermanentHouseNumber =
-                            request.PermanentHouseNumber ??
-                            beforeProfile.PermanentHouseNumber,
-
-                        PermanentAddress =
-                            request.PermanentAddress ??
-                            beforeProfile.PermanentAddress,
-
-                        PermanentPincode =
-                            request.PermanentPincode ??
-                            beforeProfile.PermanentPincode,
-
-                        PermanentCity =
-                            request.PermanentCity ??
-                            beforeProfile.PermanentCity,
-
-                        PermanentDistrict =
-                            request.PermanentDistrict ??
-                            beforeProfile.PermanentDistrict,
-
-                        PermanentState =
-                            request.PermanentState ??
-                            beforeProfile.PermanentState,
-
-                        PermanentCountry =
-                            request.PermanentCountry ??
-                            beforeProfile.PermanentCountry,
-
-                        Pincode =
-                            request.Pincode ??
-                            beforeProfile.Pincode,
-
-                        City =
-                            request.City ??
-                            beforeProfile.City,
-
-                        District =
-                            request.District ??
-                            beforeProfile.District,
-
-                        State =
-                            request.State ??
-                            beforeProfile.State,
-
-                        AboutMe =
-                            request.AboutMe ??
-                            beforeProfile.AboutMe,
-
-                        ProfileImagePath =
-                            beforeProfile.ProfileImagePath,
-
-                        LastLoginAt =
-                            beforeProfile.LastLoginAt,
-
-                        UpdatedAt =
-                            DateTime.UtcNow
-                    };
-
-                // ============================================================
-                // 9. Build audit changes
-                // ============================================================
+                if (EmployeeProfileCompletion.AppliesTo(updatedProfile.Roles))
+                {
+                    var completed = updatedProfile.ProfileCompleted;
+                    await _context.Database.ExecuteSqlInterpolatedAsync(
+                        $"UPDATE users SET profile_completed={completed} WHERE user_id={userId} AND status=1 AND deleted_at IS NULL");
+                    _logger.LogInformation(
+                        "Employee profile completion evaluated. UserId={UserId}, ProfileCompleted={ProfileCompleted}",
+                        userId, completed);
+                }
 
                 var changes =
                     BuildChanges(
@@ -725,6 +681,7 @@ namespace BTech.Services
                     actorUserId,
                     changes.Count);
 
+                await transaction.CommitAsync();
                 return (
                     true,
                     "Profile updated successfully.",
@@ -900,6 +857,18 @@ namespace BTech.Services
                 before.PermanentCountry,
                 after.PermanentCountry);
 
+            AddIfChanged(changes, "Country", request.Country != null, before.Country, after.Country);
+            if (request.AssignedOrganization is { } organization)
+            {
+                foreach (var property in typeof(AssignedOrganizationUpdateDto).GetProperties())
+                {
+                    if (property.Name == "CollegeId" || property.GetValue(organization) == null) continue;
+                    var responseProperty = typeof(AssignedOrganizationResponseDto).GetProperty(property.Name)!;
+                    AddIfChanged(changes, "AssignedOrganization." + property.Name, true,
+                        before.AssignedOrganization == null ? null : responseProperty.GetValue(before.AssignedOrganization)?.ToString(),
+                        after.AssignedOrganization == null ? null : responseProperty.GetValue(after.AssignedOrganization)?.ToString());
+                }
+            }
             return changes;
         }
 
@@ -1108,7 +1077,7 @@ namespace BTech.Services
                             user.Email,
                             user.Mobile,
                             user.FullName
-                        });
+                        }, transaction: _context.Database.CurrentTransaction?.GetDbTransaction());
             }
             finally
             {

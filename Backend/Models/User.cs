@@ -1,4 +1,4 @@
-﻿namespace BTech.Models
+namespace BTech.Models
 {
     public class User
     {
@@ -16,6 +16,11 @@
         public string? Mobile { get; set; }
 
         public string PasswordHash { get; set; } = string.Empty;
+
+        public bool ProfileCompleted { get; set; } = true;
+        public bool InternalIdentifier { get; set; }
+        public bool AcademicYearRestricted { get; set; }
+        public int AccessVersion { get; set; }
 
         public bool MustChangePassword { get; set; }
 

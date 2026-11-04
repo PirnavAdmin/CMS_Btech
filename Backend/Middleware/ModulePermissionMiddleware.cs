@@ -14,6 +14,8 @@ namespace BTech.Middleware;
 public sealed class ModulePermissionMiddleware
 {
     public const string CurrentCollegeItem = "AcademicYearAuthorization.CollegeId";
+    public const string ActiveRolesItem = "Authorization.ActiveRoles";
+    public const string AssignedCollegeItem = "Authorization.AssignedCollegeId";
     public const string SuperAdminItem = "AcademicYearAuthorization.IsSuperAdmin";
 
     private readonly RequestDelegate _next;
@@ -57,14 +59,6 @@ public sealed class ModulePermissionMiddleware
         }
 
         var module = ResolveModule(path);
-        if (module == null)
-        {
-            // Fail closed for unclassified API endpoints. Explicit exemptions above
-            // are limited to authentication and infrastructure endpoints.
-            await Deny(context, StatusCodes.Status403Forbidden, "No permission mapping exists for this API endpoint.");
-            return;
-        }
-
         var userIdValue = context.User.FindFirstValue(ClaimTypes.NameIdentifier)
             ?? context.User.FindFirstValue("sub");
         if (!long.TryParse(userIdValue, out var userId) || userId <= 0)
@@ -76,7 +70,7 @@ public sealed class ModulePermissionMiddleware
         var academicYearsPath = path.Equals("/api/v1/academic-years", StringComparison.OrdinalIgnoreCase)
             || path.StartsWith("/api/v1/academic-years/", StringComparison.OrdinalIgnoreCase);
         long? selectedAcademicCollege = null;
-        if (AcademicSetupCollegeScope.Supports(module))
+        if (module != null && AcademicSetupCollegeScope.Supports(module))
         {
             var selection = await AcademicYearScopeRequest.ReadAsync(context.Request, academicYearsPath);
             if (selection.Error != null)
@@ -88,11 +82,33 @@ public sealed class ModulePermissionMiddleware
             context.Items[AcademicYearScopeRequest.ItemKey] = selectedAcademicCollege;
         }
 
+
         var action = ResolveAction(context.Request.Method, path);
+        if (!await AuthorizeAsync(context, path, module, userId, selectedAcademicCollege, action))
+            return;
+
+        // Existing services read collegeId from the principal. Use the verified request
+        // scope without changing the saved primary college or issuing elevated roles.
+        if (context.Items[SuperAdminItem] is not true &&
+            !path.Equals("/api/v1/account/profile", StringComparison.OrdinalIgnoreCase) &&
+            context.Items[CurrentCollegeItem] is long effectiveCollege &&
+            context.User.Identity is ClaimsIdentity identity)
+        {
+            foreach (var claim in identity.FindAll("collegeId").ToList()) identity.RemoveClaim(claim);
+            identity.AddClaim(new Claim("collegeId", effectiveCollege.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        }
+        await _next(context);
+    }
+
+    private async Task<bool> AuthorizeAsync(HttpContext context, string path, string? module,
+        long userId, long? selectedAcademicCollege, string action)
+    {
+        var dependency = "database-connection";
         try
         {
             await using var connection = new MySqlConnection(_connectionString);
             await connection.OpenAsync(context.RequestAborted);
+            dependency = "active-account/users";
             var collegeId = await connection.ExecuteScalarAsync<long?>(new CommandDefinition(
                 "SELECT college_id FROM users WHERE user_id=@userId AND status=1 AND deleted_at IS NULL LIMIT 1;",
                 new { userId }, cancellationToken: context.RequestAborted));
@@ -102,7 +118,7 @@ public sealed class ModulePermissionMiddleware
             if (accountExists != 1)
             {
                 await Deny(context, StatusCodes.Status401Unauthorized, "The account is inactive or no longer exists.");
-                return;
+                return false;
             }
 
             const string rolesSql = """
@@ -112,15 +128,32 @@ public sealed class ModulePermissionMiddleware
                 WHERE ur.user_id=@userId AND ur.status=1 AND ur.removed_at IS NULL
                   AND r.status=1 AND r.deleted_at IS NULL;
                 """;
+            dependency = "active-roles/user_roles+roles";
             var rawRoleCodes = await connection.QueryAsync<string>(new CommandDefinition(rolesSql, new { userId }, cancellationToken: context.RequestAborted));
             var roleCodes = rawRoleCodes.Select(CanonicalRoleCode.Normalize).ToHashSet(StringComparer.OrdinalIgnoreCase);
             // Pass the same live, verified authorization snapshot to academic-year scope resolution.
             context.Items[CurrentCollegeItem] = collegeId;
+            context.Items[AssignedCollegeItem] = collegeId;
+            context.Items[ActiveRolesItem] = roleCodes;
             context.Items[SuperAdminItem] = roleCodes.Contains("SUPER_ADMIN");
             if (roleCodes.Contains("SUPER_ADMIN"))
             {
-                await _next(context);
-                return;
+                return true;
+            }
+
+            if (path.Equals("/api/v1/account/profile", StringComparison.OrdinalIgnoreCase) ||
+                (path.Equals("/api/v1/profile", StringComparison.OrdinalIgnoreCase) &&
+                 (HttpMethods.IsGet(context.Request.Method) || HttpMethods.IsPatch(context.Request.Method))))
+            {
+                return true;
+            }
+
+            if (module == null)
+            {
+                // Fail closed for unclassified API endpoints. Explicit exemptions above
+                // are limited to authentication and infrastructure endpoints.
+                await Deny(context, StatusCodes.Status403Forbidden, "No permission mapping exists for this API endpoint.");
+                return false;
             }
 
             // A student assignment always restricts the account to the student portal,
@@ -128,22 +161,31 @@ public sealed class ModulePermissionMiddleware
             if (roleCodes.Contains("STUDENT") && !StudentModules.Contains(module))
             {
                 await Deny(context, StatusCodes.Status403Forbidden, "Student accounts may only access student-portal modules.");
-                return;
+                return false;
             }
+
+            // College creation and scoped view/edit are explicit College Admin capabilities.
+            // Repository scope filters list/count before pagination and checks individual records.
+            var collegeRecordsPath = path.Equals("/api/v1/colleges", StringComparison.OrdinalIgnoreCase) ||
+                path.StartsWith("/api/v1/colleges/", StringComparison.OrdinalIgnoreCase);
+            if (collegeRecordsPath && roleCodes.Contains("COLLEGE_ADMIN") &&
+                context.Request.Method is "GET" or "POST" or "PUT" or "PATCH")
+                return true;
 
             // Resolve academic setup records and explicit college selections against live ownership.
             // Mapped College Admin access still requires the selected college permission matrix.
+            dependency = "academic-record-ownership";
             var referenceScope = await AcademicSetupCollegeScope.ResolveAsync(connection, context, module);
             if (referenceScope.Error != null)
             {
                 await Deny(context, StatusCodes.Status403Forbidden, referenceScope.Error);
-                return;
+                return false;
             }
             if (selectedAcademicCollege.HasValue && referenceScope.CollegeId.HasValue &&
                 selectedAcademicCollege != referenceScope.CollegeId)
             {
                 await Deny(context, StatusCodes.Status403Forbidden, "The selected records do not belong to the selected college.");
-                return;
+                return false;
             }
             selectedAcademicCollege ??= referenceScope.CollegeId;
             if (AcademicSetupCollegeScope.Supports(module) && roleCodes.Contains("COLLEGE_ADMIN"))
@@ -159,6 +201,7 @@ public sealed class ModulePermissionMiddleware
                           AND cs.status=1 AND c.status=1 AND c.deleted_at IS NULL
                           AND cs.college_id=@selected;
                         """;
+                    dependency = "college-mapping/college_user_mappings+college_settings+colleges";
                     var mapped = await connection.ExecuteScalarAsync<int>(new CommandDefinition(
                         mappingSql, new { userId, selected }, cancellationToken: context.RequestAborted));
                     if (mapped > 0) collegeId = selected;
@@ -170,14 +213,14 @@ public sealed class ModulePermissionMiddleware
             if (selectedAcademicCollege.HasValue && selectedAcademicCollege != collegeId)
             {
                 await Deny(context, StatusCodes.Status403Forbidden, "Cross-college access is not permitted. An active college assignment is required.");
-                return;
+                return false;
             }
 
             // A primary assignment or verified mapping is required.
             if (collegeId == null && !roleCodes.Contains("SUPER_ADMIN"))
             {
                 await Deny(context, StatusCodes.Status403Forbidden, "A college-scoped account is required.");
-                return;
+                return false;
             }
 
             var column = action switch
@@ -209,12 +252,19 @@ public sealed class ModulePermissionMiddleware
                   AND r.status=1 AND r.deleted_at IS NULL
                   AND (r.college_id IS NULL OR r.college_id=@collegeId);
                 """;
+            dependency = "role-permissions/permission_modules+role_permissions";
             var granted = await connection.ExecuteScalarAsync<int>(new CommandDefinition(permissionSql, new { userId, module, collegeId }, cancellationToken: context.RequestAborted));
+            dependency = "user-permissions/user_module_permissions";
+            var userOverride = await connection.ExecuteScalarAsync<int?>(new CommandDefinition(
+                $"SELECT {column} FROM user_module_permissions WHERE user_id=@userId AND college_id=@collegeId AND module_key=@module",
+                new { userId, collegeId, module }, cancellationToken: context.RequestAborted));
+            // User settings can narrow the live role ceiling, never elevate it.
+            if (userOverride.HasValue && userOverride != 1) granted = 0;
             if (granted != 1)
             {
                 _logger.LogWarning("Module permission denied. UserId={UserId}, Module={Module}, Action={Action}, Path={Path}", userId, module, action, path);
                 await Deny(context, StatusCodes.Status403Forbidden, "You do not have permission to perform this action.");
-                return;
+                return false;
             }
 
             // For college-scoped accounts, reject explicit attempts to select a different
@@ -226,7 +276,7 @@ public sealed class ModulePermissionMiddleware
             {
                 _logger.LogWarning("Cross-college query denied. UserId={UserId}, AuthorizedCollegeId={AuthorizedCollegeId}, RequestedCollegeId={RequestedCollegeId}, RoleCodes={RoleCodes}, TraceId={TraceId}", userId, collegeId, requestedId, string.Join(",", roleCodes), context.TraceIdentifier);
                 await Deny(context, StatusCodes.Status403Forbidden, "Cross-college access is not permitted.");
-                return;
+                return false;
             }
 
             if (!roleCodes.Contains("SUPER_ADMIN") && collegeId.HasValue &&
@@ -234,25 +284,14 @@ public sealed class ModulePermissionMiddleware
             {
                 _logger.LogWarning("Cross-college body denied. UserId={UserId}, AuthorizedCollegeId={AuthorizedCollegeId}, RoleCodes={RoleCodes}, TraceId={TraceId}", userId, collegeId, string.Join(",", roleCodes), context.TraceIdentifier);
                 await Deny(context, StatusCodes.Status403Forbidden, "Cross-college access is not permitted.");
-                return;
+                return false;
             }
+            return true;
         }
         catch (MySqlException ex)
         {
-            _logger.LogError(ex, "Permission lookup failed for UserId={UserId}, Module={Module}", userId, module);
-            await Deny(context, StatusCodes.Status503ServiceUnavailable, "Authorization data is temporarily unavailable.");
-            return;
+            throw new AuthorizationDependencyException(ex, dependency, _connectionString);
         }
-
-        // Existing services read collegeId from the principal. Use the verified request
-        // scope without changing the saved primary college or issuing elevated roles.
-        if (context.Items[CurrentCollegeItem] is long effectiveCollege &&
-            context.User.Identity is ClaimsIdentity identity)
-        {
-            foreach (var claim in identity.FindAll("collegeId").ToList()) identity.RemoveClaim(claim);
-            identity.AddClaim(new Claim("collegeId", effectiveCollege.ToString(System.Globalization.CultureInfo.InvariantCulture)));
-        }
-        await _next(context);
     }
 
     private static bool IsAuthenticationOrInfrastructurePath(string path) =>
@@ -383,6 +422,7 @@ public sealed class ModulePermissionMiddleware
     {
         context.Response.StatusCode = status;
         context.Response.ContentType = "application/json";
-        await context.Response.WriteAsJsonAsync(new { success = false, message, statusCode = status });
+        context.Response.Headers[RequestLoggingMiddleware.CorrelationHeader] = context.TraceIdentifier;
+        await context.Response.WriteAsJsonAsync(new { success = false, message, statusCode = status, correlationId = context.TraceIdentifier });
     }
 }

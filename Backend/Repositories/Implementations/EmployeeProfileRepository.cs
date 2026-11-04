@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore.Storage;
 using BTech.Data;
 
 using BTech.DTOs.Profile;
@@ -62,7 +63,7 @@ namespace BTech.Repositories
 
                         },
 
-                        commandType: CommandType.StoredProcedure);
+                        transaction: _context.Database.CurrentTransaction?.GetDbTransaction(), commandType: CommandType.StoredProcedure);
 
                 return result;
 
@@ -171,6 +172,7 @@ namespace BTech.Repositories
                     p_district = district,
 
                     p_state = state,
+                    p_country = addressFields?.Country,
 
                     p_permanent_house_number =
 
@@ -214,7 +216,7 @@ namespace BTech.Repositories
 
                         parameters,
 
-                        commandType: CommandType.StoredProcedure);
+                        transaction: _context.Database.CurrentTransaction?.GetDbTransaction(), commandType: CommandType.StoredProcedure);
 
                 return result > 0;
 

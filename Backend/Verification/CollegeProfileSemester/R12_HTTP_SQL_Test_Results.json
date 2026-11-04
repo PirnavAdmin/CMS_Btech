@@ -1,0 +1,1233 @@
+{
+  "baselineFailingRequest": {
+    "method": "POST",
+    "route": "/api/semester",
+    "payload": {
+      "courseId": 10001,
+      "branchId": 10001,
+      "academicYearId": 10001,
+      "semesterNumber": 1,
+      "semesterName": "Semester 1",
+      "yearNumber": 1,
+      "startDate": "",
+      "endDate": "",
+      "status": 1
+    },
+    "status": 400,
+    "response": {
+      "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+      "title": "One or more validation errors occurred.",
+      "status": 400,
+      "errors": {
+        "dto": [
+          "The dto field is required."
+        ],
+        "$.startDate": [
+          "The JSON value could not be converted to System.Nullable`1[System.DateTime]. Path: $.startDate | LineNumber: 0 | BytePositionInLine: 147."
+        ]
+      },
+      "traceId": "00-536b420b2706ffdcaef9078929d7086a-c75f37a68bc0de42-00"
+    },
+    "source": "Reproduced with supplied R11 PublishedBackend. Original browser request was not attached."
+  },
+  "r12InvalidDate": {
+    "route": "POST /api/semester",
+    "status": 400,
+    "response": {
+      "success": false,
+      "message": "Invalid semester request body. Send one flat JSON object.",
+      "statusCode": 400,
+      "route": "/api/semester",
+      "correlationId": "r12-verification-1793770764114893358",
+      "errors": {
+        "dto": [
+          "The dto field is required."
+        ],
+        "$.startDate": [
+          "Use an ISO date (yyyy-MM-dd), ISO timestamp, null, or an empty string for an optional semester date."
+        ]
+      }
+    }
+  },
+  "eightSemesters": {
+    "branchId": 10002,
+    "semesterIds": [
+      248,
+      249,
+      250,
+      251,
+      252,
+      253,
+      254,
+      255
+    ],
+    "databaseCount": 8,
+    "retries": 8,
+    "concurrentRetryRequests": 12
+  },
+  "summary": {
+    "passed": 64,
+    "failed": 0,
+    "database": "isolated copy of supplied dump; MySQL 8.0.46",
+    "liveUserServerChanged": false
+  },
+  "checks": [
+    {
+      "test": "Restore supplied dump into isolated MySQL 8.0.46",
+      "passed": true
+    },
+    {
+      "test": "Login R12SUPER",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "message": "Login successful."
+      }
+    },
+    {
+      "test": "R11 reproduces dto required plus underlying $.startDate conversion error",
+      "passed": true,
+      "detail": {
+        "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+        "title": "One or more validation errors occurred.",
+        "status": 400,
+        "errors": {
+          "dto": [
+            "The dto field is required."
+          ],
+          "$.startDate": [
+            "The JSON value could not be converted to System.Nullable`1[System.DateTime]. Path: $.startDate | LineNumber: 0 | BytePositionInLine: 147."
+          ]
+        },
+        "traceId": "00-536b420b2706ffdcaef9078929d7086a-c75f37a68bc0de42-00"
+      }
+    },
+    {
+      "test": "R11 accepts the flat body with valid dates",
+      "passed": true
+    },
+    {
+      "test": "R12 direct SQL patch applies and can be rerun",
+      "passed": true
+    },
+    {
+      "test": "Login R12SUPER",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "message": "Login successful."
+      }
+    },
+    {
+      "test": "Login R12ADMIN",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "message": "Login successful."
+      }
+    },
+    {
+      "test": "Login R12STAFF",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "message": "Login successful."
+      }
+    },
+    {
+      "test": "Incomplete employee login returns profileCompleted false",
+      "passed": true
+    },
+    {
+      "test": "College Admin first profile save creates employee profile row",
+      "passed": true
+    },
+    {
+      "test": "College Admin creates college; server owns CreatedBy",
+      "passed": true,
+      "detail": {
+        "status": 201,
+        "body": {
+          "success": true,
+          "message": "College created successfully.",
+          "data": {
+            "collegeId": 10003,
+            "createdBy": 10002,
+            "collegeCode": "R12CREATED",
+            "collegeName": "R12 Created College",
+            "collegeType": null,
+            "universityName": null,
+            "email": null,
+            "mobile": null,
+            "phone": null,
+            "principal": null,
+            "principalEmail": null,
+            "principalContact": null,
+            "alternateContactNumber": null,
+            "accreditationStatus": null,
+            "accreditationBody": null,
+            "accreditationGrade": null,
+            "accreditationNumber": null,
+            "validFrom": null,
+            "validUntil": null,
+            "addressLine1": null,
+            "addressLine2": null,
+            "city": null,
+            "area": null,
+            "district": null,
+            "state": null,
+            "country": null,
+            "pincode": null,
+            "website": null,
+            "academicYearId": null,
+            "timezone": "Asia/Kolkata",
+            "currencyCode": "INR",
+            "logoPath": null,
+            "status": 1,
+            "createdAt": "2026-11-04T05:39:22",
+            "updatedAt": "2026-11-04T11:09:22",
+            "name": "R12 Created College",
+            "code": "R12CREATED",
+            "type": null,
+            "university": null,
+            "address": null,
+            "contact": null,
+            "logo": null
+          }
+        }
+      }
+    },
+    {
+      "test": "Super Admin creates college with actor audit",
+      "passed": true
+    },
+    {
+      "test": "Faculty cannot create colleges",
+      "passed": true,
+      "detail": {
+        "status": 403
+      }
+    },
+    {
+      "test": "College Admin list includes only assigned and created colleges",
+      "passed": true
+    },
+    {
+      "test": "College search count/pagination are scoped",
+      "passed": true
+    },
+    {
+      "test": "Search hides foreign college matches and counts",
+      "passed": true
+    },
+    {
+      "test": "College Admin detail for 10001",
+      "passed": true
+    },
+    {
+      "test": "College Admin edit for 10001",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "body": {
+          "success": true,
+          "message": "College updated successfully.",
+          "data": {
+            "collegeId": 10001,
+            "createdBy": null,
+            "collegeCode": "R12PRIMARY",
+            "collegeName": "R12 Assigned College",
+            "collegeType": null,
+            "universityName": null,
+            "email": null,
+            "mobile": null,
+            "phone": null,
+            "principal": null,
+            "principalEmail": null,
+            "principalContact": null,
+            "alternateContactNumber": null,
+            "accreditationStatus": null,
+            "accreditationBody": null,
+            "accreditationGrade": null,
+            "accreditationNumber": null,
+            "validFrom": null,
+            "validUntil": null,
+            "addressLine1": null,
+            "addressLine2": null,
+            "city": "Test City",
+            "area": null,
+            "district": null,
+            "state": null,
+            "country": null,
+            "pincode": null,
+            "website": null,
+            "academicYearId": null,
+            "timezone": "Asia/Kolkata",
+            "currencyCode": "INR",
+            "logoPath": null,
+            "status": 1,
+            "createdAt": "2026-11-04T11:09:17",
+            "updatedAt": "2026-11-04T05:39:23",
+            "name": "R12 Assigned College",
+            "code": "R12PRIMARY",
+            "type": null,
+            "university": null,
+            "address": null,
+            "contact": null,
+            "logo": null
+          }
+        }
+      }
+    },
+    {
+      "test": "College Admin detail for 10003",
+      "passed": true
+    },
+    {
+      "test": "College Admin edit for 10003",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "body": {
+          "success": true,
+          "message": "College updated successfully.",
+          "data": {
+            "collegeId": 10003,
+            "createdBy": 10002,
+            "collegeCode": "R12CREATED",
+            "collegeName": "R12 Created College",
+            "collegeType": null,
+            "universityName": null,
+            "email": null,
+            "mobile": null,
+            "phone": null,
+            "principal": null,
+            "principalEmail": null,
+            "principalContact": null,
+            "alternateContactNumber": null,
+            "accreditationStatus": null,
+            "accreditationBody": null,
+            "accreditationGrade": null,
+            "accreditationNumber": null,
+            "validFrom": null,
+            "validUntil": null,
+            "addressLine1": null,
+            "addressLine2": null,
+            "city": "Test City",
+            "area": null,
+            "district": null,
+            "state": null,
+            "country": null,
+            "pincode": null,
+            "website": null,
+            "academicYearId": null,
+            "timezone": "Asia/Kolkata",
+            "currencyCode": "INR",
+            "logoPath": null,
+            "status": 1,
+            "createdAt": "2026-11-04T05:39:22",
+            "updatedAt": "2026-11-04T05:39:23",
+            "name": "R12 Created College",
+            "code": "R12CREATED",
+            "type": null,
+            "university": null,
+            "address": null,
+            "contact": null,
+            "logo": null
+          }
+        }
+      }
+    },
+    {
+      "test": "Foreign college GET blocked",
+      "passed": true,
+      "detail": {
+        "status": 404
+      }
+    },
+    {
+      "test": "Foreign college PATCH blocked",
+      "passed": true,
+      "detail": {
+        "status": 404
+      }
+    },
+    {
+      "test": "Super Admin retains cross-college edit",
+      "passed": true
+    },
+    {
+      "test": "Super Admin retains full list",
+      "passed": true
+    },
+    {
+      "test": "Department name resolves and incomplete profile remains false",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "body": {
+          "success": true,
+          "message": "Profile updated successfully.",
+          "data": {
+            "userId": 10002,
+            "profileCompleted": false,
+            "employeeUserId": "R12ADMIN",
+            "fullName": "Test College Admin",
+            "email": "r12admin@example.invalid",
+            "mobile": "9876543202",
+            "roles": [
+              "COLLEGE_ADMIN"
+            ],
+            "dateOfBirth": null,
+            "gender": null,
+            "departmentId": 10001,
+            "departmentName": "Computer Science",
+            "designation": "Administrator",
+            "address": "Current Road",
+            "houseNumber": "",
+            "permanentHouseNumber": "P-2",
+            "permanentAddress": "Permanent Road",
+            "permanentPincode": "500081",
+            "permanentCity": "Hyderabad",
+            "permanentDistrict": "Hyderabad",
+            "permanentState": "Telangana",
+            "permanentCountry": "India",
+            "pincode": null,
+            "city": null,
+            "district": null,
+            "state": null,
+            "aboutMe": "Initial bio",
+            "bio": "Initial bio",
+            "jobTitle": "Administrator",
+            "addressLine1": "Current Road",
+            "postalCode": null,
+            "country": "India",
+            "collegeId": 10001,
+            "collegeName": "R12 Assigned College",
+            "assignedOrganization": {
+              "collegeId": 10001,
+              "collegeName": "R12 Assigned College",
+              "collegeCode": "R12PRIMARY",
+              "collegeType": null,
+              "universityName": null,
+              "officialEmail": null,
+              "officialPhone": null,
+              "address": null,
+              "addressLine2": null,
+              "city": "Test City",
+              "district": null,
+              "state": null,
+              "country": null,
+              "pincode": null,
+              "website": null
+            },
+            "profileImagePath": null,
+            "lastLoginAt": "2026-11-04T05:39:23",
+            "updatedAt": "2026-11-04T11:09:22",
+            "studentId": null,
+            "studentCode": null,
+            "status": null,
+            "registrationNumber": null,
+            "admissionNumber": null,
+            "rollNumber": null,
+            "courseName": null,
+            "branchName": null,
+            "academicYearName": null,
+            "semesterName": null,
+            "sectionName": null,
+            "batch": null
+          }
+        }
+      }
+    },
+    {
+      "test": "Final required field completes profile and omitted fields persist",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "body": {
+          "success": true,
+          "message": "Profile updated successfully.",
+          "data": {
+            "userId": 10002,
+            "profileCompleted": true,
+            "employeeUserId": "R12ADMIN",
+            "fullName": "Test College Admin",
+            "email": "r12admin@example.invalid",
+            "mobile": "9876543202",
+            "roles": [
+              "COLLEGE_ADMIN"
+            ],
+            "dateOfBirth": null,
+            "gender": null,
+            "departmentId": 10001,
+            "departmentName": "Computer Science",
+            "designation": "Administrator",
+            "address": "Current Road",
+            "houseNumber": "12/A",
+            "permanentHouseNumber": "P-2",
+            "permanentAddress": "Permanent Road",
+            "permanentPincode": "500081",
+            "permanentCity": "Hyderabad",
+            "permanentDistrict": "Hyderabad",
+            "permanentState": "Telangana",
+            "permanentCountry": "India",
+            "pincode": null,
+            "city": null,
+            "district": null,
+            "state": null,
+            "aboutMe": "Initial bio",
+            "bio": "Initial bio",
+            "jobTitle": "Administrator",
+            "addressLine1": "Current Road",
+            "postalCode": null,
+            "country": "India",
+            "collegeId": 10001,
+            "collegeName": "R12 Assigned College",
+            "assignedOrganization": {
+              "collegeId": 10001,
+              "collegeName": "R12 Assigned College",
+              "collegeCode": "R12PRIMARY",
+              "collegeType": null,
+              "universityName": null,
+              "officialEmail": null,
+              "officialPhone": null,
+              "address": null,
+              "addressLine2": null,
+              "city": "Test City",
+              "district": null,
+              "state": null,
+              "country": null,
+              "pincode": null,
+              "website": null
+            },
+            "profileImagePath": null,
+            "lastLoginAt": "2026-11-04T05:39:23",
+            "updatedAt": "2026-11-04T11:09:23",
+            "studentId": null,
+            "studentCode": null,
+            "status": null,
+            "registrationNumber": null,
+            "admissionNumber": null,
+            "rollNumber": null,
+            "courseName": null,
+            "branchName": null,
+            "academicYearName": null,
+            "semesterName": null,
+            "sectionName": null,
+            "batch": null
+          }
+        }
+      }
+    },
+    {
+      "test": "Assigned organization fields saved; name, identity and role remain system managed",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "body": {
+          "success": true,
+          "message": "Profile updated successfully.",
+          "data": {
+            "userId": 10002,
+            "profileCompleted": true,
+            "employeeUserId": "R12ADMIN",
+            "fullName": "Test College Admin",
+            "email": "r12admin@example.invalid",
+            "mobile": "9876543202",
+            "roles": [
+              "COLLEGE_ADMIN"
+            ],
+            "dateOfBirth": null,
+            "gender": null,
+            "departmentId": 10001,
+            "departmentName": "Computer Science",
+            "designation": "Administrator",
+            "address": "Current Road",
+            "houseNumber": "12/A",
+            "permanentHouseNumber": "P-2",
+            "permanentAddress": "Permanent Road",
+            "permanentPincode": "500081",
+            "permanentCity": "Hyderabad",
+            "permanentDistrict": "Hyderabad",
+            "permanentState": "Telangana",
+            "permanentCountry": "India",
+            "pincode": null,
+            "city": null,
+            "district": null,
+            "state": null,
+            "aboutMe": "Initial bio",
+            "bio": "Initial bio",
+            "jobTitle": "Administrator",
+            "addressLine1": "Current Road",
+            "postalCode": null,
+            "country": "India",
+            "collegeId": 10001,
+            "collegeName": "R12 Assigned College",
+            "assignedOrganization": {
+              "collegeId": 10001,
+              "collegeName": "R12 Assigned College",
+              "collegeCode": "R12PRIMARY",
+              "collegeType": "Engineering",
+              "universityName": "R12 University",
+              "officialEmail": "college@example.invalid",
+              "officialPhone": "04012345678",
+              "address": "Organization Road",
+              "addressLine2": "Building 2",
+              "city": "Hyderabad",
+              "district": "Hyderabad",
+              "state": "Telangana",
+              "country": "India",
+              "pincode": "500081",
+              "website": "https://example.invalid"
+            },
+            "profileImagePath": null,
+            "lastLoginAt": "2026-11-04T05:39:23",
+            "updatedAt": "2026-11-04T11:09:23",
+            "studentId": null,
+            "studentCode": null,
+            "status": null,
+            "registrationNumber": null,
+            "admissionNumber": null,
+            "rollNumber": null,
+            "courseName": null,
+            "branchName": null,
+            "academicYearName": null,
+            "semesterName": null,
+            "sectionName": null,
+            "batch": null
+          }
+        }
+      }
+    },
+    {
+      "test": "All assigned organization fields returned",
+      "passed": true
+    },
+    {
+      "test": "Organization update preserves personal address and completion",
+      "passed": true
+    },
+    {
+      "test": "Partial profile/organization PATCH preserves omitted values",
+      "passed": true
+    },
+    {
+      "test": "Assigned organization update cannot target even a college created by this admin",
+      "passed": true,
+      "detail": {
+        "status": 403
+      }
+    },
+    {
+      "test": "Profile rejects another college department",
+      "passed": true
+    },
+    {
+      "test": "GET reflects saved fields after rejected PATCH requests",
+      "passed": true
+    },
+    {
+      "test": "Login R12ADMIN",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "message": "Login successful."
+      }
+    },
+    {
+      "test": "Login and profile agree after setup completion",
+      "passed": true
+    },
+    {
+      "test": "Account profile GET uses the shared result",
+      "passed": true
+    },
+    {
+      "test": "Legacy account profile PUT aliases preserve omitted fields and report actual completion",
+      "passed": true
+    },
+    {
+      "test": "Non-admin cannot edit assigned organization",
+      "passed": true
+    },
+    {
+      "test": "Save new branch before semester requests",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "body": {
+          "success": true,
+          "message": "Branch created successfully.",
+          "data": {
+            "branchId": 10002,
+            "courseId": 10001,
+            "courseCode": "R12BTECH",
+            "courseName": "R12 BTech",
+            "branchCode": "R12NEW",
+            "branchName": "R12 New Branch",
+            "shortName": null,
+            "specialization": null,
+            "departmentId": 10001,
+            "departmentName": "Computer Science",
+            "branchType": null,
+            "duration": 4,
+            "totalSemesters": 8,
+            "intakeCapacity": null,
+            "startingAcademicYearId": 10001,
+            "startingAcademicYear": null,
+            "description": null,
+            "status": 1,
+            "createdAt": "2026-11-04T05:39:23",
+            "createdBy": 10001,
+            "updatedAt": "2026-11-04T11:09:23",
+            "updatedBy": null,
+            "id": 10002,
+            "code": "R12NEW",
+            "name": "R12 New Branch",
+            "durationValue": 4,
+            "semesters": 8,
+            "intake": null
+          }
+        }
+      }
+    },
+    {
+      "test": "Flat POST creates semester 1",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "body": {
+          "success": true,
+          "message": "Semester saved successfully",
+          "data": {
+            "semesterId": 248,
+            "courseId": 10001,
+            "branchId": 10002,
+            "academicYearId": 10001,
+            "semesterNumber": 1,
+            "semesterName": "Semester 1",
+            "yearNumber": 1,
+            "startDate": null,
+            "endDate": null,
+            "status": 1,
+            "createdAt": "2026-11-04T05:39:24",
+            "createdBy": 10001
+          }
+        }
+      }
+    },
+    {
+      "test": "Flat POST creates semester 2",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "body": {
+          "success": true,
+          "message": "Semester saved successfully",
+          "data": {
+            "semesterId": 249,
+            "courseId": 10001,
+            "branchId": 10002,
+            "academicYearId": 10001,
+            "semesterNumber": 2,
+            "semesterName": "Semester 2",
+            "yearNumber": 1,
+            "startDate": null,
+            "endDate": null,
+            "status": 1,
+            "createdAt": "2026-11-04T05:39:24",
+            "createdBy": 10001
+          }
+        }
+      }
+    },
+    {
+      "test": "Flat POST creates semester 3",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "body": {
+          "success": true,
+          "message": "Semester saved successfully",
+          "data": {
+            "semesterId": 250,
+            "courseId": 10001,
+            "branchId": 10002,
+            "academicYearId": 10001,
+            "semesterNumber": 3,
+            "semesterName": "Semester 3",
+            "yearNumber": 2,
+            "startDate": null,
+            "endDate": null,
+            "status": 1,
+            "createdAt": "2026-11-04T05:39:24",
+            "createdBy": 10001
+          }
+        }
+      }
+    },
+    {
+      "test": "Flat POST creates semester 4",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "body": {
+          "success": true,
+          "message": "Semester saved successfully",
+          "data": {
+            "semesterId": 251,
+            "courseId": 10001,
+            "branchId": 10002,
+            "academicYearId": 10001,
+            "semesterNumber": 4,
+            "semesterName": "Semester 4",
+            "yearNumber": 2,
+            "startDate": null,
+            "endDate": null,
+            "status": 1,
+            "createdAt": "2026-11-04T05:39:24",
+            "createdBy": 10001
+          }
+        }
+      }
+    },
+    {
+      "test": "Flat POST creates semester 5",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "body": {
+          "success": true,
+          "message": "Semester saved successfully",
+          "data": {
+            "semesterId": 252,
+            "courseId": 10001,
+            "branchId": 10002,
+            "academicYearId": 10001,
+            "semesterNumber": 5,
+            "semesterName": "Semester 5",
+            "yearNumber": 3,
+            "startDate": null,
+            "endDate": null,
+            "status": 1,
+            "createdAt": "2026-11-04T05:39:24",
+            "createdBy": 10001
+          }
+        }
+      }
+    },
+    {
+      "test": "Flat POST creates semester 6",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "body": {
+          "success": true,
+          "message": "Semester saved successfully",
+          "data": {
+            "semesterId": 253,
+            "courseId": 10001,
+            "branchId": 10002,
+            "academicYearId": 10001,
+            "semesterNumber": 6,
+            "semesterName": "Semester 6",
+            "yearNumber": 3,
+            "startDate": null,
+            "endDate": null,
+            "status": 1,
+            "createdAt": "2026-11-04T05:39:24",
+            "createdBy": 10001
+          }
+        }
+      }
+    },
+    {
+      "test": "Flat POST creates semester 7",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "body": {
+          "success": true,
+          "message": "Semester saved successfully",
+          "data": {
+            "semesterId": 254,
+            "courseId": 10001,
+            "branchId": 10002,
+            "academicYearId": 10001,
+            "semesterNumber": 7,
+            "semesterName": "Semester 7",
+            "yearNumber": 4,
+            "startDate": null,
+            "endDate": null,
+            "status": 1,
+            "createdAt": "2026-11-04T05:39:24",
+            "createdBy": 10001
+          }
+        }
+      }
+    },
+    {
+      "test": "Flat POST creates semester 8",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "body": {
+          "success": true,
+          "message": "Semester saved successfully",
+          "data": {
+            "semesterId": 255,
+            "courseId": 10001,
+            "branchId": 10002,
+            "academicYearId": 10001,
+            "semesterNumber": 8,
+            "semesterName": "Semester 8",
+            "yearNumber": 4,
+            "startDate": null,
+            "endDate": null,
+            "status": 1,
+            "createdAt": "2026-11-04T05:39:24",
+            "createdBy": 10001
+          }
+        }
+      }
+    },
+    {
+      "test": "Retry returns original semester 1",
+      "passed": true
+    },
+    {
+      "test": "Retry returns original semester 2",
+      "passed": true
+    },
+    {
+      "test": "Retry returns original semester 3",
+      "passed": true
+    },
+    {
+      "test": "Retry returns original semester 4",
+      "passed": true
+    },
+    {
+      "test": "Retry returns original semester 5",
+      "passed": true
+    },
+    {
+      "test": "Retry returns original semester 6",
+      "passed": true
+    },
+    {
+      "test": "Retry returns original semester 7",
+      "passed": true
+    },
+    {
+      "test": "Retry returns original semester 8",
+      "passed": true
+    },
+    {
+      "test": "Database has exactly 8 saved semesters after all retries",
+      "passed": true
+    },
+    {
+      "test": "Create concurrent retry test branch",
+      "passed": true
+    },
+    {
+      "test": "12 simultaneous semester requests return one saved ID",
+      "passed": true,
+      "detail": [
+        [
+          200,
+          {
+            "success": true,
+            "message": "Semester saved successfully",
+            "data": {
+              "semesterId": 256,
+              "courseId": 10001,
+              "branchId": 10003,
+              "academicYearId": 10001,
+              "semesterNumber": 1,
+              "semesterName": "Semester 1",
+              "yearNumber": 1,
+              "startDate": null,
+              "endDate": null,
+              "status": 1,
+              "createdAt": "2026-11-04T05:39:24",
+              "createdBy": 10001
+            }
+          }
+        ],
+        [
+          200,
+          {
+            "success": true,
+            "message": "Semester saved successfully",
+            "data": {
+              "semesterId": 256,
+              "courseId": 10001,
+              "branchId": 10003,
+              "academicYearId": 10001,
+              "semesterNumber": 1,
+              "semesterName": "Semester 1",
+              "yearNumber": 1,
+              "startDate": null,
+              "endDate": null,
+              "status": 1,
+              "createdAt": "2026-11-04T05:39:24",
+              "createdBy": 10001
+            }
+          }
+        ],
+        [
+          200,
+          {
+            "success": true,
+            "message": "Semester saved successfully",
+            "data": {
+              "semesterId": 256,
+              "courseId": 10001,
+              "branchId": 10003,
+              "academicYearId": 10001,
+              "semesterNumber": 1,
+              "semesterName": "Semester 1",
+              "yearNumber": 1,
+              "startDate": null,
+              "endDate": null,
+              "status": 1,
+              "createdAt": "2026-11-04T05:39:24",
+              "createdBy": 10001
+            }
+          }
+        ],
+        [
+          200,
+          {
+            "success": true,
+            "message": "Semester saved successfully",
+            "data": {
+              "semesterId": 256,
+              "courseId": 10001,
+              "branchId": 10003,
+              "academicYearId": 10001,
+              "semesterNumber": 1,
+              "semesterName": "Semester 1",
+              "yearNumber": 1,
+              "startDate": null,
+              "endDate": null,
+              "status": 1,
+              "createdAt": "2026-11-04T05:39:24",
+              "createdBy": 10001
+            }
+          }
+        ],
+        [
+          200,
+          {
+            "success": true,
+            "message": "Semester saved successfully",
+            "data": {
+              "semesterId": 256,
+              "courseId": 10001,
+              "branchId": 10003,
+              "academicYearId": 10001,
+              "semesterNumber": 1,
+              "semesterName": "Semester 1",
+              "yearNumber": 1,
+              "startDate": null,
+              "endDate": null,
+              "status": 1,
+              "createdAt": "2026-11-04T05:39:24",
+              "createdBy": 10001
+            }
+          }
+        ],
+        [
+          200,
+          {
+            "success": true,
+            "message": "Semester saved successfully",
+            "data": {
+              "semesterId": 256,
+              "courseId": 10001,
+              "branchId": 10003,
+              "academicYearId": 10001,
+              "semesterNumber": 1,
+              "semesterName": "Semester 1",
+              "yearNumber": 1,
+              "startDate": null,
+              "endDate": null,
+              "status": 1,
+              "createdAt": "2026-11-04T05:39:24",
+              "createdBy": 10001
+            }
+          }
+        ],
+        [
+          200,
+          {
+            "success": true,
+            "message": "Semester saved successfully",
+            "data": {
+              "semesterId": 256,
+              "courseId": 10001,
+              "branchId": 10003,
+              "academicYearId": 10001,
+              "semesterNumber": 1,
+              "semesterName": "Semester 1",
+              "yearNumber": 1,
+              "startDate": null,
+              "endDate": null,
+              "status": 1,
+              "createdAt": "2026-11-04T05:39:24",
+              "createdBy": 10001
+            }
+          }
+        ],
+        [
+          200,
+          {
+            "success": true,
+            "message": "Semester saved successfully",
+            "data": {
+              "semesterId": 256,
+              "courseId": 10001,
+              "branchId": 10003,
+              "academicYearId": 10001,
+              "semesterNumber": 1,
+              "semesterName": "Semester 1",
+              "yearNumber": 1,
+              "startDate": null,
+              "endDate": null,
+              "status": 1,
+              "createdAt": "2026-11-04T05:39:24",
+              "createdBy": 10001
+            }
+          }
+        ],
+        [
+          200,
+          {
+            "success": true,
+            "message": "Semester saved successfully",
+            "data": {
+              "semesterId": 256,
+              "courseId": 10001,
+              "branchId": 10003,
+              "academicYearId": 10001,
+              "semesterNumber": 1,
+              "semesterName": "Semester 1",
+              "yearNumber": 1,
+              "startDate": null,
+              "endDate": null,
+              "status": 1,
+              "createdAt": "2026-11-04T05:39:24",
+              "createdBy": 10001
+            }
+          }
+        ],
+        [
+          200,
+          {
+            "success": true,
+            "message": "Semester saved successfully",
+            "data": {
+              "semesterId": 256,
+              "courseId": 10001,
+              "branchId": 10003,
+              "academicYearId": 10001,
+              "semesterNumber": 1,
+              "semesterName": "Semester 1",
+              "yearNumber": 1,
+              "startDate": null,
+              "endDate": null,
+              "status": 1,
+              "createdAt": "2026-11-04T05:39:24",
+              "createdBy": 10001
+            }
+          }
+        ],
+        [
+          200,
+          {
+            "success": true,
+            "message": "Semester saved successfully",
+            "data": {
+              "semesterId": 256,
+              "courseId": 10001,
+              "branchId": 10003,
+              "academicYearId": 10001,
+              "semesterNumber": 1,
+              "semesterName": "Semester 1",
+              "yearNumber": 1,
+              "startDate": null,
+              "endDate": null,
+              "status": 1,
+              "createdAt": "2026-11-04T05:39:24",
+              "createdBy": 10001
+            }
+          }
+        ],
+        [
+          200,
+          {
+            "success": true,
+            "message": "Semester saved successfully",
+            "data": {
+              "semesterId": 256,
+              "courseId": 10001,
+              "branchId": 10003,
+              "academicYearId": 10001,
+              "semesterNumber": 1,
+              "semesterName": "Semester 1",
+              "yearNumber": 1,
+              "startDate": null,
+              "endDate": null,
+              "status": 1,
+              "createdAt": "2026-11-04T05:39:24",
+              "createdBy": 10001
+            }
+          }
+        ]
+      ]
+    },
+    {
+      "test": "Unique key prevents concurrent duplicates",
+      "passed": true
+    },
+    {
+      "test": "Invalid semester date gives field-level HTTP 400",
+      "passed": true,
+      "detail": {
+        "success": false,
+        "message": "Invalid semester request body. Send one flat JSON object.",
+        "statusCode": 400,
+        "route": "/api/semester",
+        "correlationId": "r12-verification-1793770764114893358",
+        "errors": {
+          "dto": [
+            "The dto field is required."
+          ],
+          "$.startDate": [
+            "Use an ISO date (yyyy-MM-dd), ISO timestamp, null, or an empty string for an optional semester date."
+          ]
+        }
+      }
+    },
+    {
+      "test": "Nested dto wrapper is rejected with missing-field validation",
+      "passed": true
+    },
+    {
+      "test": "Semester cannot use academic year from another college",
+      "passed": true
+    },
+    {
+      "test": "Invalid status is rejected with its JSON path",
+      "passed": true
+    },
+    {
+      "test": "Semester search verifies all 8 generated IDs",
+      "passed": true
+    }
+  ]
+}

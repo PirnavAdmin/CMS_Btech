@@ -13,6 +13,10 @@ namespace BTech.Models
         public string? Gender { get; set; }
 
         public long? DepartmentId { get; set; }
+        [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+        public string? DepartmentName { get; set; }
+        [System.ComponentModel.DataAnnotations.Schema.Column("country")]
+        public string? Country { get; set; }
         public string Qualification { get; set; } = string.Empty;
 
         public string? Designation { get; set; }

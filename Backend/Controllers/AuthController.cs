@@ -11,15 +11,18 @@ namespace BTech.Controllers
     [Route("api/v1/auth")]
     public class AuthController : ControllerBase
     {
+        private readonly BTech.UserAccess.UserAccessService _access;
         private readonly IAuthService _authService;
         private readonly IChangePasswordService _changePasswordService;
         private readonly IAccountSetupService _accountSetupService;
 
         public AuthController(
+            BTech.UserAccess.UserAccessService access,
             IAuthService authService,
             IChangePasswordService changePasswordService,
             IAccountSetupService accountSetupService)
         {
+            _access = access;
             _authService = authService;
             _changePasswordService = changePasswordService;
             _accountSetupService = accountSetupService;

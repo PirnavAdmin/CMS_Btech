@@ -1,0 +1,23 @@
+{
+  "modified": [
+    "Backend/COLLEGE_ADMIN_EMAIL_R6.md",
+    "Backend/Middleware/ExceptionMiddleware.cs",
+    "Backend/Services/BackendBuild.cs",
+    "Backend/Tests/AccountInvitationMySql/Program.cs",
+    "Backend/USER_ONBOARDING_R3.md",
+    "Backend/UserAccess/Requests.cs",
+    "Backend/UserAccess/UserAccessController.cs",
+    "Backend/UserAccess/UserAccessService.cs",
+    "Backend/Verification/SuperAdminUserAccess/smoke_test.py",
+    "Backend/Verification/UserOnboarding/check_proxy.py"
+  ],
+  "added": [
+    "Backend/PASSWORD_SETUP_RESET_ROUTE_R7.md",
+    "Backend/Tests/ResetPasswordRoute/Program.cs",
+    "Backend/Tests/ResetPasswordRoute/ResetPasswordRoute.Tests.csproj",
+    "Backend/UserAccess/UserAccountRequestException.cs",
+    "Backend/Verification/Invitations/reset_password.py"
+  ],
+  "sql_changes": false,
+  "runtime_build_and_live_tests": "not executed; SDK/database/deployment unavailable"
+}

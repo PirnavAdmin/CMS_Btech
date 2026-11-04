@@ -1,0 +1,7 @@
+{
+  "original_http_attributes": 728,
+  "removed_or_changed_http_attributes": [],
+  "added_endpoint": "POST /api/v1/admin/users/email-diagnostics",
+  "frontend_source_supplied": false,
+  "frontend_files_changed": 0
+}

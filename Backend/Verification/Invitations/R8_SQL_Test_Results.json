@@ -1,0 +1,29 @@
+{
+  "mysql_version": "8.0.46-0ubuntu0.24.04.3",
+  "original_error_reproduced": 1054,
+  "migration_applied_twice": true,
+  "business_data_preserved": true,
+  "existing_user_count": 36,
+  "invitation_columns": [
+    "user_id",
+    "token_hash",
+    "purpose",
+    "expires_at",
+    "consumed_at",
+    "delivery_status",
+    "created_at",
+    "recipient_email",
+    "delivery_error_code",
+    "smtp_accepted_at",
+    "attempt_count",
+    "last_attempt_at",
+    "correlation_id"
+  ],
+  "fresh_install": {
+    "fresh_schema_creation": true,
+    "legacy_columns_added": true,
+    "legacy_user_preserved": true,
+    "existing_user_defaults_preserve_access": true,
+    "repeat_application_safe": true
+  }
+}

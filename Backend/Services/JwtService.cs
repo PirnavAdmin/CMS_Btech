@@ -79,7 +79,9 @@ public string GenerateToken(
 
         new Claim(
             "employeeUserId",
-            user.EmployeeUserId),
+            user.InternalIdentifier ? string.Empty : user.EmployeeUserId),
+
+        new Claim("accessVersion", user.AccessVersion.ToString(System.Globalization.CultureInfo.InvariantCulture)),
 
         new Claim(
             "mustChangePassword",

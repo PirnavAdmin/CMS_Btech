@@ -1,0 +1,233 @@
+{
+  "passed": 25,
+  "checks": [
+    "MySQL component suite: new/pending/existing accounts, password setup, scope, resend and failure persistence",
+    "Live database Super Admin role and new build access response",
+    "Existing list and lookups endpoints return 200",
+    "New college + admin persisted and real MailKit STARTTLS email accepted",
+    "Exact recipient received email in controlled SMTP inbox",
+    "Access response exposes pending setup and delivery attempt state without token material",
+    "Welcome email contains encoded name, college, role, login URL, support and exact subject",
+    "Token stored as SHA-256 hash with 24-hour expiry",
+    "College/user mapping and module permissions persisted transactionally",
+    "Setup link redemption succeeds once; replay rejected",
+    "First login succeeds and modules are blocked before mandatory profile completion",
+    "Profile completion unlocks granted read access; write, cross-college and admin-only access remain forbidden",
+    "Invite for existing college sends automatically",
+    "Duplicate user prevented without extra email",
+    "Immediate resend throttled without rotating token or sending another email",
+    "Save details + reset-password sends initial setup to current saved email",
+    "Resend invalidates superseded tokens; expired tokens rejected",
+    "Completed onboarding is not restarted by resend-invitation",
+    "SMTP rejection returns 503, preserves account and invalidates setup token",
+    "Failed completed-account reset keeps existing onboarding/password state and points to the authorized reset retry",
+    "Retry succeeds for the saved account without creating duplicate users",
+    "Concurrent resend permits one accepted email and throttles the competing request",
+    "Original failing user 39 reset-password succeeds against repaired dump and controlled inbox",
+    "Missing schema stops edits before writes and retains a correlation ID",
+    "Unavailable database returns actionable 503 without bypassing authorization"
+  ],
+  "api_requests": [
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "status": 200,
+      "correlationId": "2a04c322ff314ccfb84ae5a03be12054"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me/access",
+      "status": 200,
+      "correlationId": "465e2066a978475f8a04beacb0e2c567"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/users",
+      "status": 200,
+      "correlationId": "241d19388b374e8fb59b121f5c8ede5d"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/users/lookups",
+      "status": 200,
+      "correlationId": "0ecb287a668d4b499fc1a38a73eff9bd"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/users/onboard-college",
+      "status": 201,
+      "correlationId": "0efb8e4986c649dc882a0d96e5e8a167"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/users/43/access",
+      "status": 200,
+      "correlationId": "0bcc7429283c442a8310eb116dd0eaf3"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/complete-account-setup",
+      "status": 200,
+      "correlationId": "75d4769827bf4821bdf483a9ba394fb1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/complete-account-setup",
+      "status": 400,
+      "correlationId": "c5128aaa2dab4cc8bf09a1384a93b4af"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "status": 200,
+      "correlationId": "9ef47e6183b1450287b288431f8f0430"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/departments?collegeId=108",
+      "status": 403,
+      "correlationId": "316ce5f624d34ec09a7e2f273ff6afd0"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/account/profile",
+      "status": 200,
+      "correlationId": "9628f37f87ba4a75bc72b4df69b2f396"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/departments?collegeId=108",
+      "status": 200,
+      "correlationId": "681c8388aec140469a5318598e02de9d"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/departments",
+      "status": 403,
+      "correlationId": "8e158f431e404f35a42be9d8ca6488ce"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/departments?collegeId=10107",
+      "status": 403,
+      "correlationId": "8b1a0f5f7ec54b5bb086104d8e86e784"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/users",
+      "status": 403,
+      "correlationId": "6342e475b22e41b5991e36f3c9c436a7"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/users/invite",
+      "status": 201,
+      "correlationId": "c5cade714f554f24894b3f282c63cbe7"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/users/invite",
+      "status": 409,
+      "correlationId": "5339e32d6ed343d3af89f068ae4dd4cb"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/users/44/reset-password",
+      "status": 429,
+      "correlationId": "1b28bc45f0e846d1bfa8a02e51e33d0c"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/users/44",
+      "status": 200,
+      "correlationId": "4ebb185fa0254e758368f14b4c81d4a5"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/users/44/reset-password",
+      "status": 200,
+      "correlationId": "0a92e5a0a1694edfb24fb7beb3a409ec"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/users/44/resend-invitation",
+      "status": 200,
+      "correlationId": "87d1a451b5264583bf75940ffe4ce359"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/complete-account-setup",
+      "status": 400,
+      "correlationId": "6d9c638bff144d69b3aa318ee01d2609"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/complete-account-setup",
+      "status": 400,
+      "correlationId": "d97837bb5d5d448fb5e770d0ee194372"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/users/43/resend-invitation",
+      "status": 409,
+      "correlationId": "3483b8b08c6343a8a54e78f88f2b3728"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/users/invite",
+      "status": 503,
+      "correlationId": "0724146cd8194e14a4135b469a8c8fdc"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/users/43/reset-password",
+      "status": 503,
+      "correlationId": "ad265d5aadda413fa65a8c95f50cc4d6"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "status": 200,
+      "correlationId": "2bc7611d5e5948fb921d7b6d025187a3"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/users/46/resend-invitation",
+      "status": 200,
+      "correlationId": "8f5d8df20f564b71b7088fe3b4930f80"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/users/46/resend-invitation",
+      "status": 429,
+      "correlationId": "23a0669670014174abe3b68e8c5e75d3"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/users/46/resend-invitation",
+      "status": 200,
+      "correlationId": "cdacc834619d4bc78355224848dd9fb9"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/users/39/reset-password",
+      "status": 200,
+      "correlationId": "cfb477772e4d48568920b4af9b776c45"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/users/44",
+      "status": 503,
+      "correlationId": "5f8e4529a33c477cb5b12949fc90cc47"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/users",
+      "status": 503,
+      "correlationId": "86a422ea5e1441c2b237702c0d722919"
+    }
+  ],
+  "smtp": "Real MailKit SMTP with STARTTLS + AUTH against isolated controlled inbox; not external Gmail delivery",
+  "controlled_inbox_received": 7,
+  "live_environment_verified": false
+}

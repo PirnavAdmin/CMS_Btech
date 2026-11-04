@@ -1,0 +1,730 @@
+{
+  "R12FailingRequest": {
+    "method": "POST",
+    "route": "/api/semester",
+    "contentType": "application/json",
+    "body": {
+      "courseId": 35,
+      "branchId": 33,
+      "academicYearId": 63,
+      "semesterNumber": 1,
+      "semesterName": "Semester 1",
+      "yearNumber": null,
+      "startDate": null,
+      "endDate": null,
+      "status": 1
+    },
+    "status": 400,
+    "response": {
+      "success": false,
+      "message": "Invalid semester request body. Send one flat JSON object.",
+      "statusCode": 400,
+      "route": "/api/semester",
+      "correlationId": "r13-verification-1793772433936259618",
+      "errors": {
+        "dto": [
+          "The dto field is required."
+        ],
+        "$.yearNumber": [
+          "The JSON value could not be converted to System.Int32. Path: $.yearNumber | LineNumber: 0 | BytePositionInLine: 124."
+        ]
+      }
+    },
+    "source": "Actual local reproduction with supplied branch IDs, not an original browser capture."
+  },
+  "R13ValidationExample": {
+    "status": 400,
+    "response": {
+      "success": false,
+      "message": "Invalid semester request: $.startDate: Use an ISO date (yyyy-MM-dd), ISO timestamp, null, or an empty string for an optional semester date.",
+      "statusCode": 400,
+      "route": "/api/semester",
+      "correlationId": "r13-verification-1793772436986733614",
+      "errors": {
+        "$.startDate": [
+          "Use an ISO date (yyyy-MM-dd), ISO timestamp, null, or an empty string for an optional semester date."
+        ]
+      }
+    }
+  },
+  "eightSemesters": {
+    "collegeId": 111,
+    "courseId": 35,
+    "branchId": 33,
+    "academicYearId": 63,
+    "semesterIds": [
+      247,
+      248,
+      249,
+      250,
+      251,
+      252,
+      253,
+      254
+    ],
+    "savedCount": 8,
+    "retryCount": 8,
+    "concurrentRequests": 12
+  },
+  "summary": {
+    "passed": 42,
+    "failed": 0,
+    "database": "isolated copy of dump 11-4.sql; MySQL 8.0.46",
+    "liveUserServerChanged": false
+  },
+  "checks": [
+    {
+      "test": "Restore latest supplied dump into isolated MySQL 8.0.46",
+      "passed": true
+    },
+    {
+      "test": "Supplied branch 33 has no saved semesters",
+      "passed": true
+    },
+    {
+      "test": "Supplied branch 33 is configured for 8 semesters",
+      "passed": true
+    },
+    {
+      "test": "Login R13SUPER",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "message": "Login successful."
+      }
+    },
+    {
+      "test": "R12 reproduces nullable yearNumber conversion plus dto-required error",
+      "passed": true,
+      "detail": {
+        "success": false,
+        "message": "Invalid semester request body. Send one flat JSON object.",
+        "statusCode": 400,
+        "route": "/api/semester",
+        "correlationId": "r13-verification-1793772433936259618",
+        "errors": {
+          "dto": [
+            "The dto field is required."
+          ],
+          "$.yearNumber": [
+            "The JSON value could not be converted to System.Int32. Path: $.yearNumber | LineNumber: 0 | BytePositionInLine: 124."
+          ]
+        }
+      }
+    },
+    {
+      "test": "R12 Super Admin directory ignores the selected college filter",
+      "passed": true
+    },
+    {
+      "test": "R13 semester prerequisite SQL safely reruns",
+      "passed": true
+    },
+    {
+      "test": "Login R13SUPER",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "message": "Login successful."
+      }
+    },
+    {
+      "test": "Login R13ADMIN",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "message": "Login successful."
+      }
+    },
+    {
+      "test": "Automatic flat request persists semester 1",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "response": {
+          "success": true,
+          "message": "Semester saved successfully",
+          "data": {
+            "semesterId": 247,
+            "courseId": 35,
+            "branchId": 33,
+            "academicYearId": 63,
+            "semesterNumber": 1,
+            "semesterName": "Semester 1",
+            "yearNumber": 1,
+            "startDate": null,
+            "endDate": null,
+            "status": 1,
+            "createdAt": "2026-11-04T06:07:17",
+            "createdBy": 10002
+          }
+        }
+      }
+    },
+    {
+      "test": "Automatic flat request persists semester 2",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "response": {
+          "success": true,
+          "message": "Semester saved successfully",
+          "data": {
+            "semesterId": 248,
+            "courseId": 35,
+            "branchId": 33,
+            "academicYearId": 63,
+            "semesterNumber": 2,
+            "semesterName": "Semester 2",
+            "yearNumber": 1,
+            "startDate": null,
+            "endDate": null,
+            "status": 1,
+            "createdAt": "2026-11-04T06:07:17",
+            "createdBy": 10002
+          }
+        }
+      }
+    },
+    {
+      "test": "Automatic flat request persists semester 3",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "response": {
+          "success": true,
+          "message": "Semester saved successfully",
+          "data": {
+            "semesterId": 249,
+            "courseId": 35,
+            "branchId": 33,
+            "academicYearId": 63,
+            "semesterNumber": 3,
+            "semesterName": "Semester 3",
+            "yearNumber": 2,
+            "startDate": null,
+            "endDate": null,
+            "status": 1,
+            "createdAt": "2026-11-04T06:07:17",
+            "createdBy": 10002
+          }
+        }
+      }
+    },
+    {
+      "test": "Automatic flat request persists semester 4",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "response": {
+          "success": true,
+          "message": "Semester saved successfully",
+          "data": {
+            "semesterId": 250,
+            "courseId": 35,
+            "branchId": 33,
+            "academicYearId": 63,
+            "semesterNumber": 4,
+            "semesterName": "Semester 4",
+            "yearNumber": 2,
+            "startDate": null,
+            "endDate": null,
+            "status": 1,
+            "createdAt": "2026-11-04T06:07:17",
+            "createdBy": 10002
+          }
+        }
+      }
+    },
+    {
+      "test": "Automatic flat request persists semester 5",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "response": {
+          "success": true,
+          "message": "Semester saved successfully",
+          "data": {
+            "semesterId": 251,
+            "courseId": 35,
+            "branchId": 33,
+            "academicYearId": 63,
+            "semesterNumber": 5,
+            "semesterName": "Semester 5",
+            "yearNumber": 3,
+            "startDate": null,
+            "endDate": null,
+            "status": 1,
+            "createdAt": "2026-11-04T06:07:17",
+            "createdBy": 10002
+          }
+        }
+      }
+    },
+    {
+      "test": "Automatic flat request persists semester 6",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "response": {
+          "success": true,
+          "message": "Semester saved successfully",
+          "data": {
+            "semesterId": 252,
+            "courseId": 35,
+            "branchId": 33,
+            "academicYearId": 63,
+            "semesterNumber": 6,
+            "semesterName": "Semester 6",
+            "yearNumber": 3,
+            "startDate": null,
+            "endDate": null,
+            "status": 1,
+            "createdAt": "2026-11-04T06:07:17",
+            "createdBy": 10002
+          }
+        }
+      }
+    },
+    {
+      "test": "Automatic flat request persists semester 7",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "response": {
+          "success": true,
+          "message": "Semester saved successfully",
+          "data": {
+            "semesterId": 253,
+            "courseId": 35,
+            "branchId": 33,
+            "academicYearId": 63,
+            "semesterNumber": 7,
+            "semesterName": "Semester 7",
+            "yearNumber": 4,
+            "startDate": null,
+            "endDate": null,
+            "status": 1,
+            "createdAt": "2026-11-04T06:07:17",
+            "createdBy": 10002
+          }
+        }
+      }
+    },
+    {
+      "test": "Automatic flat request persists semester 8",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "response": {
+          "success": true,
+          "message": "Semester saved successfully",
+          "data": {
+            "semesterId": 254,
+            "courseId": 35,
+            "branchId": 33,
+            "academicYearId": 63,
+            "semesterNumber": 8,
+            "semesterName": "Semester 8",
+            "yearNumber": 4,
+            "startDate": null,
+            "endDate": null,
+            "status": 1,
+            "createdAt": "2026-11-04T06:07:17",
+            "createdBy": 10002
+          }
+        }
+      }
+    },
+    {
+      "test": "College Admin directory GET returns all 8 saved records after refresh",
+      "passed": true
+    },
+    {
+      "test": "Directory rows are non-archived and limited to selected college",
+      "passed": true
+    },
+    {
+      "test": "Super Admin directory GET also respects selected college",
+      "passed": true
+    },
+    {
+      "test": "Retry returns original ID for semester 1",
+      "passed": true
+    },
+    {
+      "test": "Retry returns original ID for semester 2",
+      "passed": true
+    },
+    {
+      "test": "Retry returns original ID for semester 3",
+      "passed": true
+    },
+    {
+      "test": "Retry returns original ID for semester 4",
+      "passed": true
+    },
+    {
+      "test": "Retry returns original ID for semester 5",
+      "passed": true
+    },
+    {
+      "test": "Retry returns original ID for semester 6",
+      "passed": true
+    },
+    {
+      "test": "Retry returns original ID for semester 7",
+      "passed": true
+    },
+    {
+      "test": "Retry returns original ID for semester 8",
+      "passed": true
+    },
+    {
+      "test": "Database still has exactly 8 non-archived rows",
+      "passed": true
+    },
+    {
+      "test": "Null/blank optional values and quoted IDs resolve from branch without duplicates",
+      "passed": true
+    },
+    {
+      "test": "Invalid field reports its own path without dto error: $.startDate",
+      "passed": true,
+      "detail": {
+        "success": false,
+        "message": "Invalid semester request: $.startDate: Use an ISO date (yyyy-MM-dd), ISO timestamp, null, or an empty string for an optional semester date.",
+        "statusCode": 400,
+        "route": "/api/semester",
+        "correlationId": "r13-verification-1793772436986733614",
+        "errors": {
+          "$.startDate": [
+            "Use an ISO date (yyyy-MM-dd), ISO timestamp, null, or an empty string for an optional semester date."
+          ]
+        }
+      }
+    },
+    {
+      "test": "Invalid field reports its own path without dto error: $.semesterNumber",
+      "passed": true,
+      "detail": {
+        "success": false,
+        "message": "Invalid semester request: $.semesterNumber: Use a whole number or a quoted whole number.",
+        "statusCode": 400,
+        "route": "/api/semester",
+        "correlationId": "r13-verification-1793772437005094547",
+        "errors": {
+          "$.semesterNumber": [
+            "Use a whole number or a quoted whole number."
+          ]
+        }
+      }
+    },
+    {
+      "test": "Invalid field reports its own path without dto error: $.status",
+      "passed": true,
+      "detail": {
+        "success": false,
+        "message": "Invalid semester request: $.status: Semester status must be 1/0, Active/Inactive, or true/false. Omit it or use null for the Active default.",
+        "statusCode": 400,
+        "route": "/api/semester",
+        "correlationId": "r13-verification-1793772437015720297",
+        "errors": {
+          "$.status": [
+            "Semester status must be 1/0, Active/Inactive, or true/false. Omit it or use null for the Active default."
+          ]
+        }
+      }
+    },
+    {
+      "test": "Nested dto wrapper rejected; flat contract enforced",
+      "passed": true
+    },
+    {
+      "test": "Missing branch cannot create a record",
+      "passed": true
+    },
+    {
+      "test": "Explicit foreign academic year is rejected",
+      "passed": true
+    },
+    {
+      "test": "College Admin cannot select another college",
+      "passed": true
+    },
+    {
+      "test": "12 simultaneous requests return one generated semester ID",
+      "passed": true,
+      "detail": [
+        [
+          200,
+          {
+            "success": true,
+            "message": "Semester saved successfully",
+            "data": {
+              "semesterId": 255,
+              "courseId": 35,
+              "branchId": 10001,
+              "academicYearId": 63,
+              "semesterNumber": 1,
+              "semesterName": "Semester 1",
+              "yearNumber": 1,
+              "startDate": null,
+              "endDate": null,
+              "status": 1,
+              "createdAt": "2026-11-04T06:07:17",
+              "createdBy": 10002
+            }
+          }
+        ],
+        [
+          200,
+          {
+            "success": true,
+            "message": "Semester saved successfully",
+            "data": {
+              "semesterId": 255,
+              "courseId": 35,
+              "branchId": 10001,
+              "academicYearId": 63,
+              "semesterNumber": 1,
+              "semesterName": "Semester 1",
+              "yearNumber": 1,
+              "startDate": null,
+              "endDate": null,
+              "status": 1,
+              "createdAt": "2026-11-04T06:07:17",
+              "createdBy": 10002
+            }
+          }
+        ],
+        [
+          200,
+          {
+            "success": true,
+            "message": "Semester saved successfully",
+            "data": {
+              "semesterId": 255,
+              "courseId": 35,
+              "branchId": 10001,
+              "academicYearId": 63,
+              "semesterNumber": 1,
+              "semesterName": "Semester 1",
+              "yearNumber": 1,
+              "startDate": null,
+              "endDate": null,
+              "status": 1,
+              "createdAt": "2026-11-04T06:07:17",
+              "createdBy": 10002
+            }
+          }
+        ],
+        [
+          200,
+          {
+            "success": true,
+            "message": "Semester saved successfully",
+            "data": {
+              "semesterId": 255,
+              "courseId": 35,
+              "branchId": 10001,
+              "academicYearId": 63,
+              "semesterNumber": 1,
+              "semesterName": "Semester 1",
+              "yearNumber": 1,
+              "startDate": null,
+              "endDate": null,
+              "status": 1,
+              "createdAt": "2026-11-04T06:07:17",
+              "createdBy": 10002
+            }
+          }
+        ],
+        [
+          200,
+          {
+            "success": true,
+            "message": "Semester saved successfully",
+            "data": {
+              "semesterId": 255,
+              "courseId": 35,
+              "branchId": 10001,
+              "academicYearId": 63,
+              "semesterNumber": 1,
+              "semesterName": "Semester 1",
+              "yearNumber": 1,
+              "startDate": null,
+              "endDate": null,
+              "status": 1,
+              "createdAt": "2026-11-04T06:07:17",
+              "createdBy": 10002
+            }
+          }
+        ],
+        [
+          200,
+          {
+            "success": true,
+            "message": "Semester saved successfully",
+            "data": {
+              "semesterId": 255,
+              "courseId": 35,
+              "branchId": 10001,
+              "academicYearId": 63,
+              "semesterNumber": 1,
+              "semesterName": "Semester 1",
+              "yearNumber": 1,
+              "startDate": null,
+              "endDate": null,
+              "status": 1,
+              "createdAt": "2026-11-04T06:07:17",
+              "createdBy": 10002
+            }
+          }
+        ],
+        [
+          200,
+          {
+            "success": true,
+            "message": "Semester saved successfully",
+            "data": {
+              "semesterId": 255,
+              "courseId": 35,
+              "branchId": 10001,
+              "academicYearId": 63,
+              "semesterNumber": 1,
+              "semesterName": "Semester 1",
+              "yearNumber": 1,
+              "startDate": null,
+              "endDate": null,
+              "status": 1,
+              "createdAt": "2026-11-04T06:07:17",
+              "createdBy": 10002
+            }
+          }
+        ],
+        [
+          200,
+          {
+            "success": true,
+            "message": "Semester saved successfully",
+            "data": {
+              "semesterId": 255,
+              "courseId": 35,
+              "branchId": 10001,
+              "academicYearId": 63,
+              "semesterNumber": 1,
+              "semesterName": "Semester 1",
+              "yearNumber": 1,
+              "startDate": null,
+              "endDate": null,
+              "status": 1,
+              "createdAt": "2026-11-04T06:07:17",
+              "createdBy": 10002
+            }
+          }
+        ],
+        [
+          200,
+          {
+            "success": true,
+            "message": "Semester saved successfully",
+            "data": {
+              "semesterId": 255,
+              "courseId": 35,
+              "branchId": 10001,
+              "academicYearId": 63,
+              "semesterNumber": 1,
+              "semesterName": "Semester 1",
+              "yearNumber": 1,
+              "startDate": null,
+              "endDate": null,
+              "status": 1,
+              "createdAt": "2026-11-04T06:07:17",
+              "createdBy": 10002
+            }
+          }
+        ],
+        [
+          200,
+          {
+            "success": true,
+            "message": "Semester saved successfully",
+            "data": {
+              "semesterId": 255,
+              "courseId": 35,
+              "branchId": 10001,
+              "academicYearId": 63,
+              "semesterNumber": 1,
+              "semesterName": "Semester 1",
+              "yearNumber": 1,
+              "startDate": null,
+              "endDate": null,
+              "status": 1,
+              "createdAt": "2026-11-04T06:07:17",
+              "createdBy": 10002
+            }
+          }
+        ],
+        [
+          200,
+          {
+            "success": true,
+            "message": "Semester saved successfully",
+            "data": {
+              "semesterId": 255,
+              "courseId": 35,
+              "branchId": 10001,
+              "academicYearId": 63,
+              "semesterNumber": 1,
+              "semesterName": "Semester 1",
+              "yearNumber": 1,
+              "startDate": null,
+              "endDate": null,
+              "status": 1,
+              "createdAt": "2026-11-04T06:07:17",
+              "createdBy": 10002
+            }
+          }
+        ],
+        [
+          200,
+          {
+            "success": true,
+            "message": "Semester saved successfully",
+            "data": {
+              "semesterId": 255,
+              "courseId": 35,
+              "branchId": 10001,
+              "academicYearId": 63,
+              "semesterNumber": 1,
+              "semesterName": "Semester 1",
+              "yearNumber": 1,
+              "startDate": null,
+              "endDate": null,
+              "status": 1,
+              "createdAt": "2026-11-04T06:07:17",
+              "createdBy": 10002
+            }
+          }
+        ]
+      ]
+    },
+    {
+      "test": "Unique key prevents concurrent duplicates",
+      "passed": true
+    },
+    {
+      "test": "Archived rows stay out of directory GET",
+      "passed": true
+    },
+    {
+      "test": "Auto setup replaces missing active slot without altering archived history",
+      "passed": true
+    },
+    {
+      "test": "All 8 semesters remain visible after backend restart and fresh GET",
+      "passed": true
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-﻿using BCrypt.Net;
+using BCrypt.Net;
 using BTech.DTOs;
 using BTech.DTOs.ForgotPassword;
 using BTech.Models;
@@ -12,7 +12,9 @@ namespace BTech.Services
 {
     public class AuthService : IAuthService
     {
+        private readonly BTech.UserAccess.UserAccessService _access;
         private readonly IUserRepository _userRepository;
+        private readonly IEmployeeProfileRepository _employeeProfileRepository;
         private readonly IUserRoleRepository _userRoleRepository;
         private readonly ILoginAuditRepository _loginAuditRepository;
         private readonly IJwtService _jwtService;
@@ -20,14 +22,18 @@ namespace BTech.Services
         private readonly IOtpVerificationRepository _otpVerificationRepository;
 
         public AuthService(
+            BTech.UserAccess.UserAccessService access,
             IUserRepository userRepository,
+            IEmployeeProfileRepository employeeProfileRepository,
             IUserRoleRepository userRoleRepository,
             ILoginAuditRepository loginAuditRepository,
             IRefreshTokenRepository refreshTokenRepository,
             IJwtService jwtService,
             IOtpVerificationRepository otpVerificationRepository)
         {
+            _access = access;
             _userRepository = userRepository;
+            _employeeProfileRepository = employeeProfileRepository;
             _userRoleRepository = userRoleRepository;
             _loginAuditRepository = loginAuditRepository;
             _refreshTokenRepository = refreshTokenRepository;
@@ -143,6 +149,16 @@ namespace BTech.Services
                 return (false, "Student account is not fully configured. Contact the college administrator.", null);
             }
 
+            // Recompute from saved employee data rather than trusting a stale
+            // completion cache. Student onboarding keeps its existing behavior.
+            if (EmployeeProfileCompletion.AppliesTo(roles))
+            {
+                var employeeProfile = await _employeeProfileRepository.GetByUserIdAsync(user.user_id);
+                user.ProfileCompleted = employeeProfile is { Status: 1 } &&
+                    EmployeeProfileCompletion.IsComplete(
+                        user.FullName, user.Email, user.Mobile, employeeProfile.HouseNumber);
+            }
+
             // Generate JWT Tokens
             var accessToken =
                 _jwtService.GenerateToken(
@@ -197,7 +213,10 @@ namespace BTech.Services
                 AccessTokenExpiresAt = accessTokenExpiresAt,
                 UserId = user.user_id,
                 CollegeId = user.college_id,
-                EmployeeUserId = user.EmployeeUserId,
+                EmployeeUserId = user.InternalIdentifier ? string.Empty : user.EmployeeUserId,
+                ProfileCompleted = user.ProfileCompleted,
+                AcademicYearRestricted = user.AcademicYearRestricted,
+                AssignedAcademicYearIds = await _access.AssignedYears(user.user_id),
                 FullName = user.FullName,
                 Email = user.Email,
                 Mobile = user.Mobile,

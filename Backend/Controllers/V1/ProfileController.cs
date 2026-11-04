@@ -178,9 +178,11 @@ namespace BTech.Controllers
         // GET /api/profile/{studentId}
         // =========================================================
 
+        [Authorize]
         [HttpGet("~/api/profile/{studentId:long}")]
         public async Task<IActionResult> GetProfile(long studentId)
         {
+            if (GetLoggedInUserId() != studentId) return Forbid();
             var result = await _profileService.GetProfileAsync(studentId);
 
             if (result == null)
@@ -194,12 +196,14 @@ namespace BTech.Controllers
         // PUT /api/profile/{studentId}
         // =========================================================
 
+        [Authorize]
         [HttpPut("~/api/profile/{studentId:long}")]
         public async Task<IActionResult> UpdateProfile(
             long studentId,
             [FromBody] UpdateProfileRequestDto request)
         {
-            var changedBy = GetLoggedInUserId() ?? studentId;
+            if (GetLoggedInUserId() != studentId) return Forbid();
+            var changedBy = GetLoggedInUserId()!.Value;
 
             _logger.LogInformation(
                 "Legacy profile update requested. UserId={UserId}, ChangedBy={ChangedBy}",

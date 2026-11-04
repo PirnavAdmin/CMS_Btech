@@ -167,14 +167,14 @@ public sealed class AcademicFeePlanService(IConfiguration config, FeePlanAccess 
 
     public async Task<IReadOnlyList<AcademicFeePlanDto>> PickerAsync(AdmissionFeePlanQuery q)
     {
-        FeePlanRules.ValidatePickerScope(q);
+        FeePlanRules.ValidateScope(q);
         await using var c = await OpenAsync();
         await access.AuthorizeAsync(c, q.CollegeId, "student_admissions", "view");
         await using var tx = await c.BeginTransactionAsync();
-        await ValidatePickerAcademicScopeAsync(c, tx, q);
+        await ValidateAcademicScopeAsync(c, tx, q, null);
         var candidates = (await c.QueryAsync<AcademicFeePlanDto>(AcademicFeePlanStore.Select + """
              WHERE college_id=@CollegeId AND academic_year_id=@AcademicYearId AND course_id=@CourseId AND branch_id=@BranchId
-               AND (@SemesterId <= 0 OR semester_id=@SemesterId) AND status='PUBLISHED' AND effective_from<=UTC_DATE() AND effective_to>=UTC_DATE()
+               AND semester_id=@SemesterId AND status='PUBLISHED' AND effective_from<=UTC_DATE() AND effective_to>=UTC_DATE()
              ORDER BY fee_structure_id DESC
             """, q, tx)).Select(AcademicFeePlanStore.Hydrate);
         var result = candidates.Where(p => FeePlanRules.Available(p, q, DateTime.UtcNow)).ToArray();
@@ -189,39 +189,14 @@ public sealed class AcademicFeePlanService(IConfiguration config, FeePlanAccess 
             JOIN academicyears ay ON ay.college_id=col.college_id AND ay.academic_year_id=@AcademicYearId
             JOIN courses co ON co.college_id=col.college_id AND co.course_id=@CourseId
             JOIN branches b ON b.course_id=co.course_id AND b.branch_id=@BranchId
-            JOIN semesters s ON s.course_id=co.course_id AND s.branch_id=b.branch_id AND (@SemesterId <= 0 OR s.semester_id=@SemesterId) AND s.academic_year_id=ay.academic_year_id
+            JOIN semesters s ON s.course_id=co.course_id AND s.branch_id=b.branch_id AND s.semester_id=@SemesterId AND s.academic_year_id=ay.academic_year_id
             WHERE col.college_id=@CollegeId AND col.status=1 AND col.deleted_at IS NULL
               AND ay.status=1 AND ay.is_archived=0 AND ay.deleted_at IS NULL
               AND co.status=1 AND co.deleted_at IS NULL AND b.status=1 AND b.deleted_at IS NULL AND s.status=1 AND s.is_archived=0
             """, q, tx);
-        FeePlanRules.Require(valid > 0, "Academic year, course, branch and semester must form an active academic scope in the selected college.");
+        FeePlanRules.Require(valid == 1, "Academic year, course, branch and semester must form an active academic scope in the selected college.");
         if (category.HasValue)
             FeePlanRules.Require(await c.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM fee_categories WHERE fee_category_id=@category AND status=1", new { category }, tx) == 1,
                 "Fee category does not exist or is inactive.");
-    }
-
-    private static async Task ValidatePickerAcademicScopeAsync(MySqlConnection c, MySqlTransaction tx, AdmissionFeePlanQuery q)
-    {
-        const string scopeSql = """
-            SELECT COUNT(*) FROM colleges col
-            JOIN academicyears ay ON ay.college_id=col.college_id AND ay.academic_year_id=@AcademicYearId
-            JOIN courses co ON co.college_id=col.college_id AND co.course_id=@CourseId
-            JOIN branches b ON b.course_id=co.course_id AND b.branch_id=@BranchId
-            JOIN semesters s ON s.course_id=co.course_id AND s.branch_id=b.branch_id AND s.academic_year_id=ay.academic_year_id
-            WHERE col.college_id=@CollegeId AND col.status=1 AND col.deleted_at IS NULL
-              AND ay.status=1 AND ay.is_archived=0 AND ay.deleted_at IS NULL
-              AND co.status=1 AND co.deleted_at IS NULL AND b.status=1 AND b.deleted_at IS NULL
-              AND s.status=1 AND s.is_archived=0 AND (@SemesterId <= 0 OR s.semester_id=@SemesterId)
-            """;
-        var matchingSemesterCount = await c.ExecuteScalarAsync<int>(scopeSql, q, tx);
-        if (matchingSemesterCount == 0 && q.SemesterId > 0)
-        {
-            // Older admissions can retain a semester ID that no longer belongs to
-            // their selected academic year. Keep the valid year/course/branch scope
-            // and let the admission user choose from its published semester plans.
-            q.SemesterId = 0;
-            matchingSemesterCount = await c.ExecuteScalarAsync<int>(scopeSql, q, tx);
-        }
-        FeePlanRules.Require(matchingSemesterCount > 0, "Academic year, course and branch must form an active academic scope in the selected college.");
     }
 }

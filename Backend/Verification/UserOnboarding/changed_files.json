@@ -1,0 +1,33 @@
+{
+  "modified": [
+    "Backend/Controllers/AuthAccessController.cs",
+    "Backend/Controllers/AuthController.cs",
+    "Backend/Controllers/V1/AdminUsersController.cs",
+    "Backend/DTOs/LoginResponseDto.cs",
+    "Backend/Data/ApplicationDbContext.cs",
+    "Backend/Middleware/ExceptionMiddleware.cs",
+    "Backend/Middleware/ModulePermissionMiddleware.cs",
+    "Backend/Models/User.cs",
+    "Backend/Program.cs",
+    "Backend/Repositories/UserRepository.cs",
+    "Backend/Services/AuthService.cs",
+    "Backend/Services/Implementations/AccountSetupService.cs",
+    "Backend/Services/Implementations/ProfileService.cs",
+    "Backend/Services/JwtService.cs",
+    "Backend/USER_ACCESS_FIX_20261102.md",
+    "Backend/Verification/SuperAdminUserAccess/smoke_test.py"
+  ],
+  "added": [
+    "Backend/Database/AdminManagement/User_Access_Onboarding_Migration.sql",
+    "Backend/USER_ONBOARDING_R3.md",
+    "Backend/UserAccess/AccountReadinessMiddleware.cs",
+    "Backend/UserAccess/Requests.cs",
+    "Backend/UserAccess/UserAccessController.cs",
+    "Backend/UserAccess/UserAccessManagement.cs",
+    "Backend/UserAccess/UserAccessRolePermissions.cs",
+    "Backend/UserAccess/UserAccessService.cs",
+    "Backend/UserAccess/UserYearScopeMiddleware.cs",
+    "Backend/Verification/UserOnboarding/check_proxy.py",
+    "Backend/Verification/UserOnboarding/check_sql.py"
+  ]
+}

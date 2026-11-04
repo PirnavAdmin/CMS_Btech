@@ -1,0 +1,252 @@
+{
+  "status": "passed",
+  "build": "cms-backend-20261104-profile-completion-r11",
+  "database": "Isolated MySQL 8.0.41; supplied dump restored unchanged",
+  "api": "Local rebuilt ASP.NET Core backend; actual HTTP calls",
+  "restartVerified": true,
+  "checksPassed": 35,
+  "checks": [
+    {
+      "test": "Anonymous profile request rejected",
+      "passed": true,
+      "status": 401
+    },
+    {
+      "test": "Login returns profileCompleted=False",
+      "passed": true,
+      "status": 200,
+      "profileCompleted": false,
+      "build": "cms-backend-20261104-profile-completion-r11"
+    },
+    {
+      "test": "GET profile returns profileCompleted=False",
+      "passed": true,
+      "status": 200,
+      "profileCompleted": false,
+      "build": "cms-backend-20261104-profile-completion-r11"
+    },
+    {
+      "test": "PATCH fullName, email, mobile, houseNumber returns profileCompleted=True",
+      "passed": true,
+      "status": 200,
+      "profileCompleted": true,
+      "message": "Profile updated successfully.",
+      "build": "cms-backend-20261104-profile-completion-r11"
+    },
+    {
+      "test": "Extra address and designation fields are optional",
+      "passed": true
+    },
+    {
+      "test": "GET profile returns profileCompleted=True",
+      "passed": true,
+      "status": 200,
+      "profileCompleted": true,
+      "build": "cms-backend-20261104-profile-completion-r11"
+    },
+    {
+      "test": "Login returns profileCompleted=True",
+      "passed": true,
+      "status": 200,
+      "profileCompleted": true,
+      "build": "cms-backend-20261104-profile-completion-r11"
+    },
+    {
+      "test": "Completion flag and house number persisted",
+      "passed": true
+    },
+    {
+      "test": "PATCH aboutMe returns profileCompleted=True",
+      "passed": true,
+      "status": 200,
+      "profileCompleted": true,
+      "message": "Profile updated successfully.",
+      "build": "cms-backend-20261104-profile-completion-r11"
+    },
+    {
+      "test": "PATCH mobile returns profileCompleted=False",
+      "passed": true,
+      "status": 200,
+      "profileCompleted": false,
+      "message": "Profile updated successfully.",
+      "build": "cms-backend-20261104-profile-completion-r11"
+    },
+    {
+      "test": "GET profile returns profileCompleted=False",
+      "passed": true,
+      "status": 200,
+      "profileCompleted": false,
+      "build": "cms-backend-20261104-profile-completion-r11"
+    },
+    {
+      "test": "Login returns profileCompleted=False",
+      "passed": true,
+      "status": 200,
+      "profileCompleted": false,
+      "build": "cms-backend-20261104-profile-completion-r11"
+    },
+    {
+      "test": "PATCH mobile returns profileCompleted=True",
+      "passed": true,
+      "status": 200,
+      "profileCompleted": true,
+      "message": "Profile updated successfully.",
+      "build": "cms-backend-20261104-profile-completion-r11"
+    },
+    {
+      "test": "PATCH houseNumber returns profileCompleted=False",
+      "passed": true,
+      "status": 200,
+      "profileCompleted": false,
+      "message": "Profile updated successfully.",
+      "build": "cms-backend-20261104-profile-completion-r11"
+    },
+    {
+      "test": "GET profile returns profileCompleted=False",
+      "passed": true,
+      "status": 200,
+      "profileCompleted": false,
+      "build": "cms-backend-20261104-profile-completion-r11"
+    },
+    {
+      "test": "Login returns profileCompleted=False",
+      "passed": true,
+      "status": 200,
+      "profileCompleted": false,
+      "build": "cms-backend-20261104-profile-completion-r11"
+    },
+    {
+      "test": "PATCH houseNumber returns profileCompleted=True",
+      "passed": true,
+      "status": 200,
+      "profileCompleted": true,
+      "message": "Profile updated successfully.",
+      "build": "cms-backend-20261104-profile-completion-r11"
+    },
+    {
+      "test": "GET profile returns profileCompleted=True",
+      "passed": true,
+      "status": 200,
+      "profileCompleted": true,
+      "build": "cms-backend-20261104-profile-completion-r11"
+    },
+    {
+      "test": "Login returns profileCompleted=True",
+      "passed": true,
+      "status": 200,
+      "profileCompleted": true,
+      "build": "cms-backend-20261104-profile-completion-r11"
+    },
+    {
+      "test": "PATCH aboutMe returns profileCompleted=True",
+      "passed": true,
+      "status": 200,
+      "profileCompleted": true,
+      "message": "Profile updated successfully.",
+      "build": "cms-backend-20261104-profile-completion-r11"
+    },
+    {
+      "test": "GET profile returns profileCompleted=False",
+      "passed": true,
+      "status": 200,
+      "profileCompleted": false,
+      "build": "cms-backend-20261104-profile-completion-r11"
+    },
+    {
+      "test": "Login returns profileCompleted=False",
+      "passed": true,
+      "status": 200,
+      "profileCompleted": false,
+      "build": "cms-backend-20261104-profile-completion-r11"
+    },
+    {
+      "test": "GET profile returns profileCompleted=False",
+      "passed": true,
+      "status": 200,
+      "profileCompleted": false,
+      "build": "cms-backend-20261104-profile-completion-r11"
+    },
+    {
+      "test": "Login returns profileCompleted=False",
+      "passed": true,
+      "status": 200,
+      "profileCompleted": false,
+      "build": "cms-backend-20261104-profile-completion-r11"
+    },
+    {
+      "test": "PATCH fullName returns profileCompleted=True",
+      "passed": true,
+      "status": 200,
+      "profileCompleted": true,
+      "message": "Profile updated successfully.",
+      "build": "cms-backend-20261104-profile-completion-r11"
+    },
+    {
+      "test": "API process restarted",
+      "passed": true
+    },
+    {
+      "test": "Login returns profileCompleted=True",
+      "passed": true,
+      "status": 200,
+      "profileCompleted": true,
+      "build": "cms-backend-20261104-profile-completion-r11"
+    },
+    {
+      "test": "GET profile returns profileCompleted=True",
+      "passed": true,
+      "status": 200,
+      "profileCompleted": true,
+      "build": "cms-backend-20261104-profile-completion-r11"
+    },
+    {
+      "test": "Rebuilt R11 is serving responses",
+      "passed": true
+    },
+    {
+      "test": "PATCH houseNumber, profileCompleted returns profileCompleted=False",
+      "passed": true,
+      "status": 200,
+      "profileCompleted": false,
+      "message": "Profile updated successfully.",
+      "build": "cms-backend-20261104-profile-completion-r11"
+    },
+    {
+      "test": "GET profile returns profileCompleted=False",
+      "passed": true,
+      "status": 200,
+      "profileCompleted": false,
+      "build": "cms-backend-20261104-profile-completion-r11"
+    },
+    {
+      "test": "Login returns profileCompleted=False",
+      "passed": true,
+      "status": 200,
+      "profileCompleted": false,
+      "build": "cms-backend-20261104-profile-completion-r11"
+    },
+    {
+      "test": "PATCH houseNumber returns profileCompleted=True",
+      "passed": true,
+      "status": 200,
+      "profileCompleted": true,
+      "message": "Profile updated successfully.",
+      "build": "cms-backend-20261104-profile-completion-r11"
+    },
+    {
+      "test": "Login returns profileCompleted=False",
+      "passed": true,
+      "status": 200,
+      "profileCompleted": false,
+      "build": "cms-backend-20261104-profile-completion-r11"
+    },
+    {
+      "test": "Login returns profileCompleted=True",
+      "passed": true,
+      "status": 200,
+      "profileCompleted": true,
+      "build": "cms-backend-20261104-profile-completion-r11"
+    }
+  ],
+  "limitations": "User computer and deployed API were not accessed or restarted."
+}

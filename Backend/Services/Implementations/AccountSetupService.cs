@@ -5,153 +5,27 @@ using BTech.Models;
 using BTech.Services;
 using BTech.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Hosting;
 
 namespace BTech.Services.Implementations
 {
     public sealed class AccountSetupService : IAccountSetupService
     {
         private const string SetupTokenType = "ACCOUNT_SETUP";
-        private const int TokenLifetimeHours = 24;
-
         private readonly ApplicationDbContext _context;
-        private readonly IEmailService _emailService;
-        private readonly IConfiguration _configuration;
-        private readonly ILogger<AccountSetupService> _logger;
-        private readonly IWebHostEnvironment _environment;
+        private readonly BTech.Services.Invitations.AccountInvitationService _invitations;
 
-        public AccountSetupService(
-            ApplicationDbContext context,
-            IEmailService emailService,
-            IConfiguration configuration,
-            ILogger<AccountSetupService> logger,
-            IWebHostEnvironment environment)
+        public AccountSetupService(ApplicationDbContext context,
+            BTech.Services.Invitations.AccountInvitationService invitations)
         {
             _context = context;
-            _emailService = emailService;
-            _configuration = configuration;
-            _logger = logger;
-            _environment = environment;
+            _invitations = invitations;
         }
 
-        public async Task SendSetupLinkAsync(long userId, string accountType)
-        {
-            var user = await _context.Users.SingleOrDefaultAsync(u =>
-                u.user_id == userId && u.DeletedAt == null);
+        public Task SendSetupLinkAsync(long userId, string accountType) =>
+            _invitations.SendAsync(userId, accountType);
 
-            if (user == null || user.Status != 1)
-                throw new InvalidOperationException("Cannot issue setup link for a missing or inactive user.");
-
-            if (!user.MustChangePassword)
-                throw new InvalidOperationException("Account setup link is only available for accounts requiring an initial password setup.");
-
-            if (string.IsNullOrWhiteSpace(user.Email))
-                throw new InvalidOperationException("The account has no email address. Add a verified email before sending setup instructions.");
-
-            var configuredBaseUrl = ResolveSetupBaseUrl();
-            var setupUrlBase = configuredBaseUrl.TrimEnd('/');
-
-            var now = DateTime.UtcNow;
-            var previous = await _context.OtpVerifications
-                .Where(x => x.UserId == userId &&
-                            x.OtpType == SetupTokenType &&
-                            x.Status == 1)
-                .ToListAsync();
-
-            foreach (var item in previous)
-                item.Status = 0;
-
-            var tokenBytes = RandomNumberGenerator.GetBytes(32);
-            var token = Convert.ToBase64String(tokenBytes)
-                .TrimEnd('=').Replace('+', '-').Replace('/', '_');
-
-            var tokenRecord = new OtpVerification
-            {
-                UserId = user.user_id,
-                Identifier = user.EmployeeUserId,
-                OtpHash = BCrypt.Net.BCrypt.HashPassword(token, workFactor: 12),
-                OtpType = SetupTokenType,
-                DeliveryMethod = "EMAIL",
-                ExpiresAt = now.AddHours(TokenLifetimeHours),
-                VerifiedAt = null,
-                Attempts = 0,
-                MaxAttempts = 5,
-                Status = 1,
-                CreatedAt = now
-            };
-
-            _context.OtpVerifications.Add(tokenRecord);
-            await _context.SaveChangesAsync();
-
-            var setupUrl = setupUrlBase +
-                "/activate-account?loginId=" + Uri.EscapeDataString(user.EmployeeUserId) +
-                "&token=" + Uri.EscapeDataString(token);
-
-            var safeName = System.Net.WebUtility.HtmlEncode(user.FullName);
-            var safeType = System.Net.WebUtility.HtmlEncode(accountType);
-            var safeLogin = System.Net.WebUtility.HtmlEncode(user.EmployeeUserId);
-            var safeUrl = System.Net.WebUtility.HtmlEncode(setupUrl);
-
-            var body = $@"<!doctype html>
-<html><body style='font-family:Arial,sans-serif;color:#202124;line-height:1.6'>
-  <p>Dear {safeName},</p>
-  <p>Your {safeType} account is ready. Use the following login ID and create your own password.</p>
-  <p><strong>Login ID:</strong> {safeLogin}</p>
-  <p><a href='{safeUrl}' style='display:inline-block;padding:12px 22px;background:#185abc;color:#fff;text-decoration:none;border-radius:5px'>Set your password</a></p>
-  <p>This single-use link expires in {TokenLifetimeHours} hours. After setting your password, sign in with your login ID (or registered email) and the password you created.</p>
-  <p>If you were not expecting this message, contact your college administrator. Do not share this link.</p>
-  <p>Regards,<br/>BTech College</p>
-</body></html>";
-
-            try
-            {
-                await _emailService.SendEmailAsync(
-                    user.Email,
-                    $"BTech College - {accountType} password setup",
-                    body);
-            }
-            catch (Exception ex)
-            {
-                tokenRecord.Status = 0;
-                await _context.SaveChangesAsync();
-                _logger.LogError(ex,
-                    "Account setup email delivery failed. UserId={UserId}, AccountType={AccountType}",
-                    user.user_id, accountType);
-                throw;
-            }
-        }
-
-        private string ResolveSetupBaseUrl()
-        {
-            var configuredBaseUrl =
-                _configuration["PasswordSetup:BaseUrl"] ??
-                _configuration["Frontend:BaseUrl"];
-
-            if (string.IsNullOrWhiteSpace(configuredBaseUrl))
-            {
-                configuredBaseUrl = _configuration
-                    .GetSection("Cors:AllowedOrigins")
-                    .Get<string[]>()?
-                    .FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
-            }
-
-            if (string.IsNullOrWhiteSpace(configuredBaseUrl))
-                throw new InvalidOperationException("Configure PasswordSetup:BaseUrl with the frontend origin before sending account setup emails.");
-
-            if (!Uri.TryCreate(configuredBaseUrl.Trim(), UriKind.Absolute, out var uri) ||
-                (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
-                throw new InvalidOperationException("PasswordSetup:BaseUrl must be a valid HTTP or HTTPS frontend origin.");
-
-            var isLocalHost = uri.IsLoopback ||
-                string.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase);
-            if (!_environment.IsDevelopment() && uri.Scheme != Uri.UriSchemeHttps)
-                throw new InvalidOperationException("PasswordSetup:BaseUrl must use HTTPS outside development.");
-
-            if (!_environment.IsDevelopment() && isLocalHost)
-                throw new InvalidOperationException("PasswordSetup:BaseUrl cannot point to localhost outside development.");
-
-            return uri.GetLeftPart(UriPartial.Path).TrimEnd('/');
-        }
+        public Task SendPasswordResetLinkAsync(long userId, string accountType) =>
+            _invitations.SendAsync(userId, accountType, reset: true);
 
         public async Task<(bool Success, string Message)> CompleteSetupAsync(
             string loginId,
@@ -173,13 +47,17 @@ namespace BTech.Services.Implementations
             if (Encoding.UTF8.GetByteCount(newPassword) > 72)
                 return (false, "Password must not exceed 72 UTF-8 bytes.");
 
+            if (token.StartsWith("ua_", StringComparison.Ordinal))
+                return await _invitations.CompleteAsync(loginId, token, newPassword, confirmNewPassword);
+
+            // Compatibility for previously issued legacy ACCOUNT_SETUP OTP links.
             var normalizedLoginId = loginId.Trim();
             var now = DateTime.UtcNow;
 
             await using var transaction = await _context.Database.BeginTransactionAsync();
 
             var user = await _context.Users.SingleOrDefaultAsync(u =>
-                u.EmployeeUserId == normalizedLoginId &&
+                ((!u.InternalIdentifier && u.EmployeeUserId == normalizedLoginId) || u.Email == normalizedLoginId) &&
                 u.DeletedAt == null);
 
             if (user == null || user.Status != 1)
@@ -230,8 +108,13 @@ namespace BTech.Services.Implementations
                 return (false, "Setup link is invalid or expired.");
             }
 
+            var consumed = await _context.Database.ExecuteSqlInterpolatedAsync($"UPDATE otp_verifications SET status=0,verified_at={now} WHERE otp_verification_id={matched.OtpVerificationId} AND status=1 AND verified_at IS NULL AND expires_at>{now}");
+            if (consumed != 1)
+                return (false, "Setup link has already been used or expired.");
+
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword, workFactor: 12);
             user.MustChangePassword = false;
+            user.AccessVersion++;
             user.UpdatedAt = now;
             user.UpdatedBy = user.user_id;
 

@@ -7,6 +7,8 @@ namespace BTech.Services.Interfaces
     {
         Task SendSetupLinkAsync(long userId, string accountType);
 
+        Task SendPasswordResetLinkAsync(long userId, string accountType);
+
         Task<(bool Success, string Message)> CompleteSetupAsync(
             string loginId,
             string token,

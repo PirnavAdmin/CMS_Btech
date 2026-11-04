@@ -1,0 +1,150 @@
+{
+  "frontend_changed": false,
+  "files": [
+    {
+      "path": "Configure_CMS_SMTP_Development.ps1",
+      "sha256": "4ad293e9b80ea7fa38bd31cc6dd0e7c87208d8603cd252bc847a051d33ec600d",
+      "change": "modified"
+    },
+    {
+      "path": "ONBOARDING_EMAIL_R8_README.md",
+      "sha256": "d363941c0737fe6436364f1b77f645486ae95e2e58c066e3617108a8bc3a81bc",
+      "change": "added"
+    },
+    {
+      "path": "appsettings.example.json",
+      "sha256": "ae7bca07bfbc58a2f66ee7453e0696626d9b4da1b669208c2da196ed7939e4e8",
+      "change": "modified"
+    },
+    {
+      "path": "Program.cs",
+      "sha256": "de2e0cfe7d0dc4ecbb19a009c09370f5d2c4f379f6cbe2cb65841829fd7a87bc",
+      "change": "modified"
+    },
+    {
+      "path": "START_HERE_FULL_REPLACEMENT.md",
+      "sha256": "45b2d6a4a4525183d62e39d454f761eaaf0e527158a23b0efa73b254c1e010b8",
+      "change": "modified"
+    },
+    {
+      "path": "appsettings.json",
+      "sha256": "ba48628e66ab70b1a23eb964e72285144f30e5d70f54a0d8388c1261b3026049",
+      "change": "modified"
+    },
+    {
+      "path": "UserAccess/UserAccessManagement.cs",
+      "sha256": "a5d9c38679c9c5c2f67ae5cfb929821ac93c1a1966f434e94e244ce576d08c0c",
+      "change": "modified"
+    },
+    {
+      "path": "UserAccess/UserAccessService.cs",
+      "sha256": "453d91a74195346864802be929e08926a024010704c20f6670e0d5589b4974b9",
+      "change": "modified"
+    },
+    {
+      "path": "UserAccess/Requests.cs",
+      "sha256": "a49d69adb82059b8e7f86248cca3ff01b19e029adca790b860cac31279515c1c",
+      "change": "modified"
+    },
+    {
+      "path": "UserAccess/ModuleGrantsConverter.cs",
+      "sha256": "be577940852025f19bc72422577f2bcb3563cbeea1016ec000210b8555c9bdf9",
+      "change": "added"
+    },
+    {
+      "path": "UserAccess/UserAccessController.cs",
+      "sha256": "8325a4a16c678c21cb92b0847a162add0e8d78e663c8fed337eb88c699515da6",
+      "change": "modified"
+    },
+    {
+      "path": "Middleware/ExceptionMiddleware.cs",
+      "sha256": "626eb5c40e3ba3ee9e5ef63ce5607e7d2ed230ac73974ab08decf421d45a5bec",
+      "change": "modified"
+    },
+    {
+      "path": "Services/BackendBuild.cs",
+      "sha256": "4ad12be79c0912a3c1cbde7fa47633fa7218942378a27ac9ce844612f3905301",
+      "change": "modified"
+    },
+    {
+      "path": "Database/AdminManagement/User_Access_Onboarding_Preflight_R8.sql",
+      "sha256": "462949bfed511771059425408fa9deea2ff84c26323ba9878c28722e100246d6",
+      "change": "added"
+    },
+    {
+      "path": "Database/AdminManagement/User_Access_Onboarding_Migration.sql",
+      "sha256": "8ebf2b5feff3d807aedd380090ad5d2881c1eb046310c2f592234419dd212502",
+      "change": "modified"
+    },
+    {
+      "path": "Database/AdminManagement/User_Access_Onboarding_Repair_R8.sql",
+      "sha256": "4e1554d7757fc1e86b77b7e4232d65bacfd5228064f606c8a612df5931b70604",
+      "change": "added"
+    },
+    {
+      "path": "Verification/Invitations/R8_SQL_Test_Results.json",
+      "sha256": "8226e6d504c2291c3fa1fcb080a2eb5fead889eada4ea56b7754be264000976f",
+      "change": "added"
+    },
+    {
+      "path": "Verification/Invitations/run_isolated_r8.py",
+      "sha256": "ac0059c1c78387098485001dbc1e19357b3826c57d8254fdf131f6b91b9734a4",
+      "change": "added"
+    },
+    {
+      "path": "Verification/Invitations/R8_Validation.json",
+      "sha256": "453ef90456317d01ea2bfa40a0c90e1c7e0a7ea92947e8262f27613a7d95705b",
+      "change": "added"
+    },
+    {
+      "path": "Verification/Invitations/R8_HTTP_Test_Results.json",
+      "sha256": "adabcd5fccdd9b0556d8c592e89b3b4d0fac35a4cdc4f06f663f889a80763fc3",
+      "change": "added"
+    },
+    {
+      "path": "Services/Invitations/MySqlAccountInvitationStore.cs",
+      "sha256": "64c2bf07ce030dca93879e9585b64ae7f24001fac9ae3f8b84dd060659fa6229",
+      "change": "modified"
+    },
+    {
+      "path": "Services/Invitations/InvitationContracts.cs",
+      "sha256": "1690b296f52313aabccc9a803aa6e63e6996684fa28b6abb9c5f3b1b105d217c",
+      "change": "modified"
+    },
+    {
+      "path": "Services/Invitations/AccountInvitationService.cs",
+      "sha256": "e6d5aaeb509d2082b4073fa66b47456a9609af11f86a0668d21994ae30b5e154",
+      "change": "modified"
+    },
+    {
+      "path": "Services/Invitations/AccountInvitationEmail.cs",
+      "sha256": "ddc1b1175d8329d5303d958d3de98f7917e8367bab6b69914b3d4c81fe40b64e",
+      "change": "added"
+    },
+    {
+      "path": "Services/Invitations/UserAccessSchema.cs",
+      "sha256": "a08f47bae89e9cb42f8cf5e96ca464b08e8405b0acb4e6be081585a2df27b297",
+      "change": "added"
+    },
+    {
+      "path": "Services/Implementations/EmailService.cs",
+      "sha256": "6fcc97704d9a8c8d1bcb2b40b3bb1e113e1ce47123c0c5d1d83f1cf017a921c9",
+      "change": "modified"
+    },
+    {
+      "path": "Tests/PasswordSetupUrl/PasswordSetupUrl.Tests.csproj",
+      "sha256": "48738ab9f589cd3880d045bf896d6d9745be50f1d16321a630ee12f2273fa9bd",
+      "change": "modified"
+    },
+    {
+      "path": "Tests/AccountInvitationMySql/Program.cs",
+      "sha256": "a5e0b4401398739369fa296bdc6d4a5a896299ec589e7321d88505a649d10040",
+      "change": "modified"
+    },
+    {
+      "path": "Tests/AccountInvitations/Program.cs",
+      "sha256": "097ab10d93219da836af36dd3d7a028de5a42cfd1c05291e89c976f272d7cf40",
+      "change": "modified"
+    }
+  ]
+}

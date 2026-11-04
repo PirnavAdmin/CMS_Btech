@@ -1,0 +1,11 @@
+{
+  "preserved": true,
+  "existing_route_attributes": 818,
+  "removed": [],
+  "added": [
+    [
+      "Backend/UserAccess/UserAccessController.cs",
+      "[HttpGet(\"invitations\")]"
+    ]
+  ]
+}

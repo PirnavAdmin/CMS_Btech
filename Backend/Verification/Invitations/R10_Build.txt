@@ -1,0 +1,16 @@
+/workspace/scratch/cd097c178a80/work/Backend/Controllers/OtpController.cs(238,34): warning CS0168: The variable 'ex' is declared but never used [/workspace/scratch/cd097c178a80/work/Backend/BTech.csproj]
+/workspace/scratch/cd097c178a80/work/Backend/Controllers/OtpController.cs(743,34): warning CS0168: The variable 'ex' is declared but never used [/workspace/scratch/cd097c178a80/work/Backend/BTech.csproj]
+/workspace/scratch/cd097c178a80/work/Backend/EventManagement/EventStore.cs(38,70): warning CS8619: Nullability of reference types in value of type 'Task<T?>' doesn't match target type 'Task<T>'. [/workspace/scratch/cd097c178a80/work/Backend/BTech.csproj]
+/workspace/scratch/cd097c178a80/work/Backend/Controllers/V1/FacultyController.cs(259,30): warning CS0168: The variable 'ex' is declared but never used [/workspace/scratch/cd097c178a80/work/Backend/BTech.csproj]
+  BTech -> /workspace/scratch/cd097c178a80/work/Backend/bin/Debug/net8.0/BTech.dll
+
+Build succeeded.
+
+/workspace/scratch/cd097c178a80/work/Backend/Controllers/OtpController.cs(238,34): warning CS0168: The variable 'ex' is declared but never used [/workspace/scratch/cd097c178a80/work/Backend/BTech.csproj]
+/workspace/scratch/cd097c178a80/work/Backend/Controllers/OtpController.cs(743,34): warning CS0168: The variable 'ex' is declared but never used [/workspace/scratch/cd097c178a80/work/Backend/BTech.csproj]
+/workspace/scratch/cd097c178a80/work/Backend/EventManagement/EventStore.cs(38,70): warning CS8619: Nullability of reference types in value of type 'Task<T?>' doesn't match target type 'Task<T>'. [/workspace/scratch/cd097c178a80/work/Backend/BTech.csproj]
+/workspace/scratch/cd097c178a80/work/Backend/Controllers/V1/FacultyController.cs(259,30): warning CS0168: The variable 'ex' is declared but never used [/workspace/scratch/cd097c178a80/work/Backend/BTech.csproj]
+    4 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:10.67

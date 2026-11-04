@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 
 namespace BTech.DTOs.College
 {
     public class CollegeResponseDto
     {
         public long CollegeId { get; set; }
+        public long? CreatedBy { get; set; }
         public string CollegeCode { get; set; } = string.Empty;
         public string CollegeName { get; set; } = string.Empty;
         public string? CollegeType { get; set; }

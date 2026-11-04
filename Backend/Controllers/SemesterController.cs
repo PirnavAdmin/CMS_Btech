@@ -1,9 +1,14 @@
 using BTech.DTOs;
 using BTech.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
+using BTech.Filters;
 
 namespace BTech.Controllers
 {
+    [Authorize]
+    [ServiceFilter(typeof(SemesterRequestDiagnosticsFilter))]
     [ApiController]
     [Route("api/semester")]
     public class SemesterController : ControllerBase
@@ -22,15 +27,28 @@ namespace BTech.Controllers
 
         [HttpPost]
         public async Task<IActionResult> Add(
-            [FromBody] SemesterDto dto)
+            [FromBody] SemesterDto? dto)
         {
+            if (dto == null) return BadRequest(new
+            {
+                success = false, statusCode = 400, route = Request.Path.Value,
+                message = "Send one flat semester JSON object in the request body.",
+                correlationId = HttpContext.TraceIdentifier,
+                errors = new Dictionary<string, string[]> { ["body"] = ["A semester JSON object is required."] }
+            });
+            dto.CreatedBy = long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var result = await _service.AddAsync(dto);
 
             return Ok(new
             {
                 success = true,
-                message = "Semester added successfully",
-                data = result
+                message = "Semester saved successfully",
+                data = new
+                {
+                    result.SemesterId, result.CourseId, result.BranchId, result.AcademicYearId,
+                    result.SemesterNumber, result.SemesterName, result.YearNumber,
+                    result.StartDate, result.EndDate, result.Status, result.CreatedAt, result.CreatedBy
+                }
             });
         }
 
@@ -40,7 +58,7 @@ namespace BTech.Controllers
         // =====================================================
 
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll([FromQuery] long? collegeId)
         {
             var result = await _service.GetAllAsync();
 
@@ -133,8 +151,9 @@ namespace BTech.Controllers
         [HttpPut("{semesterId:long}")]
         public async Task<IActionResult> Update(
             long semesterId,
-            [FromBody] SemesterDto dto)
+            [FromBody] SemesterDto? dto)
         {
+            if (dto == null) return BadRequest(new { success = false, message = "A semester JSON object is required." });
             var result = await _service.UpdateAsync(
                 semesterId,
                 dto);

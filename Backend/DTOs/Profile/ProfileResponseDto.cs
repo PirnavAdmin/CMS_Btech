@@ -3,6 +3,7 @@ namespace BTech.DTOs.Profile
     public class ProfileResponseDto
     {
         public long UserId { get; set; }
+        public bool ProfileCompleted { get; set; }
 
         public string EmployeeUserId { get; set; } = string.Empty;
 
@@ -44,6 +45,14 @@ namespace BTech.DTOs.Profile
         public string? State { get; set; }
 
         public string? AboutMe { get; set; }
+        public string? Bio => AboutMe;
+        public string? JobTitle => Designation;
+        public string? AddressLine1 => Address;
+        public string? PostalCode => Pincode;
+        public string? Country { get; set; }
+        public long? CollegeId { get; set; }
+        public string? CollegeName { get; set; }
+        public AssignedOrganizationResponseDto? AssignedOrganization { get; set; }
 
         public string? ProfileImagePath { get; set; }
 

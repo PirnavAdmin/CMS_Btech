@@ -170,7 +170,7 @@ namespace BTech.DTOs.College
         public IEnumerable<ValidationResult> Validate(
             ValidationContext validationContext)
         {
-            if (string.IsNullOrWhiteSpace(EffectiveCollegeName))
+            if ((CollegeName != null || Name != null) && string.IsNullOrWhiteSpace(EffectiveCollegeName))
                 yield return new ValidationResult(
                     "College name is required.",
                     new[] { nameof(CollegeName) });

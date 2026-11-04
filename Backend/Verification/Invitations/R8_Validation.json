@@ -1,0 +1,26 @@
+{
+  "build": "cms-backend-20261103-onboarding-schema-email-r8",
+  "build_result": {
+    "errors": 0,
+    "pre_existing_warnings": 4
+  },
+  "unit_tests": {
+    "AccountInvitations": "passed",
+    "PasswordSetupUrl": "passed",
+    "ResetPasswordRoute": "passed"
+  },
+  "mysql_component_suite": "passed",
+  "http_checks_passed": 25,
+  "http_requests": 33,
+  "controlled_inbox_received": 7,
+  "original_user_39_test": {
+    "method": "POST",
+    "path": "/api/v1/admin/users/39/reset-password",
+    "status": 200,
+    "correlationId": "cfb477772e4d48568920b4af9b776c45"
+  },
+  "original_production_correlation_id": "d2f205d1e3a54e8e989bf9a1e725252d",
+  "live_deployment_updated": false,
+  "external_gmail_inbox_verified": false,
+  "frontend_files_modified": false
+}

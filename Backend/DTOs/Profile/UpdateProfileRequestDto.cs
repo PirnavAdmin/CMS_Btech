@@ -51,5 +51,14 @@ namespace BTech.DTOs.Profile
 
         [StringLength(1000)]
         public string? AboutMe { get; set; }
+
+        [StringLength(100)]
+        public string? Country { get; set; }
+
+        // Alias for the current setup form; existing aboutMe clients keep working.
+        [StringLength(1000)]
+        public string? Bio { get; set; }
+
+        public AssignedOrganizationUpdateDto? AssignedOrganization { get; set; }
     }
 }

@@ -3,6 +3,7 @@ using BTech.DTOs;
 using BTech.Models;
 using BTech.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using MySqlConnector;
 
 namespace BTech.Services
 {
@@ -21,12 +22,38 @@ namespace BTech.Services
             _httpContextAccessor = httpContextAccessor;
         }
 
+        private long? SelectedCollegeId()
+        {
+            var context = _httpContextAccessor.HttpContext;
+            if (context?.Items[BTech.Middleware.ModulePermissionMiddleware.SuperAdminItem] is not bool)
+                throw new UnauthorizedAccessException("A verified semester request is required.");
+            return CollegeRequestScope.GetCollegeId(context) ??
+                context.Items[AcademicYearScopeRequest.ItemKey] as long?;
+        }
+
         private IQueryable<Semester> ScopedSemesters()
         {
-            var collegeId = CollegeRequestScope.GetCollegeId(_httpContextAccessor.HttpContext);
+            var collegeId = SelectedCollegeId();
             return collegeId.HasValue
                 ? _context.Semesters.Where(s => s.Course != null && s.Course.CollegeId == collegeId.Value)
                 : _context.Semesters;
+        }
+
+        private async Task<long> ResolveAcademicYearAsync(long suppliedId, Branch branch, long collegeId)
+        {
+            var years = _context.AcademicYears.AsNoTracking().Where(x =>
+                x.CollegeId == collegeId && x.DeletedAt == null && x.IsArchived == 0);
+            if (suppliedId > 0)
+            {
+                if (await years.AnyAsync(x => x.AcademicYearId == suppliedId)) return suppliedId;
+                throw new ArgumentException("academicYearId must identify a non-archived academic year in the branch's college.");
+            }
+            if (branch.StartingAcademicYearId is > 0 &&
+                await years.AnyAsync(x => x.AcademicYearId == branch.StartingAcademicYearId.Value))
+                return branch.StartingAcademicYearId.Value;
+            var active = await years.Where(x => x.Status == 1).Select(x => x.AcademicYearId).Take(2).ToListAsync();
+            if (active.Count == 1) return active[0];
+            throw new ArgumentException("academicYearId is required: this branch has no valid starting academic year and its college has no unique active academic year.");
         }
 
         // =====================================================
@@ -53,23 +80,17 @@ namespace BTech.Services
                 ? dto.CourseId
                 : branch.CourseId;
 
-            var courseExists = await _context.Courses
-                .AnyAsync(x =>
-                    x.CourseId == effectiveCourseId &&
-                    x.DeletedAt == null);
-
-            if (!courseExists)
-                throw new ArgumentException("Course not found.");
+            var course = await _context.Courses.AsNoTracking().FirstOrDefaultAsync(x =>
+                x.CourseId == effectiveCourseId && x.DeletedAt == null);
+            if (course == null) throw new ArgumentException("Course not found.");
+            var authorizedCollege = SelectedCollegeId();
+            if (authorizedCollege.HasValue && course.CollegeId != authorizedCollege)
+                throw new BTech.Exceptions.ForbiddenException("Cross-college access is not permitted.");
 
             if (branch.CourseId != effectiveCourseId)
                 throw new ArgumentException("The selected branch does not belong to the selected course.");
 
-            // Academic-year setup is optional during semester structure generation.
-            if (dto.AcademicYearId.HasValue && !await _context.AcademicYears
-                .AnyAsync(x => x.AcademicYearId == dto.AcademicYearId.Value))
-            {
-                throw new ArgumentException("Academic year not found.");
-            }
+            dto.AcademicYearId = await ResolveAcademicYearAsync(dto.AcademicYearId, branch, course.CollegeId);
 
             // Validate Semester Number
             if (dto.SemesterNumber <= 0)
@@ -95,18 +116,10 @@ namespace BTech.Services
             }
 
             // Check Duplicate
-            var duplicate = await ScopedSemesters()
-                .AnyAsync(x =>
-                    x.BranchId == dto.BranchId &&
-                    x.AcademicYearId == dto.AcademicYearId &&
-                    x.SemesterNumber == dto.SemesterNumber &&
-                    x.IsArchived == 0);
-
-            if (duplicate)
-            {
-                throw new ArgumentException(
-                    "This semester already exists for the selected branch and academic year.");
-            }
+            var existing = await ScopedSemesters().AsNoTracking().FirstOrDefaultAsync(x =>
+                x.BranchId == dto.BranchId && x.AcademicYearId == dto.AcademicYearId &&
+                x.SemesterNumber == dto.SemesterNumber && x.IsArchived == 0);
+            if (existing != null) return existing; // Retrying creation never modifies the saved record.
 
             var semester = new Semester
             {
@@ -138,8 +151,16 @@ namespace BTech.Services
             };
 
             _context.Semesters.Add(semester);
-
-            await _context.SaveChangesAsync();
+            try { await _context.SaveChangesAsync(); }
+            catch (DbUpdateException ex) when (ex.InnerException is MySqlException { Number: 1062 } mysql &&
+                mysql.Message.Contains("uq_semester_active_slot", StringComparison.OrdinalIgnoreCase))
+            {
+                // A simultaneous request won the unique key. Return its committed record.
+                _context.Entry(semester).State = EntityState.Detached;
+                return await ScopedSemesters().AsNoTracking().SingleAsync(x =>
+                    x.BranchId == dto.BranchId && x.AcademicYearId == dto.AcademicYearId &&
+                    x.SemesterNumber == dto.SemesterNumber && x.IsArchived == 0);
+            }
 
             _logger.LogInformation(
                 "Semester created. SemesterId={SemesterId}, CourseId={CourseId}, BranchId={BranchId}, AcademicYearId={AcademicYearId}",
@@ -308,7 +329,7 @@ namespace BTech.Services
         {
             var semester = await ScopedSemesters()
                 .FirstOrDefaultAsync(
-                    x => x.SemesterId == semesterId);
+                    x => x.SemesterId == semesterId && x.IsArchived == 0);
 
             if (semester == null)
             {
@@ -330,24 +351,17 @@ namespace BTech.Services
                 ? dto.CourseId
                 : branch.CourseId;
 
-            var courseExists = await _context.Courses
-                .AnyAsync(x =>
-                    x.CourseId == effectiveCourseId &&
-                    x.DeletedAt == null);
-
-            if (!courseExists)
-                throw new ArgumentException("Course not found.");
+            var course = await _context.Courses.AsNoTracking().FirstOrDefaultAsync(x =>
+                x.CourseId == effectiveCourseId && x.DeletedAt == null);
+            if (course == null) throw new ArgumentException("Course not found.");
+            var authorizedCollege = SelectedCollegeId();
+            if (authorizedCollege.HasValue && course.CollegeId != authorizedCollege)
+                throw new BTech.Exceptions.ForbiddenException("Cross-college access is not permitted.");
 
             if (branch.CourseId != effectiveCourseId)
                 throw new ArgumentException("The selected branch does not belong to the selected course.");
 
-            // Academic-year setup is optional while generating semester structures.
-            if (dto.AcademicYearId.HasValue && !await _context.AcademicYears
-                .AnyAsync(x => x.AcademicYearId == dto.AcademicYearId.Value))
-            {
-                throw new ArgumentException(
-                    "Academic year not found.");
-            }
+            dto.AcademicYearId = await ResolveAcademicYearAsync(dto.AcademicYearId, branch, course.CollegeId);
 
             // Validate Semester Number
             if (dto.SemesterNumber <= 0)

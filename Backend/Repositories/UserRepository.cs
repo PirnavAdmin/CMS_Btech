@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using BTech.Data;
 using BTech.Models;
@@ -23,7 +23,7 @@ namespace BTech.Repositories
             var matches = await _context.Users
                 .AsNoTracking()
                 .Where(u => u.DeletedAt == null &&
-                    (u.EmployeeUserId == loginIdentifier ||
+                    ((!u.InternalIdentifier && u.EmployeeUserId == loginIdentifier) ||
                      u.Email == loginIdentifier ||
                      u.Mobile == loginIdentifier))
                 .Take(2)
@@ -114,7 +114,7 @@ namespace BTech.Repositories
                 .FirstOrDefaultAsync(u =>
                     u.DeletedAt == null &&
                     (
-                        u.EmployeeUserId == identifier ||
+                        (!u.InternalIdentifier && u.EmployeeUserId == identifier) ||
                         u.Email == identifier ||
                         u.Mobile == identifier
                     ));

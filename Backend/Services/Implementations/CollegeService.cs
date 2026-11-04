@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BTech.DTOs.College;
 using BTech.Models;
+using BTech.Services;
 using BTech.Repositories.Interfaces;
 using BTech.Services.Interfaces;
 
@@ -12,11 +13,13 @@ namespace BTech.Services.Implementations
     public class CollegeService : ICollegeService
     {
         private readonly ICollegeRepository _collegeRepository;
+        private readonly IHttpContextAccessor _http;
 
         public CollegeService(
-            ICollegeRepository collegeRepository)
+            ICollegeRepository collegeRepository, IHttpContextAccessor http)
         {
             _collegeRepository = collegeRepository;
+            _http = http;
         }
 
         // =====================================================
@@ -96,6 +99,10 @@ namespace BTech.Services.Implementations
                 CreateCollegeDto dto,
                 long? userId = null)
         {
+            var scope = CollegeManagementScope.From(_http.HttpContext);
+            if (!scope.IsSuperAdmin && !scope.IsCollegeAdmin)
+                throw new BTech.Exceptions.ForbiddenException("Only College Admin and Super Admin can create colleges.");
+            userId = scope.UserId;
             var codeExists =
                 await _collegeRepository.ExistsCodeAsync(
                     dto.EffectiveCollegeCode);
@@ -267,58 +274,37 @@ namespace BTech.Services.Implementations
             college.CollegeCode =
                 nextCode;
 
-            college.CollegeName =
-                dto.EffectiveCollegeName;
+            college.CollegeName = dto.CollegeName == null && dto.Name == null ? college.CollegeName : dto.EffectiveCollegeName;
 
-            college.CollegeType =
-                dto.EffectiveCollegeType;
+            college.CollegeType = dto.EffectiveCollegeType ?? college.CollegeType;
 
-            college.UniversityName =
-                dto.EffectiveUniversityName;
+            college.UniversityName = dto.EffectiveUniversityName ?? college.UniversityName;
 
-            college.Email =
-                dto.Email;
+            college.Email = dto.Email ?? college.Email;
 
-            college.Mobile =
-                dto.EffectiveMobile;
+            college.Mobile = dto.EffectiveMobile ?? college.Mobile;
 
-            college.Phone =
-                dto.Phone;
+            college.Phone = dto.Phone ?? college.Phone;
 
-            college.Principal =
-                NormalizeOptional(dto.Principal);
+            college.Principal = dto.Principal == null ? college.Principal : NormalizeOptional(dto.Principal);
 
-            college.PrincipalEmail =
-                NormalizeOptional(dto.PrincipalEmail);
+            college.PrincipalEmail = dto.PrincipalEmail == null ? college.PrincipalEmail : NormalizeOptional(dto.PrincipalEmail);
 
-            college.PrincipalContact =
-                NormalizeOptional(dto.PrincipalContact);
+            college.PrincipalContact = dto.PrincipalContact == null ? college.PrincipalContact : NormalizeOptional(dto.PrincipalContact);
 
-            college.AlternateContactNumber =
-                NormalizeOptional(
-                    dto.AlternateContactNumber);
+            college.AlternateContactNumber = dto.AlternateContactNumber == null ? college.AlternateContactNumber : NormalizeOptional(dto.AlternateContactNumber);
 
-            college.AccreditationStatus =
-                NormalizeOptional(
-                    dto.AccreditationStatus);
+            college.AccreditationStatus = dto.AccreditationStatus == null ? college.AccreditationStatus : NormalizeOptional(dto.AccreditationStatus);
 
-            college.AccreditationBody =
-                NormalizeOptional(
-                    dto.AccreditationBody);
+            college.AccreditationBody = dto.AccreditationBody == null ? college.AccreditationBody : NormalizeOptional(dto.AccreditationBody);
 
-            college.AccreditationGrade =
-                NormalizeOptional(
-                    dto.AccreditationGrade);
+            college.AccreditationGrade = dto.AccreditationGrade == null ? college.AccreditationGrade : NormalizeOptional(dto.AccreditationGrade);
 
-            college.AccreditationNumber =
-                NormalizeOptional(
-                    dto.AccreditationNumber);
+            college.AccreditationNumber = dto.AccreditationNumber == null ? college.AccreditationNumber : NormalizeOptional(dto.AccreditationNumber);
 
-            college.ValidFrom =
-                dto.ValidFrom;
+            college.ValidFrom = dto.ValidFrom ?? college.ValidFrom;
 
-            college.ValidUntil =
-                dto.ValidUntil;
+            college.ValidUntil = dto.ValidUntil ?? college.ValidUntil;
 
             if (college.ValidFrom.HasValue &&
                 college.ValidUntil.HasValue &&
@@ -328,35 +314,25 @@ namespace BTech.Services.Implementations
                     "Valid until must be on or after valid from.");
             }
 
-            college.AddressLine1 =
-                dto.EffectiveAddressLine1;
+            college.AddressLine1 = dto.EffectiveAddressLine1 ?? college.AddressLine1;
 
-            college.AddressLine2 =
-                dto.AddressLine2;
+            college.AddressLine2 = dto.AddressLine2 ?? college.AddressLine2;
 
-            college.City =
-                dto.City;
+            college.City = dto.City ?? college.City;
 
-            college.Area =
-                NormalizeOptional(dto.Area);
+            college.Area = dto.Area == null ? college.Area : NormalizeOptional(dto.Area);
 
-            college.District =
-                NormalizeOptional(dto.District);
+            college.District = dto.District == null ? college.District : NormalizeOptional(dto.District);
 
-            college.State =
-                dto.State;
+            college.State = dto.State ?? college.State;
 
-            college.Country =
-                dto.Country;
+            college.Country = dto.Country ?? college.Country;
 
-            college.Pincode =
-                dto.Pincode;
+            college.Pincode = dto.Pincode ?? college.Pincode;
 
-            college.Website =
-                dto.Website;
+            college.Website = dto.Website ?? college.Website;
 
-            college.AcademicYearId =
-                dto.AcademicYearId;
+            college.AcademicYearId = dto.AcademicYearId ?? college.AcademicYearId;
 
             college.Timezone =
                 string.IsNullOrWhiteSpace(
@@ -453,6 +429,7 @@ namespace BTech.Services.Implementations
             {
                 CollegeId =
                     college.CollegeId,
+                CreatedBy = college.CreatedBy,
 
                 CollegeCode =
                     college.CollegeCode,
