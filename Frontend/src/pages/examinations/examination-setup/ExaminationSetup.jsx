@@ -42,28 +42,24 @@ function normalize(schedule, index = 0) {
   }
 }
 
-function ExaminationSummary({ types = [], examCount, scheduleCount }) {
-  const [apiCounts, setApiCounts] = reactImports_useState({ totalCount: null, scheduleRows: null, loading: true, error: '' })
+function ExaminationSummary({ examCount }) {
+  const [apiCounts, setApiCounts] = reactImports_useState({ totalCount: null, loading: true, error: '' })
   reactImports_useEffect(() => {
     let active = true
     Promise.all([
       fetchExams({ Page: 1, PageSize: 1 }),
       hasExamSetup(),
-      scheduleCount === undefined ? fetchScheduleRows() : Promise.resolve(null),
-    ]).then(([examResult, setupExists, rows]) => {
-      if (active) setApiCounts({ totalCount: setupExists ? examResult.totalCount : 0, scheduleRows: rows, loading: false, error: '' })
+    ]).then(([examResult, setupExists]) => {
+      if (active) setApiCounts({ totalCount: setupExists ? examResult.totalCount : 0, loading: false, error: '' })
     }).catch(error => {
       if (active) setApiCounts(current => ({ ...current, loading: false, error: error?.message || 'Unable to load examination totals.' }))
     })
     return () => { active = false }
-  }, [scheduleCount === undefined])
+  }, [])
 
   const examinationTotal = examCount ?? (apiCounts.loading ? '…' : apiCounts.error ? '—' : apiCounts.totalCount)
-  const scheduleTotal = scheduleCount ?? (apiCounts.loading ? '…' : apiCounts.error ? '—' : apiCounts.scheduleRows?.length ?? 0)
   return <div className="examination-setup__summary" aria-label="Examination setup totals">
     <div title={apiCounts.error}><strong>{examinationTotal}</strong><small>Examinations</small></div>
-    <div><strong>{types.length}</strong><small>Exam Types</small></div>
-    <div title={apiCounts.error}><strong>{scheduleTotal}</strong><small>Schedules</small></div>
   </div>
 }
 
@@ -78,9 +74,9 @@ const useNavigate = react_router_domImports_useNavigate
 const DashboardLayout = DashboardLayoutImports_default
 const useAcademic = useAcademicImports_useAcademic
 
-const tabs = [['Examination List', '/examination-setup/examination-list'], ['Create Examination', '/examination-setup/create-examination'], ['Exam Type', '/examination-setup/exam-type'], ['Exam Schedule', '/examination-setup/exam-schedule'], ['Exam Rules', '/examination-setup/exam-rules']]
+const tabs = [['Examination List', '/examination-setup/examination-list'], ['Create Examination', '/examination-setup/create-examination']]
 const key = 'cms-examination-setup-demo-v1'
-const blank = { name: '', academicYear: '', examType: '', term: '', startDate: '', endDate: '', description: '', status: 'Draft' }
+const blank = { name: '', academicYear: '', term: '', startDate: '', endDate: '', description: '', status: 'Draft' }
 const load = () => { try { return JSON.parse(localStorage.getItem(key)) || {} } catch { return {} } }
 
 function CreateExamination() {
@@ -102,7 +98,7 @@ function CreateExamination() {
   const change = (name, value) => { setForm(current => ({ ...current, [name]: value })); setErrors(current => ({ ...current, [name]: '' })); setSaved(false) }
   const submit = event => {
     event.preventDefault()
-    const next = Object.fromEntries(['name', 'academicYear', 'examType', 'term', 'startDate', 'endDate'].filter(name => !String(form[name] || '').trim()).map(name => [name, 'This field is required.']))
+    const next = Object.fromEntries(['name', 'academicYear', 'term', 'startDate', 'endDate'].filter(name => !String(form[name] || '').trim()).map(name => [name, 'This field is required.']))
     if (form.startDate && form.endDate && form.endDate < form.startDate) next.endDate = 'End date must be on or after the start date.'
     setErrors(next)
     if (Object.keys(next).length) return
@@ -114,14 +110,13 @@ function CreateExamination() {
   }
 
   return <DashboardLayout><main className="examination-setup">
-    <header className="examination-setup__header"><div><h1>Examination Setup</h1><p>Create and manage examination cycles.</p></div><ExaminationSummary types={summaryData.types || []} /></header>
+    <header className="examination-setup__header"><div><h1>Examination Setup</h1><p>Create and manage examination cycles.</p></div><ExaminationSummary examCount={summaryData.examinations?.length || 0} /></header>
     <section className="examination-setup__card"><header className="examination-setup__card-header"><div><p>CREATE EXAMINATION</p><h2>Enter examination details and academic period.</h2></div></header>
       <nav className="examination-setup__tabs" aria-label="Examination setup sections">{tabs.filter(([, path]) => path !== '/examination-setup/create-examination').map(([label, path]) => { const isCurrent = path === location.pathname || (path === '/examination-setup/examination-list' && location.pathname === '/examination-setup'); return <Link key={path} to={path} className={isCurrent ? 'active' : ''} aria-current={isCurrent ? 'page' : undefined}>{label}</Link> })}</nav>
       {saved && <div className="examination-setup__success examination-setup__toast" role="status"><span>Examination saved successfully.</span><button type="button" className="examination-setup__toast-close" onClick={() => setSaved(false)} aria-label="Dismiss notification">×</button></div>}
       <div className="examination-setup__form-wrap"><form className="examination-setup__form" onSubmit={submit} noValidate>
         <label><span>Examination Name <b>*</b></span><input value={form.name} aria-invalid={Boolean(errors.name)} onChange={event => change('name', event.target.value)} />{errors.name && <small className="examination-setup__field-error">{errors.name}</small>}</label>
         <label><span>Active Academic Year</span><input value={form.academicYear || activeYearName || 'No active academic year configured'} readOnly aria-label="Active academic year" />{!activeYearName && <small className="examination-setup__field-error">Configure an active academic year before creating examinations.</small>}</label>
-        <label><span>Exam Type <b>*</b></span><ProjectSelect value={form.examType} aria-invalid={Boolean(errors.examType)} onChange={event => change('examType', event.target.value)}><option value="">Select exam type</option>{(load().types || [{ id: 'type-mid', name: 'Mid Semester', status: 'Active' }, { id: 'type-end', name: 'End Semester', status: 'Active' }, { id: 'type-practical', name: 'Practical', status: 'Active' }]).filter(type => type.status === 'Active').map(type => <option key={type.id}>{type.name}</option>)}</ProjectSelect>{errors.examType && <small className="examination-setup__field-error">{errors.examType}</small>}</label>
         <label><span>Semester / Term <b>*</b></span><ProjectSelect value={form.term} aria-invalid={Boolean(errors.term)} onChange={event => change('term', event.target.value)}><option value="">Select semester / term</option>{['Semester 1', 'Semester 2', 'Semester 3', 'Semester 4', 'Semester 5', 'Semester 6', 'Semester 7', 'Semester 8', 'Annual'].map(term => <option key={term}>{term}</option>)}</ProjectSelect>{errors.term && <small className="examination-setup__field-error">{errors.term}</small>}</label>
         <label><span>Start Date <b>*</b></span><input type="date" value={form.startDate} aria-invalid={Boolean(errors.startDate)} onChange={event => change('startDate', event.target.value)} />{errors.startDate && <small className="examination-setup__field-error">{errors.startDate}</small>}</label>
         <label><span>End Date <b>*</b></span><input type="date" value={form.endDate} aria-invalid={Boolean(errors.endDate)} onChange={event => change('endDate', event.target.value)} />{errors.endDate && <small className="examination-setup__field-error">{errors.endDate}</small>}</label>
