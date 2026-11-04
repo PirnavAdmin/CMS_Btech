@@ -1763,7 +1763,6 @@ td.col-actions,
 }
 
 .preview-card,
-.college-live-preview,
 .course-preview,
 .branch-preview,
 .section-preview,
@@ -1928,7 +1927,7 @@ td.col-actions,
   margin-top: 6px;
 }
 
-/* Universal 2-Column Equal-Height Compact Layout */
+/* Default management editor grid; preview-free forms override to one column below. */
 .erp-two-column-layout,
 .college-form-layout,
 .course-form-layout,

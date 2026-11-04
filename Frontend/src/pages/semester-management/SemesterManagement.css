@@ -449,6 +449,16 @@
   box-sizing: border-box;
 }
 
+.semester-workflow[data-without-live-preview="true"] {
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+
+.semester-workflow[data-without-live-preview="true"] .semester-workflow-main {
+  min-height: 0;
+  max-height: none;
+}
+
 /* ==========================================================================
    COMPACT HORIZONTAL STEPPER
    ========================================================================== */

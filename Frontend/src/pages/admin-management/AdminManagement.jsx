@@ -3696,7 +3696,7 @@ function DepartmentManagement() {
               </button>}
             />
 
-            <div className="erp-two-column-layout">
+            <div className="erp-two-column-layout" data-without-live-preview="true">
               <section className="erp-card-main">
                 <FormLayout onSubmit={save} busy={isSaving} error={error} actions={<>
                     <button type="button" className="erp-btn erp-btn--secondary" onClick={closeToList} disabled={isSaving}>
@@ -3729,39 +3729,6 @@ function DepartmentManagement() {
                 </FormLayout>
               </section>
 
-              <aside className="college-live-preview" aria-label="Department preview">
-                <header className="preview-top-bar">
-                  <span className="preview-live-tag"><span className="live-dot" /> LIVE PREVIEW</span>
-                  <span className="preview-sync-hint">Real-time sync</span>
-                </header>
-                <div className="preview-body-container">
-                  <div className="preview-hero">
-                    <div className="preview-hero-badge">{form.code ? form.code.slice(0, 4).toUpperCase() : (form.name ? form.name.slice(0, 4).toUpperCase() : 'DEPT')}</div>
-                    <div className="preview-hero-details">
-                      <h3 className="preview-course-title">{form.name.trim() || 'Department Preview'}</h3>
-                      <p className="preview-course-meta">{[form.code, form.status || (form.name ? 'Active' : '')].filter(Boolean).join('   ') || 'Department details'}</p>
-                    </div>
-                  </div>
-                  <div className="preview-section-group">
-                    <span className="preview-section-title">Department Details</span>
-                    <div className="preview-kv-grid">
-                      {[
-                        ['Department Name', form.name],
-                        ['Department Code', form.code],
-                        ['Status', form.name || form.code ? form.status : ''],
-                        ['Start Date', form.startDate],
-                        ['End Date', form.endDate],
-                        ['Description', form.description],
-                      ].filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== '').map(([label, value]) => (
-                        <div key={label} className="preview-kv-item">
-                          <span className="kv-label">{label}</span>
-                          <strong className="kv-val" title={String(value).trim()}>{String(value).trim()}</strong>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </aside>
             </div>
           </div>
         )}
