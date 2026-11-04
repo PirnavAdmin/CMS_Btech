@@ -52,10 +52,11 @@ test('empty directory retains Add Department and selected college when opening a
  const empty = screen.getByRole('heading', { name: 'No departments have been added yet.' }).closest('.erp-empty-state'); fireEvent.click(within(empty).getByRole('button', { name: 'Add Department' }))
  fill(); fireEvent.click(screen.getByRole('button', { name: 'Create Department' })); await waitFor(() => expect(createDepartment).toHaveBeenCalled()); expect(createDepartment.mock.calls[0][0].collegeId).toBe(7)
 })
-test('new form retains required controls, preview, native field transforms and exact create DTO', async () => {
+test('new form retains required controls without a preview, native field transforms and exact create DTO', async () => {
  mount(); await openAdd(); expect(screen.getByLabelText(/Department Name/).required).toBe(true); fill()
  fireEvent.change(screen.getByLabelText('Start Date'), { target: { value: '2026-08-01' } }); fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Configured department' } })
- expect(within(screen.getByLabelText('Department preview')).getByRole('heading', { name: 'Computer Science' })).toBeTruthy(); expect(screen.getByLabelText(/Department Code/).value).toBe('CSE')
+ expect(screen.queryByLabelText('Department preview')).toBeNull(); expect(screen.queryByText('Real-time sync')).toBeNull()
+ expect(document.querySelector('.erp-form-page [data-without-live-preview="true"]')).toBeTruthy(); expect(screen.getByLabelText(/Department Code/).value).toBe('CSE')
  fireEvent.click(screen.getByRole('button', { name: 'Create Department' })); await waitFor(() => expect(createDepartment).toHaveBeenCalledTimes(1))
  expect(createDepartment.mock.calls[0][0]).toEqual({ departmentName: 'Computer Science', departmentCode: 'CSE', collegeId: 7, description: 'Configured department', startDate: '2026-08-01', endDate: null, StartDate: '2026-08-01', EndDate: null, start_date: '2026-08-01', end_date: null })
  await screen.findByRole('heading', { name: 'Department Management' })

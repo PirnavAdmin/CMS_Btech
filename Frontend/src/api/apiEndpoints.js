@@ -16,7 +16,7 @@ if (typeof window !== 'undefined' && window.localStorage) {
 }
 
 const normalizeBaseUrl = (value = '') => value.trim().replace(/\/+$/, '')
-const DEFAULT_API_BASE_URL = 'https://clarity-math-delouse.ngrok-free.dev'
+const DEFAULT_API_BASE_URL = 'https://stagnant-craftily-paving.ngrok-free.dev'
 
 // Results endpoints are optional until the institution's result service is integrated.
 export const RESULTS_API_ENABLED = String(import.meta.env.VITE_RESULTS_API_ENABLED || '').toLowerCase() === 'true'
@@ -648,7 +648,7 @@ const normalizeProfile = (source) => {
   const application = data.application && typeof data.application === 'object' ? data.application : {}
   const lastLoginAt = data.lastLoginAt ?? data.last_login_at ?? data.LastLoginAt ?? data.lastLogin ?? data.last_login ?? ''
   return {
-    id: data.userId ?? data.studentId ?? '', facultyId: data.facultyId ?? '', identifier: data.employeeUserId ?? data.studentCode ?? data.studentId ?? '', fullName: data.fullName ?? data.studentName ?? '', collegeName: data.collegeName ?? '', profileImagePath: data.profileImagePath ?? '',
+    id: data.userId ?? data.studentId ?? '', facultyId: data.facultyId ?? '', identifier: data.employeeUserId ?? data.studentCode ?? data.studentId ?? '', fullName: data.fullName ?? data.studentName ?? '', collegeName: data.collegeName ?? '', collegeType: data.collegeType ?? '', universityName: data.universityName ?? '', collegeEmail: data.collegeEmail ?? '', collegeMobile: data.collegeMobile ?? '', collegePhone: data.collegePhone ?? '', collegeAddressLine1: data.collegeAddressLine1 ?? '', collegeAddressLine2: data.collegeAddressLine2 ?? '', collegeCity: data.collegeCity ?? '', collegeDistrict: data.collegeDistrict ?? '', collegeState: data.collegeState ?? '', collegeCountry: data.collegeCountry ?? '', collegePincode: data.collegePincode ?? '', collegeWebsite: data.collegeWebsite ?? '', profileImagePath: data.profileImagePath ?? '',
     email: data.email ?? '', mobile: data.mobile ?? '', role: Array.isArray(data.roles) ? data.roles.join(', ') : String(data.role ?? ''),
     dateOfBirth: data.dateOfBirth ?? '', gender: data.gender ?? '', department: data.department ?? data.departmentName ?? '', departmentId: data.departmentId ?? '',
     designation: data.designation ?? '', houseNumber: data.houseNumber ?? data.currentHouseNumber ?? '', address: data.address ?? data.currentAddress ?? '', permanentHouseNumber: data.permanentHouseNumber ?? '', permanentAddress: data.permanentAddress ?? '', postalCode: data.postalCode ?? '',
@@ -679,6 +679,21 @@ export const profileApi = {
         mobile: String(profile.mobile || '').trim(),
         dateOfBirth: profile.dateOfBirth || null,
         gender: profile.gender || null,
+        departmentId: profile.departmentId ? Number(profile.departmentId) : null,
+        designation: String(profile.designation || '').trim() || null,
+        collegeType: String(profile.collegeType || '').trim() || null,
+        universityName: String(profile.universityName || '').trim() || null,
+        collegeEmail: String(profile.collegeEmail || '').trim() || null,
+        collegeMobile: String(profile.collegeMobile || '').trim() || null,
+        collegePhone: String(profile.collegePhone || '').trim() || null,
+        collegeAddressLine1: String(profile.collegeAddressLine1 || '').trim() || null,
+        collegeAddressLine2: String(profile.collegeAddressLine2 || '').trim() || null,
+        collegeCity: String(profile.collegeCity || '').trim() || null,
+        collegeDistrict: String(profile.collegeDistrict || '').trim() || null,
+        collegeState: String(profile.collegeState || '').trim() || null,
+        collegeCountry: String(profile.collegeCountry || '').trim() || null,
+        collegePincode: String(profile.collegePincode || '').trim() || null,
+        collegeWebsite: String(profile.collegeWebsite || '').trim() || null,
         houseNumber: String(profile.houseNumber || '').trim() || null,
         address: String(profile.address || '').trim() || null,
         permanentHouseNumber: String(profile.permanentHouseNumber || '').trim() || null,
