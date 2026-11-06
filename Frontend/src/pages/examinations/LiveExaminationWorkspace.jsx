@@ -19,7 +19,7 @@ import './examination-setup/ExaminationSetup.css'
 import './exam-timetable/ExamModule.css'
 import './LiveExaminationWorkspace.css'
 
-const setupTabs = [['Examination List','examination-list'], ['Create Examination','create-examination'], ['Exam Type','exam-type'], ['Exam Schedule','exam-schedule'], ['Exam Rules','exam-rules']]
+const setupTabs = [['Examination List','examination-list'], ['Create Examination','create-examination'], ['Exam Type','exam-type']]
 const timetableTabs = [['Exam Timetable','/exam/timetable'], ['Schedule List','/exam/schedules'], ['Department Schedule','/exam/department-schedule'], ['Student Schedule','/exam/student-schedule'], ['Hall Allocation','/exam/hall-allocation'], ['Completed Exams','/examination/completed-exams']]
 const active = value => value === true || value === 1 || ['active','scheduled'].includes(String(value).toLowerCase())
 const ids = { examinations: 'examId', types: 'examTypeId', schedules: 'scheduleId', rules: 'ruleId', halls: 'examHallAllocationId' }
@@ -185,7 +185,7 @@ function Workspace({ academic, screen, timetable }) {
   const count = key => state.loading || !scope.enabled || !data.loaded?.includes(key) || data.resourceErrors?.[key] ? '—' : data[key].length
   const addLabel = collection === 'schedules' ? 'Schedule' : collection === 'halls' ? 'Allocation' : collection === 'types' ? 'Exam Type' : collection === 'rules' ? 'Rule' : 'Examination'
   return <DashboardLayout><main className="examination-setup examination-setup--connected">
-    <PageHeader title={title} subtitle={collection === 'types' ? 'Configure examination types used by examinations and schedules.' : collection === 'rules' ? 'Manage rules for the selected examination.' : collection === 'halls' ? 'Allocate examination halls and seats.' : 'Create and manage examination cycles and schedules.'} compactSummary={[{label:'Examinations',value:count('examinations')},{label:'Exam Types',value:count('types')},{label:'Schedules',value:count('schedules')}]} />
+    <PageHeader title={title} subtitle={collection === 'types' ? 'Configure examination types used by examinations and schedules.' : collection === 'rules' ? 'Manage rules for the selected examination.' : collection === 'halls' ? 'Allocate examination halls and seats.' : 'Create and manage examination cycles and schedules.'} compactSummary={[{label:'Examinations',value:count('examinations')},{label:'Exam Types',value:count('types')}]} />
     <nav className="examination-setup__tabs" aria-label={title}>{(timetable ? timetableTabs : setupTabs.map(([label,slug]) => [label,`/examination-setup/${slug}`])).map(([label,url]) => <Link key={url} to={url} className={location.pathname === url ? 'active' : ''}>{label}</Link>)}</nav>
     {scope.enabled ? <ScopedModuleNotice state={state} data={data} resource={collection} onRetry={reload} /> : <p role="status" className="campus-notice">{academic.loading ? 'Loading college configuration…' : 'Select a college to view examination records.'}</p>}{notice && <p role="status" className="examination-setup__success">{notice}</p>}
     {scope.enabled && !scope.academicYearId && collection !== 'types' && <p role="status" className="campus-notice">No active academic year is available for this college. Existing records can be reviewed; an academic year is required to save examinations and schedules.</p>}
