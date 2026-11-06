@@ -216,6 +216,47 @@ export async function loadOfficialResults(scope) {
     return ownRecords.length ? [{...sheet,records:ownRecords}] : []
   })
 }
+
+export async function loadResultExaminations(scope) {
+  requireId(scope.collegeId, 'college')
+  requireId(scope.academicYearId, 'academic year')
+  return (await list('exams', scope)).filter(exam => scoped(exam, scope) && Number(exam.examId) > 0)
+}
+
+export async function loadResultCandidates(scope, exam) {
+  if (!scoped(exam, scope)) throw new Error('Select an examination in the current college and academic year.')
+  const examId = requireId(exam.examId, 'examination')
+  const marks = await list('marks', { examId, workflowStatus: 'APPROVED' })
+  return [...new Map(marks.filter(mark => Number(mark.examId) === examId &&
+    String(mark.collegeId) === String(scope.collegeId) &&
+    String(mark.workflowStatus).toUpperCase() === 'APPROVED' && Number(mark.studentId) > 0)
+    .map(mark => [String(mark.studentId), mark])).values()]
+}
+
+export async function reviewExamResult(scope, exam, candidate) {
+  if (!scoped(exam, scope) || String(candidate.collegeId) !== String(scope.collegeId) ||
+      String(candidate.examId) !== String(exam.examId) || String(candidate.workflowStatus).toUpperCase() !== 'APPROVED') {
+    throw new Error('Select an eligible student for the current examination.')
+  }
+  const body = { studentId: requireId(candidate.studentId, 'student'), examId: requireId(exam.examId, 'examination') }
+  const result = unwrap(await call('results/calculate', { method: 'POST', body }))
+  if (Number(result?.studentId) !== body.studentId || Number(result?.examId) !== body.examId || !Array.isArray(result.subjects)) {
+    throw new Error('The server did not return a result for the selected student and examination.')
+  }
+  const validation = unwrap(await call('results/validate', { method: 'POST', body }))
+  if (Number(validation?.studentId) !== body.studentId || Number(validation?.examId) !== body.examId ||
+      typeof validation.isValid !== 'boolean' || !Array.isArray(validation.validations)) {
+    throw new Error('The server did not return validation for the selected result.')
+  }
+  return { result, validation }
+}
+
+export async function loadStudentResultHistory(scope, examinations, studentId) {
+  const id = requireId(studentId, 'student')
+  const allowed = new Set(examinations.filter(exam => scoped(exam, scope)).map(exam => String(exam.examId)))
+  if (!allowed.size) throw new Error('Load examinations for this college and academic year before opening result history.')
+  return (await list(`results/student/${id}`)).filter(row => Number(row.studentId) === id && allowed.has(String(row.examId)))
+}
 export async function loadGradePolicy(scope) {
   requireId(scope?.collegeId, 'college')
   requireId(scope?.academicYearId, 'academic year')

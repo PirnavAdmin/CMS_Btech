@@ -25,6 +25,7 @@ export function assessmentOptions(response, assignment) {
 }
 export function createTeachingService({ request, getProfile, collegeId, getIdentity = () => '' }) {
   let workspace, revision = 0
+  const pendingSessions=new Map(), savingSessions=new Set()
   const scoped = (path, params = {}) => {
     const query = new URLSearchParams(Object.entries({ ...params, collegeId: collegeId() }).filter(([, v]) => v !== undefined && v !== null && v !== ''))
     return `${path}?${query}`
@@ -44,11 +45,8 @@ export function createTeachingService({ request, getProfile, collegeId, getIdent
     return row
   }
   const roster = a => workspace.students.filter(s => same(s.sectionId, a.sectionId))
-  return {
-    async getSnapshot() {
-      workspace = null
-      const version = ++revision, identity = getIdentity()
-      const college = collegeId()
+  const loadSessionRoster=async sessionId=>{const result=unwrap(await get('/api/v1/student-attendance/sessions/'+sessionId+'/students'));return {...result,students:rows(result)}}
+  const resolveFacultyIdentity=async college=>{
       if (!positive(college)) throw new Error('Your login is missing a college mapping. Please contact your administrator.')
       const profile = await getProfile()
       let facultyId = profile.facultyId
@@ -63,6 +61,16 @@ export function createTeachingService({ request, getProfile, collegeId, getIdent
         }
       }
       if (!positive(facultyId)) throw new Error('Your login profile is not linked to a faculty record. Ask your administrator to map your user account to your faculty ID.')
+    return {profile,facultyId,collegeId:college}
+  }
+
+  return {
+    async getFacultyIdentity(){const college=collegeId(),identity=getIdentity();const result=await resolveFacultyIdentity(college);if(!same(college,collegeId())||!same(identity,getIdentity()))throw new Error('Your faculty account changed. Reload attendance.');return result},
+    async getSnapshot() {
+      workspace = null
+      const version = ++revision, identity = getIdentity()
+      const college = collegeId()
+      const {profile,facultyId}=await resolveFacultyIdentity(college)
       const allocations = rows(await get('/api/v1/faculty-subject-allocations', { facultyId })).filter(r => same(r.facultyId, facultyId) && enabled(r.status) && (!r.collegeId || same(r.collegeId, college)))
       const assignments = allocations.filter(r => positive(r.sectionId) && positive(r.subjectId)).map(r => ({ ...r, id: id(r.allocationId ?? r.id), subjectName: r.subjectName || `Subject ${r.subjectId}`, sectionName: r.sectionName || `Section ${r.sectionId}` }))
       const warnings = []
@@ -96,20 +104,67 @@ export function createTeachingService({ request, getProfile, collegeId, getIdent
       const a = assignment(allocationId)
       return rows(await get('/api/v1/student-attendance/sessions', { facultyId: workspace.facultyId, sectionId: a.sectionId, subjectId: a.subjectId, academicYearId: a.academicYearId, fromDate: date, toDate: date })).filter(r => same(r.facultyId, workspace.facultyId) && same(r.sectionId, a.sectionId) && same(r.subjectId, a.subjectId))
     },
+    async getClassRoster(allocationId) {
+      const a=assignment(allocationId), college=workspace.collegeId
+      const data=rows(await get('/api/v1/sections/'+a.sectionId+'/students'))
+      assignment(allocationId)
+      return data.filter(row=>positive(row.studentId ?? row.id)&&(!row.sectionId||same(row.sectionId,a.sectionId))&&(!row.collegeId||same(row.collegeId,college))).map(row=>({...row,id:id(row.studentId ?? row.id),name:row.fullName || row.studentName || row.name || 'Name unavailable',rollNumber:row.rollNumber || row.studentCode || '—'}))
+    },
+    async getSessionHistory(allocationId) {
+      const a=assignment(allocationId), end=new Date(), start=new Date(end)
+      start.setUTCDate(start.getUTCDate()-29)
+      const facultyId=workspace.facultyId
+      return rows(await get('/api/v1/student-attendance/sessions',{facultyId,sectionId:a.sectionId,subjectId:a.subjectId,academicYearId:a.academicYearId,fromDate:start.toISOString().slice(0,10),toDate:end.toISOString().slice(0,10)})).filter(row=>same(row.facultyId,facultyId)&&same(row.sectionId,a.sectionId)&&same(row.subjectId,a.subjectId))
+    },
+    async getSessionRoster(allocationId,date,sessionId) {
+      assignment(allocationId)
+      if(!positive(sessionId) || !(await this.getSessions(allocationId,date)).some(row=>same(row.attendanceSessionId,sessionId)))throw new Error('Select a session assigned to this class and date.')
+      assignment(allocationId)
+      return loadSessionRoster(sessionId)
+    },
+    async reopenAttendance(allocationId,date,sessionId) {
+      const sessions=await this.getSessions(allocationId,date)
+      assignment(allocationId)
+      if(!sessions.some(row=>same(row.attendanceSessionId,sessionId)&&row.sessionStatus==='COMPLETED'))throw new Error('Select a completed session for this class.')
+      return send('/api/v1/student-attendance/sessions/'+sessionId+'/status','PATCH',{sessionStatus:'OPEN'})
+    },
     async saveAttendance({ allocationId, date, records, sessionId }) {
-      const a = assignment(allocationId), students = roster(a)
+      const a = assignment(allocationId), owner=workspace
       const today = new Date(); today.setHours(23, 59, 59, 999)
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '') || Number.isNaN(Date.parse(date)) || new Date(date).toISOString().slice(0, 10) !== date || new Date(date) > today) throw new Error('Select a valid attendance date, today or earlier.')
-      if (!students.length || records.length !== students.length || new Set(records.map(r => id(r.studentId))).size !== students.length || records.some(r => !students.some(s => same(s.id, r.studentId)) || !['PRESENT', 'ABSENT', 'LATE', 'LEAVE'].includes(r.attendanceStatus))) throw new Error('Mark attendance for every student in the assigned section.')
+      if (!records?.length || new Set(records.map(r => id(r.studentId))).size !== records.length || records.some(r => !positive(r.studentId) || !['PRESENT', 'ABSENT', 'LATE', 'LEAVE'].includes(r.attendanceStatus))) throw new Error('Mark attendance for every student in the assigned section.')
+      const key=[workspace.identity,workspace.collegeId,allocationId,date].join(':')
+      if(savingSessions.has(key))throw new Error('Attendance is already being saved.')
+      savingSessions.add(key)
+      try {
       const sessions = await this.getSessions(allocationId, date)
+      if(workspace!==owner)throw new Error('Your class scope changed. Reload the register.')
+      const pending=pendingSessions.get(key)
+      if(!sessionId && positive(pending))sessionId=pending
+      if(!sessionId && pending==='unknown') {
+        const open=sessions.filter(row=>row.sessionStatus==='OPEN')
+        if(open.length!==1)throw new Error('Verify the previous submission in the session register before retrying.')
+        sessionId=open[0].attendanceSessionId
+      }
       if (sessionId && !sessions.some(s => same(s.attendanceSessionId, sessionId) && s.sessionStatus === 'OPEN')) throw new Error('This session is no longer open. Reload attendance.')
       if (!sessionId) {
         if (sessions.length) throw new Error('A session already exists for this date. Open the existing session to continue.')
-        const created = unwrap(await send('/api/v1/student-attendance/sessions', 'POST', { academicYearId: Number(a.academicYearId), semesterId: Number(a.semesterId), sectionId: Number(a.sectionId), subjectId: Number(a.subjectId), facultyId: Number(workspace.facultyId), attendanceDate: date }))
-        sessionId = created.attendanceSessionId
+        const currentRoster=await this.getClassRoster(allocationId)
+        if(workspace!==owner)throw new Error('Your class scope changed. Reload the register.')
+        if(currentRoster.length!==records.length || currentRoster.some(row=>!records.some(mark=>same(mark.studentId,row.id))))throw new Error('Mark attendance for every student in the current section roster.')
+        pendingSessions.set(key,'unknown')
+        let created;try{created = unwrap(await send('/api/v1/student-attendance/sessions', 'POST', { academicYearId: Number(a.academicYearId), semesterId: Number(a.semesterId), sectionId: Number(a.sectionId), subjectId: Number(a.subjectId), facultyId: Number(workspace.facultyId), attendanceDate: date }))}catch(error){if(error.status>=400 && error.status<500)pendingSessions.delete(key);throw error}
+        sessionId = created?.attendanceSessionId
+        if(positive(sessionId))pendingSessions.set(key,sessionId)
       }
       if (!positive(sessionId)) throw new Error('The backend did not return a valid attendance session ID.')
-      return send(`/api/v1/student-attendance/sessions/${sessionId}/mark`, 'PUT', { students: records, markUnlistedAsAbsent: false, completeSession: true })
+      const fresh=await loadSessionRoster(sessionId)
+      if(workspace!==owner)throw new Error('Your class scope changed. Reload the register.')
+      const ids=new Set(fresh.students.map(row=>id(row.studentId)))
+      if(ids.size!==records.length || records.some(row=>!ids.has(id(row.studentId))))throw new Error('The session roster changed. Reload the register and explicitly mark the assigned students.')
+      const result=await send(`/api/v1/student-attendance/sessions/${sessionId}/mark`, 'PUT', { students: records, markUnlistedAsAbsent: false, completeSession: true })
+      pendingSessions.delete(key);return result
+      }finally{savingSessions.delete(key)}
     },
     async getExams(allocationId) { const a = assignment(allocationId); return assessmentOptions(await get('/api/v1/exams', { academicYearId: a.academicYearId, semesterId: a.semesterId, branchId: a.branchId }), a) },
     async getMarks(allocationId, examId) { const a = assignment(allocationId); if (!positive(examId)) return []; return rows(await get('/api/v1/marks', { examId, sectionId: a.sectionId, subjectId: a.subjectId })).filter(r => same(r.subjectId, a.subjectId) && (!r.sectionId || same(r.sectionId, a.sectionId)) && roster(a).some(s => same(s.id, r.studentId))) },
@@ -132,4 +187,4 @@ export function createTeachingService({ request, getProfile, collegeId, getIdent
       return send('/api/v1/faculty-leave/requests', 'POST', { facultyId: Number(workspace.facultyId), policyId: form.policyId, leaveTypeId: form.typeId, fromDate: form.from, toDate: form.to, days: Math.round((to - from) / 86400000) + 1, reason: form.reason.trim() })
     },
   }
-}
+}

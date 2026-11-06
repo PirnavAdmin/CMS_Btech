@@ -1,3 +1,7 @@
+import { accessGovernance } from '../../services/accessGovernanceService'
+import { generateNextAcademicYear } from '../../auth/collegeApi'
+import ViewDialog from '../../components/ViewDialog'
+import { Link } from 'react-router-dom'
 import DataTable from '../../components/DataTable'
 import AsyncState from '../../components/AsyncState'
 import FormLayout, { FormField, FormGroup } from '../../components/FormLayout'
@@ -49,7 +53,7 @@ const useToastState = useToastStateImports_default
 const useEffect = reactImports_useEffect
 const useMemo = reactImports_useMemo
 const useState = reactImports_useState
-const PrintDetailsButton = ExportMenuImports_PrintDetailsButton
+
 const ExportMenu = ExportMenuImports_default
 const yearColumns = exportColumnsImports_yearColumns
 const DashboardLayout = DashboardLayoutImports_default
@@ -65,7 +69,7 @@ const ERP_EVENTS = eventBusImports_ERP_EVENTS
 const eventBus = eventBusImports_default
 const showDeactivationBlocked = DeactivationBlockedDialogImports_showDeactivationBlocked
 const DAY = 864e5;
-const states = ['UPCOMING', 'ACTIVE', 'ARCHIVED'];
+const states = ['UPCOMING', 'ACTIVE', 'COMPLETED', 'INACTIVE', 'ARCHIVED'];
 const blank = { name: '', startDate: '', endDate: '', autoActivate: false };
 
 const normalizeDate = (val) => {
@@ -192,17 +196,15 @@ const mapYear = (x) => {
     cacheYearDates(id, name, { startDate, endDate });
   }
 
+  const rawStatus = String(x.backendStatus ?? x.status ?? x.Status ?? x.academicYearStatus ?? '').trim().toLowerCase();
+  const activeValue = x.isActive ?? x.IsActive;
+  const archived = Number(x.isArchived ?? x.IsArchived) === 1 || rawStatus === 'archived';
+  const explicitlyInactive = activeValue === false || String(activeValue).toLowerCase() === 'false' || rawStatus === '0' || ['inactive','disabled','deactivated'].includes(rawStatus);
+  const backendActive = !archived && !explicitlyInactive && (activeValue === true || Number(activeValue) === 1 || ['active','current','1','true'].includes(rawStatus));
+  const lifecycle = archived ? 'ARCHIVED' : backendActive ? 'ACTIVE' : startDate && d(startDate) > now() ? 'UPCOMING' : endDate && d(endDate) < now() ? 'COMPLETED' : 'INACTIVE';
   return {
-    id,
-    name,
-    startDate,
-    endDate,
-    status:
-      x.isActive === true || x.IsActive === true || Number(x.isActive ?? x.IsActive) === 1 ||
-      x.isCurrent === true || x.IsCurrent === true ||
-      ['active', 'current', '1', 'true'].includes(String(x.status ?? x.Status ?? x.academicYearStatus ?? '').trim().toLowerCase())
-        ? 'ACTIVE'
-        : autoStatus(startDate, endDate),
+    id, name, startDate, endDate, backendActive,
+    status: lifecycle,
     autoActivate: Boolean(x.autoActivate ?? x.AutoActivate ?? false),
   };
 };
@@ -210,6 +212,12 @@ const mapYear = (x) => {
 function AcademicYear() {
   const { selectedCollegeId, selectedCollege, loading: contextLoading } = AcademicContextImports_useAcademic();
   const loadRequest = reactImports_useRef(0);
+  const { canAction } = screenAccessImports_useScreenAccess();
+  const mayCreate = canAction('/academic-year-management', 'create');
+  const mayEdit = canAction('/academic-year-management', 'edit');
+  const viewRequest = reactImports_useRef(0);
+  const [viewLoading, setViewLoading] = useState(false);
+  const [viewError, setViewError] = useState('');
   const [years, setYears] = useState([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('ALL');
@@ -230,6 +238,7 @@ function AcademicYear() {
   const [page, setPage] = useState(1);
 
   const close = () => {
+    viewRequest.current++;
     setForm({ ...blank });
     setModal(null);
     setSelected(null);
@@ -272,7 +281,7 @@ function AcademicYear() {
     return () => { loadRequest.current++; };
   }, [selectedCollegeId]);
 
-  const active = years.find((x) => x.status === 'ACTIVE' || isPresentYear(x));
+  const active = years.find((x) => x.backendActive);
   const next = years
     .filter((x) => x.status === 'UPCOMING')
     .sort((a, b) => a.startDate.localeCompare(b.startDate))[0];
@@ -373,19 +382,11 @@ function AcademicYear() {
       const data = selected ? await academicYearApi.update(selected.id, payload) : await academicYearApi.create(payload);
       const targetId = data?.academicYearId ?? data?.id ?? selected?.id;
       cacheYearDates(targetId, payload.name, { startDate: form.startDate, endDate: form.endDate });
-      const item = data
-        ? mapYear(data)
-        : {
-            ...form,
-            id: selected?.id || Date.now().toString(),
-            name: form.name.trim(),
-            startDate: form.startDate,
-            endDate: form.endDate,
-            status: autoStatus(form.startDate, form.endDate),
-          };
-      if (!selected) { rememberCreated('academic-years', item); setSearch(''); setFilter('ALL'); setPage(1); }
-      setYears((x) => (selected ? x.map((y) => (y.id === selected.id ? item : y)) : [item, ...x]));
-      setNotice(`${item.name} has been ${selected ? 'updated' : 'created'} successfully.`, 'success');
+      if (!selected) {
+        if (targetId) rememberCreated('academic-years', { id: targetId });
+        setSearch(''); setFilter('ALL'); setPage(1);
+      }
+      setNotice(`${payload.name} has been ${selected ? 'updated' : 'created'} successfully.`, 'success');
       close();
       await loadYears();
       eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED);
@@ -442,8 +443,9 @@ function AcademicYear() {
     } else {
       setSaving(true);
       try {
-        const genResult = await academicYearApi.create(item);
-        cacheYearDates(genResult?.academicYearId ?? genResult?.id, item.name, { startDate: item.startDate, endDate: item.endDate });
+        const response = await generateNextAcademicYear({ collegeId: Number(selectedCollegeId), activateImmediately: false, ...(!generationBase ? { startDate: firstYearStart } : {}) });
+        const genResult = response?.data?.data ?? response?.data ?? response;
+        cacheYearDates(genResult?.academicYearId ?? genResult?.id, genResult?.name || genResult?.academicYearName || item.name, { startDate: item.startDate, endDate: item.endDate });
         rememberCreated('academic-years', genResult);
         setSearch(''); setFilter('ALL'); setPage(1);
         setNotice(`${item.name} was generated successfully.`, 'success');
@@ -462,56 +464,26 @@ function AcademicYear() {
   }
 
   const openView = async (x) => {
+    const request = ++viewRequest.current;
+    setViewLoading(true); setViewError('');
     setSelected(x);
     setModal('view');
     try {
       const data = await academicYearApi.getById(x.id);
-      if (data) setSelected(mapYear(data));
+      if (request === viewRequest.current && data) setSelected(mapYear(data));
     } catch (error) {
-      setNotice(error.message || 'Unable to load academic year details.', 'error');
-    }
+      if (request === viewRequest.current) setViewError(error.message || 'Unable to load academic year details.');
+    } finally { if (request === viewRequest.current) setViewLoading(false); }
   };
 
   return (
     <DashboardLayout>
       <main className="ay">
-        {modal !== 'view' && <PageHeader
+        <PageHeader
           title="Academic Year"
           subtitle="Add and manage academic years separately for each college."
-        />}
-        {modal === 'view' && selected ? (
-          <div className="cm-profile-view ay-details-view" data-export-record>
-            <div className="cm-profile-top-bar">
-          <ExportMenu mode="single" title="Academic Year Details" filename={`academic-year_${selected.name || selected.id}`} />
-              <button type="button" className="erp-btn erp-btn--secondary" onClick={close}>
-                &larr; Back 
-              </button>
-            </div>
-
-            <div className="cm-profile-card">
-              <div className="cm-profile-banner">
-                <div className="cm-profile-avatar-wrap">
-                  <div className="cm-profile-placeholder">
-                    <FiCalendar />
-                  </div>
-                </div>
-                <div className="cm-profile-header-info">
-                  <div className="cm-profile-badges">
-                    <span className="cm-badge cm-badge-code">Cycle</span>
-                    <span className={`cm-status-badge ${String(selected.status).toLowerCase()}`}>
-                      {selected.status}
-                    </span>
-                  </div>
-                  <h1 className="cm-profile-title">{selected.name}</h1>
-                  <p className="cm-profile-subtitle">
-                    <span>Duration: </span>
-                    <strong>{duration(selected.startDate, selected.endDate)} days</strong>
-                    <span> ({formatDate(selected.startDate)} - {formatDate(selected.endDate)})</span>
-                  </p>
-                </div>
-              </div>
-
-              <div className="cm-profile-grid ay-profile-grid">
+        />
+        {modal === 'view' && selected && <ViewDialog title="Academic Year Details" subtitle={selected.name} onClose={close} exportFilename={`academic-year_${selected.id}`}><div className="ay-detail-grid">{viewLoading ? <AsyncState status="loading" title="Loading academic year details…" /> : viewError ? <AsyncState status="error" message={viewError} onRetry={() => openView(selected)} /> : <>
                 <InfoCard
                   title="Cycle Information"
                   icon={FiCalendar}
@@ -531,45 +503,14 @@ function AcademicYear() {
                     { label: 'Present Active Cycle', value: isPresentYear(selected) ? 'Yes (Current Ongoing)' : 'No' },
                     { label: 'Historical Record', value: isPastYear(selected) ? 'Yes (Past Cycle)' : 'No' },
                   ]}
-                />
-              </div>
-            </div>
-          </div>
-        ) : (
+                /></>}</div></ViewDialog>}
           <>
-            {active ? (
-              <section className="hero">
-                <div>
-                  <p className="eyebrow">Active Academic Context</p>
-                  <h2>{active.name}</h2>
-                  <p>
-                    {formatDate(active.startDate)} - {formatDate(active.endDate)}
-                  </p>
-                  <StatusBadge status="ACTIVE" />
-                </div>
-                <div className="metrics">
-                  <p>
-                    <b>{Math.max(0, days(active.endDate))}</b>Days remaining
-                  </p>
-                  <p>
-                    <b>{progress(active.startDate, active.endDate)}%</b>Year progress
-                  </p>
-                </div>
-                <div className="bar">
-                  <span style={{ width: `${progress(active.startDate, active.endDate)}%` }} />
-                </div>
-              </section>
-            ) : (
-              <section className="hero">
-                <h2>No active academic year</h2>
-                <p>Activate an upcoming academic year to establish current college operations context.</p>
-              </section>
-            )}
+            {!contextLoading && !exportLoading && !loadError && selectedCollegeId && <section className="ay-session-strip" aria-label="Active college academic year"><div><span>Active academic year</span><h2>{active?.name || 'No active academic year'}</h2><p>{active ? `${formatDate(active.startDate)} – ${formatDate(active.endDate)}` : 'Activate a configured academic year to use it for college operations.'}</p></div>{active && <div><span>{Math.max(0, days(active.endDate))} days remaining · {progress(active.startDate, active.endDate)}% elapsed</span><progress aria-label="Academic year progress" max="100" value={progress(active.startDate, active.endDate)} /></div>}</section>}
 
-            <section className="cm-panel course-directory">
-              <header className="course-directory-heading">
+            <section className="ay-directory">
+              <header className="ay-directory-heading">
                 <div>
-                  <span className="cm-eyebrow">Academic Year Directory</span>
+                  <h2>Academic Year Directory</h2>
                   <p>{shown.length} records</p>
                 </div>
                 <div className="directory-export-actions">
@@ -580,12 +521,12 @@ function AcademicYear() {
                     filename="academic-years"
                     loading={exportLoading || noticeTone === 'error'}
                   />
-                  <button type="button" className="cm-button secondary" disabled={!selectedCollegeId || contextLoading || exportLoading || Boolean(loadError)} onClick={() => setModal('generate')}>
+                  {mayCreate && <button type="button" className="erp-btn erp-btn--secondary" disabled={!selectedCollegeId || contextLoading || exportLoading || Boolean(loadError)} onClick={() => setModal('generate')}>
                     {generationBase ? 'Generate Next Year' : 'Generate Academic Year'}
-                  </button>
-                  <button type="button" className="cm-button" disabled={!selectedCollegeId || contextLoading} onClick={openAdd}>
+                  </button>}
+                  {mayCreate && <button type="button" className="erp-btn erp-btn--primary" disabled={!selectedCollegeId || contextLoading} onClick={openAdd}>
                     <FiPlus /> Add Academic Year
-                  </button>
+                  </button>}
                 </div>
               </header>
 
@@ -626,7 +567,7 @@ function AcademicYear() {
                 caption="Academic year directory"
                 rows={shown}
                 columns={[
-                  { key: 'name', label: 'Academic Year', className: 'table-center', sortable: true, render: x => <button type="button" className="ay-name-link table-cell-truncate" title={`Click to view details for ${x.name || 'Academic Year'}`} onClick={() => openView(x)}>{x.name}</button> },
+                  { key: 'name', label: 'Academic Year', sortable: true, render: x => <button type="button" className="ay-name-link table-cell-truncate" title={`Click to view details for ${x.name || 'Academic Year'}`} onClick={() => openView(x)}>{x.name}</button> },
                   { key: 'startDate', label: 'Start Date', className: 'table-center', width: '130px', sortable: true, render: x => formatDate(x.startDate) },
                   { key: 'endDate', label: 'End Date', className: 'table-center', width: '130px', sortable: true, render: x => formatDate(x.endDate) },
                   { key: 'status', label: 'Status', className: 'table-center', width: '120px', sortable: true, render: x => <StatusBadge value={x.status} /> },
@@ -640,17 +581,19 @@ function AcademicYear() {
                 emptyState={<AsyncState status="empty" title={!selectedCollegeId ? 'Select a college to view academic years.' : 'No academic years found.'} />}
                 rowActions={x => (
                           <div className="erp-row-actions table-actions-group">
+                            <button type="button" className="table-action-btn" aria-label={`View ${x.name}`} onClick={() => openView(x)}><FiEye /></button>
+                            {mayEdit && <>
                             <button
                               type="button"
                               className="table-action-btn action-edit erp-action-btn"
                               title={`Edit ${x.name || 'Academic Year'}`}
                               aria-label={`Edit ${x.name || 'Academic Year'}`}
                               onClick={() => edit(x)}
-                              disabled={x.status === 'ARCHIVED' || isPresentYear(x)}
+                              disabled={['ARCHIVED','COMPLETED'].includes(x.status) || isPresentYear(x)}
                             >
                               <FiEdit2 />
                             </button>
-                            {x.status === 'UPCOMING' && (
+                            {['UPCOMING','INACTIVE'].includes(x.status) && (
                               <button
                                 type="button"
                                 className="table-action-btn action-activate erp-action-btn erp-action-btn--danger"
@@ -672,23 +615,18 @@ function AcademicYear() {
                                 <FiToggleRight data-status="active" />
                               </button>
                             )}
+                            </>}
                           </div>
                 )}
               />
             </section>
           </>
-        )}
 
         {/* Add/Edit Modal */}
         {(modal === 'add' || modal === 'edit') && (
-          <div className="backdrop" onMouseDown={(e) => e.target === e.currentTarget && close()}>
-            <section className="modal" role="dialog" aria-modal="true" aria-labelledby="form-title">
-              <button type="button" className="x" aria-label="Close dialog" onClick={close}>
-                <FiX aria-hidden="true" />
-              </button>
-              <h2 id="form-title">{modal === 'add' ? 'Add Academic Year' : 'Edit Academic Year'}</h2>
+          <ViewDialog title={modal === 'add' ? 'Add Academic Year' : 'Edit Academic Year'} onClose={close} busy={saving} showExport={false} hideFooter>
               <FormLayout className="ay-editor" onSubmit={save} noValidate busy={saving} error={errors.form} actions={<>
-                <button type="button" className="erp-btn erp-btn--secondary" onClick={close}>Cancel</button>
+                <button type="button" className="erp-btn erp-btn--secondary" onClick={close} disabled={saving}>Cancel</button>
                 <button type="submit" className="erp-btn erp-btn--primary" disabled={saving}>{saving ? 'Saving...' : modal === 'add' ? 'Add Academic Year' : 'Save Changes'}</button>
               </>}>
                 <p>College: <strong>{selectedCollege?.name || selectedCollege?.collegeName || 'Selected college'}</strong></p>
@@ -710,26 +648,21 @@ function AcademicYear() {
                       onChange={(e) => setForm((x) => ({ ...x, autoActivate: e.target.checked }))}
                     />
                     <span>Enable auto activation</span>
-                    <small>Display preference only; manual status confirmation applies.</small>
+                    <small>Activation follows the existing college workflow.</small>
                   </label>
                 )}
 
                 </FormGroup>
                 {errors.range && <p className="field-error" role="alert">{errors.range}</p>}
               </FormLayout>
-            </section>
-          </div>
+          </ViewDialog>
         )}
 
         {/* Generate Next Year Modal */}
         {modal === 'generate' && (
-          <div className="backdrop" onMouseDown={(e) => e.target === e.currentTarget && close()}>
-            <section className="modal" role="dialog" aria-modal="true" aria-labelledby="gen-title">
-              <button type="button" className="x" aria-label="Close dialog" onClick={close}>
-                <FiX aria-hidden="true" />
-              </button>
-              <h2 id="gen-title">{generationBase ? 'Generate Next Academic Year' : 'Generate First Academic Year'}</h2>
+          <ViewDialog title={generationBase ? 'Generate Next Academic Year' : 'Generate First Academic Year'} onClose={close} busy={saving} showExport={false} hideFooter>
               <p>College: <strong>{selectedCollege?.name || selectedCollege?.collegeName || 'Selected college'}</strong></p>
+              {!generationBase && generatedCycle && <p className="ay-generation-note">The first academic year becomes active automatically if its dates include today.</p>}
               {errors.form && <p className="field-error" role="alert">{errors.form}</p>}
               {!generationBase && <label className="field">
                 <span>Academic year start date</span>
@@ -739,16 +672,15 @@ function AcademicYear() {
                 {generationBase ? `Generate the next annual cycle after ${generationBase.name}.` : 'Generate a new annual academic cycle for this college.'}
                 {generatedCycle && <> <strong>{generatedCycle.name}</strong> ({formatDate(generatedCycle.startDate)} – {formatDate(generatedCycle.endDate)}).</>}
               </p>
-              <footer>
-                <button type="button" className="erp-btn erp-btn--secondary" onClick={close}>
+              <footer className="ay-generation-actions">
+                <button type="button" className="erp-btn erp-btn--secondary" onClick={close} disabled={saving}>
                   Cancel
                 </button>
                 <button type="button" className="erp-btn erp-btn--primary" onClick={generate} disabled={saving || !generatedCycle || !selectedCollegeId || contextLoading}>
                   {saving ? 'Generating...' : 'Generate Cycle'}
                 </button>
               </footer>
-            </section>
-          </div>
+          </ViewDialog>
         )}
 
         {/* Status Confirmation Dialog */}
@@ -762,7 +694,7 @@ function AcademicYear() {
             busy={saving}
             description={
               confirmStatus.targetStatus === 'ACTIVE'
-                ? 'Activating this academic year sets it as the current active operational cycle for the institution.'
+                ? active && active.id !== confirmStatus.year.id ? `The selected college already has an active year (${active.name}). The activation workflow will validate the change. Continue?` : 'Activate this academic year for the selected college.'
                 : 'Archiving marks this academic cycle as historical records.'
             }
           />
@@ -921,11 +853,8 @@ function Field({ label, name, values, errors, touched, onChange, required, maxLe
   </label>
 }
 
-function Dialog({ title, children, actions, onClose, labelledBy = 'ac-dialog-title' }) {
-  return <div className="ac-dialog-layer" role="presentation"><div className="ac-dialog" role="dialog" aria-modal="true" aria-labelledby={labelledBy}>
-    <button type="button" className="ac-dialog-close" onClick={onClose} aria-label="Close dialog">×</button>
-    <h2 id={labelledBy}>{title}</h2>{children}<div className="ac-dialog-actions">{actions}</div>
-  </div></div>
+function Dialog({ title, children, actions, onClose }) {
+  return <ViewDialog title={title} onClose={onClose} maxWidth="520px" showExport={false} hideFooter>{children}<footer className="ac-dialog-actions">{actions}</footer></ViewDialog>
 }
 
 function AddCollege() {
@@ -963,9 +892,14 @@ function AddCollege() {
   const [saved, setSaved] = useState(false)
   const redirectTimer = useRef(null)
   const originalEditValues = useRef(null)
+  const loadedFormScope = useRef(null)
+  const [loadAttempt, setLoadAttempt] = useState(0)
+  const [collegeLoadError, setCollegeLoadError] = useState('')
+  const formUserId = String(effectiveAccess?.userId ?? '')
+  const accessReady = Boolean(collegeAccess || effectiveAccess)
   const errors = validate(values)
   const normalizeDuplicate = (value) => String(value || '').trim().toLowerCase()
-  const currentId = normalizeDuplicate(editId)
+  const currentId = normalizeDuplicate(editId || pendingLogoCollegeId)
   const currentCode = normalizeDuplicate(values.collegeCode)
   const original = originalEditValues.current || {}
   const changedFromOriginal = (field) => !editId || normalizeDuplicate(values[field]) !== normalizeDuplicate(original[field])
@@ -998,6 +932,10 @@ function AddCollege() {
   const progress = draftProgress(values)
 
   useEffect(() => {
+    if (contextLoading || accessLoading || !accessReady) return undefined
+    const formScope = `${editId || 'new'}:${formUserId}:${isOutsideAssignedCollege}:${loadAttempt}`
+    if (loadedFormScope.current === formScope) return undefined
+    setCollegeLoadError('')
     if (logoObjectUrlRef.current) {
       URL.revokeObjectURL(logoObjectUrlRef.current)
       logoObjectUrlRef.current = ''
@@ -1015,8 +953,8 @@ function AddCollege() {
     setLogoFile(null)
     setRemoveExistingLogo(false)
     setPendingLogoCollegeId(null)
-    if (contextLoading || accessLoading || (!collegeAccess && !effectiveAccess)) return undefined
     if (!editId) {
+      loadedFormScope.current = formScope
       originalEditValues.current = null
       setValues({ ...initialValues })
       return undefined
@@ -1025,6 +963,7 @@ function AddCollege() {
     getCollegeById(editId).then((response) => {
       if (!active) return
       const record = unwrapCollegeRecord(response)
+      loadedFormScope.current = formScope
       const recordCreatorId = record.createdBy ?? record.CreatedBy
       if (isOutsideAssignedCollege && String(recordCreatorId ?? '') !== String(effectiveAccess?.userId ?? '')) {
         navigate('/college-institution-management', { replace: true })
@@ -1067,7 +1006,7 @@ function AddCollege() {
           if (active) setValues((current) => ({ ...current, logo: logoUrl }))
         })
       }
-    }).catch((error) => { if (active) setNotice(error.message || 'Unable to load college details.', 'error') }).finally(() => { if (active) setLoadingCollege(false) })
+    }).catch((error) => { if (active) { loadedFormScope.current = null; setCollegeLoadError(getApiErrorMessage(error)); setNotice(error.message || 'Unable to load college details.', 'error') } }).finally(() => { if (active) setLoadingCollege(false) })
     return () => {
       active = false
       if (logoObjectUrlRef.current) {
@@ -1075,7 +1014,7 @@ function AddCollege() {
         logoObjectUrlRef.current = ''
       }
     }
-  }, [editId, isOutsideAssignedCollege, navigate, setNotice, contextLoading, accessLoading, collegeAccess, effectiveAccess])
+  }, [editId, isOutsideAssignedCollege, navigate, setNotice, contextLoading, accessLoading, accessReady, formUserId, loadAttempt])
 
   useEffect(() => {
     if (!dirty) return
@@ -1229,7 +1168,7 @@ function AddCollege() {
       const normalized = (item) => String(item || '').trim().toLowerCase()
       const duplicate = latestColleges.find((item) => {
         const itemId = normalized(item.id ?? item.collegeId)
-        if (editId && itemId === normalized(editId)) return false
+        if (collegeId && itemId === normalized(collegeId)) return false
         return normalized(item.code ?? item.collegeCode) === normalized(values.collegeCode)
           || normalized(item.name ?? item.collegeName) === normalized(values.collegeName)
           || normalized(item.email ?? item.collegeEmail) === normalized(values.email)
@@ -1288,11 +1227,7 @@ function AddCollege() {
       }
       if (values.logo) {
         if (logoFile) {
-          try {
-            await uploadCollegeLogo(collegeId, logoFile)
-          } catch (logoErr) {
-            console.warn('Backend logo upload notice:', logoErr.message)
-          }
+          await uploadCollegeLogo(collegeId, logoFile)
         }
         // Persist the authenticated API endpoint, not the temporary data URL.
         // This keeps the sidebar logo working after a refresh or a new session.
@@ -1325,7 +1260,7 @@ function AddCollege() {
         if (fileRef.current) fileRef.current.value = ''
       }
       window.clearTimeout(redirectTimer.current)
-      redirectTimer.current = window.setTimeout(() => navigate('/college-institution-management'), 1000)
+      navigate('/college-institution-management')
     } catch (error) {
       const partialSave = !editId && collegeId
       setNotice(partialSave
@@ -1338,6 +1273,7 @@ function AddCollege() {
 
   const section = (title, subtitle, content) => <section className="ac-section"><header><h2>{title}</h2><p>{subtitle}</p></header><div className="ac-grid">{content}</div></section>
 
+  if (collegeLoadError) return <DashboardLayout><main className="add-college"><PageHeaderImports_default title="Edit College" /><AsyncState status="error" message={collegeLoadError} onRetry={() => setLoadAttempt(value => value + 1)} /></main></DashboardLayout>
   return <DashboardLayout><main className="add-college">
     <header className="ac-page-header"><div><h1>{editId ? 'Edit College' : 'Add College'}</h1><p>{editId ? 'Update the college information below.' : 'Create and configure a new college in the college management system.'}</p><span className="ac-draft-progress">Draft progress: <b>{progress}%</b></span></div><button className="ac-back" type="button" onClick={requestLeave}><FiArrowLeft aria-hidden="true" />Back</button></header>
     {loadingCollege && <div className="ac-notice" role="status">Loading college details...</div>}
@@ -1352,6 +1288,10 @@ function AddCollege() {
                 key={tab.id}
                 type="button"
                 role="tab"
+                id={`college-tab-${tab.id}`}
+                aria-controls={`college-panel-${tab.id}`}
+                tabIndex={isActive ? 0 : -1}
+                onKeyDown={event => { if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return; event.preventDefault(); const next = event.key === 'Home' ? 0 : event.key === 'End' ? highestUnlockedTab : (index + (event.key === 'ArrowRight' ? 1 : -1) + highestUnlockedTab + 1) % (highestUnlockedTab + 1); showTab(FORM_TABS[next].id); document.getElementById(`college-tab-${FORM_TABS[next].id}`)?.focus() }}
                 aria-selected={isActive}
                 aria-label={tab.label}
                 title={tab.label}
@@ -1366,6 +1306,7 @@ function AddCollege() {
             )
           })}
         </nav>
+        <div role="tabpanel" id={`college-panel-${activeTab}`} aria-labelledby={`college-tab-${activeTab}`} tabIndex={0}>
         {activeTab === 'college' && <>
         {section('College Information', 'Core identity and affiliation details.', <>
           <Field label="College Name" name="collegeName" values={values} errors={{ ...errors, ...(duplicateName ? { collegeName: 'A college with this name already exists.' } : {}) }} touched={touched} onChange={update} required maxLength={120} placeholder="e.g. Crescent Institute of Technology" />
@@ -1430,6 +1371,7 @@ function AddCollege() {
           <Field label="Valid Until" name="validUntil" type="date" values={values} errors={errors} touched={touched} onChange={update} />
           {values.accreditationStatus === 'Accredited' && <p className="ac-hint ac-span-2">Complete the accreditation grade, number, and validity dates for a comprehensive record.</p>}
         </>)}
+        </div>
         <footer className="ac-actions ac-next-actions">
           {FORM_TABS.findIndex((tab) => tab.id === activeTab) > 0 && (
             <button type="button" className="ac-secondary" onClick={goPrevious}>
@@ -1475,7 +1417,7 @@ const newestFirst = newestFirstImports_newestFirst
 const rememberCreated = newestFirstImports_rememberCreated
 const showSuccess = toastImports_showSuccess
 const useToastState = useToastStateImports_default
-const PrintDetailsButton = ExportMenuImports_PrintDetailsButton
+
 const ExportMenu = ExportMenuImports_default
 const collegeColumns = exportColumnsImports_collegeColumns
 const collegeSettingsColumns = exportColumnsImports_collegeSettingsColumns
@@ -1483,11 +1425,11 @@ const useState = reactImports_useState
 const useEffect = reactImports_useEffect
 const useRef = reactImports_useRef
 const useNavigate = react_router_domImports_useNavigate
-const EyeIcon = FiEye
+
 const EditIcon = FiEdit2
 const Plus = FiPlus
 const DashboardLayout = DashboardLayoutImports_default
-const FilterPanel = FilterPanelImports_default
+
 const PAGE_SIZE = TablePaginationImports_PAGE_SIZE
 const TablePagination = TablePaginationImports_default
 const StatusConfirmDialog = StatusConfirmDialogImports_default
@@ -1495,7 +1437,7 @@ const StatusBadge = StatusBadgeImports_default
 const ERP_EVENTS = eventBusImports_ERP_EVENTS
 const eventBus = eventBusImports_default
 const InfoCard = InfoCardImports_default
-const CompactSummary = CompactSummaryImports_default
+
 const createCollegeSettings = collegeApiImports_createCollegeSettings
 const cacheCollegeLogo = collegeApiImports_cacheCollegeLogo
 const cacheCollegeDates = collegeApiImports_cacheCollegeDates
@@ -1916,13 +1858,17 @@ const mapRecordToForm = (record) => ({
 
 function CollegeInstitutionManagement({ initialView = 'list' }) {
   const navigate = useNavigate()
-  const { collegeAccess } = AcademicContextImports_useAcademic()
-  const { access: effectiveAccess } = screenAccessImports_useScreenAccess()
+  const { collegeAccess, selectedCollege, selectedCollegeId } = AcademicContextImports_useAcademic()
+  const { access: effectiveAccess, canAction } = screenAccessImports_useScreenAccess()
   const assignedCollegeId = getUserCollegeId()
   const isSuperAdmin = collegeAccess?.isSuperAdmin === true || effectiveAccess?.isSuperAdmin === true
+  const canCreateCollege = canAction('/college-institution-management', 'create')
+  const canEditCollege = canAction('/college-institution-management', 'edit')
   const isAssignedCollegeAdmin = !isSuperAdmin && Boolean(assignedCollegeId)
   const currentUserId = effectiveAccess?.userId == null ? '' : String(effectiveAccess.userId)
   const canManageCollege = (college) => isSuperAdmin || String(college.id) === String(assignedCollegeId) || (currentUserId && String(college.createdBy) === currentUserId)
+  const listRequest = reactImports_useRef(0)
+  const detailRequest = reactImports_useRef(0)
   const [colleges, setColleges] = useState([])
   const [isCollegesLoading, setIsCollegesLoading] = useState(true)
   const [collegeError, setCollegeError] = useToastState('', 'error')
@@ -2006,10 +1952,12 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
   const displayedSettings = settingsList.slice((currentSettingsPage - 1) * PAGE_SIZE, currentSettingsPage * PAGE_SIZE)
 
   const loadColleges = async (term = '') => {
+    const request = ++listRequest.current
     setIsCollegesLoading(true)
     setCollegeError('')
     try {
       const response = term.trim() ? await searchColleges(term.trim()) : await getColleges()
+      if (request !== listRequest.current) return
       const loadedRecords = newestFirst('colleges', getCollegeRecords(response?.data ?? response)).map(mapCollege)
       const records = isAssignedCollegeAdmin ? loadedRecords.filter(canManageCollege) : loadedRecords
       setColleges(newestFirst('colleges', records))
@@ -2025,19 +1973,20 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
         })
       }
     } catch (error) {
+      if (request !== listRequest.current) return
       setColleges([])
       setCollegeError(getApiErrorMessage(error, 'Unable to load colleges. Please try again.'))
       if (!searchTerm.trim()) {
         setCollegeSummary({ total: null, active: null, inactive: null, loading: false, error: getApiErrorMessage(error, 'Unable to load college summary.') })
       }
     } finally {
-      setIsCollegesLoading(false)
+      if (request === listRequest.current) setIsCollegesLoading(false)
     }
   }
 
   useEffect(() => {
     const timer = window.setTimeout(() => loadColleges(searchTerm), searchTerm.trim() ? 300 : 0)
-    return () => window.clearTimeout(timer)
+    return () => { window.clearTimeout(timer); listRequest.current++ }
   }, [searchTerm])
 
   useEffect(() => {
@@ -2103,6 +2052,7 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
   }
 
   const openDetails = async (college) => {
+    const request = ++detailRequest.current
     setIsCollegeDetailsLoading(true)
     setCollegeError('')
     setActiveId(college.id)
@@ -2110,17 +2060,20 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
     try {
       const response = await getCollegeById(college.id)
+      if (request !== detailRequest.current) return
       const detailRecord = unwrapCollegeRecord(response)
       const detail = mapCollege(Object.keys(detailRecord).length ? detailRecord : college)
       setColleges((current) => current.map((item) => (String(item.id) === String(detail.id) ? detail : item)))
     } catch (error) {
+      if (request !== detailRequest.current) return
       setCollegeError(getApiErrorMessage(error, 'Unable to load college details. Please try again.'))
     } finally {
-      setIsCollegeDetailsLoading(false)
+      if (request === detailRequest.current) setIsCollegeDetailsLoading(false)
     }
   }
 
   const backToList = () => {
+    detailRequest.current++
     if (initialView === 'settings') {
       navigate('/college-institution-management')
       return
@@ -2324,72 +2277,15 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
     <DashboardLayout>
       <div className="college-management">
         {/* LIST VIEW */}
-        {viewMode === 'list' && (
+        {['list', 'details'].includes(viewMode) && (
           <>
-            <header className="cm-header management-page__heading">
-              <div>
-                <h1>College Management</h1>
-                <p>Manage colleges, institutional details, and academic configurations.</p>
-              </div>
-              <CompactSummary
-                label="College status summary"
-                items={summaryCards.map(({ label, value, tone }) => ({
-                  label,
-                  value: collegeSummary.loading || value === null ? '—' : Number(value).toLocaleString('en-IN'),
-                  tone,
-                }))}
-              />
-            </header>
-
-            {collegeSummary.error && !collegeError && (
-              <p className="cm-summary-error" role="alert">{collegeSummary.error}</p>
-            )}
-
-            <section className="cm-panel course-directory">
-              <header className="course-directory-heading">
-                <div>
-                  <span className="cm-eyebrow">College Directory</span>
-                  <p>{filteredColleges.length} records</p>
-                </div>
-                <div className="directory-export-actions">
-                  <ExportMenu
-                    rows={filteredColleges}
-                    columns={collegeColumns}
-                    title="Colleges"
-                    filename="colleges"
-                    loading={isCollegesLoading || Boolean(collegeError)}
-                    scope="Current filtered loaded results"
-                  />
-                  <button type="button" className="cm-button" onClick={openAdd}>
-                    <Plus aria-hidden="true" /> Add College
-                  </button>
-                </div>
-              </header>
-
-              <FilterPanel active={Boolean(searchTerm || typeFilter || statusFilter)} onClear={() => { setSearchTerm(''); setTypeFilter(''); setStatusFilter(''); setCurrentPage(1); loadColleges('') }}>
-                <div className="course-toolbar">
-                  <label className="course-search">
-                    <FiSearch />
-                    <input
-                      type="text"
-                      placeholder="Search by name, code or city..."
-                      value={searchTerm}
-                      onChange={handleSearchChange}
-                      aria-label="Search colleges"
-                    />
-                  </label>
-                  <ProjectSelect aria-label="Filter colleges by type" value={typeFilter} onChange={(event) => { setTypeFilter(event.target.value); setCurrentPage(1) }}>
-                    <option value="">Select Type</option>
-                    {availableCollegeTypes.map((type) => <option key={type} value={type}>{type}</option>)}
-                  </ProjectSelect>
-                  <ProjectSelect aria-label="Filter colleges by status" value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setCurrentPage(1) }}>
-                    <option value="">Select Status</option>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </ProjectSelect>
-                </div>
-              </FilterPanel>
-
+            <Link className="college-back-link" to="/settings"><FiArrowLeft /> Global Settings</Link>
+            <header className="college-config-banner"><div><FiHome aria-hidden="true" /><h1>College Configuration</h1></div><div className="college-config-actions"><ExportMenu rows={filteredColleges} columns={collegeColumns} title="Colleges" filename="colleges" loading={isCollegesLoading || Boolean(collegeError)} />{canCreateCollege && <button className="erp-btn erp-btn--primary" onClick={openAdd}><Plus aria-hidden="true" /> Add College</button>}</div></header>
+            <div className="college-config-stats">{summaryCards.map(({ label, value, tone }) => <article key={label}><span className={`college-config-stat-mark is-${tone}`}>{label === 'Total' ? <FiHome /> : label === 'Active' ? <FiCheck /> : <FiClock />}</span><div><h2>{label} Colleges</h2><strong>{collegeSummary.loading || value === null ? '—' : Number(value).toLocaleString('en-IN')}</strong></div></article>)}<article><div><h2>Working College</h2><strong className="college-config-selected">{selectedCollege?.name || selectedCollege?.collegeName || 'Not selected'}</strong><small>{selectedCollege?.code || selectedCollege?.collegeCode || ''}</small></div></article></div>
+            {collegeSummary.error && !collegeError && <p role="alert">{collegeSummary.error}</p>}
+            <div className="college-config-toolbar"><label className="college-config-search"><FiSearch aria-hidden="true" /><input type="search" placeholder="Search by name, code or city…" value={searchTerm} onChange={handleSearchChange} aria-label="Search colleges" /></label><ProjectSelect aria-label="Filter colleges by type" value={typeFilter} onChange={event => { setTypeFilter(event.target.value); setCurrentPage(1) }}><option value="">All types</option>{availableCollegeTypes.map(type => <option key={type}>{type}</option>)}</ProjectSelect><div className="college-config-filter-tabs" role="group" aria-label="College status">{[['','All'],['active','Active'],['inactive','Inactive']].map(([value,label]) => <button key={label} type="button" aria-pressed={statusFilter === value} onClick={() => { setStatusFilter(value); setCurrentPage(1) }}>{label}</button>)}</div></div>
+            {visibleCollegeDraft?.values && canCreateCollege && <aside className="college-config-draft"><span><b>{collegeDraft.values.collegeName || 'New college draft'}</b> · Unsaved draft</span><button className="erp-btn erp-btn--secondary" onClick={() => navigate('/college-institution-management/add')}>Resume draft</button><button className="erp-btn erp-btn--secondary" onClick={() => { localStorage.removeItem(NEW_COLLEGE_DRAFT_KEY); setCollegeDraft(null) }}>Discard draft</button></aside>}
+            <section className="college-config-directory" aria-label="College directory">
             {isCollegesLoading ? (
               <div className="cm-empty">
                 <p>Loading colleges...</p>
@@ -2404,121 +2300,18 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
             ) : filteredColleges.length === 0 && !visibleCollegeDraft?.values ? (
               <div className="cm-empty">
                 <p>{isAssignedCollegeAdmin ? 'No assigned or created colleges were found.' : 'No colleges found.'}</p>
-                <button type="button" className="cm-primary-btn" onClick={openAdd}>
-                  <Plus aria-hidden="true" /> Add your first college
-                </button>
+                {canCreateCollege && <button type="button" className="erp-btn erp-btn--primary" onClick={openAdd}><Plus aria-hidden="true" /> Add your first college</button>}
               </div>
             ) : (
               <>
-                <div className="cm-table-wrap">
-                  <table className="cm-table">
-                    <thead>
-                      <tr>
-                        <th className="col-logo table-center" style={{ width: '70px', minWidth: '70px', maxWidth: '70px' }}>Logo</th>
-                        <th className="col-name table-left" style={{ width: '32%' }}>College Name</th>
-                        <th className="col-code table-center" style={{ width: '120px' }}>Code</th>
-                        <th className="col-type table-left" style={{ width: '24%' }}>Type</th>
-                        <th className="col-status table-center" style={{ width: '130px' }}>Status</th>
-                        <th className="col-actions table-center" style={{ width: '110px', minWidth: '110px', maxWidth: '110px' }}>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {visibleCollegeDraft?.values && (
-                        <tr className="cm-draft-row">
-                          <td className="col-logo table-center"><span className="cm-draft-row__mark">D</span></td>
-                          <td className="col-name table-left">
-                            <button
-                              type="button"
-                              className="cm-name-link table-cell-truncate cm-college-name"
-                              onClick={() => navigate('/college-institution-management/add')}
-                              title="Resume draft"
-                            >
-                              {collegeDraft.values.collegeName || 'New college draft'}
-                            </button>
-                            <small className="cm-draft-row__label">Draft saved</small>
-                          </td>
-                          <td className="col-code table-center"><code>{collegeDraft.values.collegeCode || '—'}</code></td>
-                          <td className="col-type table-left"><span className="table-cell-truncate" style={{ textAlign: 'left', margin: 0 }} title={collegeDraft.values.institutionType || '—'}>{collegeDraft.values.institutionType || '—'}</span></td>
-                          <td className="col-status table-center"><StatusBadge tone="pending">Pending</StatusBadge></td>
-                          <td className="col-actions table-center"><div className="cm-actions table-actions-group"><button type="button" className="table-action-btn action-edit cm-action-icon-btn cm-edit-action" title="Resume draft" aria-label="Resume draft" onClick={() => navigate('/college-institution-management/add')}><EditIcon /></button><button type="button" className="table-action-btn action-deactivate cm-action-icon-btn cm-danger cm-discard-action" title="Discard draft" aria-label="Discard draft" onClick={() => { localStorage.removeItem(NEW_COLLEGE_DRAFT_KEY); setCollegeDraft(null) }}><FiTrash2 aria-hidden="true" /></button></div></td>
-                        </tr>
-                      )}
-                      {displayedColleges.map((college) => (
-                        <tr key={college.id}>
-                          <td className="col-logo table-center">
-                            <CollegeLogoImage
-                              src={college.logo}
-                              fallbackSrc={getCollegeLogoEndpoint(college.id)}
-                              alt={college.name}
-                              code={college.code}
-                              className="cm-logo-thumb"
-                              onError={() => markLogoBroken(college.id)}
-                            />
-                          </td>
-                          <td className="col-name table-left">
-                            <button
-                              type="button"
-                              className="cm-name-link table-cell-truncate cm-college-name"
-                              onClick={() => openDetails(college)}
-                              title={college.name}
-                              aria-label={`View details for ${college.name}`}
-                            >
-                              {college.name}
-                            </button>
-                          </td>
-                          <td className="col-code table-center"><code>{college.code}</code></td>
-                          <td className="col-type table-left"><span className="table-cell-truncate" style={{ textAlign: 'left', margin: 0 }} title={college.type}>{college.type}</span></td>
-                          <td className="col-status table-center">
-                            <StatusBadge value={college.status === 'active' ? 'Active' : 'Inactive'} />
-                          </td>
-                          <td className="col-actions table-center">
-                            <div className="cm-actions table-actions-group">
-                              <button
-                                type="button"
-                                className="table-action-btn action-edit cm-action-icon-btn cm-edit-action"
-                                title={`Edit ${college.name}`}
-                                aria-label={`Edit ${college.name}`}
-                                onClick={() => openEdit(college)}
-                              >
-                                <EditIcon />
-                              </button>
-                              {canManageCollege(college) && <button
-                                type="button"
-                                className={`table-action-btn cm-action-icon-btn cm-status-action ${college.status === 'active' ? 'action-activate cm-success' : 'action-deactivate cm-danger'}`}
-                                title={college.status === 'active' ? `Deactivate ${college.name}` : `Activate ${college.name}`}
-                                aria-label={college.status === 'active' ? `Deactivate ${college.name}` : `Activate ${college.name}`}
-                                onClick={() => toggleStatus(college)}
-                              >
-                                {college.status === 'active' ? <FiToggleRight data-status="active" /> : <FiToggleLeft data-status="inactive" />}
-                              </button>}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Table Pagination Controls */}
-                <div className="course-pagination">
-                  <button
-                    type="button"
-                    className="pagination-btn"
-                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                    disabled={safeCurrentPage === 1}
-                  >
-                    Previous
-                  </button>
-                  <span className="pagination-status">Page {safeCurrentPage} of {totalPages}</span>
-                  <button
-                    type="button"
-                    className="pagination-btn"
-                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                    disabled={safeCurrentPage === totalPages}
-                  >
-                    Next
-                  </button>
-                </div>
+                <DataTable caption="Colleges" tableClassName="college-config-table" rows={filteredColleges} pagination={{ page: currentPage, pageSize: itemsPerPage, onPageChange: setCurrentPage }} columns={[
+                  { key:'name', label:'College', render:college => <div className="college-config-identity"><CollegeLogoImage src={college.logo} fallbackSrc={getCollegeLogoEndpoint(college.id)} alt="" code={college.code} className="college-config-logo" /><div><button type="button" className="college-config-name" aria-label={`View details for ${college.name}`} onClick={() => openDetails(college)}>{college.name}</button><small>{college.type}</small>{String(selectedCollegeId) === String(college.id) && <span className="college-config-working">Working college</span>}</div></div> },
+                  { key:'code', label:'Code', render:college => <code>{college.code}</code> },
+                  { key:'university', label:'Affiliation', render:college => college.university || '—' },
+                  { key:'address', label:'Address', render:college => <span className="college-config-address">{[college.addressLine1 || college.address, college.city, college.state].filter(Boolean).join(', ') || '—'}</span> },
+                  { key:'contact', label:'Contact', render:college => <div>{college.contact || '—'}<small className="college-config-email">{college.email || '—'}</small></div> },
+                  { key:'status', label:'Status', render:college => <StatusBadge value={college.status === 'active' ? 'Active' : 'Inactive'} /> },
+                ]} rowActions={college => <div className="college-config-actions"><button type="button" className="table-action-btn" title={`View ${college.name}`} aria-label={`View ${college.name}`} onClick={() => openDetails(college)}><FiEye /></button>{canEditCollege && canManageCollege(college) && <><button type="button" className="table-action-btn action-edit" aria-label={`Edit ${college.name}`} onClick={() => openEdit(college)}><EditIcon /></button><button type="button" className="table-action-btn" aria-label={`${college.status === 'active' ? 'Deactivate' : 'Activate'} ${college.name}`} onClick={() => toggleStatus(college)}>{college.status === 'active' ? <FiToggleRight data-status="active" /> : <FiToggleLeft data-status="inactive" />}</button></>}</div>} />
               </>
             )}
             </section>
@@ -2647,47 +2440,8 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
           </>
         )}
 
-        {/* FULL COLLEGE DETAILS / PROFILE SCREEN */}
-        {viewMode === 'details' && activeCollege && (
-          <div className="cm-profile-view" data-export-record>
-            <div className="cm-profile-top-bar">
-          <ExportMenu mode="single" title="College Details" filename={`college_${activeCollege.code || activeCollege.id}`} loading={isCollegeDetailsLoading || Boolean(collegeError)} />
-              <button type="button" className="cm-secondary-btn" onClick={backToList}>
-                &larr; Back 
-              </button>
-            </div>
-
-            {isCollegeDetailsLoading && <p>Loading college details...</p>}
-            {collegeError && <p className="cm-field-error" role="alert">{collegeError}</p>}
-
-            <div className="cm-profile-card">
-              {/* Header Profile Banner */}
-              <div className="cm-profile-banner cm-profile-banner--account">
-                <div className="cm-account-identity">
-                  <div className="cm-profile-avatar-wrap">
-                    <CollegeLogoImage
-                      src={activeCollege.logo}
-                      fallbackSrc={getCollegeLogoEndpoint(activeCollege.id)}
-                      alt={activeCollege.name}
-                      code={activeCollege.code}
-                      className="cm-profile-logo"
-                      onError={() => markLogoBroken(activeCollege.id)}
-                    />
-                  </div>
-                  <div className="cm-profile-header-info">
-                    <h1 className="cm-profile-title"><span>{activeCollege.name}</span></h1>
-                    <p className="cm-profile-subtitle"><span>Affiliated with </span><strong>{activeCollege.university}</strong></p>
-                  </div>
-                </div>
-                <dl className="cm-account-facts">
-                  <div><dt>College Code</dt><dd>{activeCollege.code || '—'}</dd></div>
-                  <div><dt>College Type</dt><dd>{activeCollege.type || '—'}</dd></div>
-                  <div><dt>Account Status</dt><dd><span className={`cm-account-status ${activeCollege.status === 'active' ? 'is-active' : 'is-inactive'}`}><i />{activeCollege.status === 'active' ? 'Active' : 'Inactive'}</span></dd></div>
-                </dl>
-              </div>
-
-              {/* Profile Information Cards Grid */}
-              <div className="cm-profile-grid">
+        {viewMode === 'details' && activeCollege && <ViewDialog title="College Details" subtitle={activeCollege.name} onClose={backToList} maxWidth="920px" exportFilename={`college_${activeCollege.code || activeCollege.id}`} footerActions={canEditCollege && canManageCollege(activeCollege) ? <button className="erp-btn erp-btn--primary" onClick={() => openEdit(activeCollege)}>Edit college</button> : null}>
+          {isCollegeDetailsLoading ? <AsyncState status="loading" title="Loading college details…" /> : collegeError ? <AsyncState status="error" message={collegeError} onRetry={() => openDetails(activeCollege)} /> : <><div className="college-config-detail-identity"><CollegeLogoImage src={activeCollege.logo} fallbackSrc={getCollegeLogoEndpoint(activeCollege.id)} alt="" code={activeCollege.code} className="college-config-logo" /><div><h3>{activeCollege.name}</h3><p>{activeCollege.code} · {activeCollege.university}</p></div><StatusBadge value={activeCollege.status === 'active' ? 'Active' : 'Inactive'} /></div><div className="college-config-detail-grid">
                 <InfoCard
                   title="Basic College Information"
                   icon={AcademicIcon}
@@ -2749,11 +2503,8 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
                     { label: 'Valid From', value: activeCollege.validFrom },
                     { label: 'Valid Until', value: activeCollege.validUntil },
                   ]}
-                />
-              </div>
-            </div>
-          </div>
-        )}
+                /></div></>}
+        </ViewDialog>}
 
         {/* COLLEGE SETTINGS - LIST VIEW, backed by /api/college-settings */}
         {viewMode === 'settings' && (
@@ -2990,7 +2741,7 @@ return { default: CollegeInstitutionManagement }
 const DepartmentManagementScreen = (() => {
 const ProjectSelect = SearchableSelectImports_ProjectSelect
 const GENERIC_ERROR_MESSAGE = userErrorImports_GENERIC_ERROR_MESSAGE
-const DirectoryEmptyState = DirectoryEmptyStateImports_default
+
 const newestFirst = newestFirstImports_newestFirst
 const rememberCreated = newestFirstImports_rememberCreated
 const showSuccess = toastImports_showSuccess
@@ -2998,7 +2749,7 @@ const useToastState = useToastStateImports_default
 const useEffect = reactImports_useEffect
 const useMemo = reactImports_useMemo
 const useState = reactImports_useState
-const PrintDetailsButton = ExportMenuImports_PrintDetailsButton
+
 const ExportMenu = ExportMenuImports_default
 const departmentColumns = exportColumnsImports_departmentColumns
 const DashboardLayout = DashboardLayoutImports_default
@@ -3201,6 +2952,11 @@ const payloadFor = (value) => ({
 
 function DepartmentManagement() {
   const { scopeRecords, selectedCollegeId, selectedCollege } = useAcademic();
+  const { canAction } = screenAccessImports_useScreenAccess();
+  const canCreateDepartment = canAction('/department-management', 'create');
+  const canEditDepartment = canAction('/department-management', 'edit');
+  const detailRequest = reactImports_useRef(0);
+  const listRequest = reactImports_useRef(0);
   const [items, setItems] = useState([]);
   const [allDepartments, setAllDepartments] = useState([]);
   const [screen, setScreen] = useState('list'); // 'list' | 'form' | 'assign-hod' | 'details'
@@ -3221,24 +2977,28 @@ function DepartmentManagement() {
   const itemsPerPage = 5;
 
   const loadDepartments = async (searchTerm = query) => {
+    const request = ++listRequest.current;
     setIsLoading(true);
     setError('');
     try {
       const response = searchTerm.trim() ? await searchDepartments(searchTerm.trim()) : await getDepartments();
+      if (request !== listRequest.current) return;
       const mapped = newestFirst('departments', listFrom(response.data)).map((item) => mapDepartment(item, faculty));
       setAllDepartments(mapped);
       setItems(mapped);
     } catch (requestError) {
+      if (request !== listRequest.current) return;
       setItems([]);
       setError(apiError(requestError, 'Unable to load departments right now. Please try again.'));
     } finally {
-      setIsLoading(false);
+      if (request === listRequest.current) setIsLoading(false);
     }
   };
 
   useEffect(() => {
     loadDepartments(query);
-  }, [query]);
+    return () => { listRequest.current++; };
+  }, [query, selectedCollegeId]);
 
   useEffect(() => {
     getColleges()
@@ -3274,6 +3034,7 @@ function DepartmentManagement() {
   const totalCount = countSource.length;
 
   const closeToList = () => {
+    detailRequest.current++;
     setForm({ ...empty, collegeId: selectedCollegeId || '', collegeNumericId: selectedCollegeId || '' });
     setScreen('list');
     setSelected(null);
@@ -3299,6 +3060,7 @@ function DepartmentManagement() {
   }, [selectedCollegeId]);
 
   const loadDetail = async (item, nextScreen) => {
+    const request = ++detailRequest.current;
     setScreen(nextScreen);
     setSelected(item);
     setForm(nextScreen === 'form' ? { ...item } : item);
@@ -3313,6 +3075,7 @@ function DepartmentManagement() {
         currentFaculty = facultyForCollege(records.map(normalizeFaculty), collegeId, allDepartments);
         setFaculty(currentFaculty);
       }
+      if (request !== detailRequest.current) return;
       const detail = mapDepartment(recordFrom(response), currentFaculty);
       setSelected(detail);
       setForm({
@@ -3321,9 +3084,10 @@ function DepartmentManagement() {
       });
       setItems((current) => current.map((entry) => (entry.id === detail.id ? detail : entry)));
     } catch (requestError) {
+      if (request !== detailRequest.current) return;
       setError(apiError(requestError, 'Unable to load department details. Please try again.'));
     } finally {
-      setIsDetailsLoading(false);
+      if (request === detailRequest.current) setIsDetailsLoading(false);
     }
   };
 
@@ -3536,9 +3300,7 @@ function DepartmentManagement() {
         || faculty.find((m) => String(m.id) === String(form.hodUserId) || String(m.facultyId) === String(form.hodUserId) || String(m.userId) === String(form.hodUserId));
       const chosenHodName = candidate?.fullName || form.hodName?.trim() || '';
 
-      const names = savedHodNames();
-      names[form.id] = chosenHodName;
-      localStorage.setItem(HOD_NAMES_KEY, JSON.stringify(names));
+      if (!Number.isSafeInteger(Number(form.hodUserId)) || Number(form.hodUserId) <= 0) throw new Error('The selected faculty member does not have a valid account identifier.');
 
       let updated = mapDepartment({
         ...form,
@@ -3564,6 +3326,9 @@ function DepartmentManagement() {
         }, faculty);
       }
 
+      const names = savedHodNames();
+      names[form.id] = chosenHodName;
+      localStorage.setItem(HOD_NAMES_KEY, JSON.stringify(names));
       setItems((current) => current.map((item) => (item.id === form.id ? updated : item)));
       setAllDepartments((current) => current.map((item) => (item.id === form.id ? updated : item)));
       setSelected(updated);
@@ -3585,7 +3350,7 @@ function DepartmentManagement() {
   return (
     <DashboardLayout>
       <main className="department-management">
-        {(screen === 'list' || screen === 'assign-hod') && (
+        {['list','assign-hod','details','form'].includes(screen) && (
           <>
             <PageHeader
               title="Department Management"
@@ -3593,10 +3358,10 @@ function DepartmentManagement() {
               compactSummary={summaryCards}
             />
 
-            <section className="erp-directory-card">
-              <header className="course-directory-heading">
+            <section className="department-master-card">
+              <header className="department-master-heading">
                 <div>
-                  <span className="cm-eyebrow">Department Directory</span>
+                  <h2>Departments</h2>
                   <p>{visible.length} records</p>
                 </div>
                 <div className="directory-export-actions">
@@ -3610,9 +3375,9 @@ function DepartmentManagement() {
                     filename="departments"
                     loading={isLoading || Boolean(error)}
                   />
-                  <button
+                  {canCreateDepartment && <button
                     type="button"
-                    className="cm-button"
+                    className="erp-btn erp-btn--primary"
                     onClick={() => {
                       setForm({ ...empty, collegeId: selectedCollegeId || '', collegeNumericId: selectedCollegeId || '' });
                       setSelected(null);
@@ -3621,7 +3386,7 @@ function DepartmentManagement() {
                     }}
                   >
                     <FiPlus /> Add Department
-                  </button>
+                  </button>}
                 </div>
               </header>
 
@@ -3662,20 +3427,20 @@ function DepartmentManagement() {
               <DataTable
                 caption="Department directory"
                 columns={[
-                  { key: 'name', label: 'Department', className: 'col-name table-center', width: '32%', sortable: true, render: item => <button type="button" className="dept-name-link table-cell-truncate" title={`Click to view details for ${item.name}`} onClick={() => loadDetail(item, 'details')}>{item.name}</button> },
-                  { key: 'code', label: 'Code', className: 'col-code table-center', width: '120px', sortable: true, render: item => <code>{item.code || '-'}</code> },
-                  { key: 'hod', label: 'Head / In-Charge', className: 'col-hod table-center', width: '26%', sortable: true, render: item => <span className="table-cell-truncate" title={item.hod || 'Unassigned'}>{item.hod || '-'}</span> },
+                  { key: 'name', label: 'Department', className: 'col-name', width: '32%', sortable: true, render: item => <button type="button" className="dept-name-link table-cell-truncate" title={`Click to view details for ${item.name}`} onClick={() => loadDetail(item, 'details')}>{item.name}</button> },
+                  { key: 'code', label: 'Code', className: 'col-code', width: '120px', sortable: true, render: item => <code>{item.code || '-'}</code> },
+                  { key: 'hod', label: 'Head / In-Charge', className: 'col-hod', width: '26%', sortable: true, render: item => <span className="table-cell-truncate" title={item.hod || 'Unassigned'}>{item.hod || '-'}</span> },
                   { key: 'status', label: 'Status', className: 'col-status table-center', width: '130px', sortable: true, render: item => <StatusBadge value={item.status} /> },
                 ]}
                 rows={visible}
                 pagination={{ page: currentPage, pageSize: itemsPerPage, onPageChange: setCurrentPage }}
                 loading={isLoading && 'Loading departments...'}
-                error={error}
+                error={screen === 'list' ? error : ''}
                 onRetry={() => loadDepartments(query)}
                 className="department-table-wrap"
-                emptyState={<AsyncState status="empty" title={items.length ? 'No departments found.' : 'No departments have been added yet.'} action={!items.length && <button type="button" className="erp-btn erp-btn--primary" onClick={() => { setForm({ ...empty, collegeId: selectedCollegeId || '', collegeNumericId: selectedCollegeId || '' }); setScreen('form'); }}>Add Department</button>} />}
+                emptyState={<AsyncState status="empty" title={items.length ? 'No departments found.' : 'No departments have been added yet.'} action={!items.length && canCreateDepartment && <button type="button" className="erp-btn erp-btn--primary" onClick={() => { setForm({ ...empty, collegeId: selectedCollegeId || '', collegeNumericId: selectedCollegeId || '' }); setScreen('form'); }}>Add Department</button>} />}
                 rowActions={item => (
-                              <div className="erp-row-actions table-actions-group">
+                              <div className="erp-row-actions table-actions-group"><button type="button" className="table-action-btn" aria-label={`View ${item.name}`} onClick={() => loadDetail(item, 'details')}><FiEye /></button>{canEditDepartment && <>
                                 <button
                                   type="button"
                                   className="table-action-btn action-edit erp-action-btn"
@@ -3707,26 +3472,14 @@ function DepartmentManagement() {
                                     <FiToggleLeft data-status="inactive" />
                                   )}
                                 </button>
-                              </div>
+                              </>}</div>
                 )}
               />
             </section>
           </>
         )}
 
-        {screen === 'form' && (
-          <div className="erp-form-page">
-            <PageHeader
-              title={form.id ? 'Edit Department' : 'Add Department'}
-              subtitle="Enter the department information, code, college association, and status."
-              secondaryActions={<button type="button" className="erp-btn erp-btn--secondary" onClick={closeToList}>
-                <FiArrowLeft /> Back
-              </button>}
-            />
-
-            <div className="erp-two-column-layout" data-without-live-preview="true">
-              <section className="erp-card-main">
-                <FormLayout onSubmit={save} busy={isSaving} error={error} actions={<>
+        {screen === 'form' && <ViewDialog title={form.id ? 'Edit Department' : 'Add Department'} onClose={closeToList} busy={isSaving} showExport={false} hideFooter><div className="erp-form-page" data-without-live-preview="true">                <FormLayout onSubmit={save} busy={isSaving} error={error} actions={<>
                     <button type="button" className="erp-btn erp-btn--secondary" onClick={closeToList} disabled={isSaving}>
                       Cancel
                     </button>
@@ -3754,64 +3507,9 @@ function DepartmentManagement() {
                     <FormField label="Description" className="erp-form-field--full"><textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Describe this organizational department..." rows={2} /></FormField>
                   </FormGroup>
                   {isDetailsLoading && <AsyncState status="loading" title="Loading department details..." />}
-                </FormLayout>
-              </section>
+                </FormLayout></div></ViewDialog>}
 
-            </div>
-          </div>
-        )}
-
-        {screen === 'assign-hod' && (
-          <div className="department-modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && !isHodSaving && closeToList()}>
-            <section className="hod-modal-card" role="dialog" aria-modal="true" aria-labelledby="assign-hod-title">
-              <form onSubmit={saveHod} className="hod-modal-form">
-                {/* Modal Header */}
-                <div className="hod-modal-header">
-                  <div className="hod-modal-header-icon">
-                    <FiUserCheck />
-                  </div>
-                  <div className="hod-modal-header-text">
-                    <span className="hod-modal-eyebrow">DEPARTMENT LEADERSHIP</span>
-                    <h2 id="assign-hod-title">Assign Head / In-Charge</h2>
-                    <p>Designate an active faculty member to lead this department.</p>
-                  </div>
-                  <button type="button" className="hod-modal-close-btn" onClick={closeToList} disabled={isHodSaving} aria-label="Close dialog" title="Close">
-                    <FiX />
-                  </button>
-                </div>
-
-                {/* Department Info Banner */}
-                <div className="hod-dept-card">
-                  <div className="hod-dept-avatar">
-                    {(form.code || form.name || 'DEP').slice(0, 3).toUpperCase()}
-                  </div>
-                  <div className="hod-dept-details">
-                    <div className="hod-dept-title-row">
-                      <h3 className="hod-dept-name">{form.name || 'Selected Department'}</h3>
-                      {form.code && <span className="hod-dept-code-tag">{form.code}</span>}
-                    </div>
-                    <div className="hod-dept-meta-row">
-                      <span><strong>College:</strong> {form.collegeName || selectedCollege?.name || 'Academic Institution'}</span>
-                      {selected?.hod && selected.hod !== 'Not assigned' && (
-                        <span className="hod-current-pill"><strong>Current Head:</strong> {selected.hod}</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Searchable Select Field */}
-                <div className="hod-form-field">
-                  <div className="hod-field-header">
-                    <label htmlFor="hod-faculty-search-select" className="hod-field-label">
-                      Select Faculty Member <span className="required-star">*</span>
-                    </label>
-                    <span className="hod-candidate-count-badge">
-                      {hodCandidates.length} Active Candidate{hodCandidates.length === 1 ? '' : 's'}
-                    </span>
-                  </div>
-
-                  <div className="hod-select-container">
-                    <SearchableSelect
+        {screen === 'assign-hod' && <ViewDialog title="Assign Head / In-Charge" subtitle={form.name} onClose={closeToList} busy={isHodSaving} showExport={false} hideFooter><FormLayout onSubmit={saveHod} busy={isHodSaving} error={error} actions={<><button type="button" className="erp-btn erp-btn--secondary" onClick={closeToList} disabled={isHodSaving}>Cancel</button><button type="submit" className="erp-btn erp-btn--primary" disabled={isHodSaving || isDetailsLoading || !form.hodUserId}>{isHodSaving ? 'Saving Assignment...' : 'Assign Head'}</button></>}><p className="department-assignment-context">College: {form.collegeName || selectedCollege?.name || 'Selected college'} · Current head: {selected?.hod || 'Unassigned'}</p>{isDetailsLoading ? <AsyncState status="loading" title="Loading department leadership…" /> : <>                    <SearchableSelect
                       id="hod-faculty-search-select"
                       label="Select Faculty Member"
                       value={form.hodUserId ? String(form.hodUserId) : ''}
@@ -3845,119 +3543,9 @@ function DepartmentManagement() {
                       placeholder="-- Select or search faculty member --"
                       searchPlaceholder="Search by name, employee code, or designation..."
                       noOptionsMessage="No active faculty members found."
-                    />
-                  </div>
-                  <p className="hod-field-hint">
-                    Search by faculty name, employee code, or designation from active faculty members.
-                  </p>
-                </div>
+                    />{(() => { const member = hodCandidates.find(m => String(m.hodId) === String(form.hodUserId)); return member ? <InfoCard title="Selected faculty" items={[{label:'Faculty',value:member.fullName},{label:'Employee ID',value:member.employeeId},{label:'Designation',value:member.designation},{label:'Department',value:member.department},{label:'Qualification',value:member.qualification},{label:'Official email',value:member.email}]} /> : null })()}</>}</FormLayout></ViewDialog>}
 
-                {/* Selected Faculty Details Card */}
-                {(() => {
-                  const selectedFaculty = hodCandidates.find((m) => String(m.hodId) === String(form.hodUserId));
-                  if (!selectedFaculty) return null;
-                  return (
-                    <div className="hod-selected-preview-card">
-                      <div className="hod-selected-avatar">
-                        {(selectedFaculty.fullName || 'F').slice(0, 2).toUpperCase()}
-                      </div>
-                      <div className="hod-selected-info">
-                        <div className="hod-selected-name-row">
-                          <h4 className="hod-selected-name">{selectedFaculty.fullName}</h4>
-                          {selectedFaculty.employeeId && (
-                            <span className="hod-selected-empid">{selectedFaculty.employeeId}</span>
-                          )}
-                          <span className="hod-selected-status-pill">Active Faculty</span>
-                        </div>
-                        <div className="hod-selected-meta-grid">
-                          <div className="hod-selected-meta-item">
-                            <span className="meta-label">Designation</span>
-                            <strong className="meta-val">{selectedFaculty.designation || 'Faculty Member'}</strong>
-                          </div>
-                          <div className="hod-selected-meta-item">
-                            <span className="meta-label">Department</span>
-                            <strong className="meta-val">{selectedFaculty.department || form.name || 'Academic'}</strong>
-                          </div>
-                          {selectedFaculty.qualification && (
-                            <div className="hod-selected-meta-item">
-                              <span className="meta-label">Qualification</span>
-                              <strong className="meta-val">{selectedFaculty.qualification}</strong>
-                            </div>
-                          )}
-                          {selectedFaculty.email && (
-                            <div className="hod-selected-meta-item">
-                              <span className="meta-label">Official Email</span>
-                              <strong className="meta-val">{selectedFaculty.email}</strong>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {error && (
-                  <div className="hod-error-banner" role="alert">
-                    <span>{error}</span>
-                  </div>
-                )}
-
-                {/* Actions Footer */}
-                <div className="hod-modal-footer">
-                  <button type="button" className="hod-btn hod-btn--cancel" onClick={closeToList} disabled={isHodSaving}>
-                    Cancel
-                  </button>
-                  <button type="submit" className="hod-btn hod-btn--submit" disabled={isHodSaving || !form.hodUserId}>
-                    <FiCheck />
-                    {isHodSaving ? 'Saving Assignment...' : 'Assign Head'}
-                  </button>
-                </div>
-              </form>
-            </section>
-          </div>
-        )}
-
-        {screen === 'details' && selected && (
-          <div className="cm-profile-view" data-export-record>
-            <div className="cm-profile-top-bar">
-          <ExportMenu mode="single" title="Department Details" filename={`department_${selected.code || selected.id}`} />
-              <button type="button" className="cm-secondary-btn erp-btn erp-btn--secondary" onClick={closeToList}>
-                &larr; Back 
-              </button>
-            </div>
-
-            <div className="cm-profile-card">
-              {/* Header Profile Banner */}
-              <div className="cm-profile-banner">
-                <div className="cm-profile-avatar-wrap">
-                  <div className="cm-profile-placeholder">
-                    {(selected.code || selected.name).slice(0, 3).toUpperCase()}
-                  </div>
-                </div>
-                <div className="cm-profile-header-info">
-                  <div className="cm-profile-badges">
-                    <span className="cm-badge cm-badge-code">Code: {selected.code || '-'}</span>
-                    <span className="cm-badge cm-badge-type">Department</span>
-                    <span className={`cm-status-badge ${String(selected.status).toLowerCase()}`}>
-                      {selected.status}
-                    </span>
-                  </div>
-                  <h1 className="cm-profile-title">{selected.name}</h1>
-                  <p className="cm-profile-subtitle">
-                    {selected.collegeName ? (
-                      <>
-                        <span>College: </span>
-                        <strong>{selected.collegeName}</strong>
-                      </>
-                    ) : (
-                      <span>Academic Department</span>
-                    )}
-                  </p>
-                </div>
-              </div>
-
-              {/* Profile Information Cards Grid */}
-              <div className="cm-profile-grid">
+        {screen === 'details' && selected && <ViewDialog title="Department Details" onClose={closeToList} exportFilename={`department_${selected.id}`}><h3 className="department-detail-name">{selected.name}</h3>{isDetailsLoading ? <AsyncState status="loading" title="Loading department details…" /> : error ? <AsyncState status="error" message={error} onRetry={() => loadDetail(selected, 'details')} /> : <div className="department-detail-grid">
                 <InfoCard
                   title="Department Information"
                   icon={FiLayers}
@@ -3979,11 +3567,7 @@ function DepartmentManagement() {
                     { label: 'Head / In-Charge Name', value: selected.hodName || selected.hod },
                     { label: 'Faculty ID', value: selected.hodUserId },
                   ]}
-                />
-              </div>
-            </div>
-          </div>
-        )}
+                /></div>}</ViewDialog>}
 
         {pendingStatus && (
           <StatusConfirmDialog
@@ -4013,7 +3597,8 @@ return { default: DepartmentManagement }
 const RolesAndDesignationsScreen = (() => {
 const ProjectSelect = SearchableSelectImports_ProjectSelect
 const useCollegeState = useCollegeStateImports_default
-const collegeStorageKey = collegeScopeImports_collegeStorageKey
+
+const useCallback = reactImports_useCallback
 const useState = reactImports_useState
 const useEffect = reactImports_useEffect
 const useMemo = reactImports_useMemo
@@ -4024,8 +3609,8 @@ const ExportMenu = ExportMenuImports_default
 const StatusBadge = StatusBadgeImports_default
 const showSuccess = toastImports_showSuccess
 const showError = toastImports_showError
-const normalizeFaculty = facultyServiceImports_normalizeFaculty
-const facultyService = facultyServiceImports_default
+
+
 const academicService = academicServiceImports_default
 const roleApi = apiEndpointsImports_roleApi
 // ==========================================
@@ -4488,51 +4073,31 @@ const DEFAULT_STAFF_MEMBERS = [
   },
 ]
 
-const STORAGE_KEY_ROLES = 'pirnav_erp_rbac_roles_clean_v1'
-const STORAGE_KEY_DESIGNATIONS = 'pirnav_erp_rbac_designations_clean_v1'
-const STORAGE_KEY_ASSIGNMENTS = 'pirnav_erp_rbac_assignments_clean_v1'
+
+
+
 
 function RolesAndDesignations() {
+  const { selectedCollegeId } = AcademicContextImports_useAcademic()
+  return <RolesAndDesignationsWorkspace key={selectedCollegeId || 'none'} />
+}
+
+function RolesAndDesignationsWorkspace() {
+  const { canAction } = screenAccessImports_useScreenAccess()
+  const canCreateAccess = canAction('/roles-designations', 'create')
+  const canEditAccess = canAction('/roles-designations', 'edit')
+  const canDeleteAccess = canAction('/roles-designations', 'delete')
   const [activeTab, setActiveTab] = useState('roles') // 'roles' | 'designations' | 'assignments'
   const [query, setQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
-  // Real data state
-  const [roles, setRoles] = useState(() => {
-    try {
-      const saved = localStorage.getItem(collegeStorageKey(STORAGE_KEY_ROLES))
-      const parsed = saved ? JSON.parse(saved) : []
-      return Array.isArray(parsed) && parsed.length >= DEFAULT_SYSTEM_ROLES.length ? parsed : DEFAULT_SYSTEM_ROLES
-    } catch {
-      return DEFAULT_SYSTEM_ROLES
-    }
-  })
-
-  const [designations, setDesignations] = useState(() => {
-    try {
-      const saved = localStorage.getItem(collegeStorageKey(STORAGE_KEY_DESIGNATIONS))
-      const parsed = saved ? JSON.parse(saved) : []
-      return Array.isArray(parsed) && parsed.length >= DEFAULT_DESIGNATIONS.length ? parsed : DEFAULT_DESIGNATIONS
-    } catch {
-      return DEFAULT_DESIGNATIONS
-    }
-  })
-
-  const [assignments, setAssignments] = useState(() => {
-    try {
-      const saved = localStorage.getItem(collegeStorageKey(STORAGE_KEY_ASSIGNMENTS))
-      const parsed = saved ? JSON.parse(saved) : null
-      if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
-        return parsed
-      }
-      return {}
-    } catch {
-      return {}
-    }
-  })
-
+  const { selectedCollegeId } = AcademicContextImports_useAcademic()
+  const [roles, setRoles] = useState([]), [designations, setDesignations] = useState([]), [assignments, setAssignments] = useState({})
+  const [governanceBusy, setGovernanceBusy] = useState(false)
+  const governanceLock = reactImports_useRef(false), activeGovernanceCollege = reactImports_useRef(selectedCollegeId)
+  activeGovernanceCollege.current = selectedCollegeId
   const [facultyList, setFacultyList] = useCollegeState([])
   const [departments, setDepartments] = useCollegeState([])
   const [isLoadingFaculty, setIsLoadingFaculty] = useState(false)
@@ -4570,84 +4135,20 @@ function RolesAndDesignations() {
 
   const [deletingDesignation, setDeletingDesignation] = useState(null)
 
-  // Sync to LocalStorage
-  useEffect(() => {
-    localStorage.setItem(collegeStorageKey(STORAGE_KEY_ROLES), JSON.stringify(roles))
-  }, [roles])
-
-  useEffect(() => {
-    localStorage.setItem(collegeStorageKey(STORAGE_KEY_DESIGNATIONS), JSON.stringify(designations))
-  }, [designations])
-
-  useEffect(() => {
-    localStorage.setItem(collegeStorageKey(STORAGE_KEY_ASSIGNMENTS), JSON.stringify(assignments))
-  }, [assignments])
-
-  // Load real live faculty, departments, and roles from backend
-  const loadRoles = async () => {
-    setRolesLoadError('')
+  const loadRoles = useCallback(async () => {
+    setRolesLoadError('');setIsLoadingFaculty(true)
     try {
-      const apiRoles = await roleApi.getAll()
-      if (Array.isArray(apiRoles) && apiRoles.length > 0) {
-        const normalized = apiRoles.map((r) => {
-          const id = String(r.roleId ?? r.RoleId ?? r.id ?? r.Id ?? '')
-          const name = r.roleName ?? r.RoleName ?? r.name ?? r.Name ?? ''
-          const code = r.roleCode ?? r.RoleCode ?? r.code ?? r.Code ?? (name ? name.toUpperCase().replace(/\s+/g, '_') : '')
-          let permissions = r.permissions ?? r.Permissions
-          if (typeof permissions === 'string') {
-            try { permissions = JSON.parse(permissions) } catch { permissions = null }
-          }
-          if (!permissions || typeof permissions !== 'object') {
-            permissions = readOnlyPermissions()
-          }
-          return {
-            id: id || `ROLE-${name.toUpperCase().replace(/\s+/g, '_')}`,
-            roleId: id,
-            name,
-            code,
-            category: r.category ?? r.Category ?? 'Academic',
-            level: r.level ?? r.Level ?? 'Level 4 (Academic Staff)',
-            description: r.description ?? r.Description ?? '',
-            status: (r.status === 0 || r.status === 'Inactive' || r.status === false || r.isActive === false || r.IsActive === false) ? 'Inactive' : 'Active',
-            isSystem: Boolean(r.isSystem ?? r.IsSystem),
-            userCount: Number(r.userCount ?? r.UserCount ?? 0),
-            permissions,
-          }
-        }).filter(r => r.name)
-
-        if (normalized.length > 0) {
-          setRoles(normalized)
-          return
-        }
-      }
-    } catch (err) {
-      setRolesLoadError(err?.message || 'Failed to load roles from server.')
-      console.warn('Backend roles API request failed:', err?.message || err)
-    }
-  }
-
-  useEffect(() => {
-    loadRoles()
-
-    setIsLoadingFaculty(true)
-    facultyService.list()
-      .then((records) => {
-        const normalized = (records || []).map(normalizeFaculty).filter(r => r.fullName)
-        if (normalized.length > 0) {
-          setFacultyList(normalized)
-        }
-      })
-      .catch(() => {})
-      .finally(() => setIsLoadingFaculty(false))
-
-    academicService.getDepartments()
-      .then((depts) => {
-        if (Array.isArray(depts) && depts.length > 0) {
-          setDepartments(depts)
-        }
-      })
-      .catch(() => {})
-  }, [])
+      if (!selectedCollegeId) { setRoles([]);setDesignations([]);setFacultyList([]);setAssignments({});return }
+      const data = await accessGovernance.bootstrap(selectedCollegeId)
+      if (String(selectedCollegeId) !== String(activeGovernanceCollege.current)) return
+      setRoles((data.roles || []).map(row=>({...row,id:String(row.id),roleId:String(row.roleId ?? row.id),permissions:row.permissions || {}})))
+      setDesignations((data.designations || []).map(row=>({...row,id:String(row.id),defaultRole:row.defaultRoleId ? String(row.defaultRoleId):''})))
+      setFacultyList((data.staffAssignments || []).map(row=>({...row,id:String(row.employeeProfileId),collegeId:Number(selectedCollegeId)})))
+      setAssignments(Object.fromEntries((data.staffAssignments || []).map(row=>[String(row.employeeProfileId),{...row,roleId:row.roleId == null ? '' : String(row.roleId),designationId:row.designationId == null ? '' : String(row.designationId)}])))
+    } catch(error) {if (String(selectedCollegeId) !== String(activeGovernanceCollege.current)) return;setRoles([]);setDesignations([]);setFacultyList([]);setAssignments({});setRolesLoadError(error.message || 'Access governance could not be loaded.')}
+    finally {setIsLoadingFaculty(false)}
+  }, [selectedCollegeId, setFacultyList])
+  useEffect(() => { loadRoles(); academicService.getDepartments().then(setDepartments).catch(()=>setDepartments([])) }, [loadRoles, setDepartments])
 
   // Reset pagination on tab / search / filter change
   useEffect(() => {
@@ -4678,6 +4179,7 @@ function RolesAndDesignations() {
   // 1. ROLES & PERMISSIONS HANDLERS
   // ==========================================
   const handleOpenCreateRole = () => {
+    if (!canCreateAccess) return
     setRoleModalError('')
     setRoleFieldErrors({})
     setIsRoleCodeCustomized(false)
@@ -4697,6 +4199,7 @@ function RolesAndDesignations() {
   }
 
   const handleOpenEditRole = (role) => {
+    if (!canEditAccess) return
     setRoleModalError('')
     setRoleFieldErrors({})
     setIsRoleCodeCustomized(true)
@@ -4770,6 +4273,8 @@ function RolesAndDesignations() {
 
   const handleSaveRole = async (e) => {
     e.preventDefault()
+    const editingExisting = Number(editingRole?.id) > 0
+    if (!(editingExisting ? canEditAccess : canCreateAccess) || isSavingRole || governanceLock.current) return
     setRoleModalError('')
 
     const nameErr = validateRoleName(editingRole.name, editingRole.id, roles)
@@ -4810,12 +4315,14 @@ function RolesAndDesignations() {
     const isExistingNumeric = Number.isInteger(Number(editingRole.id)) && Number(editingRole.id) > 0
     let savedId = editingRole.id
 
+    governanceLock.current = true
     setIsSavingRole(true)
     try {
       if (isExistingNumeric) {
         await roleApi.update(editingRole.id, payload)
       } else {
         const created = await roleApi.create(payload)
+        if (!(created?.roleId || created?.id || created?.data?.roleId || created?.data?.id)) { setRoleModalError('The server did not return a saved role identity. Refresh roles before another creation.'); setIsRoleModalOpen(false); await loadRoles(); return }
         if (created?.roleId || created?.id || created?.data?.roleId || created?.data?.id) {
           savedId = String(created.roleId || created.id || created?.data?.roleId || created?.data?.id)
         }
@@ -4839,11 +4346,13 @@ function RolesAndDesignations() {
       setRoleModalError(errMsg)
       showError(errMsg)
     } finally {
+      governanceLock.current = false
       setIsSavingRole(false)
     }
   }
 
   const handleDeleteRole = (role) => {
+    if (!canDeleteAccess) return
     setRoleDeleteError('')
     if (role.isSystem) return showError('System default roles cannot be deleted.')
     const assignedStaffCount = countStaffWithRole(role.id)
@@ -4854,6 +4363,7 @@ function RolesAndDesignations() {
   }
 
   const handleConfirmDeleteRole = async () => {
+    if (!canDeleteAccess || isDeletingRole || governanceLock.current) return
     if (!deletingRole) return
     if (deletingRole.isSystem) {
       setDeletingRole(null)
@@ -4867,11 +4377,11 @@ function RolesAndDesignations() {
     }
 
     const isNumeric = Number.isInteger(Number(deletingRole.id)) && Number(deletingRole.id) > 0
+    governanceLock.current = true
     setIsDeletingRole(true)
     try {
-      if (isNumeric) {
-        await roleApi.delete(deletingRole.id)
-      }
+      if (!isNumeric) throw new Error('Reload roles before deleting a record without a backend identity.')
+      await roleApi.delete(deletingRole.id)
 
       // API Succeeded -> Update state, show success, close modal
       setRoles((current) => current.filter((r) => r.id !== deletingRole.id))
@@ -4883,6 +4393,7 @@ function RolesAndDesignations() {
       setRoleDeleteError(errMsg)
       showError(errMsg)
     } finally {
+      governanceLock.current = false
       setIsDeletingRole(false)
     }
   }
@@ -4895,6 +4406,7 @@ function RolesAndDesignations() {
   }
 
   const handleTogglePermission = (moduleId, actionId) => {
+    if (!canEditAccess) return
     setEditingPermissionsRole((prev) => {
       const currentMod = prev.permissions?.[moduleId] || { view: false, create: false, edit: false, delete: false, export: false }
       const nextVal = !currentMod[actionId]
@@ -4916,6 +4428,7 @@ function RolesAndDesignations() {
   }
 
   const handleToggleRowAll = (moduleId) => {
+    if (!canEditAccess) return
     setEditingPermissionsRole((prev) => {
       const currentMod = prev.permissions?.[moduleId] || { view: false, create: false, edit: false, delete: false, export: false }
       const allActive = PERMISSION_ACTIONS.every((act) => currentMod[act.id])
@@ -4937,6 +4450,7 @@ function RolesAndDesignations() {
   }
 
   const handleToggleCategoryAll = (category) => {
+    if (!canEditAccess) return
     setEditingPermissionsRole((prev) => {
       const categoryModules = SYSTEM_MODULES.filter((m) => m.category === category)
       const allCategoryActive = categoryModules.every((mod) => {
@@ -4962,7 +4476,7 @@ function RolesAndDesignations() {
   }
 
   const handleApplyPreset = (presetName) => {
-    if (!editingPermissionsRole) return
+    if (!canEditAccess || !editingPermissionsRole) return
     let newPerms = {}
     if (presetName === 'full') newPerms = fullAccessPermissions()
     if (presetName === 'read') newPerms = readOnlyPermissions()
@@ -4973,10 +4487,11 @@ function RolesAndDesignations() {
       ...prev,
       permissions: newPerms,
     }))
-    showSuccess(`Applied "${presetName.toUpperCase()}" permissions preset.`)
+    showSuccess('Permissions preset loaded into the draft. Save to apply it.')
   }
 
   const handleSavePermissions = async () => {
+    if (!canEditAccess || isSavingPerms || governanceLock.current) return
     setPermsModalError('')
     const isBoolStatus = editingPermissionsRole.status === 'Active' || editingPermissionsRole.status === true || editingPermissionsRole.status === 1
     const payload = {
@@ -4993,13 +4508,11 @@ function RolesAndDesignations() {
     }
     const isExistingNumeric = Number.isInteger(Number(editingPermissionsRole.id)) && Number(editingPermissionsRole.id) > 0
 
+    governanceLock.current = true
     setIsSavingPerms(true)
     try {
-      if (isExistingNumeric) {
-        await roleApi.update(editingPermissionsRole.id, payload)
-      } else {
-        await roleApi.create(payload)
-      }
+      if (!isExistingNumeric) throw new Error('Reload roles before assigning permissions to an unsaved role.')
+      await roleApi.update(editingPermissionsRole.id, payload)
 
       // API Succeeded -> Update state, notify, close modal
       setRoles((current) => current.map((r) => (r.id === editingPermissionsRole.id ? editingPermissionsRole : r)))
@@ -5011,6 +4524,7 @@ function RolesAndDesignations() {
       setPermsModalError(errMsg)
       showError(errMsg)
     } finally {
+      governanceLock.current = false
       setIsSavingPerms(false)
     }
   }
@@ -5019,6 +4533,7 @@ function RolesAndDesignations() {
   // 2. DESIGNATIONS HANDLERS
   // ==========================================
   const handleOpenCreateDesignation = () => {
+    if (!canCreateAccess) return
     setDesFieldErrors({})
     setIsDesCodeCustomized(false)
     setEditingDesignation({
@@ -5035,6 +4550,7 @@ function RolesAndDesignations() {
   }
 
   const handleOpenEditDesignation = (des) => {
+    if (!canEditAccess) return
     setDesFieldErrors({})
     setIsDesCodeCustomized(true)
     setEditingDesignation({ ...des })
@@ -5081,8 +4597,9 @@ function RolesAndDesignations() {
     setDesFieldErrors((prev) => ({ ...prev, code: codeErr }))
   }
 
-  const handleSaveDesignation = (e) => {
+  const handleSaveDesignation = async (e) => {
     e.preventDefault()
+    if (!(Number(editingDesignation?.id) > 0 ? canEditAccess : canCreateAccess) || governanceLock.current) return
 
     const titleErr = validateDesTitle(editingDesignation.title, editingDesignation.id, designations)
     const codeErr = validateDesCode(editingDesignation.code, editingDesignation.id, designations)
@@ -5106,19 +4623,17 @@ function RolesAndDesignations() {
 
     const normalizedCode = editingDesignation.code.trim().toUpperCase()
 
-    setDesignations((current) => {
-      const exists = current.some((d) => d.id === editingDesignation.id)
-      if (exists) {
-        return current.map((d) => (d.id === editingDesignation.id ? { ...editingDesignation, code: normalizedCode } : d))
-      }
-      return [...current, { ...editingDesignation, code: normalizedCode }]
-    })
-
-    showSuccess(`Designation "${editingDesignation.title}" saved successfully.`)
-    setIsDesModalOpen(false)
+    governanceLock.current = true; setGovernanceBusy(true)
+    try {
+      const saved = await accessGovernance.saveDesignation({...editingDesignation,code:normalizedCode}, selectedCollegeId)
+      if (!saved?.id && !saved?.designationId) throw new Error('The server did not return the saved designation identity. Refresh before trying again.')
+      setEditingDesignation({...editingDesignation,...saved,id:String(saved.id ?? saved.designationId)})
+      await loadRoles(); setIsDesModalOpen(false); showSuccess('Designation saved.')
+    } catch(error) {showError(error.message)} finally {governanceLock.current = false; setGovernanceBusy(false)}
   }
 
   const handleDeleteDesignation = (des) => {
+    if (!canDeleteAccess) return
     const assignedStaffCount = countStaffWithDesignation(des.id, des.title)
     if (assignedStaffCount > 0) {
       return showError(`Cannot delete designation "${des.title}" because it is currently assigned to ${assignedStaffCount} staff member(s). Reassign them first.`)
@@ -5126,34 +4641,33 @@ function RolesAndDesignations() {
     setDeletingDesignation(des)
   }
 
-  const handleConfirmDeleteDesignation = () => {
+  const handleConfirmDeleteDesignation = async () => {
     if (!deletingDesignation) return
     const assignedStaffCount = countStaffWithDesignation(deletingDesignation.id, deletingDesignation.title)
     if (assignedStaffCount > 0) {
       return showError(`Cannot delete designation "${deletingDesignation.title}" because it is assigned to ${assignedStaffCount} staff member(s).`)
     }
 
-    setDesignations((current) => current.filter((d) => d.id !== deletingDesignation.id))
-    showSuccess(`Designation "${deletingDesignation.title}" deleted successfully.`)
-    setDeletingDesignation(null)
+    if (!canDeleteAccess || governanceLock.current) return
+    governanceLock.current = true; setGovernanceBusy(true)
+    try { await accessGovernance.deleteDesignation(deletingDesignation.id,selectedCollegeId); await loadRoles();setDeletingDesignation(null);showSuccess('Designation deleted.') }
+    catch(error) {showError(error.message)} finally {governanceLock.current = false; setGovernanceBusy(false)}
   }
 
-  // ==========================================
-  // 3. STAFF ACCESS ASSIGNMENT HANDLERS
-  // ==========================================
   const handleOpenAssignStaff = (staff) => {
+    if (!canEditAccess) return
     setAssigningStaff(staff)
     const assigned = assignments[staff.id]
 
     const staffDesText = String(staff.designation || '').trim().toLowerCase()
     const matchedDes = designations.find((d) =>
-      (staffDesText && d.title.toLowerCase().includes(staffDesText)) ||
+      (staffDesText && d.title.toLowerCase() === staffDesText) ||
       (staffDesText && d.code.toLowerCase() === staffDesText)
-    ) || designations[0]
+    )
 
-    const initialDesId = assigned?.designationId || matchedDes?.id || (designations[0]?.id || '')
+    const initialDesId = assigned?.designationId || matchedDes?.id || ''
     const selectedDesObj = designations.find((d) => d.id === initialDesId) || matchedDes
-    const initialRoleId = assigned?.roleId || selectedDesObj?.defaultRole || (roles[0]?.id || '')
+    const initialRoleId = assigned?.roleId || selectedDesObj?.defaultRole || ''
 
     setSelectedStaffDesignation(initialDesId)
     setSelectedStaffRole(initialRoleId)
@@ -5164,7 +4678,7 @@ function RolesAndDesignations() {
       setSelectedStaffScopeDept(assigned.scopeDepartmentId || assigned.scopeDepartmentName || staff.department || '')
     } else if (assigned?.scope?.startsWith('Department')) {
       setSelectedStaffScopeType('Department')
-      setSelectedStaffScopeDept(assigned.scopeDepartmentId || staff.department || '')
+      setSelectedStaffScopeDept(assigned.scopeDepartmentId || assigned.scopeDepartmentName || (assigned.scope.includes(':') ? assigned.scope.split(':').slice(1).join(':').trim() : '') || staff.department || '')
     } else if (assigned?.scope === 'Institution-wide' || assigned?.scope === 'College-wide') {
       setSelectedStaffScopeType('Institution-wide')
       setSelectedStaffScopeDept('')
@@ -5187,7 +4701,7 @@ function RolesAndDesignations() {
     }
   }
 
-  const handleSaveStaffAssignment = (e) => {
+  const handleSaveStaffAssignment = async (e) => {
     e.preventDefault()
     if (!assigningStaff) return
     if (!selectedStaffDesignation) return showError('Please select an official designation.')
@@ -5198,27 +4712,17 @@ function RolesAndDesignations() {
     let selectedDeptObj = null
     if (selectedStaffScopeType === 'Department') {
       selectedDeptObj = departments.find(d => String(d.id) === String(selectedStaffScopeDept) || d.name === selectedStaffScopeDept)
-      const deptName = selectedDeptObj?.name || selectedStaffScopeDept || assigningStaff.department || 'Department'
+      if (!selectedDeptObj) return showError('Select a valid department before assigning department-scoped access.')
+      const deptName = selectedDeptObj.name
       formattedScope = `Department: ${deptName}`
     }
 
-    setAssignments((prev) => ({
-      ...prev,
-      [assigningStaff.id]: {
-        roleId: selectedStaffRole,
-        designationId: selectedStaffDesignation,
-        scope: formattedScope,
-        scopeType: selectedStaffScopeType,
-        scopeDepartmentId: selectedDeptObj?.id || selectedStaffScopeDept || '',
-        scopeDepartmentName: selectedDeptObj?.name || selectedStaffScopeDept || '',
-        updatedAt: new Date().toISOString(),
-      },
-    }))
-
-    const assignedRole = roles.find((r) => r.id === selectedStaffRole)
-    const assignedDes = designations.find((d) => d.id === selectedStaffDesignation)
-    showSuccess(`Updated access for ${assigningStaff.fullName} to "${assignedRole?.name || 'Assigned Role'}" (${assignedDes?.title || ''}).`)
-    setIsAssignModalOpen(false)
+    if (!canEditAccess || governanceLock.current) return
+    governanceLock.current = true; setGovernanceBusy(true)
+    try {
+      await accessGovernance.assignStaff(assigningStaff.id,{roleId:selectedStaffRole,designationId:selectedStaffDesignation,scope:formattedScope},selectedCollegeId)
+      await loadRoles();setIsAssignModalOpen(false);showSuccess('Staff access updated by the server.')
+    } catch(error) {showError(error.message)} finally {governanceLock.current = false; setGovernanceBusy(false)}
   }
 
   // ==========================================
@@ -5353,6 +4857,7 @@ function RolesAndDesignations() {
           </div>
         )}
 
+        {isLoadingFaculty && <p role="status">Loading access governance…</p>}
         {/* Main Card Container */}
         <div className="sa-directory rbac-main-card">
           {/* Tabs Navigation Header */}
@@ -5383,12 +4888,12 @@ function RolesAndDesignations() {
 
             <div className="rbac-header-actions">
               {activeTab === 'roles' && (
-                <button type="button" className="sa-primary rbac-action-btn" onClick={handleOpenCreateRole}>
+                <button type="button" className="sa-primary rbac-action-btn" disabled={!canCreateAccess} onClick={handleOpenCreateRole}>
                   <FiPlus /> Create New Role
                 </button>
               )}
               {activeTab === 'designations' && (
-                <button type="button" className="sa-primary rbac-action-btn" onClick={handleOpenCreateDesignation}>
+                <button type="button" className="sa-primary rbac-action-btn" disabled={!canCreateAccess} onClick={handleOpenCreateDesignation}>
                   <FiPlus /> Add Designation
                 </button>
               )}
@@ -5515,7 +5020,7 @@ function RolesAndDesignations() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => handleOpenEditRole(role)}
+                              disabled={!canEditAccess} onClick={() => handleOpenEditRole(role)}
                               title="Edit Role Details"
                               className="rbac-icon-btn is-edit"
                             >
@@ -5524,7 +5029,7 @@ function RolesAndDesignations() {
                             {!role.isSystem && (
                               <button
                                 type="button"
-                                onClick={() => handleDeleteRole(role)}
+                                disabled={!canDeleteAccess} onClick={() => handleDeleteRole(role)}
                                 title="Delete Custom Role"
                                 className="rbac-icon-btn is-delete"
                               >
@@ -5543,9 +5048,7 @@ function RolesAndDesignations() {
                           <FiShield />
                           <h3>No Roles Created Yet</h3>
                           <p>Click "Create New Role" above to define system access profiles.</p>
-                          <button type="button" className="sa-primary rbac-empty-create-btn" onClick={handleOpenCreateRole}>
-                            <FiPlus /> Create New Role
-                          </button>
+                          
                         </div>
                       </td>
                     </tr>
@@ -5619,7 +5122,7 @@ function RolesAndDesignations() {
                           <div className="rbac-table-row-actions">
                             <button
                               type="button"
-                              onClick={() => handleOpenEditDesignation(des)}
+                              disabled={!canEditAccess} onClick={() => handleOpenEditDesignation(des)}
                               title="Edit Designation"
                               className="rbac-icon-btn is-edit"
                             >
@@ -5627,7 +5130,7 @@ function RolesAndDesignations() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => handleDeleteDesignation(des)}
+                              disabled={!canDeleteAccess} onClick={() => handleDeleteDesignation(des)}
                               title="Delete Designation"
                               className="rbac-icon-btn is-delete"
                             >
@@ -5645,9 +5148,7 @@ function RolesAndDesignations() {
                           <FiAward />
                           <h3>No Designations Created Yet</h3>
                           <p>Click "Add Designation" above to define official job titles and hierarchy levels.</p>
-                          <button type="button" className="sa-primary rbac-empty-create-btn" onClick={handleOpenCreateDesignation}>
-                            <FiPlus /> Add Designation
-                          </button>
+                          
                         </div>
                       </td>
                     </tr>
@@ -5692,7 +5193,7 @@ function RolesAndDesignations() {
                         <span className="rbac-code-badge">{staff.employeeId || 'N/A'}</span>
                       </td>
                       <td>
-                        <span className="rbac-dept-name">{staff.department || 'Academic Department'}</span>
+                        <span className="rbac-dept-name">{staff.department || '—'}</span>
                       </td>
                       <td>
                         {staff.currentDesignation?.title ? (
@@ -5726,7 +5227,7 @@ function RolesAndDesignations() {
                         <button
                           type="button"
                           className="rbac-action-assign-btn"
-                          onClick={() => handleOpenAssignStaff(staff)}
+                          disabled={!canEditAccess} onClick={() => handleOpenAssignStaff(staff)}
                         >
                           <FiUserCheck /> Assign Access
                         </button>
@@ -5809,7 +5310,7 @@ function RolesAndDesignations() {
         {/* MODAL 1: CREATE / EDIT ROLE */}
         {/* ============================================================== */}
         {isRoleModalOpen && editingRole && (
-          <div className="rbac-modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && !isSavingRole && setIsRoleModalOpen(false)}>
+          <ViewDialog title="Access Role" onClose={() => setIsRoleModalOpen(false)} busy={isSavingRole} showExport={false} hideFooter maxWidth="760px">
             <div className="rbac-modal-window">
               <button type="button" className="rbac-modal-close" disabled={isSavingRole} onClick={() => setIsRoleModalOpen(false)}>
                 <FiX />
@@ -5855,11 +5356,11 @@ function RolesAndDesignations() {
               <form onSubmit={handleSaveRole}>
                 <div className="rbac-modal-grid">
                   <div className={`sa-field ${roleFieldErrors.name ? 'has-error' : ''}`}>
-                    <label>Role Name <b>*</b></label>
+                    <label htmlFor="access-role-name">Role Name <b>*</b></label>
                     <input
                       type="text"
                       required
-                      value={editingRole.name}
+                      id="access-role-name" aria-label="Role Name" value={editingRole.name}
                       onChange={(e) => handleRoleNameChange(e.target.value)}
                       placeholder="e.g. Academic Administrator"
                     />
@@ -5872,7 +5373,7 @@ function RolesAndDesignations() {
 
                   <div className={`sa-field ${roleFieldErrors.code ? 'has-error' : ''}`}>
                     <div className="rbac-field-label-row">
-                      <label>Role Code <b>*</b></label>
+                      <label htmlFor="access-role-code">Role Code <b>*</b></label>
                       {!editingRole.isSystem && (
                         <span className={`rbac-code-badge-hint ${isRoleCodeCustomized ? 'is-custom' : 'is-auto'}`}>
                           {isRoleCodeCustomized ? (
@@ -5891,7 +5392,7 @@ function RolesAndDesignations() {
                     <input
                       type="text"
                       required
-                      value={editingRole.code}
+                      id="access-role-code" aria-label="Role Code" value={editingRole.code}
                       onChange={(e) => handleRoleCodeChange(e.target.value)}
                       placeholder="e.g. ACADEMIC_ADMIN"
                       disabled={editingRole.isSystem}
@@ -5912,7 +5413,7 @@ function RolesAndDesignations() {
                     <label>Category <b>*</b></label>
                     <ProjectSelect
                       required
-                      value={editingRole.category}
+                      id="access-role-category" aria-label="Role Category" value={editingRole.category}
                       onChange={(e) => {
                         setEditingRole({ ...editingRole, category: e.target.value })
                         setRoleFieldErrors((prev) => ({ ...prev, category: '' }))
@@ -5935,7 +5436,7 @@ function RolesAndDesignations() {
                     <label>Hierarchy Level <b>*</b></label>
                     <ProjectSelect
                       required
-                      value={editingRole.level}
+                      id="access-role-level" aria-label="Role Hierarchy Level" value={editingRole.level}
                       onChange={(e) => {
                         setEditingRole({ ...editingRole, level: e.target.value })
                         setRoleFieldErrors((prev) => ({ ...prev, level: '' }))
@@ -5970,7 +5471,7 @@ function RolesAndDesignations() {
                     <label>Status <b>*</b></label>
                     <ProjectSelect
                       required
-                      value={editingRole.status}
+                      id="access-role-status" aria-label="Role Status" value={editingRole.status}
                       onChange={(e) => {
                         setEditingRole({ ...editingRole, status: e.target.value })
                         setRoleFieldErrors((prev) => ({ ...prev, status: '' }))
@@ -5998,14 +5499,14 @@ function RolesAndDesignations() {
                 </footer>
               </form>
             </div>
-          </div>
+          </ViewDialog>
         )}
 
         {/* ============================================================== */}
         {/* MODAL 2: CREATE / EDIT DESIGNATION */}
         {/* ============================================================== */}
         {isDesModalOpen && editingDesignation && (
-          <div className="rbac-modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && setIsDesModalOpen(false)}>
+          <ViewDialog title="Designation" onClose={() => setIsDesModalOpen(false)} busy={governanceBusy} showExport={false} hideFooter maxWidth="760px">
             <div className="rbac-modal-window">
               <button type="button" className="rbac-modal-close" onClick={() => setIsDesModalOpen(false)}>
                 <FiX />
@@ -6024,7 +5525,7 @@ function RolesAndDesignations() {
                     <input
                       type="text"
                       required
-                      value={editingDesignation.title}
+                      id="access-designation-title" aria-label="Designation Title" value={editingDesignation.title}
                       onChange={(e) => handleDesTitleChange(e.target.value)}
                       placeholder="e.g. Associate Professor"
                     />
@@ -6054,7 +5555,7 @@ function RolesAndDesignations() {
                     <input
                       type="text"
                       required
-                      value={editingDesignation.code}
+                      id="access-designation-code" aria-label="Designation Code" value={editingDesignation.code}
                       onChange={(e) => handleDesCodeChange(e.target.value)}
                       placeholder="e.g. ASSOC_PROF"
                     />
@@ -6074,7 +5575,7 @@ function RolesAndDesignations() {
                     <label>Staff Category <b>*</b></label>
                     <ProjectSelect
                       required
-                      value={editingDesignation.category}
+                      id="access-designation-category" aria-label="Designation Category" value={editingDesignation.category}
                       onChange={(e) => {
                         setEditingDesignation({ ...editingDesignation, category: e.target.value })
                         setDesFieldErrors((prev) => ({ ...prev, category: '' }))
@@ -6095,7 +5596,7 @@ function RolesAndDesignations() {
                     <label>Hierarchy Level Band <b>*</b></label>
                     <ProjectSelect
                       required
-                      value={editingDesignation.level}
+                      id="access-designation-level" aria-label="Designation Hierarchy Level" value={editingDesignation.level}
                       onChange={(e) => {
                         setEditingDesignation({ ...editingDesignation, level: e.target.value })
                         setDesFieldErrors((prev) => ({ ...prev, level: '' }))
@@ -6153,7 +5654,7 @@ function RolesAndDesignations() {
                     <label>Status <b>*</b></label>
                     <ProjectSelect
                       required
-                      value={editingDesignation.status}
+                      id="access-designation-status" aria-label="Designation Status" value={editingDesignation.status}
                       onChange={(e) => {
                         setEditingDesignation({ ...editingDesignation, status: e.target.value })
                         setDesFieldErrors((prev) => ({ ...prev, status: '' }))
@@ -6181,14 +5682,14 @@ function RolesAndDesignations() {
                 </footer>
               </form>
             </div>
-          </div>
+          </ViewDialog>
         )}
 
         {/* ============================================================== */}
         {/* MODAL 3: GRANULAR PERMISSIONS MATRIX */}
         {/* ============================================================== */}
         {isPermModalOpen && editingPermissionsRole && (
-          <div className="rbac-modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && !isSavingPerms && setIsPermModalOpen(false)}>
+          <ViewDialog title="Module Permissions" onClose={() => setIsPermModalOpen(false)} busy={isSavingPerms} showExport={false} hideFooter maxWidth="1200px">
             <div className="rbac-matrix-dialog">
               {/* Header Bar */}
               <div className="rbac-matrix-top-bar">
@@ -6218,16 +5719,16 @@ function RolesAndDesignations() {
               <div className="rbac-matrix-sub-toolbar">
                 <div className="rbac-presets-strip">
                   <span className="rbac-preset-caption">Quick Presets:</span>
-                  <button type="button" className="rbac-preset-chip" onClick={() => handleApplyPreset('full')}>
+                  <button type="button" className="rbac-preset-chip" disabled={!canEditAccess} onClick={() => handleApplyPreset('full')}>
                     Full Access
                   </button>
-                  <button type="button" className="rbac-preset-chip" onClick={() => handleApplyPreset('hod')}>
+                  <button type="button" className="rbac-preset-chip" disabled={!canEditAccess} onClick={() => handleApplyPreset('hod')}>
                     HOD Lead
                   </button>
-                  <button type="button" className="rbac-preset-chip" onClick={() => handleApplyPreset('faculty')}>
+                  <button type="button" className="rbac-preset-chip" disabled={!canEditAccess} onClick={() => handleApplyPreset('faculty')}>
                     Teaching Faculty
                   </button>
-                  <button type="button" className="rbac-preset-chip" onClick={() => handleApplyPreset('read')}>
+                  <button type="button" className="rbac-preset-chip" disabled={!canEditAccess} onClick={() => handleApplyPreset('read')}>
                     Read Only
                   </button>
                 </div>
@@ -6283,7 +5784,7 @@ function RolesAndDesignations() {
                                 <button
                                   type="button"
                                   className="rbac-cat-bulk-btn"
-                                  onClick={() => handleToggleCategoryAll(category)}
+                                  disabled={!canEditAccess} onClick={() => handleToggleCategoryAll(category)}
                                 >
                                   {allCatChecked ? <><FiX size={16} aria-hidden="true" /> Deselect All in Category</> : <><FiCheck size={16} aria-hidden="true" /> Grant All in Category</>}
                                 </button>
@@ -6318,6 +5819,8 @@ function RolesAndDesignations() {
                                         <input
                                           type="checkbox"
                                           checked={isChecked}
+                                          aria-label={`${mod.name} ${act.label}`}
+                                          disabled={!canEditAccess || isSavingPerms}
                                           onChange={() => handleTogglePermission(mod.id, act.id)}
                                         />
                                         <span className={`rbac-checkbox-custom-mark ${isChecked ? 'is-granted' : ''}`}>
@@ -6332,7 +5835,7 @@ function RolesAndDesignations() {
                                   <button
                                     type="button"
                                     className={`rbac-module-toggle-btn ${isAllRowActive ? 'is-all-granted' : ''}`}
-                                    onClick={() => handleToggleRowAll(mod.id)}
+                                    disabled={!canEditAccess} onClick={() => handleToggleRowAll(mod.id)}
                                   >
                                     {isAllRowActive ? 'All Granted' : 'Toggle All'}
                                   </button>
@@ -6356,20 +5859,20 @@ function RolesAndDesignations() {
                   <button type="button" className="sa-secondary rbac-btn-cancel" disabled={isSavingPerms} onClick={() => setIsPermModalOpen(false)}>
                     Cancel
                   </button>
-                  <button type="button" className="sa-primary rbac-btn-save-matrix" disabled={isSavingPerms} onClick={handleSavePermissions}>
+                  <button type="button" className="sa-primary rbac-btn-save-matrix" disabled={!canEditAccess || isSavingPerms} onClick={handleSavePermissions}>
                     <FiCheck /> {isSavingPerms ? 'Saving Matrix...' : 'Save & Apply Permission Matrix'}
                   </button>
                 </div>
               </footer>
             </div>
-          </div>
+          </ViewDialog>
         )}
 
         {/* ============================================================== */}
         {/* MODAL 4: ASSIGN ROLE & SCOPE TO STAFF */}
         {/* ============================================================== */}
         {isAssignModalOpen && assigningStaff && (
-          <div className="rbac-modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && setIsAssignModalOpen(false)}>
+          <ViewDialog title="Assign Staff Access" onClose={() => setIsAssignModalOpen(false)} busy={governanceBusy} showExport={false} hideFooter maxWidth="760px">
             <div className="rbac-modal-window">
               <button type="button" className="rbac-modal-close" onClick={() => setIsAssignModalOpen(false)}>
                 <FiX />
@@ -6409,7 +5912,7 @@ function RolesAndDesignations() {
                     <label>Official Designation (Job Title) <b>*</b></label>
                     <ProjectSelect
                       required
-                      value={selectedStaffDesignation}
+                      id="access-staff-designation" aria-label="Official Designation" value={selectedStaffDesignation}
                       onChange={(e) => handleDesignationSelect(e.target.value)}
                     >
                       <option value="">Select Official Designation</option>
@@ -6432,7 +5935,7 @@ function RolesAndDesignations() {
                     </div>
                     <ProjectSelect
                       required
-                      value={selectedStaffRole}
+                      id="access-staff-role" aria-label="System Access Role" value={selectedStaffRole}
                       onChange={(e) => setSelectedStaffRole(e.target.value)}
                     >
                       <option value="">Select System Access Role</option>
@@ -6521,14 +6024,14 @@ function RolesAndDesignations() {
                 </footer>
               </form>
             </div>
-          </div>
+          </ViewDialog>
         )}
 
         {/* ============================================================== */}
         {/* MODAL 5: DELETE ROLE CONFIRMATION */}
         {/* ============================================================== */}
         {deletingRole && (
-          <div className="rbac-modal-backdrop" onClick={() => !isDeletingRole && setDeletingRole(null)}>
+          <ViewDialog title="Delete Role" onClose={() => setDeletingRole(null)} busy={isDeletingRole} showExport={false} hideFooter maxWidth="600px">
             <div className="rbac-delete-modal-window" onClick={(e) => e.stopPropagation()}>
               <div className="rbac-delete-modal-header">
                 <div className="rbac-delete-icon-badge">
@@ -6597,14 +6100,14 @@ function RolesAndDesignations() {
                 </button>
               </div>
             </div>
-          </div>
+          </ViewDialog>
         )}
 
         {/* ============================================================== */}
         {/* MODAL 6: DELETE DESIGNATION CONFIRMATION */}
         {/* ============================================================== */}
         {deletingDesignation && (
-          <div className="rbac-modal-backdrop" onClick={() => setDeletingDesignation(null)}>
+          <ViewDialog title="Delete Designation" onClose={() => setDeletingDesignation(null)} busy={governanceBusy} showExport={false} hideFooter maxWidth="600px">
             <div className="rbac-delete-modal-window" onClick={(e) => e.stopPropagation()}>
               <div className="rbac-delete-modal-header">
                 <div className="rbac-delete-icon-badge">
@@ -6664,7 +6167,7 @@ function RolesAndDesignations() {
                 </button>
               </div>
             </div>
-          </div>
+          </ViewDialog>
         )}
       </div>
     </DashboardLayout>
@@ -7236,7 +6739,7 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
               className="cm-button secondary"
               onClick={() => navigate('/rooms-management')}
             >
-              &larr; Back 
+              &larr; Back
             </button>
             {targetRoom && (
               <button

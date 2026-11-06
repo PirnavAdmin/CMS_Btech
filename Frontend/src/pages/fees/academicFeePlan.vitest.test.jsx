@@ -1,14 +1,18 @@
 import React from 'react'
 import { afterEach, expect, test, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { FeeStructureWizard } from './FeeManagement'
+import { MemoryRouter } from 'react-router-dom'
+import { FeeStructureWizard, FeeStructure } from './FeeManagement'
 import { academicFeePlanApi } from '../../api/apiEndpoints'
 import { newFeeStructure } from '../../services/feeStructureService'
-vi.mock('../../context/AcademicContext', () => ({ useAcademic: () => ({ loading: false, error: null }) }))
-vi.mock('../../api/apiEndpoints', async importOriginal => ({ ...await importOriginal(), feeConfigurationApi: { categories: vi.fn(async () => [{ id: 8, name: 'Academic charges' }]) }, academicFeePlanApi: { list: vi.fn(async () => []), create: vi.fn(async body => ({ ...body, feeStructureId: 101, revision: 1, status: 'DRAFT' })) } }))
+const access=vi.hoisted(()=>({write:true,scope:rows=>rows}))
+vi.mock('../../auth/ScreenAccess',()=>({useScreenAccess:()=>({canAction:()=>access.write})}))
+vi.mock('../../auth/collegeApi',()=>({getSemesters:vi.fn(async()=>[])}))
+vi.mock('../../context/AcademicContext', () => ({ useAcademic: () => ({ loading: false, error: null, selectedCollegeId:'9',academicYears:[],scopeRecords:access.scope }) }))
+vi.mock('../../api/apiEndpoints', async importOriginal => ({ ...await importOriginal(), branchApi:{getAll:vi.fn(async()=>[])},courseApi:{getAll:vi.fn(async()=>[])},departmentApi:{getAll:vi.fn(async()=>[])}, feeConfigurationApi: { categories: vi.fn(async () => [{ id: 8, name: 'Academic charges' }]) }, academicFeePlanApi: { list: vi.fn(async () => []), create: vi.fn(async body => ({ ...body, feeStructureId: 101, revision: 1, status: 'DRAFT' })) } }))
 // Native controls make the dependency behavior independent of dropdown presentation.
 vi.mock('../../components/SearchableSelect', () => ({ default: ({ label, value, options, onChange, disabled }) => <select aria-label={label} value={value} disabled={disabled} onChange={e => onChange(e.target.value)}>{options.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select>, ProjectSelect: () => null }))
-afterEach(cleanup)
+afterEach(()=>{cleanup();access.write=true})
 const masters = { years: [{ id: '1', name: '2026-27' }], courses: [{ id: '2', name: 'B.Tech' }, { id: '3', name: 'M.Tech' }], branches: [{ id: '4', courseId: '2', name: 'CSE' }, { id: '5', courseId: '3', name: 'ECE' }], semesters: [{ id: '6', courseId: '2', branchId: '4', name: 'Semester 3' }], batchScopes: [{ courseId: '2', branchId: '4', batch: '2025-2029' }] }
 function mount() { return render(<FeeStructureWizard value={newFeeStructure('1')} masters={masters} collegeId="9" close={() => {}} save={() => {}} />) }
 const choose = (name, value) => fireEvent.change(screen.getByLabelText(name), { target: { value } })
@@ -115,4 +119,11 @@ test('Fee Breakdown retains independent quota fee heads, copy and totals without
  const bodies = academicFeePlanApi.create.mock.calls.map(([body]) => body);
  expect(bodies[0]).toMatchObject({ quota: 'Management', totalAmount: '5000.00', components: [{ name: 'Tuition Fee', amount: '5000.00' }] });
  expect(bodies[1]).toMatchObject({ quota: 'NRI', totalAmount: '8000.00', components: [{ name: 'Tuition Fee', amount: '8000.00' }] });
+})
+
+test('academic fee directory offers a retry instead of showing an empty successful read',async()=>{
+ const retry=vi.fn();render(<MemoryRouter><FeeStructure embedded workflow={{rows:[],error:'Fee plans offline',retry}}/></MemoryRouter>);fireEvent.click(await screen.findByRole('button',{name:'Retry fee structures'}));expect(retry).toHaveBeenCalledTimes(1);expect(screen.queryByText('No academic fee plans yet')).toBeNull()
+})
+test('readonly fee structure directory hides editing while retaining real draft details',async()=>{
+ access.write=false;const plan={...newFeeStructure('1'),id:'41',code:'AFP-41',name:'Backend draft',status:'Draft',collegeId:'9',components:[]};render(<MemoryRouter><FeeStructure embedded workflow={{rows:[plan],assignments:[]}}/></MemoryRouter>);await screen.findByText('Backend draft');expect(screen.getByTitle('View Plan Details')).toBeTruthy();expect(screen.queryByTitle('Edit Plan')).toBeNull();expect(screen.getByRole('button',{name:/Create Academic Plan/}).disabled).toBe(true)
 })

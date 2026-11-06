@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Security.Claims;
 using BTech.DTOs.MarksManagement;
+using BTech.Middleware;
+using BTech.Services;
 using BTech.Services.Interfaces;
 using ClosedXML.Excel;
 using Microsoft.AspNetCore.Authorization;
@@ -375,9 +377,21 @@ public sealed class MarksController : ControllerBase
 
     private long? CollegeId()
     {
-        var raw = User.FindFirstValue("collegeId");
-        return long.TryParse(raw, out var id) && id > 0 ? id : null;
+        // The authorization middleware validates the selected college against the
+        // user's active college assignment/mapping and stores the effective scope.
+        // Super Admin may optionally select one college; no selection means global scope.
+        if (IsSuperAdmin())
+            return HttpContext.Items.TryGetValue(AcademicYearScopeRequest.ItemKey, out var selected)
+                   && selected is long selectedCollege && selectedCollege > 0
+                ? selectedCollege
+                : null;
+
+        return HttpContext.Items[ModulePermissionMiddleware.CurrentCollegeItem] is long effectiveCollege
+               && effectiveCollege > 0
+            ? effectiveCollege
+            : null;
     }
 
-    private bool IsSuperAdmin() => User.IsInRole("SUPER_ADMIN");
+    private bool IsSuperAdmin() =>
+        HttpContext.Items[ModulePermissionMiddleware.SuperAdminItem] is true;
 }

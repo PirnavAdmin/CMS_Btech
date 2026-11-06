@@ -161,3 +161,21 @@ test('a failed enrollment read prevents a basic-information PUT with unverified 
     assert.deepEqual(methods, ['GET'])
   } finally { globalThis.fetch = originalFetch }
 })
+
+test('explicit fee replacement sends the existing reason field without changing enrollment', async () => {
+  const previousFetch = globalThis.fetch
+  try {
+    globalThis.fetch = async (_url, options) => {
+      if (!options.method) return Response.json({ data: { admissionId: 56, collegeId: 9, academicYearId: 3, courseId: 1, branchId: 2, semesterId: 4 } })
+      const payload = JSON.parse(options.body)
+      assert.equal(options.method, 'PUT')
+      assert.equal(payload.feeStructureId, 22)
+      assert.equal(payload.feePlanChangeReason, 'Corrected quota')
+      assert.equal(payload.courseId, 1)
+      return Response.json({ data: { admissionId: 56, feeStructureId: 22 } })
+    }
+    await studentAdmissionApi.update(56, { feeStructureId: 22, academic: { courseId: 99 } }, {
+      preserveAcademicMapping: true, feePlanChangeReason: 'Corrected quota',
+    })
+  } finally { globalThis.fetch = previousFetch }
+})

@@ -55,6 +55,11 @@
     "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
   },
   {
+    "file": "src/pages/examinations/LiveExaminationWorkspace.jsx",
+    "referencedByInventory": false,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
     "file": "src/pages/examinations/marks-management/MarksManagement.jsx",
     "referencedByInventory": true,
     "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
@@ -66,6 +71,11 @@
   },
   {
     "file": "src/pages/fees/FeeManagement.jsx",
+    "referencedByInventory": true,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/fees/FeeTypesConfiguration.jsx",
     "referencedByInventory": true,
     "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
   },
@@ -151,6 +161,11 @@
   },
   {
     "file": "src/pages/settings/AcademicContextSettings.jsx",
+    "referencedByInventory": false,
+    "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
+  },
+  {
+    "file": "src/pages/settings/GlobalSettings.jsx",
     "referencedByInventory": false,
     "note": "A source file is not necessarily a distinct routed screen; private panels/dialogs remain in their owning workspace."
   },

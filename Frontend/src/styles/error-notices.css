@@ -1,11 +1,18 @@
-/* Shared presentation for page/API errors. Repeated root specificity overrides
-   legacy per-module !important alert rules without changing field validation. */
-#root#root :is(.page-error-notice, .branch-api-error, .course-api-error,
-  .course-empty--error, .cm-empty--error, .cm-summary-error,
-  .sm-error[role="alert"], .em-alert[role="alert"], .flm-error, .fm-error[role="alert"],
-  .tt-error[role="alert"], .rbac-load-error-strip,
-  .hod-error-banner, .department-no-results--error, .workspace-context-select__error,
-  .sp-state[data-message-tone="error"]) {
+
+
+#root#root :is(.page-error-notice, .branch-api-error, .course-api-error, .sm-error[role="alert"], .em-alert[role="alert"], .flm-error, .rbac-load-error-strip) > span {
+  min-width: 0;
+  flex: 1;
+}
+
+#root#root :is(.page-error-notice, .branch-api-error, .course-api-error, .sm-error[role="alert"], .em-alert[role="alert"], .flm-error, .rbac-load-error-strip) > svg {
+  flex: 0 0 19px;
+  width: 19px;
+  height: 19px;
+  margin: 0 !important;
+}
+
+#root#root :is(.page-error-notice, .branch-api-error, .course-api-error, .course-empty--error, .cm-empty--error, .cm-summary-error, .sm-error[role="alert"], .em-alert[role="alert"], .flm-error, .fm-error[role="alert"], .tt-error[role="alert"], .rbac-load-error-strip, .department-no-results--error, .workspace-context-select__error, .sp-state[data-message-tone="error"]) {
   display: flex !important;
   align-items: center !important;
   justify-content: flex-start !important;
@@ -19,11 +26,11 @@
   min-height: 46px !important;
   height: auto !important;
   padding: 12px 16px !important;
-  border: 1px solid var(--screen-error-border, #f0b4ae) !important;
-  border-left: 4px solid var(--screen-error-text, #c5221f) !important;
+  border: 1px solid var(--screen-error-border, var(--border)) !important;
+  border-left: 4px solid var(--screen-error-text, var(--border)) !important;
   border-radius: 12px !important;
-  background: var(--screen-error-bg, #fff8f7) !important;
-  color: var(--screen-error-text, #b42318) !important;
+  background: var(--screen-error-bg, var(--surface-soft)) !important;
+  color: var(--screen-error-text, var(--danger)) !important;
   font-size: 14px !important;
   font-weight: 500 !important;
   line-height: 1.5 !important;
@@ -32,21 +39,8 @@
   box-shadow: none !important;
 }
 
-#root#root :is(.page-error-notice, .branch-api-error, .course-api-error,
-  .sm-error[role="alert"], .em-alert[role="alert"], .flm-error,
-  .rbac-load-error-strip, .hod-error-banner) > svg {
-  flex: 0 0 19px;
-  width: 19px;
-  height: 19px;
-  margin: 0 !important;
-}
-
-#root#root :is(.page-error-notice, .branch-api-error, .course-api-error,
-  .sm-error[role="alert"], .em-alert[role="alert"], .flm-error,
-  .rbac-load-error-strip, .hod-error-banner) > span {
-  min-width: 0;
-  flex: 1;
-}
+/* Shared presentation for page/API errors. Repeated root specificity overrides
+   legacy per-module !important alert rules without changing field validation. */
 
 #root#root :is(.course-empty--error, .cm-empty--error,
   .sm-error[role="alert"], .em-alert[role="alert"], .flm-error,

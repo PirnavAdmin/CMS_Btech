@@ -225,6 +225,7 @@ export default function App() {
               <Route path="/results/student-result" element={<StudentResult />} />
               <Route path="/my-profile" element={<MyProfile />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/global-settings" element={<Settings />} />
               <Route path="/settings/academic-context" element={<Settings />} />
 
               {/* Faculty demo module */}
@@ -305,7 +306,6 @@ export default function App() {
               <Route path="/rooms-management/:roomId" element={<RoomsManagement key="room-view" viewMode />} />
               <Route path="/rooms" element={<RoomsManagement />} />
               <Route path="/rooms/:roomId" element={<RoomsManagement key="room-view-alias" viewMode />} />
-              <Route path="/roles-designations" element={<RolesAndDesignations />} />
               <Route path="/subject-management" element={<SubjectManagement />} />
               <Route path="/subject-management/:id" element={<SubjectDetailsPage />} />
               <Route path="/credits-management" element={<CreditsManagement />} />

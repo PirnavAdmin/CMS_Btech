@@ -46,3 +46,14 @@ test('context changed after selection blocks backend generation', async () => {
   await assert.rejects(workflow.generate({ scope: { ...scope, academicYearId: '99' }, selected: ['6'], config, expected: [] }), /valid active sections/)
   assert.deepEqual(calls, [])
 })
+
+test('publication resumes remaining drafts without modifying already published batch history', async () => {
+  const { workflow, tables, calls } = fixture()
+  const published = JSON.stringify(tables[0])
+  tables.push({ ...tables[0], id:'12', publicationStatus:'draft', entries:[] })
+  await workflow.publish(tables)
+  assert.deepEqual(calls, ['publish:12'])
+  assert.equal(JSON.stringify(tables[0]), published)
+  assert.equal(tables[1].publicationStatus,'published')
+  await assert.rejects(workflow.publish(tables), /No draft/)
+})

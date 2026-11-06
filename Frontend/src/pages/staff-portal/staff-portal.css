@@ -238,12 +238,12 @@
 }
 
 .sp-tone-blue .sp-tile-icon {
-  color: #1769c2;
+  color: var(--brand);
   background: rgba(23, 105, 194, 0.12);
 }
 
 .sp-tone-orange .sp-tile-icon {
-  color: #d97706;
+  color: var(--warning);
   background: rgba(217, 119, 6, 0.12);
 }
 
@@ -253,7 +253,7 @@
 }
 
 .sp-tone-green .sp-tile-icon {
-  color: #059669;
+  color: var(--success);
   background: rgba(5, 150, 105, 0.12);
 }
 
@@ -474,7 +474,7 @@
 }
 
 .sp-duty-badge.is-in-progress {
-  background: #fef3c7;
+  background: var(--cms-amber-soft);
   color: #92400e;
 }
 
@@ -570,7 +570,7 @@
 }
 
 .sp-priority-tag.is-high {
-  background: #fee2e2;
+  background: var(--cms-red-soft);
   color: #991b1b;
 }
 
@@ -580,8 +580,8 @@
 }
 
 .sp-priority-tag.is-info {
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--surface-alt);
+  color: var(--text-secondary);
 }
 
 :root[data-theme="dark"] .sp-priority-tag.is-high {
@@ -596,7 +596,7 @@
 
 :root[data-theme="dark"] .sp-priority-tag.is-info {
   background: rgba(148, 163, 184, 0.2);
-  color: #cbd5e1;
+  color: var(--border-strong);
 }
 
 /* Upcoming Meetings & Events */
@@ -741,7 +741,7 @@
   align-items: center;
   gap: 10px;
   padding: 12px 18px;
-  background: #0f172a;
+  background: var(--cms-sidebar-bg);
   color: #ffffff;
   border-radius: 9px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
@@ -758,7 +758,7 @@
 .sp-toast svg {
   width: 16px;
   height: 16px;
-  color: #10b981;
+  color: var(--success);
 }
 
 @keyframes sp-slide-in {
@@ -804,7 +804,7 @@
   width: 68px;
   height: 68px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #1769c2, #104177);
+  background: linear-gradient(135deg, var(--brand), #104177);
   color: #ffffff;
   font-size: 24px;
   font-weight: 750;
@@ -854,7 +854,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #10b981;
+  background: var(--success);
 }
 
 :root[data-theme="dark"] .sp-badge-active {
@@ -1003,7 +1003,7 @@
   width: 100%;
   padding: 9px 12px;
   font-size: 13px;
-  font-family: inherit;
+  font-family: var(--font-family);
   color: var(--text-primary);
   background: var(--surface);
   border: 1px solid var(--border);
@@ -1173,12 +1173,12 @@
 }
 
 .sp-doc-badge.is-pending {
-  background: #fef3c7;
+  background: var(--cms-amber-soft);
   color: #92400e;
 }
 
 .sp-doc-badge.is-missing {
-  background: #fee2e2;
+  background: var(--cms-red-soft);
   color: #991b1b;
 }
 
@@ -1317,9 +1317,9 @@
   gap: 7px;
   padding: 10px 18px;
   border-radius: 8px;
-  background: #059669;
+  background: var(--success);
   color: #ffffff;
-  border: 1px solid #059669;
+  border: 1px solid var(--success);
   font-size: 12px;
   font-weight: 650;
   cursor: pointer;
@@ -1343,9 +1343,9 @@
   gap: 7px;
   padding: 10px 18px;
   border-radius: 8px;
-  background: #dc2626;
+  background: var(--danger);
   color: #ffffff;
-  border: 1px solid #dc2626;
+  border: 1px solid var(--danger);
   font-size: 12px;
   font-weight: 650;
   cursor: pointer;
@@ -1435,7 +1435,7 @@
   font-size: 13px;
   font-weight: 650;
   color: var(--text-primary);
-  font-family: inherit;
+  font-family: var(--font-family);
   cursor: pointer;
 }
 
@@ -1487,7 +1487,7 @@
 }
 
 .sp-att-card.is-present::before {
-  background: #10b981;
+  background: var(--success);
 }
 
 .sp-att-card.is-late::before {
@@ -1495,7 +1495,7 @@
 }
 
 .sp-att-card.is-absent::before {
-  background: #ef4444;
+  background: var(--danger);
 }
 
 .sp-att-card.is-leave::before {
@@ -1513,17 +1513,17 @@
 
 .sp-att-card.is-present .sp-att-card-icon {
   background: rgba(16, 185, 129, 0.12);
-  color: #059669;
+  color: var(--success);
 }
 
 .sp-att-card.is-late .sp-att-card-icon {
   background: rgba(245, 158, 11, 0.12);
-  color: #d97706;
+  color: var(--warning);
 }
 
 .sp-att-card.is-absent .sp-att-card-icon {
   background: rgba(239, 68, 68, 0.12);
-  color: #dc2626;
+  color: var(--danger);
 }
 
 .sp-att-card.is-leave .sp-att-card-icon {
@@ -1650,10 +1650,10 @@
   background: rgba(16, 185, 129, 0.08);
 }
 .sp-cal-day-cell.status-present .sp-cal-status-dot {
-  background: #10b981;
+  background: var(--success);
 }
 .sp-cal-day-cell.status-present .sp-cal-day-meta {
-  color: #059669;
+  color: var(--success);
 }
 
 .sp-cal-day-cell.status-late {
@@ -1664,7 +1664,7 @@
   background: #f59e0b;
 }
 .sp-cal-day-cell.status-late .sp-cal-day-meta {
-  color: #d97706;
+  color: var(--warning);
 }
 
 .sp-cal-day-cell.status-absent {
@@ -1672,10 +1672,10 @@
   background: rgba(239, 68, 68, 0.08);
 }
 .sp-cal-day-cell.status-absent .sp-cal-status-dot {
-  background: #ef4444;
+  background: var(--danger);
 }
 .sp-cal-day-cell.status-absent .sp-cal-day-meta {
-  color: #dc2626;
+  color: var(--danger);
 }
 
 .sp-cal-day-cell.status-leave {
@@ -1742,9 +1742,9 @@
   border-radius: 50%;
 }
 
-.sp-legend-dot.is-present { background: #10b981; }
+.sp-legend-dot.is-present { background: var(--success); }
 .sp-legend-dot.is-late { background: #f59e0b; }
-.sp-legend-dot.is-absent { background: #ef4444; }
+.sp-legend-dot.is-absent { background: var(--danger); }
 .sp-legend-dot.is-leave { background: #8b5cf6; }
 .sp-legend-dot.is-holiday { background: #3b82f6; }
 .sp-legend-dot.is-weekly-off { background: #94a3b8; }
@@ -1809,12 +1809,12 @@
 }
 
 .sp-status-chip.is-late {
-  background: #fef3c7;
+  background: var(--cms-amber-soft);
   color: #92400e;
 }
 
 .sp-status-chip.is-absent {
-  background: #fee2e2;
+  background: var(--cms-red-soft);
   color: #991b1b;
 }
 
@@ -1829,8 +1829,8 @@
 }
 
 .sp-status-chip.is-weekly-off {
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--surface-alt);
+  color: var(--text-secondary);
 }
 
 :root[data-theme="dark"] .sp-status-chip.is-present {
@@ -1860,7 +1860,7 @@
 
 :root[data-theme="dark"] .sp-status-chip.is-weekly-off {
   background: rgba(148, 163, 184, 0.2);
-  color: #cbd5e1;
+  color: var(--border-strong);
 }
 
 /* ==========================================================================

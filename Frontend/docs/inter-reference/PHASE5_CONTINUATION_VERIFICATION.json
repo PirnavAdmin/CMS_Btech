@@ -1,0 +1,20 @@
+{
+  "vitestFiles": 39,
+  "vitestPassed": 281,
+  "nodePassed": 441,
+  "totalPassed": 722,
+  "finalFocusedFiles": 7,
+  "finalFocusedPassed": 24,
+  "productionBuildPassed": true,
+  "lintErrors": 0,
+  "lintWarningsBefore": 713,
+  "lintWarningsAfter": 710,
+  "protectedFilesChecked": 1663,
+  "changedProtectedFiles": [],
+  "backendFilesChanged": [],
+  "browserStatus": "pending-blocked",
+  "actualBrowserRunPerformed": false,
+  "liveApiVerificationPerformed": false,
+  "visualParityVerified": false,
+  "completeReconstruction": false
+}

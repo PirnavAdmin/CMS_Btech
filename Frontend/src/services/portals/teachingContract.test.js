@@ -15,16 +15,19 @@ test('assessment options normalize exam identifiers and retain only matching sco
 })
 
 const allocation = { allocationId: 20, facultyId: 7, sectionId: 3, subjectId: 8, semesterId: 2, academicYearId: 4, status: true, sectionName: 'CSE A' }
-function setup({ profile = { facultyId: 7, fullName: 'Faculty' }, failRoster = false } = {}) {
+function setup({ profile = { facultyId: 7, fullName: 'Faculty' }, failRoster = false, failMark=false } = {}) {
   const calls = []
-  let identity = 'user-1'
+  let identity = 'user-1', createdSession=false, markFailed=false
   const service = createTeachingService({ collegeId: () => '1', getIdentity: () => identity, getProfile: async () => profile, request: async (url, options = {}) => {
     calls.push({ url, options })
     const parsed = new URL(url, 'http://test'), path = parsed.pathname
-    if (options.method === 'POST' && path.endsWith('/sessions')) return { data: { attendanceSessionId: 40 } }
+    if (options.method === 'POST' && path.endsWith('/sessions')) {createdSession=true;return { data: { attendanceSessionId: 40 } }}
+    if(failMark && options.method==='PUT' && path.endsWith('/mark') && !markFailed){markFailed=true;throw Error('Mark unavailable')}
+    if(failMark && createdSession && !options.method && path.endsWith('/sessions'))return {data:[{...allocation,attendanceSessionId:40,sessionStatus:'OPEN'}]}
     if (options.method) return { success: true }
     if (path.endsWith('/faculty-subject-allocations')) return { data: [allocation, { ...allocation, allocationId: 21, facultyId: 99 }, { ...allocation, allocationId: 22, collegeId: 2 }, { ...allocation, allocationId: 23, status: false }] }
     if (path.includes('/timetable-management/views/faculty/')) return { data: [{ facultyId: 7, subjectId: 8 }, { facultyId: 99 }] }
+    if (path.includes('/sessions/') && path.endsWith('/students')) return { data: { students: [{studentId:10}] } }
     if (path.endsWith('/students')) { if (failRoster) throw new Error('Forbidden'); return { data: [{ studentId: 10, fullName: 'Student', studentCode: 'ROLL10', sectionId: 3 }, { studentId: 11, sectionId: 99 }] } }
     if (path.includes('/subjects/')) return { data: { subjectName: 'Data Structures', subjectCode: 'CS201' } }
     return { data: [] }
@@ -125,4 +128,8 @@ test('faculty timetable permission failures never fall back to another route', a
   const data = await service.getSnapshot()
   assert.match(data.timetableError, /Forbidden/)
   assert.ok(!calls.some(url => url.includes('/timetables/view/faculty')))
+})
+
+test('class marking retry resumes the acknowledged open session without a duplicate create',async()=>{
+ const {service,calls}=setup({failMark:true});await service.getSnapshot();const input={allocationId:20,date:'2026-01-10',records:[{studentId:10,attendanceStatus:'PRESENT'}]};await assert.rejects(service.saveAttendance(input),/Mark unavailable/);await service.saveAttendance(input);assert.equal(calls.filter(row=>row.options.method==='POST').length,1);assert.equal(calls.filter(row=>row.options.method==='PUT').length,2)
 })

@@ -30,13 +30,13 @@ const attendanceData = {
 describe('faculty attendance grid', () => {
   it('marks the complete roster present and updates its live counters', async () => {
     const user = userEvent.setup()
-    const { container } = render(<AttendanceScreen data={attendanceData} action={operation => operation()} />)
+    render(<AttendanceScreen data={attendanceData} action={operation => operation()} />)
 
     await user.click(screen.getByRole('button', { name: /mark all present/i }))
-    const counters = container.querySelector('.fw-counter-row')
-    expect(counters.textContent).toContain('Present 3')
-    expect(counters.textContent).toContain('Absent 0')
-    expect(counters.textContent).toContain('Late 0')
+    const counters = screen.getByLabelText('Current attendance totals')
+    expect(counters.textContent).toContain('Present3')
+    expect(counters.textContent).toContain('Absent0')
+    expect(counters.textContent).toContain('Late0')
     expect(screen.getByRole('button', { name: /submit attendance/i }).disabled).toBe(false)
   })
 

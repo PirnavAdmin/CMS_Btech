@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { backlogRows, defaultBands, flattenResults, gradeFor, matchesResultSearch, summarize, validateBands, weightedGpa } from '../src/utils/gradeResultModel.js'
+import { backlogRows, defaultBands, flattenResults, gradeFor, latestSubjectAttempts, meanReportedGpa, recordedBacklogs, matchesResultSearch, summarize, validateBands, weightedGpa } from '../src/utils/gradeResultModel.js'
 
 test('grade boundaries include zero and 100 without overlap', () => {
   assert.equal(validateBands(defaultBands), '')
@@ -21,6 +21,14 @@ test('sheet normalization preserves scope and distinguishes missing marks from z
   assert.equal(rows[1].percentage, null)
   assert.equal(rows[0].academicYearId, 4)
   assert.equal(rows[0].collegeId, 1)
+})
+test('result normalization preserves backend GPA, overall status and backlog identities', () => {
+  const [row] = flattenResults([{ examId: 7, officialSgpa: 0, officialCgpa: null, officialBacklogCount: 1, examResultStatus: 'Failed', records: [{ studentId: 5, marksObtained: 0 }] }])
+  assert.equal(row.examId, 7)
+  assert.equal(row.officialSgpa, 0)
+  assert.equal(row.officialCgpa, null)
+  assert.equal(row.officialBacklogCount, 1)
+  assert.equal(row.examResultStatus, 'Failed')
 })
 test('result search matches student name, roll number, and admission number', () => {
   const [row] = flattenResults([{
@@ -58,6 +66,26 @@ test('report pass rate excludes pending assessments', () => {
   assert.equal(result.students, 2)
 })
 import { resultAnalytics, resultIssues, sortResultRows } from '../src/utils/gradeResultModel.js'
+
+test('repeat attempts remain available while summaries count the latest subject attempt', () => {
+  const old = { id: 'old', studentId: '5', semesterId: 1, subjectId: 2, examId: 7, examDate: '2026-01-01', gradePoint: 0, officialSgpa: 0, officialCgpa: 4 }
+  const passed = { ...old, id: 'new', examId: 8, examDate: '2026-06-01', gradePoint: 8, officialSgpa: 8, officialCgpa: 7 }
+  assert.deepEqual(latestSubjectAttempts([passed, old]), [passed])
+  assert.equal(meanReportedGpa([old, passed]), 8)
+  assert.equal(meanReportedGpa([old, passed], 'officialCgpa'), 7)
+  assert.equal(meanReportedGpa([{ ...old, officialSgpa: null }]), null)
+  assert.equal(meanReportedGpa([old]), 0)
+})
+
+test('backlog records use backend identities and never infer a backlog from a failed grade', () => {
+  const row = { resultId: 11, studentId: '5', status: 'Failed', grade: 'F' }
+  assert.deepEqual(recordedBacklogs([], [row]), [])
+  const record = { backlogId: 9, studentId: 5, sourceResultId: 11, backlogStatus: 'Cleared', attemptCount: 2 }
+  const result = recordedBacklogs([{ studentBacklogs: [record, { ...record, backlogId: 10, studentId: 6 }] }, { studentBacklogs: [record] }], [row])
+  assert.equal(result.length, 1)
+  assert.equal(result[0].status, 'Cleared')
+  assert.equal(result[0].attemptCount, 2)
+})
 
 test('analytics exclude invalid scores and pending records from assessment pass rate', () => {
   const records = [{ status: 'Passed', percentage: 80, grade: 'A' }, { status: 'Failed', percentage: 30, grade: 'F' }, { status: 'Pending', percentage: null, grade: '' }, { status: 'Pending', percentage: 200, grade: '' }]

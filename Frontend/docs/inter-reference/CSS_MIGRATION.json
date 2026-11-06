@@ -1,0 +1,408 @@
+[
+  {
+    "file": "src/App.css",
+    "tokenDefinitions": 7,
+    "shellSelectors": 72,
+    "colorsChanged": 21,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/components/AcademicContextSelect.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 40,
+    "colorsChanged": 9,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/components/CollegeModule.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 0,
+    "colorsChanged": 2,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/components/CompactSummary.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 0,
+    "colorsChanged": 4,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/components/CompanyLogo.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 0,
+    "colorsChanged": 1,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/components/ContextGuard.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 0,
+    "colorsChanged": 11,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/components/FilterPanel.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 9,
+    "colorsChanged": 5,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/components/HeaderAcademicYear.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 2,
+    "colorsChanged": 8,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/components/InfoCard.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 0,
+    "colorsChanged": 6,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/components/PageHeader.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 0,
+    "colorsChanged": 1,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/components/portals/FacultySignOutDialog.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 0,
+    "colorsChanged": 1,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/components/RequestDemo.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 0,
+    "colorsChanged": 10,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/components/SearchableSelect.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 0,
+    "colorsChanged": 7,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/components/Sidebar.css",
+    "tokenDefinitions": 1,
+    "shellSelectors": 107,
+    "colorsChanged": 3,
+    "isShellOwner": true
+  },
+  {
+    "file": "src/components/StatusBadge.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 0,
+    "colorsChanged": 4,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/components/StatusConfirmDialog.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 0,
+    "colorsChanged": 1,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/components/TablePagination.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 0,
+    "colorsChanged": 4,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/components/ViewDialog.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 0,
+    "colorsChanged": 13,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/features/faculty/workspace.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 1,
+    "colorsChanged": 0,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/index.css",
+    "tokenDefinitions": 52,
+    "shellSelectors": 129,
+    "colorsChanged": 60,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/layouts/AccountMenu.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 3,
+    "colorsChanged": 0,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/layouts/DashboardLayout.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 85,
+    "colorsChanged": 16,
+    "isShellOwner": true
+  },
+  {
+    "file": "src/layouts/PortalLayout.css",
+    "tokenDefinitions": 2,
+    "shellSelectors": 46,
+    "colorsChanged": 0,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/pages/admin-management/AdminManagement.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 8,
+    "colorsChanged": 292,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/pages/attendance/Attendance.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 0,
+    "colorsChanged": 3,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/pages/campus/CampusWorkspace.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 5,
+    "colorsChanged": 59,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/pages/courseManagement/Course.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 0,
+    "colorsChanged": 49,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/pages/elective-management/ElectiveManagement.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 4,
+    "colorsChanged": 19,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/pages/examinations/exam-timetable/ExamModule.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 0,
+    "colorsChanged": 23,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/pages/examinations/examination-setup/ExaminationSetup.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 4,
+    "colorsChanged": 10,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/pages/examinations/grade-result-management/GradeResultManagement.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 5,
+    "colorsChanged": 48,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/pages/examinations/marks-management/MarksManagement.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 2,
+    "colorsChanged": 25,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/pages/faculty/FacultyManagement.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 11,
+    "colorsChanged": 111,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/pages/fees/fees.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 15,
+    "colorsChanged": 2,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/pages/Pages.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 6,
+    "colorsChanged": 202,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/pages/portals/faculty-attendance.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 0,
+    "colorsChanged": 1,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/pages/portals/student-dashboard.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 0,
+    "colorsChanged": 1,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/pages/portals/teaching-portal-enhanced.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 7,
+    "colorsChanged": 0,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/pages/portals/teaching-portal.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 0,
+    "colorsChanged": 1,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/pages/profile/MyProfile.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 0,
+    "colorsChanged": 7,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/pages/section-management/SectionManagement.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 0,
+    "colorsChanged": 66,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/pages/semester-management/SemesterManagement.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 0,
+    "colorsChanged": 29,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/pages/staff-portal/staff-portal.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 0,
+    "colorsChanged": 2,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/pages/student-management/StudentAdmission/StudentAdmission.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 0,
+    "colorsChanged": 50,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/pages/student-management/StudentProfile/StudentProfile.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 0,
+    "colorsChanged": 3,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/pages/student-management/StudentPromotion/StudentPromotion.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 0,
+    "colorsChanged": 8,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/pages/subject-management/SubjectManagement.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 12,
+    "colorsChanged": 20,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/styles/dark-mode-contrast.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 42,
+    "colorsChanged": 5,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/styles/dark-mode-fixes.css",
+    "tokenDefinitions": 9,
+    "shellSelectors": 10,
+    "colorsChanged": 2,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/styles/dark-mode.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 31,
+    "colorsChanged": 21,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/styles/directory-search.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 9,
+    "colorsChanged": 2,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/styles/erp-theme.css",
+    "tokenDefinitions": 66,
+    "shellSelectors": 480,
+    "colorsChanged": 98,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/styles/global.css",
+    "tokenDefinitions": 27,
+    "shellSelectors": 49,
+    "colorsChanged": 13,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/styles/laptop-layout.css",
+    "tokenDefinitions": 2,
+    "shellSelectors": 49,
+    "colorsChanged": 0,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/styles/portalAdmin.css",
+    "tokenDefinitions": 1,
+    "shellSelectors": 17,
+    "colorsChanged": 0,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/styles/portals.css",
+    "tokenDefinitions": 1,
+    "shellSelectors": 16,
+    "colorsChanged": 0,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/styles/tableActions.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 0,
+    "colorsChanged": 37,
+    "isShellOwner": false
+  },
+  {
+    "file": "src/styles/view-cards.css",
+    "tokenDefinitions": 0,
+    "shellSelectors": 0,
+    "colorsChanged": 16,
+    "isShellOwner": false
+  }
+]

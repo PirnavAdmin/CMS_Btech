@@ -1,9 +1,10 @@
 import { useScreenAccess } from '../auth/ScreenAccess.jsx'
-import { MODULE_REGISTRY } from '../config/moduleRegistry.js'
+import { MODULE_REGISTRY, findModuleForPath } from '../config/moduleRegistry.js'
+import { adminWorkspaceForModule } from '../config/adminWorkspaces.js'
 import useToastState from '../hooks/useToastState'
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { FiAlertCircle, FiLock, FiLogOut, FiMoon, FiSearch, FiSun, FiUser, FiX } from 'react-icons/fi'
+import { FiAlertCircle, FiLock, FiLogOut, FiMenu, FiMoon, FiSearch, FiSun, FiUser, FiX } from 'react-icons/fi'
 import { getUserRole, signOut } from '../auth/auth'
 import { changePassword, profileApi } from '../api/apiEndpoints'
 import Sidebar from '../components/Sidebar'
@@ -132,7 +133,7 @@ export default function DashboardLayout({ children }) {
     '/student-management/admissions': 'Student Admissions',
     '/student-management/profiles': 'Student Profiles', '/student-management/promotions': 'Student Promotions',
   })[pathname] || (pathname.startsWith('/semester-management') ? 'Semesters' : pathname.startsWith('/section-management') ? 'Sections' : pathname.startsWith('/student-management/admissions') ? 'Student Admissions' : pathname.startsWith('/student-management/profiles') ? 'Student Profiles' : pathname.startsWith('/student-management/promotions') ? 'Student Promotions' : pathname.startsWith('/faculty/') ? pathname.startsWith('/faculty/attendance') ? 'Faculty Attendance' : 'Faculty Management' : pathname.startsWith('/courses') ? 'Courses' : pathname.startsWith('/branches') ? 'Branches' : 'Digital Campus')
-  const breadcrumbSection = ['My Profile', 'Settings'].includes(pageName) ? 'Account' : pageName === 'Overview' ? 'Digital Campus' : pageName.startsWith('Student ') ? 'Student Management' : pageName.startsWith('Faculty ') ? 'Faculty' : 'Academic Configuration'
+  const breadcrumbSection = (userRole === 'admin' && adminWorkspaceForModule(findModuleForPath(pathname)?.id)?.label) || (['My Profile', 'Settings'].includes(pageName) ? 'Account' : pageName === 'Overview' ? 'Digital Campus' : pageName.startsWith('Student ') ? 'Student Management' : pageName.startsWith('Faculty ') ? 'Faculty' : 'Academic Configuration')
   const financeBreadcrumbs = feeBreadcrumbs(pathname)?.map(crumb => ({ ...crumb, label: ({ 'Fee Structures': 'Fee Plans', 'Student Accounts': 'Student Fees', 'Create Fee Structure': 'Create Fee Plan', 'Edit Fee Structure': 'Edit Fee Plan', 'Structure Details': 'Fee Plan Details' })[crumb.label] || crumb.label }))
 
   // Logout confirmation state
@@ -342,6 +343,7 @@ export default function DashboardLayout({ children }) {
 
       <main>
         <header className="dashboard-header">
+          <button type="button" className="mobile-navigation-toggle" aria-label="Open navigation" aria-expanded={sidebarOpen} onClick={() => setSidebarOpen(true)}><FiMenu aria-hidden="true" /></button>
 
           <div className="global-search"><FiSearch aria-hidden="true" /><input aria-label="Search modules" value={globalQuery} onChange={(event) => setGlobalQuery(event.target.value)} placeholder="Search" />{globalResults.length > 0 && <div className="global-search-results">{globalResults.map(([label, to]) => <Link to={to} key={to} onClick={() => setGlobalQuery('')}>{label}</Link>)}</div>}</div>
 

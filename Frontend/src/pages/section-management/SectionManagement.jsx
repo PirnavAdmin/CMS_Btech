@@ -1,3 +1,8 @@
+import PageHeader from '../../components/PageHeader'
+import ViewDialog from '../../components/ViewDialog'
+import SharedInfoCard from '../../components/InfoCard'
+import StatusConfirmDialog from '../../components/StatusConfirmDialog'
+import AsyncState from '../../components/AsyncState'
 import { ProjectSelect } from '../../components/SearchableSelect'
 import { newestFirst, rememberCreated } from '../../utils/newestFirst'
 import { showError, showSuccess, showWarning } from '../../utils/toast'
@@ -139,7 +144,7 @@ const normalizeSection = (item = {}, lookups = {}) => {
 }
 
 async function loadSources() {
-  const [sectionRows, courseRows, branchRows, yearRows, semesterRows, assignmentRows, summaryData, facultyRows] = await Promise.all([sectionApi.getAll(), courseApi.getAll(), branchApi.getAll(), academicYearApi.getAll(), getSemesters(), sectionAssignmentApi.list().catch(() => []), sectionApi.summary().catch(() => null), facultyService.list().catch(() => [])])
+  const [sectionRows, courseRows, branchRows, yearRows, semesterRows, assignmentRows, summaryData, facultyRows] = await Promise.all([sectionApi.getAll(), courseApi.getAll(), branchApi.getAll(), academicYearApi.getAll(), getSemesters(), sectionAssignmentApi.list(), sectionApi.summary().catch(() => null), facultyService.list().catch(() => [])])
   const courses = courseRows.map(normalizeCourse).filter((item) => item.id && item.name)
   const branches = branchRows.map(normalizeBranch).filter((item) => item.id && item.name)
   const years = yearRows.map(normalizeAcademicYear).filter((item) => item.id && item.name)
@@ -149,15 +154,19 @@ async function loadSources() {
 }
 
 const Page = ({ children }) => <DashboardLayout><main className="section-management">{children}</main></DashboardLayout>
-const Header = ({ title, text, children }) => <header className="section-page-header"><div><p className="section-breadcrumb">Academic Configuration <span>/</span> Sections</p><h1>{title}</h1>{text && <p>{text}</p>}</div><div className="section-header-actions">{children}</div></header>
+const Header = ({ title, text, children }) => <PageHeader title={title} subtitle={text}>{children}</PageHeader>
 const Status = ({ value }) => <span className={`section-status ${String(value || '').toLowerCase()}`}>{value}</span>
 const ReadOnly = ({ value, placeholder = 'Resolved after selection' }) => <input value={value || ''} placeholder={placeholder} readOnly />
 const Field = ({ label, error, children }) => <label className={`section-field ${error ? 'invalid' : ''}`}><span>{label.endsWith(' *') ? <>{label.slice(0, -2)} <b className="section-required">*</b></> : label}</span>{children}{error && <small role="alert">{error}</small>}</label>
 function InfoRows({ rows }) { const visible = rows.filter(([, value]) => clean(value)); if (!visible.length) return null; return <div className="cm-info-rows sa-detail-kv-grid erp-view-grid">{visible.map(([label, value]) => <div className="cm-info-row sa-kv-cell erp-view-field" key={label}><span className="cm-info-label sa-kv-label erp-view-label">{label}</span><strong className="cm-info-val sa-kv-val erp-view-value">{value}</strong></div>)}</div> }
-function InfoCard({ icon: Icon, title, rows }) { const visible = rows.filter(([, value]) => clean(value)); if (!visible.length) return null; return <section className="cm-info-card sa-detail-panel sa-modern-panel erp-view-section"><div className="cm-info-card-header sa-panel-header"><div className="sa-panel-title-wrap">{Icon && <span className="sa-panel-icon"><Icon aria-hidden="true" /></span>}<h2>{title}</h2></div><span className="sa-card-count-badge">{visible.length} items</span></div><InfoRows rows={visible} /></section> }
+function InfoCard({ icon, title, rows }) { return <SharedInfoCard icon={icon} title={title} rows={rows} /> }
 function Empty({ icon: Icon, title, action, isError = false }) { return <div className="section-empty" role={isError ? 'alert' : undefined} data-message-tone={isError ? 'error' : undefined}><Icon /><h3>{title}</h3>{action}</div> }
 
-function SectionList() {
+function SectionList({ initialViewId = null }) {
+  const navigate = useNavigate()
+  const [viewId, setViewId] = useState(initialViewId)
+  const closeView = () => { setViewId(null); if (initialViewId) navigate('/section-management') }
+  const [statusSaving, setStatusSaving] = useState(false)
   const { scopeRecords, selectedCollegeId, selectedAcademicYearId } = useAcademic()
   const [sections, setSections] = useState([]), [assignments, setAssignments] = useState([]), [summaryData, setSummaryData] = useState(null), [faculty, setFaculty] = useState([])
   const [filters, setFilters] = useState({ query: '', course: '', branch: '', semester: '', status: '', academicYear: '' }), [page, setPage] = useState(1), [loading, setLoading] = useState(true), [error, setError] = useToastState('', 'error'), [, setToast] = useToastState('', 'success'), [assigning, setAssigning] = useState(null), [confirmAction, setConfirmAction] = useState(null)
@@ -234,7 +243,7 @@ function SectionList() {
       setConfirmAction({ row: section, nextStatus, assigned: rows.length })
     } catch (error) { setToast(apiError(error, 'Unable to verify the assigned student count.'), 'error') }
   }
-  const confirm = async () => { const { row, nextStatus } = confirmAction; try { await sectionApi.updateStatus(row.id, nextStatus); eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED, { sectionId: row.id, status: nextStatus }); setSections(sections.map((item) => item.id === row.id ? { ...item, status: nextStatus } : item)); setSummaryData(null); setToast(`Section ${nextStatus === 'Active' ? 'activated' : 'deactivated'}.`); setConfirmAction(null) } catch (requestError) { setToast(apiError(requestError, 'Unable to update section status.'), 'error') } }
+  const confirm = async () => { if (statusSaving) return; const { row, nextStatus } = confirmAction; setStatusSaving(true); try { await sectionApi.updateStatus(row.id, nextStatus); eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED, { sectionId: row.id, status: nextStatus }); setSections(sections.map((item) => item.id === row.id ? { ...item, status: nextStatus } : item)); setSummaryData(null); setToast(`Section ${nextStatus === 'Active' ? 'activated' : 'deactivated'}.`); setConfirmAction(null) } catch (requestError) { setToast(apiError(requestError, 'Unable to update section status.'), 'error') } finally { setStatusSaving(false) } }
   const hasFilters = Object.values(filters).some(Boolean)
   return <Page>
 
@@ -242,9 +251,9 @@ function SectionList() {
       <CompactSummary label="Section summary" items={[{ label: 'Total', value: summary.total }, { label: 'Active', value: summary.active, tone: 'active' }, { label: 'Inactive', value: summary.inactive, tone: 'inactive' }, { label: 'Students', value: summary.students }]} />
     </Header>
     <section className="section-table-card">
-      <header className="course-directory-heading">
+      <header className="section-reference-heading">
         <div>
-          <span className="cm-eyebrow">Section Directory</span>
+          <h2>Section Directory</h2>
           <p>{filtered.length} records</p>
         </div>
         <div className="directory-export-actions">
@@ -286,7 +295,7 @@ function SectionList() {
                     <tr key={section.id}>
                       <td className="table-center" style={{ minWidth: '150px' }}>
                         <div className="table-primary-cell">
-                          <Link to={`/section-management/${section.id}`} className="section-name-link table-cell-truncate" title={`Click to view details for ${section.name}`}>
+                          <Link to={`/section-management/${section.id}`} onClick={event => { if (!event.metaKey && !event.ctrlKey && !event.shiftKey) { event.preventDefault(); setViewId(section.id) } }} className="section-name-link table-cell-truncate" title={`Click to view details for ${section.name}`}>
                             {section.name}
                           </Link>
                           <small>{section.code}</small>
@@ -338,7 +347,8 @@ function SectionList() {
       )}
     </section>
     {assigning && <AssignStudents section={assigning} faculty={faculty} assignments={assignments.filter((item) => String(item.sectionId) === String(assigning.id))} allAssignments={assignments} sections={sections} assignMany={assignStudents} assignTeacher={assignTeacher} remove={removeAssignment} close={() => setAssigning(null)} />}
-    {confirmAction && <Confirm action={confirmAction} close={() => setConfirmAction(null)} confirm={confirm} />}
+    {confirmAction && <Confirm action={confirmAction} close={() => setConfirmAction(null)} confirm={confirm} busy={statusSaving} />}
+    {viewId && <SectionDetails sectionId={viewId} onClose={closeView} />}
   </Page>
 }
 
@@ -515,13 +525,13 @@ function SectionForm({ editMode = false }) {
       <Header title={editMode ? 'Edit Section' : 'Add Section'} text={editMode ? 'Update section capacity, advisor, room, and status.' : 'Create a section for the selected academic mapping.'}>
         <Link className="section-primary secondary" to="/section-management"><FiArrowLeft /> Back</Link>
       </Header>
-      
-      <div className="erp-two-column-layout" data-without-live-preview="true">
-        <form className="erp-card-main section-form-card-unified" onSubmit={submit} noValidate>
+
+      <div className="section-reference-editor" data-without-live-preview="true">
+        <form className="section-reference-form" onSubmit={submit} noValidate>
           {errors.form && <div className="section-form-error" role="alert">{errors.form}</div>}
           {yearWarning && <div className="section-form-warning" role="alert">{yearWarning}</div>}
-          
-          <div className="erp-tabs-bar" role="tablist" aria-label="Section form tabs">
+
+          <div className="erp-tabs-bar" role="tablist" aria-label="Section form tabs" onKeyDown={event => { if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return; const tabs = [...event.currentTarget.querySelectorAll('[role="tab"]')]; const index = tabs.indexOf(document.activeElement); if (index < 0) return; event.preventDefault(); const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length; tabs[next].click(); tabs[next].focus() }}>
             <button
               type="button"
               role="tab"
@@ -639,52 +649,32 @@ function SectionForm({ editMode = false }) {
   )
 }
 
-function SectionDetails() {
-  const { id } = useParams()
+function SectionDetails({ sectionId, onClose }) {
+  const { id: routeId } = useParams()
+  const id = sectionId || routeId
+  const [attempt, setAttempt] = useState(0)
   const [section, setSection] = useState(null), [assignments, setAssignments] = useState([]), [loading, setLoading] = useState(true), [error, setError] = useToastState('', 'error')
-  useEffect(() => { let alive = true; const load = async () => { setLoading(true); try { const sources = await loadSources(); const base = sources.sections.find((item) => String(item.id) === String(id)) || {}; const detail = normalizeSection({ ...base, ...responseRecord(await sectionApi.getById(id)) }, makeLookups(sources.courses, sources.branches, sources.semesters, sources.years)); const rows = await sectionAssignmentApi.listBySection(id).catch(() => []); if (alive) { setSection(detail); setAssignments(rows.map((item) => normalizeAssignment({ ...item, sectionId: id }))) } } catch (requestError) { if (alive) setError(apiError(requestError, 'Unable to load section details.')) } finally { if (alive) setLoading(false) } }; load(); return () => { alive = false } }, [id, setError])
-  if (loading) return <Page><Empty icon={FiClock} title="Loading section details..." /></Page>
-  if (error || !section) return <Page><div className="cm-profile-view" data-export-record><div className="cm-profile-top-bar"><Link className="cm-button secondary" to="/section-management">&larr; Back </Link></div><Empty icon={FiLayers} title={error || 'Section not found.'} /></div></Page>
-  const assigned = Math.max(assignments.length, Number(section.currentStrength || 0)), available = Math.max(Number(section.capacity || 0) - assigned, 0)
-  return (
-    <Page>
-      <div className="cm-profile-view" data-export-record>
-        <div className="cm-profile-top-bar">
-          <ExportMenu mode="single" title="Section Details" filename={`section_${section.code || section.id}_${section.academicYear || ""}`} />
-          <Link className="cm-button secondary" to="/section-management">
-            &larr; Back 
-          </Link>
-        </div>
-        <article className="section-profile-page">
-          <div className="cm-profile-card">
-            <div className="cm-profile-banner">
-              <div className="cm-profile-avatar-wrap">
-                <div className="cm-profile-placeholder">
-                  <FiUsers />
-                </div>
-              </div>
-              <div className="cm-profile-header-info">
-                <div className="cm-profile-badges">
-                  <span className="cm-badge cm-badge-code">SECTION</span>
-                  {section.code && <span className="cm-badge cm-badge-type">{section.code}</span>}
-                  <span className={`cm-status-badge ${String(section.status).toLowerCase()}`}>{section.status}</span>
-                </div>
-                <h1 className="cm-profile-title">{section.name}</h1>
-                <p className="cm-profile-subtitle">
-                  {[section.course, section.branchCode || section.branch, section.semester].filter(clean).join(' ')}
-                </p>
-              </div>
-            </div>
-            <div className="cm-profile-grid">
+  useEffect(() => {
+    let active = true
+    const load = async () => {
+      setLoading(true); setError('')
+      try {
+        const sources = await loadSources()
+        const base = sources.sections.find(item => String(item.id) === String(id)) || {}
+        const detail = normalizeSection({ ...base, ...responseRecord(await sectionApi.getById(id)) }, makeLookups(sources.courses, sources.branches, sources.semesters, sources.years))
+        const rows = await sectionAssignmentApi.listBySection(id)
+        if (active) { setSection(detail); setAssignments(rows.map(item => normalizeAssignment({ ...item, sectionId:id }))) }
+      } catch (cause) { if (active) setError(apiError(cause, 'Unable to load section details.')) }
+      finally { if (active) setLoading(false) }
+    }
+    load(); return () => { active = false }
+  }, [id, attempt, setError])
+  const assigned = section ? Math.max(assignments.length, Number(section.currentStrength || 0)) : 0
+  const available = section ? Math.max(Number(section.capacity || 0) - assigned, 0) : 0
+  return <ViewDialog title="Section Details" subtitle={section?.name} onClose={onClose} maxWidth="900px" showExport={Boolean(section) && !error} exportFilename={`section_${id}`}>{loading || error || !section ? <AsyncState status={loading ? 'loading' : 'error'} message={error || undefined} onRetry={() => setAttempt(value => value + 1)} /> : <div className="section-reference-detail-grid">
               <InfoCard icon={FiGrid} title="Basic Information" rows={[["Section Name", section.name], ["Section Code", section.code], ["Type", section.sectionType || section.type], ["Capacity", section.capacity], ["Current Strength", assigned], ["Available Seats", available], ["Status", section.status]]} />
               <InfoCard icon={FiBookOpen} title="Academic Mapping" rows={[["Course Name", section.course], ["Course Code", section.courseCode], ["Branch Name", section.branch], ["Branch Code", section.branchCode], ["Academic Level", section.academicLevel || (["1st Year", "2nd Year", "3rd Year", "4th Year"][Math.ceil(Number(section.semesterNumber) / 2) - 1])], ["Semester", section.semester], ["Academic Year", section.academicYear]]} />
-              <InfoCard icon={FiUser} title="Section Allocation" rows={[["Faculty Advisor", section.advisor], ["Room / Classroom", section.room], ["Assigned Students", assigned], ["Available Seats", available]]} />
-            </div>
-          </div>
-        </article>
-      </div>
-    </Page>
-  )
+              <InfoCard icon={FiUser} title="Section Allocation" rows={[["Faculty Advisor", section.advisor], ["Room / Classroom", section.room], ["Assigned Students", assigned], ["Available Seats", available]]} /></div>}</ViewDialog>
 }
 
 function Select({ label, value, change, first, values }) { return <SearchableSelect label={'Filter by ' + label} value={value} onChange={(next) => change(label, next)} placeholder={first} options={[{ value: '', name: first }, ...values.map((item) => ({ value: item, name: item }))]} searchPlaceholder={'Search ' + label + '...'} /> }
@@ -836,14 +826,15 @@ function AssignStudents({ section, faculty = [], assignments, allAssignments = [
     }
   }
 
-  return <div className="section-overlay centered" onMouseDown={(event) => event.target === event.currentTarget && close()}><section className="section-assignment-panel" role="dialog" aria-modal="true" aria-label="Assign teacher or student"><header><div><p>Section Allocation</p><h2>{section.name}</h2><span>{[section.branchCode || section.branch, section.semester, section.academicYear].filter(clean).join(' ')}</span></div><button type="button" aria-label="Close section allocation" onClick={close}><FiX /></button></header><div className="section-capacity"><strong>{assignedCount} / {section.capacity}</strong><span>{available} seats available</span><i><b style={{ width: `${Math.min(100, assignedCount * 100 / Math.max(Number(section.capacity || 1), 1))}%` }} /></i></div>{!mode && <div className="section-assignment-chooser"><button type="button" onClick={() => setMode('teacher')}><FiCheckCircle /><span><strong>Assign Teacher</strong><small>{section.advisor || 'No teacher assigned'}</small></span></button><button type="button" onClick={() => setMode('student')}><FiUserPlus /><span><strong>Students / Allocations</strong><small>{assignedCount} students assigned</small></span></button></div>}{mode === 'teacher' && <form className="section-assignment-form section-teacher-form" onSubmit={submitTeacher}><div className="section-assignment-form-head"><h3>Assign teacher</h3></div><div><label>Teacher / Faculty Advisor<SearchableSelect label="Faculty Advisor" value={teacher} onChange={setTeacher} loading={teacherLoading} noOptionsMessage={teacherError ? 'Unable to load faculty candidates.' : 'No active faculty candidates found for this section.'} options={teacherCandidates.map((item) => ({ value: item.employeeProfileId, name: item.fullName, code: [item.employeeCode, item.designation].filter(clean).join(' / ') }))} placeholder="Select faculty advisor" searchPlaceholder="Search faculty name or employee code..." /></label><button className="section-primary" disabled={saving || teacherLoading}><FiCheckCircle /> {saving ? 'Saving...' : 'Save Teacher'}</button></div>{teacherError && <p className="section-assignment-error" role="alert">{teacherError}</p>}</form>}{mode === 'student' && <div className="section-student-allocation"><div className="section-assignment-form-head"><h3>Students / Allocations</h3><span>{selectedStudents.length} selected</span></div>{section.status !== 'Active' && <p className="section-assignment-error" role="alert">Students can only be assigned to an active section.</p>}<label className="section-student-search"><FiSearch aria-hidden="true" /><input type="search" aria-label="Search students" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search students..." /></label><label className="section-select-all"><input type="checkbox" checked={allVisibleSelected} disabled={!available || !selectableRows.length || section.status !== 'Active'} onChange={toggleAll} /> Select All Eligible</label><div className="section-eligible-list">{visibleStudents.length ? visibleStudents.map(({ student, crossAssignment }) => { const otherSection = crossAssignment ? sectionById.get(String(crossAssignment.sectionId)) : null; const disabled = Boolean(crossAssignment) || section.status !== 'Active'; return <label className={`section-student-row ${disabled ? 'disabled' : ''}`} key={student.id}><input type="checkbox" checked={selectedIds.includes(String(student.id))} disabled={disabled} onChange={() => toggleStudent(student.id)} /><span><strong>{student.name}</strong><small>{student.code || 'Student record'}</small></span><em>{crossAssignment ? `Already assigned to ${otherSection?.name || 'another section'}` : 'Unassigned'}</em></label> }) : <p className="section-assignment-empty">{studentsLoading ? 'Loading students...' : error ? 'Unable to load students for this section. Please retry.' : 'No eligible unassigned students found for this section.'}</p>}</div><footer className="section-student-actions"><span>Selected: {selectedStudents.length}</span><button className="section-primary" disabled={saving || !selectedStudents.length || section.status !== 'Active'} onClick={submitSelected}><FiUserPlus /> {saving ? 'Assigning...' : 'Assign Selected Students'}</button></footer>{error && <p className="section-assignment-error" role="alert">{error}</p>}<div className="section-assigned-list"><h3>Assigned Students <span>{assignments.length}</span></h3>{assignments.length ? assignments.map((assignment) => <article key={`${assignment.sectionId}-${assignment.studentId}-${assignment.id}`}><div><strong>{assignment.studentName}</strong><span>{assignment.enrollmentNo}</span></div><button title="Remove student" disabled={removingStudentIds.includes(String(assignment.studentId))} onClick={() => removeStudent(assignment)}><FiTrash2 className="module-action-icon module-action-icon--danger" /> {removingStudentIds.includes(String(assignment.studentId)) ? 'Removing...' : 'Remove'}</button></article>) : <p>No students have been assigned yet.</p>}</div></div>}{mode && <footer><button type="button" className="section-back-button" onClick={() => { setMode(''); setError(''); setSelectedIds([]) }}>Back</button></footer>}</section></div>
+  return <ViewDialog title="Assign teacher or student" subtitle={section.name} onClose={close} busy={saving} showExport={false} hideFooter maxWidth="900px"><section className="section-assignment-panel"><p className="section-assignment-context">{[section.branchCode || section.branch, section.semester, section.academicYear].filter(clean).join(' · ')}</p><div className="section-capacity"><strong>{assignedCount} / {section.capacity}</strong><span>{available} seats available</span><i><b style={{ width: `${Math.min(100, assignedCount * 100 / Math.max(Number(section.capacity || 1), 1))}%` }} /></i></div>{!mode && <div className="section-assignment-chooser"><button type="button" onClick={() => setMode('teacher')}><FiCheckCircle /><span><strong>Assign Teacher</strong><small>{section.advisor || 'No teacher assigned'}</small></span></button><button type="button" onClick={() => setMode('student')}><FiUserPlus /><span><strong>Students / Allocations</strong><small>{assignedCount} students assigned</small></span></button></div>}{mode === 'teacher' && <form className="section-assignment-form section-teacher-form" onSubmit={submitTeacher}><div className="section-assignment-form-head"><h3>Assign teacher</h3></div><div><label>Teacher / Faculty Advisor<SearchableSelect label="Faculty Advisor" value={teacher} onChange={setTeacher} loading={teacherLoading} noOptionsMessage={teacherError ? 'Unable to load faculty candidates.' : 'No active faculty candidates found for this section.'} options={teacherCandidates.map((item) => ({ value: item.employeeProfileId, name: item.fullName, code: [item.employeeCode, item.designation].filter(clean).join(' / ') }))} placeholder="Select faculty advisor" searchPlaceholder="Search faculty name or employee code..." /></label><button className="section-primary" disabled={saving || teacherLoading}><FiCheckCircle /> {saving ? 'Saving...' : 'Save Teacher'}</button></div>{teacherError && <p className="section-assignment-error" role="alert">{teacherError}</p>}</form>}{mode === 'student' && <div className="section-student-allocation"><div className="section-assignment-form-head"><h3>Students / Allocations</h3><span>{selectedStudents.length} selected</span></div>{section.status !== 'Active' && <p className="section-assignment-error" role="alert">Students can only be assigned to an active section.</p>}<label className="section-student-search"><FiSearch aria-hidden="true" /><input type="search" aria-label="Search students" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search students..." /></label><label className="section-select-all"><input type="checkbox" checked={allVisibleSelected} disabled={!available || !selectableRows.length || section.status !== 'Active'} onChange={toggleAll} /> Select All Eligible</label><div className="section-eligible-list">{visibleStudents.length ? visibleStudents.map(({ student, crossAssignment }) => { const otherSection = crossAssignment ? sectionById.get(String(crossAssignment.sectionId)) : null; const disabled = Boolean(crossAssignment) || section.status !== 'Active'; return <label className={`section-student-row ${disabled ? 'disabled' : ''}`} key={student.id}><input type="checkbox" checked={selectedIds.includes(String(student.id))} disabled={disabled} onChange={() => toggleStudent(student.id)} /><span><strong>{student.name}</strong><small>{student.code || 'Student record'}</small></span><em>{crossAssignment ? `Already assigned to ${otherSection?.name || 'another section'}` : 'Unassigned'}</em></label> }) : <p className="section-assignment-empty">{studentsLoading ? 'Loading students...' : error ? 'Unable to load students for this section. Please retry.' : 'No eligible unassigned students found for this section.'}</p>}</div><footer className="section-student-actions"><span>Selected: {selectedStudents.length}</span><button className="section-primary" disabled={saving || !selectedStudents.length || section.status !== 'Active'} onClick={submitSelected}><FiUserPlus /> {saving ? 'Assigning...' : 'Assign Selected Students'}</button></footer>{error && <p className="section-assignment-error" role="alert">{error}</p>}<div className="section-assigned-list"><h3>Assigned Students <span>{assignments.length}</span></h3>{assignments.length ? assignments.map((assignment) => <article key={`${assignment.sectionId}-${assignment.studentId}-${assignment.id}`}><div><strong>{assignment.studentName}</strong><span>{assignment.enrollmentNo}</span></div><button title="Remove student" disabled={removingStudentIds.includes(String(assignment.studentId))} onClick={() => removeStudent(assignment)}><FiTrash2 className="module-action-icon module-action-icon--danger" /> {removingStudentIds.includes(String(assignment.studentId)) ? 'Removing...' : 'Remove'}</button></article>) : <p>No students have been assigned yet.</p>}</div></div>}{mode && <footer><button type="button" className="section-back-button" onClick={() => { setMode(''); setError(''); setSelectedIds([]) }}>Back</button></footer>}</section></ViewDialog>
 }
-function Confirm({ action, close, confirm }) { const activate = action.nextStatus === 'Active'; return <div className="section-overlay centered"><section className="section-confirm" role="alertdialog" aria-modal="true"><i>!</i><h2>{activate ? 'Activate' : 'Deactivate'} Section?</h2><p><strong>{action.row.name} ({action.row.code})</strong> {activate ? 'will become available for student allocations.' : `${action.assigned} students are currently assigned to this section. Deactivating this section will prevent new allocations. Existing allocations are not removed by this action.`}</p><footer><button onClick={close}>Cancel</button><button className={activate ? 'section-primary' : 'section-danger'} onClick={confirm}>{activate ? 'Activate' : 'Confirm Deactivate'}</button></footer></section></div> }
+function Confirm({ action, close, confirm, busy }) { return <StatusConfirmDialog entity="Section" name={`${action.row.name} (${action.row.code})`} nextStatus={action.nextStatus} onCancel={close} onConfirm={confirm} busy={busy} description={action.nextStatus === 'Active' ? 'This section will become available for student allocations.' : `${action.assigned} students are currently assigned. Existing allocations are retained.`} confirmLabel={action.nextStatus === 'Active' ? 'Activate' : 'Confirm Deactivate'} /> }
+
 
 export default function SectionManagement({ mode }) {
   const { id } = useParams()
   if (mode === 'form') return <SectionForm key="add" />
   if (mode === 'edit') return <SectionForm key={id} editMode />
-  if (mode === 'details' || id) return <SectionDetails />
+  if (mode === 'details' || id) return <SectionList initialViewId={id} />
   return <SectionList />
 }

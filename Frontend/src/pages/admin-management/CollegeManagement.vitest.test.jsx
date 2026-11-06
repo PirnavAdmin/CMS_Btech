@@ -1,0 +1,110 @@
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { AddCollege, CollegeInstitutionManagement } from './AdminManagement.jsx'
+import { getColleges, searchColleges, getCollegeById, createCollege, updateCollege, uploadCollegeLogo } from '../../auth/collegeApi'
+import { showToast } from '../../utils/toast'
+
+const fixture = vi.hoisted(() => ({ rows: [], edit: true, create: true, access: { isSuperAdmin: true, userId: 1 } }))
+vi.mock('../../layouts/DashboardLayout', () => ({ default: ({ children }) => children }))
+vi.mock('../../components/ExportMenu', () => ({ default: () => <button>Export</button>, PrintDetailsButton: () => null }))
+vi.mock('../../context/AcademicContext', () => ({ useAcademic: () => ({ collegeAccess: fixture.access, selectedCollegeId: '7', selectedCollege: { id: '7', name: 'Selected College' }, loading: false }) }))
+vi.mock('../../auth/ScreenAccess', () => ({ useScreenAccess: () => ({ access: fixture.access, loading: false, canAction: (_path, action) => action === 'create' ? fixture.create : fixture.edit }) }))
+vi.mock('../../utils/toast', async original => ({ ...await original(), showToast: vi.fn() }))
+vi.mock('../../auth/collegeApi', async original => ({ ...await original(), getColleges: vi.fn(), searchColleges: vi.fn(), getCollegeById: vi.fn(), createCollege: vi.fn(), updateCollege: vi.fn(), uploadCollegeLogo: vi.fn(), fetchCollegeLogo: vi.fn(async () => ''), getCollegeLogoEndpoint: () => '', getCollegeLogoUrl: () => '', readCachedCollegeLogo: () => '' }))
+const college = (id = 7) => ({ id, name: `College ${String.fromCharCode(64 + id)}`, code: `COL${id}`, type: 'Engineering', university: 'Engineering University', addressLine1: 'Campus Road', city: 'Bengaluru', state: 'Karnataka', pincode: '560001', contact: '9876543210', email: `office${id}@example.edu`, principal: 'Principal Name', principalEmail: 'principal@example.edu', principalContact: '9876543211', status: 1 })
+beforeEach(() => {
+  vi.clearAllMocks(); localStorage.clear(); fixture.rows = [college()]; fixture.edit = true; fixture.create = true; fixture.access = { isSuperAdmin: true, userId: 1 }
+  getColleges.mockReset().mockImplementation(async () => ({ data: fixture.rows }))
+  searchColleges.mockReset().mockImplementation(async () => ({ data: fixture.rows }))
+  getCollegeById.mockReset().mockImplementation(async id => ({ data: fixture.rows.find(row => String(row.id) === String(id)) }))
+  createCollege.mockReset().mockImplementation(async payload => { const created = { ...payload, id:90 }; fixture.rows.push(created); return { data:created } })
+  updateCollege.mockReset().mockResolvedValue({}); uploadCollegeLogo.mockReset().mockResolvedValue({})
+  vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Lookup unavailable')))
+})
+afterEach(() => { cleanup(); vi.unstubAllGlobals() })
+const mount = (path = '/college-institution-management') => render(<MemoryRouter initialEntries={[path]}><Routes>
+  <Route path="/college-institution-management" element={<CollegeInstitutionManagement />} />
+  <Route path="/college-institution-management/add" element={<AddCollege />} />
+</Routes></MemoryRouter>)
+test('college directory retains affiliation/contact fields and five-row pagination', async () => {
+  fixture.rows = Array.from({ length: 6 }, (_, index) => college(index + 1)); mount()
+  const table = await screen.findByRole('table', { name: 'Colleges' })
+  expect(within(table).getAllByRole('row')).toHaveLength(6)
+  expect(within(table).getByRole('columnheader', { name: 'Affiliation' })).toBeTruthy()
+  expect(within(table).getAllByText('Engineering University')).toHaveLength(5)
+  fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+  expect(within(screen.getByRole('table')).getAllByRole('row')).toHaveLength(2)
+  fireEvent.click(screen.getByRole('button', { name: 'Inactive', exact: true }))
+  expect(await screen.findByText('No colleges found.')).toBeTruthy()
+})
+test('college details opens above the list, preserves fields, and closes with Escape', async () => {
+  mount(); fireEvent.click(await screen.findByRole('button', { name: 'View College G' }))
+  const dialog = await screen.findByRole('dialog', { name: 'College Details' })
+  await within(dialog).findByText('principal@example.edu')
+  expect(screen.getByRole('table')).toBeTruthy()
+  expect(within(dialog).getByText('560001')).toBeTruthy()
+  fireEvent(dialog, new Event('cancel', { cancelable: true }))
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(screen.getByRole('table')).toBeTruthy()
+})
+test('read-only access hides create/edit/status actions and retains view', async () => {
+  fixture.edit = false; fixture.create = false; mount()
+  await screen.findByRole('button', { name: 'View College G' })
+  expect(screen.queryByRole('button', { name: 'Add College' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Edit College G' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Deactivate College G' })).toBeNull()
+})
+test('failed reads offer retry without presenting an empty successful directory', async () => {
+  getColleges.mockRejectedValueOnce(new Error('Unavailable')); mount()
+  fireEvent.click(await screen.findByRole('button', { name: 'Retry' }))
+  await screen.findByRole('table'); expect(getColleges).toHaveBeenCalledTimes(2)
+})
+test('edit form retains entered values when context access refreshes and supports tab keyboard movement', async () => {
+  const tree = <MemoryRouter initialEntries={['/college-institution-management/add?edit=7']}><AddCollege /></MemoryRouter>
+  const { rerender } = render(tree)
+  await waitFor(() => expect(screen.getByLabelText(/^College Name/).value).toBe('College G'))
+  fireEvent.change(screen.getByLabelText(/^College Name/), { target: { value: 'Updated College' } })
+  fixture.access = { ...fixture.access }; rerender(<MemoryRouter initialEntries={['/college-institution-management/add?edit=7']}><AddCollege /></MemoryRouter>)
+  expect(screen.getByLabelText(/^College Name/).value).toBe('Updated College')
+  const tabs = screen.getAllByRole('tab'); fireEvent.keyDown(tabs[0], { key: 'ArrowRight' })
+  expect(screen.getByRole('tabpanel').getAttribute('aria-labelledby')).toBe(tabs[1].id)
+  expect(document.activeElement).toBe(tabs[1])
+})
+test('failed logo upload does not navigate or publish a success notification', async () => {
+  mount('/college-institution-management/add?edit=7')
+  await waitFor(() => expect(screen.getByLabelText(/^College Name/).value).toBe('College G'))
+  fireEvent.change(document.querySelector('input[type=file]'), { target: { files: [new File(['image'], 'logo.png', { type: 'image/png' })] } })
+  await waitFor(() => expect(document.querySelector('.ac-logo-preview img')).toBeTruthy())
+  fireEvent.click(screen.getByRole('tab', { name: 'Accreditation Details' }))
+  uploadCollegeLogo.mockRejectedValueOnce(new Error('Upload failed'))
+  fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }))
+  await waitFor(() => expect(uploadCollegeLogo).toHaveBeenCalledOnce())
+  expect(updateCollege).toHaveBeenCalledOnce()
+  await waitFor(() => expect(showToast.mock.calls.some(([, type]) => type === 'error')).toBe(true))
+  expect(showToast.mock.calls.some(([message, type]) => type === 'success' && String(message).includes('successfully'))).toBe(false)
+  expect(screen.getByRole('heading', { name: 'Edit College' })).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }))
+  await screen.findByRole('heading', { name: 'College Configuration' })
+  expect(uploadCollegeLogo).toHaveBeenCalledTimes(2)
+})
+
+test('new college creation keeps the saved identifier when logo upload fails and retries without creating a duplicate', async () => {
+  mount('/college-institution-management/add')
+  const change = (label,value) => fireEvent.change(screen.getByLabelText(label), { target:{value} })
+  const next = () => fireEvent.click(screen.getByRole('button', { name:/Save.*Next/ }))
+  change(/^College Name/,'New Engineering College'); change(/^College Code/,'NEC'); change(/^College Type/,'Engineering College'); change(/^University Name/,'Engineering University')
+  fireEvent.change(document.querySelector('input[type=file]'), { target:{ files:[new File(['image'],'logo.png',{type:'image/png'})] } })
+  await waitFor(() => expect(document.querySelector('.ac-logo-preview img')).toBeTruthy())
+  next(); change(/^Address Line 1/,'Campus Road'); change(/^Pincode/,'560001'); change(/^City/,'Bengaluru'); change(/^State/,'Karnataka'); next()
+  change(/^Official Contact Number/,'9876543299'); change(/^Official Email/,'newcollege@example.edu'); next()
+  change(/^Principal Name/,'Principal Name'); change(/^Principal Email/,'newprincipal@example.edu'); change(/^Principal Contact Number/,'9876543298'); next()
+  uploadCollegeLogo.mockRejectedValueOnce(new Error('Upload failed'))
+  fireEvent.click(screen.getByRole('button', { name:'Submit College' }))
+  await waitFor(() => expect(uploadCollegeLogo).toHaveBeenCalledOnce())
+  expect(createCollege).toHaveBeenCalledOnce()
+  await waitFor(() => expect(screen.getByRole('button', { name:'Submit College' }).disabled).toBe(false))
+  fireEvent.click(screen.getByRole('button', { name:'Submit College' }))
+  await screen.findByRole('heading', { name:'College Configuration' })
+  expect(createCollege).toHaveBeenCalledOnce(); expect(uploadCollegeLogo).toHaveBeenLastCalledWith(90, expect.any(File))
+})

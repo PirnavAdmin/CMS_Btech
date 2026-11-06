@@ -1,0 +1,18 @@
+/* CMS Inter AdminSettings/SettingsPage.css card structure; two supported B-Tech configurations. */
+.configuration-workspace { min-width:0; }
+.configuration-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.configuration-card { display:flex; flex-direction:column; justify-content:space-between; min-height:150px; min-width:0; padding:10px 12px; border:1px solid var(--border); border-radius:12px; background:var(--surface); box-shadow:0 2px 8px color-mix(in srgb,var(--text-primary) 4%,transparent); transition:box-shadow .2s,border-color .2s,transform .15s; }
+.configuration-card:hover { border-color:var(--cms-primary-border); box-shadow:var(--shadow-sm); transform:translateY(-1px); }
+.configuration-card header,.configuration-context-card header { display:flex; align-items:center; gap:10px; margin-bottom:6px; }
+.configuration-card header img { width:30px; height:30px; object-fit:contain; }
+.configuration-card h2 { margin:0; font-size:14.5px; line-height:1.25; }
+.configuration-card p { margin:0; color:var(--text-muted); font-size:12px; line-height:1.45; flex:1; }
+.configuration-card footer { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-top:16px; }
+.configuration-card footer svg { width:14px; height:14px; }
+.configuration-context-card { padding:16px; margin-bottom:16px; border:1px solid var(--border); border-radius:12px; background:var(--surface); }
+.configuration-context-card h2 { font-size:14px; margin:0; }
+.configuration-context-card header svg { width:20px; height:20px; color:var(--brand); }
+.configuration-context { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin-top:14px; }
+.configuration-context-card p { margin:12px 0 4px; font-size:12px; color:var(--text-secondary); }
+.configuration-context-card small { color:var(--text-muted); font-size:11px; }
+@media(max-width:640px){.configuration-grid,.configuration-context{grid-template-columns:1fr}.configuration-card{min-height:140px}}

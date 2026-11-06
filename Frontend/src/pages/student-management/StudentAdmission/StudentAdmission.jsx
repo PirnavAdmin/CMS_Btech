@@ -1,3 +1,9 @@
+import StudentDocumentActions from '../../../components/StudentDocumentActions'
+import { studentIntegrationFees } from '../../../utils/studentIntegrationFees'
+import PageHeader from '../../../components/PageHeader'
+import ViewDialog from '../../../components/ViewDialog'
+import { useScreenAccess } from '../../../auth/ScreenAccess'
+import { uploadAdmissionDocuments, admissionDecisionAllowed } from '../../../utils/admissionDocumentWorkflow'
 import { ADMISSION_QUOTAS } from '../../../utils/admissionQuotaOptions'
 import { ProjectSelect } from '../../../components/SearchableSelect'
 import { Link } from 'react-router-dom'
@@ -50,7 +56,8 @@ import { readFeeWorkspace, readStructures, readHostelStructures, readTransportSt
 import './StudentAdmission.css'
 
 
-const STEPS = ['Basic Information', 'Academic Information', 'Parent / Guardian', 'Contact & Address', 'Previous Education', 'Admission Details', 'Fees', 'Documents Upload']
+const STEPS = ['Personal Details', 'Academic Details', 'Parent Details', 'Documents', 'Fee Information', 'Review', 'Submit']
+const LEGACY_STEP_TO_MAIN = [0, 1, 2, 0, 1, 1, 4, 3]
 const STEP_ICONS = [FiUser, FiPhone, FiUsers, FiBookOpen, FiFileText, FiHome, FiInbox, FiUploadCloud]
 const STATUS = { DRAFT: 'Draft', PENDING: 'Pending', SUBMITTED: 'Submitted', APPLICATION_SUBMITTED: 'Submitted', UNDER_REVIEW: 'Under Review', VERIFIED: 'Verified', APPROVED: 'Approved', CORRECTION_REQUIRED: 'Correction Required', REJECTED: 'Rejected' }
 const normalizeStatus = raw => normalizeAdmissionStatus(raw)
@@ -102,7 +109,7 @@ const normalizeHostelRoomType = value => {
   return label
 }
 
-const empty = () => createEmptyCanonicalStudent()
+const empty = () => { const data = createEmptyCanonicalStudent(); return { ...data, fees: { ...studentIntegrationFees(), paymentPlan:'Full Payment' } } }
 
 const merge = row => {
   const base = empty()
@@ -111,7 +118,8 @@ const merge = row => {
 
 const admissionFromApi = row => {
   if (!row) return empty()
-  return normalizeCanonicalStudent(row)
+  const normalized = normalizeCanonicalStudent(row)
+  return { ...normalized, fees: { ...normalized.fees, ...studentIntegrationFees(row.feeSummary, row.feeStructure) } }
 }
 
 const documentsFromApi = rows => {
@@ -155,18 +163,7 @@ const dateTime = value => formatDateTime(value)
 const quota = student => studentQuotaDisplay(student)
 const matchingFeeStructures = (academic = {}, admission = {}, serverPlans = []) => {
   const collegeId = admission.collegeId || academic.collegeId;
-  let candidates = [];
-  try {
-    {
-      const ws = readFeeWorkspace(collegeId);
-      if (ws && Array.isArray(ws.structures)) {
-        candidates = [...candidates, ...ws.structures];
-      }
-    }
-  } catch {}
-  try { candidates = [...candidates, ...readStructures(collegeId)]; } catch {}
-  // Prefer authoritative backend rows if a local legacy plan reuses the same ID.
-  if (Array.isArray(serverPlans)) candidates = [...candidates, ...serverPlans];
+  const candidates = Array.isArray(serverPlans) ? serverPlans : [];
 
   // Admission uses the same exact scope matcher as fee-plan assignment. The
   // admission wizard stores display names alongside IDs, so pass both forms.
@@ -181,117 +178,15 @@ const matchingFeeStructures = (academic = {}, admission = {}, serverPlans = []) 
   const uniquePlans = [...new Map(candidates.filter(plan => plan?.id != null).map(plan => [String(plan.id), plan])).values()];
   const scope = { ...admission, collegeId }
   const exactMatches = matchingAdmissionFeeStructures(uniquePlans, scopedAcademic, scope)
-  if (exactMatches.length || !(scopedAcademic.semesterId || scopedAcademic.semester)) return exactMatches
-  // Older admission records may retain an invalid semester ID. Keep the course,
-  // branch and year filter, then let the user choose from the available semesters.
-  return matchingAdmissionFeeStructures(uniquePlans, { ...scopedAcademic, semesterId: '', semester: '' }, scope)
+  return exactMatches
 };
 const findMatchingFeeStructure = (academic, admission, selectedId) => {
   const plans = matchingFeeStructures(academic, admission);
   return plans.find(plan => String(plan.id) === String(selectedId)) || plans[0] || null;
 };
 
-const getResolvedHostelFee = (admission = {}, fees = {}, academic = {}) => {
-  if (admission?.hostel !== 'Yes') return 0;
-  const collegeId = admission.collegeId || academic?.collegeId;
-  const roomType = String(admission?.hostelRoomType || '').trim().toLowerCase();
-  const gender = String(admission?.gender || '').trim().toLowerCase();
-  const preference = String(admission?.hostelPreference || '').trim().toLowerCase();
-
-  // 1. Check if the assigned academic fee structure explicitly has a hostel fee component
-  const academicComps = Array.isArray(fees?.components) ? fees.components : Array.isArray(fees?.feeComponents) ? fees.feeComponents : [];
-  const matchedComp = academicComps.find(c => /hostel|accommodation|mess/i.test(String(c.name || c.feeHeadName || '')));
-  if (matchedComp && Number(matchedComp.amount || 0) > 0) {
-    return Number(matchedComp.amount);
-  }
-
-  // 2. Check configured Hostel Fee Plans from Fee Management
-  try {
-    const hostelPlans = readHostelStructures(collegeId);
-    if (Array.isArray(hostelPlans) && hostelPlans.length > 0) {
-      const activeHostelPlans = hostelPlans.filter(p => !p.status || ['Active', 'Published', 'Approved'].includes(p.status));
-      const candidates = activeHostelPlans.length ? activeHostelPlans : hostelPlans;
-
-      const matchedPlan = candidates.find(p => {
-        if (preference && String(p.hostelType || p.hostelName || '').toLowerCase().includes(preference)) return true;
-        if (gender === 'male' && /boys/i.test(String(p.hostelType || p.hostelName || ''))) return true;
-        if (gender === 'female' && /girls/i.test(String(p.hostelType || p.hostelName || ''))) return true;
-        return false;
-      }) || candidates[0];
-
-      if (matchedPlan) {
-        if (Array.isArray(matchedPlan.roomPricing) && matchedPlan.roomPricing.length > 0) {
-          const matchedRoom = matchedPlan.roomPricing.find(r => {
-            const rType = String(r.roomType || '').trim().toLowerCase();
-            return roomType && (rType === roomType || rType.includes(roomType) || roomType.includes(rType));
-          }) || matchedPlan.roomPricing[0];
-
-          if (matchedRoom) {
-            const roomComps = Array.isArray(matchedRoom.components) ? matchedRoom.components : [];
-            const roomTotal = roomComps.reduce((sum, c) => sum + Number(c.amount || 0), 0);
-            if (roomTotal > 0) return roomTotal;
-            if (Number(matchedRoom.fee || matchedRoom.amount || 0) > 0) return Number(matchedRoom.fee || matchedRoom.amount);
-          }
-        }
-        const planComps = Array.isArray(matchedPlan.components) ? matchedPlan.components : [];
-        const planTotal = planComps.reduce((sum, c) => sum + Number(c.amount || 0), 0);
-        if (planTotal > 0) return planTotal;
-        if (Number(matchedPlan.fee || matchedPlan.amount || 0) > 0) return Number(matchedPlan.fee || matchedPlan.amount);
-      }
-    }
-  } catch {}
-
-  // 3. Fallback to existing student fee record if present
-  if (Number(fees?.hostelFee || 0) > 0) {
-    return Number(fees.hostelFee);
-  }
-
-  // 4. Fallback to canonical HOSTEL_FEES if roomType is known
-  return Number(HOSTEL_FEES[admission?.hostelRoomType] || 0);
-};
-
-const getResolvedTransportFee = (admission = {}, fees = {}, academic = {}) => {
-  if (admission?.transport !== 'Yes') return 0;
-  const collegeId = admission.collegeId || academic?.collegeId;
-  const route = String(admission?.transportRoute || '').trim().toLowerCase();
-
-  // 1. Check if the assigned academic fee structure explicitly has a transport fee component
-  const academicComps = Array.isArray(fees?.components) ? fees.components : Array.isArray(fees?.feeComponents) ? fees.feeComponents : [];
-  const matchedComp = academicComps.find(c => /transport|bus|conveyance/i.test(String(c.name || c.feeHeadName || '')));
-  if (matchedComp && Number(matchedComp.amount || 0) > 0) {
-    return Number(matchedComp.amount);
-  }
-
-  // 2. Check configured Transport Fee Plans from Fee Management
-  try {
-    const transportPlans = readTransportStructures(collegeId);
-    if (Array.isArray(transportPlans) && transportPlans.length > 0) {
-      const activeTransportPlans = transportPlans.filter(p => !p.status || ['Active', 'Published', 'Approved'].includes(p.status));
-      const candidates = activeTransportPlans.length ? activeTransportPlans : transportPlans;
-
-      const matchedPlan = candidates.find(p => {
-        const pRoute = String(p.route || p.routeCode || p.name || '').trim().toLowerCase();
-        return route && (pRoute === route || pRoute.includes(route) || route.includes(pRoute));
-      }) || candidates[0];
-
-      if (matchedPlan) {
-        const planComps = Array.isArray(matchedPlan.components) ? matchedPlan.components : [];
-        const planTotal = planComps.reduce((sum, c) => sum + Number(c.amount || 0), 0);
-        if (planTotal > 0) return planTotal;
-        if (Number(matchedPlan.fee || matchedPlan.amount || 0) > 0) return Number(matchedPlan.fee || matchedPlan.amount);
-      }
-    }
-  } catch {}
-
-  // 3. Fallback to existing student fee record if present
-  if (Number(fees?.transportFee || 0) > 0) {
-    return Number(fees.transportFee);
-  }
-
-  // 4. Fallback to canonical TRANSPORT_FEES if route is known
-  return Number(TRANSPORT_FEES[admission?.transportRoute] || 0);
-};
-
+const getResolvedHostelFee = (_admission = {}, fees = {}) => Number(fees.hostelFee ?? 0)
+const getResolvedTransportFee = (_admission = {}, fees = {}) => Number(fees.transportFee ?? fees.transportationFee ?? 0)
 const normalizeFeeSummary = response => {
   if (!response || typeof response !== 'object') return {}
   const nested = response.feeSummary ?? response.summary ?? response.feeDetails ?? response.feeStructure ?? {}
@@ -420,28 +315,7 @@ const defaultFeeSummary = data => {
     source: 'unconfigured'
   };
 }
-const resolveFeeSummary = (data, summaryResponse, structureResponse) => {
-  const backend = mergeFeeResponses(summaryResponse, structureResponse)
-  if (hasFeeSummary(backend)) {
-    const hostelFee = Number(backend.hostelFee) > 0 ? Number(backend.hostelFee) : getResolvedHostelFee(data.admission, data.fees, data.academic)
-    const transportFee = Number(backend.transportFee) > 0 ? Number(backend.transportFee) : getResolvedTransportFee(data.admission, data.fees, data.academic)
-    const tuitionFee = Number(backend.tuitionFee) || 0
-    const admissionFee = Number(backend.admissionFee) >= 0 && backend.admissionFee !== '' ? Number(backend.admissionFee) : Number(data.fees?.admissionFee || 0)
-    const scholarshipAmount = Number(backend.scholarshipAmount || data.fees?.scholarshipAmount || 0)
-    const calculatedTotal = Math.max(0, tuitionFee + admissionFee + hostelFee + transportFee - scholarshipAmount)
-    const totalFee = calculatedTotal > 0 ? calculatedTotal : Number(backend.totalFee || 0)
-    return {
-      ...backend,
-      configured: true,
-      admissionFee,
-      hostelFee,
-      transportFee,
-      totalFee,
-      source: 'backend'
-    }
-  }
-  return defaultFeeSummary(data)
-}
+const resolveFeeSummary = (_data, summaryResponse, structureResponse) => studentIntegrationFees(summaryResponse, structureResponse)
 const normalizeEmail = value => text(value).toLowerCase()
 const validEmail = value => { const email = normalizeEmail(value); return /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z]{2,})+$/i.test(email) && !email.includes('..') }
 const academicEndYear = data => Number(String(data.academic.academicYear || new Date().getFullYear()).slice(0,4)) || new Date().getFullYear()
@@ -469,7 +343,7 @@ const requiredPaths = new Set(REQUIRED)
 const validationStep = path => {
   const prefixes = ['personal.','academic.','parents.','contact.','previousEducation.','admission.','fees.','documents.']
   const index = prefixes.findIndex(prefix => path.startsWith(prefix))
-  return index < 0 ? 0 : index
+  return index < 0 ? 1 : LEGACY_STEP_TO_MAIN[index]
 }
 const validationLabel = path => {
   const labels = {
@@ -549,32 +423,15 @@ function Badge({ value }) {
     </span>
   );
 }
-function Button({ primary = false, danger = false, children, ...props }) { return <button className={danger ? 'sa-danger' : primary ? 'sa-primary' : 'sa-secondary'} {...props}>{children}</button> }
+function Button({ primary = false, danger = false, children, ...props }) { return <button type="button" className={danger ? 'sa-danger' : primary ? 'sa-primary' : 'sa-secondary'} {...props}>{children}</button> }
 function ConfirmDialog({ icon: Icon = FiAlertCircle, title, confirmLabel = 'Confirm', onCancel, onConfirm, busy = false, error = null, children }) {
-  return (
-    <div className="sa-overlay">
-      <div className="sa-dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
-        <button type="button" className="sa-dialog-close" onClick={onCancel} aria-label="Close dialog">
-          <FiX />
-        </button>
-        <div className="sa-dialog-icon">
-          <Icon />
-        </div>
-        <h2 id="dialog-title">{title}</h2>
-        {error && <div className="sa-callout danger" style={{ marginTop: '10px' }}>{error}</div>}
-        <div className="sa-dialog-copy">
-          {children}
-        </div>
-        <footer>
-          <Button onClick={onCancel} disabled={busy}>Cancel</Button>
-          <Button primary onClick={onConfirm} disabled={busy}>
-            {busy ? 'Processing...' : confirmLabel}
-          </Button>
-        </footer>
-      </div>
-    </div>
-  )
+  return <ViewDialog title={title} icon={Icon} onClose={onCancel} busy={busy} showExport={false} hideFooter maxWidth="560px">
+    {error && <p role="alert" className="sa-callout danger">{error}</p>}
+    <div className="sa-dialog-copy">{children}</div>
+    <footer className="sa-wizard-actions"><Button disabled={busy} onClick={onCancel}>Cancel</Button><Button primary disabled={busy} onClick={onConfirm}>{busy ? 'Processing...' : confirmLabel}</Button></footer>
+  </ViewDialog>
 }
+
 function Section({ title, icon: Icon = FiFileText, hint, action, children, className = '' }) {
   const shownTitle = title === 'Application Information' ? 'Registration Details' : title;
   return (
@@ -639,13 +496,19 @@ function AdmissionFilters({ rows, query, setQuery, filters, setFilters }) {
   const options = key => [...new Set(rows.map(item => key === 'status' ? item.status : key === 'feeStatus' ? (item.fees?.paymentStatus || 'Pending') : key === 'quota' ? quota(item) : item.academic?.[key]).filter(Boolean))].sort()
   const active = Object.entries(filters).filter(([,value]) => value)
   const clear = () => { setQuery(''); setFilters(Object.fromEntries(FILTERS.map(([key]) => [key, '']))) }
-  return <FilterPanel active={Boolean(query || active.length)} onClear={clear} className="sa-filter-panel"><div className="sa-toolbar"><label className="sa-search"><FiSearch /><input value={query} onChange={event => setQuery(event.target.value)} title="Search name, registration, admission, mobile or email" placeholder="Search name, registration, admission, mobile or email" /></label></div><div className="sa-filter-grid">{FILTERS.map(([key,label]) => <label key={key}><span>{label}</span><ProjectSelect value={filters[key]} onChange={event => setFilters(current => ({ ...current, [key]: event.target.value }))}><option value="">All {label}</option>{options(key).map(value => <option value={value} key={value}>{key === 'status' ? (STATUS[value] || value) : value}</option>)}</ProjectSelect></label>)}</div>{active.length > 0 && <div className="sa-filter-chips">{active.map(([key,value]) => <button key={key} onClick={() => setFilters(current => ({ ...current, [key]: '' }))}>{FILTERS.find(item => item[0] === key)?.[1]}: {key === 'status' ? (STATUS[value] || value) : value} <FiX /></button>)}</div>}</FilterPanel>
+  return <FilterPanel active={Boolean(query || active.length)} onClear={clear} className="sa-filter-panel"><div className="sa-toolbar"><label className="sa-search"><FiSearch /><input value={query} onChange={event => setQuery(event.target.value)} title="Search name, registration, admission, mobile or email" placeholder="Search name, registration, admission, mobile or email" /></label></div><div className="sa-filter-grid">{FILTERS.map(([key,label]) => <label key={key}><span>{label}</span><ProjectSelect value={filters[key]} onChange={event => setFilters(current => ({ ...current, [key]: event.target.value, ...(key === 'course' ? {branch:''} : {}) }))}><option value="">All {label}</option>{options(key).map(value => <option value={value} key={value}>{key === 'status' ? (STATUS[value] || value) : value}</option>)}</ProjectSelect></label>)}</div>{active.length > 0 && <div className="sa-filter-chips">{active.map(([key,value]) => <button key={key} onClick={() => setFilters(current => ({ ...current, [key]: '' }))}>{FILTERS.find(item => item[0] === key)?.[1]}: {key === 'status' ? (STATUS[value] || value) : value} <FiX /></button>)}</div>}</FilterPanel>
 }
 function EmptyState() {
   return <div className="sa-empty"><span><FiInbox /></span><h3>No admission applications found</h3><p>Create a new admission application to begin student enrollment.</p></div>
 }
 
 function AdmissionList() {
+  const { canAction } = useScreenAccess()
+  const canCreate = canAction('/student-management/admissions', 'create'), canEdit = canAction('/student-management/admissions', 'edit')
+  const [loading, setLoading] = useState(true)
+  const [loadError, setDirectoryError] = useState('')
+  const requestSequence = useRef(0)
+  const [sort, setSort] = useState('recent')
   const navigate = useNavigate()
   const { selectedCollegeId, selectedCollege, selectedAcademicYearId, selectedAcademicYear } = useAcademic()
   const [rows, setRows] = useCollegeState([])
@@ -656,17 +519,19 @@ function AdmissionList() {
   const initialFilters = Object.fromEntries(FILTERS.map(([key]) => [key, '']))
   const [filters, setFilters] = useState(initialFilters)
   const loadAdmissions = useCallback(() => {
+    const requestId = ++requestSequence.current
     let active = true
+    setLoading(true); setDirectoryError('')
     studentAdmissionApi.getAll().then(items => {
-      if (active) {
+      if (active && requestId === requestSequence.current) {
         setExportReady(isApiResult(items))
         setRows(newestFirst('admissions', items).map(admissionFromApi))
       }
     }).catch(error => {
-      if (active) setLoadError(error.message || 'Unable to load admissions.')
-    })
+      if (active && requestId === requestSequence.current) { setDirectoryError(error.message || 'Unable to load admissions.'); setLoadError(error.message || 'Unable to load admissions.'); setExportReady(false) }
+    }).finally(() => { if (active && requestId === requestSequence.current) setLoading(false) })
     return () => { active = false }
-  }, [setLoadError])
+  }, [setLoadError, selectedCollegeId, selectedAcademicYearId])
 
   useEffect(() => {
     const cancel = loadAdmissions()
@@ -717,34 +582,20 @@ function AdmissionList() {
   useEffect(() => { setPage(1) }, [query, filters])
   const totalPages = Math.max(1, Math.ceil(shown.length / PAGE_SIZE))
   const currentPage = Math.min(page, totalPages)
-  const pageRows = shown.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+  const sortedRows = [...shown].sort((a, b) => sort === 'name' ? studentName(a).localeCompare(studentName(b)) : sort === 'registration' ? String(a.application.number).localeCompare(String(b.application.number), undefined, { numeric: true }) : 0)
+  const pageRows = sortedRows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
   const clear = () => { setQuery(''); setFilters(initialFilters); setPage(1) }
   const stats = {
     total: scopedRows.length,
     approved: scopedRows.filter(item => normalizeStatus(item.status) === 'APPROVED').length,
-    pending: scopedRows.filter(item => ['SUBMITTED', 'PENDING', 'UNDER_REVIEW', 'VERIFIED'].includes(normalizeStatus(item.status))).length,
+    pending: scopedRows.filter(item => ['SUBMITTED', 'PENDING', 'UNDER_REVIEW', 'VERIFIED', 'DOCUMENT_VERIFICATION'].includes(normalizeStatus(item.status))).length,
     draft: scopedRows.filter(item => normalizeStatus(item.status) === 'DRAFT').length,
   }
 
   return (
     <>
-      <header className="sa-page-header cm-header">
-        <div>
-          <h1>Student Admissions</h1>
-          <p>Manage student registrations, verification, approval and enrollment</p>
-        </div>
-        <div className="cm-row-actions">
-          <CompactSummary
-            label="Admission summary"
-            items={[
-              { label: 'Total', value: stats.total },
-              { label: 'Approved', value: stats.approved, tone: 'active' },
-              { label: 'Pending', value: stats.pending, tone: 'upcoming' },
-              { label: 'Draft', value: stats.draft, tone: 'inactive' },
-            ]}
-          />
-        </div>
-      </header>
+      <PageHeader title="Student Admissions" subtitle="Manage registrations, review and approval in the selected college and academic year." />
+      <div className="sa-reference-summary">{[['Applications',stats.total],['Approved',stats.approved],['Awaiting review',stats.pending],['Drafts',stats.draft]].map(([label,value]) => <article key={label}><span>{label}</span><strong>{loading ? '—' : value}</strong></article>)}</div>
       <section className="sa-directory cm-panel">
         <header className="course-directory-heading">
           <div>
@@ -753,13 +604,14 @@ function AdmissionList() {
           </div>
           <div className="directory-export-actions">
             <ExportMenu rows={shown} columns={admissionColumns} recordSections={admissionDetailSections} title="Student Admissions" filename="student-admissions" loading={!exportReady} scope="Current filtered API results" />
-            <button className="cm-button" type="button" onClick={() => navigate('/student-management/admissions/new')}>
+            <button hidden={!canCreate} className="cm-button" type="button" onClick={() => navigate('/student-management/admissions/new')}>
               <FiPlus /> New Admission
             </button>
           </div>
         </header>
         <AdmissionFilters rows={scopedRows} query={query} setQuery={setQuery} filters={filters} setFilters={setFilters} />
-        {!scopedRows.length || !shown.length ? (
+        <label className="sa-sort">Sort by <select aria-label="Sort admissions" value={sort} onChange={event => { setSort(event.target.value); setPage(1) }}><option value="recent">Recently added</option><option value="name">Student name</option><option value="registration">Registration number</option></select></label>
+        {loading ? <p role="status" className="sa-empty">Loading admissions...</p> : loadError ? <div className="sa-empty" role="alert"><p>{loadError}</p><Button onClick={loadAdmissions}>Retry</Button></div> : !scopedRows.length || !shown.length ? (
           <EmptyState hasRows={Boolean(scopedRows.length)} filtered={Boolean(query || Object.values(filters).some(Boolean))} onCreate={() => navigate('/student-management/admissions/new')} onClear={clear} />
         ) : (
           <div className="sa-table-wrap" tabIndex={0} role="region" aria-label="Admissions table, scroll horizontally to see all columns">
@@ -780,8 +632,8 @@ function AdmissionList() {
                 {pageRows.map(item => {
                   const normStat = normalizeStatus(item.status)
                   const feeStat = item.fees?.paymentStatus || 'Pending'
-                  const isEditable = ['DRAFT', 'CORRECTION_REQUIRED'].includes(normStat)
-                  const isReviewable = ['SUBMITTED', 'PENDING', 'UNDER_REVIEW', 'VERIFIED'].includes(normStat)
+                  const isEditable = canEdit && ['DRAFT', 'CORRECTION_REQUIRED'].includes(normStat)
+                  const isReviewable = canEdit && ['SUBMITTED', 'PENDING', 'UNDER_REVIEW', 'VERIFIED'].includes(normStat)
                   const sName = studentName(item)
                   const sContact = item.contact.email || item.contact.mobile || 'Contact pending'
                   return (
@@ -903,44 +755,18 @@ function PhotoUpload({ data, update, notify }) {
     </div>
   )
 }
-function DocumentsUpload({ data, update }) {
-  return (
-    <section className="sa-documents">
-      <div className="sa-document-grid">
-        {DOCUMENTS.map(([key, label]) => {
-          const value = data.documents?.[key]?.status || (data.documents?.[key] ? 'Submitted' : '')
-          const isSubmitted = value === 'Submitted'
-          const isPending = value === 'Pending'
-          return (
-            <article className={`sa-document-item ${isSubmitted ? 'uploaded' : isPending ? 'pending' : ''}`} key={key}>
-              <div className="sa-document-icon">
-                {isSubmitted ? <FiCheckCircle /> : <FiFileText />}
-              </div>
-              <div className="sa-document-copy">
-                <strong>{label}</strong>
-                <span className={`sa-doc-status-tag ${isSubmitted ? 'status-submitted' : isPending ? 'status-pending' : ''}`}>
-                  {value || 'Status not selected'}
-                </span>
-              </div>
-              <div className="sa-document-actions">
-                <ProjectSelect
-                  aria-label={`${label} status`}
-                  value={value}
-                  onChange={event => update(`documents.${key}`, event.target.value ? { status: event.target.value } : null)}
-                >
-                  <option value="">Select status</option>
-                  <option value="Submitted">Submitted</option>
-                  <option value="Pending">Pending</option>
-                </ProjectSelect>
-              </div>
-            </article>
-          )
-        })}
-      </div>
-    </section>
-  )
+function DocumentsUpload({ data, update, notify }) {
+  const choose = (key, file) => {
+    if (!file) return
+    if (!/\.(pdf|jpe?g|png|webp)$/i.test(file.name) || file.size > 5 * 1024 * 1024) { notify('Choose a PDF, JPG, PNG or WEBP document up to 5 MB.', 'error'); return }
+    update('documents.' + key, { ...(data.documents?.[key] || {}), file, name: file.name, uploaded: false, status: 'Pending' })
+  }
+  return <section className="sa-documents"><header><h2>Supporting documents</h2><p>Select files now. Each upload is confirmed by the server when the student identity is available.</p></header><div className="sa-document-grid">{DOCUMENTS.map(([key,label]) => {
+    const document = data.documents?.[key]
+    return <article className="sa-document-item" key={key}><FiFileText /><div className="sa-document-copy"><strong>{label}</strong><span>{document?.file ? 'Selected — awaiting upload' : document?.uploaded || document?.id ? 'Uploaded' : document?.status || 'Not uploaded'}</span><small>{document?.name}</small></div><div className="sa-document-actions"><label className="sa-document-picker">{document?.file || document?.id ? 'Replace file' : 'Choose file'}<input aria-label={label + ' file'} type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={event => { choose(key,event.target.files?.[0]); event.target.value = '' }} /></label><ProjectSelect aria-label={label + ' status'} value={document?.status || ''} onChange={event => update('documents.' + key,{ ...(document || {}), status:event.target.value })}><option value="">Select status</option><option value="Submitted">Submitted</option><option value="Pending">Pending</option></ProjectSelect>{(document?.id || document?.data) && <DocumentPreview document={document} studentId={data.studentId} />}{document?.file && <Button onClick={() => update('documents.' + key, { ...document, file: undefined, name: undefined })}>Clear selected file</Button>}</div></article>
+  })}</div></section>
 }
-function WizardStepper({ step, setStep }) {
+function WizardStepper({ step, setStep, furthestStep, busy }) {
   const navRef = useRef(null), activeRef = useRef(null)
   useEffect(() => {
     const nav = navRef.current
@@ -966,7 +792,7 @@ function WizardStepper({ step, setStep }) {
     }
   }, [step])
   return (
-    <nav ref={navRef} className="erp-tabs-bar ac-tabs" aria-label="Admission form steps">
+    <nav ref={navRef} className="sa-reference-stepper" aria-label="Admission form steps">
       {STEPS.map((label, index) => {
         const isCompleted = index < step
         const isActive = index === step
@@ -976,8 +802,8 @@ function WizardStepper({ step, setStep }) {
             key={label}
             type="button"
             className={isActive ? 'active' : isCompleted ? 'completed' : ''}
-            onClick={() => index <= step && setStep(index)}
-            aria-disabled={index > step}
+            onClick={() => setStep(index)}
+            disabled={busy || index > Math.max(step, furthestStep)}
             aria-current={isActive ? 'step' : undefined}
           >
             <span>{isCompleted ? <FiCheck /> : index + 1}</span>
@@ -1206,7 +1032,7 @@ function ApplicantFeeStructure({ data, update, error }) {
   const hostel = getResolvedHostelFee(data.admission, fees, data.academic)
   const transport = getResolvedTransportFee(data.admission, fees, data.academic)
   const scholarship = Number(fees.scholarshipAmount ?? fees.discountAmount ?? 0)
-  const firstYear = Math.max(0, tuition + admission + hostel + transport - scholarship)
+  const firstYear = Number(fees.totalFee ?? matchedPlan?.totalAmount ?? matchedPlan?.amount ?? 0)
   const entireCourse = Math.max(0, (tuition + hostel + transport) * 4 + admission - scholarship)
   const plan = String(fees.paymentPlan || 'Full Payment').toUpperCase()
   const termWise = plan.includes('TERM') || plan.includes('INSTALLMENT') || plan === 'SEMESTER_WISE'
@@ -1296,21 +1122,18 @@ function ApplicantFeeStructure({ data, update, error }) {
         </dl>
         <div className="sa-fee-estimates">
           <div>
-            <span>Estimated First-Year Total</span>
+            <span>Assigned payable amount</span>
             <strong>{money(firstYear)}</strong>
           </div>
-          <div>
-            <span>Estimated Entire 4-Year Total</span>
-            <strong>{money(entireCourse)}</strong>
-          </div>
-          <small>Tuition, hostel and transportation are annual charges. Admission fee is charged only once.</small>
+          <div><span>Paid amount</span><strong>{fees.paidAmount != null ? money(fees.paidAmount) : 'Unavailable'}</strong></div>
+          <div><span>Outstanding balance</span><strong>{fees.balanceAmount != null ? money(fees.balanceAmount) : 'Unavailable'}</strong></div>
         </div>
       </section>
 
       {/* Payment Preference & Installment Schedule */}
       <section className={`sa-payment-plan ${error ? 'invalid' : ''}`}>
         <h3>Payment Preference <b>*</b></h3>
-        <p>Select how you prefer to pay the estimated fee.</p>
+        <p>Select the payment preference supported by the assigned fee plan.</p>
         <div>
           <label className={!termWise ? 'selected' : ''}>
             <input type="radio" name="paymentPlan" checked={!termWise} onChange={() => setPlan('Full Payment')} />
@@ -1332,7 +1155,7 @@ function ApplicantFeeStructure({ data, update, error }) {
           <section className="sa-term-breakdown">
             <header>
               <strong>Payment Schedule Breakdown</strong>
-              <span>{installments.length ? `${installments.length} Scheduled Installments` : 'Two terms per academic year'}</span>
+              <span>{installments.length ? `${installments.length} Scheduled Installments` : 'Schedule unavailable'}</span>
             </header>
             {installments.length > 0 ? (
               <div className="fm-table-wrap" style={{ margin: 0 }}>
@@ -1350,7 +1173,7 @@ function ApplicantFeeStructure({ data, update, error }) {
                         <td style={{ padding: '8px 12px', fontWeight: 600 }}>Installment {idx + 1}</td>
                         <td style={{ padding: '8px 12px' }}>{inst.dueDate || '—'}</td>
                         <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--brand)' }}>
-                          {money(inst.amount || Math.ceil(firstYear / installments.length))}
+                          {inst.amount != null ? money(inst.amount) : 'Unavailable'}
                         </td>
                       </tr>
                     ))}
@@ -1358,20 +1181,8 @@ function ApplicantFeeStructure({ data, update, error }) {
                 </table>
               </div>
             ) : (
-              <dl>
-                <div>
-                  <dt>First Term</dt>
-                  <dd>{money(firstTerm)}</dd>
-                  <small>Includes half of annual charges and the one-time admission fee share.</small>
-                </div>
-                <div>
-                  <dt>Second Term</dt>
-                  <dd>{money(secondTerm)}</dd>
-                  <small>Remaining first-year estimated amount.</small>
-                </div>
-              </dl>
+              <p>No installment schedule was returned for this fee plan.</p>
             )}
-            <p>From the second year onward, each term is approximately {money(futureTerm)} at the current fee structure.</p>
           </section>
         )}
         {error && <small className="field-error" role="alert">{error}</small>}
@@ -1403,7 +1214,7 @@ function ReviewSection({ title, icon: Icon, step, edit, items }) {
           <span className="sa-card-count-badge">{visible.length}</span>
         </div>
         {edit && (
-          <button type="button" className="sa-card-edit-btn" onClick={() => edit(step)}>
+          <button type="button" className="sa-card-edit-btn" onClick={() => edit(LEGACY_STEP_TO_MAIN[step] ?? step)}>
             <FiEdit2 size={12} /> Edit
           </button>
         )}
@@ -1581,15 +1392,7 @@ function CoreReview({ data, edit }) {
     </div>
   )
 }
-function DocumentPreview({ document, studentId }) {
-  const [opening,setOpening]=useState(false)
-  const [error, setError] = useToastState('', 'error')
-  const href=document?.data??document?.fileUrl??document?.documentUrl??document?.downloadUrl??document?.url
-  if(href)return <a href={href} target="_blank" rel="noreferrer">Preview</a>
-  if(!studentId||!document?.id)return null
-  const open=async()=>{const tab=window.open('','_blank');setOpening(true);setError('');try{const result=await studentDocumentApi.download(studentId,document.id),url=URL.createObjectURL(result.blob);if(tab)tab.location.href=url;else window.open(url,'_blank');window.setTimeout(()=>URL.revokeObjectURL(url),60000)}catch(reason){tab?.close();setError(reason.message||'Unable to preview document.')}finally{setOpening(false)}}
-  return <><button type="button" className="sa-document-preview-button" disabled={opening} onClick={open}>{opening?'Opening...':'Preview'}</button>{error&&<small className="error">{error}</small>}</>
-}
+function DocumentPreview({ document, studentId }) { return <StudentDocumentActions document={document} studentId={studentId} /> }
 function DocumentReview({ data, edit, studentId }) {
   const documents = [
     ...DOCUMENTS.map(([key, label]) => ({ key, label, document: data.documents?.[key], ...(typeof data.documents?.[key] === 'object' ? data.documents[key] : {}) })),
@@ -1604,7 +1407,7 @@ function DocumentReview({ data, edit, studentId }) {
           <span className="sa-card-count-badge">{documents.length}</span>
         </div>
         {edit && (
-          <button type="button" className="sa-card-edit-btn" onClick={() => edit(7)}>
+          <button type="button" className="sa-card-edit-btn" onClick={() => edit(3)}>
             <FiEdit2 size={12} /> Edit
           </button>
         )}
@@ -1676,6 +1479,15 @@ function PreviewHeader({ data }) {
 }
 
 function AdmissionForm() {
+  const { canAction } = useScreenAccess()
+  const submittedRecord = useRef(null)
+  const creationUncertain = useRef(false)
+  const [formLoading, setFormLoading] = useState(false)
+  const [formLoadError, setFormLoadError] = useState('')
+  const [formWarnings, setFormWarnings] = useState([])
+  const [formAttempt, setFormAttempt] = useState(0)
+  const [masterAttempt, setMasterAttempt] = useState(0)
+  const [furthestStep, setFurthestStep] = useState(0)
   const { id } = useParams(); const navigate = useNavigate(); const validId = (id && id !== 'undefined' && id !== 'null') ? id : null;
   const location = useLocation()
   const resume = location.state?.admissionWizard
@@ -1713,14 +1525,15 @@ function AdmissionForm() {
     if (validId) return
     setData(current => {
       let next = current;
-      if (!next.admission?.collegeId && globalCollegeId) {
+      if (globalCollegeId && !same(next.admission?.collegeId, globalCollegeId)) {
         next = setPath(next, 'admission.collegeId', globalCollegeId);
         next = setPath(next, 'admission.college', globalCollege?.name || globalCollege?.collegeName || next.admission?.college || '');
       }
-      if (!next.academic?.academicYearId && globalAcademicYearId) {
+      if (globalAcademicYearId && !same(next.academic?.academicYearId, globalAcademicYearId)) {
         next = setPath(next, 'academic.academicYearId', globalAcademicYearId);
         next = setPath(next, 'academic.academicYear', globalAcademicYear?.name || globalAcademicYear?.academicYearName || next.academic?.academicYear || '');
       }
+      if (!same(next.admission?.collegeId,current.admission?.collegeId) || !same(next.academic?.academicYearId,current.academic?.academicYearId)) next = { ...next, academic: { ...next.academic, departmentId:'', department:'', courseId:'',course:'',courseCode:'',branchId:'',branch:'',branchCode:'',semesterId:'',semester:'',sectionId:'',section:'' }, fees: empty().fees };
       return next;
     });
   }, [validId, globalCollegeId, globalCollege, globalAcademicYearId, globalAcademicYear, data.admission.collegeId, data.academic.academicYearId]);
@@ -1743,7 +1556,7 @@ function AdmissionForm() {
     if (preference && data.admission.hostelPreference !== preference) setData(current => ({ ...current, admission: { ...current.admission, hostelPreference: preference } }))
   }, [data.admission.hostel, data.admission.hostelPreference, data.personal.gender])
   const notify = (message, tone = 'success') => setToast({ message, tone })
-  useEffect(()=>{let active=true;Promise.all([academicYearApi.getAll(),courseApi.getAll(),branchApi.getAll(),getColleges(),getSemesters()]).then(([years,courses,branches,collegeResponse,semesterResponse])=>{if(!active)return;const list=response=>{let value=response;for(let depth=0;depth<5&&value&&typeof value==='object';depth+=1){if(Array.isArray(value))return value;const rows=value.items??value.content??value.results??value.records;if(Array.isArray(rows))return rows;value=value.data}return[]};const operationalYears = getOperationalAcademicYearOptions(years);setMasters({loaded: true, years: operationalYears, courses, branches, colleges:list(collegeResponse), semesters:list(semesterResponse)})}).catch(error=>notify(error.message||'Unable to load admission selections.','error'));return()=>{active=false}},[])
+  useEffect(()=>{let active=true;Promise.all([academicYearApi.getAll(),courseApi.getAll(),branchApi.getAll(),getColleges(),getSemesters()]).then(([years,courses,branches,collegeResponse,semesterResponse])=>{if(!active)return;const list=response=>{let value=response;for(let depth=0;depth<5&&value&&typeof value==='object';depth+=1){if(Array.isArray(value))return value;const rows=value.items??value.content??value.results??value.records;if(Array.isArray(rows))return rows;value=value.data}return[]};const operationalYears = getOperationalAcademicYearOptions(years);setMasters({loaded: true, years: operationalYears, courses, branches, colleges:list(collegeResponse), semesters:list(semesterResponse)})}).catch(error=>{ if(active) {setMasters(current=>({...current,loaded:false,error:error.message||'Unable to load admission selections.'}));notify(error.message||'Unable to load admission selections.','error')} });return()=>{active=false}},[masterAttempt, globalCollegeId])
   useEffect(() => {
     const courseId = data.academic.courseId
     let active = true
@@ -1769,15 +1582,18 @@ function AdmissionForm() {
     return () => { active = false }
   }, [data.academic.courseId])
   useEffect(() => {
-    if (step !== 6) return
+    if (step !== 4) return
     let active = true
-    setFeeState({ loading: false, loaded: true, error: '' })
+    setFeeState({ loading: Boolean(recordIds.admissionId), loaded: false, error: '' })
     if (recordIds.admissionId) {
       Promise.allSettled([
         studentFeeApi.getSummary(recordIds.admissionId),
         studentFeeApi.getStructure(recordIds.admissionId)
       ]).then(results => {
         if (!active) return
+        const failed = results.find(result => result.status === 'rejected')
+        setFeeState({ loading: false, loaded: true, error: failed ? failed.reason?.message || 'Fee information unavailable.' : '' })
+        if (failed) return
         const summaryResponse = results[0].status === 'fulfilled' ? results[0].value : null
         const structureResponse = results[1].status === 'fulfilled' ? results[1].value : null
         const summary = resolveFeeSummary(dataRef.current, summaryResponse, structureResponse)
@@ -1804,6 +1620,7 @@ function AdmissionForm() {
   useEffect(() => {
     if (!validId || same(locallySavedAdmission.current, validId)) return
     let active = true
+    setFormLoading(true); setFormLoadError('')
     studentAdmissionApi.getById(validId).then(async row => {
       const loadedIds = idsFromApi(row, validId), admissionId = loadedIds.admissionId, studentId = loadedIds.studentId
       const sections = await Promise.allSettled([
@@ -1815,6 +1632,7 @@ function AdmissionForm() {
         studentFeeApi.getStructure(admissionId)
       ])
       if (!active) return
+      setFormWarnings(sections.flatMap((result,index) => result.status === 'rejected' ? [(['Academic details','Previous education','Parent details','Documents','Fee summary','Fee structure'][index]) + ': ' + (result.reason?.message || 'Unable to load saved information.')] : []))
       const loaded = admissionFromApi({
         ...row,
         academicDetails: sections[0].status === 'fulfilled' && sections[0].value ? sections[0].value : row.academicDetails,
@@ -1852,13 +1670,14 @@ function AdmissionForm() {
       setData({
         ...finalLoaded,
         academic: baseLoaded.academic,
+        fees: { ...baseLoaded.fees, paymentPlan: localDraft?.fees?.paymentPlan || baseLoaded.fees.paymentPlan },
         admission: { ...finalLoaded.admission, collegeId: baseLoaded.admission.collegeId, college: baseLoaded.admission.college },
         previewEditedFields: localDraft?.previewEditedFields ?? row.formData?.previewEditedFields,
       })
       setRecordIds(loadedIds)
-    }).catch(error => notify(error.message || 'Unable to load this admission.', 'error'))
+    }).catch(error => { if(active) { setFormLoadError(error.message || 'Unable to load this admission.'); notify(error.message || 'Unable to load this admission.', 'error') } }).finally(() => { if(active) setFormLoading(false) })
     return () => { active = false }
-  }, [validId])
+  }, [validId, formAttempt])
   const update = (path, value) => {
     setSaveError('')
     setData(current => {
@@ -1927,7 +1746,7 @@ function AdmissionForm() {
       next.fees.admissionFee = String(admission);
       next.fees.hostelFee = String(hostel);
       next.fees.transportFee = String(transport);
-      next.fees.totalFee = String(total);
+      if (path.startsWith('fees.') || path.startsWith('admission.hostel') || path.startsWith('admission.transport')) next.fees.totalFee = String(total);
       return next;
     });
     setErrors(current => ({ ...current, [path]: '', ...(path === 'academic.semesterId' ? { 'academic.semester': '' } : {}) }));
@@ -2034,7 +1853,8 @@ function AdmissionForm() {
   const academicOption=(item,idKeys,nameKeys)=>({id:idKeys.map(key=>read(item,key)).find(value=>value!=null&&value!==''),name:nameKeys.map(key=>read(item,key)).find(Boolean)||''})
   const yearOptions=masters.years.filter(isItemActive).map(item=>academicOption(item,['academicYearId','id'],['academicYearName','name'])).filter(item=>item.id)
   const selectedCollegeId = data.admission.collegeId
-  const courseOptions=masters.courses.filter(isItemActive).map(item=>{
+  const departmentOptions = [...new Map(masters.courses.filter(item => isItemActive(item) && (!item.collegeId || same(item.collegeId,selectedCollegeId))).filter(item => item.departmentId).map(item => [String(item.departmentId), { id:item.departmentId,name:item.departmentName || item.department?.departmentName || item.department?.name || String(item.departmentId) }])).values()]
+  const courseOptions=masters.courses.filter(item => !data.academic.departmentId || same(item.departmentId, data.academic.departmentId)).filter(isItemActive).map(item=>{
     const opt = academicOption(item,['courseId','id'],['courseName','name'])
     const code = item.courseCode || item.code || item.shortName || item.courseShortName || courseCodeFallback(opt.name)
     return { ...opt, code, collegeId:item.collegeId??item.college?.collegeId??item.college?.id }
@@ -2046,7 +1866,7 @@ function AdmissionForm() {
     const opt = academicOption(item,['branchId','id'],['branchName','name','branchShortName','shortName'])
     const code = item.branchCode || item.code || item.shortName || item.branchShortName || branchCodeFallback(opt.name)
     return { ...opt, code, courseId:item.courseId??item.course?.courseId??item.course?.id, collegeId:item.collegeId??item.college?.collegeId??item.college?.id }
-  }).filter(item=>item.id&&(!selectedCollegeId||same(item.collegeId,selectedCollegeId)||collegeCourseIds.has(String(item.courseId)))&&(!data.academic.courseId||!item.courseId||same(item.courseId,data.academic.courseId)))
+  }).filter(item=>item.id&&(!selectedCollegeId||same(item.collegeId,selectedCollegeId)||collegeCourseIds.has(String(item.courseId)))&&(data.academic.courseId&&same(item.courseId,data.academic.courseId)))
   const collegeOptions=masters.colleges.filter(isItemActive).map(item=>({id:item.collegeId??item.id,name:item.collegeName??item.name??item.institutionName??''})).filter(item=>item.id&&item.name)
 
   const roomTypeOptions = useMemo(() => {
@@ -2129,22 +1949,31 @@ function AdmissionForm() {
     <Section key="identity" title="Student Identity" icon={FiUser} hint="Core identity and government identification details"><PhotoUpload data={data} update={update} notify={notify} />{field('personal.firstName','First Name')}{field('personal.middleName','Middle Name')}{field('personal.lastName','Last Name')}{field('personal.gender','Gender',['Female','Male','Non-binary'])}{field('personal.dob','Date of Birth',null,'date')}{field('personal.bloodGroup','Blood Group',['A+','A-','B+','B-','AB+','AB-','O+','O-'])}{field('personal.nationality','Nationality')}{field('personal.aadhaar','Aadhaar Number')}</Section>,
     <><Section title="Contact Information" icon={FiPhone}>{field('contact.mobile','Student Mobile')}{field('contact.alternateMobile','Alternate Mobile')}{field('contact.email','Student Email',null,'email')}{field('contact.alternateEmail','Alternate Email',null,'email')}</Section><Section title="Current Address" icon={FiHome}><AddressFields data={data} prefix="contact.currentAddress" update={update} errors={effectiveAddressErrors} markTouched={markTouched} />{pinStatus.current && <p className={`sa-pincode-status ${pinStatus.current.includes('filled') ? 'success' : ''}`}>{pinStatus.current}</p>}</Section><Section title="Permanent Address" icon={FiHome} action={<label className="sa-same-addr-check" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 650, color: 'var(--brand, #125AA8)' }}><input type="checkbox" checked={Boolean(data.contact.sameAddress)} onChange={event => update('contact.sameAddress', event.target.checked)} style={{ width: '15px', height: '15px', accentColor: 'var(--brand, #125AA8)', cursor: 'pointer' }} /><span>Same as current address</span></label>}>{!data.contact.sameAddress && <><AddressFields data={data} prefix="contact.permanentAddress" update={update} errors={effectiveAddressErrors} markTouched={markTouched} />{pinStatus.permanent && <p className={`sa-pincode-status ${pinStatus.permanent.includes('filled') ? 'success' : ''}`}>{pinStatus.permanent}</p>}</>}</Section></>,
     <><Section title="Father Details" icon={FiUsers} hint="Optional parent or guardian contact information.">{field('parents.father.name','Father Name')}{field('parents.father.mobile','Father Mobile')}{field('parents.father.email','Father Email',null,'email')}{field('parents.father.occupation','Father Occupation')}{field('parents.father.qualification','Father Qualification')}{field('parents.father.income','Father Annual Income',null,'number')}</Section><Section title="Mother Details" icon={FiUsers}>{field('parents.mother.name','Mother Name')}{field('parents.mother.mobile','Mother Mobile')}{field('parents.mother.email','Mother Email',null,'email')}{field('parents.mother.occupation','Mother Occupation')}{field('parents.mother.qualification','Mother Qualification')}{field('parents.mother.income','Mother Annual Income',null,'number')}</Section><Section title="Guardian Details" icon={FiUsers}>{field('parents.guardian.name','Guardian Name')}{field('parents.guardian.relationship','Relationship',['Father','Mother','Guardian','Other'])}{data.parents.guardian.relationship === 'Other' && field('parents.guardian.relationshipOther','Specify Relationship')}{field('parents.guardian.mobile','Guardian Mobile')}{field('parents.guardian.email','Guardian Email',null,'email')}{field('parents.guardian.occupation','Guardian Occupation')}{field('parents.guardian.qualification','Guardian Qualification')}{field('parents.guardian.income','Guardian Annual Income',null,'number')}{field('parents.primaryContact','Primary Contact',['Father','Mother','Guardian'])}{field('parents.emergencyMobile','Emergency Contact Mobile')}</Section></>,
-    <Section key="academic" title="Academic Enrollment" icon={FiBookOpen} hint="Review college and academic year, then select the available course and branch.">{field('academic.academicYear','Academic Year',null,'text',true)}{field('admission.college','Joining College',null,'text',true)}{field('academic.admissionType','Admission Type',ADMISSION_TYPES)}{data.academic.admissionType === 'Lateral Entry' && <>{field('academic.quota','Admission Quota',ADMISSION_QUOTAS)}{data.academic.quota === 'Other' && field('academic.quotaOther','Specify Admission Quota')}</>}{masterField('academic.course','academic.courseId','Course',courseOptions,!selectedCollegeId,[['academic.branchId','academic.branch']])}{field('academic.courseCode','Course Code',null,'text',true)}{masterField('academic.branch','academic.branchId','Branch',branchOptions,!data.academic.courseId)}{field('academic.branchCode','Branch Code',null,'text',true)}<label className={`sa-field ${getFieldError('academic.semester') ? 'invalid' : ''}`}><span>Semester{data.academic.requiresSemesterSelection && <b> *</b>}</span><ProjectSelect value={data.academic.semesterId || ''} disabled={!masters.loaded || !data.academic.courseId || !data.academic.branchId} onChange={event => update('academic.semesterId', event.target.value)}><option value="">Select Semester</option>{data.academic.semesterId && !semesterOptions.some(item => same(item.id, data.academic.semesterId)) && <option value={data.academic.semesterId} disabled>{data.academic.semester || 'Saved semester'} (unavailable)</option>}{semesterOptions.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</ProjectSelect>{getFieldError('academic.semester') && <small role="alert">{getFieldError('academic.semester')}</small>}{masters.loaded && data.academic.branchId && !semesterOptions.length && <small>No matching semesters are configured. Ask an administrator to configure a semester for this course, branch and academic year.</small>}</label>{field('academic.studentCategory','Student Category',['General','SC','ST','BC','EWS','Other'])}{field('academic.regulation','Regulation')}</Section>,
+    <Section key="academic" title="Academic Enrollment" icon={FiBookOpen} hint="Review the working college and academic year, then select the matching academic placement.">{field('academic.academicYear','Academic Year',null,'text',true)}{field('admission.college','Joining College',null,'text',true)}{field('academic.admissionType','Admission Type',ADMISSION_TYPES)}{data.academic.admissionType === 'Lateral Entry' && <>{field('academic.quota','Admission Quota',ADMISSION_QUOTAS)}{data.academic.quota === 'Other' && field('academic.quotaOther','Specify Admission Quota')}</>}{departmentOptions.length > 0 && masterField('academic.department','academic.departmentId','Department',departmentOptions,!selectedCollegeId,[['academic.courseId','academic.course'],['academic.branchId','academic.branch']])}{masterField('academic.course','academic.courseId','Course',courseOptions,!selectedCollegeId,[['academic.branchId','academic.branch']])}{field('academic.courseCode','Course Code',null,'text',true)}{masterField('academic.branch','academic.branchId','Branch',branchOptions,!data.academic.courseId)}{field('academic.branchCode','Branch Code',null,'text',true)}<label className={`sa-field ${getFieldError('academic.semester') ? 'invalid' : ''}`}><span>Semester{data.academic.requiresSemesterSelection && <b> *</b>}</span><ProjectSelect value={data.academic.semesterId || ''} disabled={!masters.loaded || !data.academic.courseId || !data.academic.branchId} onChange={event => update('academic.semesterId', event.target.value)}><option value="">Select Semester</option>{data.academic.semesterId && !semesterOptions.some(item => same(item.id, data.academic.semesterId)) && <option value={data.academic.semesterId} disabled>{data.academic.semester || 'Saved semester'} (unavailable)</option>}{semesterOptions.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</ProjectSelect>{getFieldError('academic.semester') && <small role="alert">{getFieldError('academic.semester')}</small>}{masters.loaded && data.academic.branchId && !semesterOptions.length && <small>No matching semesters are configured. Ask an administrator to configure a semester for this course, branch and academic year.</small>}</label>{field('academic.studentCategory','Student Category',['General','SC','ST','BC','EWS','Other'])}{field('academic.regulation','Regulation')}</Section>,
     <><Section title="10th / SSC" icon={FiBookOpen} hint="Enter only the essential school details.">{field('previousEducation.tenth.board','Board')}{field('previousEducation.tenth.institution','School Name')}{field('previousEducation.tenth.passingYear','Year of Passing')}{field('previousEducation.tenth.score','Percentage (0-100)',null,'number')}</Section><Section title="Intermediate / Diploma" icon={FiBookOpen} hint="Enter only the essential qualifying-education details.">{field('previousEducation.intermediate.board','Board / University')}{field('previousEducation.intermediate.institution','College Name')}{field('previousEducation.intermediate.passingYear','Year of Passing')}{field('previousEducation.intermediate.stream','Stream',['MPC','Other'])}{data.previousEducation.intermediate.stream === 'Other' && field('previousEducation.intermediate.streamOther','Specify Stream')}{field('previousEducation.intermediate.score','Percentage (0-100)',null,'number')}</Section></>,
     <><Section title="Application Information" icon={FiFileText} hint="Registration details.">{field('application.number','Registration Number',null,'text',true)}{field('application.date','Registration Date',null,'date',false)}{field('admission.batch','Batch')}</Section><Section title="Student Services" icon={FiHome}>{field('admission.hostel','Hostel Required',['No','Yes'])}{data.admission.hostel === 'Yes' && <>{field('admission.hostelPreference','Hostel Preference',data.personal.gender === 'Male' ? ['Boys Hostel'] : data.personal.gender === 'Female' ? ['Girls Hostel'] : ['Boys Hostel','Girls Hostel'],undefined,data.personal.gender === 'Male' || data.personal.gender === 'Female')}{field('admission.hostelRoomType','Room Type / Beds',roomTypeOptions)}</>}{field('admission.transport','Transportation Required',['No','Yes'])}{data.admission.transport === 'Yes' && field('admission.transportRoute','Transport Route',transportRouteOptions)}</Section></>,
     <div key="fees"><ApplicantFeeStructure data={data} update={update} error={errors['fees.paymentPlan']} /></div>,
     <DocumentsUpload key="documents" data={data} update={update} errors={errors} notify={notify} />,
   ]
-  const screenOrder = [0, 3, 2, 1, 4, 5, 6, 7]
+  const wizardScreens = [<>{screens[0]}{screens[1]}</>, <>{masters.error && <div role="alert"><p>{masters.error}</p><Button onClick={() => setMasterAttempt(current => current + 1)}>Retry academic selections</Button></div>}{!masters.loaded && !masters.error && <p role="status">Loading academic selections...</p>}{screens[3]}{screens[4]}{screens[5]}</>, screens[2], screens[7], <>{feeState.loading && <p role="status">Loading Student Integration fees...</p>}{feeState.error && <p role="alert">{feeState.error}</p>}{screens[6]}</>, <FullReview data={data} edit={setStep} studentId={recordIds.studentId} />, <FullReview data={data} studentId={recordIds.studentId} />]
+  const uploadDocuments = async studentId => uploadAdmissionDocuments(studentId, dataRef.current.documents, DOCUMENTS, studentDocumentApi.upload, (item, saved) => {
+    const current = dataRef.current
+    const documents = { ...current.documents }
+    if (item.index != null) documents.otherCertificates = (documents.otherCertificates || []).map((document, index) => index === item.index ? saved : document)
+    else documents[item.key] = saved
+    dataRef.current = { ...current, documents }
+    setData(dataRef.current)
+  })
   const focusFirst = () => window.setTimeout(() => document.querySelector('.student-admission .sa-field.invalid :is(input,select)')?.focus({ preventScroll: false }), 0)
   const nextStep = async () => {
-    if (savingStep) return
+    if (savingStep || submitting || savingDraft) return
+    if (!canAction('/student-management/admissions', recordIds.admissionId ? 'edit' : 'create')) { setSaveError('You do not have permission to save this admission.'); return }
     setSaveError('')
     if (step === 1 && !masters.loaded) {
       setSaveError('Academic selections have not loaded yet. Please retry after they load.')
       return
     }
-    const prefixes = [['personal.'],['academic.'],['parents.'],['contact.'],['previousEducation.'],['application.','admission.'],['fees.'],['documents.'],[]][step]
+    const prefixes = [['personal.','contact.'],['academic.','previousEducation.','application.','admission.'],['parents.'],['documents.'],['fees.'],[],[]][step]
     const relevant = Object.fromEntries(Object.entries(allErrors).filter(([path]) => prefixes.some(prefix => path.startsWith(prefix))))
     setTouched(current => {
       const next = { ...current }
@@ -2159,42 +1988,26 @@ function AdmissionForm() {
     try {
       let result, ids = recordIds
       if (!ids.admissionId) {
+        if (creationUncertain.current) throw new Error('A previous creation returned without an admission identity. Check the directory before creating another application.');
         const duplicate = duplicateAdmissionMessage(await studentAdmissionApi.getAll(), data)
         if (duplicate) throw new Error(duplicate)
         result = await studentAdmissionApi.create(data)
         rememberCreated('admissions', idsFromApi(result).admissionId)
         ids = idsFromApi(result)
-        if (!ids.admissionId) throw new Error('The admission was created but no admission ID was returned.')
+        if (!ids.admissionId) { creationUncertain.current = true; throw new Error('The admission was created but no admission ID was returned.') }
         setRecordIds(ids)
-      } else if ([0, 3, 5].includes(step)) result = await studentAdmissionApi.update(ids.admissionId, data, { preserveAcademicMapping: true })
-      else if (step === 2) {
-        result = ids.studentId
-          ? await studentParentApi.update(ids.studentId, data)
-          : await studentAdmissionApi.update(ids.admissionId, data, { preserveAcademicMapping: true })
-      } else if (step === 1) result = await studentAcademicDetailsApi.update(ids.admissionId, data)
-      else if (step === 4) result = await studentPreviousEducationApi.update(ids.admissionId, data)
-      else if (step === 6) {
-        if (!data.fees.paymentPlan) {
-          update('fees.paymentPlan', 'Full Payment')
-        }
-        if (ids.admissionId) {
-          try {
-            await studentAdmissionApi.update(ids.admissionId, data)
-            const responses = await Promise.allSettled([studentFeeApi.getSummary(ids.admissionId), studentFeeApi.getStructure(ids.admissionId)])
-            const mergedSummary = resolveFeeSummary(data, responses[0].status === 'fulfilled' ? responses[0].value : null, responses[1].status === 'fulfilled' ? responses[1].value : null)
-            if (mergedSummary) {
-              setData(current => ({ ...current, fees: { ...current.fees, ...mergedSummary } }))
-            }
-          } catch (error) {
-            throw new Error(error.message || 'Unable to save fee information.')
-          }
-        }
-      } else if (step === 7) {
-        const pending = [...DOCUMENTS.map(([key, label]) => ({ key, label, document: data.documents[key] })), ...(data.documents.otherCertificates || []).map(document => ({ key: 'otherCertificate', label: 'Other Certificate', document }))].filter(item => item.document?.file)
-        if(ids.studentId){for (const item of pending) await studentDocumentApi.upload(ids.studentId, item.document.file, { documentType: item.key, documentName: item.label });const uploadedRows = await studentDocumentApi.getAll(ids.studentId);setData(current => ({ ...current, documents: documentsFromApi(uploadedRows) }))}
-        // Submission status is selected in this step even when no file exists.
-        // Save it with the admission record so it is available in View mode.
-        if (ids.admissionId) await studentAdmissionApi.update(ids.admissionId, data)
+      } else if ([0, 1].includes(step)) result = await studentAdmissionApi.update(ids.admissionId, data, { preserveAcademicMapping: step !== 1 })
+      if (step === 1) {
+        await studentAcademicDetailsApi.update(ids.admissionId, data)
+        await studentPreviousEducationApi.update(ids.admissionId, data)
+      } else if (step === 2) {
+        if (ids.studentId) await studentParentApi.update(ids.studentId, data)
+        else await studentAdmissionApi.update(ids.admissionId, data, { preserveAcademicMapping: true })
+      } else if (step === 3) {
+        if (ids.studentId) await uploadDocuments(ids.studentId)
+        await studentAdmissionApi.update(ids.admissionId, dataRef.current)
+      } else if (step === 4) {
+        await studentAdmissionApi.update(ids.admissionId, data)
       }
       if (data.personal?.photo) {
         saveAdmissionPhoto(ids.admissionId, data.personal.photo)
@@ -2214,13 +2027,13 @@ function AdmissionForm() {
         setRecordIds(current => ({ admissionId: returnedIds.admissionId ?? current.admissionId, studentId: returnedIds.studentId ?? current.studentId, academicId: returnedIds.academicId ?? current.academicId }))
       }
       notify(
-        step === 7 && !ids.studentId
+        step === 3 && !ids.studentId
             ? 'Documents are ready to upload when the admission is submitted.'
             : 'Admission step saved successfully.',
-        step === 7 && !ids.studentId ? 'info' : 'success',
+        step === 3 && !ids.studentId ? 'info' : 'success',
       )
       const next = Math.min(step + 1, STEPS.length - 1)
-      setStep(next)
+      setStep(next); setFurthestStep(current => Math.max(current, next))
       if (!recordIds.admissionId) {
         // Navigate only after saving the draft and preserve progress if the
         // new -> edit route transition remounts the form.
@@ -2252,7 +2065,7 @@ function AdmissionForm() {
     setConfirmSubmit(true)
   }
   const skipCurrentStep = () => {
-    if (![2, 4].includes(step)) return
+    if (step !== 2) return
     if (step === 2) {
       setData(current => ({ ...current, parents: empty().parents }))
       setErrors(current => Object.fromEntries(Object.entries(current).filter(([path]) => !path.startsWith('parents.'))))
@@ -2268,43 +2081,43 @@ function AdmissionForm() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
   const submit = async () => {
-    if (submitting) return;
+    if (submitting || !canAction('/student-management/admissions', recordIds.admissionId ? 'edit' : 'create')) return;
     setSubmitting(true);
     try {
       let ids = recordIds;
       if (!ids.admissionId) {
+        if (creationUncertain.current) throw new Error('A previous creation returned without an admission identity. Check the directory before creating another application.');
         const duplicate = duplicateAdmissionMessage(await studentAdmissionApi.getAll(), data);
         if (duplicate) throw new Error(duplicate);
         const result = await studentAdmissionApi.create(data);
         rememberCreated('admissions', idsFromApi(result).admissionId);
         ids = idsFromApi(result);
-        if (!ids.admissionId) throw new Error('The admission was created but no admission ID was returned.');
+        if (!ids.admissionId) { creationUncertain.current = true; throw new Error('The admission was created but no admission ID was returned.') };
         setRecordIds(ids);
-      } else {
+      } else if (!submittedRecord.current) {
         await studentAdmissionApi.update(ids.admissionId, data);
       }
       const duplicate = duplicateAdmissionMessage(await studentAdmissionApi.getAll(), data, ids.admissionId);
       if (duplicate) throw new Error(duplicate);
-      const submitted = await studentAdmissionApi.submit(ids.admissionId);
+      const submitted = submittedRecord.current?.admissionId === ids.admissionId
+        ? submittedRecord.current : await studentAdmissionApi.submit(ids.admissionId);
+      submittedRecord.current = { ...submitted, admissionId: ids.admissionId };
+      setRecordIds(current => ({ ...current, ...idsFromApi(submitted, ids.admissionId) }));
       const submittedIds = idsFromApi(submitted, ids.admissionId);
       const studentId = submittedIds.studentId ?? ids.studentId;
       rememberCreated('admissions', ids.admissionId);
       if (studentId) rememberCreated('student-profiles', studentId);
-      const pending = [...DOCUMENTS.map(([key, label]) => ({ key, label, document: data.documents[key] })), ...(data.documents?.otherCertificates || []).map(document => ({ key: 'otherCertificate', label: 'Other Certificate', document }))].filter(item => item.document?.file);
-      if (studentId) {
-        for (const item of pending) await studentDocumentApi.upload(studentId, item.document.file, { documentType: item.key, documentName: item.label });
-      }
+      const uploadedCount = await uploadDocuments(studentId);
       const latest = await studentAdmissionStatusApi.get(ids.admissionId);
       setData(current => ({ ...current, status: latest?.status ?? 'SUBMITTED' }));
       setRecordIds(current => ({ ...current, studentId: studentId ?? current.studentId }));
       setConfirmSubmit(false);
       try { localStorage.removeItem(`pirnav-draft-admission-${ids.admissionId}`) } catch { /* ignore */ }
       eventBus.emit(ERP_EVENTS.STUDENT_UPDATED, { admissionId: ids.admissionId, status: 'SUBMITTED' });
-      notify(studentId && pending.length ? 'Admission submitted and documents uploaded successfully' : 'Admission application submitted successfully');
-      window.setTimeout(() => {
-        navigate('/student-management/admissions');
-      }, 400);
+      notify(uploadedCount ? 'Admission submitted and documents uploaded successfully' : 'Admission application submitted successfully');
+      navigate('/student-management/admissions');
     } catch (error) {
+      setSaveError(error.message || 'Unable to submit this admission.');
       notify(error.message || 'Unable to submit this admission.', 'error');
     } finally {
       setSubmitting(false);
@@ -2312,17 +2125,18 @@ function AdmissionForm() {
   }
 
   const saveAllDraftData = async (shouldNavigate = true) => {
-    if (savingDraft) return;
+    if (savingDraft || !canAction('/student-management/admissions', recordIds.admissionId ? 'edit' : 'create')) return;
     setSavingDraft(true);
     try {
       let ids = recordIds || {};
       if (!ids.admissionId) {
+        if (creationUncertain.current) throw new Error('A previous creation returned without an admission identity. Check the directory before creating another application.');
         const duplicate = duplicateAdmissionMessage(await studentAdmissionApi.getAll(), data);
         if (duplicate) throw new Error(duplicate);
         const result = await studentAdmissionApi.create(data);
         rememberCreated('admissions', idsFromApi(result).admissionId);
         ids = idsFromApi(result);
-        if (!ids.admissionId) throw new Error('The admission was created but no admission ID was returned.');
+        if (!ids.admissionId) { creationUncertain.current = true; throw new Error('The admission was created but no admission ID was returned.') };
         setRecordIds(ids);
       } else {
         await studentAdmissionApi.update(ids.admissionId, data);
@@ -2331,19 +2145,19 @@ function AdmissionForm() {
       if (ids.admissionId && (data.academic?.course || data.academic?.courseId)) {
         try {
           await studentAcademicDetailsApi.update(ids.admissionId, data);
-        } catch { /* ignore draft validation */ }
+        } catch (error) { throw new Error('Draft record saved. ' + (error.message || 'Some details could not be saved.')) }
       }
 
       if (ids.studentId && (data.parents?.father?.name || data.parents?.mother?.name || data.parents?.guardian?.name)) {
         try {
           await studentParentApi.update(ids.studentId, data);
-        } catch { /* ignore draft validation */ }
+        } catch (error) { throw new Error('Draft record saved. ' + (error.message || 'Some details could not be saved.')) }
       }
 
       if (ids.admissionId && (data.previousEducation?.tenth?.board || data.previousEducation?.tenth?.institution || data.previousEducation?.intermediate?.board)) {
         try {
           await studentPreviousEducationApi.update(ids.admissionId, data);
-        } catch { /* ignore draft validation */ }
+        } catch (error) { throw new Error('Draft record saved. ' + (error.message || 'Some details could not be saved.')) }
       }
 
       if (data.personal?.photo) {
@@ -2357,14 +2171,7 @@ function AdmissionForm() {
         } catch { /* storage fallback */ }
       }
 
-      const pending = [...DOCUMENTS.map(([key, label]) => ({ key, label, document: data.documents?.[key] })), ...(data.documents?.otherCertificates || []).map(document => ({ key: 'otherCertificate', label: 'Other Certificate', document }))].filter(item => item.document?.file);
-      if (ids.studentId && pending.length) {
-        for (const item of pending) {
-          try {
-            await studentDocumentApi.upload(ids.studentId, item.document.file, { documentType: item.key, documentName: item.label });
-          } catch { /* ignore individual doc upload errors in draft */ }
-        }
-      }
+      if (ids.studentId) await uploadDocuments(ids.studentId)
 
       eventBus.emit(ERP_EVENTS.STUDENT_UPDATED, { admissionId: ids.admissionId, status: data.status || 'Draft' });
       notify('Draft application saved successfully.', 'success');
@@ -2373,6 +2180,8 @@ function AdmissionForm() {
         window.setTimeout(() => navigate('/student-management/admissions'), 400);
       }
     } catch (error) {
+      setSaveError(error.message || 'Unable to save draft.');
+      setConfirmCancel(false);
       notify(error.message || 'Unable to save draft.', 'error');
     } finally {
       setSavingDraft(false);
@@ -2395,9 +2204,13 @@ function AdmissionForm() {
     }
   };
 
+  if (formLoading) return <p role="status" className="sa-empty">Loading admission...</p>
+  if (formLoadError) return <div role="alert" className="sa-empty"><p>{formLoadError}</p><Button onClick={() => setFormAttempt(current => current + 1)}>Retry</Button></div>
+  if (!canAction('/student-management/admissions', validId ? 'edit' : 'create')) return <div role="alert" className="sa-empty"><h2>Admission access unavailable</h2><p>You do not have permission to change this admission.</p><Button onClick={() => navigate('/student-management/admissions')}>Back to admissions</Button></div>
   return (
     <>
       <Breadcrumb tail={id ? 'Edit Admission' : 'New Admission'} />
+      {formWarnings.length > 0 && <div role="alert" className="sa-callout warning"><strong>Some saved sections could not be loaded.</strong>{formWarnings.map(message => <span key={message}>{message}</span>)}<Button onClick={() => setFormAttempt(current => current + 1)}>Retry saved sections</Button></div>}
       <header className="sa-page-header sa-wizard-header">
         <div>
           <h1>{id ? 'Edit Student Admission' : 'New Student Admission'}</h1>
@@ -2414,10 +2227,10 @@ function AdmissionForm() {
 
       <div className="erp-two-column-layout" data-without-live-preview="true">
         <div className="erp-card-main">
-          <WizardStepper step={step} setStep={setStep} />
-          <form className="sa-wizard-card" onSubmit={event => event.preventDefault()} style={{ border: 'none', boxShadow: 'none', padding: 0 }}>
+          <WizardStepper step={step} setStep={setStep} furthestStep={Math.max(furthestStep, initialStep)} busy={savingStep || submitting || savingDraft} />
+          <form className="sa-wizard-card" noValidate onSubmit={event => { event.preventDefault(); step < STEPS.length - 1 ? nextStep() : requestSubmit() }} style={{ border: 'none', boxShadow: 'none', padding: 0 }}>
             <div className="erp-form-scroll-body">
-              {screens[screenOrder[step]]}
+              {wizardScreens[step]}
               {step === STEPS.length - 1 && (
                 <label className="sa-declaration">
                   <input type="checkbox" checked={declared} onChange={event => setDeclared(event.target.checked)} />
@@ -2432,10 +2245,10 @@ function AdmissionForm() {
                 <FiArrowLeft /> Previous
               </Button>
               <span />
-              {[2, 4].includes(step) && <Button disabled={submitting} onClick={skipCurrentStep}>Skip</Button>}
+              {step === 2 && <Button disabled={submitting} onClick={skipCurrentStep}>Skip</Button>}
               {step < STEPS.length - 1 ? (
                 <Button primary onClick={nextStep} disabled={savingStep}>
-                  {savingStep ? 'Saving...' : 'Save & Continue'} <FiArrowRight />
+                  {savingStep ? 'Saving...' : step === 5 ? 'Continue to Submit' : 'Save & Continue'} <FiArrowRight />
                 </Button>
               ) : (
                 <Button primary disabled={!declared || submitting} onClick={requestSubmit}>
@@ -2450,7 +2263,7 @@ function AdmissionForm() {
       </div>
 
       {confirmSubmit && (
-        <ConfirmDialog icon={FiCheckCircle} title="Confirm Registration Submission" confirmLabel="Confirm & Submit" onCancel={() => setConfirmSubmit(false)} onConfirm={submit}>
+        <ConfirmDialog icon={FiCheckCircle} title="Confirm Registration Submission" confirmLabel="Confirm & Submit" busy={submitting} onCancel={() => setConfirmSubmit(false)} onConfirm={submit}>
           <p>Please verify the student details below. Once submitted, the registration will be sent to the admissions team for review.</p>
           <dl>
             <div><dt>Student</dt><dd>{studentName(data)}</dd></div>
@@ -2460,15 +2273,7 @@ function AdmissionForm() {
       )}
 
       {confirmCancel && (
-        <div className="sa-overlay">
-          <div className="sa-dialog" role="dialog" aria-modal="true" aria-labelledby="cancel-dialog-title">
-            <button type="button" className="sa-dialog-close" onClick={() => setConfirmCancel(false)} aria-label="Close dialog">
-              <FiX />
-            </button>
-            <div className="sa-dialog-icon">
-              <FiSave />
-            </div>
-            <h2 id="cancel-dialog-title">Save Draft Before Leaving?</h2>
+        <ViewDialog title="Save Draft Before Leaving?" icon={FiSave} onClose={() => setConfirmCancel(false)} showExport={false} hideFooter busy={savingDraft} maxWidth="560px">
             <div className="sa-dialog-copy">
               <p>You have entered details in this admission application. Would you like to save your progress as a <strong>Draft</strong> before leaving? All your filled information across all steps will be saved so you can resume editing anytime.</p>
               <dl>
@@ -2487,8 +2292,7 @@ function AdmissionForm() {
                 {savingDraft ? 'Saving Draft...' : 'Save Draft & Exit'}
               </Button>
             </footer>
-          </div>
-        </div>
+        </ViewDialog>
       )}
     </>
   )
@@ -2551,11 +2355,7 @@ function DocumentDetails({ data }) {
               </div>
               <div className="sa-doc-item-status-action">
                 <Badge value={status} />
-                {document?.data && (
-                  <a href={document.data} target="_blank" rel="noreferrer" className="sa-document-preview-button">
-                    Preview
-                  </a>
-                )}
+<StudentDocumentActions document={document} studentId={data.studentId} />
               </div>
             </div>
           )
@@ -2749,6 +2549,7 @@ function DetailContent({ data, tab }) {
       />
     )
   }
+  if (tab === 'fees' && data.integrationFeeError) return <p role="alert">{data.integrationFeeError}</p>
   if (tab === 'fees') {
     const isConfigured = Boolean(data.fees?.configured || (data.fees?.components?.length > 0 && Number(data.fees?.tuitionFee || 0) > 0) || Number(data.fees?.totalFee || 0) > 0)
     if (!isConfigured) {
@@ -2905,6 +2706,10 @@ function StudentHeader({ data }) {
 }
 
 function AdmissionDetails({ approval = false }) {
+  const { canAction } = useScreenAccess()
+  const authorized = canAction('/student-management/admissions', 'edit')
+  const [detailError, setDetailError] = useState('')
+  const [loadAttempt, setLoadAttempt] = useState(0)
   const { id } = useParams(); const navigate = useNavigate(); const validId = (id && id !== 'undefined' && id !== 'null') ? id : null; const [data, setData] = useState(null); const [loadingDetail, setLoadingDetail] = useState(Boolean(validId)); const [tab, setTab] = useState('overview'); const [remarks, setRemarks] = useState(''); const [toast, setToast] = useToastState(null, 'success'); const [confirmApproval, setConfirmApproval] = useState(false); const [reviewed, setReviewed] = useState(false); const [savingStatus, setSavingStatus] = useState(false)
   useEffect(() => {
     if (!validId) { setLoadingDetail(false); return }
@@ -2927,16 +2732,16 @@ function AdmissionDetails({ approval = false }) {
         ...row,
         academicDetails: optional[0].status === 'fulfilled' && optional[0].value ? optional[0].value : row.academicDetails,
         previousEducation: optional[1].status === 'fulfilled' && optional[1].value ? optional[1].value : row.previousEducation,
-        feeSummary: optional[2].status === 'fulfilled' && hasFeeSummary(optional[2].value) ? optional[2].value : row.feeSummary,
+        feeSummary: optional[2].status === 'fulfilled' ? optional[2].value : null,
         status: optional[3].status === 'fulfilled' ? optional[3].value?.status ?? row.status : row.status,
         parents: optional[4].status === 'fulfilled' && optional[4].value ? optional[4].value : row.parents,
         documents: Object.keys(mergedDocs).length ? mergedDocs : (row.documents || row.documentStatuses),
       })
-      if (active) setData(hydrated)
-    }).catch(error => setToast({ message: error.message || 'Unable to load admission.', tone: 'error' })).finally(() => { if (active) setLoadingDetail(false) }); return () => { active = false } }, [validId, setToast])
+      if (active) setData({ ...hydrated, integrationFeeError: optional[2].status === 'rejected' ? optional[2].reason?.message || 'Fee information unavailable.' : '' })
+    }).catch(error => { if (active) { setDetailError(error.message || 'Unable to load admission.'); setToast({ message: error.message || 'Unable to load admission.', tone: 'error' }) } }).finally(() => { if (active) setLoadingDetail(false) }); return () => { active = false } }, [validId, setToast, loadAttempt])
   if (loadingDetail) return <section className="sa-empty"><FiClock /><h2>Loading admission...</h2></section>
-  if (!data) return <section className="sa-empty"><FiAlertCircle /><h2>Admission not found</h2><Button onClick={() => navigate('/student-management/admissions')}>Back</Button></section>
-  const transition = async status => { if (savingStatus) return; if (['CORRECTION_REQUIRED','REJECTED'].includes(status) && !text(remarks)) { setToast({ message: 'Admission officer remarks are required for this decision.', tone: 'error' }); return } setSavingStatus(true); try { const result = await studentAdmissionStatusApi.update(id, { status, remarks }); setData(current => ({ ...current, status: normalizeStatus(result.status), remarks })); setRemarks(''); eventBus.emit(ERP_EVENTS.STUDENT_UPDATED, { admissionId: id, status }); setToast({ message: status === 'APPROVED' ? approvalNotice(result) : `${STATUS[status] || status} saved successfully`, tone: 'success' }); setConfirmApproval(false); if (status === 'APPROVED') { window.setTimeout(() => navigate('/student-management/admissions'), 1200) } } catch (error) { setToast({ message: error.message || 'Unable to update admission status.', tone: 'error' }) } finally { setSavingStatus(false) } }
+  if (!data) return <section className="sa-empty"><FiAlertCircle /><h2>{detailError || 'Admission not found'}</h2><Button onClick={() => setLoadAttempt(current => current + 1)}>Retry</Button><Button onClick={() => navigate('/student-management/admissions')}>Back</Button></section>
+  const transition = async status => { if (savingStatus || !admissionDecisionAllowed(normalizeStatus(data.status), status, authorized)) return; if (['CORRECTION_REQUIRED','REJECTED'].includes(status) && !text(remarks)) { setToast({ message: 'Admission officer remarks are required for this decision.', tone: 'error' }); return } setSavingStatus(true); try { const result = await studentAdmissionStatusApi.update(id, { status, remarks }); setData(current => ({ ...current, status: normalizeStatus(result.status), remarks })); setRemarks(''); eventBus.emit(ERP_EVENTS.STUDENT_UPDATED, { admissionId: id, status }); setToast({ message: status === 'APPROVED' ? approvalNotice(result) : `${STATUS[status] || status} saved successfully`, tone: 'success' }); setConfirmApproval(false); if (status === 'APPROVED') navigate('/student-management/admissions') } catch (error) { setToast({ message: error.message || 'Unable to update admission status.', tone: 'error' }) } finally { setSavingStatus(false) } }
   if (approval) {
     const markedDocs = DOCUMENTS.filter(([key]) => {
       const doc = data.documents?.[key]
@@ -3002,10 +2807,10 @@ function AdmissionDetails({ approval = false }) {
                     <small>{remarks.length}/500</small>
                   </label>
                   <footer>
-                    {['SUBMITTED', 'PENDING', 'UNDER_REVIEW', 'VERIFIED'].includes(data.status) && (
-                      <Button danger disabled={!reviewed || savingStatus || !remarks.trim()} onClick={() => transition('REJECTED')}>
+                    {authorized && ['SUBMITTED', 'PENDING', 'UNDER_REVIEW', 'VERIFIED'].includes(normalizeStatus(data.status)) && (
+                      <><Button disabled={!reviewed || savingStatus || !remarks.trim()} onClick={() => transition('CORRECTION_REQUIRED')}>Request Correction</Button><Button danger disabled={!reviewed || savingStatus || !remarks.trim()} onClick={() => transition('REJECTED')}>
                         Reject
-                      </Button>
+                      </Button></>
                     )}
                     {['SUBMITTED', 'PENDING', 'UNDER_REVIEW', 'VERIFIED'].includes(data.status) && (
                       <Button primary disabled={!reviewed || savingStatus} onClick={() => { setToast(null); setConfirmApproval(true) }}>
@@ -3073,7 +2878,7 @@ function AdmissionDetails({ approval = false }) {
       <div className="cm-profile-top-bar">
         <ExportMenu mode="single" title="Student Admission" filename={`admission_${data.application.admissionNumber || data.application.number || id}`} recordSections={admissionDetailSections(data)} />
         <button type="button" className="cm-button secondary erp-btn erp-btn--secondary" onClick={() => navigate('/student-management/admissions')}>
-          &larr; Back 
+          &larr; Back
         </button>
       </div>
 
@@ -3095,11 +2900,16 @@ function AdmissionDetails({ approval = false }) {
   );
 }
 
+function AdmissionRouteDialog({ approval = false }) {
+  const navigate = useNavigate()
+  return <ViewDialog title={approval ? 'Admission Review' : 'Admission Details'} icon={FiUser} onClose={() => navigate('/student-management/admissions')} maxWidth="1120px" showExport={false}><AdmissionDetails approval={approval} /></ViewDialog>
+}
+
 export default function StudentAdmission() {
   const { pathname } = useLocation()
   let screen = <AdmissionList />
   if (pathname.endsWith('/new') || pathname.endsWith('/edit')) screen = <AdmissionForm />
-  else if (pathname.endsWith('/approval')) screen = <AdmissionDetails approval />
-  else if (/\/admissions\/[^/]+$/.test(pathname)) screen = <AdmissionDetails />
+  else if (pathname.endsWith('/approval')) screen = <><AdmissionList /><AdmissionRouteDialog approval /></>
+  else if (/\/admissions\/[^/]+$/.test(pathname)) screen = <><AdmissionList /><AdmissionRouteDialog /></>
   return <DashboardLayout><main className="student-admission">{screen}</main></DashboardLayout>
 }

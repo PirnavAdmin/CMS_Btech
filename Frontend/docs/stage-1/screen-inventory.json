@@ -1,14 +1,6 @@
 {
   "method": "JSX Route source scan plus existing portal configs and audited pathname dispatchers; not a runtime reachability assertion. Rows retain redirect aliases and duplicate declarations.",
-  "duplicates": [
-    {
-      "route": "/roles-designations",
-      "sources": [
-        "src/App.jsx:312",
-        "src/App.jsx:330"
-      ]
-    }
-  ],
+  "duplicates": [],
   "screens": [
     {
       "moduleId": "landing",
@@ -16,7 +8,7 @@
       "route": "/",
       "component": "LandingPage",
       "componentFile": "src/pages/Pages.jsx",
-      "source": "src/App.jsx:180",
+      "source": "src/App.jsx:181",
       "permission": null,
       "roles": [],
       "guard": "No role guard declared here",
@@ -33,7 +25,7 @@
       "route": "/login",
       "component": "Login",
       "componentFile": "src/pages/Pages.jsx",
-      "source": "src/App.jsx:181",
+      "source": "src/App.jsx:182",
       "permission": null,
       "roles": [],
       "guard": "No role guard declared here",
@@ -50,7 +42,7 @@
       "route": "/activate-account",
       "component": "ActivateAccount",
       "componentFile": "src/pages/Pages.jsx",
-      "source": "src/App.jsx:182",
+      "source": "src/App.jsx:183",
       "permission": null,
       "roles": [],
       "guard": "No role guard declared here",
@@ -67,7 +59,7 @@
       "route": "/register",
       "component": "Register",
       "componentFile": "src/pages/Pages.jsx",
-      "source": "src/App.jsx:183",
+      "source": "src/App.jsx:184",
       "permission": null,
       "roles": [],
       "guard": "No role guard declared here",
@@ -84,7 +76,7 @@
       "route": "/portal-preview",
       "component": "PortalPreview",
       "componentFile": "src/pages/portals/PortalPreview.jsx",
-      "source": "src/App.jsx:185",
+      "source": "src/App.jsx:186",
       "permission": null,
       "roles": [],
       "guard": "No role guard declared here",
@@ -97,11 +89,11 @@
     },
     {
       "moduleId": "dashboard",
-      "moduleName": "Dashboard",
+      "moduleName": "Overview",
       "route": "/dashboard",
-      "component": "Dashboard",
-      "componentFile": "src/pages/Pages.jsx",
-      "source": "src/App.jsx:186",
+      "component": "ScreenPermissionBoundary",
+      "componentFile": "src/auth/ScreenPermissionBoundary.jsx",
+      "source": "src/App.jsx:187",
       "permission": "dashboard",
       "roles": [
         "admin",
@@ -123,7 +115,7 @@
       "route": "/faculty-portal/session-expired",
       "component": "FacultySessionExpiredPage",
       "componentFile": "src/features/faculty/FacultySessionExpiredPage.jsx",
-      "source": "src/App.jsx:187",
+      "source": "src/App.jsx:188",
       "permission": null,
       "roles": [],
       "guard": "No role guard declared here",
@@ -140,7 +132,7 @@
       "route": "/faculty-portal",
       "component": "Navigate",
       "componentFile": "react-router-dom",
-      "source": "src/App.jsx:189",
+      "source": "src/App.jsx:190",
       "permission": null,
       "roles": [
         "faculty"
@@ -159,7 +151,7 @@
       "route": "/faculty-portal/dashboard",
       "component": "FacultyDashboardPage",
       "componentFile": "src/features/faculty/dashboard/pages/FacultyDashboardPage.jsx",
-      "source": "src/App.jsx:190",
+      "source": "src/App.jsx:191",
       "permission": null,
       "roles": [
         "faculty"
@@ -178,7 +170,7 @@
       "route": "/faculty-portal/:screen?",
       "component": "FacultyWorkspacePage",
       "componentFile": "src/features/faculty/FacultyWorkspacePage.jsx",
-      "source": "src/App.jsx:191",
+      "source": "src/App.jsx:192",
       "permission": null,
       "roles": [
         "faculty"
@@ -197,7 +189,7 @@
       "route": "/student-portal/:screen?",
       "component": "AcademicPortal",
       "componentFile": "src/pages/portals/AcademicPortal.jsx",
-      "source": "src/App.jsx:194",
+      "source": "src/App.jsx:195",
       "permission": null,
       "roles": [
         "student"
@@ -216,7 +208,7 @@
       "route": "/staff-portal/:screen?",
       "component": "StaffPortal",
       "componentFile": "src/pages/staff-portal/StaffPortal.jsx",
-      "source": "src/App.jsx:197",
+      "source": "src/App.jsx:198",
       "permission": null,
       "roles": [
         "staff"
@@ -235,7 +227,7 @@
       "route": "/user-access",
       "component": "UserAccessManagement",
       "componentFile": "src/pages/admin-management/UserAccessManagement.jsx",
-      "source": "src/App.jsx:200",
+      "source": "src/App.jsx:201",
       "permission": "roles_permissions",
       "roles": [
         "admin"
@@ -254,7 +246,7 @@
       "route": "/library",
       "component": "LibraryWorkspace",
       "componentFile": "src/pages/campus/CampusWorkspace.jsx",
-      "source": "src/App.jsx:215",
+      "source": "src/App.jsx:216",
       "permission": "library",
       "roles": [
         "admin"
@@ -275,7 +267,7 @@
       "route": "/meetings-events",
       "component": "MeetingsEventsWorkspace",
       "componentFile": "src/pages/campus/CampusWorkspace.jsx",
-      "source": "src/App.jsx:216",
+      "source": "src/App.jsx:217",
       "permission": "meetings_events",
       "roles": [
         "admin"
@@ -296,7 +288,7 @@
       "route": "/placement",
       "component": "PlacementWorkspace",
       "componentFile": "src/pages/campus/CampusWorkspace.jsx",
-      "source": "src/App.jsx:217",
+      "source": "src/App.jsx:218",
       "permission": "placement",
       "roles": [
         "admin"
@@ -317,7 +309,7 @@
       "route": "/results",
       "component": "ResultGeneration",
       "componentFile": "src/pages/examinations/grade-result-management/GradeResultManagement.jsx",
-      "source": "src/App.jsx:218",
+      "source": "src/App.jsx:219",
       "permission": "results",
       "roles": [
         "admin"
@@ -338,7 +330,7 @@
       "route": "/results/semester-result",
       "component": "SemesterResult",
       "componentFile": "src/pages/examinations/grade-result-management/GradeResultManagement.jsx",
-      "source": "src/App.jsx:219",
+      "source": "src/App.jsx:220",
       "permission": "results",
       "roles": [
         "admin"
@@ -359,7 +351,7 @@
       "route": "/results/department-result",
       "component": "DepartmentResult",
       "componentFile": "src/pages/examinations/grade-result-management/GradeResultManagement.jsx",
-      "source": "src/App.jsx:220",
+      "source": "src/App.jsx:221",
       "permission": "results",
       "roles": [
         "admin"
@@ -380,7 +372,7 @@
       "route": "/results/consolidated-marks-memo",
       "component": "ConsolidatedMarksMemo",
       "componentFile": "src/pages/examinations/grade-result-management/GradeResultManagement.jsx",
-      "source": "src/App.jsx:221",
+      "source": "src/App.jsx:222",
       "permission": "results",
       "roles": [
         "admin"
@@ -401,7 +393,7 @@
       "route": "/results/backlog-report",
       "component": "BacklogReport",
       "componentFile": "src/pages/examinations/grade-result-management/GradeResultManagement.jsx",
-      "source": "src/App.jsx:222",
+      "source": "src/App.jsx:223",
       "permission": "results",
       "roles": [
         "admin"
@@ -422,7 +414,7 @@
       "route": "/results/student-result",
       "component": "StudentResult",
       "componentFile": "src/pages/examinations/grade-result-management/GradeResultManagement.jsx",
-      "source": "src/App.jsx:223",
+      "source": "src/App.jsx:224",
       "permission": "results",
       "roles": [
         "admin"
@@ -443,7 +435,7 @@
       "route": "/my-profile",
       "component": "MyProfile",
       "componentFile": "src/pages/profile/MyProfile.jsx",
-      "source": "src/App.jsx:224",
+      "source": "src/App.jsx:225",
       "permission": "my_profile",
       "roles": [
         "admin"
@@ -462,7 +454,28 @@
       "route": "/settings",
       "component": "Settings",
       "componentFile": "src/pages/profile/MyProfile.jsx",
-      "source": "src/App.jsx:225",
+      "source": "src/App.jsx:226",
+      "permission": "academic_settings",
+      "roles": [
+        "admin"
+      ],
+      "guard": "PortalRoute → ProtectedRoute",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "settings",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "academic_settings",
+      "moduleName": "Settings",
+      "route": "/global-settings",
+      "component": "Settings",
+      "componentFile": "src/pages/profile/MyProfile.jsx",
+      "source": "src/App.jsx:227",
       "permission": "academic_settings",
       "roles": [
         "admin"
@@ -483,7 +496,7 @@
       "route": "/settings/academic-context",
       "component": "Settings",
       "componentFile": "src/pages/profile/MyProfile.jsx",
-      "source": "src/App.jsx:226",
+      "source": "src/App.jsx:228",
       "permission": "academic_settings",
       "roles": [
         "admin"
@@ -504,7 +517,7 @@
       "route": "/faculty/*",
       "component": "FacultyManagement",
       "componentFile": "src/pages/faculty/FacultyManagement.jsx",
-      "source": "src/App.jsx:229",
+      "source": "src/App.jsx:231",
       "permission": "faculty_directory",
       "roles": [
         "admin"
@@ -525,7 +538,7 @@
       "route": "/faculty/leave-management",
       "component": "FacultyLeaveManagement",
       "componentFile": "src/pages/faculty/FacultyManagement.jsx",
-      "source": "src/App.jsx:230",
+      "source": "src/App.jsx:232",
       "permission": "faculty_leaves",
       "roles": [
         "admin"
@@ -546,7 +559,7 @@
       "route": "/faculty/payroll",
       "component": "Payroll",
       "componentFile": "src/pages/faculty/FacultyManagement.jsx",
-      "source": "src/App.jsx:231",
+      "source": "src/App.jsx:233",
       "permission": "faculty_payroll",
       "roles": [
         "admin"
@@ -567,7 +580,7 @@
       "route": "/attendance/*",
       "component": "Navigate",
       "componentFile": "react-router-dom",
-      "source": "src/App.jsx:235",
+      "source": "src/App.jsx:237",
       "permission": "student_attendance",
       "roles": [
         "admin"
@@ -593,7 +606,7 @@
       "route": "/exam/student-schedule",
       "component": "StudentExamSchedule",
       "componentFile": "src/pages/examinations/exam-timetable/ExamModule.jsx",
-      "source": "src/App.jsx:238",
+      "source": "src/App.jsx:240",
       "permission": "examinations",
       "roles": [
         "admin"
@@ -612,9 +625,9 @@
       "moduleId": "examinations",
       "moduleName": "Exam Management",
       "route": "/exam/create",
-      "component": "CreateExamTimetable",
-      "componentFile": "src/pages/examinations/exam-timetable/ExamModule.jsx",
-      "source": "src/App.jsx:242",
+      "component": "Navigate",
+      "componentFile": "react-router-dom",
+      "source": "src/App.jsx:244",
       "permission": "examinations",
       "roles": [
         "admin"
@@ -625,8 +638,8 @@
         "college"
       ],
       "icon": "file-pen-line",
-      "uiPattern": "Form",
-      "redirect": null,
+      "uiPattern": "Redirect",
+      "redirect": "/exam/timetable",
       "kind": "screen-or-redirect"
     },
     {
@@ -635,7 +648,7 @@
       "route": "/exam/department-schedule",
       "component": "DepartmentExamSchedule",
       "componentFile": "src/pages/examinations/exam-timetable/ExamModule.jsx",
-      "source": "src/App.jsx:243",
+      "source": "src/App.jsx:245",
       "permission": "examinations",
       "roles": [
         "admin"
@@ -656,7 +669,7 @@
       "route": "/exam/schedules",
       "component": "ExamScheduleList",
       "componentFile": "src/pages/examinations/exam-timetable/ExamModule.jsx",
-      "source": "src/App.jsx:244",
+      "source": "src/App.jsx:246",
       "permission": "examinations",
       "roles": [
         "admin"
@@ -677,7 +690,7 @@
       "route": "/exam/timetable",
       "component": "ExamTimetable",
       "componentFile": "src/pages/examinations/exam-timetable/ExamModule.jsx",
-      "source": "src/App.jsx:245",
+      "source": "src/App.jsx:247",
       "permission": "examinations",
       "roles": [
         "admin"
@@ -698,7 +711,7 @@
       "route": "/exam/hall-allocation",
       "component": "HallAllocation",
       "componentFile": "src/pages/examinations/exam-timetable/ExamModule.jsx",
-      "source": "src/App.jsx:246",
+      "source": "src/App.jsx:248",
       "permission": "examinations",
       "roles": [
         "admin"
@@ -719,7 +732,7 @@
       "route": "/exam/configuration",
       "component": "ExamConfiguration",
       "componentFile": "src/pages/examinations/exam-timetable/ExamModule.jsx",
-      "source": "src/App.jsx:247",
+      "source": "src/App.jsx:249",
       "permission": "examinations",
       "roles": [
         "admin"
@@ -740,7 +753,7 @@
       "route": "/examination/completed-exams",
       "component": "CompletedExams",
       "componentFile": "src/pages/examinations/exam-timetable/ExamModule.jsx",
-      "source": "src/App.jsx:248",
+      "source": "src/App.jsx:250",
       "permission": "examinations",
       "roles": [
         "admin"
@@ -761,7 +774,7 @@
       "route": "/examination/completed-exams/:examId",
       "component": "CompletedExams",
       "componentFile": "src/pages/examinations/exam-timetable/ExamModule.jsx",
-      "source": "src/App.jsx:249",
+      "source": "src/App.jsx:251",
       "permission": "examinations",
       "roles": [
         "admin"
@@ -782,7 +795,7 @@
       "route": "/examination-setup/*",
       "component": "ExaminationSetup",
       "componentFile": "src/pages/examinations/examination-setup/ExaminationSetup.jsx",
-      "source": "src/App.jsx:250",
+      "source": "src/App.jsx:252",
       "permission": "examinations",
       "roles": [
         "admin"
@@ -803,7 +816,7 @@
       "route": "/examination-setup/examination-list",
       "component": "ExaminationList",
       "componentFile": "src/pages/examinations/examination-setup/ExaminationSetup.jsx",
-      "source": "src/App.jsx:251",
+      "source": "src/App.jsx:253",
       "permission": "examinations",
       "roles": [
         "admin"
@@ -824,7 +837,7 @@
       "route": "/examination-setup/create-examination",
       "component": "CreateExamination",
       "componentFile": "src/pages/examinations/examination-setup/ExaminationSetup.jsx",
-      "source": "src/App.jsx:252",
+      "source": "src/App.jsx:254",
       "permission": "examinations",
       "roles": [
         "admin"
@@ -842,51 +855,9 @@
     {
       "moduleId": "examinations",
       "moduleName": "Exam Management",
-      "route": "/examination-setup/exam-type",
-      "component": "ExamType",
-      "componentFile": "src/pages/examinations/examination-setup/ExaminationSetup.jsx",
-      "source": "src/App.jsx:253",
-      "permission": "examinations",
-      "roles": [
-        "admin"
-      ],
-      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
-      "scope": "college",
-      "dependencies": [
-        "college"
-      ],
-      "icon": "file-pen-line",
-      "uiPattern": "List / Workspace",
-      "redirect": null,
-      "kind": "screen-or-redirect"
-    },
-    {
-      "moduleId": "examinations",
-      "moduleName": "Exam Management",
-      "route": "/examination-setup/exam-schedule",
-      "component": "ExamSchedule",
-      "componentFile": "src/pages/examinations/examination-setup/ExaminationSetup.jsx",
-      "source": "src/App.jsx:254",
-      "permission": "examinations",
-      "roles": [
-        "admin"
-      ],
-      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
-      "scope": "college",
-      "dependencies": [
-        "college"
-      ],
-      "icon": "file-pen-line",
-      "uiPattern": "List / Workspace",
-      "redirect": null,
-      "kind": "screen-or-redirect"
-    },
-    {
-      "moduleId": "examinations",
-      "moduleName": "Exam Management",
-      "route": "/examination-setup/exam-rules",
-      "component": "ExamRules",
-      "componentFile": "src/pages/examinations/examination-setup/ExaminationSetup.jsx",
+      "route": "/exam-timetable/*",
+      "component": "ExamTimetable",
+      "componentFile": "src/pages/examinations/exam-timetable/ExamModule.jsx",
       "source": "src/App.jsx:255",
       "permission": "examinations",
       "roles": [
@@ -905,9 +876,9 @@
     {
       "moduleId": "examinations",
       "moduleName": "Exam Management",
-      "route": "/exam-timetable/*",
-      "component": "ExamTimetable",
-      "componentFile": "src/pages/examinations/exam-timetable/ExamModule.jsx",
+      "route": "/exam-timetable/create-exam-timetable",
+      "component": "Navigate",
+      "componentFile": "react-router-dom",
       "source": "src/App.jsx:256",
       "permission": "examinations",
       "roles": [
@@ -919,29 +890,8 @@
         "college"
       ],
       "icon": "file-pen-line",
-      "uiPattern": "List / Workspace",
-      "redirect": null,
-      "kind": "screen-or-redirect"
-    },
-    {
-      "moduleId": "examinations",
-      "moduleName": "Exam Management",
-      "route": "/exam-timetable/create-exam-timetable",
-      "component": "CreateExamTimetable",
-      "componentFile": "src/pages/examinations/exam-timetable/ExamModule.jsx",
-      "source": "src/App.jsx:257",
-      "permission": "examinations",
-      "roles": [
-        "admin"
-      ],
-      "guard": "PortalRoute → ProtectedRoute → ProtectedRoute",
-      "scope": "college",
-      "dependencies": [
-        "college"
-      ],
-      "icon": "file-pen-line",
-      "uiPattern": "Form",
-      "redirect": null,
+      "uiPattern": "Redirect",
+      "redirect": "/exam/timetable",
       "kind": "screen-or-redirect"
     },
     {
@@ -950,7 +900,7 @@
       "route": "/exam-timetable/exam-schedule-list",
       "component": "ExamScheduleList",
       "componentFile": "src/pages/examinations/exam-timetable/ExamModule.jsx",
-      "source": "src/App.jsx:258",
+      "source": "src/App.jsx:257",
       "permission": "examinations",
       "roles": [
         "admin"
@@ -971,7 +921,7 @@
       "route": "/exam-timetable/department-exam-schedule",
       "component": "DepartmentExamSchedule",
       "componentFile": "src/pages/examinations/exam-timetable/ExamModule.jsx",
-      "source": "src/App.jsx:259",
+      "source": "src/App.jsx:258",
       "permission": "examinations",
       "roles": [
         "admin"
@@ -992,7 +942,7 @@
       "route": "/exam-timetable/student-exam-schedule",
       "component": "StudentExamSchedule",
       "componentFile": "src/pages/examinations/exam-timetable/ExamModule.jsx",
-      "source": "src/App.jsx:260",
+      "source": "src/App.jsx:259",
       "permission": "examinations",
       "roles": [
         "admin"
@@ -1013,7 +963,7 @@
       "route": "/exam-timetable/hall-allocation",
       "component": "HallAllocation",
       "componentFile": "src/pages/examinations/exam-timetable/ExamModule.jsx",
-      "source": "src/App.jsx:261",
+      "source": "src/App.jsx:260",
       "permission": "examinations",
       "roles": [
         "admin"
@@ -1034,7 +984,7 @@
       "route": "/marks-management",
       "component": "Navigate",
       "componentFile": "react-router-dom",
-      "source": "src/App.jsx:262",
+      "source": "src/App.jsx:261",
       "permission": "marks",
       "roles": [
         "admin"
@@ -1055,7 +1005,7 @@
       "route": "/marks-management/*",
       "component": "MarksManagement",
       "componentFile": "src/pages/examinations/marks-management/MarksManagement.jsx",
-      "source": "src/App.jsx:263",
+      "source": "src/App.jsx:262",
       "permission": "marks",
       "roles": [
         "admin"
@@ -1076,7 +1026,7 @@
       "route": "/marks-management/marks-entry",
       "component": "MarksEntry",
       "componentFile": "src/pages/examinations/marks-management/MarksManagement.jsx",
-      "source": "src/App.jsx:264",
+      "source": "src/App.jsx:263",
       "permission": "marks",
       "roles": [
         "admin"
@@ -1097,7 +1047,7 @@
       "route": "/marks-management/bulk-marks-upload",
       "component": "BulkMarksUpload",
       "componentFile": "src/pages/examinations/marks-management/MarksManagement.jsx",
-      "source": "src/App.jsx:265",
+      "source": "src/App.jsx:264",
       "permission": "marks",
       "roles": [
         "admin"
@@ -1118,7 +1068,7 @@
       "route": "/marks-management/edit-marks",
       "component": "EditMarks",
       "componentFile": "src/pages/examinations/marks-management/MarksManagement.jsx",
-      "source": "src/App.jsx:266",
+      "source": "src/App.jsx:265",
       "permission": "marks",
       "roles": [
         "admin"
@@ -1139,7 +1089,7 @@
       "route": "/marks-management/student-marks",
       "component": "StudentMarks",
       "componentFile": "src/pages/examinations/marks-management/MarksManagement.jsx",
-      "source": "src/App.jsx:267",
+      "source": "src/App.jsx:266",
       "permission": "marks",
       "roles": [
         "admin"
@@ -1160,7 +1110,7 @@
       "route": "/marks-management/subject-marks-report",
       "component": "SubjectMarksReport",
       "componentFile": "src/pages/examinations/marks-management/MarksManagement.jsx",
-      "source": "src/App.jsx:268",
+      "source": "src/App.jsx:267",
       "permission": "marks",
       "roles": [
         "admin"
@@ -1181,7 +1131,7 @@
       "route": "/marks-management/marks-approval",
       "component": "MarksApproval",
       "componentFile": "src/pages/examinations/marks-management/MarksManagement.jsx",
-      "source": "src/App.jsx:269",
+      "source": "src/App.jsx:268",
       "permission": "marks",
       "roles": [
         "admin"
@@ -1202,7 +1152,7 @@
       "route": "/grade-result-management",
       "component": "GradeResultManagement",
       "componentFile": "src/pages/examinations/grade-result-management/GradeResultManagement.jsx",
-      "source": "src/App.jsx:270",
+      "source": "src/App.jsx:269",
       "permission": "results",
       "roles": [
         "admin"
@@ -1223,7 +1173,7 @@
       "route": "/grade-result-management/grade-configuration",
       "component": "GradeConfiguration",
       "componentFile": "src/pages/examinations/grade-result-management/GradeResultManagement.jsx",
-      "source": "src/App.jsx:271",
+      "source": "src/App.jsx:270",
       "permission": "results",
       "roles": [
         "admin"
@@ -1244,7 +1194,7 @@
       "route": "/grade-result-management/cgpa-calculator",
       "component": "CGPACalculatorPage",
       "componentFile": "src/pages/examinations/grade-result-management/GradeResultManagement.jsx",
-      "source": "src/App.jsx:272",
+      "source": "src/App.jsx:271",
       "permission": "results",
       "roles": [
         "admin"
@@ -1265,7 +1215,7 @@
       "route": "/grade-result-management/result-generation",
       "component": "Navigate",
       "componentFile": "react-router-dom",
-      "source": "src/App.jsx:273",
+      "source": "src/App.jsx:272",
       "permission": "results",
       "roles": [
         "admin"
@@ -1286,7 +1236,7 @@
       "route": "/grade-result-management/semester-result",
       "component": "Navigate",
       "componentFile": "react-router-dom",
-      "source": "src/App.jsx:274",
+      "source": "src/App.jsx:273",
       "permission": "results",
       "roles": [
         "admin"
@@ -1307,7 +1257,7 @@
       "route": "/grade-result-management/department-result",
       "component": "Navigate",
       "componentFile": "react-router-dom",
-      "source": "src/App.jsx:275",
+      "source": "src/App.jsx:274",
       "permission": "results",
       "roles": [
         "admin"
@@ -1328,7 +1278,7 @@
       "route": "/grade-result-management/consolidated-marks-memo",
       "component": "Navigate",
       "componentFile": "react-router-dom",
-      "source": "src/App.jsx:276",
+      "source": "src/App.jsx:275",
       "permission": "results",
       "roles": [
         "admin"
@@ -1349,7 +1299,7 @@
       "route": "/grade-result-management/backlog-report",
       "component": "Navigate",
       "componentFile": "react-router-dom",
-      "source": "src/App.jsx:277",
+      "source": "src/App.jsx:276",
       "permission": "results",
       "roles": [
         "admin"
@@ -1370,7 +1320,7 @@
       "route": "/grade-result-management/student-result",
       "component": "Navigate",
       "componentFile": "react-router-dom",
-      "source": "src/App.jsx:278",
+      "source": "src/App.jsx:277",
       "permission": "results",
       "roles": [
         "admin"
@@ -1391,7 +1341,7 @@
       "route": "/grade-result-management/*",
       "component": "GradeResultManagement",
       "componentFile": "src/pages/examinations/grade-result-management/GradeResultManagement.jsx",
-      "source": "src/App.jsx:279",
+      "source": "src/App.jsx:278",
       "permission": "results",
       "roles": [
         "admin"
@@ -1412,7 +1362,7 @@
       "route": "/college-institution-management",
       "component": "CollegeInstitutionManagement",
       "componentFile": "src/pages/admin-management/AdminManagement.jsx",
-      "source": "src/App.jsx:283",
+      "source": "src/App.jsx:282",
       "permission": "colleges",
       "roles": [
         "admin"
@@ -1431,7 +1381,7 @@
       "route": "/college-institution-management/add",
       "component": "AddCollege",
       "componentFile": "src/pages/admin-management/AdminManagement.jsx",
-      "source": "src/App.jsx:284",
+      "source": "src/App.jsx:283",
       "permission": "colleges",
       "roles": [
         "admin"
@@ -1450,7 +1400,7 @@
       "route": "/academic-year-management",
       "component": "AcademicYearManagement",
       "componentFile": "src/pages/admin-management/AdminManagement.jsx",
-      "source": "src/App.jsx:285",
+      "source": "src/App.jsx:284",
       "permission": "academic_years",
       "roles": [
         "admin"
@@ -1471,7 +1421,7 @@
       "route": "/academic-year-management/:id",
       "component": "AcademicYearManagement",
       "componentFile": "src/pages/admin-management/AdminManagement.jsx",
-      "source": "src/App.jsx:286",
+      "source": "src/App.jsx:285",
       "permission": "academic_years",
       "roles": [
         "admin"
@@ -1492,7 +1442,7 @@
       "route": "/department-management",
       "component": "DepartmentManagement",
       "componentFile": "src/pages/admin-management/AdminManagement.jsx",
-      "source": "src/App.jsx:287",
+      "source": "src/App.jsx:286",
       "permission": "departments",
       "roles": [
         "admin"
@@ -1513,7 +1463,7 @@
       "route": "/department-management/:id",
       "component": "DepartmentManagement",
       "componentFile": "src/pages/admin-management/AdminManagement.jsx",
-      "source": "src/App.jsx:288",
+      "source": "src/App.jsx:287",
       "permission": "departments",
       "roles": [
         "admin"
@@ -1534,7 +1484,7 @@
       "route": "/courses",
       "component": "Course",
       "componentFile": "src/pages/courseManagement/Course.jsx",
-      "source": "src/App.jsx:289",
+      "source": "src/App.jsx:288",
       "permission": "courses",
       "roles": [
         "admin"
@@ -1555,7 +1505,7 @@
       "route": "/courses/add",
       "component": "Course",
       "componentFile": "src/pages/courseManagement/Course.jsx",
-      "source": "src/App.jsx:290",
+      "source": "src/App.jsx:289",
       "permission": "courses",
       "roles": [
         "admin"
@@ -1576,7 +1526,7 @@
       "route": "/courses/:id/edit",
       "component": "Course",
       "componentFile": "src/pages/courseManagement/Course.jsx",
-      "source": "src/App.jsx:291",
+      "source": "src/App.jsx:290",
       "permission": "courses",
       "roles": [
         "admin"
@@ -1597,7 +1547,7 @@
       "route": "/courses/:id",
       "component": "Course",
       "componentFile": "src/pages/courseManagement/Course.jsx",
-      "source": "src/App.jsx:292",
+      "source": "src/App.jsx:291",
       "permission": "courses",
       "roles": [
         "admin"
@@ -1618,7 +1568,7 @@
       "route": "/courses/structure",
       "component": "CourseStructure",
       "componentFile": "src/pages/courseManagement/Course.jsx",
-      "source": "src/App.jsx:293",
+      "source": "src/App.jsx:292",
       "permission": "courses",
       "roles": [
         "admin"
@@ -1639,7 +1589,7 @@
       "route": "/branches",
       "component": "Branch",
       "componentFile": "src/pages/courseManagement/Course.jsx",
-      "source": "src/App.jsx:294",
+      "source": "src/App.jsx:293",
       "permission": "branches",
       "roles": [
         "admin"
@@ -1661,7 +1611,7 @@
       "route": "/branches/add",
       "component": "Branch",
       "componentFile": "src/pages/courseManagement/Course.jsx",
-      "source": "src/App.jsx:295",
+      "source": "src/App.jsx:294",
       "permission": "branches",
       "roles": [
         "admin"
@@ -1683,7 +1633,7 @@
       "route": "/branches/:id/edit",
       "component": "Branch",
       "componentFile": "src/pages/courseManagement/Course.jsx",
-      "source": "src/App.jsx:296",
+      "source": "src/App.jsx:295",
       "permission": "branches",
       "roles": [
         "admin"
@@ -1705,7 +1655,7 @@
       "route": "/branches/:id",
       "component": "Branch",
       "componentFile": "src/pages/courseManagement/Course.jsx",
-      "source": "src/App.jsx:297",
+      "source": "src/App.jsx:296",
       "permission": "branches",
       "roles": [
         "admin"
@@ -1727,7 +1677,7 @@
       "route": "/semester-management",
       "component": "SemesterManagement",
       "componentFile": "src/pages/semester-management/SemesterManagement.jsx",
-      "source": "src/App.jsx:298",
+      "source": "src/App.jsx:297",
       "permission": "semesters",
       "roles": [
         "admin"
@@ -1750,7 +1700,7 @@
       "route": "/semester-management/add",
       "component": "SemesterManagement",
       "componentFile": "src/pages/semester-management/SemesterManagement.jsx",
-      "source": "src/App.jsx:299",
+      "source": "src/App.jsx:298",
       "permission": "semesters",
       "roles": [
         "admin"
@@ -1773,7 +1723,7 @@
       "route": "/semester-management/:id/edit",
       "component": "SemesterManagement",
       "componentFile": "src/pages/semester-management/SemesterManagement.jsx",
-      "source": "src/App.jsx:300",
+      "source": "src/App.jsx:299",
       "permission": "semesters",
       "roles": [
         "admin"
@@ -1796,7 +1746,7 @@
       "route": "/semester-management/:id",
       "component": "SemesterManagement",
       "componentFile": "src/pages/semester-management/SemesterManagement.jsx",
-      "source": "src/App.jsx:301",
+      "source": "src/App.jsx:300",
       "permission": "semesters",
       "roles": [
         "admin"
@@ -1819,7 +1769,7 @@
       "route": "/section-management",
       "component": "SectionManagement",
       "componentFile": "src/pages/section-management/SectionManagement.jsx",
-      "source": "src/App.jsx:302",
+      "source": "src/App.jsx:301",
       "permission": "sections",
       "roles": [
         "admin"
@@ -1844,7 +1794,7 @@
       "route": "/section-management/add",
       "component": "SectionManagement",
       "componentFile": "src/pages/section-management/SectionManagement.jsx",
-      "source": "src/App.jsx:303",
+      "source": "src/App.jsx:302",
       "permission": "sections",
       "roles": [
         "admin"
@@ -1869,7 +1819,7 @@
       "route": "/section-management/:id/edit",
       "component": "SectionManagement",
       "componentFile": "src/pages/section-management/SectionManagement.jsx",
-      "source": "src/App.jsx:304",
+      "source": "src/App.jsx:303",
       "permission": "sections",
       "roles": [
         "admin"
@@ -1894,7 +1844,7 @@
       "route": "/section-management/:id",
       "component": "SectionManagement",
       "componentFile": "src/pages/section-management/SectionManagement.jsx",
-      "source": "src/App.jsx:305",
+      "source": "src/App.jsx:304",
       "permission": "sections",
       "roles": [
         "admin"
@@ -1919,7 +1869,7 @@
       "route": "/rooms-management",
       "component": "RoomsManagement",
       "componentFile": "src/pages/admin-management/AdminManagement.jsx",
-      "source": "src/App.jsx:306",
+      "source": "src/App.jsx:305",
       "permission": "rooms",
       "roles": [
         "admin"
@@ -1940,7 +1890,7 @@
       "route": "/rooms-management/add",
       "component": "RoomsManagement",
       "componentFile": "src/pages/admin-management/AdminManagement.jsx",
-      "source": "src/App.jsx:307",
+      "source": "src/App.jsx:306",
       "permission": "rooms",
       "roles": [
         "admin"
@@ -1961,7 +1911,7 @@
       "route": "/rooms-management/:roomId/edit",
       "component": "RoomsManagement",
       "componentFile": "src/pages/admin-management/AdminManagement.jsx",
-      "source": "src/App.jsx:308",
+      "source": "src/App.jsx:307",
       "permission": "rooms",
       "roles": [
         "admin"
@@ -1982,7 +1932,7 @@
       "route": "/rooms-management/:roomId",
       "component": "RoomsManagement",
       "componentFile": "src/pages/admin-management/AdminManagement.jsx",
-      "source": "src/App.jsx:309",
+      "source": "src/App.jsx:308",
       "permission": "rooms",
       "roles": [
         "admin"
@@ -2003,7 +1953,7 @@
       "route": "/rooms",
       "component": "RoomsManagement",
       "componentFile": "src/pages/admin-management/AdminManagement.jsx",
-      "source": "src/App.jsx:310",
+      "source": "src/App.jsx:309",
       "permission": "rooms",
       "roles": [
         "admin"
@@ -2024,7 +1974,7 @@
       "route": "/rooms/:roomId",
       "component": "RoomsManagement",
       "componentFile": "src/pages/admin-management/AdminManagement.jsx",
-      "source": "src/App.jsx:311",
+      "source": "src/App.jsx:310",
       "permission": "rooms",
       "roles": [
         "admin"
@@ -2040,31 +1990,12 @@
       "kind": "screen-or-redirect"
     },
     {
-      "moduleId": "roles_permissions",
-      "moduleName": "Roles & Designations",
-      "route": "/roles-designations",
-      "component": "RolesAndDesignations",
-      "componentFile": "src/pages/admin-management/AdminManagement.jsx",
-      "source": "src/App.jsx:312",
-      "permission": "roles_permissions",
-      "roles": [
-        "admin"
-      ],
-      "guard": "PortalRoute → ProtectedRoute",
-      "scope": "platform-and-college",
-      "dependencies": [],
-      "icon": "key-round",
-      "uiPattern": "List / Workspace",
-      "redirect": null,
-      "kind": "screen-or-redirect"
-    },
-    {
       "moduleId": "subjects",
       "moduleName": "Subject Management",
       "route": "/subject-management",
       "component": "SubjectManagement",
       "componentFile": "src/App.jsx",
-      "source": "src/App.jsx:313",
+      "source": "src/App.jsx:311",
       "permission": "subjects",
       "roles": [
         "admin"
@@ -2085,7 +2016,7 @@
       "route": "/subject-management/:id",
       "component": "SubjectDetailsPage",
       "componentFile": "src/App.jsx",
-      "source": "src/App.jsx:314",
+      "source": "src/App.jsx:312",
       "permission": "subjects",
       "roles": [
         "admin"
@@ -2106,7 +2037,7 @@
       "route": "/credits-management",
       "component": "CreditsManagement",
       "componentFile": "src/pages/credits-management/CreditsManagement.jsx",
-      "source": "src/App.jsx:315",
+      "source": "src/App.jsx:313",
       "permission": "credits",
       "roles": [
         "admin"
@@ -2127,7 +2058,7 @@
       "route": "/timetable",
       "component": "TimetableManagement",
       "componentFile": "src/pages/timetable/TimetableManagement.jsx",
-      "source": "src/App.jsx:316",
+      "source": "src/App.jsx:314",
       "permission": "timetable",
       "roles": [
         "admin"
@@ -2153,7 +2084,7 @@
       "route": "/elective-management",
       "component": "ElectiveManagement",
       "componentFile": "src/pages/elective-management/ElectiveManagement.jsx",
-      "source": "src/App.jsx:317",
+      "source": "src/App.jsx:315",
       "permission": "electives",
       "roles": [
         "admin"
@@ -2174,7 +2105,7 @@
       "route": "/student-management/admissions",
       "component": "StudentAdmission",
       "componentFile": "src/pages/student-management/StudentAdmission/StudentAdmission.jsx",
-      "source": "src/App.jsx:318",
+      "source": "src/App.jsx:316",
       "permission": "student_admissions",
       "roles": [
         "admin"
@@ -2199,7 +2130,7 @@
       "route": "/student-management/admissions/new",
       "component": "StudentAdmission",
       "componentFile": "src/pages/student-management/StudentAdmission/StudentAdmission.jsx",
-      "source": "src/App.jsx:319",
+      "source": "src/App.jsx:317",
       "permission": "student_admissions",
       "roles": [
         "admin"
@@ -2224,7 +2155,7 @@
       "route": "/student-management/admissions/add",
       "component": "StudentAdmission",
       "componentFile": "src/pages/student-management/StudentAdmission/StudentAdmission.jsx",
-      "source": "src/App.jsx:320",
+      "source": "src/App.jsx:318",
       "permission": "student_admissions",
       "roles": [
         "admin"
@@ -2249,7 +2180,7 @@
       "route": "/student-management/admissions/:id/edit",
       "component": "StudentAdmission",
       "componentFile": "src/pages/student-management/StudentAdmission/StudentAdmission.jsx",
-      "source": "src/App.jsx:321",
+      "source": "src/App.jsx:319",
       "permission": "student_admissions",
       "roles": [
         "admin"
@@ -2274,7 +2205,7 @@
       "route": "/student-management/admissions/:id/approval",
       "component": "StudentAdmission",
       "componentFile": "src/pages/student-management/StudentAdmission/StudentAdmission.jsx",
-      "source": "src/App.jsx:322",
+      "source": "src/App.jsx:320",
       "permission": "student_admissions",
       "roles": [
         "admin"
@@ -2299,7 +2230,7 @@
       "route": "/student-management/admissions/:id",
       "component": "StudentAdmission",
       "componentFile": "src/pages/student-management/StudentAdmission/StudentAdmission.jsx",
-      "source": "src/App.jsx:323",
+      "source": "src/App.jsx:321",
       "permission": "student_admissions",
       "roles": [
         "admin"
@@ -2324,7 +2255,7 @@
       "route": "/student-management/profiles",
       "component": "StudentProfile",
       "componentFile": "src/pages/student-management/StudentProfile/StudentProfile.jsx",
-      "source": "src/App.jsx:324",
+      "source": "src/App.jsx:322",
       "permission": "student_profiles",
       "roles": [
         "admin"
@@ -2345,7 +2276,7 @@
       "route": "/student-management/profiles/:id",
       "component": "StudentProfile",
       "componentFile": "src/pages/student-management/StudentProfile/StudentProfile.jsx",
-      "source": "src/App.jsx:325",
+      "source": "src/App.jsx:323",
       "permission": "student_profiles",
       "roles": [
         "admin"
@@ -2366,7 +2297,7 @@
       "route": "/student-management/attendance/sessions/:sessionId",
       "component": "AttendanceSessionDetails",
       "componentFile": "src/pages/attendance/Attendance.jsx",
-      "source": "src/App.jsx:326",
+      "source": "src/App.jsx:324",
       "permission": "student_attendance",
       "roles": [
         "admin"
@@ -2392,7 +2323,7 @@
       "route": "/student-management/attendance/*",
       "component": "Attendance",
       "componentFile": "src/pages/attendance/Attendance.jsx",
-      "source": "src/App.jsx:327",
+      "source": "src/App.jsx:325",
       "permission": "student_attendance",
       "roles": [
         "admin"
@@ -2418,7 +2349,7 @@
       "route": "/student-management/promotions",
       "component": "StudentPromotion",
       "componentFile": "src/pages/student-management/StudentPromotion/StudentPromotion.jsx",
-      "source": "src/App.jsx:328",
+      "source": "src/App.jsx:326",
       "permission": "student_promotions",
       "roles": [
         "admin"
@@ -2440,7 +2371,7 @@
       "route": "/fees/*",
       "component": "Fees",
       "componentFile": "src/pages/fees/FeeManagement.jsx",
-      "source": "src/App.jsx:329",
+      "source": "src/App.jsx:327",
       "permission": "fees",
       "roles": [
         "admin"
@@ -2461,7 +2392,7 @@
       "route": "/roles-designations",
       "component": "RolesAndDesignations",
       "componentFile": "src/pages/admin-management/AdminManagement.jsx",
-      "source": "src/App.jsx:330",
+      "source": "src/App.jsx:328",
       "permission": "roles_permissions",
       "roles": [
         "admin"
@@ -2480,7 +2411,7 @@
       "route": "/roles-permissions",
       "component": "RolesAndDesignations",
       "componentFile": "src/pages/admin-management/AdminManagement.jsx",
-      "source": "src/App.jsx:331",
+      "source": "src/App.jsx:329",
       "permission": "roles_permissions",
       "roles": [
         "admin"
@@ -2499,7 +2430,7 @@
       "route": "/my-subjects",
       "component": "RoleAlias",
       "componentFile": "src/App.jsx",
-      "source": "src/App.jsx:336",
+      "source": "src/App.jsx:334",
       "permission": null,
       "roles": [
         "faculty",
@@ -2519,7 +2450,7 @@
       "route": "/unauthorized",
       "component": "Unauthorized",
       "componentFile": "src/pages/Pages.jsx",
-      "source": "src/App.jsx:340",
+      "source": "src/App.jsx:338",
       "permission": null,
       "roles": [],
       "guard": "No role guard declared here",
@@ -2536,7 +2467,7 @@
       "route": "*",
       "component": "Navigate",
       "componentFile": "react-router-dom",
-      "source": "src/App.jsx:343",
+      "source": "src/App.jsx:341",
       "permission": null,
       "roles": [],
       "guard": "No role guard declared here",
@@ -2550,10 +2481,31 @@
     {
       "moduleId": "fee_management",
       "moduleName": "Fee Management",
+      "route": "/fees/types",
+      "component": "FeeTypesConfiguration",
+      "componentFile": "src/pages/fees/FeeTypesConfiguration.jsx",
+      "source": "src/pages/fees/FeeManagement.jsx:7190",
+      "permission": "fees",
+      "roles": [
+        "admin"
+      ],
+      "guard": "App.jsx PortalRoute + ProtectedRoute (admin)",
+      "scope": "college",
+      "dependencies": [
+        "college"
+      ],
+      "icon": "receipt-indian-rupee",
+      "uiPattern": "List / Workspace",
+      "redirect": null,
+      "kind": "screen-or-redirect"
+    },
+    {
+      "moduleId": "fee_management",
+      "moduleName": "Fee Management",
       "route": "/fees",
       "component": "Navigate",
       "componentFile": "src/pages/fees/FeeManagement.jsx",
-      "source": "src/pages/fees/FeeManagement.jsx:7438",
+      "source": "src/pages/fees/FeeManagement.jsx:7191",
       "permission": "fees",
       "roles": [
         "admin"
@@ -2574,7 +2526,7 @@
       "route": "/fees/overview",
       "component": "ServerFeeCollection",
       "componentFile": "src/pages/fees/FeeManagement.jsx",
-      "source": "src/pages/fees/FeeManagement.jsx:7441",
+      "source": "src/pages/fees/FeeManagement.jsx:7194",
       "permission": "fees",
       "roles": [
         "admin"
@@ -2595,7 +2547,7 @@
       "route": "/fees/structures",
       "component": "FeeStructureConfiguration",
       "componentFile": "src/pages/fees/FeeManagement.jsx",
-      "source": "src/pages/fees/FeeManagement.jsx:7453",
+      "source": "src/pages/fees/FeeManagement.jsx:7206",
       "permission": "fees",
       "roles": [
         "admin"
@@ -2621,7 +2573,7 @@
       "route": "/fees/components",
       "component": "Navigate",
       "componentFile": "src/pages/fees/FeeManagement.jsx",
-      "source": "src/pages/fees/FeeManagement.jsx:7467",
+      "source": "src/pages/fees/FeeManagement.jsx:7238",
       "permission": "fees",
       "roles": [
         "admin"
@@ -2647,7 +2599,7 @@
       "route": "/fees/structures/create",
       "component": "CreateAcademicFeePlan",
       "componentFile": "src/pages/fees/FeeManagement.jsx",
-      "source": "src/pages/fees/FeeManagement.jsx:7471",
+      "source": "src/pages/fees/FeeManagement.jsx:7242",
       "permission": "fees",
       "roles": [
         "admin"
@@ -2673,7 +2625,7 @@
       "route": "/fees/structures/:structureId/edit",
       "component": "CreateAcademicFeePlan",
       "componentFile": "src/pages/fees/FeeManagement.jsx",
-      "source": "src/pages/fees/FeeManagement.jsx:7508",
+      "source": "src/pages/fees/FeeManagement.jsx:7279",
       "permission": "fees",
       "roles": [
         "admin"
@@ -2699,7 +2651,7 @@
       "route": "/fees/structures/:structureId/view",
       "component": "FeeStructureConfiguration",
       "componentFile": "src/pages/fees/FeeManagement.jsx",
-      "source": "src/pages/fees/FeeManagement.jsx:7529",
+      "source": "src/pages/fees/FeeManagement.jsx:7300",
       "permission": "fees",
       "roles": [
         "admin"
@@ -2725,7 +2677,7 @@
       "route": "/fees/structures/hostel",
       "component": null,
       "componentFile": null,
-      "source": "src/pages/fees/FeeManagement.jsx:7531",
+      "source": "src/pages/fees/FeeManagement.jsx:7302",
       "permission": "fees",
       "roles": [
         "admin"
@@ -2747,7 +2699,7 @@
       "route": "/fees/structures/transport",
       "component": null,
       "componentFile": null,
-      "source": "src/pages/fees/FeeManagement.jsx:7531",
+      "source": "src/pages/fees/FeeManagement.jsx:7302",
       "permission": "fees",
       "roles": [
         "admin"
@@ -2769,7 +2721,7 @@
       "route": "/fees/structures/hostel/:facilityId/view",
       "component": "FeeStructureConfiguration",
       "componentFile": "src/pages/fees/FeeManagement.jsx",
-      "source": "src/pages/fees/FeeManagement.jsx:7531",
+      "source": "src/pages/fees/FeeManagement.jsx:7302",
       "permission": "fees",
       "roles": [
         "admin"
@@ -2791,7 +2743,7 @@
       "route": "/fees/structures/transport/:facilityId/view",
       "component": "FeeStructureConfiguration",
       "componentFile": "src/pages/fees/FeeManagement.jsx",
-      "source": "src/pages/fees/FeeManagement.jsx:7531",
+      "source": "src/pages/fees/FeeManagement.jsx:7302",
       "permission": "fees",
       "roles": [
         "admin"
@@ -2813,7 +2765,7 @@
       "route": "/fees/structures/hostel/create",
       "component": "FeeStructureConfiguration",
       "componentFile": "src/pages/fees/FeeManagement.jsx",
-      "source": "src/pages/fees/FeeManagement.jsx:7532",
+      "source": "src/pages/fees/FeeManagement.jsx:7303",
       "permission": "fees",
       "roles": [
         "admin"
@@ -2835,7 +2787,7 @@
       "route": "/fees/structures/transport/create",
       "component": "FeeStructureConfiguration",
       "componentFile": "src/pages/fees/FeeManagement.jsx",
-      "source": "src/pages/fees/FeeManagement.jsx:7532",
+      "source": "src/pages/fees/FeeManagement.jsx:7303",
       "permission": "fees",
       "roles": [
         "admin"
@@ -2857,7 +2809,7 @@
       "route": "/fees/structures/hostel/:facilityId/edit",
       "component": "FeeStructureConfiguration",
       "componentFile": "src/pages/fees/FeeManagement.jsx",
-      "source": "src/pages/fees/FeeManagement.jsx:7536",
+      "source": "src/pages/fees/FeeManagement.jsx:7307",
       "permission": "fees",
       "roles": [
         "admin"
@@ -2879,7 +2831,7 @@
       "route": "/fees/structures/transport/:facilityId/edit",
       "component": "FeeStructureConfiguration",
       "componentFile": "src/pages/fees/FeeManagement.jsx",
-      "source": "src/pages/fees/FeeManagement.jsx:7536",
+      "source": "src/pages/fees/FeeManagement.jsx:7307",
       "permission": "fees",
       "roles": [
         "admin"
@@ -2901,7 +2853,7 @@
       "route": "/fees/students",
       "component": "StudentFees",
       "componentFile": "src/pages/fees/FeeManagement.jsx",
-      "source": "src/pages/fees/FeeManagement.jsx:7544",
+      "source": "src/pages/fees/FeeManagement.jsx:7315",
       "permission": "fees",
       "roles": [
         "admin"
@@ -2922,7 +2874,7 @@
       "route": "/fees/accounts/:studentId",
       "component": "StudentFeeDetails",
       "componentFile": "src/pages/fees/FeeManagement.jsx",
-      "source": "src/pages/fees/FeeManagement.jsx:7557",
+      "source": "src/pages/fees/FeeManagement.jsx:7328",
       "permission": "fees",
       "roles": [
         "admin"
@@ -2943,7 +2895,7 @@
       "route": "/fees/ledger/:assignmentId",
       "component": "StudentFeeDetails",
       "componentFile": "src/pages/fees/FeeManagement.jsx",
-      "source": "src/pages/fees/FeeManagement.jsx:7567",
+      "source": "src/pages/fees/FeeManagement.jsx:7338",
       "permission": "fees",
       "roles": [
         "admin"
@@ -2964,7 +2916,7 @@
       "route": "/fees/assignments",
       "component": "AssignFeePlan",
       "componentFile": "src/pages/fees/FeeManagement.jsx",
-      "source": "src/pages/fees/FeeManagement.jsx:7577",
+      "source": "src/pages/fees/FeeManagement.jsx:7348",
       "permission": "fees",
       "roles": [
         "admin"
@@ -2985,7 +2937,7 @@
       "route": "/fees/concessions",
       "component": "Navigate",
       "componentFile": "src/pages/fees/FeeManagement.jsx",
-      "source": "src/pages/fees/FeeManagement.jsx:7590",
+      "source": "src/pages/fees/FeeManagement.jsx:7361",
       "permission": "fees",
       "roles": [
         "admin"
@@ -3006,7 +2958,7 @@
       "route": "/fees/dues",
       "component": "Dues",
       "componentFile": "src/pages/fees/FeeManagement.jsx",
-      "source": "src/pages/fees/FeeManagement.jsx:7591",
+      "source": "src/pages/fees/FeeManagement.jsx:7362",
       "permission": "fees",
       "roles": [
         "admin"
@@ -3027,7 +2979,7 @@
       "route": "/fees/receipts",
       "component": "ServerFeeCollection",
       "componentFile": "src/pages/fees/FeeManagement.jsx",
-      "source": "src/pages/fees/FeeManagement.jsx:7594",
+      "source": "src/pages/fees/FeeManagement.jsx:7365",
       "permission": "fees",
       "roles": [
         "admin"
@@ -3048,7 +3000,7 @@
       "route": "/fees/collection",
       "component": "ServerFeeCollection",
       "componentFile": "src/pages/fees/FeeManagement.jsx",
-      "source": "src/pages/fees/FeeManagement.jsx:7598",
+      "source": "src/pages/fees/FeeManagement.jsx:7369",
       "permission": "fees",
       "roles": [
         "admin"
@@ -3069,7 +3021,7 @@
       "route": "/fees/refunds",
       "component": "Navigate",
       "componentFile": "src/pages/fees/FeeManagement.jsx",
-      "source": "src/pages/fees/FeeManagement.jsx:7602",
+      "source": "src/pages/fees/FeeManagement.jsx:7373",
       "permission": "fees",
       "roles": [
         "admin"
@@ -3090,7 +3042,7 @@
       "route": "/fees/reports",
       "component": "ServerFeeCollection",
       "componentFile": "src/pages/fees/FeeManagement.jsx",
-      "source": "src/pages/fees/FeeManagement.jsx:7605",
+      "source": "src/pages/fees/FeeManagement.jsx:7376",
       "permission": "fees",
       "roles": [
         "admin"
@@ -3111,7 +3063,7 @@
       "route": "/fees/*",
       "component": "Navigate",
       "componentFile": "src/pages/fees/FeeManagement.jsx",
-      "source": "src/pages/fees/FeeManagement.jsx:7610",
+      "source": "src/pages/fees/FeeManagement.jsx:7381",
       "permission": "fees",
       "roles": [
         "admin"
@@ -3132,7 +3084,7 @@
       "route": "/fees/legacy",
       "component": "Navigate",
       "componentFile": "src/pages/fees/FeeManagement.jsx",
-      "source": "src/pages/fees/FeeManagement.jsx:7621",
+      "source": "src/pages/fees/FeeManagement.jsx:7392",
       "permission": "fees",
       "roles": [
         "admin"
@@ -3158,7 +3110,7 @@
       "route": "/fees/*",
       "component": "FeeWorkspace",
       "componentFile": "src/pages/fees/FeeManagement.jsx",
-      "source": "src/pages/fees/FeeManagement.jsx:7622",
+      "source": "src/pages/fees/FeeManagement.jsx:7393",
       "permission": "fees",
       "roles": [
         "admin"

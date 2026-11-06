@@ -9,23 +9,23 @@
 .sl-bal-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
 .sl-left{font-size:22px;font-weight:700;color:var(--sl-accent)}
 .sl-bar{display:flex;height:8px;border-radius:8px;background:var(--sl-line);overflow:hidden;margin-bottom:8px}
-.sl-bar .used{background:#10b981}.sl-bar .pend{background:#f59e0b}
+.sl-bar .used{background:var(--success)}.sl-bar .pend{background:#f59e0b}
 .sl-toolbar{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
 .sl-toolbar h2{font-size:18px;margin:0}
 .sl-filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .sl-filters select,.sl-search,.sl-dialog input:not([type=checkbox]):not([type=file]),.sl-dialog select,.sl-dialog textarea{border:1px solid var(--sl-line);background:var(--sl-card);color:var(--sl-text);border-radius:10px;padding:8px 10px;font:inherit}
 .sl-search{display:flex;align-items:center;gap:6px}.sl-search input{border:0!important;padding:0!important;outline:0;background:transparent}
 .sl-primary{background:var(--sl-accent);color:#fff;border:0;border-radius:10px;padding:9px 14px;font-weight:600;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
-.sl-danger{background:#dc2626;color:#fff;border:0;border-radius:10px;padding:9px 14px;cursor:pointer}
+.sl-danger{background:var(--danger);color:#fff;border:0;border-radius:10px;padding:9px 14px;cursor:pointer}
 .sl-table-wrap{overflow-x:auto}
 .sl-table{width:100%;border-collapse:collapse;font-size:14px}
 .sl-table th{text-align:left;font-size:12px;color:var(--sl-muted);padding:10px 8px;border-bottom:1px solid var(--sl-line)}
 .sl-table td{padding:12px 8px;border-bottom:1px solid var(--sl-line)}
 .sl-table tbody tr{cursor:pointer}.sl-table tbody tr:hover{background:rgba(21,101,192,.06)}
 .sl-chip{padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600}
-.sl-chip.pending{background:#fef3c7;color:#92400e}.sl-chip.approved{background:#d1fae5;color:#065f46}
-.sl-chip.rejected{background:#fee2e2;color:#991b1b}.sl-chip.cancelled{background:#e5e7eb;color:#374151}
-.sl-link{background:none;border:0;color:#dc2626;cursor:pointer;font-weight:600}
+.sl-chip.pending{background:var(--cms-amber-soft);color:#92400e}.sl-chip.approved{background:#d1fae5;color:#065f46}
+.sl-chip.rejected{background:var(--cms-red-soft);color:#991b1b}.sl-chip.cancelled{background:#e5e7eb;color:#374151}
+.sl-link{background:none;border:0;color:var(--danger);cursor:pointer;font-weight:600}
 .sl-empty{text-align:center;color:var(--sl-muted);padding:32px}
 .sl-overlay{position:fixed;inset:0;background:rgba(8,20,40,.55);display:grid;place-items:center;z-index:1000;padding:16px}
 .sl-dialog{background:var(--sl-card);color:var(--sl-text);border-radius:16px;padding:22px;width:min(520px,100%);max-height:92vh;overflow:auto;display:flex;flex-direction:column;gap:12px}
@@ -34,7 +34,7 @@
 .sl-dlg-head h2,.sl-dialog h2{font-size:18px;margin:0}
 .sl-dlg-head button{background:none;border:0;color:var(--sl-text);font-size:20px;cursor:pointer}
 .sl-dialog label{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600}
-.sl-dialog em{color:#dc2626;font-size:12px;font-style:normal;font-weight:400}
+.sl-dialog em{color:var(--danger);font-size:12px;font-style:normal;font-weight:400}
 .sl-two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .sl-check{flex-direction:row!important;align-items:center;font-weight:400!important}
 .sl-days{margin:0}
@@ -46,6 +46,6 @@
 .sl-timeline li{position:relative;display:flex;flex-direction:column;padding:0 0 14px 12px;opacity:.55}
 .sl-timeline li.done{opacity:1}
 .sl-timeline li::before{content:'';position:absolute;left:-25px;top:3px;width:12px;height:12px;border-radius:50%;background:var(--sl-line)}
-.sl-timeline li.done::before{background:#10b981}
+.sl-timeline li.done::before{background:var(--success)}
 .sl-toast{position:fixed;bottom:24px;right:24px;background:#065f46;color:#fff;padding:12px 18px;border-radius:10px;z-index:1100}
 @media(max-width:600px){.sl-two{grid-template-columns:1fr}.sl-head h1{font-size:26px}}

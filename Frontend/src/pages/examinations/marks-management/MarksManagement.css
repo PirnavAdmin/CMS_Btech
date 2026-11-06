@@ -44,7 +44,7 @@
 }
 
 .marks-clean-nav a:hover:not(.active) {
-  background: var(--surface-soft, #f8fafc);
+  background: var(--surface-soft, var(--surface-soft));
   color: var(--text-primary);
 }
 
@@ -61,7 +61,7 @@
 }
 
 .marks-clean-nav a:focus-visible {
-  outline: 2px solid var(--brand, #1769c2);
+  outline: 2px solid var(--brand, var(--brand));
   outline-offset: 2px;
 }
 
@@ -70,60 +70,7 @@
   margin-bottom: 0;
 }
 
-.marks-module-page-header .erp-page-header__left {
-  flex: 1 1 320px;
-}
-
-.marks-module-page-header .erp-page-header__right {
-  flex: 0 1 520px;
-}
-
-.marks-module-page-header .compact-summary {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  width: 100%;
-  border: 1px solid #d8e4f2;
-  border-radius: 12px !important;
-  background: var(--surface, #fff);
-  box-shadow: 0 4px 16px rgb(24 63 106 / 5%) !important;
-}
-
-.marks-module-page-header .compact-summary__item {
-  display: flex;
-  min-width: 0 !important;
-  min-height: 68px !important;
-  align-items: center;
-  padding: 8px 10px !important;
-  border-color: #d8e4f2;
-}
-
-.marks-module-page-header .compact-summary__item strong {
-  color: #1769c2;
-  font-size: 20px !important;
-  line-height: 1.1 !important;
-}
-
-.marks-module-page-header .compact-summary__item--active strong {
-  color: #00a978 !important;
-}
-
-.marks-module-page-header .compact-summary__item--inactive strong,
-.marks-module-page-header .compact-summary__item--danger strong {
-  color: #d8323d !important;
-}
-
-.marks-module-page-header .compact-summary__item small {
-  max-width: 110px;
-  color: #5f7592;
-  font-size: 9px !important;
-  line-height: 1.25 !important;
-}
-
 @media (max-width: 768px) {
-  .marks-module-page-header .erp-page-header__left,
-  .marks-module-page-header .erp-page-header__right {
-    flex-basis: auto;
-  }
 }
 
 @media (max-width: 560px) {
@@ -131,22 +78,6 @@
     min-height: 36px;
     padding: 8px 11px;
     font-size: 12px;
-  }
-
-  .marks-module-page-header .compact-summary {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .marks-module-page-header .compact-summary__item:nth-child(2) {
-    border-right: 0;
-  }
-
-  .marks-module-page-header .compact-summary__item:nth-child(-n+2) {
-    border-bottom: 1px solid #d8e4f2;
-  }
-
-  .marks-module-page-header .compact-summary__item:nth-child(n+3) {
-    border-bottom: 0;
   }
 }
 
@@ -162,7 +93,7 @@
 .bulk-marks-upload-dropzone:hover,
 .bulk-marks-upload-dropzone:focus-within { border-color: var(--brand); background: var(--brand-soft, #edf5ff); }
 .bulk-marks-upload-dropzone input { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
-.bulk-marks-upload-dropzone__icon { display: grid; flex: 0 0 44px; place-items: center; width: 44px; height: 44px; border-radius: 10px; background: var(--brand-soft, #eaf3ff); color: var(--brand); font-size: 21px; }
+.bulk-marks-upload-dropzone__icon { display: grid; flex: 0 0 44px; place-items: center; width: 44px; height: 44px; border-radius: 10px; background: var(--brand-soft, var(--brand-soft)); color: var(--brand); font-size: 21px; }
 .bulk-marks-upload-dropzone__text { display: grid; min-width: 0; gap: 4px; }
 .bulk-marks-upload-dropzone__text strong { overflow: hidden; color: var(--text-primary); text-overflow: ellipsis; white-space: nowrap; }
 .bulk-marks-upload-dropzone__text small { color: var(--text-secondary); font-size: 12px; }
@@ -174,9 +105,7 @@
 .bulk-marks-upload-error { color: var(--danger, #c62828); }
 .bulk-marks-preview-card__header { padding: 20px 20px 4px; }
 .bulk-marks-preview-filters { margin: 12px 20px 16px; }
-.marks-management-bulk-marks-upload .filter-disclosure.bulk-marks-preview-filters { position: relative; z-index: 4; overflow: visible; }
 .bulk-marks-preview-filters .export-control { z-index: 5; }
-.bulk-marks-preview-filters .filter-disclosure__search { flex: 1 1 320px; justify-content: flex-start; }
 .bulk-marks-search-wrap { width: 100%; }
 .bulk-marks-search { display: flex; align-items: center; gap: 8px; width: min(100%, 460px); min-height: 40px; box-sizing: border-box; padding: 8px 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-secondary); }
 .bulk-marks-search svg { flex: 0 0 auto; }
@@ -201,56 +130,22 @@
 }
 
 /* Align Clear Filters with the filter controls instead of their labels. */
-.bulk-marks-preview-filters .filter-disclosure__clear-btn { align-self: flex-end !important; margin-bottom: 0 !important; }
 
 /* Keep the uploaded-data filter fields together and centered on one row. */
-.bulk-marks-preview-filters .filter-disclosure__content-inner {
-  display: grid !important;
-  grid-auto-flow: column;
-  grid-auto-columns: 165px;
-  align-items: end !important;
-  justify-content: safe center !important;
-  gap: 12px !important;
-  width: 100% !important;
-  overflow-x: auto !important;
-  scrollbar-width: thin;
-}
-.bulk-marks-preview-filters .filter-disclosure__content-inner > .bulk-marks-filter {
-  flex: none !important;
-  width: 165px !important;
-  min-width: 165px !important;
-  max-width: 165px !important;
-}
-.bulk-marks-preview-filters .filter-disclosure__content-inner > .bulk-marks-filter > span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.bulk-marks-preview-filters .filter-disclosure__content .bulk-marks-filter :is(select, input) {
-  width: 100% !important;
-  min-width: 0 !important;
-  max-width: 100% !important;
-  flex: 1 1 auto !important;
-}
-.bulk-marks-preview-filters .filter-disclosure__clear-btn { justify-self: center; }
 
 @media (max-width: 640px) {
-  .bulk-marks-preview-filters .filter-disclosure__content-inner {
-    justify-content: safe center !important;
-  }
 }
 
 /* Bulk import workspace: explicit target, guided file selection, and row states. */
 .bulk-marks-upload-card__header { align-items: flex-start; }
 .bulk-marks-upload-card__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
-.bulk-marks-upload-card__actions .erp-btn { min-height: 38px; padding-inline: 12px; white-space: nowrap; }
 .bulk-marks-upload-context { display: grid; gap: 8px; margin: 0 20px 16px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface-soft, #f7faff); }
 .bulk-marks-upload-context label { display: grid; gap: 7px; color: var(--text-primary); font-size: 13px; font-weight: 700; }
 .bulk-marks-upload-context label b { color: var(--danger, #c62828); }
 .bulk-marks-upload-context .project-select { width: 100%; }
 .bulk-marks-upload-context p { margin: 0; color: var(--text-secondary); font-size: 12px; line-height: 1.5; }
 .bulk-marks-upload-dropzone { min-height: 228px; }
-.bulk-marks-upload-dropzone.is-dragging { border-color: var(--brand); background: var(--brand-soft, #eaf3ff); box-shadow: inset 0 0 0 1px var(--brand); }
+.bulk-marks-upload-dropzone.is-dragging { border-color: var(--brand); background: var(--brand-soft, var(--brand-soft)); box-shadow: inset 0 0 0 1px var(--brand); }
 .bulk-marks-upload-dropzone.is-reading { cursor: progress; opacity: .78; }
 .bulk-marks-upload-dropzone__text small { text-wrap: balance; }
 .bulk-marks-upload-dropzone .bulk-marks-upload-browse { pointer-events: none; }
@@ -299,27 +194,6 @@
   gap: 12px;
   padding-bottom: 14px;
 }
-.marks-approval-filter-panel.filter-disclosure {
-  margin: 0;
-  overflow: visible;
-  border: 0 !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-.marks-approval-filter-panel .filter-disclosure__bar {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: 10px;
-  min-height: 58px;
-  padding: 10px 16px;
-  background: transparent !important;
-}
-.marks-approval-filter-panel .filter-disclosure__search {
-  flex: 1 1 auto;
-  min-width: 220px;
-}
 .marks-approval-filter-search {
   display: flex;
   align-items: center;
@@ -344,27 +218,6 @@
   font-size: 13px;
 }
 .marks-approval-filter-search svg { flex: 0 0 auto; }
-.marks-approval-filter-panel .filter-disclosure__toggle {
-  flex: 0 0 auto;
-  width: auto;
-  min-height: 40px;
-  height: 40px;
-  order: 1;
-}
-.marks-approval-filter-panel .filter-disclosure__bar > .export-control {
-  flex: 0 0 auto;
-  order: 0;
-}
-.marks-approval-filter-panel .filter-disclosure__content {
-  overflow-x: auto;
-  padding: 14px 16px 16px;
-  border-top: 1px solid var(--border);
-  background: var(--surface-soft, #f7faff) !important;
-}
-.marks-approval-filter-panel .filter-disclosure__content-inner {
-  display: block !important;
-  width: 100% !important;
-}
 .marks-approval-filter-layout { display: contents; }
 .marks-approval-dropdown-grid {
   display: grid;
@@ -431,7 +284,7 @@
   font-weight: 700;
   cursor: pointer;
 }
-.marks-approval-view-btn:hover { background: var(--brand-soft, #eaf3ff); }
+.marks-approval-view-btn:hover { background: var(--brand-soft, var(--brand-soft)); }
 .marks-approval-pagination {
   display: flex;
   align-items: center;
@@ -441,7 +294,6 @@
   color: var(--text-secondary);
   font-size: 12px;
 }
-.marks-approval-pagination .table-pagination { margin: 0; }
 .marks-approval-loading { margin: 0 20px 20px; color: var(--text-secondary); }
 .marks-approval-error {
   display: flex;
@@ -596,7 +448,7 @@
   height: 42px;
   margin-bottom: 12px;
   border-radius: 12px;
-  background: var(--brand-soft, #eaf3ff);
+  background: var(--brand-soft, var(--brand-soft));
   color: var(--brand);
   font-size: 21px;
 }
@@ -621,8 +473,6 @@
   font-size: 13px;
 }
 .marks-approval-decision form footer { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 9px; margin-top: 17px; }
-.marks-management-marks-approval .erp-btn--danger { border: 1px solid #bd3434; background: #c64242; color: #fff; }
-.marks-management-marks-approval .erp-btn--danger:hover { background: #ac3333; }
 
 @media (max-width: 1280px) {
   .marks-approval-detail-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -631,9 +481,6 @@
   .marks-approval-details-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 640px) {
-  .marks-approval-filter-panel .filter-disclosure__bar { flex-wrap: wrap; }
-  .marks-approval-filter-panel .filter-disclosure__search { flex: 1 0 100%; min-width: 0; }
-  .marks-approval-filter-panel .filter-disclosure__content { overflow-x: auto; padding-inline: 12px; }
   .marks-approval-details-grid,
   .marks-approval-detail-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .marks-approval-pagination { align-items: flex-start; flex-direction: column; padding-inline: 14px; }
@@ -651,24 +498,12 @@
 /* MarksEntry.css */
 .marks-management-marks-entry { display: grid; gap: 24px; min-width: 0; }
 .marks-management-marks-entry .marks-entry-page-header { align-items: center; margin-bottom: 0; }
-.marks-management-marks-entry .marks-entry-page-header .erp-page-header__left { flex-basis: 340px; }
-.marks-management-marks-entry .marks-entry-page-header .erp-page-header__right { flex: 0 1 486px; }
-.marks-management-marks-entry .marks-entry-page-header .compact-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: 100%; border: 1px solid #d8e4f2; border-radius: 12px !important; background: var(--surface, #fff); box-shadow: 0 3px 12px rgb(24 63 106 / 5%) !important; }
-.marks-management-marks-entry .marks-entry-page-header .compact-summary__item { display: flex; min-width: 0 !important; min-height: 68px !important; align-items: center; padding: 8px 10px !important; border-right: 1px solid #d8e4f2; }
-.marks-management-marks-entry .marks-entry-page-header .compact-summary__item:last-child { border-right: 0; }
-.marks-management-marks-entry .marks-entry-page-header .compact-summary__item strong { color: #1769c2; font-size: 20px !important; line-height: 1.1 !important; }
-.marks-management-marks-entry .marks-entry-page-header .compact-summary__item--active strong { color: #00a978 !important; }
-.marks-management-marks-entry .marks-entry-page-header .compact-summary__item--inactive strong { color: #d8323d !important; }
-.marks-management-marks-entry .marks-entry-page-header .compact-summary__item small { max-width: 110px; color: #5f7592; font-size: 9px !important; line-height: 1.25 !important; }
 .marks-entry-card { min-width: 0; overflow: visible; }
 .marks-entry-card__header { padding-bottom: 16px; }
 .marks-entry-card__actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
 .marks-entry-card__actions > a { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; text-decoration: none; }
 .marks-entry-filters { margin: 0 20px 16px; }
-.marks-management-marks-entry .filter-disclosure.marks-entry-filters { position: relative; z-index: 4; overflow: visible; }
 .marks-entry-filters .export-control { z-index: 5; }
-.marks-entry-filters .filter-disclosure__bar { justify-content: space-between; }
-.marks-entry-filters .filter-disclosure__search { flex: 1 1 360px; justify-content: flex-start; }
 .marks-entry-search-wrap { width: 100%; }
 .marks-entry-search { display: flex; align-items: center; gap: 9px; min-width: min(100%, 360px); padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-secondary); }
 .marks-entry-search input { width: 100%; border: 0; outline: 0; background: transparent; color: var(--text-primary); font: inherit; }
@@ -689,7 +524,7 @@
 .marks-management-marks-entry .marks-entry-records-table tbody tr:nth-child(even) td { background: #edf5ff; }
 .marks-management-marks-entry .marks-entry-records-table tbody tr:hover td { background: #e5f0fd; }
 .marks-entry-student-layout { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.marks-entry-student-avatar { display: grid; flex: 0 0 42px; width: 42px; height: 42px; place-items: center; border-radius: 12px; background: #e2eefb; color: #1769c2; font-size: 16px; font-weight: 800; }
+.marks-entry-student-avatar { display: grid; flex: 0 0 42px; width: 42px; height: 42px; place-items: center; border-radius: 12px; background: #e2eefb; color: var(--brand); font-size: 16px; font-weight: 800; }
 .marks-entry-student-copy, .marks-entry-academic-copy, .marks-entry-subject-copy, .marks-entry-exam-copy, .marks-entry-score-copy, .marks-entry-result-copy { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; }
 .marks-entry-records-table .marks-entry-student-copy > strong, .marks-entry-records-table .marks-entry-academic-copy > strong, .marks-entry-records-table .marks-entry-subject-copy > strong { display: block; max-width: 100%; overflow: hidden; color: #102b4d; font-size: 13px; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
 .marks-entry-records-table .marks-entry-student-copy > small, .marks-entry-records-table .marks-entry-academic-copy > span, .marks-entry-records-table .marks-entry-exam-copy > small, .marks-entry-records-table .marks-entry-score-copy > small { display: block; max-width: 100%; overflow: hidden; color: #71839d; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
@@ -738,32 +573,31 @@
 .marks-entry-academic-lines > span { display: block; width: 100%; max-width: 100%; overflow: hidden; color: #71839d; font-size: 12px; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
 .marks-entry-loading { padding: 18px 22px; color: var(--text-secondary); }
 .marks-entry-delete-backdrop { position: fixed; inset: 0; z-index: 1300; display: grid; place-items: center; padding: 20px; box-sizing: border-box; background: rgb(15 23 42 / 62%); backdrop-filter: blur(4px); animation: marks-entry-delete-fade-in .15s ease-out; }
-.marks-entry-delete-modal { width: min(100%, 480px); overflow: hidden; border: 1px solid #e2e8f0; border-radius: 16px; background: #fff; box-shadow: 0 24px 48px rgb(15 23 42 / 25%); animation: marks-entry-delete-modal-in .2s cubic-bezier(.16, 1, .3, 1); }
-.marks-entry-delete-modal__header { position: relative; display: flex; align-items: center; gap: 14px; padding: 20px 22px 16px; border-bottom: 1px solid #e2e8f0; }
-.marks-entry-delete-modal__icon { display: grid; flex: 0 0 42px; width: 42px; height: 42px; place-items: center; border: 1px solid #d8e4f2; border-radius: 12px; background: #eaf3ff; color: #125aa8; font-size: 19px; }
+.marks-entry-delete-modal { width: min(100%, 480px); overflow: hidden; border: 1px solid var(--border); border-radius: 16px; background: #fff; box-shadow: 0 24px 48px rgb(15 23 42 / 25%); animation: marks-entry-delete-modal-in .2s cubic-bezier(.16, 1, .3, 1); }
+.marks-entry-delete-modal__header { position: relative; display: flex; align-items: center; gap: 14px; padding: 20px 22px 16px; border-bottom: 1px solid var(--border); }
+.marks-entry-delete-modal__icon { display: grid; flex: 0 0 42px; width: 42px; height: 42px; place-items: center; border: 1px solid var(--border); border-radius: 12px; background: var(--brand-soft); color: var(--brand-hover); font-size: 19px; }
 .marks-entry-delete-modal__header h2 { margin: 0; color: #1e1b4b; font-size: 16px; font-weight: 800; }
-.marks-entry-delete-modal__header p { margin: 3px 36px 0 0; color: #64748b; font-size: 12px; }
-.marks-entry-delete-modal__close { display: grid; position: absolute; top: 17px; right: 17px; width: 32px; height: 32px; place-items: center; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; color: #64748b; cursor: pointer; }
-.marks-entry-delete-modal__close:hover { background: #f1f5f9; color: #0f172a; }
+.marks-entry-delete-modal__header p { margin: 3px 36px 0 0; color: var(--text-muted); font-size: 12px; }
+.marks-entry-delete-modal__close { display: grid; position: absolute; top: 17px; right: 17px; width: 32px; height: 32px; place-items: center; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-soft); color: var(--text-muted); cursor: pointer; }
+.marks-entry-delete-modal__close:hover { background: var(--surface-alt); color: var(--text-primary); }
 .marks-entry-delete-modal__body { display: grid; gap: 16px; padding: 20px 22px; }
 .marks-entry-delete-record { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 14px 16px; border: 1px solid #e0eaff; border-radius: 12px; background: #eef4ff; }
-.marks-entry-delete-record__badge { display: grid; flex: 0 0 36px; height: 30px; place-items: center; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #475569; font-size: 9px; font-weight: 800; }
+.marks-entry-delete-record__badge { display: grid; flex: 0 0 36px; height: 30px; place-items: center; border: 1px solid var(--border-strong); border-radius: 6px; background: #fff; color: var(--text-secondary); font-size: 9px; font-weight: 800; }
 .marks-entry-delete-record > div { min-width: 0; }
 .marks-entry-delete-record strong { display: block; overflow-wrap: anywhere; color: #1e1b4b; font-size: 13px; }
 .marks-entry-delete-record p { margin: 4px 0 0; overflow-wrap: anywhere; color: #71839d; font-size: 11px; line-height: 1.5; }
 .marks-entry-delete-modal__message { margin: 0; color: #71839d; font-size: 12px; line-height: 1.65; }
-.marks-entry-delete-modal__message strong { color: #526a86; }
-.marks-entry-delete-modal__footer { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 20px; border-top: 1px solid #e2e8f0; }
+.marks-entry-delete-modal__message strong { color: var(--text-secondary); }
+.marks-entry-delete-modal__footer { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 20px; border-top: 1px solid var(--border); }
 .marks-entry-delete-modal__footer button { display: inline-flex; min-height: 38px; align-items: center; justify-content: center; gap: 7px; padding: 0 14px; border-radius: 8px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
-.marks-entry-delete-modal__cancel { border: 1px solid #cbd5e1; background: #fff; color: #475569; }
-.marks-entry-delete-modal__cancel:hover { background: #f8fafc; }
-.marks-entry-delete-modal__confirm { border: 1px solid #125aa8; background: #1769c2; color: #fff; box-shadow: 0 3px 8px rgb(23 105 194 / 22%); }
-.marks-entry-delete-modal__confirm:hover { background: #125aa8; }
-.marks-entry-delete-modal__footer button:focus-visible, .marks-entry-delete-modal__close:focus-visible { outline: 2px solid #1769c2; outline-offset: 2px; }
+.marks-entry-delete-modal__cancel { border: 1px solid var(--border-strong); background: #fff; color: var(--text-secondary); }
+.marks-entry-delete-modal__cancel:hover { background: var(--surface-soft); }
+.marks-entry-delete-modal__confirm { border: 1px solid var(--brand-hover); background: var(--brand); color: #fff; box-shadow: 0 3px 8px rgb(23 105 194 / 22%); }
+.marks-entry-delete-modal__confirm:hover { background: var(--brand-hover); }
+.marks-entry-delete-modal__footer button:focus-visible, .marks-entry-delete-modal__close:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 @keyframes marks-entry-delete-fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes marks-entry-delete-modal-in { from { opacity: 0; transform: scale(.96) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 .marks-entry-modal { position: fixed; inset: 0; z-index: 1200; display: grid; place-items: center; box-sizing: border-box; padding: 24px 24px 24px 284px; overflow-y: auto; background: rgb(12 24 40 / 52%); }
-.marks-entry-modal.sidebar-collapsed { padding-left: 96px; }
 .marks-entry-form { width: min(100%, 1120px); max-height: min(90vh, 920px); overflow-y: auto; padding: 24px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); box-shadow: 0 24px 70px rgb(10 25 45 / 24%); }
 .marks-entry-form__heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 20px; }
 .marks-entry-form__heading h3 { margin: 0 0 5px; color: var(--text-primary); font-size: 18px; }
@@ -803,7 +637,7 @@
   padding: 12px 16px;
   border: 1px solid #f87171;
   border-radius: 8px;
-  background: #fef2f2;
+  background: var(--cms-red-soft);
   color: #991b1b;
   font-size: 13px;
   line-height: 1.5;
@@ -813,7 +647,7 @@
   flex-shrink: 0;
   width: 18px;
   height: 18px;
-  color: #dc2626;
+  color: var(--danger);
 }
 .marks-section-student-message {
   display: flex;
@@ -823,14 +657,14 @@
   padding: 10px 12px;
   border: 1px solid #bfdbfe;
   border-radius: 8px;
-  background: #eff6ff;
+  background: var(--brand-soft);
   color: #1e40af;
   font-size: 13px;
   line-height: 1.45;
 }
 .marks-section-student-message--error {
   border-color: #fecaca;
-  background: #fef2f2;
+  background: var(--cms-red-soft);
   color: #991b1b;
 }
 .marks-section-student-message button {
@@ -850,7 +684,7 @@
   opacity: .65;
 }
 .marks-required-indicator {
-  color: #dc2626;
+  color: var(--danger);
   font-weight: 700;
   margin-left: 3px;
 }
@@ -859,7 +693,7 @@
 .marks-entry-input-combo.has-error .project-select,
 .marks-entry-form__field.has-error input,
 .marks-entry-form__field.has-error select {
-  border-color: #ef4444 !important;
+  border-color: var(--danger) !important;
   box-shadow: 0 0 0 1.5px rgba(239, 68, 68, 0.25) !important;
 }
 @media (max-width: 700px) {
@@ -870,16 +704,10 @@
   .marks-entry-form__body { grid-template-columns: minmax(0, 1fr); }
   .marks-entry-form__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 }
-@media (max-width: 900px) { .marks-entry-modal, .marks-entry-modal.sidebar-collapsed { padding: 14px; } }
+@media (max-width: 900px) { .marks-entry-modal { padding: 14px; } }
 @media (max-width: 768px) {
-  .marks-management-marks-entry .marks-entry-page-header .erp-page-header__left { flex-basis: auto; }
-  .marks-management-marks-entry .marks-entry-page-header .erp-page-header__right { flex-basis: auto; }
 }
 @media (max-width: 620px) {
-  .marks-management-marks-entry .marks-entry-page-header .compact-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .marks-management-marks-entry .marks-entry-page-header .compact-summary__item:nth-child(2) { border-right: 0; }
-  .marks-management-marks-entry .marks-entry-page-header .compact-summary__item:nth-child(-n+2) { border-bottom: 1px solid #d8e4f2; }
-  .marks-management-marks-entry .marks-entry-page-header .compact-summary__item:nth-child(n+3) { border-bottom: 0; }
 }
 @media (max-width: 480px) { .marks-entry-delete-modal__header, .marks-entry-delete-modal__body { padding-inline: 16px; } .marks-entry-delete-modal__footer { flex-wrap: wrap; padding-inline: 16px; } .marks-entry-delete-modal__footer button { flex: 1 1 auto; } }
 @media (max-width: 440px) { .marks-entry-form__grid { grid-template-columns: minmax(0, 1fr); } }
@@ -889,9 +717,9 @@
 .marks-management-student-marks { display: grid; gap: 24px; min-width: 0; }
 .student-marks-card { min-width: 0; overflow: visible; }
 .student-marks-card__header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 14px; }
-.student-marks-count { flex: 0 0 auto; padding: 7px 11px; border-radius: 999px; background: var(--brand-soft, #eaf3ff); color: var(--brand); font-size: 12px; font-weight: 700; }
+.student-marks-count { flex: 0 0 auto; padding: 7px 11px; border-radius: 999px; background: var(--brand-soft, var(--brand-soft)); color: var(--brand); font-size: 12px; font-weight: 700; }
 .student-marks-student-picker { display: grid; grid-template-columns: 42px minmax(220px, 1fr); align-items: center; gap: 12px; margin: 0 20px 14px; padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-soft, #f7faff); }
-.student-marks-student-picker > svg { width: 42px; height: 42px; padding: 11px; box-sizing: border-box; border-radius: 9px; background: var(--brand-soft, #eaf3ff); color: var(--brand); }
+.student-marks-student-picker > svg { width: 42px; height: 42px; padding: 11px; box-sizing: border-box; border-radius: 9px; background: var(--brand-soft, var(--brand-soft)); color: var(--brand); }
 .student-marks-student-picker label { display: grid; gap: 6px; max-width: 620px; color: var(--text-secondary); font-size: 12px; font-weight: 650; }
 .student-marks-student-picker select { width: 100%; min-height: 42px; box-sizing: border-box; padding: 8px 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-primary); font: inherit; font-size: 14px; }
 .student-marks-profile { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 0 20px 16px; }
@@ -900,10 +728,7 @@
 .student-marks-profile strong { overflow-wrap: anywhere; color: var(--text-primary); font-size: 13px; }
 .student-marks-error { margin: 0 20px 12px; color: var(--danger, #c62828); font-size: 13px; }
 .student-marks-filters { margin: 0 20px 16px; }
-.marks-management-student-marks .filter-disclosure.student-marks-filters { position: relative; z-index: 4; overflow: visible; }
 .student-marks-filters .export-control { z-index: 5; }
-.student-marks-filters .filter-disclosure__bar { justify-content: space-between; }
-.student-marks-filters .filter-disclosure__search { flex: 1 1 320px; justify-content: flex-start; }
 .student-marks-search-wrap { width: 100%; }
 .student-marks-search { display: flex; align-items: center; gap: 8px; width: min(100%, 460px); min-height: 40px; box-sizing: border-box; padding: 8px 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-secondary); }
 .student-marks-search svg { flex: 0 0 auto; }
@@ -949,9 +774,9 @@
 .marks-management-subject-marks-report { display:grid; gap:24px; min-width:0; }
 .subject-marks-report-card { min-width:0; overflow:visible; }
 .subject-marks-report-card__header { display:flex; align-items:center; justify-content:space-between; gap:16px; padding-bottom:14px; }
-.subject-marks-report-count { flex:0 0 auto; padding:7px 11px; border-radius:999px; background:var(--brand-soft,#eaf3ff); color:var(--brand); font-size:12px; font-weight:700; }
+.subject-marks-report-count { flex:0 0 auto; padding:7px 11px; border-radius:999px; background:var(--brand-soft,var(--brand-soft)); color:var(--brand); font-size:12px; font-weight:700; }
 .subject-marks-report-picker { display:grid; grid-template-columns:42px minmax(220px,1fr); align-items:center; gap:12px; margin:0 20px 14px; padding:14px; border:1px solid var(--border); border-radius:10px; background:var(--surface-soft,#f7faff); }
-.subject-marks-report-picker>svg { width:42px; height:42px; padding:11px; box-sizing:border-box; border-radius:9px; background:var(--brand-soft,#eaf3ff); color:var(--brand); }
+.subject-marks-report-picker>svg { width:42px; height:42px; padding:11px; box-sizing:border-box; border-radius:9px; background:var(--brand-soft,var(--brand-soft)); color:var(--brand); }
 .subject-marks-report-subject-field { position:relative; display:grid; gap:6px; width:100%; max-width:620px; color:var(--text-secondary); font-size:12px; font-weight:650; }
 .subject-marks-report-subject-search { display:flex; align-items:center; gap:9px; min-height:42px; box-sizing:border-box; padding:0 11px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text-secondary); }
 .subject-marks-report-subject-search input { width:100%; min-width:0; padding:9px 0; border:0; outline:0; background:transparent; color:var(--text-primary); font:inherit; font-size:14px; }
@@ -963,10 +788,7 @@
 .subject-marks-report-subject-options li button strong { flex:0 0 auto; color:var(--brand); }
 .subject-marks-report-no-subjects { padding:12px 10px; color:var(--text-secondary); font-size:13px; font-weight:400; }
 .subject-marks-report-filters { margin:0 20px 16px; }
-.marks-management-subject-marks-report .filter-disclosure.subject-marks-report-filters { position:relative; z-index:4; overflow:visible; }
 .subject-marks-report-filters .export-control { z-index:5; }
-.subject-marks-report-filters .filter-disclosure__bar { justify-content:space-between; }
-.subject-marks-report-filters .filter-disclosure__search { flex:1 1 320px; justify-content:flex-start; }
 .subject-marks-report-search-wrap { width:100%; }
 .subject-marks-report-search { display:flex; align-items:center; gap:8px; width:min(100%,460px); min-height:40px; box-sizing:border-box; padding:8px 11px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text-secondary); }
 .subject-marks-report-search svg { flex:0 0 auto; }
@@ -1215,3 +1037,5 @@
     margin-inline: 12px;
   }
 }
+
+.marks-entry .shared-view-dialog .marks-entry-form,.shared-view-dialog .marks-entry-form{width:100%;max-height:none;overflow:visible;padding:0;border:0;background:transparent;box-shadow:none}

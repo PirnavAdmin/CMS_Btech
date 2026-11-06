@@ -1,6 +1,7 @@
 import React from 'react'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { generateNextAcademicYear } from '../../auth/collegeApi'
 import { MemoryRouter } from 'react-router-dom'
 import { AcademicYearManagement } from './AdminManagement'
 import { academicYearApi, studentApi } from '../../api/apiEndpoints'
@@ -8,6 +9,8 @@ import eventBus, { ERP_EVENTS } from '../../services/eventBus'
 import { showDeactivationBlocked } from '../../components/DeactivationBlockedDialog'
 
 const fixture = vi.hoisted(() => ({ collegeId: '7', rows: [], contextLoading: false }))
+vi.mock('../../auth/ScreenAccess', () => ({ useScreenAccess: () => ({ canAction: () => true }) }))
+vi.mock('../../auth/collegeApi', async original => ({ ...await original(), generateNextAcademicYear: vi.fn() }))
 vi.mock('../../layouts/DashboardLayout', () => ({ default: ({ children }) => <>{children}</> }))
 vi.mock('../../components/ExportMenu', () => ({ default: ({ loading }) => <button type="button" disabled={loading}>Export</button>, PrintDetailsButton: () => null }))
 vi.mock('../../context/AcademicContext', () => ({ useAcademic: () => ({ selectedCollegeId: fixture.collegeId, selectedCollege: { id: fixture.collegeId, name: `College ${fixture.collegeId}` }, loading: fixture.contextLoading }) }))
@@ -21,6 +24,7 @@ const deferred = () => { let resolve, reject; const promise = new Promise((done,
 beforeEach(() => {
  vi.clearAllMocks(); localStorage.clear(); sessionStorage.clear(); fixture.contextLoading = false; writeCollege('7'); fixture.rows = [year()]
  vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-11-03T06:00:00Z'))
+ generateNextAcademicYear.mockReset().mockImplementation(async payload => { const base = [...fixture.rows].sort((a,b) => b.endDate.localeCompare(a.endDate))[0]; const start = base ? `${Number(base.endDate.slice(0,4))}-06-01` : payload.startDate; const result = year(99, { startDate: start, endDate: `${Number(start.slice(0,4))+1}-05-31` }); fixture.rows.push(result); return { data: { data: result } } });
  academicYearApi.getAll.mockReset().mockImplementation(async () => [...fixture.rows])
  academicYearApi.getById.mockReset().mockImplementation(async id => fixture.rows.find(row => String(row.academicYearId) === String(id)))
  academicYearApi.create.mockReset().mockImplementation(async payload => { const record = year(90, { ...payload, academicYearName: payload.academicYearName || payload.name }); fixture.rows.push(record); return record })
@@ -30,6 +34,14 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.useRealTimers(); document.documentElement.removeAttribute('data-theme') })
 const tree = () => <MemoryRouter><AcademicYearManagement /></MemoryRouter>
 const mount = () => render(tree())
+
+test('a dated but inactive year is not displayed as the backend active year', async () => {
+ fixture.rows = [year(1, { academicYearName: '2026 - 2027', startDate: '2026-06-01', endDate: '2027-05-31', backendStatus: 0, status: 'Inactive', isActive: false })]
+ mount(); await directory()
+ expect(screen.getByText('No active academic year')).toBeTruthy()
+ expect(screen.getByRole('button', { name: 'Activate 2026 - 2027' })).toBeTruthy()
+ expect(academicYearApi.activate).not.toHaveBeenCalled()
+})
 const directory = () => screen.findByRole('table', { name: 'Academic year directory' })
 const openAdd = async () => { await directory(); fireEvent.click(screen.getByRole('button', { name: 'Add Academic Year' })); return screen.findByRole('dialog', { name: 'Add Academic Year' }) }
 const fill = (name = '2032 - 2033', start = '2032-06-01', end = '2033-05-31') => {
@@ -98,7 +110,7 @@ test('edit uses the existing identifier and cancel closes without creating a rec
 test('present and archived cycles retain their edit restrictions and read-only details flow', async () => {
  fixture.rows = [year(1, { academicYearName: '2026 - 2027', startDate: '2026-06-01', endDate: '2027-05-31', status: 'ACTIVE' }), year(2, { academicYearName: '2020 - 2021', startDate: '2020-06-01', endDate: '2021-05-31', status: 'ARCHIVED' })]
  mount(); await directory(); expect(screen.getByRole('button', { name: 'Edit 2026 - 2027' }).disabled).toBe(true); expect(screen.getByRole('button', { name: 'Edit 2020 - 2021' }).disabled).toBe(true)
- fireEvent.click(screen.getByRole('button', { name: '2026 - 2027' })); await waitFor(() => expect(academicYearApi.getById).toHaveBeenCalledWith('1')); expect(screen.queryByRole('textbox')).toBeNull(); fireEvent.click(screen.getByRole('button', { name: /Back/ })); await directory()
+ fireEvent.click(screen.getByRole('button', { name: '2026 - 2027' })); await waitFor(() => expect(academicYearApi.getById).toHaveBeenCalledWith('1')); expect(within(screen.getByRole('dialog')).queryByRole('textbox')).toBeNull(); fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Close', exact: true })); await directory()
 })
 test('activation remains explicit and calls the existing status endpoint by year ID', async () => {
  mount(); await directory(); fireEvent.click(screen.getByRole('button', { name: 'Activate 2030 - 2031' })); await screen.findByRole('alertdialog'); expect(academicYearApi.activate).not.toHaveBeenCalled()
@@ -115,14 +127,14 @@ test.each(['students', 'lookup failure', 'clear'])('archiving preserves the %s d
 test('first-cycle generation retains its existing annual DTO and manual confirmation', async () => {
  fixture.rows = []; mount(); await screen.findByRole('heading', { name: 'No academic years found.' }); fireEvent.click(screen.getByRole('button', { name: 'Generate Academic Year' }))
  fireEvent.change(screen.getByLabelText('Academic year start date'), { target: { value: '2032-06-01' } }); expect(academicYearApi.create).not.toHaveBeenCalled(); fireEvent.click(screen.getByRole('button', { name: 'Generate Cycle' }))
- await waitFor(() => expect(academicYearApi.create).toHaveBeenCalledWith({ name: '2032 - 2033', startDate: '2032-06-01', endDate: '2033-05-31', autoActivate: false })); await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+ await waitFor(() => expect(generateNextAcademicYear).toHaveBeenCalledWith({ collegeId: 7, startDate: '2032-06-01', activateImmediately: false })); await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
 })
 test('next-cycle generation retains its annual dates, state and API contract', async () => {
  mount(); await directory(); fireEvent.click(screen.getByRole('button', { name: 'Generate Next Year' })); expect(screen.getByRole('dialog').textContent).toContain('2031 - 2032'); fireEvent.click(screen.getByRole('button', { name: 'Generate Cycle' }))
- await waitFor(() => expect(academicYearApi.create).toHaveBeenCalledTimes(1)); expect(academicYearApi.create.mock.calls[0][0]).toEqual({ name: '2031 - 2032', startDate: '2031-06-01', endDate: '2032-05-31', status: 'UPCOMING', autoActivate: false })
+ await waitFor(() => expect(generateNextAcademicYear).toHaveBeenCalledTimes(1)); expect(generateNextAcademicYear.mock.calls[0][0]).toEqual({ collegeId: 7, activateImmediately: false }); expect(academicYearApi.create).not.toHaveBeenCalled()
 })
 test('generation failure keeps the dialog open with existing college-specific 403 feedback', async () => {
- academicYearApi.create.mockRejectedValueOnce(Object.assign(new Error('Forbidden'), { status: 403 })); mount(); await directory(); fireEvent.click(screen.getByRole('button', { name: 'Generate Next Year' })); fireEvent.click(screen.getByRole('button', { name: 'Generate Cycle' }))
+ generateNextAcademicYear.mockRejectedValueOnce(Object.assign(new Error('Forbidden'), { status: 403 })); mount(); await directory(); fireEvent.click(screen.getByRole('button', { name: 'Generate Next Year' })); fireEvent.click(screen.getByRole('button', { name: 'Generate Cycle' }))
  await screen.findByText(/Access denied for College 7 \(ID: 7\)/); expect(screen.getByRole('dialog')).toBeTruthy()
 })
 test.each(['light', 'dark'])('shared form and overflow table retain theme compatibility in %s mode', async theme => {

@@ -154,3 +154,15 @@ describe('saved semester directory', () => {
     expect(updateSemester).not.toHaveBeenCalled()
   })
 })
+
+it('opens semester details above the directory and restores the list on Escape', async () => {
+  fixtures.semesters = [{ semesterId:101, branchId:7, courseId:10, academicYearId:1, semesterNumber:1, yearNumber:1, semesterName:'Semester 1' }]
+  open('/semester-management')
+  fireEvent.click(await screen.findByRole('link', { name:'Semester 1' }))
+  const dialog = await screen.findByRole('dialog', { name:'Semester Details' })
+  await within(dialog).findByText('Academic Mapping')
+  expect(screen.getByRole('table')).toBeTruthy()
+  fireEvent(dialog, new Event('cancel', { cancelable:true }))
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(screen.getByRole('table')).toBeTruthy()
+})

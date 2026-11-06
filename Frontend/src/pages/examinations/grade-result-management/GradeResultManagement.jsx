@@ -1,5 +1,10 @@
+import ViewDialog from '../../../components/ViewDialog'
+import { FiAlertTriangle } from 'react-icons/fi'
 import * as gradeApi from '../../../services/scopedModulesService'
 import ScopedModuleNotice from '../../../components/ScopedModuleNotice'
+import { useScreenAccess } from '../../../auth/ScreenAccess'
+import ResultReview from './ResultReview'
+import { loadExaminationResultSheets } from '../../../services/examinationResultsService'
 import * as pageDependency0 from 'react-router-dom'
 import * as pageDependency1 from 'react-icons/fi'
 import * as pageDependency2 from 'react'
@@ -45,7 +50,6 @@ const {
   FiAlertCircle,
   FiAward,
   FiBarChart2,
-  FiCheck,
   FiCheckCircle,
   FiCpu,
   FiFileText,
@@ -70,17 +74,16 @@ const FilterPanel = pageDependency7.default
 const ExportMenu = pageDependency8.default
 const TablePagination = pageDependency9.default
 const { useAcademic } = pageDependency10
-const resultsService = pageDependency11.default
 const {
-  academicDivision,
-  backlogRows,
+  recordedBacklogs,
+  latestSubjectAttempts,
+  meanReportedGpa,
   defaultBands,
   flattenResults,
   gradeFor,
   gradingPresets,
   summarize,
   validateBands,
-  weightedGpa,
   matchesResultSearch,
   sortResultRows
 } = pageDependency3
@@ -197,7 +200,7 @@ const compareResultSemesters = (left, right) => {
 
 function Workspace({ screen, academic, scope }) {
   const definition = gradeScreens.find((item) => item.slug === screen) || {
-    label: 'Official Results',
+    label: 'Examination Results',
     slug: screen,
   }
   const policyKey = `cms-grade-policy:${scope}`
@@ -206,13 +209,14 @@ function Workspace({ screen, academic, scope }) {
   const [backendPolicy, setBackendPolicy] = useState(null)
   const [policyLoading, setPolicyLoading] = useState(true)
   const [policyLoaded, setPolicyLoaded] = useState(false)
-  const [publishing, setPublishing] = useState(false)
   const [refreshVersion, setRefreshVersion] = useState(0)
   const [sheets, setSheets] = useState([])
   const [loading, setLoading] = useState(screen !== 'grade-configuration')
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
-  const [published, setPublished] = useState(false)
+  const { canAction } = useScreenAccess()
+  const canReview = canAction('/results', 'create') || canAction('/results', 'edit')
+  const canSavePolicy = canAction('/grade-result-management/grade-configuration', backendPolicy ? 'edit' : 'create')
   const [query, setQuery] = useState('')
   const [semester, setSemester] = useState('')
   const [department, setDepartment] = useState('')
@@ -271,8 +275,7 @@ function Workspace({ screen, academic, scope }) {
     let current = true
     setError('')
     setLoading(true)
-    gradeApi
-      .loadOfficialResults({
+    loadExaminationResultSheets({
         collegeId: selectedCollegeId || undefined,
         academicYearId: selectedAcademicYearId || undefined,
       })
@@ -304,7 +307,8 @@ function Workspace({ screen, academic, scope }) {
   // Aggregate student-level summaries (1 clean row per candidate)
   const studentSummaries = useMemo(() => {
     const map = new Map()
-    rows.forEach((row) => {
+    const relevantRows = semester ? rows.filter(row => sameResultSemester(resultSemesterName(row, semesters), semester)) : rows
+    relevantRows.forEach((row) => {
       if (!row.studentId) return
       if (!map.has(row.studentId)) {
         map.set(row.studentId, {
@@ -321,35 +325,37 @@ function Workspace({ screen, academic, scope }) {
 
     return Array.from(map.values()).map((student) => {
       const records = student.records
-      const totalCredits = records.reduce((sum, r) => sum + (r.credits || 0), 0)
-      const totalMarks = records.reduce((sum, r) => sum + (r.totalMarks || 0), 0)
-      const maxMarks = records.reduce((sum, r) => sum + (r.maximumMarks || 0), 0)
-      const gpa = weightedGpa(records)
-      const arrears = records.filter((r) => String(r.status).toLowerCase() === 'failed')
-      const isPassed = arrears.length === 0 && records.every((r) => String(r.status).toLowerCase() === 'passed')
-      const divisionObj = gpa ? academicDivision(gpa) : null
+      const attempts = latestSubjectAttempts(records)
+      const totalCredits = attempts.reduce((sum, r) => sum + (r.credits || 0), 0)
+      const totalMarks = attempts.reduce((sum, r) => sum + (r.totalMarks || 0), 0)
+      const maxMarks = attempts.reduce((sum, r) => sum + (r.maximumMarks || 0), 0)
+      const latest = records.reduce((chosen, row) => String(row.examDate) >= String(chosen.examDate) ? row : chosen)
+      const gpa = semester ? latest.officialSgpa : latest.officialCgpa
+      const status = latest.examResultStatus || 'Unavailable'
+      const isPassed = status === 'Passed'
 
       return {
         ...student,
+        semester: resultSemesterName(latest, semesters),
         totalCredits,
         totalMarks,
         maxMarks,
         percentage: maxMarks > 0 ? (totalMarks / maxMarks) * 100 : 0,
         gpa: gpa !== null ? gpa.toFixed(2) : '—',
         gpaNum: gpa,
-        arrearsCount: arrears.length,
-        status: isPassed ? 'Passed' : arrears.length > 0 ? 'Failed' : 'Pending',
+        arrearsCount: latest.officialBacklogCount,
+        status,
         isPassed,
-        division: divisionObj ? divisionObj.division : '—',
+        division: '—',
       }
     })
-  }, [rows, departments, branches, semesters])
+  }, [rows, departments, branches, semesters, semester])
 
   // Semester summaries
   const semesterSummaries = useMemo(() => {
     return summarize(rows, 'semester').map((item) => {
       const semRows = rows.filter((r) => (r.semester || 'Unassigned') === item.group)
-      const gpa = weightedGpa(semRows)
+      const gpa = meanReportedGpa(semRows)
       return {
         ...item,
         avgGpa: gpa !== null ? gpa.toFixed(2) : '—',
@@ -361,7 +367,7 @@ function Workspace({ screen, academic, scope }) {
   const departmentSummaries = useMemo(() => {
     return summarize(rows, 'department').map((item) => {
       const deptRows = rows.filter((r) => (r.department || 'Unassigned') === item.group)
-      const gpa = weightedGpa(deptRows)
+      const gpa = meanReportedGpa(deptRows)
       return {
         ...item,
         avgGpa: gpa !== null ? gpa.toFixed(2) : '—',
@@ -371,21 +377,22 @@ function Workspace({ screen, academic, scope }) {
 
   // Backlog records
   const arrearRecords = useMemo(() => {
-    return backlogRows(rows)
-  }, [rows])
+    return recordedBacklogs(sheets, rows)
+  }, [sheets, rows])
 
   // Institutional KPI metrics
   const stats = useMemo(() => {
     const totalStudents = studentSummaries.length
     const passedStudents = studentSummaries.filter((s) => s.isPassed).length
-    const passRate = totalStudents > 0 ? ((passedStudents / totalStudents) * 100).toFixed(1) : '100'
-    const overallGpa = weightedGpa(rows)
+    const decidedStudents = studentSummaries.filter(student => ['Passed', 'Failed'].includes(student.status)).length
+    const passRate = decidedStudents ? `${((passedStudents / decidedStudents) * 100).toFixed(1)}%` : '—'
+    const overallGpa = meanReportedGpa(rows, 'officialCgpa')
     return {
       totalStudents,
       passedStudents,
       passRate,
-      overallGpa: overallGpa !== null ? overallGpa.toFixed(2) : '8.35',
-      arrearsCount: arrearRecords.length,
+      overallGpa: overallGpa !== null ? overallGpa.toFixed(2) : '—',
+      arrearsCount: studentSummaries.every(student => Number.isInteger(student.arrearsCount)) ? studentSummaries.reduce((sum, student) => sum + student.arrearsCount, 0) : '—',
     }
   }, [studentSummaries, rows, arrearRecords])
 
@@ -501,16 +508,6 @@ function Workspace({ screen, academic, scope }) {
     { label: 'Result Status', key: 'status' },
   ]
 
-  const handlePublish = async () => {
-    if (publishing) return
-    setError(''); setNotice(''); setPublishing(true)
-    try {
-      if (!sheets.length) throw new Error('No institutional results are available to publish.')
-      await gradeApi.call('results/publish', { method: 'POST', body: { collegeId: gradeApi.requireId(selectedCollegeId, 'college'), academicYearId: gradeApi.requireId(selectedAcademicYearId, 'academic year'), sheets } })
-      setPublished(true); setNotice('Official results published successfully.')
-    } catch (reason) { setError(reason.message) } finally { setPublishing(false) }
-  }
-
   return (
     <section className="res-workspace">
       {/* Sleek Standard Page Header with Institutional Stats */}
@@ -519,13 +516,13 @@ function Workspace({ screen, academic, scope }) {
         subtitle={
           configuration
             ? 'Grade Boundary Scale & Policy Configuration'
-            : 'Official Academic Examination Results · Autonomous R22 Regulation'
+            : 'Academic Examination Results'
         }
         compactSummary={[
           { label: 'Candidates', value: stats.totalStudents },
-          { label: 'University Pass Rate', value: `${stats.passRate}%` },
-          { label: 'Average SGPA', value: stats.overallGpa },
-          { label: 'Active Arrears', value: stats.arrearsCount },
+          { label: 'Result Pass Rate', value: stats.passRate },
+          { label: 'Average CGPA', value: stats.overallGpa },
+          { label: 'Latest Exam Backlogs', value: stats.arrearsCount },
         ]}
         breadcrumb={[
           { label: 'Grades System and Results', link: '/results' },
@@ -542,7 +539,7 @@ function Workspace({ screen, academic, scope }) {
           <nav className="res-clean-nav" aria-label="Official results views">
             <NavLink to="/results" end className={({ isActive }) => (isActive ? 'active' : '')}>
               <FiCpu />
-              <span>Publish & Gazette</span>
+              <span>Result Review & Directory</span>
             </NavLink>
             <NavLink
               to="/results/student-result"
@@ -596,46 +593,24 @@ function Workspace({ screen, academic, scope }) {
         </div>
       )}
       {(!selectedCollegeId || !selectedAcademicYearId || academic.loading) && <p className="campus-notice" role="status">{academic.loading ? 'Loading college configuration…' : 'Select a college and active academic year to load institutional records.'}</p>}
-      {error && <ScopedModuleNotice state={{error,loading:configuration ? policyLoading : loading,saving:publishing}} onRetry={async () => setRefreshVersion(value=>value+1)} />}
+      {error && <ScopedModuleNotice state={{error,loading:configuration ? policyLoading : loading}} onRetry={async () => setRefreshVersion(value=>value+1)} />}
 
       {/* ========================================================================= */}
       {/* 1. PUBLISH & GAZETTE VIEW (/results)                                     */}
       {/* ========================================================================= */}
       {screen === 'result-generation' && (
         <div className="res-section">
-          {/* Lightweight Publishing Control Card */}
-          <div className="res-publish-card">
-            <div className="res-publish-card__info">
-              <div className="res-publish-card__badge">
-                <FiCheckCircle />
-                <span>Verification Complete · Ready for Publishing</span>
-              </div>
-              <h3>Official Examination Gazette Publication</h3>
-              <p>
-                All internal assessment scores and end-semester regular marks have been verified against
-                autonomous regulations. Calculating and publishing generates student grade memos and
-                updates the mobile app.
-              </p>
-            </div>
-            <div className="res-publish-card__actions">
-              <button
-                type="button"
-                className="res-btn res-btn--primary"
-                onClick={handlePublish}
-                disabled={loading || publishing || !sheets.length}
-              >
-                <FiCheck /> {published ? 'Re-publish Gazette' : 'Publish to Student Portal'}
-              </button>
-            </div>
-          </div>
+          {canReview && !academic.loading && selectedCollegeId && selectedAcademicYearId &&
+            <ResultReview key={`${selectedCollegeId}:${selectedAcademicYearId}`} collegeId={selectedCollegeId} academicYearId={selectedAcademicYearId} />}
+          {canReview && <p className="campus-notice">Examination results can be reviewed here. Official publication requires a workflow that issues validated examination results.</p>}
 
           {/* Search, Filter & Student Gazette Table */}
           <div className="erp-card res-card">
             <div className="res-card-header">
               <div>
-                <h3 className="res-card-title">Candidate Results Gazette</h3>
+                <h3 className="res-card-title">Candidate Examination Results</h3>
                 <p className="res-card-subtitle">
-                  Showing overall assessed performance per candidate across CSE, ECE, and Mechanical Engineering.
+                  Review backend examination results for the selected college and academic year.
                 </p>
               </div>
             </div>
@@ -649,7 +624,7 @@ function Workspace({ screen, academic, scope }) {
                   rows={filteredStudents}
                   columns={exportColumns}
                   filename="official_results_gazette.csv"
-                  title="Official Results Gazette"
+                  title="Examination Results Report"
                   loading={loading}
                 />
               }
@@ -1195,28 +1170,29 @@ function Workspace({ screen, academic, scope }) {
             <div className="res-alert-banner__content">
               <div className="res-alert-badge">
                 <FiAlertTriangle />
-                <span>Supplementary Examination Cycle Active</span>
+                <span>Recorded Backlog History</span>
               </div>
               <h3>Backlog Candidates Remedial Center</h3>
               <p>
-                {arrearRecords.length} active arrear course units identified across examination cycles.
-                Candidates are eligible to register for upcoming supplementary examinations.
+                {arrearRecords.length} backlog records returned for the selected academic scope.
+                Review each record and its examination history.
               </p>
             </div>
             <div className="res-alert-banner__actions">
               <button
                 type="button"
                 className="res-btn res-btn--outline-danger"
-                onClick={() => setNotice('Remedial notification sent to candidates via SMS & Portal.')}
+                disabled
+                title="No verified supplementary-notice delivery API is available."
               >
-                <FiSend /> Send Supplementary Notice
+                <FiSend /> Supplementary Notices Unavailable
               </button>
               <button
                 type="button"
                 className="res-btn res-btn--primary"
                 onClick={() => window.print()}
               >
-                <FiPrinter /> Print Arrear Gazette
+                <FiPrinter /> Print Backlog Report
               </button>
             </div>
           </div>
@@ -1378,13 +1354,7 @@ function Workspace({ screen, academic, scope }) {
                 searchPlaceholder="Search name, roll number or department..."
               />
             </div>
-            <button
-              type="button"
-              className="res-btn res-btn--primary"
-              onClick={() => window.print()}
-            >
-              <FiPrinter /> Print Consolidated Marks Memo
-            </button>
+            <p className="res-card-subtitle">Official memo printing requires an issued document from the institution.</p>
           </div>
 
           {/* Official Autonomous Transcript Sheet */}
@@ -1395,22 +1365,17 @@ function Workspace({ screen, academic, scope }) {
                   <FiAward />
                 </div>
                 <div className="res-transcript-titles">
-                  <h2>BHARAT INSTITUTE OF ENGINEERING & TECHNOLOGY</h2>
-                  <p>AUTONOMOUS INSTITUTION · ACCREDITED BY NAAC 'A+' & NBA</p>
-                  <h3>CONSOLIDATED MARKS MEMORANDUM & CUMULATIVE TRANSCRIPT</h3>
-                  <span>Serial Memo No: CMM/2026/BTECH/{selectedCmmStudent.rollNumber}</span>
+                  <h2>Consolidated Marks Preview</h2>
+                  <p>Examination records for the selected academic year</p>
                 </div>
               </div>
 
               <div className="res-transcript-meta">
                 <div><span>Candidate Name:</span><strong>{selectedCmmStudent.studentName}</strong></div>
                 <div><span>Hall Ticket No:</span><strong>{selectedCmmStudent.rollNumber}</strong></div>
-                <div><span>Degree Program:</span><strong>Bachelor of Technology (B.Tech)</strong></div>
                 <div><span>Branch:</span><strong>{selectedCmmStudent.department}</strong></div>
-                <div><span>Cumulative CGPA:</span><strong className="text-brand">{selectedCmmStudent.gpa} / 10.0</strong></div>
-                <div><span>Division Awarded:</span><strong>{selectedCmmStudent.division}</strong></div>
-                <div><span>Total Credits:</span><strong>{selectedCmmStudent.totalCredits} Credits</strong></div>
-                <div><span>Status:</span><strong className="text-emerald">PASSED (ALL CLEAR)</strong></div>
+                <div><span>Latest-attempt credits:</span><strong>{selectedCmmStudent.totalCredits}</strong></div>
+                <div><span>Latest examination result:</span><strong>{selectedCmmStudent.status}</strong></div>
               </div>
 
               {/* Course Ledger Table */}
@@ -1420,10 +1385,12 @@ function Workspace({ screen, academic, scope }) {
                     <tr>
                       <th>Course Code</th>
                       <th>Course Title</th>
+                      <th>Examination / Date</th>
+                      <th>SGPA / CGPA</th>
                       <th>Credits</th>
-                      <th>Internal (/30)</th>
-                      <th>External (/70)</th>
-                      <th>Total (/100)</th>
+                      <th>Internal</th>
+                      <th>External</th>
+                      <th>Total</th>
                       <th>Grade</th>
                       <th>Points</th>
                       <th>Result</th>
@@ -1434,6 +1401,8 @@ function Workspace({ screen, academic, scope }) {
                       <tr key={rec.id || i}>
                         <td><strong>{rec.subjectCode}</strong></td>
                         <td>{rec.subjectName}</td>
+                        <td>{rec.examType || '—'} / {rec.examDate || '—'}</td>
+                        <td>{rec.officialSgpa ?? '—'} / {rec.officialCgpa ?? '—'}</td>
                         <td>{rec.credits}</td>
                         <td>{rec.internalMarks ?? '—'}</td>
                         <td>{rec.externalMarks ?? '—'}</td>
@@ -1455,7 +1424,7 @@ function Workspace({ screen, academic, scope }) {
                     ))}
                     {visibleCmmRecords.length === 0 && (
                       <tr>
-                        <td colSpan={9} className="res-empty-row">
+                        <td colSpan={11} className="res-empty-row">
                           No course results are available for this candidate.
                         </td>
                       </tr>
@@ -1481,8 +1450,10 @@ function Workspace({ screen, academic, scope }) {
       {/* ========================================================================= */}
       {configuration && (
         <div className="res-section">
-          {policyLoading ? <p role="status">Loading institutional grade policy…</p> : !backendPolicy && <p role="status">Default bands are shown for preview. Save a policy to configure institutional grades.</p>}
-          <GradePolicyLab bands={bands} savedBands={savedBands} actions={<GradePolicyEditor bands={savedBands} onSave={async next => {
+          <p className="campus-notice">Supplemental grade policy records control the preview below. Official examination grades and SGPA/CGPA follow the result engine’s grading rules. Editing those rules is unavailable through the current configuration API.</p>
+          {policyLoading ? <p role="status">Loading supplemental grade policy…</p> : !backendPolicy && <p role="status">Default bands are shown for preview. Save a policy to retain this preview scale.</p>}
+          <GradePolicyLab bands={bands} savedBands={savedBands} actions={canSavePolicy && <GradePolicyEditor bands={savedBands} onSave={async next => {
+            if (!canSavePolicy) throw new Error('You do not have permission to save grade policies.')
             if (policyLoading || !policyLoaded) throw new Error('The institutional policy must load successfully before saving. Refresh and try again.')
             const policy = await gradeApi.saveGradePolicy({ collegeId: gradeApi.requireId(selectedCollegeId, 'college'), academicYearId: gradeApi.requireId(selectedAcademicYearId, 'academic year') }, next, backendPolicy)
             setBackendPolicy(policy); setBands(next); setSavedBands(next); setNotice('Grade policy saved successfully.')
@@ -1494,23 +1465,8 @@ function Workspace({ screen, academic, scope }) {
       {/* STUDENT GRADE CARD MODAL (Opened from View Grade Card Button)              */}
       {/* ========================================================================= */}
       {activeStudentModal && (
-        <div className="res-modal-backdrop" onClick={() => setActiveStudentModal(null)}>
-          <div className="res-modal" role="dialog" aria-modal="true" aria-labelledby="res-grade-card-title" onClick={(e) => e.stopPropagation()}>
-            <div className="res-modal-header">
-              <div className="res-modal-header__info">
-                <h3 id="res-grade-card-title">Official Student Grade Card</h3>
-                <span>{activeStudentModal.department} · {activeStudentModal.semester}</span>
-              </div>
-              <button
-                type="button"
-                className="res-modal-close"
-                onClick={() => setActiveStudentModal(null)}
-                aria-label="Close"
-              >
-                <FiX />
-              </button>
-            </div>
-
+        <ViewDialog title="Student Grade Card Preview" subtitle={activeStudentModal.department+' · '+activeStudentModal.semester} onClose={() => setActiveStudentModal(null)} showExport={false} hideFooter maxWidth="1080px">
+          <div className="res-grade-card-content">
             <div className="res-modal-profile">
               <div className="res-avatar-lg">{activeStudentModal.studentName.charAt(0)}</div>
               <div className="res-modal-profile__details">
@@ -1552,10 +1508,12 @@ function Workspace({ screen, academic, scope }) {
                   <tr>
                     <th>Code</th>
                     <th>Course Title</th>
+                    <th>Examination / Date</th>
+                    <th>SGPA / CGPA</th>
                     <th>Credits</th>
-                    <th>Internal (30)</th>
-                    <th>External (70)</th>
-                    <th>Total (100)</th>
+                    <th>Internal</th>
+                    <th>External</th>
+                    <th>Total</th>
                     <th>Grade</th>
                     <th>Points</th>
                     <th>Status</th>
@@ -1566,6 +1524,8 @@ function Workspace({ screen, academic, scope }) {
                     <tr key={r.id || i}>
                       <td><strong>{r.subjectCode}</strong></td>
                       <td>{r.subjectName}</td>
+                      <td>{r.examType || '—'} / {r.examDate || '—'}</td>
+                      <td>{r.officialSgpa ?? '—'} / {r.officialCgpa ?? '—'}</td>
                       <td>{r.credits}</td>
                       <td>{r.internalMarks ?? '—'}</td>
                       <td>{r.externalMarks ?? '—'}</td>
@@ -1587,7 +1547,7 @@ function Workspace({ screen, academic, scope }) {
                   ))}
                   {visibleGradeCardRecords.length === 0 && (
                     <tr>
-                      <td colSpan={9} className="res-empty-row">
+                      <td colSpan={11} className="res-empty-row">
                         No course results are available for this candidate.
                       </td>
                     </tr>
@@ -1605,13 +1565,7 @@ function Workspace({ screen, academic, scope }) {
             />
 
             <div className="res-modal-footer">
-              <button
-                type="button"
-                className="res-btn res-btn--outline"
-                onClick={() => window.print()}
-              >
-                <FiPrinter /> Print Grade Card
-              </button>
+              <p className="res-card-subtitle">Official grade card printing requires an issued document from the institution.</p>
               <button
                 type="button"
                 className="res-btn res-btn--primary"
@@ -1621,7 +1575,7 @@ function Workspace({ screen, academic, scope }) {
               </button>
             </div>
           </div>
-        </div>
+        </ViewDialog>
       )}
     </section>
   )
@@ -1717,10 +1671,10 @@ function GradePolicyLab({ bands, savedBands, actions }) {
       <div className="grm-lab-examples"><span>Try a score:</span>{[40, 75, 90, 100].map(value => <button key={value} type="button" disabled={!(Number(maximum) > 0)} onClick={() => setScore(String(Number(maximum) * value / 100))}>{value}%</button>)}</div>
       <div className="grm-simulator-output grm-lab-result" role="status" aria-live="polite">{issue ? <p>Complete a valid policy to calculate the grade.</p> : !valid ? <p>Enter marks between zero and the maximum. Maximum marks must be positive.</p> : <><div className="grm-lab-grade"><small>GRADE</small><strong>{grade?.grade || '-'}</strong></div><div><b>{percentage.toFixed(2)}%</b><span>{format(Number(score))} out of {format(Number(maximum))} marks</span><span>{grade?.pass ? 'Passed' : 'Failed'} / {grade?.points ?? '-'} grade points</span></div></>}</div>
       {grade && <div className="grm-lab-guidance"><div><FiInfo /><span>Matched band: <strong>{grade.grade}</strong> / {grade.min}% to {grade.max}%{Number(grade.max) === 100 ? ' inclusive' : ', upper limit excluded'}.</span></div>{next ? <div><FiTrendingUp /><span>Reach <strong>{next.grade}</strong> at {format(Number(next.min) / 100 * Number(maximum))} marks: <strong>{format(Math.max(0, Number(next.min) / 100 * Number(maximum) - Number(score)))} more marks</strong>.</span></div> : <div><FiCheckCircle /><span>No higher grade-point band remains above this score.</span></div>}</div>}
-      {unsaved && savedGrade && <div className="grm-lab-comparison"><span>Saved policy at this score</span><strong>{savedGrade.grade} / {savedGrade.points} points / {savedGrade.pass ? 'Passed' : 'Failed'}</strong><small>Save your edited policy to use it in Result Generation.</small></div>}
+      {unsaved && savedGrade && <div className="grm-lab-comparison"><span>Saved policy at this score</span><strong>{savedGrade.grade} / {savedGrade.points} points / {savedGrade.pass ? 'Passed' : 'Failed'}</strong><small>Save your edited policy to retain this preview scale.</small></div>}
     </section><section className="grm-lab-section"><div className="grm-lab-heading"><span>02</span><div><h4>Understand grade ranges</h4><p>{issue ? 'Resolve policy issues to view coverage.' : `${bands.length} bands / full coverage${passBand ? ` / passing begins at ${passBand.min}%` : ' / no passing bands'}`}</p></div></div>
       {issue ? <p className="grm-policy-issue">{issue}</p> : <><div className="grm-policy-scale" aria-label="Grade percentage bands">{sorted.map(band => <div key={band.grade} style={{ flexGrow: Number(band.max) - Number(band.min) }} className={`${band.pass ? 'is-pass' : 'is-fail'} ${grade?.grade === band.grade ? 'is-current' : ''}`} title={`${band.grade}: ${band.min}% to ${band.max}%`}><span>{band.grade}</span></div>)}</div><div className="grm-scale-labels"><span>0%</span><span>50%</span><span>100%</span></div><div className="grm-lab-ranges"><div className="grm-lab-range-head"><span>Grade</span><span>Percentage range</span><span>Points</span></div>{sorted.map(band => <div key={band.grade} className={`grm-lab-range-row ${grade?.grade === band.grade ? 'is-current' : ''}`}><span>{band.grade}{grade?.grade === band.grade && <small>Current</small>}</span><span>{band.min}% &le; score {Number(band.max) === 100 ? '\u2264' : '<'} {band.max}%</span><strong>{band.points}</strong></div>)}</div></>}
-    </section></div><div className="grm-lab-footnote"><FiInfo /><span>Simulator uses current editor values. Result Generation uses the saved institutional policy. Preview does not change official results.</span></div>
+    </section></div><div className="grm-lab-footnote"><FiInfo /><span>Simulator uses the current editor values. Saved supplemental policies retain the preview scale. Official result-engine grade rules are configured separately.</span></div>
   </section>
 }
 
@@ -1736,7 +1690,7 @@ const gradeScreens = [
   },
   {
     "name": "ResultGeneration",
-    "label": "Result Generation",
+    "label": "Result Review",
     "slug": "result-generation"
   },
   {
@@ -1916,7 +1870,7 @@ function CGPACalculator({ storageKey }) {
   // Load available student records from resultsService for optional quick-import
   useEffect(() => {
     let active = true
-    gradeApi.loadOfficialResults({ collegeId: academic.selectedCollegeId, academicYearId: academic.selectedAcademicYearId }).then(sheets => {
+    loadExaminationResultSheets({ collegeId: academic.selectedCollegeId, academicYearId: academic.selectedAcademicYearId }).then(sheets => {
       if (!active || !Array.isArray(sheets)) return
       const map = new Map()
       sheets.forEach(sheet => {
@@ -2148,7 +2102,7 @@ function CGPACalculator({ storageKey }) {
     setSelectedStudentId(studentId)
     if (!studentId) return
     try {
-      const allSheets = await gradeApi.loadOfficialResults({ collegeId: academic.selectedCollegeId, academicYearId: academic.selectedAcademicYearId })
+      const allSheets = await loadExaminationResultSheets({ collegeId: academic.selectedCollegeId, academicYearId: academic.selectedAcademicYearId })
       const studentRecords = allSheets.flatMap(sheet => {
         const records = Array.isArray(sheet.records) ? sheet.records : [sheet]
         return records
@@ -3464,7 +3418,7 @@ function PreviewComparison({ before, after }) {
 
 function StudentSemesterSummary({ rows }) {
   const groups = summarize(rows, 'semester')
-  return <section className="grm-semester-overview"><h3>Semester performance</h3><div className="grm-table-scroll"><table className="erp-table"><thead><tr><th>Semester</th><th>Assessments</th><th>Passed</th><th>Failed</th><th>Pending</th><th>Weighted GPA</th></tr></thead><tbody>{groups.map(group => { const records = rows.filter(row => (row.semester || 'Unassigned') === group.group); const gpa = weightedGpa(records); return <tr key={group.group}><td>{group.group}</td><td>{group.subjects}</td><td>{group.passed}</td><td>{group.failed}</td><td>{group.pending}</td><td>{gpa === null ? '-' : gpa.toFixed(2)}</td></tr> })}</tbody></table></div><p>GPA uses available assessments, including repeat attempts. This is an informational calculation.</p></section>
+  return <section className="grm-semester-overview"><h3>Semester performance</h3><div className="grm-table-scroll"><table className="erp-table"><thead><tr><th>Semester</th><th>Assessments</th><th>Passed</th><th>Failed</th><th>Pending</th><th>Average Reported SGPA</th></tr></thead><tbody>{groups.map(group => { const records = rows.filter(row => (row.semester || 'Unassigned') === group.group); const gpa = meanReportedGpa(records); return <tr key={group.group}><td>{group.group}</td><td>{group.subjects}</td><td>{group.passed}</td><td>{group.failed}</td><td>{group.pending}</td><td>{gpa === null ? '-' : gpa.toFixed(2)}</td></tr> })}</tbody></table></div><p>Semester averages use the latest backend-reported SGPA for each student.</p></section>
 }
 
 return { ResultInsights, ResultQuality, PreviewComparison, StudentSemesterSummary }

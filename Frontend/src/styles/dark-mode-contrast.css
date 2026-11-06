@@ -1,3 +1,10 @@
+
+
+:root[data-theme="dark"] #root :is(.erp-badge, .sm-code-badge, .sm-ltp-pill, .sm-credit-badge, .cm-cat-code, .room-code-badge, .floor-badge, .rooms-capacity-badge, .rooms-allocated-badge, .rbac-tag, .rbac-dept-pill, .rbac-code-badge, .rbac-role-preview-pill, .rbac-role-pill-assigned, .rbac-scope-pill, .rbac-matrix-stats-badge, .fm-doc-summary-pill, .results-badge-info, .acs-badge, .timeline-cell-sem .sem-badge) {
+  background: var(--surface-soft) !important;
+  color: var(--text-secondary) !important;
+  border-color: var(--border) !important;
+}
 /* Final semantic theme layer. Always pair foreground and background colours.
    Explicit component names avoid recolouring status panels or badge wrappers. */
 :root[data-theme="dark"] {
@@ -26,98 +33,20 @@
   backdrop-filter: blur(3px) saturate(.9) !important;
 }
 
-:root[data-theme="dark"] dialog::backdrop,
-:root[data-theme="dark"] .shared-view-dialog::backdrop {
+:root[data-theme="dark"] dialog::backdrop {
   background: rgba(3, 8, 16, .4) !important;
   -webkit-backdrop-filter: blur(3px) saturate(.9) !important;
   backdrop-filter: blur(3px) saturate(.9) !important;
 }
 
-:root[data-theme="dark"] #root :is(
-  .erp-status-badge, .semester-badge.status, .cm-status, .cm-status-badge,
-  .section-status, .status-pill, .status-badge, .department-detail-status,
-  .fm-status-pill, .flm-status, .fp-status, .view-modal-badge-status, .ay .badge
-) {
-  --badge-bg: var(--status-neutral-bg);
-  --badge-text: var(--status-neutral-text);
-  background: var(--badge-bg) !important;
-  color: var(--badge-text) !important;
-  border-color: color-mix(in srgb, var(--badge-text) 40%, var(--badge-bg)) !important;
-}
-
-:root[data-theme="dark"] #root :is(
-  .erp-status-badge--active, .erp-status-badge--available,
-  .erp-status-badge--approved, .erp-status-badge--paid, .erp-status-badge--working,
-  :is(.semester-badge.status, .cm-status, .cm-status-badge, .section-status,
-      .status-pill, .status-badge, .department-detail-status, .fm-status-pill,
-      .flm-status, .fp-status, .view-modal-badge-status, .ay .badge):is(.active, .ACTIVE, .approved, .paid, .working)
-) {
-  --badge-bg: var(--status-positive-bg);
-  --badge-text: var(--status-positive-text);
-}
-
-:root[data-theme="dark"] #root :is(
-  .erp-status-badge--warning, .erp-status-badge--upcoming,
-  .erp-status-badge--pending, .erp-status-badge--hold, .erp-status-badge--probation,
-  :is(.semester-badge.status, .cm-status-badge, .status-badge, .fm-status-pill,
-      .flm-status, .fp-status, .view-modal-badge-status, .ay .badge):is(.upcoming, .UPCOMING, .pending, .hold, .probation, .CLOSING)
-) {
-  --badge-bg: var(--status-warning-bg);
-  --badge-text: var(--status-warning-text);
-}
-
-:root[data-theme="dark"] #root :is(
-  .erp-status-badge--inactive, .erp-status-badge--unavailable,
-  .erp-status-badge--resigned, .erp-status-badge--relieved,
-  .erp-status-badge--rejected, .erp-status-badge--correction-required,
-  :is(.semester-badge.status, .cm-status, .cm-status-badge, .section-status,
-      .status-pill, .status-badge, .department-detail-status, .fm-status-pill,
-      .flm-status, .fp-status, .view-modal-badge-status, .ay .badge):is(.inactive, .rejected, .resigned, .retired, .deactive, .ineligible)
-) {
-  --badge-bg: var(--status-negative-bg);
-  --badge-text: var(--status-negative-text);
-}
-
-:root[data-theme="dark"] #root :is(
-  .erp-status-badge--processed, .erp-status-badge--completed,
-  .erp-status-badge--on-leave, .erp-status-badge--leave,
-  :is(.semester-badge.status, .cm-status-badge, .fm-status-pill, .fp-status,
-      .view-modal-badge-status, .status-badge):is(.completed, .processed, .on-leave)
-) {
-  --badge-bg: var(--status-info-bg);
-  --badge-text: var(--status-info-text);
-}
-
-:root[data-theme="dark"] #root .erp-status-badge i {
-  background: currentColor !important;
-}
-
 /* White header text needs a deeper lavender than the light-theme accent. */
 :root[data-theme="dark"] #root table th,
 :root[data-theme="dark"] #root table th :is(span, strong, small, button) {
-  background-color: #1769C2 !important;
+  background-color: var(--brand) !important;
   color: #ffffff !important;
 }
 
 /* Nested labels must keep their badge's colour, including profile banners. */
-:root[data-theme="dark"] #root :is(.erp-status-badge, .cm-status-badge,
-  .semester-badge.status, .fm-status-pill, .flm-status, .fp-status)
-  :is(span, strong, small) {
-  color: inherit !important;
-}
-
-:root[data-theme="dark"] #root :is(
-  .erp-badge, .sm-code-badge, .sm-ltp-pill, .sm-credit-badge, .cm-cat-code,
-  .room-code-badge, .floor-badge, .rooms-capacity-badge, .rooms-allocated-badge,
-  .rbac-tag, .rbac-dept-pill, .rbac-code-badge, .rbac-role-preview-pill,
-  .rbac-role-pill-assigned, .rbac-scope-pill, .rbac-matrix-stats-badge,
-  .fm-doc-summary-pill, .hod-current-pill, .hod-selected-status-pill,
-  .results-badge-info, .acs-badge, .timeline-cell-sem .sem-badge
-) {
-  background: #29324b !important;
-  color: #ddd9ff !important;
-  border-color: #595779 !important;
-}
 
 :root[data-theme="dark"] #root :is(.timeline-cell-dates .date-badge,
   .sm-status-action, .sm-filter-context button) {
@@ -125,57 +54,6 @@
 }
 
 /* Preserve the popup layout while giving its cards and badges dark-theme surfaces. */
-:root[data-theme="dark"] #root .department-modal-backdrop .hod-dept-card,
-:root[data-theme="dark"] #root .department-modal-backdrop .hod-selected-preview-card {
-  border-color: #334155 !important;
-  background: linear-gradient(135deg, #1e293b 0%, #172538 100%) !important;
-  color: #e2e8f0 !important;
-}
-
-:root[data-theme="dark"] #root .department-modal-backdrop .hod-dept-card :is(.hod-dept-name, .hod-dept-meta-row, .hod-dept-meta-row strong),
-:root[data-theme="dark"] #root .department-modal-backdrop .hod-selected-preview-card :is(.hod-selected-name, .meta-val) {
-  color: #f1f5f9 !important;
-}
-
-:root[data-theme="dark"] #root .department-modal-backdrop :is(.hod-dept-code-tag, .hod-selected-empid, .hod-candidate-count-badge) {
-  border-color: #36516c !important;
-  background: #19344d !important;
-  color: #bfdbfe !important;
-}
-
-:root[data-theme="dark"] #root .department-modal-backdrop .hod-selected-meta-grid {
-  border-color: #334155 !important;
-}
-
-:root[data-theme="dark"] #root .department-modal-backdrop .hod-selected-status-pill {
-  background: #173d32 !important;
-  color: #86efac !important;
-}
-
-:root[data-theme="dark"] #root .department-modal-backdrop .hod-current-pill {
-  border-color: #61404b !important;
-  background: #382630 !important;
-  color: #fda4af !important;
-}
-
-:root[data-theme="dark"] #root .department-modal-backdrop .hod-current-pill strong,
-:root[data-theme="dark"] #root .department-modal-backdrop .hod-dept-meta-row strong {
-  color: #f1f5f9 !important;
-}
-
-:root[data-theme="dark"] #root .department-modal-backdrop :is(.hod-dept-meta-row, .hod-selected-meta-item .meta-label) {
-  color: #cbd5e1 !important;
-}
-
-:root[data-theme="dark"] #root .department-modal-backdrop .hod-modal-header-icon {
-  border-color: #d8e4f2 !important;
-  background: #eaf3ff !important;
-  color: #125aa8 !important;
-}
-
-:root[data-theme="dark"] #root .department-modal-backdrop :is(.hod-dept-avatar, .hod-selected-avatar) {
-  color: #ffffff !important;
-}
 
 /* Semester workflow surfaces and step labels use fixed light-theme colours. */
 :root[data-theme="dark"] #root .semester-management :is(.semester-stepper-wrap, .semester-schedule-header) {
@@ -184,15 +62,15 @@
 }
 
 :root[data-theme="dark"] #root .semester-management .semester-stepper-wrap :is(.stepper-step-lbl, .stepper-title) {
-  color: #cbd5e1 !important;
+  color: var(--border-strong) !important;
 }
 
-:root[data-theme="dark"] #root .semester-management .semester-stepper-wrap .stepper-step-lbl { color: #94a3b8 !important; }
+:root[data-theme="dark"] #root .semester-management .semester-stepper-wrap .stepper-step-lbl { color: var(--text-muted) !important; }
 :root[data-theme="dark"] #root .semester-management .semester-stepper-wrap .stepper-node.is-active .stepper-step-lbl,
 :root[data-theme="dark"] #root .semester-management .semester-stepper-wrap .stepper-node.is-active .stepper-title { color: #bfdbfe !important; }
 :root[data-theme="dark"] #root .semester-management .semester-stepper-wrap .stepper-node:hover:not(:disabled) { background: #26364b !important; }
-:root[data-theme="dark"] #root .semester-management .semester-stepper-wrap .stepper-line { background: #334155 !important; }
-:root[data-theme="dark"] #root .semester-management .semester-stepper-wrap .stepper-line.is-active { background: #1769c2 !important; }
+:root[data-theme="dark"] #root .semester-management .semester-stepper-wrap .stepper-line { background: var(--surface-raised) !important; }
+:root[data-theme="dark"] #root .semester-management .semester-stepper-wrap .stepper-line.is-active { background: var(--brand) !important; }
 
 :root[data-theme="dark"] #root .semester-management .semester-schedule-table-wrap {
   border-color: #334155 !important;
@@ -201,7 +79,7 @@
 
 :root[data-theme="dark"] #root .semester-management .semester-schedule-header {
   border-bottom-color: #334155 !important;
-  color: #cbd5e1 !important;
+  color: var(--border-strong) !important;
 }
 
 :root[data-theme="dark"] #root .semester-management .semester-schedule-row {
@@ -211,7 +89,7 @@
 
 :root[data-theme="dark"] #root .semester-management .semester-schedule-row:hover { background: #1e293b !important; }
 :root[data-theme="dark"] #root .semester-management .semester-schedule-row .sem-name { color: #f1f5f9 !important; }
-:root[data-theme="dark"] #root .semester-management .semester-schedule-row .sem-year { color: #94a3b8 !important; }
+:root[data-theme="dark"] #root .semester-management .semester-schedule-row .sem-year { color: var(--text-muted) !important; }
 
 :root[data-theme="dark"] #root .semester-management .semester-date-input {
   border-color: #475569 !important;
@@ -228,7 +106,7 @@
 :root[data-theme="dark"] #root .semester-management .timeline-table-head {
   border-bottom-color: #334155 !important;
   background: #1e293b !important;
-  color: #cbd5e1 !important;
+  color: var(--border-strong) !important;
 }
 
 :root[data-theme="dark"] #root .semester-management .timeline-row {
@@ -239,7 +117,7 @@
 :root[data-theme="dark"] #root .semester-management .timeline-cell-sem .sem-text-col strong,
 :root[data-theme="dark"] #root .semester-management .timeline-cell-dates .date-badge { color: #f1f5f9 !important; }
 :root[data-theme="dark"] #root .semester-management .timeline-cell-sem .sem-text-col small,
-:root[data-theme="dark"] #root .semester-management .timeline-cell-dates .date-pending { color: #94a3b8 !important; }
+:root[data-theme="dark"] #root .semester-management .timeline-cell-dates .date-pending { color: var(--text-muted) !important; }
 
 :root[data-theme="dark"] #root .semester-management .timeline-count-tag {
   border: 1px solid #36516c !important;
@@ -275,10 +153,6 @@
   outline: 2px solid #A9D3F7;
   outline-offset: 3px;
 }
-:root[data-theme="dark"] #root .sidebar :is(a, button, [role="button"]):not(.active):hover {
-  background: #29324b !important;
-  color: #ede9fe !important;
-}
 
 /* The app shell has a light-theme gradient image that survives background-color overrides. */
 :root[data-theme="dark"] body,
@@ -287,189 +161,10 @@
   background: var(--app-bg, #0b0f17) !important;
   color: var(--text-primary, #f8fafc);
 }
-:root[data-theme="dark"] #root .dashboard-layout {
-  min-height: 100vh;
-  background: var(--app-bg, #0b0f17) !important;
-  color: var(--text-primary, #f8fafc);
-}
 
 /* Electives uses several fixed light surfaces and foregrounds outside shared card styles. */
-:root[data-theme="dark"] #root .page-content .em-screen {
-  color: var(--text-primary) !important;
-}
-:root[data-theme="dark"] #root .page-content :is(
-  .em-kpi-card, .sm-card, .em-student-card, .em-form-body,
-  .em-readonly-student, .em-report-summary span, .em-pagination button,
-  .em-context, .em-report-heading
-) {
-  background: var(--surface) !important;
-  border-color: var(--border) !important;
-  color: var(--text-primary) !important;
-}
-:root[data-theme="dark"] #root .page-content :is(
-  .em-kpi-content small, .em-student-identity p, .em-student-card dt,
-  .em-readonly-student span, .em-pagination, .em-pagination-count,
-  .em-report-summary span, .em-report-summary small, .em-report-summary em,
-  .em-report-heading p, .em-cell-subtitle, .em-tabs .em-tab-btn
-) {
-  color: var(--text-secondary) !important;
-}
-:root[data-theme="dark"] #root .page-content :is(
-  .em-student-card dd, .em-report-summary strong, .em-report-heading h2,
-  .em-report-eyebrow, .em-context strong, .em-kpi-content strong,
-  .em-table td, .em-table td strong
-) {
-  color: var(--text-primary) !important;
-}
-:root[data-theme="dark"] #root .page-content :is(
-  .em-screen input, .em-screen select, .em-screen textarea,
-  .em-search input, .em-filters select
-) {
-  border-color: var(--border-strong) !important;
-  background: var(--surface-soft) !important;
-  color: var(--text-primary) !important;
-  color-scheme: dark;
-}
-:root[data-theme="dark"] #root .page-content .em-table :is(th, td) {
-  border-color: var(--border) !important;
-}
-:root[data-theme="dark"] #root .page-content .em-table tbody tr,
-:root[data-theme="dark"] #root .page-content .em-table tbody tr:nth-child(even) {
-  background: var(--surface) !important;
-  color: var(--text-secondary) !important;
-}
-:root[data-theme="dark"] #root .page-content .em-table tbody tr:hover {
-  background: var(--surface-raised) !important;
-}
-:root[data-theme="dark"] #root .page-content .em-report-table .em-table th {
-  background: #1d3552 !important;
-  color: #e5efff !important;
-}
-:root[data-theme="dark"] #root .page-content .em-screen .sm-btn--danger {
-  border-color: #71343c !important;
-  background: #482630 !important;
-  color: #fda4af !important;
-}
 
 /* Marks workflow cards used a pale selected link and assessment badge that
    become unreadable against the dark workspace. */
-:root[data-theme="dark"] #root .page-content .marks-module-nav {
-  border-color: var(--border-strong) !important;
-  background: var(--surface) !important;
-}
-:root[data-theme="dark"] #root .page-content .marks-module-nav__link {
-  color: var(--text-secondary) !important;
-}
-:root[data-theme="dark"] #root .page-content .marks-module-nav__link:hover,
-:root[data-theme="dark"] #root .page-content .marks-module-nav__link.active {
-  border-color: #3c5f88 !important;
-  background: #1d3552 !important;
-  color: #f8fafc !important;
-}
-:root[data-theme="dark"] #root .page-content .marks-module-nav__link.active .marks-module-nav__copy small {
-  color: #c5d8ed !important;
-}
-:root[data-theme="dark"] #root .page-content .marks-module-nav__icon,
-:root[data-theme="dark"] #root .page-content .marks-module-nav__link.active .marks-module-nav__icon {
-  border-color: #3c5f88 !important;
-  background: #263f5e !important;
-  color: #bfdbfe !important;
-}
-:root[data-theme="dark"] #root .page-content .marks-entry-search {
-  border-color: var(--border-strong) !important;
-  background: var(--surface-soft) !important;
-  color: var(--text-secondary) !important;
-}
-:root[data-theme="dark"] #root .page-content .marks-entry-search input {
-  background: transparent !important;
-  color: var(--text-primary) !important;
-  -webkit-text-fill-color: var(--text-primary);
-}
-:root[data-theme="dark"] #root .page-content .marks-management-marks-entry .marks-entry-records-table tbody td,
-:root[data-theme="dark"] #root .page-content .marks-management-marks-entry .marks-entry-records-table tbody tr:nth-child(even) td {
-  background: var(--surface) !important;
-  color: var(--text-secondary) !important;
-}
-:root[data-theme="dark"] #root .page-content .marks-entry-records-table :is(
-  .marks-entry-student-copy > strong, .marks-entry-academic-copy > strong,
-  .marks-entry-subject-copy > strong, .marks-entry-faculty-cell > strong,
-  .marks-entry-score-copy > strong
-) {
-  color: var(--text-primary) !important;
-}
-:root[data-theme="dark"] #root .page-content .marks-entry-records-table :is(
-  .marks-entry-student-copy > small, .marks-entry-academic-copy > span,
-  .marks-entry-exam-copy > small, .marks-entry-score-copy > span,
-  .marks-entry-score-copy > small, .marks-entry-academic-lines > span
-) {
-  color: var(--text-muted) !important;
-}
-:root[data-theme="dark"] #root .page-content :is(.marks-entry-exam-pill, .marks-entry-assessment-pill) {
-  border: 1px solid #3c4b63 !important;
-  background: #202c3d !important;
-  color: #dbeafe !important;
-}
-:root[data-theme="dark"] #root .page-content .marks-entry-assessment-pill {
-  border-color: #57427b !important;
-  background: #33264a !important;
-  color: #e9d5ff !important;
-}
-:root[data-theme="dark"] #root .page-content .marks-entry-result-copy > strong {
-  background: #202c3d !important;
-  color: #dbeafe !important;
-}
 
 /* Official results score badges need dark surfaces with distinct foregrounds. */
-:root[data-theme="dark"] #root .page-content .res-card {
-  border-color: var(--border) !important;
-  background: var(--surface) !important;
-  color: var(--text-primary) !important;
-}
-:root[data-theme="dark"] #root .page-content .res-search-input,
-:root[data-theme="dark"] #root .page-content .res-filter-label select,
-:root[data-theme="dark"] #root .page-content .res-rows-selector select {
-  border-color: var(--border-strong) !important;
-  background: var(--surface-soft) !important;
-  color: var(--text-primary) !important;
-  color-scheme: dark;
-}
-:root[data-theme="dark"] #root .page-content .res-search-input input {
-  background: transparent !important;
-  color: var(--text-primary) !important;
-  -webkit-text-fill-color: var(--text-primary);
-}
-:root[data-theme="dark"] #root .page-content .res-search-input input::placeholder {
-  color: var(--text-muted) !important;
-  opacity: 1;
-}
-:root[data-theme="dark"] #root .page-content .res-table td {
-  border-color: var(--border) !important;
-  background: var(--surface) !important;
-  color: var(--text-secondary) !important;
-}
-:root[data-theme="dark"] #root .page-content .res-table tr:hover td {
-  background: var(--surface-raised) !important;
-}
-:root[data-theme="dark"] #root .page-content .res-roll-badge {
-  border-color: #475569 !important;
-  background: #263449 !important;
-  color: #e2e8f0 !important;
-}
-:root[data-theme="dark"] #root .page-content .res-gpa-badge {
-  border-color: #385a82 !important;
-  background: #1d3552 !important;
-  color: #bfdbfe !important;
-}
-:root[data-theme="dark"] #root .page-content .res-status-badge--pass {
-  border-color: #27644b !important;
-  background: #173d32 !important;
-  color: #86efac !important;
-}
-:root[data-theme="dark"] #root .page-content .res-status-badge--fail {
-  border-color: #71343c !important;
-  background: #482630 !important;
-  color: #fda4af !important;
-}
-:root[data-theme="dark"] #root .page-content .res-table td :is(strong, .res-division-text) {
-  color: var(--text-primary) !important;
-}

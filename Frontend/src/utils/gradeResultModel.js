@@ -97,6 +97,13 @@ export function flattenResults(sheets) {
       id: `${sheet.id || sheetIndex}:${record.studentId || index}:${index}`,
       collegeId: record.collegeId ?? sheet.collegeId,
       academicYearId: record.academicYearId ?? sheet.academicYearId,
+      examId: record.examId ?? sheet.examId,
+      resultId: record.resultId,
+      subjectId: record.subjectId ?? sheet.subjectId,
+      officialSgpa: number(record.officialSgpa ?? sheet.officialSgpa),
+      officialCgpa: number(record.officialCgpa ?? sheet.officialCgpa),
+      officialBacklogCount: number(record.officialBacklogCount ?? sheet.officialBacklogCount),
+      examResultStatus: text(record.examResultStatus ?? sheet.examResultStatus),
       departmentId: record.departmentId ?? sheet.departmentId,
       branchId: record.branchId ?? sheet.branchId,
       semesterId: record.semesterId ?? sheet.semesterId,
@@ -140,6 +147,41 @@ export function weightedGpa(rows) {
   if (!rows.length || rows.some(row => !(row.credits > 0) || !Number.isFinite(row.gradePoint) || row.gradePoint < 0 || row.gradePoint > 10)) return null
   const credits = rows.reduce((sum, row) => sum + row.credits, 0)
   return rows.reduce((sum, row) => sum + row.credits * row.gradePoint, 0) / credits
+}
+
+const laterAttempt = (left, right) => String(left.examDate || '').localeCompare(String(right.examDate || '')) || Number(left.examId || 0) - Number(right.examId || 0)
+
+export function latestSubjectAttempts(rows) {
+  const latest = new Map()
+  rows.forEach(row => {
+    const key = JSON.stringify([row.studentId, row.semesterId || row.semester || row.examId, row.subjectId || row.subjectCode || row.id])
+    const previous = latest.get(key)
+    if (!previous || laterAttempt(row, previous) >= 0) latest.set(key, row)
+  })
+  return [...latest.values()]
+}
+
+export function meanReportedGpa(rows, field = 'officialSgpa') {
+  const latest = new Map()
+  rows.forEach(row => {
+    const key = JSON.stringify([row.studentId, field === 'officialSgpa' ? row.semesterId || row.semester || row.examId : ''])
+    const previous = latest.get(key)
+    if (!previous || laterAttempt(row, previous) >= 0) latest.set(key, row)
+  })
+  const values = [...latest.values()].map(row => row[field]).filter(value => typeof value === 'number' && Number.isFinite(value))
+  return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null
+}
+
+export function recordedBacklogs(sheets, rows) {
+  const records = new Map(rows.filter(row => row.resultId).map(row => [String(row.resultId), row]))
+  const backlogs = new Map()
+  sheets.forEach(sheet => (sheet.studentBacklogs || []).forEach(backlog => {
+    const record = records.get(String(backlog.sourceResultId))
+    if (record && String(record.studentId) === String(backlog.studentId)) {
+      backlogs.set(String(backlog.backlogId), { ...record, ...backlog, id: `backlog:${backlog.backlogId}`, status: backlog.backlogStatus })
+    }
+  }))
+  return [...backlogs.values()]
 }
 export function backlogRows(rows) {
   // Preserve exam types as separate assessments; a pass in another assessment cannot clear a backlog.

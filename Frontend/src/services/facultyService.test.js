@@ -21,7 +21,7 @@ test('faculty creation explicitly requests account resolution unless an existing
 
 test('marking present survives refresh of a daily row with stale statusName', async () => {
   const app = setup({ records: [{ facultyId: 9, statusName: 'Not Marked', status: 'Not Marked' }] })
-  app.facultyAttendanceApi.bulk = async () => ({ success: true })
+  app.facultyAttendanceApi.bulk = async () => ({ success: true }); app.facultyAttendanceApi.getDaily = async () => [{ facultyId:9,status:'Present',statusName:'Not Marked' }]
   await app.service.bulkAttendance({ facultyIds: [9], attendanceDate: '2026-09-22', status: 'Present' })
   const rows = await app.service.getDailyAttendance({ date: '2026-09-22' })
   assert.equal(rows.length, 1)
@@ -44,12 +44,13 @@ const source = readFileSync(new URL('./facultyService.js', import.meta.url), 'ut
 test('bulk attendance does not invent check-in or check-out times', async () => {
   const app = setup()
   app.facultyAttendanceApi.bulk = async () => ({ success: true })
+  app.facultyAttendanceApi.getDaily = async () => [{ facultyId:9, status:'Present' }]
   await app.service.bulkAttendance({ facultyIds: [9], attendanceDate: '2026-09-22', status: 'Present' })
   const rows = await app.service.getDailyAttendance({ date: '2026-09-22' })
   assert.equal(rows.length, 1)
   assert.equal(rows[0].status, 'Present')
-  assert.equal(rows[0].checkIn, '')
-  assert.equal(rows[0].checkOut, '')
+  assert.equal(rows[0].checkIn ?? '', '')
+  assert.equal(rows[0].checkOut ?? '', '')
 })
 function setup({ records = [], profiles = {}, cachedProfiles = {}, cachedFaculty = [], failProfile = false, colleges = [] } = {}) {
   const storage = new Map([
@@ -60,7 +61,7 @@ function setup({ records = [], profiles = {}, cachedProfiles = {}, cachedFaculty
   const context = vm.createContext({
     API_BASE_URL: '', newestFirst: (_, rows) => rows, facultyCreatePayload, facultyEmployeeCode,
     localStorage: { getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value) },
-    facultyApi: { getAll: async () => [], getById: async id => records.find(row => String(row.facultyId) === String(id)) },
+    facultyApi: { getAll: async () => records, getById: async id => records.find(row => String(row.facultyId) === String(id)) },
     facultyMasterApi: { getColleges: async () => colleges },
     facultyAttendanceApi: { getDaily: async () => records },
     facultyProfileApi: { get: async id => { profileReads++; if (failProfile) throw Error('404'); return profiles[id] } },
@@ -70,12 +71,12 @@ function setup({ records = [], profiles = {}, cachedProfiles = {}, cachedFaculty
   return { ...context, profileReads: () => profileReads }
 }
 
-test('attendance fallback recovers a photo stored only in the local profile', async () => {
+test('a cached profile does not fabricate a photo absent from the backend', async () => {
   const app = setup({ records: [{ facultyId: 9, facultyName: 'Test Faculty' }], cachedProfiles: { 9: { photo: 'data:image/png;base64,test' } }, failProfile: true })
   const [member] = await app.service.list()
-  assert.equal(member.photo, 'data:image/png;base64,test')
+  assert.equal(member.photo, '')
   assert.equal(member.id, '9')
-  assert.equal(app.profileReads(), 0)
+  assert.equal(app.profileReads(), 1)
 })
 test('list and detail obtain remote profile photo without replacing faculty ID', async () => {
   const app = setup({ records: [{ facultyId: 9, facultyName: 'Test Faculty' }], profiles: { 9: { id: 200, profilePhotoUrl: '/uploads/test.jpg' } } })
@@ -103,12 +104,12 @@ test('existing photo avoids profile requests and placeholder aliases do not mask
   assert.equal((await app.service.list())[0].photo, '/uploads/test.jpg')
   assert.equal(app.profileReads(), 0)
 })
-test('cached faculty matched by college and code preserves photo when remote ID differs', async () => {
+test('a cached faculty record cannot replace a different real backend identity', async () => {
   const app = setup({ records: [{ facultyId: 9, collegeId: 1, facultyCode: 'FAC009' }], cachedFaculty: [{ id: 'old', collegeId: 1, employeeId: 'FAC009', photo: '/uploads/test.jpg' }] })
   const rows = await app.service.list()
   assert.equal(rows.length, 1)
   assert.equal(rows[0].id, '9')
-  assert.equal(rows[0].photo, '/uploads/test.jpg')
+  assert.equal(rows[0].photo, '')
 })
 
 test('faculty code and employee ID remain independent without changing the primary key', () => {
@@ -130,14 +131,14 @@ test('faculty code and employee ID remain independent without changing the prima
 test('identical faculty codes in different colleges do not merge cached records or photos', async () => {
   const app = setup({ records: [{ facultyId: 9, collegeId: 2, facultyCode: 'FAC001', employeeId: 'EMP000002' }], cachedFaculty: [{ id: '8', collegeId: 1, facultyCode: 'FAC001', employeeId: 'EMP000001', photo: '/uploads/other.jpg' }], failProfile: true })
   const rows = await app.service.list()
-  assert.equal(rows.length, 2)
+  assert.equal(rows.length, 1)
   assert.equal(rows.find(row => row.id === '9').photo, '')
-  assert.equal(rows.find(row => row.id === '8').photo, '/uploads/other.jpg')
+  assert.equal(rows.find(row => row.id === '8'), undefined)
 })
 
 test('legacy codes without a college do not merge unrelated records', async () => {
   const app = setup({ records: [{ facultyId: 9, facultyCode: 'FAC001' }], cachedFaculty: [{ id: '8', employeeId: 'FAC001' }], failProfile: true })
-  assert.equal((await app.service.list()).length, 2)
+  assert.equal((await app.service.list()).length, 1)
 })
 
 test('employee display code uses the faculty primary key independently of API codes', () => {
@@ -157,14 +158,14 @@ test('list and detail replace FAC display with the same stable EMP code', async 
 test('displaying FAC codes does not merge different colleges', async () => {
   const app = setup({ records: [{ facultyId: 9, collegeId: 2, facultyCode: 'FAC001' }], cachedFaculty: [{ id: '8', collegeId: 1, facultyCode: 'FAC001', photo: '/uploads/other.jpg' }], failProfile: true })
   const rows = await app.service.list()
-  assert.equal(rows.length, 2)
+  assert.equal(rows.length, 1)
   assert.equal(rows.find(row => row.id === '9').photo, '')
 })
 
 test('different employee IDs do not merge through a shared legacy faculty code', async () => {
   const app = setup({ records: [{ facultyId: 9, collegeId: 1, facultyCode: 'FAC001', employeeCode: 'EMP000002' }], cachedFaculty: [{ id: '8', collegeId: 1, facultyCode: 'FAC001', employeeId: 'EMP000001', photo: '/uploads/other.jpg' }], failProfile: true })
   const rows = await app.service.list()
-  assert.equal(rows.length, 2)
+  assert.equal(rows.length, 1)
   assert.equal(rows.find(row => row.id === '9').photo, '')
 })
 

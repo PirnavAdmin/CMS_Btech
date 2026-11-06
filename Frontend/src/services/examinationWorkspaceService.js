@@ -1,5 +1,30 @@
 import { call, list, readModuleResources, requireId, unwrap } from './scopedModulesService'
 
+export function scheduleConflict(body, schedules, currentId) {
+  const start = String(body.startTime || '').slice(0, 5)
+  const end = String(body.endTime || '').slice(0, 5)
+  const other = schedules.find(row => String(row.scheduleId ?? row.examScheduleId) !== String(currentId) &&
+    ![false, 0, 'Inactive', 'inactive'].includes(row.status) &&
+    String(row.examDate).slice(0, 10) === body.examDate &&
+    start < String(row.endTime).slice(0, 5) && String(row.startTime).slice(0, 5) < end &&
+    ((body.classroomId && String(row.classroomId) === String(body.classroomId)) ||
+      (body.sectionId && String(row.sectionId) === String(body.sectionId))))
+  return other ? 'This time overlaps another schedule for the selected hall or section. Adjust the date, time or allocation.' : ''
+}
+
+export async function loadScheduleLookups(scope, exam, signal) {
+  const query = {
+    collegeId: requireId(scope.collegeId, 'college'),
+    academicYearId: requireId(exam.academicYearId, 'examination academic year'),
+    courseId: requireId(exam.courseId, 'examination course'),
+    branchId: requireId(exam.branchId, 'examination branch'),
+    semesterId: requireId(exam.semesterId, 'examination semester'),
+  }
+  const data = unwrap(await call('exams/lookups', { query, signal }))
+  if (!Array.isArray(data?.subjects) || !Array.isArray(data?.sections)) throw new Error('The examination did not return valid subject and section mappings.')
+  return data
+}
+
 export async function loadExaminationData(scope) {
   requireId(scope.collegeId,'college')
   const area = scope.area || 'overview'

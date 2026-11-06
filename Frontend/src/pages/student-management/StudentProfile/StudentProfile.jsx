@@ -1,3 +1,11 @@
+import StudentDocumentActions from '../../../components/StudentDocumentActions'
+import { resetAdmissionAcademicDependents } from '../../../utils/admissionAcademicMapping'
+import eventBus, { ERP_EVENTS } from '../../../services/eventBus'
+import { studentIntegrationFees } from '../../../utils/studentIntegrationFees'
+import { uploadAdmissionDocuments } from '../../../utils/admissionDocumentWorkflow'
+import PageHeader from '../../../components/PageHeader'
+import ViewDialog from '../../../components/ViewDialog'
+import { useScreenAccess } from '../../../auth/ScreenAccess'
 import { showInfo, showWarning } from '../../../utils/toast'
 import { FiUploadCloud, FiInbox } from 'react-icons/fi'
 import { academicYearApi, branchApi, courseApi, lookupIndianPincode } from '../../../api/apiEndpoints'
@@ -211,7 +219,7 @@ const saveStoredPhoto = (kind, id, photo) => {
   }
 };
 
-const profileFromApi = (x) => normalizeCanonicalStudent(x);
+const profileFromApi = (x) => { const normalized = normalizeCanonicalStudent(x); return { ...normalized, documentError: x.documentError, fees: x.fees?.source === "backend" || x.fees?.error ? x.fees : { ...normalized.fees, ...studentIntegrationFees(x.feeSummary, x.feeStructure) } }; };
 
 const profileAdmissionId = (source) =>
   source?.admissionId ??
@@ -315,8 +323,8 @@ const hydrateProfile = async (source) => {
       admissionId ? studentFeeApi.getSummary(admissionId) : Promise.resolve(null),
       admissionId ? studentFeeApi.getStructure(admissionId) : Promise.resolve(null),
       studentId ? studentDocumentApi.getAll(studentId) : Promise.resolve([]),
-      studentId ? feeCollectionApi.allPending({ studentId }).catch(() => []) : Promise.resolve([]),
-      studentId ? feeCollectionApi.allHistory({ studentId }).catch(() => []) : Promise.resolve([]),
+      studentId ? feeCollectionApi.allPending({ studentId }) : Promise.resolve([]),
+      studentId ? feeCollectionApi.allHistory({ studentId }) : Promise.resolve([]),
     ]);
   const read = (result, fallback = null) =>
     result.status === "fulfilled" ? result.value : fallback;
@@ -325,103 +333,22 @@ const hydrateProfile = async (source) => {
   const combinedSource = mergeFilledProfileData(admissionData, sourceData);
   const rawSummary = read(feeSummary);
   const rawStructure = read(feeStructure);
-  const resolvedFees = resolveFeeSummary(combinedSource, rawSummary, rawStructure);
+  const resolvedFees = studentIntegrationFees(rawSummary, rawStructure);
   const pendingItems = Array.isArray(read(feePending)) ? read(feePending) : [];
   const historyItems = Array.isArray(read(feeHistory)) ? read(feeHistory) : [];
 
-  // Workspace assignment ledger fallback
-  let wsAssignment = null;
-  let wsLedger = null;
-  try {
-    const collegeId = combinedSource.admission?.collegeId || combinedSource.academic?.collegeId;
-    if (collegeId) {
-      const ws = readFeeWorkspace(collegeId);
-      if (ws && Array.isArray(ws.assignments)) {
-        wsAssignment = ws.assignments.find(a => String(a.student?.id) === String(studentId) || String(a.student?.studentId) === String(studentId));
-        if (wsAssignment) {
-          wsLedger = feeLedger(ws, wsAssignment);
-        }
-      }
-    }
-  } catch {}
-
-  let totalPayable = 0;
-  let paidAmount = 0;
-  let balanceAmount = 0;
-  let isOverdue = false;
-  let paymentStatus = 'Pending';
-  let installments = [];
-  let isConfigured = false;
-
-  if (pendingItems.length > 0) {
-    isConfigured = true;
-    totalPayable = pendingItems.reduce((sum, r) => sum + Number(r.payableAmount || 0), 0);
-    paidAmount = pendingItems.reduce((sum, r) => sum + Number(r.paidAmount || 0), 0);
-    balanceAmount = pendingItems.reduce((sum, r) => sum + Number(r.balanceAmount || 0), 0);
-    isOverdue = pendingItems.some(r => r.overdue || (r.dueDate && new Date(r.dueDate) < new Date() && Number(r.balanceAmount || 0) > 0));
-    paymentStatus = isOverdue
-      ? 'Overdue'
-      : balanceAmount <= 0 && totalPayable > 0
-      ? 'Paid'
-      : paidAmount > 0
-      ? 'Partially Paid'
-      : 'Pending';
-    installments = pendingItems.map((item, idx) => ({
-      id: item.studentFeeId || idx,
-      name: item.feePlanName || item.feeCategory || `Installment ${idx + 1}`,
-      dueDate: item.dueDate,
-      payable: Number(item.payableAmount || 0),
-      paid: Number(item.paidAmount || 0),
-      balance: Number(item.balanceAmount || 0),
-      status: item.overdue ? 'Overdue' : Number(item.balanceAmount || 0) === 0 ? 'Paid' : Number(item.paidAmount || 0) > 0 ? 'Partially Paid' : 'Pending',
-    }));
-  } else if (wsLedger) {
-    isConfigured = true;
-    totalPayable = Number(wsLedger.total || 0) / 100;
-    paidAmount = Number(wsLedger.paid || 0) / 100;
-    balanceAmount = Number(wsLedger.outstanding || 0) / 100;
-    isOverdue = Boolean(wsLedger.overdue);
-    paymentStatus = isOverdue
-      ? 'Overdue'
-      : balanceAmount <= 0 && totalPayable > 0
-      ? 'Paid'
-      : paidAmount > 0
-      ? 'Partially Paid'
-      : 'Pending';
-  } else {
-    const tuition = Number(resolvedFees.tuitionFee) > 0 ? Number(resolvedFees.tuitionFee) : Number(combinedSource.fees?.tuitionFee) > 0 ? Number(combinedSource.fees.tuitionFee) : 0;
-    const admissionFee = Number(resolvedFees.admissionFee) > 0 ? Number(resolvedFees.admissionFee) : Number(combinedSource.fees?.admissionFee) > 0 ? Number(combinedSource.fees.admissionFee) : 0;
-    const resolvedH = resolveProfileHostelFee(combinedSource.admission, combinedSource.fees, combinedSource.academic);
-    const resolvedT = resolveProfileTransportFee(combinedSource.admission, combinedSource.fees, combinedSource.academic);
-    const hostel = Number(resolvedFees.hostelFee || combinedSource.fees?.hostelFee || resolvedH || 0);
-    const transport = Number(resolvedFees.transportFee || combinedSource.fees?.transportFee || resolvedT || 0);
-    const calcPayable = Math.max(0, tuition + admissionFee + hostel + transport - scholarship);
-    totalPayable = calcPayable > 0 ? calcPayable : Number(resolvedFees.totalFee || combinedSource.fees?.totalFee || 0);
-    paidAmount = Number(combinedSource.fees?.paidAmount || 0);
-    if (historyItems.length > 0) {
-      paidAmount = historyItems.reduce((sum, h) => sum + Number(h.totalAmount || h.feeAmount || 0), 0);
-    }
-    if (historyItems.length > 0 && pendingItems.length === 0) {
-      totalPayable = Math.max(totalPayable, paidAmount);
-      balanceAmount = 0;
-      paymentStatus = 'Paid';
-      isConfigured = true;
-    } else {
-      balanceAmount = Math.max(0, totalPayable - paidAmount);
-      isConfigured = resolvedFees.configured || Boolean(combinedSource.fees?.configured) || totalPayable > 0 || (resolvedFees.components && resolvedFees.components.length > 0);
-      paymentStatus = isConfigured
-        ? (balanceAmount <= 0 && totalPayable > 0 ? 'Paid' : paidAmount > 0 ? 'Partially Paid' : 'Pending')
-        : 'Fee Not Assigned';
-    }
-  }
-
-  if (historyItems.length > 0 && pendingItems.length === 0) {
-    paidAmount = historyItems.reduce((sum, h) => sum + Number(h.totalAmount || h.feeAmount || 0), 0);
-    totalPayable = Math.max(totalPayable, paidAmount);
-    balanceAmount = 0;
-    paymentStatus = 'Paid';
-    isConfigured = true;
-  }
+  const feeError = feeSummary.status === 'rejected' || feeStructure.status === 'rejected' ? 'Unable to load Student Integration fee information. Close and retry this student.' : '';
+  const backendFee = { ...(rawStructure || {}), ...(rawSummary || {}) };
+  const number = (...keys) => { const key = keys.find(key => backendFee[key] != null && backendFee[key] !== ''); const value = key ? Number(backendFee[key]) : null; return Number.isFinite(value) ? value : null; };
+  const payable = number('payableAmount','netPayable','totalPayable','firstYearTotal','totalFee','totalAmount');
+  const paid = number('amountPaid','paidAmount','totalPaid');
+  const outstanding = number('balanceAmount','outstandingBalance','balance','pendingAmount');
+  const totalPayable = payable ?? 0, paidAmount = paid ?? 0;
+  const balanceAmount = outstanding ?? (payable != null && paid != null ? Math.max(0,payable-paid) : 0);
+  const isConfigured = !feeError && resolvedFees.configured;
+  const isOverdue = Boolean(backendFee.overdue);
+  const paymentStatus = backendFee.paymentStatus || (isConfigured ? 'Pending' : 'Fee Not Assigned');
+  const installments = Array.isArray(backendFee.installments) ? backendFee.installments : [];
 
   return profileFromApi({
     ...combinedSource,
@@ -438,6 +365,9 @@ const hydrateProfile = async (source) => {
       ...(rawStructure || {}),
       ...(rawSummary || {}),
       configured: isConfigured,
+      error: feeError,
+      balanceVerified: payable != null && paid != null,
+      source: 'backend',
       planName: rawStructure?.name || rawStructure?.planName || rawSummary?.planName || resolvedFees.planName || (isConfigured ? 'Academic Fee Structure' : ''),
       tuitionFee: Number(resolvedFees.tuitionFee || combinedSource.fees?.tuitionFee || 0),
       admissionFee: Number(resolvedFees.admissionFee || combinedSource.fees?.admissionFee || 0),
@@ -451,7 +381,9 @@ const hydrateProfile = async (source) => {
       paymentStatus,
       installments: installments.length > 0 ? installments : (rawStructure?.installments || resolvedFees.installments || []),
       paymentHistory: historyItems,
+      historyError: feeHistory.status === "rejected" ? feeHistory.reason?.message || "Payment history unavailable." : "",
     },
+    documentError: documents.status === "rejected" ? documents.reason?.message || "Saved documents could not be loaded. Close and retry this student." : "",
     documents: documents.status === "fulfilled" && documents.value
       ? mergeFilledProfileData(combinedSource.documents, documentsFromApi(documents.value))
       : combinedSource.documents,
@@ -582,10 +514,12 @@ function Empty({ title, children }) {
 
 
 export default function StudentProfile() {
-  // Student Profiles is an administrative workspace. Keep the edit action
-  // available to every user who can open this screen; the API remains the
-  // source of truth for save authorization.
-  const canEdit = true;
+  const { canAction } = useScreenAccess();
+  const canEdit = canAction('/student-management/profiles', 'edit');
+  const [sort, setSort] = useState('recent');
+  const detailSequence = useRef(0);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState('');
   const { selectedCollegeId, selectedCollege, selectedAcademicYearId, selectedAcademicYear } = useAcademic();
   const [students, setStudents] = useCollegeState([]),
     [loading, setLoading] = useState(true),
@@ -607,7 +541,10 @@ export default function StudentProfile() {
     [tab, setTab] = useState("personal"),
     [editing, setEditing] = useState(null);
   const tableRef = useRef(null);
+  const directorySequence = useRef(0);
+  const previousScope = useRef(`${selectedCollegeId}:${selectedAcademicYearId}`);
   const load = async () => {
+    const requestId = ++directorySequence.current;
     setLoading(true);
     setError("");
     const rawParam = new URLSearchParams(window.location.search).get("studentId");
@@ -623,6 +560,7 @@ export default function StudentProfile() {
           : Promise.resolve(null),
         studentAdmissionApi.getAll(),
       ]);
+      if (requestId !== directorySequence.current) return;
       let rows =
         directory.status === "fulfilled"
           ? directory.value.map(row => ({ ...profileFromApi(row), exportVerified: isApiResult(directory.value) }))
@@ -634,6 +572,7 @@ export default function StudentProfile() {
           studentId: requestedId,
           documents: documentsFromApi(documents),
         });
+        if (requestId !== directorySequence.current) return;
         setSelectedStudent(latest);
         rows = [
           { ...latest, exportVerified: isApiResult(preview) },
@@ -684,20 +623,29 @@ export default function StudentProfile() {
           exportVerified: isApiResult(admissions.value),
         })),
       ];
+      if (requestId !== directorySequence.current) return;
       setStudents(newestFirst('student-profiles', rows));
       if (directory.status === "rejected" && !rows.length)
         setError(
           directory.reason?.message || "Student profiles could not be loaded.",
         );
     } catch (loadError) {
-      setError(loadError.message || "Student profiles could not be loaded.");
+      if (requestId === directorySequence.current) setError(loadError.message || "Student profiles could not be loaded.");
     } finally {
-      setLoading(false);
+      if (requestId === directorySequence.current) setLoading(false);
     }
   };
   useEffect(() => {
+    const scope = selectedCollegeId + ':' + selectedAcademicYearId;
+    if (previousScope.current !== scope) {
+      detailSequence.current += 1; setSelectedStudent(null); setSelectedId(null); setEditing(null); setPage(1);
+      const url = new URL(window.location.href); url.searchParams.delete('studentId'); window.history.replaceState({}, '', url);
+      previousScope.current = scope;
+    }
     load();
-  }, []);
+    const unsubscribe = eventBus.on(ERP_EVENTS.STUDENT_UPDATED, load);
+    return () => { unsubscribe?.(); detailSequence.current += 1; directorySequence.current += 1; };
+  }, [selectedCollegeId, selectedAcademicYearId]);
 
   const normYear = y => String(y || '').replace(/[^0-9]/g, '')
   const scopedStudents = useMemo(() => {
@@ -763,7 +711,7 @@ export default function StudentProfile() {
     [scopedStudents, query, filters],
   );
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)),
-    shown = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    shown = [...filtered].sort((a,b) => sort === 'name' ? name(a).localeCompare(name(b)) : sort === 'admission' ? String(a.application?.admissionNumber || '').localeCompare(String(b.application?.admissionNumber || ''), undefined, { numeric:true }) : 0).slice((Math.min(page, pages) - 1) * PAGE_SIZE, Math.min(page,pages) * PAGE_SIZE),
     selected = selectedStudent || (selectedId ? (
       scopedStudents.find((x) =>
         String(x.id) === String(selectedId) ||
@@ -790,6 +738,8 @@ export default function StudentProfile() {
       return updated;
     });
   const openProfile = async (studentOrId) => {
+    const requestId = ++detailSequence.current;
+    setDetailLoading(true); setDetailError('');
     const directoryStudent =
       typeof studentOrId === "object"
         ? studentOrId
@@ -828,6 +778,7 @@ export default function StudentProfile() {
         ...preview,
         studentId: directoryStudent?.studentId || (directoryStudent?.admissionId ? undefined : requestedId),
       });
+      if (requestId !== detailSequence.current) return;
       const resolvedId = String(latest.id ?? latest.studentId ?? latest.admissionId ?? requestedId);
       setSelectedStudent(latest);
       setSelectedId(resolvedId);
@@ -847,13 +798,15 @@ export default function StudentProfile() {
         ),
       ]);
     } catch (previewError) {
-      console.warn("Hydration warning on openProfile:", previewError);
+      if (requestId !== detailSequence.current) return;
+      setDetailError(previewError.message || "Unable to load student details.");
       if (directoryStudent) {
         setSelectedStudent(directoryStudent);
       }
-    }
+    } finally { if (requestId === detailSequence.current) setDetailLoading(false); }
   };
   const closeProfile = () => {
+    detailSequence.current += 1; setDetailLoading(false); setDetailError('');
     setSelectedStudent(null);
     setSelectedId(null);
     const url = new URL(window.location.href);
@@ -891,6 +844,7 @@ export default function StudentProfile() {
     }
   };
   const saveStudent = async (student, originalStudent = {}) => {
+    if (!canEdit) throw new Error('You do not have permission to edit student profiles.');
     const p = student.personal || {},
       c = student.contact || {},
       father = student.parents?.father || {},
@@ -1020,16 +974,18 @@ export default function StudentProfile() {
       JSON.stringify(student[key] ?? {}) !== JSON.stringify(originalStudent[key] ?? {});
     const relatedUpdates = [
       studentId && studentId !== 'undefined' && changed("parents")
-        ? studentParentApi.update(studentId, student).catch(() => null)
+        ? studentParentApi.update(studentId, student)
         : Promise.resolve(),
       admissionId && changed("previousEducation")
-        ? studentPreviousEducationApi.update(admissionId, student.previousEducation).catch(() => null)
+        ? studentPreviousEducationApi.update(admissionId, student.previousEducation)
         : Promise.resolve(),
       admissionId && !savedThroughAdmission && changed("admission")
-        ? studentAdmissionApi.update(admissionId, student).catch(() => null)
+        ? studentAdmissionApi.update(admissionId, student)
         : Promise.resolve(),
     ];
-    await Promise.allSettled(relatedUpdates);
+    const relatedResults = await Promise.allSettled(relatedUpdates);
+    const failed = relatedResults.find(result => result.status === 'rejected');
+    if (failed) throw new Error('Profile saved partially. ' + (failed.reason?.message || 'A related section could not be saved. Retry the unsaved changes.'));
     // Keep the image visible when an API returns a compact record without its
     // photo field; the API value still takes precedence whenever it is present.
     saveStoredPhoto("student-profile", studentId, p.photo);
@@ -1068,31 +1024,24 @@ export default function StudentProfile() {
     ];
   }, [scopedStudents]);
 
-  const body = selected ? (
+  const profileDialog = selected ? (
+    <ViewDialog title="Student Details" icon={FiUser} onClose={closeProfile} showExport={false} maxWidth="1120px">
+    {detailLoading && <p role="status">Loading complete student details...</p>}
+    {detailError && <div role="alert"><p>{detailError}</p><button type="button" onClick={() => openProfile(selected)}>Retry details</button></div>}
     <Profile
       student={selected}
       tab={tab}
       setTab={setTab}
       back={closeProfile}
       edit={() => beginEdit(selected)}
-      canEdit={canEdit}
+      canEdit={canEdit && !detailLoading}
     />
-  ) : (
+    </ViewDialog>
+  ) : null;
+  const body = (
     <>
-      <header className="sp-heading cm-header">
-        <div>
-          <h1>Student Profiles</h1>
-          <p>
-            Find, preview and manage profiles created from student admissions.
-          </p>
-        </div>
-        <div className="cm-row-actions">
-          <CompactSummary
-            label="Student profile summary"
-            items={studentSummaryItems}
-          />
-        </div>
-      </header>
+      <PageHeader title="Student Management" subtitle="Find and manage approved students in the selected college and academic year." />
+      <div className="sp-reference-summary">{studentSummaryItems.map(item => <article key={item.label}><span>{item.label}</span><strong>{item.value}</strong></article>)}</div>
       {error ? (
         <State error={error} onRetry={load} />
       ) : (
@@ -1178,7 +1127,8 @@ export default function StudentProfile() {
                 ))}
               </div>
             </FilterPanel>
-            <div className="sp-table-wrap">
+            <label className="sp-sort">Sort by <select aria-label="Sort students" value={sort} onChange={event => { setSort(event.target.value); setPage(1) }}><option value="recent">Recently added</option><option value="name">Student name</option><option value="admission">Admission number</option></select></label>
+            <div className="sp-table-wrap" tabIndex={0} role="region" aria-label="Student directory">
               <table className="sp-directory-table" ref={tableRef}>
                 <thead>
                   <tr>
@@ -1197,7 +1147,7 @@ export default function StudentProfile() {
                     return (
                       <tr
                         key={student.id}
-                        
+
                       >
                         <td>
                           <div className="sp-student">
@@ -1303,6 +1253,7 @@ export default function StudentProfile() {
     <DashboardLayout>
       <main className="student-profile">
         {" "}
+        {profileDialog}
         {editing ? (
           <StudentProfileEdit
             student={editing}
@@ -1336,23 +1287,30 @@ function ProfileCard({ title, icon: Icon, rows = [] }) {
   );
 }
 
-function StudentProfileReceiptModal({ receipt, student, onClose }) {
+function StudentProfileReceiptModal({ receipt: requestedReceipt, student, onClose }) {
+  const [receipt, setReceipt] = useState(null)
+  const [error, setError] = useState('')
+  const [attempt, setAttempt] = useState(0)
+  useEffect(() => {
+    let active = true; setReceipt(null); setError('')
+    if (!requestedReceipt?.receiptId) { setError('This payment does not include a receipt identity.'); return }
+    feeCollectionApi.receipt(requestedReceipt.receiptId).then(result => { if(active) setReceipt(result) }).catch(reason => { if(active) setError(reason.message || 'Unable to load the receipt.') })
+    return () => { active = false }
+  }, [requestedReceipt?.receiptId, attempt])
+  if (!receipt) return <ViewDialog title="Fee Receipt" onClose={onClose} showExport={false}><div role={error ? 'alert' : 'status'}>{error || 'Loading receipt...'}{error && <button type="button" onClick={() => setAttempt(value => value + 1)}>Retry receipt</button>}</div></ViewDialog>
+
   const collegeName = student.admission?.college || student.academic?.collegeName || "Academic ERP Institute";
   const amountVal = Number(receipt?.totalAmount || receipt?.feeAmount || 0);
   const balanceVal = Number(receipt?.balanceAmount ?? student.fees?.balanceAmount ?? 0);
-  const receiptNum = receipt?.receiptNumber || `REC-${receipt?.receiptId || receipt?.paymentId || '001'}`;
-  const dateStr = receipt?.paymentDate || receipt?.issuedAt || new Date().toISOString().slice(0, 10);
+  const receiptNum = receipt?.receiptNumber || 'Unavailable';
+  const dateStr = receipt?.paymentDate || receipt?.issuedAt || 'Unavailable';
 
   const handlePrint = () => {
     window.print();
   };
 
   return (
-    <div className="sa-overlay" onClick={onClose} role="dialog" aria-modal="true">
-      <div className="sa-dialog" style={{ width: 'min(100%, 650px)' }} onClick={e => e.stopPropagation()}>
-        <button type="button" className="sa-dialog-close" onClick={onClose} aria-label="Close">
-          <FiX />
-        </button>
+<ViewDialog title="Fee Receipt" onClose={onClose} showExport={false} hideFooter maxWidth="650px">
         <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '14px', borderBottom: '1px solid var(--border)' }}>
           <div>
             <h2 style={{ fontSize: '18px', margin: '0 0 4px' }}>{collegeName}</h2>
@@ -1376,7 +1334,7 @@ function StudentProfileReceiptModal({ receipt, student, onClose }) {
           </div>
           <div>
             <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 800 }}>Payment Method</span>
-            <div style={{ fontWeight: 700, fontSize: '13px' }}>{receipt?.paymentMode || 'CASH'}</div>
+            <div style={{ fontWeight: 700, fontSize: '13px' }}>{receipt?.paymentMode || 'Unavailable'}</div>
           </div>
           <div>
             <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 800 }}>Transaction Ref</span>
@@ -1416,23 +1374,25 @@ function StudentProfileReceiptModal({ receipt, student, onClose }) {
             <FiPrinter /> Print Receipt
           </button>
         </footer>
-      </div>
-    </div>
+    </ViewDialog>
   );
 }
 
 function StudentProfileFeesView({ student, onOpenReceipt }) {
   const fees = student.fees || {};
-  const isConfigured = Boolean(fees.configured || Number(fees.totalFee || 0) > 0 || (fees.components && fees.components.length > 0));
+  const isConfigured = fees.configured === true;
   const totalFee = Number(fees.totalFee || 0);
-  const paidAmount = Number(fees.paidAmount || (fees.paymentStatus === 'Paid' ? totalFee : 0));
-  const balance = Math.max(0, totalFee - paidAmount);
+  const paidAmount = Number(fees.paidAmount ?? 0);
+  const balance = Number(fees.balanceAmount ?? fees.balance ?? Math.max(0,totalFee - paidAmount));
   const isOverdue = fees.paymentStatus === 'Overdue';
   const statusLabel = isOverdue ? 'Overdue' : balance === 0 && totalFee > 0 ? 'Paid' : paidAmount > 0 ? 'Partially Paid' : 'Pending';
   const statusSlug = statusLabel.toLowerCase().replace(/\s+/g, '-');
   const payments = Array.isArray(fees.paymentHistory) ? fees.paymentHistory : [];
   const installments = Array.isArray(fees.installments) ? fees.installments : [];
 
+  if (fees.error) return <div className="sa-empty" role="alert"><h3>Fee information unavailable</h3><p>{fees.error}</p></div>;
+  if (!isConfigured) return <div className="sa-empty" role="status"><h3>No applicable active fee structure</h3><p>Configure and assign an approved fee plan for this student's academic placement.</p></div>;
+  if (!fees.balanceVerified) return <div className="sa-empty" role="status"><h3>Fee balance unavailable</h3><p>The Student Integration response does not contain complete payable, paid and outstanding balances.</p></div>;
   return (
     <div className="sp-fees-container" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '16px 0' }}>
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -1685,7 +1645,7 @@ function StudentProfileFeesView({ student, onOpenReceipt }) {
               </div>
             ) : (
               <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
-                No payment transactions recorded yet for this student.
+                {fees.historyError || 'No payment transactions recorded yet for this student.'}
               </div>
             )}
           </section>
@@ -1945,31 +1905,7 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
       </div>
 
       <div className="cm-profile-card">
-        <div className="cm-profile-banner">
-          <div className="cm-profile-avatar-wrap">
-            {p.photo ? (
-              <img src={p.photo} alt={studentFullName(student)} className="cm-profile-logo" />
-            ) : (
-              <div className="cm-profile-placeholder">
-                {studentInitials(student)}
-              </div>
-            )}
-          </div>
-          <div className="cm-profile-header-info">
-            <div className="cm-profile-badges">
-              {app.admissionNumber && <span className="cm-badge cm-badge-code">Adm: {app.admissionNumber}</span>}
-              {app.registrationNumber && <span className="cm-badge cm-badge-type">Reg: {app.registrationNumber}</span>}
-              <span className="cm-status-badge active">
-                {status(student.status)}
-              </span>
-            </div>
-            <h1 className="cm-profile-title">{studentFullName(student) || "Unnamed student"}</h1>
-            <p className="cm-profile-subtitle">
-              {[formatDisplay(a.course), formatDisplay(a.branch)].filter((x) => x !== 'Not provided').join(' - ')}
-            </p>
-          </div>
-        </div>
-
+        <div className="sp-reference-identity">{p.photo && <img src={p.photo} alt="" />}<div><h3>{studentFullName(student) || 'Unnamed student'}</h3><p>{[formatDisplay(a.course),formatDisplay(a.branch)].join(' · ')}</p><small>{app.admissionNumber || app.registrationNumber}</small></div><StatusBadge value={status(student.status)} /></div>
         <nav className="sp-tabs" aria-label="Student profile sections">
           {TABS.map(([id, label, Icon]) => (
             <button
@@ -1988,6 +1924,7 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
         <section className="sp-panel">
           <header>
             <h2>Submitted documents</h2>
+            {student.documentError && <p role="alert">{student.documentError}</p>}
           </header>
           <div className="sp-document-list">
             {documentRows.map(([label, document], index) => (
@@ -1997,11 +1934,7 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
                   <strong>{label}</strong>
                   <span>{document?.name || document?.status || "Not uploaded"}</span>
                 </div>
-                {document?.data && (
-                  <a href={document.data} target="_blank" rel="noreferrer">
-                    Preview
-                  </a>
-                )}
+<StudentDocumentActions document={document} studentId={profileStudentId(student)} />
               </article>
             ))}
           </div>
@@ -2064,7 +1997,7 @@ const validYear = (value) =>
   /^\d{4}$/.test(clean(value)) &&
   Number(value) >= 1950 &&
   Number(value) <= new Date().getFullYear() + 1;
-const initialEditForm = (student) => normalizeCanonicalStudent(student);
+const initialEditForm = (student) => ({ ...normalizeCanonicalStudent(student), fees: { ...student.fees }, documentUploads: {} });
 
 const validateProfileForm = (form, docErrors = {}) => {
   const next = {
@@ -2295,9 +2228,9 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
       .filter(
         (item) =>
           item.name &&
-          (!effectiveCourseId || !item.courseId || same(item.courseId, effectiveCourseId))
+          (effectiveCourseId && same(item.courseId, effectiveCourseId)) && (!item.collegeId || same(item.collegeId,effectiveCollegeId))
       );
-  }, [branches, effectiveCourseId]);
+  }, [branches, effectiveCourseId, effectiveCollegeId]);
 
   const roomTypeOptions = useMemo(() => {
     const list = [];
@@ -2447,8 +2380,8 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
         if (path === "admission.transportRoute") {
           next.fees.transportFee = resolveProfileTransportFee(next.admission, next.fees, next.academic);
         }
-        const tuition = Number(next.fees?.tuitionFee) > 0 ? Number(next.fees.tuitionFee) : 50000;
-        const admission = Number(next.fees?.admissionFee !== undefined && next.fees?.admissionFee !== "" ? next.fees.admissionFee : 4000);
+        const tuition = Number(next.fees?.tuitionFee) > 0 ? Number(next.fees.tuitionFee) : 0;
+        const admission = Number(next.fees?.admissionFee !== undefined && next.fees?.admissionFee !== "" ? next.fees.admissionFee : 0);
         const hostel = next.admission?.hostel === "Yes" ? Number(next.fees?.hostelFee || resolveProfileHostelFee(next.admission, next.fees, next.academic) || 0) : 0;
         const transport = next.admission?.transport === "Yes" ? Number(next.fees?.transportFee || resolveProfileTransportFee(next.admission, next.fees, next.academic) || 0) : 0;
         const scholarship = Number(next.fees?.scholarshipAmount || 0);
@@ -2503,6 +2436,11 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
     }
     setSaving(true);
     try {
+      await uploadAdmissionDocuments(profileStudentId(student), Object.fromEntries(Object.entries(form.documentUploads || {}).map(([key,file]) => [key, { ...(form.documents?.[key] || {}), file, name:file.name }])), DOCUMENTS_CONFIG, studentDocumentApi.upload, (item,saved) => {
+        delete form.documentUploads[item.key];
+        form.documents = { ...form.documents, [item.key]: saved };
+        setForm(current => ({ ...current, documents:form.documents, documentUploads:{ ...form.documentUploads } }));
+      });
       await onSave(form, student);
     } catch (error) {
       setErrors({ form: error?.message || "Unable to update this student." });
@@ -2864,7 +2802,7 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
                           next.contact.permanentAddress = clone(
                             next.contact.currentAddress || {},
                           );
-                        return next;
+                        return resetAdmissionAcademicDependents(next, current, 'admission.collegeId');
                       });
                     }}
                   />
@@ -2969,7 +2907,7 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
                           "academic.academicYearId",
                           selected?.id || selected?.academicYearId || ""
                         );
-                        return next;
+                        return resetAdmissionAcademicDependents(next,current,"academic.academicYearId");
                       });
                       setErrors((current) => ({ ...current, "academic.academicYear": "" }));
                     },
@@ -3059,6 +2997,7 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
                         let next = setPath(current, "academic.course", val);
                         next = setPath(next, "academic.courseId", selected?.id || "");
                         next = setPath(next, "academic.courseCode", selected?.code || "");
+                        next = resetAdmissionAcademicDependents(next,current,"academic.courseId");
                         if (selected?.department) {
                           next = setPath(next, "academic.department", selected.department);
                         }
@@ -3088,6 +3027,7 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
                         let next = setPath(current, "academic.branch", val);
                         next = setPath(next, "academic.branchId", selected?.id || "");
                         next = setPath(next, "academic.branchCode", selected?.code || "");
+                        next = resetAdmissionAcademicDependents(next,current,"academic.branchId");
                         if (selected?.department && !current.academic?.department) {
                           next = setPath(next, "academic.department", selected.department);
                         }
@@ -3321,11 +3261,11 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginTop: "8px" }}>
                       <div>
                         <small style={{ color: "var(--text-muted)", display: "block" }}>First Term</small>
-                        <strong style={{ fontSize: "14px", color: "var(--brand)" }}>{formatMoney(Math.ceil((Number(form.fees?.totalFee) || 54000) / 2))}</strong>
+                        <strong style={{ fontSize: "14px", color: "var(--brand)" }}>{formatMoney(Math.ceil((Number(form.fees?.totalFee) ?? 0) / 2))}</strong>
                       </div>
                       <div>
                         <small style={{ color: "var(--text-muted)", display: "block" }}>Second Term</small>
-                        <strong style={{ fontSize: "14px", color: "var(--brand)" }}>{formatMoney(Math.max(0, (Number(form.fees?.totalFee) || 54000) - Math.ceil((Number(form.fees?.totalFee) || 54000) / 2)))}</strong>
+                        <strong style={{ fontSize: "14px", color: "var(--brand)" }}>{formatMoney(Math.max(0, (Number(form.fees?.totalFee) ?? 0) - Math.ceil((Number(form.fees?.totalFee) ?? 0) / 2)))}</strong>
                       </div>
                     </div>
                   </div>
@@ -3344,7 +3284,7 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
                   return <article key={key} className={`sp-document-upload ${documentStatus === "Submitted" ? "has-file" : ""}`}>
                     <div className="sp-document-upload-icon">{documentStatus === "Submitted" ? <FiCheckCircle /> : <FiFileText />}</div>
                     <div className="sp-document-upload-copy"><strong>{label}</strong><span>{documentStatus || "Status not selected"}</span></div>
-                    <div className="sp-document-upload-actions"><ProjectSelect value={documentStatus} onChange={(event) => update(`documents.${key}`, event.target.value ? { status: event.target.value } : null)}><option value="">Select status</option><option>Submitted</option><option>Pending</option></ProjectSelect></div>
+                    <div className="sp-document-upload-actions"><ProjectSelect value={documentStatus} onChange={(event) => update(`documents.${key}`, { ...(current || {}), status: event.target.value })}><option value="">Select status</option><option>Submitted</option><option>Pending</option></ProjectSelect></div>
                   </article>;
                 })}
                 {(form.documents?.otherCertificates || []).map((document, index) => (
@@ -3357,7 +3297,7 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
               </div>
             </fieldset>
           )}
-          {tab === "legacy-documents" && (
+          {tab === "documents" && (
             <fieldset>
               <legend>Student Documents</legend>
               <p className="sp-edit-note">
@@ -3474,8 +3414,7 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
           </footer>
         </form>
         {discard && (
-          <div className="sp-confirm">
-            <div>
+          <ViewDialog title="Discard unsaved changes?" onClose={() => setDiscard(false)} showExport={false} hideFooter maxWidth="480px">
               <h3>You have unsaved changes.</h3>
               <p>Discard your changes?</p>
               <footer>
@@ -3489,8 +3428,7 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
                   Discard Changes
                 </button>
               </footer>
-            </div>
-          </div>
+          </ViewDialog>
         )}
       </section>
     </div>

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { FiChevronDown } from 'react-icons/fi'
-import ModuleIcon from '../../config/ModuleIcon.jsx'
+import NavigationIcon from '../../config/NavigationIcon.jsx'
 import { activeSidebarChild } from '../../config/sidebarNavigation.js'
 import SidebarItem from './SidebarItem.jsx'
 
@@ -16,7 +16,7 @@ export default function SidebarGroup({ entry, active, pathname, collapsed, onTog
     <button type="button" className={`sidebar-link sidebar-link--blue sidebar-disclosure ${entry.sidebarClass || ''} ${active ? 'is-module-active' : ''}`}
       title={entry.label} aria-label={entry.label} aria-expanded={!collapsed && expanded} aria-controls={!collapsed && expanded ? id : undefined}
       onClick={() => { if (collapsed) onToggleCollapse(); setManual({ pathname, open: collapsed ? true : !expanded }) }}>
-      <ModuleIcon icon={entry.icon} /><span>{entry.label}</span><FiChevronDown className="sidebar-disclosure__chevron" aria-hidden="true" />
+      <NavigationIcon moduleId={entry.id} icon={entry.icon} /><span>{entry.label}</span><FiChevronDown className="sidebar-disclosure__chevron" aria-hidden="true" />
     </button>
     {!collapsed && expanded && <div className={`sidebar-submenu ${entry.submenuClass || ''}`} id={id}>
       {entry.children.map(child => <SidebarItem key={child.id} entry={child} active={active && child.id === childId} onNavigate={onNavigate} />)}

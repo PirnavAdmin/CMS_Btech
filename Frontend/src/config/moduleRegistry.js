@@ -281,7 +281,7 @@ const entries = [
     permission: {"module":"academic_settings","action":"view","source":"existing access matrix"}, authorization: "existing-guards-and-permissions",
     roles: ["admin"], scope: "college", navigation: false,
     component: "src/pages/profile/MyProfile.jsx", exportName: "Settings",
-    aliases: [], children: [], prerequisites: ["college"],
+    aliases: ['/global-settings'], children: [], prerequisites: ["college"],
   },
   {
     id: "my_subjects", label: "My Subjects", icon: "book-marked",

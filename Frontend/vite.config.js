@@ -9,7 +9,21 @@ export default defineConfig(({ mode }) => {
   plugins: [react()],
   test: {
     environment: 'jsdom',
-    include: ['src/components/**/*.vitest.test.{js,jsx}', 'src/pages/academic-structure/**/*.vitest.test.{js,jsx}', 'src/pages/admin-management/DepartmentManagement.vitest.test.jsx', 'src/pages/admin-management/AcademicYearManagement.vitest.test.jsx', 'src/config/**/*.vitest.test.{js,jsx}', 'src/features/faculty/**/*.vitest.test.{js,jsx}', 'src/pages/semester-management/**/*.vitest.test.{js,jsx}', 'src/pages/section-management/**/*.vitest.test.{js,jsx}', 'src/auth/**/*.vitest.test.{js,jsx}'],
+    pool: 'threads',
+    maxWorkers: 2,
+    setupFiles: ['./tests/browser-environment.js'],
+    include: [
+      'src/pages/examinations/**/*.vitest.test.{js,jsx}',
+      'src/pages/fees/**/*.vitest.test.{js,jsx}',
+      'src/components/**/*.vitest.test.{js,jsx}',
+      'src/pages/academic-structure/**/*.vitest.test.{js,jsx}',
+      'src/pages/admin-management/**/*.vitest.test.{js,jsx}',
+      'src/config/**/*.vitest.test.{js,jsx}',
+      'src/features/faculty/**/*.vitest.test.{js,jsx}',
+      'src/pages/semester-management/**/*.vitest.test.{js,jsx}',
+      'src/pages/section-management/**/*.vitest.test.{js,jsx}',
+      'src/auth/**/*.vitest.test.{js,jsx}',
+    ],
   },
   resolve: {
     dedupe: ['react', 'react-dom'],

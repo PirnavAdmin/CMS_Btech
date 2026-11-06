@@ -1,0 +1,77 @@
+{
+  "sprintA": {
+    "codeStatus": "Code-complete for existing frontend-supported workflows",
+    "liveVisualStatus": "Pending",
+    "focusedWorkflowChecks": 62
+  },
+  "sprintB": {
+    "codeStatus": "Started; admin workflows implemented and tested, portal completion partial",
+    "liveVisualStatus": "Pending",
+    "remaining": [
+      "Faculty classroom live submission/history/correction UI and coverage.",
+      "Full student marking-dialog dependent-selection, roster-change and saved-refresh interaction coverage.",
+      "Faculty self-attendance portal and cross-college leave/LOP/report checklist."
+    ]
+  },
+  "verification": {
+    "fullVitest": {
+      "files": 47,
+      "passed": 347,
+      "failed": 0,
+      "durationSeconds": 410.77
+    },
+    "latestFocused": {
+      "files": 6,
+      "passed": 41,
+      "failed": 0
+    },
+    "facultyRecheck": {
+      "files": 2,
+      "passed": 13,
+      "failed": 0
+    },
+    "serviceContractTests": {
+      "passed": 456,
+      "failed": 0
+    },
+    "newAttendanceSaveWorkflowTests": {
+      "passed": 12,
+      "failed": 0
+    },
+    "productionBuild": {
+      "passed": true,
+      "existingWarnings": [
+        "Bundle chunk-size advisory",
+        "Existing stylesheet import-order advisory"
+      ]
+    },
+    "lint": {
+      "errors": 0,
+      "warnings": 679,
+      "continuationStartWarnings": 689,
+      "sprintStartWarnings": 710,
+      "rulesDisabled": 0
+    },
+    "protectedSources": {
+      "checked": 1663,
+      "mismatches": 0
+    },
+    "backendFilesChanged": 0,
+    "browserInspected": false,
+    "liveApiVerified": false
+  },
+  "backendLimitations": [
+    "Elective group update/delete/status and group-wide credits/type/dates have no verified writable contract.",
+    "Institution-wide credit framework/graduation persistence has no existing endpoint.",
+    "Published timetable destructive reopening is unsupported."
+  ],
+  "constraints": {
+    "frontendOnly": true,
+    "newRoutes": 0,
+    "cssPatchFiles": 0,
+    "productionMockDataAdded": false,
+    "facultyAttendanceDemoEntryRemoved": true,
+    "apiDtoContractsChanged": false
+  },
+  "report": "SPRINT6_FINALIZATION.md"
+}

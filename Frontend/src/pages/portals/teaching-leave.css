@@ -12,7 +12,7 @@
   position: fixed;
   bottom: 24px;
   right: 24px;
-  background: #174c88;
+  background: var(--brand);
   color: #ffffff;
   padding: 12px 20px;
   border-radius: 10px;
@@ -73,7 +73,7 @@
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #174c88, #2563eb);
+  background: linear-gradient(135deg, var(--brand), #2563eb);
   color: #ffffff;
   display: grid;
   place-items: center;
@@ -128,7 +128,7 @@
 .tl-empid {
   font-family: monospace;
   font-weight: 700;
-  color: var(--brand, #174c88);
+  color: var(--brand, var(--brand));
 }
 
 .tl-year-tag {
@@ -161,7 +161,7 @@
   border-radius: 10px;
   font-size: 14px;
   font-weight: 800;
-  background: linear-gradient(135deg, #16804e, #10b981);
+  background: linear-gradient(135deg, #16804e, var(--success));
   color: #ffffff;
   border: 1px solid #16804e;
   cursor: pointer;
@@ -170,7 +170,7 @@
 }
 
 .tl-btn-apply:hover {
-  background: linear-gradient(135deg, #136f43, #059669);
+  background: linear-gradient(135deg, #136f43, var(--success));
   transform: translateY(-1px);
   box-shadow: 0 6px 18px rgba(22, 128, 78, 0.38);
 }
@@ -237,7 +237,7 @@
 
 .tl-kpi-icon.tone-amber {
   background: rgba(217, 119, 6, 0.12);
-  color: #d97706;
+  color: var(--warning);
 }
 
 .tl-kpi-info {
@@ -272,7 +272,7 @@
 }
 
 .text-amber {
-  color: #d97706 !important;
+  color: var(--warning) !important;
 }
 
 /* ==========================================================================
@@ -323,8 +323,8 @@
 
 .tl-btn-guidelines:hover {
   background: var(--surface-soft);
-  color: var(--brand, #174c88);
-  border-color: var(--brand, #174c88);
+  color: var(--brand, var(--brand));
+  border-color: var(--brand, var(--brand));
 }
 
 /* Collapsible Guidelines Box */
@@ -357,7 +357,7 @@
   gap: 8px;
   font-size: 13px;
   font-weight: 800;
-  color: var(--brand, #174c88);
+  color: var(--brand, var(--brand));
 }
 
 .tl-guidelines-box ul {
@@ -457,12 +457,12 @@
 
 .tl-code-pill.code-sl {
   background: rgba(220, 38, 38, 0.12);
-  color: #dc2626;
+  color: var(--danger);
 }
 
 .tl-code-pill.code-el {
   background: rgba(217, 119, 6, 0.12);
-  color: #d97706;
+  color: var(--warning);
 }
 
 .tl-code-pill.code-od {
@@ -511,7 +511,7 @@
 }
 
 .tl-quota-bar-fill.pending {
-  background: #d97706;
+  background: var(--warning);
 }
 
 .tl-quota-breakdown {
@@ -548,7 +548,7 @@
   font-size: 11px;
   font-weight: 700;
   background: var(--surface-soft);
-  color: var(--brand, #174c88);
+  color: var(--brand, var(--brand));
   border: 1px solid var(--border);
   cursor: pointer;
   white-space: nowrap;
@@ -556,9 +556,9 @@
 }
 
 .tl-btn-quick-apply:hover {
-  background: var(--brand, #174c88);
+  background: var(--brand, var(--brand));
   color: #ffffff;
-  border-color: var(--brand, #174c88);
+  border-color: var(--brand, var(--brand));
 }
 
 /* ==========================================================================
@@ -614,7 +614,7 @@
 }
 
 .tl-tab-btn.is-active {
-  background: var(--brand, #174c88);
+  background: var(--brand, var(--brand));
   color: #ffffff;
 }
 
@@ -658,7 +658,7 @@
 .tl-btn-ghost:hover {
   background: var(--surface-soft);
   color: var(--text-primary);
-  border-color: var(--brand, #174c88);
+  border-color: var(--brand, var(--brand));
 }
 
 /* Search and Filters Toolbar */
@@ -743,7 +743,7 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: #ffffff;
-  background: var(--table-head, #174c88);
+  background: var(--table-head, var(--brand));
   white-space: nowrap;
 }
 
@@ -765,7 +765,7 @@
 .tl-id-cell {
   font-family: monospace;
   font-weight: 800;
-  color: var(--brand, #174c88);
+  color: var(--brand, var(--brand));
 }
 
 .tl-type-pill {
@@ -784,12 +784,12 @@
 
 .tl-type-pill.type-sl {
   background: rgba(220, 38, 38, 0.12);
-  color: #dc2626;
+  color: var(--danger);
 }
 
 .tl-type-pill.type-el {
   background: rgba(217, 119, 6, 0.12);
-  color: #d97706;
+  color: var(--warning);
 }
 
 .tl-type-pill.type-od {
@@ -816,7 +816,7 @@
 
 .tl-half-tag {
   font-size: 10px;
-  color: var(--brand, #174c88);
+  color: var(--brand, var(--brand));
   font-weight: 700;
 }
 
@@ -874,13 +874,13 @@
 
 .tl-status-chip.status-pending {
   background: rgba(217, 119, 6, 0.12);
-  color: #d97706;
+  color: var(--warning);
   border: 1px solid rgba(217, 119, 6, 0.25);
 }
 
 .tl-status-chip.status-rejected {
   background: rgba(220, 38, 38, 0.12);
-  color: #dc2626;
+  color: var(--danger);
   border: 1px solid rgba(220, 38, 38, 0.25);
 }
 
@@ -913,17 +913,17 @@
 
 .tl-btn-icon:hover {
   background: var(--surface-soft);
-  color: var(--brand, #174c88);
-  border-color: var(--brand, #174c88);
+  color: var(--brand, var(--brand));
+  border-color: var(--brand, var(--brand));
 }
 
 .tl-btn-icon.danger {
-  color: #dc2626;
+  color: var(--danger);
 }
 
 .tl-btn-icon.danger:hover {
   background: rgba(220, 38, 38, 0.08);
-  border-color: #dc2626;
+  border-color: var(--danger);
 }
 
 .tl-empty {
@@ -971,7 +971,7 @@
 
 .tl-policy-tag {
   font-size: 11px;
-  color: var(--brand, #174c88);
+  color: var(--brand, var(--brand));
   font-weight: 700;
 }
 
@@ -1004,7 +1004,7 @@
 .tl-form-group input:focus,
 .tl-form-group select:focus,
 .tl-form-group textarea:focus {
-  border-color: var(--brand, #174c88);
+  border-color: var(--brand, var(--brand));
 }
 
 .tl-form-group textarea {
@@ -1021,7 +1021,7 @@
 
 .tl-field-error {
   font-size: 11px;
-  color: #dc2626;
+  color: var(--danger);
   font-weight: 600;
 }
 
@@ -1079,7 +1079,7 @@
 .tl-calc-box span {
   font-size: 12px;
   font-weight: 700;
-  color: var(--brand, #174c88);
+  color: var(--brand, var(--brand));
 }
 
 .tl-calc-hint {
@@ -1091,7 +1091,7 @@
 .tl-calc-val {
   font-size: 18px;
   font-weight: 900;
-  color: var(--brand, #174c88);
+  color: var(--brand, var(--brand));
 }
 
 .tl-file-picker {
@@ -1184,7 +1184,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--brand, #174c88);
+  color: var(--brand, var(--brand));
   font-weight: 700;
 }
 
@@ -1255,13 +1255,13 @@
 }
 
 .tl-timeline li.pending .tl-timeline-dot {
-  border-color: #d97706;
-  background: #ffffff;
+  border-color: var(--warning);
+  background: var(--surface);
 }
 
 .tl-timeline li.cancelled .tl-timeline-dot {
-  border-color: #dc2626;
-  background: #dc2626;
+  border-color: var(--danger);
+  background: var(--danger);
 }
 
 .tl-timeline-body {
@@ -1291,7 +1291,7 @@
 
 .tl-cancel-icon {
   font-size: 40px;
-  color: #dc2626;
+  color: var(--danger);
   margin: 0 auto;
 }
 

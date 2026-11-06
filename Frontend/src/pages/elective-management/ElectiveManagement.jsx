@@ -1,9 +1,10 @@
+import { useScreenAccess } from '../../auth/ScreenAccess'
+import { useAcademic } from '../../context/AcademicContext'
+import SharedViewDialog from '../../components/ViewDialog'
 import { ProjectSelect } from '../../components/SearchableSelect'
-import { GENERIC_ERROR_MESSAGE } from '../../utils/userError.js'
 import DirectoryEmptyState from '../../components/DirectoryEmptyState'
-import { collegeStorageKey } from '../../utils/collegeScope.js'
 import useCollegeState from '../../hooks/useCollegeState'
-﻿import { useCallback, useEffect, useMemo, useState } from 'react'
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FiAward, FiArrowLeft, FiBookOpen, FiCheck, FiCheckCircle, FiEdit2, FiEye, FiInfo, FiLayers, FiPlus, FiSearch, FiTrash2, FiUsers, FiX } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
@@ -13,12 +14,10 @@ import ExportMenu from '../../components/ExportMenu'
 import InfoCard from '../../components/InfoCard'
 import FilterPanel from '../../components/FilterPanel'
 import SearchableSelect from '../../components/SearchableSelect'
-import { API_BASE_URL, departmentApi, academicYearApi, branchApi, courseApi, facultyMasterApi, profileApi, electiveManagementApi } from '../../api/apiEndpoints'
-import { getAccessToken } from '../../auth/auth'
+import { departmentApi, academicYearApi, branchApi, courseApi, facultyMasterApi, studentApi, studentProfileApi, electiveManagementApi } from '../../api/apiEndpoints'
 import { selectHeaderAcademicYear } from '../../utils/headerAcademicYear'
 import { showError, showSuccess } from '../../utils/toast'
 import subjectService from '../../services/subjectService'
-import { createApiUnavailableError, notifyApiUnavailable } from '../../api/apiFailureNotice'
 import { academicFilterOptions, changeAcademicFilter, enrichSubject, eligibleForGroup, hasAcademicFilter, isElectiveSubject, matchesSubject, subjectQuery } from '../../utils/subjectDirectory'
 import './ElectiveManagement.css'
 
@@ -31,8 +30,8 @@ const branchOptions = (rows, courseId) => rows.filter(item => !courseId || Strin
 const dateText = value => value ? String(value).slice(0, 10) : '-'
 const rowId = row => row?.id ?? row?.selectionId ?? row?.studentElectiveSelectionId
 const electiveGroupIdOf = group => group?.electiveGroupId ?? group?.electiveGroupID ?? group?.ElectiveGroupId ?? group?.elective_group_id ?? group?.groupId ?? group?.groupID ?? group?.GroupId ?? group?.group_id ?? group?.id ?? group?.ID
-const approvalStatus = row => row?.approvalStatus || row?.status || 'Pending'
-const allocationStatus = row => row?.allocationStatus || (String(row?.status).toLowerCase() === 'allocated' ? 'Allocated' : 'Pending')
+const approvalStatus = row => row?.approvalStatus || row?.status || 'Not reported'
+const allocationStatus = row => row?.allocationStatus || (String(row?.status).toLowerCase() === 'allocated' ? 'Allocated' : 'Not reported')
 const displayApprovalStatus = row => { const value = String(approvalStatus(row)); return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase() }
 const firstValue = (...values) => values.find(value => {
   if (value === null || value === undefined || String(value).trim() === '') return false
@@ -66,16 +65,6 @@ const reportExportColumns = [
   { label: 'Allocation', value: row => allocationStatus(row) },
 ]
 
-async function request(path, options = {}) {
-  const token = getAccessToken(); let response
-  try { response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options.headers } }) } catch { throw createApiUnavailableError() }
-  let body = null; try { body = await response.json() } catch { /* Empty successful responses are valid. */ }
-  if (response.status >= 500) notifyApiUnavailable({ status: response.status })
-  if (!response.ok || body?.success === false) { const messages = { 401: 'Your session has expired. Please sign in again.', 403: 'You do not have permission to perform this action.', 404: path.includes('/allocations/report') ? 'No allocation report is available yet.' : path.includes('/profile/exam-results') ? 'No examination results are available.' : path.includes('/electives') ? 'No elective records are available yet.' : 'The requested information was not found.', 500: GENERIC_ERROR_MESSAGE }; const error = new Error(response.status >= 500 ? GENERIC_ERROR_MESSAGE : messages[response.status] || body?.message || 'The request could not be completed.'); error.status = response.status; throw error }
-  return body
-}
-const get = path => request(path).then(unwrap)
-
 function Pagination({ page, pageCount, total, size, onChange }) { if (pageCount < 2) return total ? <p className="em-pagination-count">Showing 1-{Math.min(total, size)} of {total}</p> : null; return <div className="em-pagination"><span>Showing {(page - 1) * size + 1}-{Math.min(page * size, total)} of {total}</span><div><button type="button" onClick={() => onChange(page - 1)} disabled={page === 1}>Previous</button>{Array.from({ length: pageCount }, (_, index) => index + 1).map(number => <button type="button" key={number} className={number === page ? 'active' : ''} onClick={() => onChange(number)}>{number}</button>)}<button type="button" onClick={() => onChange(page + 1)} disabled={page === pageCount}>Next</button></div></div> }
 function Toolbar({ search, setSearch, filters, setFilters, options, values, placeholder, showFilters = true, quickFilterKeys = [], leadingActions = null }) {
   const active = options.some(key => filters[key] !== 'All')
@@ -85,51 +74,29 @@ function Toolbar({ search, setSearch, filters, setFilters, options, values, plac
   return showFilters ? <FilterPanel active={active} onClear={clear} leadingActions={leadingActions} className="em-filter-panel">{content}</FilterPanel> : content
 }
 function SelectionTable({ rows, approval = false, onApproval, emptyTitle = 'No elective selections found', search = '', className = '' }) { if (!rows.length) return <EmptyState title={approval ? 'No pending approvals' : emptyTitle} description={search ? 'Try a different search or filter.' : 'Records will appear here when they are available.'} />; return <div className={`sm-table-wrap ${className}`}><table className="em-table"><thead><tr><th>Student</th><th>Group</th><th>Subject</th><th>Credits</th><th>Selection Date</th><th>Approval</th><th>Allocation</th>{approval && <th>Actions</th>}</tr></thead><tbody>{rows.map(row => <tr key={rowId(row)}><td><strong>{text(row.studentName || row.fullName, row.rollNumber || row.studentId)}</strong><span className="em-cell-subtitle">{text(row.studentCode || row.studentId || row.rollNumber)}</span></td><td>{text(row.groupCode || row.electiveGroupCode)}<span className="em-cell-subtitle">{text(row.groupName || row.electiveGroupName)}</span></td><td><strong>{text(row.subjectCode)}</strong><span className="em-cell-subtitle">{text(row.subjectName)}</span></td><td>{text(row.credits, '-')}</td><td>{text(row.selectionDate || row.createdAt, '-')}</td><td><StatusBadge value={displayApprovalStatus(row)} /></td><td><StatusBadge value={allocationStatus(row)} /></td>{approval && <td><div className="em-row-actions"><button type="button" className="sm-btn sm-btn--primary em-compact-btn" onClick={() => onApproval(row, 'Approved')}>Approve</button><button type="button" className="sm-btn sm-btn--danger em-compact-btn" onClick={() => onApproval(row, 'Rejected')}>Reject</button></div></td>}</tr>)}</tbody></table></div> }
-function ResultsTable({ rows, page, size, setPage }) { const pageRows = rows.slice((page - 1) * size, page * size); return !rows.length ? <EmptyState title="No examination results available" description="Academic results have not been published for this student." /> : <><div className="sm-table-wrap"><table className="em-table"><thead><tr><th>Examination</th><th>Semester</th><th>Subject</th><th>Maximum</th><th>Obtained</th><th>Percentage</th><th>Grade</th><th>Status</th></tr></thead><tbody>{pageRows.map((row, index) => <tr key={row.id || row.subjectCode || index}><td>{text(row.examinationName || row.examName)}</td><td>{text(row.semester)}</td><td><strong>{text(row.subjectCode)}</strong><span className="em-cell-subtitle">{text(row.subjectName)}</span></td><td>{text(row.maximumMarks || row.maxMarks, '-')}</td><td>{text(row.obtainedMarks || row.marksObtained, '-')}</td><td>{text(row.percentage, '-')}</td><td>{text(row.grade, '-')}</td><td><StatusBadge value={text(row.resultStatus || row.status, '-')} /></td></tr>)}</tbody></table></div><Pagination page={page} pageCount={Math.ceil(rows.length / size)} total={rows.length} size={size} onChange={setPage} /></> }
+function ResultsTable({ rows, page, size, setPage }) { const pageRows = rows.slice((page - 1) * size, page * size); return !rows.length ? <EmptyState title="No examination results available" description="Academic results have not been published for this student." /> : <><div className="sm-table-wrap"><table className="em-table"><thead><tr><th>Examination</th><th>Semester</th><th>Subject</th><th>Maximum</th><th>Obtained</th><th>Percentage</th><th>Grade</th><th>Status</th></tr></thead><tbody>{pageRows.map((row, index) => <tr key={row.id || row.subjectCode || index}><td>{text(row.examinationName || row.examName)}</td><td>{text(row.semester)}</td><td><strong>{text(row.subjectCode)}</strong><span className="em-cell-subtitle">{text(row.subjectName)}</span></td><td>{text(row.maximumMarks ?? row.maxMarks, '-')}</td><td>{text(row.obtainedMarks ?? row.marksObtained, '-')}</td><td>{text(row.percentage, '-')}</td><td>{text(row.grade, '-')}</td><td><StatusBadge value={text(row.resultStatus || row.status, '-')} /></td></tr>)}</tbody></table></div><Pagination page={page} pageCount={Math.ceil(rows.length / size)} total={rows.length} size={size} onChange={setPage} /></> }
 function StudentCard({ profile, loading }) { if (loading) return <section className="em-student-card em-loading">Loading student profile...</section>; if (!profile) return null; const value = key => text(profile[key], key === 'semester' ? 'Semester information unavailable' : 'N/A'); return <section className="em-student-card"><div className="em-avatar">{String(profile.fullName || profile.studentName || 'S').split(' ').map(part => part[0]).join('').slice(0, 2).toUpperCase()}</div><div className="em-student-identity"><h2>{value('fullName')}</h2><p>{value('studentCode', profile.identifier || profile.id)}</p></div><dl>{[['Course', 'course'], ['Department', 'department'], ['Branch', 'branch'], ['Academic Year', 'academicYear'], ['Semester', 'semester'], ['Section', 'section'], ['Roll Number', 'rollNumber'], ['Registration Number', 'registrationNumber']].map(([label, key]) => <div key={key}><dt>{label}</dt><dd>{value(key)}</dd></div>)}</dl></section> }
 
-const ELECTIVE_DATES_KEY = 'elective_dates_cache'
-
-const readCachedElectiveDates = (id, code) => {
-  try {
-    const raw = localStorage.getItem(collegeStorageKey(ELECTIVE_DATES_KEY))
-    if (!raw) return {}
-    const parsed = JSON.parse(raw)
-    const key = [id, code].filter(Boolean).map(String).find((candidate) => parsed[candidate])
-    return key ? (parsed[key] || {}) : {}
-  } catch {
-    return {}
-  }
-}
-
-const cacheElectiveDates = (id, code, dates) => {
-  if (!dates || (!dates.startDate && !dates.endDate)) return
-  try {
-    const raw = localStorage.getItem(collegeStorageKey(ELECTIVE_DATES_KEY))
-    const parsed = raw ? JSON.parse(raw) : {}
-    const keys = [id, code].filter(Boolean).map(String)
-    keys.forEach((k) => {
-      parsed[k] = {
-        startDate: dates.startDate || parsed[k]?.startDate || '',
-        endDate: dates.endDate || parsed[k]?.endDate || '',
-      }
-    })
-    localStorage.setItem(collegeStorageKey(ELECTIVE_DATES_KEY), JSON.stringify(parsed))
-  } catch {
-    // Ignore storage errors
-  }
-}
-
 export default function ElectiveManagement() {
+  const coreRequest = useRef(0), mastersRequest = useRef(0)
+  const allocatedAcknowledgements = useRef(new Set())
+  const actionLock = useRef(false), groupProgress = useRef({}), linkedWrites = useRef(new Set()), approvalWrites = useRef(new Map())
+  const selectionWrite = useRef(''), selectionLock = useRef(false), selectionScope = useRef(0)
+  const [studentOptions,setStudentOptions] = useCollegeState([])
+  const [studentError,setStudentError] = useState('')
   const navigate = useNavigate()
+  const { selectedCollegeId, selectedAcademicYearId, selectedAcademicYear } = useAcademic()
+  const { canAction } = useScreenAccess()
+  const canCreate = canAction('/elective-management','create'), canEdit = canAction('/elective-management','edit')
   const [activeTab, setActiveTab] = useState('subjects'); const [groups, setGroups] = useCollegeState([]); const [workflowSubjects, setWorkflowSubjects] = useCollegeState([]); const [selections, setSelections] = useCollegeState([], { groups, subjects: workflowSubjects }); const [report, setReport] = useCollegeState([], { groups, subjects: workflowSubjects }); const [profile, setProfile] = useState(null); const [results, setResults] = useState([])
   const [departments, setDepartments] = useCollegeState([]); const [directoryLoading, setDirectoryLoading] = useState(true); const [directoryError, setDirectoryError] = useState(''); const [mastersError, setMastersError] = useState('');
   const [courses, setCourses] = useCollegeState([]); const [branches, setBranches] = useCollegeState([]); const [academicYears, setAcademicYears] = useState([]); const [semesters, setSemesters] = useCollegeState([]); const [activeAcademicYear, setActiveAcademicYear] = useState(''); const [mastersLoading, setMastersLoading] = useState(true)
   const [loading, setLoading] = useState(true); const [profileLoading, setProfileLoading] = useState(true); const [resultsLoading, setResultsLoading] = useState(false); const [error, setError] = useState(''); const [search, setSearch] = useState(''); const [filters, setFilters] = useState({ status: 'All', semester: 'All', branch: 'All', course: 'All', academicYear: 'All', level: 'All', electiveType: 'Elective', approvalStatus: 'All', allocationStatus: 'All' }); const [page, setPage] = useState(1); const [resultPage, setResultPage] = useState(1); const size = 10
-  const [groupModal, setGroupModal] = useState(false); const [editingGroup, setEditingGroup] = useState(null); const [viewingGroup, setViewingGroup] = useState(null); const [viewingSubject, setViewingSubject] = useState(null); const [editingSubject, setEditingSubject] = useState(null); const [subjectEditForm, setSubjectEditForm] = useState(null); const [deletingGroup, setDeletingGroup] = useState(null); const [subjectModal, setSubjectModal] = useState(null); const [groupForm, setGroupForm] = useState(blankGroup()); const [selectedSubjects, setSelectedSubjects] = useState([]); const [selectedGroupId, setSelectedGroupId] = useState(''); const [selectedSubjectId, setSelectedSubjectId] = useState(''); const [actionLoading, setActionLoading] = useState(false); const [groupFieldOverrides, setGroupFieldOverrides] = useState({})
+  const [groupModal, setGroupModal] = useState(false); const [editingGroup, setEditingGroup] = useState(null); const [viewingGroup, setViewingGroup] = useState(null); const [viewingSubject, setViewingSubject] = useState(null); const [subjectModal, setSubjectModal] = useState(null); const [groupForm, setGroupForm] = useState(blankGroup()); const [selectedSubjects, setSelectedSubjects] = useState([]); const [selectedGroupId, setSelectedGroupId] = useState(''); const [selectedSubjectId, setSelectedSubjectId] = useState(''); const [actionLoading, setActionLoading] = useState(false)
   const studentId = profile?.id || profile?.studentId || ''
-  const loadMasters = async () => { setMastersLoading(true); setMastersError(''); try { const [courseRows, branchRows, yearRows, semesterRows, departmentRows] = await Promise.all([courseApi.getAll(), branchApi.getAll(), academicYearApi.getAll(), facultyMasterApi.getSemesters(), departmentApi.getAll()]); setDepartments(unwrap(departmentRows)); const years = unwrap(yearRows); setCourses(unwrap(courseRows)); setBranches(unwrap(branchRows)); setAcademicYears(years); setSemesters(unwrap(semesterRows)); const selected = selectHeaderAcademicYear(years).year; setActiveAcademicYear(selected?.academicYearName || selected?.name || '') } catch (err) { setMastersError(err.message || 'Unable to load academic filters.'); } finally { setMastersLoading(false) } }
-  const loadCore = async (preservedGroupValues = {}) => {
+  const loadMasters = async () => { const version=++mastersRequest.current;setMastersLoading(true); setMastersError(''); try { const [courseRows, branchRows, yearRows, semesterRows, departmentRows] = await Promise.all([courseApi.getAll(), branchApi.getAll(), academicYearApi.getAll(), facultyMasterApi.getSemesters(), departmentApi.getAll()]); if(version!==mastersRequest.current)return;setDepartments(unwrap(departmentRows)); const years = unwrap(yearRows).filter(row=>row.collegeId==null || String(row.collegeId)===String(selectedCollegeId)); setCourses(unwrap(courseRows)); setBranches(unwrap(branchRows)); setAcademicYears(years); setSemesters(unwrap(semesterRows)); const selected = selectHeaderAcademicYear(years).year; setActiveAcademicYear(selectedAcademicYear?.name || selectedAcademicYear?.academicYearName || selected?.academicYearName || selected?.name || '') } catch (err) { if(version===mastersRequest.current)setMastersError(err.message || 'Unable to load academic filters.'); } finally { if(version===mastersRequest.current)setMastersLoading(false) } }
+  const loadCore = async (_preservedGroupValues = {}, propagate = false) => {
+    const version=++coreRequest.current
     setLoading(true)
     setError('')
     try {
@@ -141,31 +108,24 @@ export default function ElectiveManagement() {
 
       const groupsWithSubjects = await Promise.all(rawGroups.map(async group => {
         const id = electiveGroupIdOf(group)
-        let groupSubjects = []
+        let groupSubjects = [], subjectsError = ''
 
         try {
           groupSubjects = await electiveManagementApi.getGroupSubjects(id)
         } catch {
-          /* A group without subjects remains visible for configuration. */
+          subjectsError = 'Unable to load group subjects. Retry the elective directory before changing this group.'
         }
 
-        const preserved =
-          preservedGroupValues[String(id)] ||
-          preservedGroupValues[String(group.groupCode)] ||
-          groupFieldOverrides[String(id)] ||
-          groupFieldOverrides[String(group.groupCode)] ||
-          {}
-
         return {
-          ...group,
+          ...group, subjectsError,
           id,
           groupId: id,
           courseId: group.courseId ?? '',
           branchId: group.branchId ?? '',
           academicYear: group.academicYearName || group.academicYear || '',
           semester: group.semesterName || group.semester || '',
-          electiveType: firstValue(electiveTypeOf(group), preserved.electiveType),
-          credits: firstValue(creditsOf(group), preserved.credits),
+          electiveType: electiveTypeOf(group),
+          credits: creditsOf(group),
           minimumSelection: group.minSelections ?? group.minimumSelection ?? 1,
           maximumSelection: group.maxSelections ?? group.maximumSelection ?? 1,
           selectionStartDate: group.selectionStartDate || '',
@@ -186,18 +146,39 @@ export default function ElectiveManagement() {
         id: item.selectionId,
         approvalStatus: item.approvalStatus,
         allocationStatus:
-          allocationBySelection.get(String(item.selectionId))?.allocationStatus || 'Pending',
+          allocationBySelection.get(String(item.selectionId))?.allocationStatus || 'Not reported',
       }))
 
+      if(version!==coreRequest.current)return
       setGroups(groupsWithSubjects)
+      setSubjectModal(current=>current ? groupsWithSubjects.find(row=>String(row.id)===String(electiveGroupIdOf(current))) || null : null)
       setReport(combined)
     } catch (requestError) {
+      if(version!==coreRequest.current)return
+      setGroups([]); setReport([])
       setError(requestError.message || 'Unable to load elective groups.')
+      if(propagate) throw requestError
     } finally {
-      setLoading(false)
+      if(version===coreRequest.current)setLoading(false)
     }
   }
-  const loadProfile = async () => { setProfileLoading(true); try { const current = await profileApi.getProfile(); setProfile(current); if (current?.id || current?.studentId) { setResultsLoading(true); const id = current.id || current.studentId; const [currentSelections, examResults] = await Promise.all([electiveManagementApi.getStudentSelections(id).catch(() => []), get(`/api/v1/students/${encodeURIComponent(id)}/profile/exam-results`).catch(() => [])]); setSelections(currentSelections); setResults(examResults) } } catch { setProfile(null) } finally { setProfileLoading(false); setResultsLoading(false) } }
+  const loadProfile = async () => {
+    selectionScope.current++;setProfile(null);setSelections([]);setResults([]);setSelectedGroupId('');setSelectedSubjectId('');setProfileLoading(true);setStudentError('')
+    const scope=selectionScope.current
+    try {const records=await studentApi.getAll();if(scope!==selectionScope.current)return;setStudentOptions(records.map(row=>{const academic=row.academic || row.academicInformation || {};return {...row,...academic,id:String(row.studentId ?? row.id),studentId:row.studentId ?? row.id,fullName:row.fullName || row.studentName || row.personal?.fullName || row.name,studentCode:row.studentCode || row.rollNumber}}).filter(row=>!selectedAcademicYearId || String(row.academicYearId)===String(selectedAcademicYearId)))}
+    catch(reason){if(scope===selectionScope.current){setStudentOptions([]);setStudentError(reason.message || 'Unable to load students.')}}
+    finally{if(scope===selectionScope.current)setProfileLoading(false)}
+  }
+  const selectStudent = async id => {
+    const student=studentOptions.find(row=>String(row.studentId)===String(id))
+    setProfile(student || null);setSelections([]);setResults([]);setSelectedGroupId('');setSelectedSubjectId('');selectionWrite.current='';setStudentError('')
+    if(!student)return
+    setProfileLoading(true);setResultsLoading(true)
+    const scope=++selectionScope.current
+    try {const [saved,marks]=await Promise.all([electiveManagementApi.getStudentSelections(student.studentId),studentProfileApi.getExamResults(student.studentId)]);if(scope!==selectionScope.current)return;setSelections(saved);setResults(marks)}
+    catch(reason){if(scope===selectionScope.current)setStudentError(reason.message || 'Unable to load student elective records.')}
+    finally{if(scope===selectionScope.current){setProfileLoading(false);setResultsLoading(false)}}
+  }
   const loadDirectory = useCallback(async () => {
     setDirectoryLoading(true)
     setDirectoryError('')
@@ -211,7 +192,7 @@ export default function ElectiveManagement() {
       setDirectoryLoading(false)
     }
   }, [])
-  useEffect(() => { loadCore(); loadProfile(); loadMasters() }, [])
+  useEffect(() => { allocatedAcknowledgements.current.clear();approvalWrites.current.clear();linkedWrites.current.clear();groupProgress.current={};selectionWrite.current='';setGroupModal(false);setViewingGroup(null);setSubjectModal(null);loadCore();loadProfile();loadMasters();return ()=>{coreRequest.current++;mastersRequest.current++;selectionScope.current++} }, [selectedCollegeId, selectedAcademicYearId])
   useEffect(() => { loadDirectory() }, [loadDirectory])
   useEffect(() => {
     const refresh = () => { if (document.visibilityState === 'visible') loadDirectory() }
@@ -237,7 +218,7 @@ export default function ElectiveManagement() {
       department: typeof departmentValue === 'string' && !/^\d+$/.test(departmentValue) ? departmentValue : 'N/A',
     }
   }), [groups, courses, branches])
-  const selectedGroup = groups.find(row => String(row.id || row.groupId) === String(selectedGroupId)); const eligibleSubjects = workflowRows.filter(subject => eligibleForGroup(subject, selectedGroup) && (selectedGroup?.subjects || []).some(linked => String(linked.subjectId ?? linked.id) === String(subject.id)))
+  const groupsForStudent=groups.filter(group=>profile && ['courseId','branchId','semesterId','academicYearId'].every(key=>Number(profile[key])>0 && String(profile[key])===String(group[key]))); const selectedGroup = groupsForStudent.find(row => String(row.id || row.groupId) === String(selectedGroupId)); const eligibleSubjects = workflowRows.filter(subject => eligibleForGroup(subject, selectedGroup) && (selectedGroup?.subjects || []).some(linked => String(linked.subjectId ?? linked.id) === String(subject.id)))
   const pending = report.filter(row => String(approvalStatus(row)).toLowerCase() === 'pending'); const approved = report.filter(row => String(approvalStatus(row)).toLowerCase() === 'approved'); const pageRows = rows => rows.slice((page - 1) * size, page * size)
   const filteredGroups = useMemo(() => displayGroups.filter(row => !search.trim() || [row.groupCode, row.groupName].some(value => String(value || '').toLowerCase().includes(search.trim().toLowerCase()))), [displayGroups, search])
   const hasSubjectFilter = hasAcademicFilter(filters) || filters.status !== 'All' || Boolean(search.trim())
@@ -262,28 +243,24 @@ export default function ElectiveManagement() {
     return academicFilterOptions(key, filters, { departments, courses, branches, semesters, years })
   }
   const filteredSelections = useMemo(() => selections.filter(row => { const query = search.toLowerCase(); return !query || [row.studentName, row.studentCode, row.rollNumber].some(value => String(value || '').toLowerCase().includes(query)) }), [selections, search])
-  const filteredReport = useMemo(() => report.filter(row => { const query = search.toLowerCase(); return (!query || [row.studentName, row.studentCode, row.subjectName, row.electiveGroupName, row.groupName].some(value => String(value || '').toLowerCase().includes(query))) && (filters.approvalStatus === 'All' || approvalStatus(row) === filters.approvalStatus) && (filters.allocationStatus === 'All' || allocationStatus(row) === filters.allocationStatus) }), [report, search, filters])
+  const filteredReport = useMemo(() => report.filter(row => { const query = search.toLowerCase(); return (!query || [row.studentName, row.studentCode, row.subjectName, row.electiveGroupName, row.groupName].some(value => String(value || '').toLowerCase().includes(query))) && (filters.approvalStatus === 'All' || String(approvalStatus(row)).toLowerCase() === filters.approvalStatus.toLowerCase()) && (filters.allocationStatus === 'All' || String(allocationStatus(row)).toLowerCase() === filters.allocationStatus.toLowerCase()) }), [report, search, filters])
+  const pendingFiltered = pending.filter(row=>(!search || [row.studentName,row.studentCode,row.subjectName,row.subjectCode].join(' ').toLowerCase().includes(search.toLowerCase())) && (filters.approvalStatus==='All' || String(approvalStatus(row)).toLowerCase()===filters.approvalStatus.toLowerCase()))
   const reportGroups = new Set(report.map(row => row.groupCode || row.electiveGroupCode || row.groupName || row.electiveGroupName).filter(Boolean)).size
   const kpis = { groups: groups.length, active: groups.filter(row => ['active', 'open'].includes(String(row.status).toLowerCase())).length, selections: report.length, pending: pending.length, approved: approved.length, allocated: report.filter(row => String(allocationStatus(row)).toLowerCase() === 'allocated').length }
   const saveGroup = async event => {
     event.preventDefault()
+    if(actionLock.current || !canCreate) return
+    if(editingGroup) return showError('Elective group editing is unavailable: no verified update endpoint exists.')
 
     const year = academicYears.find(
-      item => String(item.academicYearName || item.name || '') === String(groupForm.academicYear)
+      item => String(item.academicYearId ?? item.id) === String(groupForm.academicYear)
     )
 
-    const semesterNumber = value =>
-      String(value ?? '').replace(/^Semester\s*/i, '').trim()
 
-    const semester = semesters.find(item =>
-      [item.semesterName, item.name, item.semesterNumber].some(
-        value => semesterNumber(value) === semesterNumber(groupForm.semester)
-      )
-    )
+    const semester = semesters.find(item => String(item.semesterId ?? item.id) === String(groupForm.semester) && (!item.courseId || String(item.courseId) === String(groupForm.course)) && (!item.branchId || String(item.branchId) === String(groupForm.branch)) && (!item.academicYearId || String(item.academicYearId) === String(year?.academicYearId ?? year?.id)))
 
     const courseId = Number(groupForm.course)
     const branchId = Number(groupForm.branch)
-    const credits = groupForm.credits === '' ? null : Number(groupForm.credits)
     const minimumSelection = Number(groupForm.minimumSelection)
     const maximumSelection = Number(groupForm.maximumSelection)
 
@@ -294,14 +271,6 @@ export default function ElectiveManagement() {
       !branchId
     ) {
       return showError('Select valid course, branch, academic year, and semester IDs.')
-    }
-
-    if (!groupForm.electiveType) {
-      return showError('Please select Elective Type.')
-    }
-
-    if (groupForm.credits === '' || !Number.isFinite(credits) || credits <= 0) {
-      return showError('Please enter valid Credits greater than 0.')
     }
 
     if (minimumSelection < 1 || maximumSelection < 1) {
@@ -320,6 +289,8 @@ export default function ElectiveManagement() {
       return showError('Selection end date cannot be before the start date.')
     }
 
+    if (!groupForm.groupCode.trim() || !groupForm.groupName.trim()) return showError('Elective code and name are required.')
+    if (!Number.isInteger(minimumSelection) || !Number.isInteger(maximumSelection)) return showError('Selection limits must be whole numbers.')
     const payload = {
       groupCode: groupForm.groupCode.trim(),
       groupName: groupForm.groupName.trim(),
@@ -330,92 +301,59 @@ export default function ElectiveManagement() {
       academicYearId: Number(year.academicYearId || year.id),
       minSelections: minimumSelection,
       maxSelections: maximumSelection,
-      electiveType: groupForm.electiveType,
-      credits,
-      selectionStartDate: groupForm.selectionStartDate || null,
-      selectionEndDate: groupForm.selectionEndDate || null,
+
     }
 
-    // Frontend fallback values. If the backend does not return these two
-    // fields from GET /electives/groups, the entered values remain visible.
-    const preservedValues = {
-      electiveType: groupForm.electiveType,
-      credits: groupForm.credits,
-    }
-
-    setActionLoading(true)
-
+    actionLock.current=true;setActionLoading(true)
     try {
-      let savedGroupId = editingGroup ? electiveGroupIdOf(editingGroup) : null
-
-      if (editingGroup) {
-        await electiveManagementApi.updateGroup(savedGroupId, payload)
-        showSuccess('Elective group updated.')
-      } else {
-        const created = await electiveManagementApi.createGroup(payload)
-
-        savedGroupId =
-          electiveGroupIdOf(created) ||
-          electiveGroupIdOf(created?.data) ||
-          electiveGroupIdOf(created?.data?.data)
+      if(groupProgress.current.uncertain) throw new Error('Verify elective groups before another creation. The saved group identity was not returned.')
+      if(!groupProgress.current.id){
+        const created=await electiveManagementApi.createGroup(payload)
+        const id=electiveGroupIdOf(created) || electiveGroupIdOf(created?.data)
+        if(!id){groupProgress.current.uncertain=true;throw new Error('Group created without an identity. Verify groups before submitting again.')}
+        groupProgress.current.id=id
       }
-
-      setGroupModal(false)
-      setEditingGroup(null)
-
-      const preservedGroupValues = {
-        [String(savedGroupId || payload.groupCode)]: preservedValues,
-        [String(payload.groupCode)]: preservedValues,
-      }
-
-      setGroupFieldOverrides(current => ({ ...current, ...preservedGroupValues }))
-      await loadCore(preservedGroupValues)
-    } catch (requestError) {
-      showError(
-        requestError.message ||
-        `Unable to ${editingGroup ? 'update' : 'create'} elective group.`
-      )
-    } finally {
-      setActionLoading(false)
-    }
+      await loadCore({},true);setGroupModal(false);setEditingGroup(null);groupProgress.current={};showSuccess('Elective group created.')
+    } catch(reason){showError(reason.message || 'Unable to create elective group.')}
+    finally{actionLock.current=false;setActionLoading(false)}
   }
-  const addSubjects = async () => { const subjectIds = selectedSubjects.map(subject => Number(subject.subjectId || subject.id)).filter(id => Number.isInteger(id) && id > 0); if (directoryLoading || directoryError || selectedSubjects.some(selected => !subjects.some(subject => String(subject.id) === String(selected.subjectId ?? selected.id)))) return showError('Refresh and select only eligible elective subjects.'); if (!subjectIds.length) return showError('Select subjects with valid backend IDs.'); setActionLoading(true); try { await electiveManagementApi.addGroupSubjects(subjectModal.electiveGroupId || subjectModal.id || subjectModal.groupId, subjectIds); showSuccess('Subjects added to the elective group.'); setSubjectModal(null); await loadCore() } catch (requestError) { showError(requestError.message || 'Unable to add subjects.') } finally { setActionLoading(false) } }
+  const addSubjects = async () => {
+    if(!canEdit || actionLock.current)return
+    if(subjectModal?.subjectsError)return showError(subjectModal.subjectsError)
+    const subjectIds=selectedSubjects.map(row=>Number(row.subjectId || row.id))
+    if(!subjectIds.length || subjectIds.some(id=>!Number.isSafeInteger(id)||id<=0) || directoryLoading || directoryError || selectedSubjects.some(row=>!subjects.some(subject=>String(subject.id)===String(row.subjectId ?? row.id))))return showError('Select eligible subjects from the current group mapping.')
+    const id=electiveGroupIdOf(subjectModal),signature=JSON.stringify([id,[...subjectIds].sort()]);actionLock.current=true;setActionLoading(true)
+    try{if(!linkedWrites.current.has(signature)){await electiveManagementApi.addGroupSubjects(id,subjectIds);linkedWrites.current.add(signature)}await loadCore({},true);setSubjectModal(null);showSuccess('Subjects linked to elective group.')}
+    catch(reason){showError(reason.message || 'Unable to link subjects.')}finally{actionLock.current=false;setActionLoading(false)}
+  }
   const openSubjectEdit = subject => {
-    setEditingSubject(subject)
-    setSubjectEditForm({
-      subjectCode: subject.subjectCode || subject.code || '',
-      subjectName: subject.subjectName || subject.name || '',
-      courseId: subject.courseId || '',
-      branchId: subject.branchId || '',
-      semesterId: subject.semesterId || '',
-      academicYearId: subject.academicYearId || '',
-      credits: subject.credits ?? '',
-      subjectType: subject.subjectType || '',
-      electiveType: subject.electiveType || 'Elective',
-      description: subject.description || '',
-      status: subject.status || 'Active',
-    })
+    if (!canEdit) return
+    navigate('/subject-management', { state: { subjectAction: { mode: 'edit', id: subject.id, returnTo: '/elective-management' } } })
   }
-  const saveSubjectEdit = async event => {
+  const submitSelection = async event => {
     event.preventDefault()
-    if (!editingSubject || !subjectEditForm) return
-    setActionLoading(true)
-    try {
-      await subjectService.updateSubject(editingSubject.id, subjectEditForm)
-      showSuccess('Subject updated successfully.')
-      setEditingSubject(null)
-      setSubjectEditForm(null)
-      await Promise.all([loadCore(), loadDirectory()])
-    } catch (requestError) {
-      showError(requestError.message || 'Unable to update subject.')
-    } finally {
-      setActionLoading(false)
-    }
+    if(!canCreate || selectionLock.current)return
+    if(!studentId || !selectedGroup || !selectedSubjectId)return showError('Select a student, mapped elective group and subject.')
+    const subject=eligibleSubjects.find(row=>String(row.id || row.subjectId)===String(selectedSubjectId))
+    if(!subject || directoryLoading || directoryError || selectedGroup.subjectsError)return showError('Select an available elective subject from a successfully loaded group.')
+    const payload={electiveGroupId:Number(selectedGroup.electiveGroupId || selectedGroup.id),subjectId:Number(subject.subjectId || subject.id),academicYearId:Number(selectedGroup.academicYearId),semesterId:Number(selectedGroup.semesterId)}
+    const signature=JSON.stringify([studentId,payload]);selectionLock.current=true;setActionLoading(true)
+    try{if(selectionWrite.current!==signature){await electiveManagementApi.createStudentSelection(studentId,payload);selectionWrite.current=signature}setSelections(await electiveManagementApi.getStudentSelections(studentId));await loadCore({},true);setSelectedSubjectId('');showSuccess('Elective selection submitted.')}
+    catch(reason){showError(reason.message || 'Unable to complete elective selection. Acknowledged writes are retained for refresh retry.')}
+    finally{selectionLock.current=false;setActionLoading(false)}
   }
-  const submitSelection = async event => { event.preventDefault(); if (!studentId || !selectedGroup || !selectedSubjectId) return showError('Student profile, group, and subject are required.'); const subject = eligibleSubjects.find(row => String(row.id || row.subjectId) === String(selectedSubjectId)); if (!subject || directoryLoading || directoryError) return showError('Select an available elective subject.'); setActionLoading(true); try { await electiveManagementApi.createStudentSelection(studentId, { electiveGroupId: Number(selectedGroup.electiveGroupId || selectedGroup.id), subjectId: Number(subject.subjectId || subject.id), academicYearId: Number(selectedGroup.academicYearId), semesterId: Number(selectedGroup.semesterId) }); showSuccess('Elective selection submitted.'); setSelectedSubjectId(''); setSelections(await electiveManagementApi.getStudentSelections(studentId)); await loadCore() } catch (requestError) { showError(requestError.message || 'Unable to complete elective selection.') } finally { setActionLoading(false) } }
-  const updateApproval = async (row, status) => { if (status === 'Approved' && (directoryLoading || directoryError || !electiveIds.has(String(row.subjectId)))) return showError('Only current elective subjects can be approved.'); setActionLoading(true); try { await electiveManagementApi.updateApproval(rowId(row), { approvalStatus: status.toUpperCase() }); showSuccess(`Selection ${status.toLowerCase()}.`); await loadCore() } catch (requestError) { showError(requestError.message || 'Unable to update approval.') } finally { setActionLoading(false) } }
-  const allocate = async () => { if (directoryLoading || directoryError || approved.some(row => String(allocationStatus(row)).toLowerCase() !== 'allocated' && !electiveIds.has(String(row.subjectId)))) return showError('Only current elective subjects can be allocated. Refresh and review approved selections.'); setActionLoading(true); try { const pendingAllocations = approved.filter(row => String(allocationStatus(row)).toLowerCase() !== 'allocated'); const results = await Promise.allSettled(pendingAllocations.map(row => electiveManagementApi.createAllocation(rowId(row), { selectionId: Number(rowId(row)) }))); const failed = results.filter(result => result.status === 'rejected'); if (failed.length) throw new Error(`${failed.length} of ${pendingAllocations.length} approved selections could not be allocated. ${failed[0].reason?.message || ''}`); showSuccess('Electives allocated successfully.'); await loadCore() } catch (requestError) { showError(requestError.message || 'Unable to allocate electives.') } finally { setActionLoading(false) } }
+  const updateApproval = async (row,status) => {
+    if(!canEdit || actionLock.current)return
+    if(status==='Approved' && (directoryLoading || directoryError || !electiveIds.has(String(row.subjectId))))return showError('Only current elective subjects can be approved.')
+    const id=rowId(row);actionLock.current=true;setActionLoading(true)
+    try{if(approvalWrites.current.get(String(id))!==status){await electiveManagementApi.updateApproval(id,{approvalStatus:status.toUpperCase()});approvalWrites.current.set(String(id),status)}await loadCore({},true);showSuccess('Selection '+status.toLowerCase()+'.')}
+    catch(reason){showError(reason.message || 'Unable to update approval.')}finally{actionLock.current=false;setActionLoading(false)}
+  }
+  const allocate = async () => { if (!canEdit || actionLock.current) return; if (directoryLoading || directoryError || approved.some(row => String(allocationStatus(row)).toLowerCase() !== 'allocated' && !electiveIds.has(String(row.subjectId)))) return showError('Only current elective subjects can be allocated. Refresh and review approved selections.'); actionLock.current=true; setActionLoading(true); try { const pendingAllocations = approved.filter(row => String(allocationStatus(row)).toLowerCase() !== 'allocated' && !allocatedAcknowledgements.current.has(String(rowId(row)))); if (!pendingAllocations.length) return showError('No unallocated approved selections are available.'); const results = await Promise.allSettled(pendingAllocations.map(async row => { const result = await electiveManagementApi.createAllocation(rowId(row), { selectionId: Number(rowId(row)) }); allocatedAcknowledgements.current.add(String(rowId(row))); return result })); const failed = results.filter(result => result.status === 'rejected'); if (failed.length) throw new Error(`${failed.length} of ${pendingAllocations.length} approved selections could not be allocated. ${failed[0].reason?.message || ''}`); showSuccess('Electives allocated successfully.'); await loadCore() } catch (requestError) { await loadCore(); showError(requestError.message || 'Unable to allocate electives.') } finally { actionLock.current=false; setActionLoading(false) } }
   const openGroup = group => {
+    if(group)return showError('Elective group edit is unavailable until a backend update endpoint is supported.')
+    if(!canCreate)return
+    groupProgress.current={}
     setEditingGroup(group || null)
     setGroupForm(group ? {
       ...blankGroup(),
@@ -424,28 +362,16 @@ export default function ElectiveManagement() {
       course: String(group.courseId || ''),
       branch: String(group.branchId || ''),
       academicYear: group.academicYear || '',
-      semester: group.semester || '',
+      semester: String(group.semesterId || ''),
       electiveType: electiveTypeOf(group),
       credits: creditsOf(group),
       minimumSelection: group.minimumSelection ?? 1,
       maximumSelection: group.maximumSelection ?? 1,
       selectionStartDate: String(group.selectionStartDate || '').slice(0, 10),
       selectionEndDate: String(group.selectionEndDate || '').slice(0, 10),
-    } : { ...blankGroup(), academicYear: activeAcademicYear })
+    } : { ...blankGroup(), academicYear: String(selectedAcademicYearId || '') })
     setGroupModal(true)
   }
-  const removeGroup = async () => {
-    if (!deletingGroup) return
-    setActionLoading(true)
-    try {
-      await electiveManagementApi.deleteGroup(electiveGroupIdOf(deletingGroup))
-      showSuccess('Elective group deleted.')
-      setDeletingGroup(null)
-      await loadCore()
-    } catch (requestError) { showError(requestError.message || 'Unable to delete elective group.') }
-    finally { setActionLoading(false) }
-  }
-
   if (viewingSubject) {
     const subject = viewingSubject
     const subjectCode = subject.subjectCode || subject.code
@@ -527,33 +453,19 @@ export default function ElectiveManagement() {
     )
   }
 
-  if (groupModal) {
-    return (
-      <DashboardLayout>
-        <main className="em-screen">
-          <header className="em-header">
-            <div>
-              <button type="button" className="cm-button secondary erp-btn erp-btn--secondary" onClick={() => setGroupModal(false)} style={{ marginBottom: '10px' }}>
-                &larr; Back to Elective Groups
-              </button>
-              <h1>{editingGroup ? 'Edit Elective Group' : 'Create Elective Group'}</h1>
-              <p>Configure elective group parameters, academic mapping, and selection window.</p>
-            </div>
-          </header>
-
-          <div className="erp-two-column-layout" data-without-live-preview="true">
+  const groupEditor = groupModal && <SharedViewDialog title={editingGroup ? 'Edit Elective Group' : 'Create Elective Group'} onClose={() => setGroupModal(false)} busy={actionLoading} showExport={false} hideFooter maxWidth="1000px"><div className="erp-two-column-layout" data-without-live-preview="true">
             <div className="erp-card-main">
               <form className="erp-form-scroll-body" onSubmit={saveGroup}>
                 <div className="sm-form-grid-2">
-                  {[['groupCode', 'Elective Code'], ['groupName', 'Elective Name'], ['academicYear', 'Academic Year'], ['credits', 'Credits'], ['selectionStartDate', 'Selection Start Date'], ['selectionEndDate', 'Selection End Date']].map(([key, label]) => (
+                  {[['groupCode', 'Elective Code'], ['groupName', 'Elective Name'], ['academicYear', 'Academic Year']].map(([key, label]) => (
                     <label className="sm-field" key={key}>
                       <span>{label}<b className="em-required-star">*</b></span>
                       {key === 'academicYear' ? (
-                        <ProjectSelect value={groupForm.academicYear} onChange={event => setGroupForm({ ...groupForm, academicYear: event.target.value })} required>
+                        <ProjectSelect value={groupForm.academicYear} onChange={event => setGroupForm({ ...groupForm, academicYear: event.target.value, semester: '' })} required>
                           <option value="">Select academic year</option>
                           {academicYears.map(year => {
                             const name = year.academicYearName || year.name
-                            return name ? <option key={year.academicYearId || year.id || name} value={name}>{name}</option> : null
+                            return name ? <option key={year.academicYearId || year.id || name} value={String(year.academicYearId ?? year.id)}>{name}</option> : null
                           })}
                         </ProjectSelect>
                       ) : (
@@ -574,7 +486,7 @@ export default function ElectiveManagement() {
                       label="Course"
                       value={groupForm.course}
                       options={courseOptions(courses)}
-                      onChange={value => setGroupForm({ ...groupForm, course: value, branch: '' })}
+                      onChange={value => setGroupForm({ ...groupForm, course: value, branch: '', semester: '' })}
                       placeholder={mastersLoading ? 'Loading courses...' : 'Select course'}
                       searchPlaceholder="Search course..."
                       noOptionsMessage="No courses found."
@@ -587,7 +499,7 @@ export default function ElectiveManagement() {
                       label="Branch"
                       value={groupForm.branch}
                       options={branchOptions(branches, groupForm.course)}
-                      onChange={value => setGroupForm({ ...groupForm, branch: value })}
+                      onChange={value => setGroupForm({ ...groupForm, branch: value, semester: '' })}
                       placeholder={!groupForm.course ? 'Select a course first' : mastersLoading ? 'Loading branches...' : 'Select branch'}
                       searchPlaceholder="Search branch or department..."
                       noOptionsMessage="No branches are present."
@@ -598,12 +510,12 @@ export default function ElectiveManagement() {
                     <span>Semester</span>
                     <ProjectSelect value={groupForm.semester} onChange={event => setGroupForm({ ...groupForm, semester: event.target.value })} required>
                       <option value="">Select semester</option>
-                      {Array.from({ length: 8 }, (_, index) => `Semester ${index + 1}`).map(semester => <option key={semester} value={semester}>{semester}</option>)}
+                      {semesters.filter(row => groupForm.course && groupForm.branch && (!row.courseId || String(row.courseId)===String(groupForm.course)) && (!row.branchId || String(row.branchId)===String(groupForm.branch)) && (!row.academicYearId || String(row.academicYearId)===String(academicYears.find(year=>String(year.academicYearId ?? year.id)===String(groupForm.academicYear))?.academicYearId ?? academicYears.find(year=>String(year.academicYearName||year.name)===String(groupForm.academicYear))?.id))).map(row=><option key={row.semesterId ?? row.id} value={row.semesterId ?? row.id}>{row.semesterName || row.name || row.semesterNumber}</option>)}
                     </ProjectSelect>
                   </label>
                   <label className="sm-field">
-                    <span>Elective Type</span>
-                    <ProjectSelect value={groupForm.electiveType} onChange={event => setGroupForm({ ...groupForm, electiveType: event.target.value })} required>
+                    <span>Elective Type (backend unavailable)</span>
+                    <ProjectSelect disabled value={groupForm.electiveType} onChange={event => setGroupForm({ ...groupForm, electiveType: event.target.value })} required>
                       <option value="">Select</option>
                       <option value="Elective">Elective</option>
                       <option value="Non-Elective">Non-Elective</option>
@@ -632,10 +544,7 @@ export default function ElectiveManagement() {
 
             <></>
           </div>
-        </main>
-      </DashboardLayout>
-    )
-  }
+</SharedViewDialog>
 
   return (
     <DashboardLayout>
@@ -653,6 +562,7 @@ export default function ElectiveManagement() {
             </button>
           ))}
         </div>
+        {error && activeTab !== 'groups' && <p role="alert">{error}<button onClick={()=>loadCore()}>Retry elective records</button></p>}
         <section className="em-kpi-grid">
           {[[FiLayers, kpis.groups, 'Total Elective Groups'], [FiAward, kpis.active, 'Active Groups'], [FiUsers, kpis.selections, 'Total Selections'], [FiCheckCircle, kpis.pending, 'Pending Approvals'], [FiCheck, kpis.approved, 'Approved Selections'], [FiCheckCircle, kpis.allocated, 'Allocated Students']].map(([Icon, value, label]) => (
             <div className="em-kpi-card" key={label}>
@@ -749,16 +659,16 @@ export default function ElectiveManagement() {
           </section>
         )}
         {activeTab === 'groups' && (
-          <section className="sm-card">
-            <div className="em-toolbar"><div className="em-search"><FiSearch /><input aria-label="Search elective groups" placeholder="Search elective groups..." value={search} onChange={event => setSearch(event.target.value)} /></div><button type="button" className="sm-btn sm-btn--primary" onClick={() => openGroup()}><FiPlus /> Create Elective Group</button><button type="button" className="sm-btn sm-btn--secondary" onClick={() => { loadCore(); loadDirectory() }}>Refresh</button></div>
-            {loading ? <div className="em-loading">Loading elective groups...</div> : error ? <div role="alert">{error}<button type="button" onClick={() => loadCore()}>Retry</button></div> : !filteredGroups.length ? <DirectoryEmptyState title="No elective groups found." actionLabel="Create Elective Group" onAction={() => openGroup()} /> : <div className="sm-table-wrap"><table className="em-table"><thead><tr><th>Group</th><th>Course</th><th>Branch</th><th>Semester</th><th>Status</th><th>Actions</th></tr></thead><tbody>{pageRows(filteredGroups).map(group => <tr key={group.id}><td>{group.groupCode}<span className="em-cell-subtitle">{group.groupName}</span></td><td>{group.course}</td><td>{group.branch}</td><td>{group.semester}</td><td><StatusBadge value={group.status} /></td><td><div className="em-row-actions"><button type="button" onClick={() => setViewingGroup(group)}>View</button><button type="button" onClick={() => openGroup(group)}>Edit</button><button type="button" onClick={() => { setSubjectModal(group); setSelectedSubjects([]); loadDirectory() }}>Link Subjects</button><button type="button" onClick={() => setDeletingGroup(group)}><FiTrash2 /> Delete</button></div></td></tr>)}</tbody></table></div>}
+          <section className="sm-card"><p role="status">Group editing, deletion, status, group credits and selection windows are unavailable: no verified writable backend capability exists.</p>
+            <div className="em-toolbar"><div className="em-search"><FiSearch /><input aria-label="Search elective groups" placeholder="Search elective groups..." value={search} onChange={event => setSearch(event.target.value)} /></div><button type="button" className="sm-btn sm-btn--primary" hidden={!canCreate} onClick={() => openGroup()}><FiPlus /> Create Elective Group</button><button type="button" className="sm-btn sm-btn--secondary" onClick={() => { loadCore(); loadDirectory() }}>Refresh</button></div>
+            {loading ? <div className="em-loading">Loading elective groups...</div> : error ? <div role="alert">{error}<button type="button" onClick={() => loadCore()}>Retry</button></div> : !filteredGroups.length ? <DirectoryEmptyState title="No elective groups found." actionLabel="Create Elective Group" onAction={() => openGroup()} /> : <div className="sm-table-wrap"><table className="em-table"><thead><tr><th>Group</th><th>Course</th><th>Branch</th><th>Semester</th><th>Status</th><th>Actions</th></tr></thead><tbody>{pageRows(filteredGroups).map(group => <tr key={group.id}><td>{group.groupCode}<span className="em-cell-subtitle">{group.groupName}</span>{group.subjectsError && <p role="alert">{group.subjectsError} <button onClick={()=>loadCore()}>Retry group subjects</button></p>}</td><td>{group.course}</td><td>{group.branch}</td><td>{group.semester}</td><td><StatusBadge value={group.status} /></td><td><div className="em-row-actions"><button type="button" onClick={() => setViewingGroup(group)}>View</button><button type="button" disabled title="No verified group update endpoint">Edit unavailable</button><button type="button" hidden={!canEdit} onClick={() => { setSubjectModal(group); setSelectedSubjects([]); loadDirectory() }}>Link Subjects</button><button type="button" disabled title="No verified group delete endpoint"><FiTrash2 /> Delete unavailable</button></div></td></tr>)}</tbody></table></div>}
             <Pagination page={page} pageCount={Math.ceil(filteredGroups.length / size)} total={filteredGroups.length} size={size} onChange={setPage} />
           </section>
         )}
         {activeTab === 'selection' && (
           <>
             <StudentCard profile={profile} loading={profileLoading} />
-            <section className="em-workflow-grid">
+            <><label className="sm-field">Student<ProjectSelect value={studentId} disabled={profileLoading || actionLoading} onChange={event=>selectStudent(event.target.value)}><option value="">Select a student</option>{studentOptions.map(student=><option key={student.studentId} value={student.studentId}>{student.fullName} · {student.studentCode}</option>)}</ProjectSelect></label>{studentError && <p role="alert">{studentError}<button onClick={()=>studentId ? selectStudent(studentId) : loadProfile()}>Retry student records</button></p>}<section className="em-workflow-grid">
               <div className="sm-card">
                 <div className="sm-card-header"><h2>Student Elective Selection</h2></div>
                 {profileLoading ? (
@@ -775,7 +685,7 @@ export default function ElectiveManagement() {
                       Elective Group
                       <ProjectSelect value={selectedGroupId} onChange={event => { setSelectedGroupId(event.target.value); setSelectedSubjectId('') }} required>
                         <option value="">Select group</option>
-                        {groups.filter(group => ['open', 'active'].includes(String(group.status).toLowerCase())).map(group => (
+                        {groupsForStudent.filter(group => ['open', 'active'].includes(String(group.status).toLowerCase())).map(group => (
                           <option key={group.id || group.groupId} value={group.id || group.groupId}>{group.groupCode} - {group.groupName}</option>
                         ))}
                       </ProjectSelect>
@@ -791,7 +701,7 @@ export default function ElectiveManagement() {
                         ))}
                       </ProjectSelect>
                     </label>
-                    <button type="submit" className="sm-btn sm-btn--primary" disabled={actionLoading}><FiCheck /> Submit Selection</button>
+                    <button type="submit" className="sm-btn sm-btn--primary" disabled={actionLoading || !canCreate}><FiCheck /> Submit Selection</button>
                   </form>
                 )}
               </div>
@@ -810,7 +720,7 @@ export default function ElectiveManagement() {
             <section className="sm-card em-results-card">
               <div className="sm-card-header"><h2>Academic Results</h2></div>
               {resultsLoading ? <div className="em-loading">Loading examination results...</div> : <ResultsTable rows={results} page={resultPage} size={size} setPage={setResultPage} />}
-            </section>
+            </section></>
           </>
         )}
         {activeTab === 'approval' && (
@@ -820,8 +730,8 @@ export default function ElectiveManagement() {
               <span className="em-muted">{pending.length} pending</span>
             </div>
             <Toolbar search={search} setSearch={setSearch} filters={filters} setFilters={setFilters} options={['approvalStatus']} values={() => ['Pending', 'Approved', 'Rejected']} placeholder="Search student..." />
-            <SelectionTable rows={pageRows(pending)} approval onApproval={updateApproval} search={search} />
-            <Pagination page={page} pageCount={Math.ceil(pending.length / size)} total={pending.length} size={size} onChange={setPage} />
+            <SelectionTable rows={pageRows(pendingFiltered)} approval={canEdit} onApproval={updateApproval} search={search} />
+            <Pagination page={page} pageCount={Math.ceil(pendingFiltered.length / size)} total={pendingFiltered.length} size={size} onChange={setPage} />
           </section>
         )}
         {activeTab === 'allocation' && (
@@ -831,7 +741,7 @@ export default function ElectiveManagement() {
                 <h2>Elective Allocation</h2>
                 <p className="em-muted">Review approved selections before running allocation.</p>
               </div>
-              <button type="button" className="sm-btn sm-btn--primary" onClick={allocate} disabled={actionLoading || !approved.length}><FiCheck /> Allocate Electives</button>
+              <button type="button" className="sm-btn sm-btn--primary" onClick={allocate} disabled={!canEdit || actionLoading || !approved.length}><FiCheck /> Allocate Electives</button>
             </div>
             <SelectionTable rows={approved} emptyTitle="No approved selections found" />
           </section>
@@ -857,6 +767,7 @@ export default function ElectiveManagement() {
             <Pagination page={page} pageCount={Math.ceil(filteredReport.length / size)} total={filteredReport.length} size={size} onChange={setPage} />
           </section>
         )}
+        {groupEditor}
         {viewingSubject && (
           <SharedViewDialog
             title="Subject Details"
@@ -891,50 +802,20 @@ export default function ElectiveManagement() {
               </div>
           </SharedViewDialog>
         )}
-        {editingSubject && subjectEditForm && (
-          <div className="sm-modal-backdrop" onClick={actionLoading ? undefined : () => { setEditingSubject(null); setSubjectEditForm(null) }}>
-            <section className="sm-modal" role="dialog" aria-modal="true" aria-labelledby="em-subject-edit-title" onClick={event => event.stopPropagation()}>
-              <header className="sm-modal-header"><h2 id="em-subject-edit-title">Edit Subject</h2><button type="button" className="sm-icon-btn" disabled={actionLoading} onClick={() => { setEditingSubject(null); setSubjectEditForm(null) }} aria-label="Close"><FiX /></button></header>
-              <form onSubmit={saveSubjectEdit}>
-                <div className="sm-modal-body">
-                  <div className="em-subject-edit-grid">
-                    <label>Subject Code<input required value={subjectEditForm.subjectCode} onChange={event => setSubjectEditForm({ ...subjectEditForm, subjectCode: event.target.value })} /></label>
-                    <label>Subject Name<input required value={subjectEditForm.subjectName} onChange={event => setSubjectEditForm({ ...subjectEditForm, subjectName: event.target.value })} /></label>
-                    <label>Credits<input type="number" min="0" step="0.5" value={subjectEditForm.credits} onChange={event => setSubjectEditForm({ ...subjectEditForm, credits: event.target.value })} /></label>
-                    <label>Subject Type<input value={subjectEditForm.subjectType} onChange={event => setSubjectEditForm({ ...subjectEditForm, subjectType: event.target.value })} /></label>
-                    <label>Elective Type<ProjectSelect value={subjectEditForm.electiveType} onChange={event => setSubjectEditForm({ ...subjectEditForm, electiveType: event.target.value })}><option value="Elective">Elective</option><option value="Non-Elective">Non-Elective</option></ProjectSelect></label>
-                    <label>Status<ProjectSelect value={subjectEditForm.status} onChange={event => setSubjectEditForm({ ...subjectEditForm, status: event.target.value })}><option value="Active">Active</option><option value="Inactive">Inactive</option></ProjectSelect></label>
-                    <label className="em-subject-edit-description">Description<textarea rows="3" value={subjectEditForm.description} onChange={event => setSubjectEditForm({ ...subjectEditForm, description: event.target.value })} /></label>
-                  </div>
-                </div>
-                <footer className="sm-modal-footer"><button type="button" className="sm-btn sm-btn--secondary" disabled={actionLoading} onClick={() => { setEditingSubject(null); setSubjectEditForm(null) }}>Cancel</button><button type="submit" className="sm-btn sm-btn--primary" disabled={actionLoading}>{actionLoading ? 'Saving...' : 'Save Changes'}</button></footer>
-              </form>
-            </section>
-          </div>
-        )}
         {viewingGroup && (
-          <div className="sm-modal-backdrop" onClick={() => setViewingGroup(null)}>
-            <section className="sm-modal" role="dialog" aria-modal="true" aria-labelledby="em-group-view-title" onClick={event => event.stopPropagation()}>
-              <header className="sm-modal-header"><h2 id="em-group-view-title">Elective Group Details</h2><button type="button" className="sm-icon-btn" onClick={() => setViewingGroup(null)} aria-label="Close"><FiX /></button></header>
+          <SharedViewDialog title={'Elective Group Details'} onClose={() => setViewingGroup(null)} busy={actionLoading} showExport={false} hideFooter maxWidth="900px">
+
+
               <div className="sm-modal-body em-group-details">
                 {[['Elective Code', viewingGroup.groupCode], ['Elective Name', viewingGroup.groupName], ['Course', viewingGroup.course], ['Department', viewingGroup.department], ['Branch', viewingGroup.branch], ['Academic Year', viewingGroup.academicYear], ['Semester', viewingGroup.semester], ['Elective Type', electiveTypeOf(viewingGroup)], ['Credits', creditsOf(viewingGroup)], ['Minimum / Maximum Selection', `${viewingGroup.minimumSelection} / ${viewingGroup.maximumSelection}`], ['Selection Start Date', viewingGroup.selectionStartDate], ['Selection End Date', viewingGroup.selectionEndDate], ['Status', viewingGroup.status]].map(([label, value]) => <div key={label}><span>{label}</span><strong>{text(value, '-')}</strong></div>)}
               </div>
               <footer className="sm-modal-footer"><button type="button" className="sm-btn sm-btn--secondary" onClick={() => setViewingGroup(null)}>Close</button><button type="button" className="sm-btn sm-btn--primary" onClick={() => { const group = viewingGroup; setViewingGroup(null); openGroup(group) }}><FiEdit2 /> Edit Group</button></footer>
-            </section>
-          </div>
-        )}
-        {deletingGroup && (
-          <div className="sm-modal-backdrop" onClick={actionLoading ? undefined : () => setDeletingGroup(null)}>
-            <section className="sm-modal" role="alertdialog" aria-modal="true" aria-labelledby="em-group-delete-title" onClick={event => event.stopPropagation()}>
-              <header className="sm-modal-header"><h2 id="em-group-delete-title">Delete Elective Group?</h2><button type="button" className="sm-icon-btn" disabled={actionLoading} onClick={() => setDeletingGroup(null)} aria-label="Close"><FiX /></button></header>
-              <div className="sm-modal-body"><p><strong>{deletingGroup.groupCode} - {deletingGroup.groupName}</strong> will be removed from the group list.</p></div>
-              <footer className="sm-modal-footer"><button type="button" className="sm-btn sm-btn--secondary" disabled={actionLoading} onClick={() => setDeletingGroup(null)}>Cancel</button><button type="button" className="sm-btn sm-btn--danger" disabled={actionLoading} onClick={removeGroup}>{actionLoading ? 'Deleting...' : 'Delete Group'}</button></footer>
-            </section>
-          </div>
+
+          </SharedViewDialog>
         )}
         {subjectModal && (
-          <div className="sm-modal-backdrop" onClick={() => setSubjectModal(null)}>
-            <div className="sm-modal" onClick={event => event.stopPropagation()}>
+          <SharedViewDialog title={'Manage Subjects: ' + subjectModal.groupCode} onClose={() => setSubjectModal(null)} busy={actionLoading} showExport={false} hideFooter maxWidth="900px">
+
               <div className="sm-modal-header">
                 <h2>Manage Subjects: {subjectModal.groupCode}</h2>
                 <button type="button" className="sm-icon-btn" onClick={() => setSubjectModal(null)} aria-label="Close"><FiX /></button>
@@ -971,13 +852,10 @@ export default function ElectiveManagement() {
                   Add Selected Subjects ({selectedSubjects.length})
                 </button>
               </div>
-            </div>
-          </div>
+
+          </SharedViewDialog>
         )}
       </main>
     </DashboardLayout>
   );
 }
-
-
-

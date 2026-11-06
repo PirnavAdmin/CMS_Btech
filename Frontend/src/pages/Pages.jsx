@@ -1,3 +1,4 @@
+import AsyncState from '../components/AsyncState'
 import { Link as react_router_domImports_Link, useNavigate as react_router_domImports_useNavigate, useSearchParams as react_router_domImports_useSearchParams, useLocation as react_router_domImports_useLocation } from 'react-router-dom'
 import { FiBookOpen as fiImports_FiBookOpen, FiLogIn as fiImports_FiLogIn, FiArrowLeft as fiImports_FiArrowLeft, FiActivity as fiImports_FiActivity, FiArrowRight as fiImports_FiArrowRight, FiAward as fiImports_FiAward, FiBarChart2 as fiImports_FiBarChart2, FiBriefcase as fiImports_FiBriefcase, FiCalendar as fiImports_FiCalendar, FiCheckCircle as fiImports_FiCheckCircle, FiChevronRight as fiImports_FiChevronRight, FiClock as fiImports_FiClock, FiExternalLink as fiImports_FiExternalLink, FiGrid as fiImports_FiGrid, FiLayers as fiImports_FiLayers, FiPieChart as fiImports_FiPieChart, FiPlus as fiImports_FiPlus, FiRefreshCw as fiImports_FiRefreshCw, FiSearch as fiImports_FiSearch, FiSliders as fiImports_FiSliders, FiStar as fiImports_FiStar, FiTrendingUp as fiImports_FiTrendingUp, FiUser as fiImports_FiUser, FiUserCheck as fiImports_FiUserCheck, FiUserPlus as fiImports_FiUserPlus, FiUsers as fiImports_FiUsers, FiZap as fiImports_FiZap, FiEye as fiImports_FiEye, FiEyeOff as fiImports_FiEyeOff, FiCheck as fiImports_FiCheck, FiHome as fiImports_FiHome, FiMenu as fiImports_FiMenu, FiTool as fiImports_FiTool, FiX as fiImports_FiX, FiBell as fiImports_FiBell, FiFileText as fiImports_FiFileText } from 'react-icons/fi'
 import { FiSun, FiMoon } from 'react-icons/fi'
@@ -162,6 +163,7 @@ function Dashboard() {
   const [subjects, setSubjects] = useCollegeState([])
   const [setupApiAvailability, setSetupApiAvailability] = useState({ admissions: null, faculty: null })
   const [loadingStats, setLoadingStats] = useState(true)
+  const [dashboardError, setDashboardError] = useState(false)
   const [lastUpdated, setLastUpdated] = useState(null)
   const [refreshVersion, setRefreshVersion] = useState(0)
   const [userName, setUserName] = useState(() =>
@@ -170,7 +172,6 @@ function Dashboard() {
 
   // Interactive timeframe states for charts (Day / Week / Month / Branch)
   const [inflowTimeframe, setInflowTimeframe] = useState('Month')
-  const [velocityTimeframe, setVelocityTimeframe] = useState('Week')
   const [barViewMode, setBarViewMode] = useState('Month') // 'Month', 'Branch', 'Week'
 
   // Search filter for tables
@@ -183,7 +184,7 @@ function Dashboard() {
   useEffect(() => {
     let active = true
     const loadDashboard = () => {
-      setLoadingStats(true)
+      setLoadingStats(true); setDashboardError(false)
       return Promise.allSettled([
         studentAdmissionApi.getAll(),
         studentProfilesApi.getAll(),
@@ -192,6 +193,7 @@ function Dashboard() {
       ])
         .then(([admRes, studentRes, facRes, subRes]) => {
           if (!active) return
+          setDashboardError([admRes, studentRes, facRes, subRes].some(result => result.status !== 'fulfilled' || !Array.isArray(result.value)))
           setSetupApiAvailability({
             admissions: admRes.status === 'fulfilled' && Array.isArray(admRes.value),
             faculty: facRes.status === 'fulfilled' && Array.isArray(facRes.value),
@@ -204,7 +206,7 @@ function Dashboard() {
           setLoadingStats(false)
         })
         .catch(() => {
-          if (active) setLoadingStats(false)
+          if (active) { setLoadingStats(false); setDashboardError(true) }
         })
     }
 
@@ -337,177 +339,16 @@ function Dashboard() {
       }))
     }
 
-    // Mode 2: Group By Week (Real Weekly Distribution)
-    if (barViewMode === 'Week') {
-      const weeks = [
-        { label: 'Week 1', count: 0 },
-        { label: 'Week 2', count: 0 },
-        { label: 'Week 3', count: 0 },
-        { label: 'Week 4', count: 0 },
-      ]
-
-      scopedAdmissions.forEach((adm, idx) => {
-        const rawDate = adm.admission?.admissionDate || adm.admissionDate || adm.createdAt || adm.applicationDate
-        if (rawDate) {
-          const d = new Date(rawDate)
-          if (!isNaN(d.getTime())) {
-            const dayOfMonth = d.getDate()
-            const weekIdx = Math.min(3, Math.floor((dayOfMonth - 1) / 7))
-            weeks[weekIdx].count += 1
-            return
-          }
-        }
-        // Fallback: distribute deterministically by record index
-        weeks[idx % 4].count += 1
-      })
-
-      const maxVal = Math.max(...weeks.map((w) => w.count), 1)
-      return weeks.map((w) => ({
-        label: w.label,
-        value: w.count,
-        fillHeight: Math.max(12, Math.round((w.count / maxVal) * 100)),
-      }))
-    }
-
-    // Mode 3: Group By Month (Real Monthly Admission Distribution)
-    const months = [
-      { label: 'Jan', count: 0, monthNum: 0 },
-      { label: 'Feb', count: 0, monthNum: 1 },
-      { label: 'Mar', count: 0, monthNum: 2 },
-      { label: 'Apr', count: 0, monthNum: 3 },
-      { label: 'May', count: 0, monthNum: 4 },
-      { label: 'Jun', count: 0, monthNum: 5 },
-      { label: 'Jul', count: 0, monthNum: 6 },
-    ]
-
-    scopedAdmissions.forEach((adm, idx) => {
-      const rawDate = adm.admission?.admissionDate || adm.admissionDate || adm.createdAt || adm.applicationDate
-      if (rawDate) {
-        const d = new Date(rawDate)
-        if (!isNaN(d.getTime())) {
-          const m = d.getMonth()
-          if (m >= 0 && m <= 6) {
-            months[m].count += 1
-            return
-          }
-        }
-      }
-      // Fallback: distribute actual admissions across active session months
-      months[idx % 7].count += 1
-    })
-
-    const maxVal = Math.max(...months.map((m) => m.count), 1)
-    return months.map((m) => ({
-      label: m.label,
-      value: m.count,
-      fillHeight: Math.max(12, Math.round((m.count / maxVal) * 100)),
-    }))
+    const trend = buildTrend(scopedAdmissions, barViewMode)
+    const max = Math.max(1, ...trend.buckets.map(bucket => bucket.value))
+    return trend.buckets.map(bucket => ({ label: bucket.label, fullLabel: bucket.label, value: bucket.value, fillHeight: bucket.value / max * 100 }))
   }, [barViewMode, scopedAdmissions, scopedBranches])
 
   // Real Admissions Inflow Trend Wave (Synchronized exactly with real count)
   const inflowTrendData = useMemo(() => {
-    const total = scopedAdmissions.length
-
-    if (inflowTimeframe === 'Day') {
-      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-      const counts = [0, 0, 0, 0, 0, 0, 0]
-
-      scopedAdmissions.forEach((adm, idx) => {
-        const rawDate = adm.admission?.admissionDate || adm.admissionDate || adm.createdAt
-        if (rawDate) {
-          const d = new Date(rawDate)
-          if (!isNaN(d.getTime())) {
-            const dayIdx = (d.getDay() + 6) % 7 // Monday = 0
-            counts[dayIdx] += 1
-            return
-          }
-        }
-        counts[idx % 7] += 1
-      })
-
-      return {
-        labels: days,
-        points: counts,
-        subtext: `${total} total candidate registrations this week`,
-      }
-    }
-
-    if (inflowTimeframe === 'Week') {
-      const weeks = ['W1', 'W2', 'W3', 'W4']
-      const counts = [0, 0, 0, 0]
-
-      scopedAdmissions.forEach((adm, idx) => {
-        counts[idx % 4] += 1
-      })
-
-      return {
-        labels: weeks,
-        points: counts,
-        subtext: `${total} applications logged across session timeline`,
-      }
-    }
-
-    // Month view uses actual admission dates in a rolling 12-month window.
-    // Distributing undated records across months made the chart look flat and
-    // implied a monthly history that was not present in the source records.
-    const trend = buildTrend(scopedAdmissions, 'Month')
-    return {
-      labels: trend.buckets.map((bucket) => bucket.label),
-      points: trend.buckets.map((bucket) => bucket.value),
-      subtext: `${approvedAdmissions.length} Approved | ${pendingAdmissions.length} In Review${trend.undated ? ` | ${trend.undated} without dates` : ''}`,
-    }
+    const trend = buildTrend(scopedAdmissions, inflowTimeframe)
+    return { labels: trend.buckets.map(bucket => bucket.label), points: trend.buckets.map(bucket => bucket.value), subtext: `${approvedAdmissions.length} Approved | ${pendingAdmissions.length} In Review${trend.undated ? ` | ${trend.undated} without dates` : ''}` }
   }, [inflowTimeframe, scopedAdmissions, approvedAdmissions.length, pendingAdmissions.length])
-
-  // Real Curriculum Velocity Trend (Synchronized with subjects and sections)
-  const velocityTrendData = useMemo(() => {
-    const totalSubjects = subjects.length || 1
-    const totalSections = scopedSections.length || 1
-
-    if (velocityTimeframe === 'Day') {
-      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-      const points = [
-        Math.round(totalSections * 0.4),
-        Math.round(totalSections * 0.8),
-        Math.round(totalSections * 0.6),
-        Math.round(totalSections * 1.0),
-        Math.round(totalSections * 0.9),
-        Math.round(totalSections * 0.3),
-        Math.round(totalSections * 0.5),
-      ]
-      return {
-        labels: days,
-        points,
-        subtext: `${totalSections} section schedules active today`,
-      }
-    }
-
-    if (velocityTimeframe === 'Week') {
-      const weeks = ['W1', 'W2', 'W3', 'W4']
-      const points = [
-        Math.round(totalSubjects * 0.25),
-        Math.round(totalSubjects * 0.5),
-        Math.round(totalSubjects * 0.75),
-        totalSubjects,
-      ]
-      return {
-        labels: weeks,
-        points,
-        subtext: `${subjects.length} Syllabi | ${scopedSections.length} Active Batches`,
-      }
-    }
-
-    // Quarter View
-    return {
-      labels: ['Q1', 'Q2', 'Q3', 'Q4'],
-      points: [
-        Math.round(totalSubjects * 0.3),
-        Math.round(totalSubjects * 0.6),
-        Math.round(totalSubjects * 0.85),
-        totalSubjects,
-      ],
-      subtext: `Semester delivery aligned across ${departments.length} departments`,
-    }
-  }, [velocityTimeframe, subjects.length, scopedSections.length, departments.length])
 
   // Donut 1 Segments (Real Admission Statuses: Exact Counts)
   const sourceSegments = useMemo(() => {
@@ -548,21 +389,7 @@ function Dashboard() {
       }))
     }
 
-    // If no admissions yet, show branches from academic context
-    if (branches.length > 0) {
-      const distinctColors = ['#0284C7', '#1769C2', '#38BDF8', '#0D9488']
-      return branches.slice(0, 3).map((b, idx) => ({
-        label: b.branchCode || b.code || b.name || `Branch ${idx + 1}`,
-        value: Number(b.intakeCapacity || b.intake || 60),
-        color: distinctColors[idx % distinctColors.length],
-      }))
-    }
-
-    return [
-      { label: 'CSE', value: 0, color: '#0284C7' },
-      { label: 'ECE', value: 0, color: '#1769C2' },
-      { label: 'IT', value: 0, color: '#38BDF8' },
-    ]
+    return []
   }, [scopedAdmissions, branches])
 
   // Real Recent Admissions List from Database
@@ -580,7 +407,7 @@ function Dashboard() {
             item.branchName ||
             item.academic?.branch ||
             'Engineering'
-          const appNo = item.applicationNumber || item.admissionNumber || `APP-${1000 + idx}`
+          const appNo = item.applicationNumber || item.admissionNumber || 'Not provided'
           const status = String(item.status || item.currentStatus || 'Pending').toUpperCase()
           const isApproved = status === 'APPROVED' || status === 'ADMITTED'
 
@@ -593,12 +420,7 @@ function Dashboard() {
             isApproved,
           }
         })
-      : [
-          { id: 1, name: 'Siddharth Varma', branch: 'Computer Science & Engg', appNo: 'APP-2026-01', status: 'Approved', isApproved: true },
-          { id: 2, name: 'Ananya Deshmukh', branch: 'Electronics & Comm', appNo: 'APP-2026-02', status: 'Under Review', isApproved: false },
-          { id: 3, name: 'Rahul Kulkarni', branch: 'Information Technology', appNo: 'APP-2026-03', status: 'Approved', isApproved: true },
-          { id: 4, name: 'Sneha Patel', branch: 'Mechanical Engg', appNo: 'APP-2026-04', status: 'Under Review', isApproved: false },
-        ]
+      : []
 
     if (!searchQuery) return list.slice(0, 5)
     return list.filter(
@@ -616,25 +438,20 @@ function Dashboard() {
           const deptId = dept.id || dept.departmentId
           const deptCourses = courses.filter((c) => String(c.departmentId) === String(deptId))
           const deptBranches = branches.filter((b) => String(b.departmentId) === String(deptId))
-          const deptIntake = deptBranches.reduce((acc, b) => acc + Number(b.intakeCapacity || b.intake || 60), 0)
+          const deptIntake = deptBranches.reduce((acc, b) => acc + Number(b.intakeCapacity || b.intake || 0), 0)
           const deptIcons = ['#1769C2', '#0284C7', '#0D9488', '#F59E0B']
 
           return {
             id: deptId || idx,
             name: dept.name || dept.departmentName || `Department of Engg`,
             code: dept.code || dept.departmentCode || `DEPT-${idx + 1}`,
-            coursesCount: deptCourses.length || 1,
-            branchesCount: deptBranches.length || 1,
-            intake: deptIntake > 0 ? `${deptIntake} Seats` : '120 Seats',
+            coursesCount: deptCourses.length,
+            branchesCount: deptBranches.length,
+            intake: deptBranches.some(branch => branch.intakeCapacity != null || branch.intake != null) ? `${deptIntake} Seats` : 'Not configured',
             color: deptIcons[idx % deptIcons.length],
           }
         })
-      : [
-          { id: 1, name: 'Computer Science & Engineering', code: 'CSE', coursesCount: 2, branchesCount: 4, intake: '240 Seats', color: '#1769C2' },
-          { id: 2, name: 'Electronics & Communication', code: 'ECE', coursesCount: 1, branchesCount: 2, intake: '120 Seats', color: '#0284C7' },
-          { id: 3, name: 'Mechanical & Automation', code: 'MECH', coursesCount: 1, branchesCount: 2, intake: '120 Seats', color: '#0D9488' },
-          { id: 4, name: 'Civil & Structural Engineering', code: 'CIVIL', coursesCount: 1, branchesCount: 1, intake: '60 Seats', color: '#F59E0B' },
-        ]
+      : []
 
     if (!searchQuery) return list.slice(0, 4)
     return list.filter(
@@ -675,7 +492,9 @@ function Dashboard() {
   // Approval Rate Calculation
   const approvalRate = scopedAdmissions.length > 0
     ? Math.round((approvedAdmissions.length / scopedAdmissions.length) * 100)
-    : 100
+    : 0
+
+  if (loadingStats || dashboardError) return <DashboardLayout><main className="ym-dashboard-wrapper"><AsyncState status={loadingStats ? 'loading' : 'error'} title={loadingStats ? 'Loading dashboard…' : 'Dashboard data is unavailable.'} message={dashboardError ? 'Please retry to load current college records.' : undefined} onRetry={() => setRefreshVersion(version => version + 1)} /></main></DashboardLayout>
 
   return (
     <DashboardLayout>
@@ -892,43 +711,11 @@ function Dashboard() {
             </div>
           </div>
 
-          {/* 3. Academic Delivery & Curriculum Velocity Trend Wave Chart 2 (Emerald / Teal Wave) */}
-          <div className="ym-card ym-chart-card ym-card--velocity">
-            <div className="ym-card-header">
-              <div>
-                <h3 className="ym-card-title text-emerald-title">Curriculum Delivery</h3>
-                <span className="ym-card-subtitle">{velocityTrendData.subtext}</span>
-              </div>
-              <div className="ym-timeframe-toggle">
-                {['Day', 'Week', 'Month'].map((tf) => (
-                  <button
-                    key={tf}
-                    type="button"
-                    className={`ym-tf-btn ${velocityTimeframe === tf ? 'is-active' : ''}`}
-                    onClick={() => setVelocityTimeframe(tf)}
-                  >
-                    {tf}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Dynamic Smooth Emerald Wave with X-axis and Y-axis clarity */}
-            <ExplicitWaveChart
-              labels={velocityTrendData.labels}
-              points={velocityTrendData.points}
-              color="#0D9488"
-              gradientId="ymWaveGradEmerald"
-              unit="Units"
-            />
-
-            <div className="ym-wave-footer-meta">
-              <span>Teaching Staff: <strong className="text-emerald-bold">{faculty.length} Mentors</strong></span>
-              <Link to="/subject-management" className="ym-card-link link-emerald">
-                Subject Matrix <FiArrowRight />
-              </Link>
-            </div>
-          </div>
+          <section className="ym-card ym-chart-card ym-card--velocity" aria-label="Curriculum configuration">
+            <div className="ym-card-header"><div><h3 className="ym-card-title">Curriculum Configuration</h3><p className="ym-card-subtitle">Current configuration for the selected college.</p></div></div>
+            <dl className="dashboard-curriculum-summary"><div><dt>Subjects</dt><dd>{subjects.length}</dd></div><div><dt>Sections</dt><dd>{scopedSections.length}</dd></div><div><dt>Faculty</dt><dd>{faculty.length}</dd></div></dl>
+            <div className="ym-wave-footer-meta"><Link to="/subject-management" className="ym-card-link">Subject Management <FiArrowRight /></Link></div>
+          </section>
         </section>
 
         {/* =========================================================================
@@ -957,6 +744,7 @@ function Dashboard() {
                   </tr>
                 </thead>
                 <tbody>
+                  {!recentAdmissionsList.length && <tr><td colSpan={3}>No admissions found for this selection.</td></tr>}
                   {recentAdmissionsList.map((item) => (
                     <tr key={item.id}>
                       <td className="ym-admissions-name-col">
@@ -1007,6 +795,7 @@ function Dashboard() {
                   </tr>
                 </thead>
                 <tbody>
+                  {!academicProgramsList.length && <tr><td colSpan={3}>No academic units found for this selection.</td></tr>}
                   {academicProgramsList.map((dept) => (
                     <tr key={dept.id}>
                       <td>

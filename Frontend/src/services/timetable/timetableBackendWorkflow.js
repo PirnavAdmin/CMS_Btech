@@ -68,10 +68,12 @@ export const backendWorkflow = {
     return issues
   },
   async publish(tables) {
-    for (const table of tables) await draft(table)
-    const issues = await this.validate(tables)
+    const pending = tables.filter(table => table.publicationStatus === 'draft')
+    if (!pending.length) throw new Error('No draft timetable periods remain to publish.')
+    for (const table of pending) await draft(table)
+    const issues = await this.validate(pending)
     if (issues.some(row => row.blocking !== false)) throw new Error(issues.map(row => row.reason).join('\n'))
-    for (const table of tables) await service.publish(table.id)
+    for (const table of pending) await service.publish(table.id)
     return true
   },
   reopen() { throw new Error('The backend reopen API changes the published record in place. Create a new timetable period to preserve history.') },

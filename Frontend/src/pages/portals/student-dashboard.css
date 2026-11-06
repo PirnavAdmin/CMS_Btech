@@ -3,7 +3,7 @@
 .student-dashboard-main,.student-dashboard-sidebar{min-width:0}
 .student-dashboard-sidebar{display:grid;gap:16px}
 .student-dashboard-sidebar .student-dashboard-card{margin-bottom:0}
-.student-welcome{position:relative;display:flex;min-height:180px;overflow:hidden;align-items:center;justify-content:space-between;gap:20px;padding:26px 30px;border-radius:16px;color:#fff;background:linear-gradient(115deg,#123f73,#1769c2 70%,#3b8edb);box-shadow:var(--shadow-sm)}
+.student-welcome{position:relative;display:flex;min-height:180px;overflow:hidden;align-items:center;justify-content:space-between;gap:20px;padding:26px 30px;border-radius:16px;color:#fff;background:linear-gradient(115deg,var(--brand-dark),var(--brand) 70%,#3b8edb);box-shadow:var(--shadow-sm)}
 .student-welcome::after{position:absolute;right:60px;bottom:-125px;width:260px;height:260px;border:1px solid #ffffff2b;border-radius:50%;content:""}
 .student-welcome-copy{position:relative;z-index:1;max-width:620px}
 .student-welcome-eyebrow{margin:0 0 8px!important;color:#b9ddff!important;font-size:13px;font-weight:700;letter-spacing:.4px}

@@ -1,3 +1,7 @@
+import TablePagination from '../../components/TablePagination'
+import PageHeader from '../../components/PageHeader'
+import SharedInfoCard from '../../components/InfoCard'
+import AsyncState from '../../components/AsyncState'
 import { ensureBranchSemesters } from '../../services/branchSemesterWorkflow.js'
 import { selectedCollegeId as currentWorkflowCollege } from '../../utils/collegeScope.js'
 import { ProjectSelect } from '../../components/SearchableSelect'
@@ -216,7 +220,7 @@ const createPlan = ({ course, branch, activeYear, academicYears, dates = {}, edi
 }
 
 const Page = ({ children }) => <DashboardLayout><main className="semester-management">{children}</main></DashboardLayout>
-const Header = ({ title, text, children }) => <header className="semester-page-header"><div><p className="semester-breadcrumb">Academic Configuration <span>/</span> Semesters</p><h1>{title}</h1>{text && <p>{text}</p>}</div><div className="management-header-actions">{children}</div></header>
+const Header = ({ title, text, children }) => <PageHeader title={title} subtitle={text}>{children}</PageHeader>
 const StatusBadge = ({ value }) => <span className={`semester-badge status ${String(value || '').toLowerCase().replace(/\s+/g, '-')}`}>{value}</span>
 const Field = ({ label, children }) => <label className="semester-field"><span>{typeof label === 'string' && label.endsWith(' *') ? <>{label.slice(0, -2)} <b className="required-mark">*</b></> : typeof label === 'string' && label.endsWith('*') ? <>{label.slice(0, -1).trim()} <b className="required-mark">*</b></> : label}</span>{children}</label>
 const ReadOnly = ({ value, placeholder = 'Resolved after selection' }) => <input value={value || ''} placeholder={placeholder} readOnly />
@@ -251,7 +255,10 @@ function useLifecycleClock() {
   return now
 }
 
-function SemesterList() {
+function SemesterList({ initialViewId = null }) {
+  const navigate = useNavigate()
+  const [viewId, setViewId] = useState(initialViewId)
+  const closeView = () => { setViewId(null); if (initialViewId) navigate('/semester-management') }
   const { selectedCollegeId, selectedAcademicYearId } = useAcademic()
   const assignedCollegeId = getUserCollegeId()
   const isAdmin = getUserRole() === 'admin'
@@ -266,7 +273,7 @@ function SemesterList() {
   const branches = scopeSemesterDirectory(allBranches, directoryScope)
   const [years, setYears] = useState([])
   const [query, setQuery] = useState('')
-  const [filters, setFilters] = useState({ courseId: '', branchId: '', academicYearId: '', status: '', yearNumber: '', yearNumber: '' })
+  const [filters, setFilters] = useState({ courseId: '', branchId: '', academicYearId: '', status: '', yearNumber: '' })
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useToastState('', 'error')
@@ -323,11 +330,11 @@ function SemesterList() {
     <Header title="Semester Overview & Academic Scheduling" text="Manage course-based semester structures, academic years, schedules, and lifecycle status.">
       <CompactSummary label="Semester summary" items={[{ label: 'Total', value: counts.total }, { label: 'Active', value: counts.active, tone: 'active' }, { label: 'Upcoming', value: counts.upcoming, tone: 'upcoming' }, { label: 'Completed', value: counts.completed, tone: 'completed' }]} />
     </Header>
-    <section className="semester-directory-card">
+    <section className="semester-reference-directory">
       {location.state?.semesterNotice && <p role="status" className="semester-config-warning">{location.state.semesterNotice}</p>}
-      <header className="course-directory-heading">
+      <header className="semester-reference-heading">
         <div>
-          <span className="cm-eyebrow">Semester Directory</span>
+          <h2>Semester Directory</h2>
           <p>{filtered.length} configured semesters</p>
         </div>
         <div className="directory-export-actions">
@@ -382,7 +389,7 @@ function SemesterList() {
                   <tr key={item.id || `${item.branchId}-${item.semesterNumber}`}>
                     <td className="table-center" style={{ minWidth: '160px' }}>
                       <div className="table-primary-cell">
-                        <Link to={`/semester-management/${item.id}`} className="semester-name-link table-cell-truncate" title={`Click to view details for ${item.semesterName}`}>
+                        <Link to={`/semester-management/${item.id}`} onClick={event => { if (!event.metaKey && !event.ctrlKey && !event.shiftKey) { event.preventDefault(); setViewId(item.id) } }} className="semester-name-link table-cell-truncate" title={`Click to view details for ${item.semesterName}`}>
                           {item.semesterName}
                         </Link>
                         {item.semesterName && item.semesterNumber && String(item.semesterName).trim().toLowerCase() !== `semester ${item.semesterNumber}`.toLowerCase() ? (
@@ -423,6 +430,7 @@ function SemesterList() {
         <DirectoryEmptyState title="No semesters configured. Create a branch to establish its structure." actionLabel="View Branches" to="/branches" />
       )}
     </section>
+    {viewId && <SemesterDetailsPage semesterId={viewId} onClose={closeView} />}
   </Page>
 }
 
@@ -574,7 +582,7 @@ function SemesterForm({ editMode = false }) {
         eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED, { branchId: form.branchId })
         setNotice('Missing semester definitions recovered. Configure dates on each saved semester.')
       }
-      setTimeout(() => navigate('/semester-management', { state: { savedSemesters } }), 700)
+      navigate('/semester-management', { state: { savedSemesters } })
     } catch (requestError) {
       setError(apiError(requestError, 'Unable to save semester structure.'))
     } finally {
@@ -723,10 +731,12 @@ function SemesterForm({ editMode = false }) {
 }
 
 
-function SemesterDetailsPage() {
+function SemesterDetailsPage({ semesterId, onClose }) {
   const now = useLifecycleClock()
   const navigate = useNavigate()
-  const { id } = useParams()
+  const { id: routeId } = useParams()
+  const id = semesterId || routeId
+  const [attempt, setAttempt] = useState(0)
   const [item, setItem] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useToastState('', 'error')
@@ -751,83 +761,29 @@ function SemesterDetailsPage() {
     }
     load()
     return () => { alive = false }
-  }, [id, setError])
+  }, [id, setError, attempt])
 
-  if (loading) return <Page><Empty icon={FiClock} title="Loading semester details..." /></Page>
-  if (error || !item) return <Page><div className="cm-profile-view" data-export-record><div className="cm-profile-top-bar"><Link className="cm-button secondary" to="/semester-management">&larr; Back </Link></div><Empty icon={FiLayers} title={error || 'Semester not found.'} /></div></Page>
-  const semesterItem = { ...item, status: deriveLifecycleStatus(item, 'Upcoming', now) }
-  return (
-    <Page>
-      <div className="cm-profile-view" data-export-record>
-        <div className="cm-profile-top-bar">
-          <ExportMenu mode="single" title="Semester Details" filename={`semester_${item.semesterName || item.id}_${item.academicYearName || ""}`} />
-          <Link className="cm-button secondary" to="/semester-management">
-            &larr; Back 
-          </Link>
-        </div>
-        <SemesterProfile item={semesterItem} />
-      </div>
-    </Page>
-  )
+  const semesterItem = item ? { ...item, status: deriveLifecycleStatus(item, 'Upcoming', now) } : null
+  return <ViewDialog title="Semester Details" subtitle={item?.semesterName} onClose={onClose} showExport={Boolean(item)} exportFilename={`semester_${id}`} maxWidth="900px">{loading || error || !item ? <AsyncState status={loading ? 'loading' : 'error'} message={error || undefined} onRetry={() => setAttempt(value => value + 1)} /> : <SemesterProfile item={semesterItem} />}</ViewDialog>
 }
 
 function SemesterProfile({ item }) {
   const startYear = item.courseDuration && item.academicYearName ? parseAcademicYearStart({ academicYearName: item.academicYearName }) - Math.floor((Number(item.semesterNumber || 1) - 1) / 2) : null
   const coursePeriod = periodLabel(startYear, item.courseDuration)
-  return (
-    <div className="cm-profile-card">
-      <div className="cm-profile-banner">
-        <div className="cm-profile-avatar-wrap">
-          <div className="cm-profile-placeholder">
-            <FiCalendar />
-          </div>
-        </div>
-        <div className="cm-profile-header-info">
-          <div className="cm-profile-badges">
-            <span className="cm-badge cm-badge-code">Semester {item.semesterNumber}</span>
-            {item.courseCode && <span className="cm-badge cm-badge-type">{item.courseCode}</span>}
-            <span className={`cm-status-badge ${String(item.status).toLowerCase()}`}>{item.status}</span>
-          </div>
-          <h1 className="cm-profile-title">{item.semesterName}</h1>
-          <p className="cm-profile-subtitle">
-            {[item.courseName, item.branchCode || item.branchName, item.academicYearName].filter(clean).join(' - ')}
-          </p>
-        </div>
-      </div>
-      <div className="cm-profile-grid">
+  return <div className="semester-reference-detail-grid">
         <InfoCard icon={FiCalendar} title="Basic Information" rows={[["Semester Name", item.semesterName], ["Semester Number", item.semesterNumber], ["Academic Year", item.academicYearName], ["Status", item.status]]} />
         <InfoCard icon={FiBookOpen} title="Academic Mapping" rows={[["College Name", item.collegeName], ["Course Name", item.courseName], ["Course Code", item.courseCode], ["Branch Name", item.branchName], ["Branch Code", item.branchCode], ["Branch Type", item.branchType]]} />
         <InfoCard icon={FiClock} title="Semester Schedule" rows={[["Start Date", displayDate(item.startDate)], ["End Date", displayDate(item.endDate)]]} />
-        <InfoCard icon={FiLayers} title="Course Structure" rows={[["Starting Academic Year", yearLabelFromStart(cohortStart(item))], ["Course Duration", item.courseDuration ? `${item.courseDuration} Years` : ''], ["Academic Pattern", item.academicPattern], ["Total Semesters", item.totalSemesters], ["Course Period", coursePeriod]]} />
-      </div>
-    </div>
-  )
+        <InfoCard icon={FiLayers} title="Course Structure" rows={[["Starting Academic Year", yearLabelFromStart(cohortStart(item))], ["Course Duration", item.courseDuration ? `${item.courseDuration} Years` : ''], ["Academic Pattern", item.academicPattern], ["Total Semesters", item.totalSemesters], ["Course Period", coursePeriod]]} /></div>
 }
 
-function InfoCard({ icon: Icon, title, rows }) {
-  const visibleRows = rows.filter(([, value]) => clean(value))
-  if (!visibleRows.length) return null
-  return (
-    <section className="cm-info-card sa-detail-panel sa-modern-panel erp-view-section">
-      <div className="cm-info-card-header sa-panel-header">
-        <div className="sa-panel-title-wrap">
-          {Icon && <span className="sa-panel-icon"><Icon aria-hidden="true" /></span>}
-          <h2>{title}</h2>
-        </div>
-        <span className="sa-card-count-badge">{visibleRows.length} items</span>
-      </div>
-      <InfoRows rows={visibleRows} />
-    </section>
-  )
-}
+function InfoCard({ icon, title, rows }) { return <SharedInfoCard icon={icon} title={title} rows={rows} /> }
 
 function Empty({ icon: Icon, title, action, isError = false }) {
   return <div className="semester-empty-state" role={isError ? 'alert' : undefined} data-message-tone={isError ? 'error' : undefined}><Icon /><h3>{title}</h3>{action}</div>
 }
 
-function Pagination({ page, pageCount, setPage }) {
-  return <div className="semester-pagination"><p>Page {page} of {pageCount}</p><div><button disabled={page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>Previous</button><button className="active">{page}</button><button disabled={page >= pageCount} onClick={() => setPage((value) => Math.min(pageCount, value + 1))}>Next</button></div></div>
-}
+function Pagination({ page, pageCount, setPage }) { return <TablePagination page={page} totalPages={pageCount} onPageChange={setPage} /> }
 
 function SemesterRecovery() {
   const { selectedCollegeId } = useAcademic()
@@ -864,6 +820,6 @@ export default function SemesterManagement({ mode }) {
   const { id } = useParams()
   if (mode === 'form') return <SemesterRecovery key="recovery" />
   if (mode === 'edit') return <SemesterForm key={id} editMode />
-  if (mode === 'details' || id) return <SemesterDetailsPage />
+  if (mode === 'details' || id) return <SemesterList initialViewId={id} />
   return <SemesterList />
 }

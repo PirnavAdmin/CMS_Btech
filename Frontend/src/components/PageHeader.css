@@ -1,72 +1,7 @@
-.erp-page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.erp-page-header__left {
-  flex: 1 1 300px;
-  min-width: 0;
-}
-
-.erp-page-header__breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 4px;
-  color: var(--brand, #1769C2);
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.erp-page-header__title {
-  margin: 0;
-  color: var(--text-primary, #132a3e);
-  font-size: clamp(1.35rem, 1.8vw, 1.65rem);
-  font-weight: 800;
-  line-height: 1.2;
-  letter-spacing: -0.025em;
-}
-
-.erp-page-header__subtitle {
-  max-width: 680px;
-  margin: 3px 0 0;
-  color: var(--text-muted, #6d8294);
-  font-size: 0.82rem;
-  line-height: 1.4;
-}
-
-.erp-page-header__right {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 12px;
-}
-
-.erp-page-header__actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-@media (max-width: 768px) {
-  .erp-page-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .erp-page-header__right {
-    justify-content: space-between;
-    width: 100%;
-  }
-  .erp-page-header__actions {
-    flex-wrap: wrap;
-    width: 100%;
-  }
-}
+.erp-page-header { display:flex; align-items:flex-end; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:18px; }
+.erp-page-header__title { margin:0; font-size:22px; letter-spacing:-.3px; color:var(--text-primary); }
+.erp-page-header__subtitle { margin:4px 0 0; color:var(--text-muted); font-size:13.5px; }
+.erp-page-header__right,.erp-page-header__actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.erp-page-header__breadcrumb { display:flex; flex-wrap:wrap; gap:6px; font-size:12.5px; color:var(--text-muted); margin-bottom:12px; }
+.erp-page-header__breadcrumb a { color:var(--text-muted); text-decoration:none; }
+@media(max-width:720px){.erp-page-header{align-items:flex-start}.erp-page-header__right{width:100%}}
