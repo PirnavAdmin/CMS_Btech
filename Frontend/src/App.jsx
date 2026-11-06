@@ -27,6 +27,7 @@ const FacultySessionExpiredPage = lazy(() => import('./features/faculty/FacultyS
 
 import { ROLES } from './auth/roles'
 
+import AcademicStructure from './pages/academic-structure/AcademicStructure'
 import SemesterManagement from './pages/semester-management/SemesterManagement'
 import SectionManagement from './pages/section-management/SectionManagement'
 import StudentAdmission from './pages/student-management/StudentAdmission/StudentAdmission'
@@ -282,21 +283,18 @@ export default function App() {
               <Route path="/college-institution-management/add" element={<AddCollege />} />
               <Route path="/academic-year-management" element={<AcademicProvider><AcademicYearManagement /></AcademicProvider>} />
               <Route path="/academic-year-management/:id" element={<AcademicProvider><AcademicYearManagement /></AcademicProvider>} />
-              <Route path="/department-management" element={<DepartmentManagement />} />
-              <Route path="/department-management/:id" element={<DepartmentManagement />} />
-              <Route path="/courses" element={<Course />} />
-              <Route path="/courses/add" element={<Course mode="form" />} />
-              <Route path="/courses/:id/edit" element={<Course mode="form" />} />
-              <Route path="/courses/:id" element={<Course mode="details" />} />
-              <Route path="/courses/structure" element={<CourseStructure />} />
-              <Route path="/branches" element={<Branch />} />
-              <Route path="/branches/add" element={<Branch mode="form" />} />
-              <Route path="/branches/:id/edit" element={<Branch mode="form" />} />
-              <Route path="/branches/:id" element={<Branch mode="details" />} />
-              <Route path="/semester-management" element={<SemesterManagement />} />
-              <Route path="/semester-management/add" element={<SemesterManagement mode="form" />} />
-              <Route path="/semester-management/:id/edit" element={<SemesterManagement mode="edit" />} />
-              <Route path="/semester-management/:id" element={<SemesterManagement mode="details" />} />
+              {/* Unified Academic Structure Single Page */}
+              <Route path="/academic-structure" element={<AcademicStructure />} />
+
+              {/* Backwards-compatible route redirects to the unified Academic Structure page */}
+              <Route path="/department-management/*" element={<Navigate to="/academic-structure?step=departments" replace />} />
+              <Route path="/department-management" element={<Navigate to="/academic-structure?step=departments" replace />} />
+              <Route path="/courses/*" element={<Navigate to="/academic-structure?step=courses" replace />} />
+              <Route path="/courses" element={<Navigate to="/academic-structure?step=courses" replace />} />
+              <Route path="/branches/*" element={<Navigate to="/academic-structure?step=branches" replace />} />
+              <Route path="/branches" element={<Navigate to="/academic-structure?step=branches" replace />} />
+              <Route path="/semester-management/*" element={<Navigate to="/academic-structure?step=semesters" replace />} />
+              <Route path="/semester-management" element={<Navigate to="/academic-structure?step=semesters" replace />} />
               <Route path="/section-management" element={<SectionManagement />} />
               <Route path="/section-management/add" element={<SectionManagement mode="form" />} />
               <Route path="/section-management/:id/edit" element={<SectionManagement mode="edit" />} />

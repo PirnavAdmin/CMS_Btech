@@ -16,7 +16,7 @@ if (typeof window !== 'undefined' && window.localStorage) {
 }
 
 const normalizeBaseUrl = (value = '') => value.trim().replace(/\/+$/, '')
-const DEFAULT_API_BASE_URL = 'https://stagnant-craftily-paving.ngrok-free.dev'
+const DEFAULT_API_BASE_URL = 'https://clarity-math-delouse.ngrok-free.dev'
 
 // Results endpoints are optional until the institution's result service is integrated.
 export const RESULTS_API_ENABLED = String(import.meta.env.VITE_RESULTS_API_ENABLED || '').toLowerCase() === 'true'
@@ -857,6 +857,7 @@ export const branchApi = {
     return response?.data
   },
   updateStatus: async (id, status) => request(API_ENDPOINTS.branches.status(id), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: status === 'Active' || status === 1 || status === true }) }),
+  delete: async (id) => request(API_ENDPOINTS.branches.detail(id), { method: 'DELETE' }),
 }
 
 export const departmentApi = {
@@ -864,6 +865,11 @@ export const departmentApi = {
     const response = await request(API_ENDPOINTS.departments.list)
     return listResponse(response)
   },
+  getById: async (id) => (await request(endpoint(`/api/v1/departments/${id}`)))?.data,
+  create: async (data) => (await request(API_ENDPOINTS.departments.list, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }))?.data,
+  update: async (id, data) => (await request(endpoint(`/api/v1/departments/${id}`), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }))?.data,
+  delete: async (id) => request(endpoint(`/api/v1/departments/${id}`), { method: 'DELETE' }),
+  updateStatus: async (id, status) => request(endpoint(`/api/v1/departments/${id}/status`), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: status === 1 || status === 'Active' || status === true ? 1 : 0 }) }),
 }
 
 export const courseApi = {
@@ -872,6 +878,10 @@ export const courseApi = {
     return listResponse(response)
   },
   getById: async (id) => (await request(API_ENDPOINTS.courses.detail(id)))?.data,
+  create: async (data) => (await request(API_ENDPOINTS.courses.list, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }))?.data,
+  update: async (id, data) => (await request(API_ENDPOINTS.courses.detail(id), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }))?.data,
+  delete: async (id) => request(API_ENDPOINTS.courses.detail(id), { method: 'DELETE' }),
+  updateStatus: async (id, status) => request(endpoint(`/api/v1/courses/${id}/status`), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: status === 1 || status === 'Active' || status === true ? 1 : 0 }) }),
 }
 
 const courseStructurePayload = (structure) => ({

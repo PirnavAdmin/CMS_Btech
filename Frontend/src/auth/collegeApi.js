@@ -5,7 +5,7 @@ import { collegeRequest } from '../utils/collegeRequest.js'
 import { createApiUnavailableError, notifyApiUnavailable } from '../api/apiFailureNotice'
 import { selectedCollegeId } from '../utils/collegeScope.js'
 const cleanUrl = (url) => (url || "").replace(/\/+$/, "");
-const DEFAULT_API_BASE_URL = "https://stagnant-craftily-paving.ngrok-free.dev";
+const DEFAULT_API_BASE_URL = "https://clarity-math-delouse.ngrok-free.dev";
 
 const friendlyValidationMessage = (errors) => {
   if (!errors || typeof errors !== "object") return "";
@@ -524,6 +524,7 @@ export const getSemesterById = (id) => SEMESTER_API.get(`/semester/${id}`);
 export const getSemesterSummary = () => SEMESTER_API.get('/semester/summary');
 export const createSemester = (data) => SEMESTER_API.post('/semester', data);
 export const updateSemester = (id, data) => SEMESTER_API.put(`/semester/${id}`, data);
+export const deleteSemester = (id) => SEMESTER_API.delete(`/semester/${id}`);
 
 // -------------------------
 // COURSE APIs
@@ -548,6 +549,20 @@ export const updateCourse = (id, courseData) => {
 export const updateCourseStatus = (id, status) => {
   return ACADEMIC_API.patch(`/courses/${id}/status`, { status });
 };
+
+export const deleteCourse = (id) => ACADEMIC_API.delete(`/courses/${id}`);
+
+// -------------------------
+// BRANCH APIs
+// -------------------------
+
+export const getBranches = (params = {}) => ACADEMIC_API.get("/branches", { params: academicParams(params) });
+export const getBranchById = (id) => ACADEMIC_API.get(`/branches/${id}`);
+export const getBranchesByCourse = (courseId) => ACADEMIC_API.get(`/branches/course/${courseId}`);
+export const createBranch = (data) => ACADEMIC_API.post("/branches", data);
+export const updateBranch = (id, data) => ACADEMIC_API.put(`/branches/${id}`, data);
+export const updateBranchStatus = (id, status) => ACADEMIC_API.patch(`/branches/${id}/status`, { status });
+export const deleteBranch = (id) => ACADEMIC_API.delete(`/branches/${id}`);
 
 // -------------------------
 // COURSE / SEMESTER MAPPING APIs

@@ -174,5 +174,25 @@ namespace BTech.Controllers
                 data = result
             });
         }
+
+        [HttpDelete("{semesterId:long}")]
+        public async Task<IActionResult> Delete(long semesterId)
+        {
+            var deleted = await _service.DeleteAsync(semesterId);
+            if (!deleted)
+            {
+                return NotFound(new
+                {
+                    success = false,
+                    message = "Semester not found"
+                });
+            }
+
+            return Ok(new
+            {
+                success = true,
+                message = "Semester deleted successfully"
+            });
+        }
     }
 }

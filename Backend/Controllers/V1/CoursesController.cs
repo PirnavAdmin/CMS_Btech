@@ -142,6 +142,22 @@ namespace BTech.Controllers.V1
             }
         }
 
+        [HttpDelete("{id:long}")]
+        public async Task<IActionResult> Delete(long id)
+        {
+            try
+            {
+                var deleted = await _courseService.DeleteAsync(id, GetUserId());
+                return !deleted
+                    ? NotFound(new { success = false, message = "Course not found." })
+                    : Ok(new { success = true, message = "Course deleted successfully." });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
         private long? GetUserId()
         {
             var value = User.FindFirstValue(ClaimTypes.NameIdentifier);

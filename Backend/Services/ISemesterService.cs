@@ -1,4 +1,4 @@
-﻿using BTech.DTOs;
+using BTech.DTOs;
 using BTech.Models;
 
 namespace BTech.Services.Interfaces
@@ -22,5 +22,7 @@ namespace BTech.Services.Interfaces
             long? branchId,
             long? academicYearId,
             byte? status);
+
+        Task<bool> DeleteAsync(long semesterId);
     }
 }

@@ -14,5 +14,6 @@ namespace BTech.Services.Interfaces
         Task<CourseResponseDto> AddAsync(CreateCourseDto dto, long? userId);
         Task<CourseResponseDto?> UpdateAsync(long courseId, UpdateCourseDto dto, long? userId);
         Task<CourseResponseDto?> UpdateStatusAsync(long courseId, sbyte status, long? userId);
+        Task<bool> DeleteAsync(long courseId, long? userId);
     }
 }
