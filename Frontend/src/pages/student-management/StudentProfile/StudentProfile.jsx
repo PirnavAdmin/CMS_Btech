@@ -1040,8 +1040,10 @@ export default function StudentProfile() {
   ) : null;
   const body = (
     <>
-      <PageHeader title="Student Management" subtitle="Find and manage approved students in the selected college and academic year." />
-      <div className="sp-reference-summary">{studentSummaryItems.map(item => <article key={item.label}><span>{item.label}</span><strong>{item.value}</strong></article>)}</div>
+      <div className="sp-overview-header">
+        <PageHeader title="Student Management" subtitle="Find and manage approved students in the selected college and academic year." />
+        <div className="sp-reference-summary" aria-label="Student summary">{studentSummaryItems.map(item => <article key={item.label}><span>{item.label}</span><strong>{item.value}</strong></article>)}</div>
+      </div>
       {error ? (
         <State error={error} onRetry={load} />
       ) : (

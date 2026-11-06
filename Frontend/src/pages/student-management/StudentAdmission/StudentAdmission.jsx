@@ -17,10 +17,9 @@ import { isApiResult } from '../../../utils/exportProvenance'
 import ExportMenu, { PrintDetailsButton } from '../../../components/ExportMenu'
 import { admissionColumns } from '../../../utils/exportColumns'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { FiAlertCircle, FiArrowLeft, FiArrowRight, FiBookOpen, FiCamera, FiCheck, FiCheckCircle, FiChevronRight, FiClock, FiCreditCard, FiEdit2, FiFileText, FiGrid, FiHome, FiInbox, FiPhone, FiPlus, FiSave, FiSearch, FiShield, FiTrash2, FiUploadCloud, FiUser, FiUsers, FiX } from 'react-icons/fi'
+import { FiAlertCircle, FiArrowLeft, FiArrowRight, FiBookOpen, FiCamera, FiCheck, FiCheckCircle, FiChevronRight, FiClock, FiCreditCard, FiEdit2, FiEye, FiFileText, FiGrid, FiHome, FiInbox, FiPhone, FiPlus, FiSave, FiSearch, FiShield, FiTrash2, FiUploadCloud, FiUser, FiUsers, FiX } from 'react-icons/fi'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import DashboardLayout from '../../../layouts/DashboardLayout'
-import FilterPanel from '../../../components/FilterPanel'
 import TablePagination, { PAGE_SIZE } from '../../../components/TablePagination'
 import CompactSummary from '../../../components/CompactSummary'
 import StatusBadge from '../../../components/StatusBadge'
@@ -56,7 +55,7 @@ import { readFeeWorkspace, readStructures, readHostelStructures, readTransportSt
 import './StudentAdmission.css'
 
 
-const STEPS = ['Personal Details', 'Academic Details', 'Parent Details', 'Documents', 'Fee Information', 'Review', 'Submit']
+const STEPS = ['Personal Details', 'Academic Details', 'Parent Details', 'Documents', 'Fee Information', 'Review']
 const LEGACY_STEP_TO_MAIN = [0, 1, 2, 0, 1, 1, 4, 3]
 const STEP_ICONS = [FiUser, FiPhone, FiUsers, FiBookOpen, FiFileText, FiHome, FiInbox, FiUploadCloud]
 const STATUS = { DRAFT: 'Draft', PENDING: 'Pending', SUBMITTED: 'Submitted', APPLICATION_SUBMITTED: 'Submitted', UNDER_REVIEW: 'Under Review', VERIFIED: 'Verified', APPROVED: 'Approved', CORRECTION_REQUIRED: 'Correction Required', REJECTED: 'Rejected' }
@@ -496,7 +495,27 @@ function AdmissionFilters({ rows, query, setQuery, filters, setFilters }) {
   const options = key => [...new Set(rows.map(item => key === 'status' ? item.status : key === 'feeStatus' ? (item.fees?.paymentStatus || 'Pending') : key === 'quota' ? quota(item) : item.academic?.[key]).filter(Boolean))].sort()
   const active = Object.entries(filters).filter(([,value]) => value)
   const clear = () => { setQuery(''); setFilters(Object.fromEntries(FILTERS.map(([key]) => [key, '']))) }
-  return <FilterPanel active={Boolean(query || active.length)} onClear={clear} className="sa-filter-panel"><div className="sa-toolbar"><label className="sa-search"><FiSearch /><input value={query} onChange={event => setQuery(event.target.value)} title="Search name, registration, admission, mobile or email" placeholder="Search name, registration, admission, mobile or email" /></label></div><div className="sa-filter-grid">{FILTERS.map(([key,label]) => <label key={key}><span>{label}</span><ProjectSelect value={filters[key]} onChange={event => setFilters(current => ({ ...current, [key]: event.target.value, ...(key === 'course' ? {branch:''} : {}) }))}><option value="">All {label}</option>{options(key).map(value => <option value={value} key={value}>{key === 'status' ? (STATUS[value] || value) : value}</option>)}</ProjectSelect></label>)}</div>{active.length > 0 && <div className="sa-filter-chips">{active.map(([key,value]) => <button key={key} onClick={() => setFilters(current => ({ ...current, [key]: '' }))}>{FILTERS.find(item => item[0] === key)?.[1]}: {key === 'status' ? (STATUS[value] || value) : value} <FiX /></button>)}</div>}</FilterPanel>
+  return (
+    <section className="sa-admission-filters" aria-label="Search and filter admissions">
+      <div className="sa-admission-filterbar">
+        <label className="sa-search">
+          <FiSearch aria-hidden="true" />
+          <input value={query} onChange={event => setQuery(event.target.value)} title="Search name, registration, admission, mobile or email" placeholder="Search name, registration, admission, mobile or email" />
+        </label>
+        {Boolean(query || active.length) && <button type="button" className="sa-clear-filters" onClick={clear}><FiX aria-hidden="true" /> Clear filters</button>}
+      </div>
+      <div className="sa-filter-grid">
+        {FILTERS.map(([key,label]) => <label key={key}>
+          <span>{label}</span>
+          <ProjectSelect value={filters[key]} onChange={event => setFilters(current => ({ ...current, [key]: event.target.value, ...(key === 'course' ? { branch: '' } : {}) }))}>
+            <option value="">All {label}</option>
+            {options(key).map(value => <option value={value} key={value}>{key === 'status' ? (STATUS[value] || value) : value}</option>)}
+          </ProjectSelect>
+        </label>)}
+      </div>
+      {active.length > 0 && <div className="sa-filter-chips">{active.map(([key,value]) => <button type="button" key={key} onClick={() => setFilters(current => ({ ...current, [key]: '' }))}>{FILTERS.find(item => item[0] === key)?.[1]}: {key === 'status' ? (STATUS[value] || value) : value} <FiX aria-hidden="true" /></button>)}</div>}
+    </section>
+  )
 }
 function EmptyState() {
   return <div className="sa-empty"><span><FiInbox /></span><h3>No admission applications found</h3><p>Create a new admission application to begin student enrollment.</p></div>
@@ -594,8 +613,10 @@ function AdmissionList() {
 
   return (
     <>
-      <PageHeader title="Student Admissions" subtitle="Manage registrations, review and approval in the selected college and academic year." />
-      <div className="sa-reference-summary">{[['Applications',stats.total],['Approved',stats.approved],['Awaiting review',stats.pending],['Drafts',stats.draft]].map(([label,value]) => <article key={label}><span>{label}</span><strong>{loading ? '—' : value}</strong></article>)}</div>
+      <div className="sa-overview-header">
+        <PageHeader title="Student Admissions" subtitle="Manage registrations, review and approval in the selected college and academic year." />
+      <div className="sa-reference-summary" aria-label="Admission summary">{[['Applications',stats.total],['Approved',stats.approved],['Awaiting review',stats.pending],['Drafts',stats.draft]].map(([label,value]) => <article key={label}><span>{label}</span><strong>{loading ? '—' : value}</strong></article>)}</div>
+      </div>
       <section className="sa-directory cm-panel">
         <header className="course-directory-heading">
           <div>
@@ -614,8 +635,9 @@ function AdmissionList() {
         {loading ? <p role="status" className="sa-empty">Loading admissions...</p> : loadError ? <div className="sa-empty" role="alert"><p>{loadError}</p><Button onClick={loadAdmissions}>Retry</Button></div> : !scopedRows.length || !shown.length ? (
           <EmptyState hasRows={Boolean(scopedRows.length)} filtered={Boolean(query || Object.values(filters).some(Boolean))} onCreate={() => navigate('/student-management/admissions/new')} onClear={clear} />
         ) : (
-          <div className="sa-table-wrap" tabIndex={0} role="region" aria-label="Admissions table, scroll horizontally to see all columns">
-            <table>
+          <div className="sa-table-wrap" tabIndex={0} role="region" aria-label="Student admissions table">
+            <table className="sa-admission-table">
+              <caption className="sr-only">Student admission applications</caption>
               <thead>
                 <tr>
                   <th style={{ minWidth: '150px' }}>Registration Number</th>
@@ -634,6 +656,7 @@ function AdmissionList() {
                   const feeStat = item.fees?.paymentStatus || 'Pending'
                   const isEditable = canEdit && ['DRAFT', 'CORRECTION_REQUIRED'].includes(normStat)
                   const isReviewable = canEdit && ['SUBMITTED', 'PENDING', 'UNDER_REVIEW', 'VERIFIED'].includes(normStat)
+                  const targetId = item.admissionId || item.id || item.studentAdmissionId
                   const sName = studentName(item)
                   const sContact = item.contact.email || item.contact.mobile || 'Contact pending'
                   return (
@@ -663,28 +686,46 @@ function AdmissionList() {
                       <td className="table-center" style={{ width: '120px' }}><StatusBadge value={formatFeeStatus(feeStat)} /></td>
                       <td className="table-center" style={{ width: '140px' }}><StatusBadge value={STATUS[normStat] || normStat} /></td>
                       <td className="table-center" style={{ width: '140px' }}><span className="sa-updated">{dateTime(item.updatedAt || item.createdAt)}</span></td>
-                      <td className="table-center" style={{ width: '160px', minWidth: '160px' }}>
+                      <td className="table-center" style={{ width: '176px', minWidth: '176px' }}>
                         <div className="sa-icon-actions table-actions-group">
+                          <button
+                            type="button"
+                            className="table-action-btn action-view"
+                            title="View Application"
+                            aria-label={`View application for ${sName}`}
+                            onClick={() => { if (targetId) navigate(`/student-management/admissions/${targetId}`) }}
+                          >
+                            <FiEye />
+                          </button>
                           {isEditable && (
                             <button
+                              type="button"
                               className="table-action-btn action-edit"
                               title="Edit Application"
-                              aria-label="Edit application"
+                              aria-label={`Edit application for ${sName}`}
                               onClick={() => {
-                                const targetId = item.admissionId || item.id || item.studentAdmissionId
                                 if (targetId) navigate(`/student-management/admissions/${targetId}/edit`)
                               }}
                             >
                               <FiEdit2 />
                             </button>
                           )}
+                          <button
+                            type="button"
+                            className="table-action-btn action-deactivate"
+                            title="Delete unavailable: admissions API does not support deletion"
+                            aria-label={`Delete application for ${sName} (unavailable)`}
+                            disabled
+                          >
+                            <FiTrash2 />
+                          </button>
                           {isReviewable && (
                             <button
+                              type="button"
                               className="table-action-btn action-activate"
                               title="Review / Approve"
-                              aria-label="Review application"
+                              aria-label={`Review application for ${sName}`}
                               onClick={() => {
-                                const targetId = item.admissionId || item.id || item.studentAdmissionId
                                 if (targetId) navigate(`/student-management/admissions/${targetId}/approval`)
                               }}
                             >
@@ -1955,7 +1996,7 @@ function AdmissionForm() {
     <div key="fees"><ApplicantFeeStructure data={data} update={update} error={errors['fees.paymentPlan']} /></div>,
     <DocumentsUpload key="documents" data={data} update={update} errors={errors} notify={notify} />,
   ]
-  const wizardScreens = [<>{screens[0]}{screens[1]}</>, <>{masters.error && <div role="alert"><p>{masters.error}</p><Button onClick={() => setMasterAttempt(current => current + 1)}>Retry academic selections</Button></div>}{!masters.loaded && !masters.error && <p role="status">Loading academic selections...</p>}{screens[3]}{screens[4]}{screens[5]}</>, screens[2], screens[7], <>{feeState.loading && <p role="status">Loading Student Integration fees...</p>}{feeState.error && <p role="alert">{feeState.error}</p>}{screens[6]}</>, <FullReview data={data} edit={setStep} studentId={recordIds.studentId} />, <FullReview data={data} studentId={recordIds.studentId} />]
+  const wizardScreens = [<>{screens[0]}{screens[1]}</>, <>{masters.error && <div role="alert"><p>{masters.error}</p><Button onClick={() => setMasterAttempt(current => current + 1)}>Retry academic selections</Button></div>}{!masters.loaded && !masters.error && <p role="status">Loading academic selections...</p>}{screens[3]}{screens[4]}{screens[5]}</>, screens[2], screens[7], <>{feeState.loading && <p role="status">Loading Student Integration fees...</p>}{feeState.error && <p role="alert">{feeState.error}</p>}{screens[6]}</>, <FullReview data={data} edit={setStep} studentId={recordIds.studentId} />]
   const uploadDocuments = async studentId => uploadAdmissionDocuments(studentId, dataRef.current.documents, DOCUMENTS, studentDocumentApi.upload, (item, saved) => {
     const current = dataRef.current
     const documents = { ...current.documents }
@@ -1973,7 +2014,7 @@ function AdmissionForm() {
       setSaveError('Academic selections have not loaded yet. Please retry after they load.')
       return
     }
-    const prefixes = [['personal.','contact.'],['academic.','previousEducation.','application.','admission.'],['parents.'],['documents.'],['fees.'],[],[]][step]
+    const prefixes = [['personal.','contact.'],['academic.','previousEducation.','application.','admission.'],['parents.'],['documents.'],['fees.'],[]][step]
     const relevant = Object.fromEntries(Object.entries(allErrors).filter(([path]) => prefixes.some(prefix => path.startsWith(prefix))))
     setTouched(current => {
       const next = { ...current }
@@ -2225,41 +2266,37 @@ function AdmissionForm() {
         </div>
       </header>
 
-      <div className="erp-two-column-layout" data-without-live-preview="true">
-        <div className="erp-card-main">
-          <WizardStepper step={step} setStep={setStep} furthestStep={Math.max(furthestStep, initialStep)} busy={savingStep || submitting || savingDraft} />
-          <form className="sa-wizard-card" noValidate onSubmit={event => { event.preventDefault(); step < STEPS.length - 1 ? nextStep() : requestSubmit() }} style={{ border: 'none', boxShadow: 'none', padding: 0 }}>
-            <div className="erp-form-scroll-body">
-              {wizardScreens[step]}
-              {step === STEPS.length - 1 && (
-                <label className="sa-declaration">
-                  <input type="checkbox" checked={declared} onChange={event => setDeclared(event.target.checked)} />
-                  <span><strong>Registration Declaration</strong>I confirm that the information entered above is correct.</span>
-                </label>
-              )}
-            </div>
-            <footer className="sa-wizard-actions erp-actions-bar">
-              {saveError && <p role="alert" className="error">{saveError}</p>}
-              {saveError && /semester|course not found|branch.*invalid/i.test(saveError) && step !== 1 && <Button onClick={() => { setStep(1); setSaveError('') }}>Review academic details</Button>}
-              <Button disabled={!step || submitting || savingStep} onClick={() => setStep(current => current - 1)}>
-                <FiArrowLeft /> Previous
+      <div className="sa-admission-layout">
+        <WizardStepper step={step} setStep={setStep} furthestStep={Math.max(furthestStep, initialStep)} busy={savingStep || submitting || savingDraft} />
+        <form className="sa-wizard-card" noValidate onSubmit={event => { event.preventDefault(); step < STEPS.length - 1 ? nextStep() : requestSubmit() }}>
+          <div className="sa-wizard-content">
+            {wizardScreens[step]}
+            {step === STEPS.length - 1 && (
+              <label className="sa-declaration">
+                <input type="checkbox" checked={declared} onChange={event => setDeclared(event.target.checked)} />
+                <span><strong>Registration Declaration</strong>I confirm that the information entered above is correct.</span>
+              </label>
+            )}
+          </div>
+          <footer className="sa-wizard-actions erp-actions-bar">
+            {saveError && <p role="alert" className="error">{saveError}</p>}
+            {saveError && /semester|course not found|branch.*invalid/i.test(saveError) && step !== 1 && <Button onClick={() => { setStep(1); setSaveError('') }}>Review academic details</Button>}
+            <Button disabled={!step || submitting || savingStep} onClick={() => setStep(current => current - 1)}>
+              <FiArrowLeft /> Previous
+            </Button>
+            <span />
+            {step === 2 && <Button disabled={submitting} onClick={skipCurrentStep}>Skip</Button>}
+            {step < STEPS.length - 1 ? (
+              <Button primary onClick={nextStep} disabled={savingStep}>
+                {savingStep ? 'Saving...' : 'Save & Continue'} <FiArrowRight />
               </Button>
-              <span />
-              {step === 2 && <Button disabled={submitting} onClick={skipCurrentStep}>Skip</Button>}
-              {step < STEPS.length - 1 ? (
-                <Button primary onClick={nextStep} disabled={savingStep}>
-                  {savingStep ? 'Saving...' : step === 5 ? 'Continue to Submit' : 'Save & Continue'} <FiArrowRight />
-                </Button>
-              ) : (
-                <Button primary disabled={!declared || submitting} onClick={requestSubmit}>
-                  {submitting ? 'Submitting...' : 'Submit Application'}
-                </Button>
-              )}
-            </footer>
-          </form>
-        </div>
-
-        <></>
+            ) : (
+              <Button primary disabled={!declared || submitting} onClick={requestSubmit}>
+                {submitting ? 'Submitting...' : 'Submit Application'}
+              </Button>
+            )}
+          </footer>
+        </form>
       </div>
 
       {confirmSubmit && (
@@ -2741,7 +2778,7 @@ function AdmissionDetails({ approval = false }) {
     }).catch(error => { if (active) { setDetailError(error.message || 'Unable to load admission.'); setToast({ message: error.message || 'Unable to load admission.', tone: 'error' }) } }).finally(() => { if (active) setLoadingDetail(false) }); return () => { active = false } }, [validId, setToast, loadAttempt])
   if (loadingDetail) return <section className="sa-empty"><FiClock /><h2>Loading admission...</h2></section>
   if (!data) return <section className="sa-empty"><FiAlertCircle /><h2>{detailError || 'Admission not found'}</h2><Button onClick={() => setLoadAttempt(current => current + 1)}>Retry</Button><Button onClick={() => navigate('/student-management/admissions')}>Back</Button></section>
-  const transition = async status => { if (savingStatus || !admissionDecisionAllowed(normalizeStatus(data.status), status, authorized)) return; if (['CORRECTION_REQUIRED','REJECTED'].includes(status) && !text(remarks)) { setToast({ message: 'Admission officer remarks are required for this decision.', tone: 'error' }); return } setSavingStatus(true); try { const result = await studentAdmissionStatusApi.update(id, { status, remarks }); setData(current => ({ ...current, status: normalizeStatus(result.status), remarks })); setRemarks(''); eventBus.emit(ERP_EVENTS.STUDENT_UPDATED, { admissionId: id, status }); setToast({ message: status === 'APPROVED' ? approvalNotice(result) : `${STATUS[status] || status} saved successfully`, tone: 'success' }); setConfirmApproval(false); if (status === 'APPROVED') navigate('/student-management/admissions') } catch (error) { setToast({ message: error.message || 'Unable to update admission status.', tone: 'error' }) } finally { setSavingStatus(false) } }
+  const transition = async status => { if (savingStatus || !admissionDecisionAllowed(normalizeStatus(data.status), status, authorized)) return; if (['CORRECTION_REQUIRED','REJECTED'].includes(status) && !text(remarks)) { setToast({ message: 'Admission officer remarks are required for this decision.', tone: 'error' }); return } setSavingStatus(true); try { const result = await studentAdmissionStatusApi.update(id, { status, remarks }); setData(current => ({ ...current, status: normalizeStatus(result.status), remarks })); setRemarks(''); eventBus.emit(ERP_EVENTS.STUDENT_UPDATED, { admissionId: id, status }); setToast({ message: status === 'APPROVED' ? approvalNotice(result) : `${STATUS[status] || status} saved successfully`, tone: 'success' }); setConfirmApproval(false); if (status === 'APPROVED') navigate('/student-management/profiles') } catch (error) { setToast({ message: error.message || 'Unable to update admission status.', tone: 'error' }) } finally { setSavingStatus(false) } }
   if (approval) {
     const markedDocs = DOCUMENTS.filter(([key]) => {
       const doc = data.documents?.[key]
