@@ -6,7 +6,7 @@ import { CollegeInstitutionManagement, AddCollege, AcademicYearManagement, Depar
 import { MyProfile, Settings } from './pages/profile/MyProfile'
 import { Attendance, AttendanceSessionDetails } from './pages/attendance/Attendance'
 import { FacultyManagement, FacultyLeaveManagement, Payroll } from './pages/faculty/FacultyManagement'
-import { ExaminationSetup, ExaminationList, CreateExamination } from './pages/examinations/examination-setup/ExaminationSetup'
+import { ExaminationSetup, ExaminationList, CreateExamination, ExamType } from './pages/examinations/examination-setup/ExaminationSetup'
 import { ExamTimetable, ExamScheduleList, DepartmentExamSchedule, StudentExamSchedule, HallAllocation, ExamConfiguration, CompletedExams } from './pages/examinations/exam-timetable/ExamModule'
 import { MarksManagement, MarksEntry, BulkMarksUpload, EditMarks, StudentMarks, SubjectMarksReport, MarksApproval } from './pages/examinations/marks-management/MarksManagement'
 import { Navigate, Route, Routes } from 'react-router-dom'
@@ -253,6 +253,9 @@ export default function App() {
               <Route path="/examination-setup/*" element={<ExaminationSetup />} />
               <Route path="/examination-setup/examination-list" element={<ExaminationList />} />
               <Route path="/examination-setup/create-examination" element={<CreateExamination />} />
+              <Route path="/examination-setup/exam-type" element={<ExamType />} />
+              <Route path="/examination-setup/exam-schedule" element={<Navigate to="/examination-setup/examination-list" replace />} />
+              <Route path="/examination-setup/exam-rules" element={<Navigate to="/examination-setup/examination-list" replace />} />
               <Route path="/exam-timetable/*" element={<ExamTimetable />} />
               <Route path="/exam-timetable/create-exam-timetable" element={<Navigate to="/exam/timetable" replace />} />
               <Route path="/exam-timetable/exam-schedule-list" element={<ExamScheduleList />} />
