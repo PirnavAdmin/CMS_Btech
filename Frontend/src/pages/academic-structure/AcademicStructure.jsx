@@ -1090,7 +1090,7 @@ export default function AcademicStructure() {
                   <thead>
                     <tr>
                       <th>Department Name</th>
-                      <th>Code</th>
+                      <th>Department Code</th>
                       <th>Description</th>
                       <th>Status</th>
                       <th style={{ textAlign: 'right' }}>Actions</th>
@@ -1102,23 +1102,23 @@ export default function AcademicStructure() {
                       const isActive = String(dept.status) === '1' || dept.status === 'Active' || dept.status === true
                       return (
                         <tr key={id}>
-                          <td>
+                          <td data-label="Department Name">
                             <div className="as-cell-hierarchy">
                               <span className="as-cell-hierarchy__main">{dept.departmentName ?? dept.name}</span>
                             </div>
                           </td>
-                          <td>
+                          <td data-label="Department Code">
                             <span className="as-badge-code">{dept.departmentCode ?? dept.code}</span>
                           </td>
-                          <td>
+                          <td data-label="Description">
                             <span style={{ color: '#475569', fontSize: '0.8125rem' }}>
                               {dept.description || '—'}
                             </span>
                           </td>
-                          <td>
+                          <td data-label="Status">
                             <StatusBadge status={isActive ? 'Active' : 'Inactive'} />
                           </td>
-                          <td>
+                          <td data-label="Actions">
                             <div className="as-actions-cell" style={{ justifyContent: 'flex-end' }}>
                               <button
                                 type="button"
@@ -1202,9 +1202,9 @@ export default function AcademicStructure() {
                   <thead>
                     <tr>
                       <th>Course Name</th>
-                      <th>Code</th>
-                      <th>Linked Department</th>
-                      <th>Type</th>
+                      <th>Course Code</th>
+                      <th>Department</th>
+                      <th>Course Level</th>
                       <th>Duration</th>
                       <th>Semesters</th>
                       <th>Status</th>
@@ -1218,7 +1218,7 @@ export default function AcademicStructure() {
                       const isActive = String(course.status) === '1' || course.status === 'Active' || course.status === true
                       return (
                         <tr key={id}>
-                          <td>
+                          <td data-label="Course Name">
                             <div className="as-cell-hierarchy">
                               <span className="as-cell-hierarchy__main">{course.courseName ?? course.name}</span>
                               {course.eligibility && (
@@ -1226,23 +1226,23 @@ export default function AcademicStructure() {
                               )}
                             </div>
                           </td>
-                          <td>
+                          <td data-label="Course Code">
                             <span className="as-badge-code">{course.courseCode ?? course.code}</span>
                           </td>
-                          <td>
+                          <td data-label="Department">
                             <span style={{ fontWeight: 500, color: '#334155' }}>{deptName}</span>
                           </td>
-                          <td>
+                          <td data-label="Course Level">
                             <span style={{ fontSize: '0.8125rem', color: '#475569' }}>
                               {course.courseType ?? course.type ?? 'Undergraduate'}
                             </span>
                           </td>
-                          <td>{course.durationYears ?? course.DurationYears ?? 4} Years</td>
-                          <td>{course.totalSemesters ?? course.TotalSemesters ?? 8} Sems</td>
-                          <td>
+                          <td data-label="Duration">{course.durationYears ?? course.DurationYears ?? 4} Years</td>
+                          <td data-label="Semesters">{course.totalSemesters ?? course.TotalSemesters ?? 8} Sems</td>
+                          <td data-label="Status">
                             <StatusBadge status={isActive ? 'Active' : 'Inactive'} />
                           </td>
-                          <td>
+                          <td data-label="Actions">
                             <div className="as-actions-cell" style={{ justifyContent: 'flex-end' }}>
                               <button
                                 type="button"
@@ -1326,10 +1326,9 @@ export default function AcademicStructure() {
                   <thead>
                     <tr>
                       <th>Branch Name</th>
-                      <th>Code</th>
-                      <th>Linked Department</th>
-                      <th>Linked Course</th>
-                      <th>Intake Capacity</th>
+                      <th>Branch Code</th>
+                      <th>Department</th>
+                      <th>Course</th>
                       <th>Status</th>
                       <th style={{ textAlign: 'right' }}>Actions</th>
                     </tr>
@@ -1343,7 +1342,7 @@ export default function AcademicStructure() {
                       const isActive = String(branch.status) === '1' || branch.status === 'Active' || branch.status === true
                       return (
                         <tr key={id}>
-                          <td>
+                          <td data-label="Branch Name">
                             <div className="as-cell-hierarchy">
                               <span className="as-cell-hierarchy__main">{branch.branchName ?? branch.name}</span>
                               {branch.specialization && (
@@ -1351,20 +1350,19 @@ export default function AcademicStructure() {
                               )}
                             </div>
                           </td>
-                          <td>
+                          <td data-label="Branch Code">
                             <span className="as-badge-code">{branch.branchCode ?? branch.code}</span>
                           </td>
-                          <td>
+                          <td data-label="Department">
                             <span style={{ fontWeight: 500, color: '#334155' }}>{deptName}</span>
                           </td>
-                          <td>
+                          <td data-label="Course">
                             <span style={{ color: '#475569' }}>{courseName}</span>
                           </td>
-                          <td>{branch.intakeCapacity ? `${branch.intakeCapacity} Seats` : '—'}</td>
-                          <td>
+                          <td data-label="Status">
                             <StatusBadge status={isActive ? 'Active' : 'Inactive'} />
                           </td>
-                          <td>
+                          <td data-label="Actions">
                             <div className="as-actions-cell" style={{ justifyContent: 'flex-end' }}>
                               <button
                                 type="button"
@@ -1447,12 +1445,11 @@ export default function AcademicStructure() {
                 <table className="as-table">
                   <thead>
                     <tr>
-                      <th>Semester</th>
-                      <th>Number</th>
-                      <th>Linked Course</th>
-                      <th>Linked Branch</th>
-                      <th>Academic Year</th>
-                      <th>Schedule Dates</th>
+                      <th>Semester Name</th>
+                      <th>Semester No.</th>
+                      <th>Department</th>
+                      <th>Course</th>
+                      <th>Branch</th>
                       <th>Status</th>
                       <th style={{ textAlign: 'right' }}>Actions</th>
                     </tr>
@@ -1462,41 +1459,36 @@ export default function AcademicStructure() {
                       const id = sem.semesterId ?? sem.id
                       const branch = branchMap.get(String(sem.branchId ?? sem.BranchId))
                       const course = courseMap.get(String(sem.courseId ?? sem.CourseId ?? branch?.courseId))
-                      const yearName = yearMap.get(String(sem.academicYearId ?? sem.AcademicYearId)) || 'Current Year'
+                      const deptName = deptMap.get(String(course?.departmentId ?? course?.DepartmentId ?? branch?.departmentId)) || '—'
                       const isActive = sem.status === 1 || sem.status === 'Active'
                       const isCompleted = sem.status === 2 || sem.status === 'Completed'
 
                       return (
                         <tr key={id}>
-                          <td>
+                          <td data-label="Semester Name">
                             <span style={{ fontWeight: 600, color: '#0f172a' }}>
                               {sem.semesterName ?? sem.name ?? `Semester ${sem.semesterNumber}`}
                             </span>
                           </td>
-                          <td>
+                          <td data-label="Semester No.">
                             <span className="as-badge-code">Sem {sem.semesterNumber}</span>
                           </td>
-                          <td>{course?.courseName ?? course?.name ?? '—'}</td>
-                          <td>{branch?.branchName ?? branch?.name ?? '—'}</td>
-                          <td>
-                            <span style={{ fontSize: '0.8125rem', color: '#475569' }}>{yearName}</span>
+                          <td data-label="Department">
+                            <span style={{ fontWeight: 500, color: '#334155' }}>{deptName}</span>
                           </td>
-                          <td>
-                            {sem.startDate && sem.endDate ? (
-                              <span style={{ fontSize: '0.8125rem', color: '#64748b' }}>
-                                {String(sem.startDate).slice(0, 10)} to {String(sem.endDate).slice(0, 10)}
-                              </span>
-                            ) : (
-                              <span style={{ color: '#94a3b8', fontSize: '0.8125rem' }}>Dates not set</span>
-                            )}
+                          <td data-label="Course">
+                            <span style={{ color: '#475569', fontSize: '0.8125rem' }}>{course?.courseName ?? course?.name ?? '—'}</span>
                           </td>
-                          <td>
+                          <td data-label="Branch">
+                            <span style={{ color: '#475569', fontSize: '0.8125rem' }}>{branch?.branchName ?? branch?.name ?? '—'}</span>
+                          </td>
+                          <td data-label="Status">
                             <StatusBadge
                               status={isActive ? 'Active' : isCompleted ? 'Completed' : 'Upcoming'}
                               tone={isActive ? 'active' : isCompleted ? 'processed' : 'warning'}
                             />
                           </td>
-                          <td>
+                          <td data-label="Actions">
                             <div className="as-actions-cell" style={{ justifyContent: 'flex-end' }}>
                               <button
                                 type="button"

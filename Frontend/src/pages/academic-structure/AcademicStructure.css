@@ -673,25 +673,50 @@
 .as-table-container {
   width: 100%;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 0 0 12px 12px;
 }
 
 .as-table {
   width: 100%;
+  min-width: 700px;
   border-collapse: collapse;
   font-size: 0.875rem;
   text-align: left;
 }
 
-.as-table th {
-  background: #f8fafc;
-  color: #475569;
-  font-weight: 600;
-  font-size: 0.8125rem;
+/* ── Table header: highest-specificity to defeat any global override ── */
+.academic-structure .as-table thead tr th,
+.as-content-card .as-table thead tr th,
+.as-table thead th {
+  background-color:  #334155 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  font-size: 0.75rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  padding: 0.75rem 1rem !important;
+  border-bottom: 2px solid #b6c2d9 !important;
+  border-top: none !important;
+  white-space: nowrap !important;
+  vertical-align: middle !important;
+  line-height: 1.4 !important;
+  visibility: visible!important;
+  display: table-cell !important;
+  opacity: 1 !important;
+  position: static !important;
+}
+
+/* Responsive label shown only on small screens (card-style layout) */
+.as-table td[data-label]::before {
+  content: attr(data-label);
+  display: none;
+  font-size: 0.6875rem;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  padding: 0.875rem 1.25rem;
-  border-bottom: 1px solid #e2e8f0;
-  white-space: nowrap;
+  color: #64748b;
+  margin-bottom: 2px;
 }
 
 .as-table td {
@@ -702,7 +727,7 @@
 }
 
 .as-table tr:hover td {
-  background-color: #f8fafc;
+  background-color: #dddde6;
 }
 
 .as-table tr:last-child td {
@@ -808,6 +833,26 @@
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   overflow: hidden;
   animation: asScaleUp 0.2s ease;
+}
+
+/* Ensure the form inside modal stretches to fill available space
+   so the footer is always pinned at the bottom and stays visible */
+.as-modal form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.as-modal form .as-modal__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.as-modal form .as-modal__footer {
+  flex-shrink: 0;
 }
 
 .as-modal--sm {
@@ -1020,5 +1065,109 @@ select.as-form-control::-ms-expand {
   to {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+/* ==========================================================================
+   RESPONSIVE TABLE — card-stacked layout on small screens
+   ========================================================================== */
+
+/* Tablet: compact padding */
+@media (max-width: 900px) {
+  .as-table th,
+  .as-table td {
+    padding: 0.75rem 0.875rem;
+    font-size: 0.8125rem;
+  }
+
+  .as-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .as-card-header__right {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .as-card-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .as-card-toolbar__right {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+/* Mobile: stacked card layout — hide thead, show data-label inline */
+@media (max-width: 640px) {
+  .as-table-container {
+    overflow-x: unset;
+  }
+
+  .as-table,
+  .as-table thead,
+  .as-table tbody,
+  .as-table th,
+  .as-table td,
+  .as-table tr {
+    display: block;
+  }
+
+  /* Hide the header row visually but keep accessible */
+  .as-table thead tr {
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+  }
+
+  .as-table tbody tr {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    margin-bottom: 0.75rem;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+  }
+
+  .as-table tbody tr:last-child {
+    margin-bottom: 0;
+  }
+
+  .as-table td {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    border-bottom: 1px solid #f1f5f9;
+    text-align: left;
+  }
+
+  .as-table td:last-child {
+    border-bottom: none;
+  }
+
+  .as-table td[data-label]::before {
+    display: block;
+    flex-shrink: 0;
+    width: 110px;
+    min-width: 110px;
+  }
+
+  .as-actions-cell {
+    justify-content: flex-start !important;
+  }
+
+  .as-header__main {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .as-tabs-list {
+    flex-wrap: wrap;
   }
 }
