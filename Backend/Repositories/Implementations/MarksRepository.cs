@@ -45,7 +45,11 @@ public sealed class MarksRepository : IMarksRepository
     private static string Json(object value) =>
         JsonSerializer.Serialize(value, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
 
-    private static int Scope(long? collegeId, bool superAdmin) => superAdmin ? 1 : 0;
+    // Super Admin is global only when no college was selected in the request.
+    // With a selected college, every read/write procedure receives a normal
+    // college scope so it cannot leak records from other institutions.
+    private static int Scope(long? collegeId, bool superAdmin)
+        => superAdmin && !collegeId.HasValue ? 1 : 0;
 
     public async Task<MarkDto> AddAsync(MarkEntryRequest r, long? actorId, long? collegeId, bool superAdmin)
     {
