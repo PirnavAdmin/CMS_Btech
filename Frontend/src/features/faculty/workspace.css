@@ -1164,11 +1164,7 @@
 }
 
 @media print {
-  .portal-shell--faculty .sidebar,
-  .portal-topbar,
-  .fw-heading-actions,
-  .fw-tabs,
-  .fw-button {
+  .portal-topbar, .fw-heading-actions, .fw-tabs, .fw-button {
     display: none !important;
   }
 
@@ -4278,13 +4274,13 @@
 }
 
 #root .portal-shell .fw-attendance-punch-actions .fw-punch-check-in {
-  border-color: #059669;
-  background: #059669;
+  border-color: var(--success);
+  background: var(--success);
 }
 
 #root .portal-shell .fw-attendance-punch-actions .fw-punch-check-out {
-  border-color: #dc2626;
-  background: #dc2626;
+  border-color: var(--danger);
+  background: var(--danger);
 }
 
 #root .portal-shell .fw-attendance-month-toolbar {

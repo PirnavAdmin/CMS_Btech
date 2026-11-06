@@ -5,6 +5,8 @@ import { MemoryRouter } from 'react-router-dom'
 
 const transport = vi.hoisted(() => vi.fn())
 const roleState = vi.hoisted(() => ({role:'admin'}))
+vi.mock('../auth/ScreenAccess', () => ({ useScreenAccess: () => ({ canAction: (_path, action) => actionState.allowed && !actionState.denied.includes(action) && roleState.role !== 'student' }) }))
+const actionState = vi.hoisted(() => ({allowed:true, denied:[]}))
 const myProfile = vi.hoisted(() => vi.fn())
 const academic = vi.hoisted(() => ({ selectedCollegeId: 1, selectedAcademicYearId: 10, courses: [], branches: [], semesters: [], sections: [] }))
 vi.mock('../api/apiEndpoints', () => ({ API_BASE_URL: '', authenticatedRequest: transport, studentProfileApi: {getMyProfile:myProfile} }))
@@ -17,16 +19,26 @@ vi.mock('../services/roomService',()=>({default:{getRooms:async()=>[]}}))
 import * as api from '../services/scopedModulesService'
 import useScopedModule from '../services/useScopedModule'
 import LiveExaminationWorkspace from '../pages/examinations/LiveExaminationWorkspace'
-import { loadExaminationData } from '../services/examinationWorkspaceService'
+import { loadExaminationData, scheduleConflict } from '../services/examinationWorkspaceService'
 import { LibraryWorkspace, MeetingsEventsWorkspace, PlacementWorkspace } from '../pages/campus/CampusWorkspace'
 
 const response = data => ({ success: true, data })
 const scope = { collegeId: 1, academicYearId: 10 }
 const urlPath = url => new URL(url, 'http://localhost').pathname
-beforeEach(() => { transport.mockReset(); myProfile.mockReset(); roleState.role='admin'; academic.selectedCollegeId=1; academic.selectedAcademicYearId=10 })
+beforeEach(() => { transport.mockReset(); myProfile.mockReset(); actionState.allowed=true; actionState.denied=[]; roleState.role='admin'; academic.selectedCollegeId=1; academic.selectedAcademicYearId=10 })
 afterEach(()=>{cleanup();delete academic.loading})
 
 describe('scoped module API contracts', () => {
+  it('detects hall and section schedule overlaps while allowing adjacent times and edits', () => {
+    const entry = { examDate: '2026-11-05', startTime: '09:00', endTime: '10:00', classroomId: 2, sectionId: 3 }
+    const existing = { ...entry, scheduleId: 9, startTime: '09:30:00', endTime: '10:30:00', status: true }
+    expect(scheduleConflict(entry, [existing])).toContain('overlaps')
+    expect(scheduleConflict(entry, [{ ...existing, classroomId: 5 }])).toContain('overlaps')
+    expect(scheduleConflict(entry, [{ ...existing, startTime: '10:00:00' }])).toBe('')
+    expect(scheduleConflict(entry, [existing], 9)).toBe('')
+    expect(scheduleConflict(entry, [{ ...existing, status: false }])).toBe('')
+    expect(scheduleConflict(entry, [{ ...existing, examDate: '2026-11-06' }])).toBe('')
+  })
   it('unwraps supplemental payloads while preserving server identity and publication status', () => {
     expect(api.rows(response([{ id: 8, status: 'Published', data: { id:'local', collegeId:1, records:[] } }]))).toEqual([{ id:8, status:'Published', collegeId:1, records:[], data:undefined }])
     expect(api.record({book_id:2, available_copies:3})).toEqual({bookId:2,availableCopies:3})
@@ -70,6 +82,39 @@ describe('scoped module API contracts', () => {
     expect(transport.mock.calls[0][0]).toBe('/api/v1/grade-policies/11')
     expect(transport.mock.calls[0][1].method).toBe('PUT')
     expect(JSON.parse(transport.mock.calls[0][1].body)).toEqual({...scope,bands})
+  })
+  it('limits result review to approved candidates for the selected exam and college', async () => {
+    const exam = { ...scope, examId: 7 }
+    const candidate = { collegeId: 1, examId: 7, studentId: 5, workflowStatus: 'APPROVED' }
+    transport.mockResolvedValueOnce(response([
+      candidate, { ...candidate, subjectId: 21 }, { ...candidate, studentId: 6, collegeId: 2 },
+      { ...candidate, studentId: 8, workflowStatus: 'DRAFT' },
+    ])).mockResolvedValueOnce(response({ studentId: 5, examId: 7, sgpa: 8, subjects: [] }))
+      .mockResolvedValueOnce(response({ studentId: 5, examId: 7, isValid: false, validations: [{ rule: 'Grade' }] }))
+    expect((await api.loadResultCandidates(scope, exam)).map(row => row.studentId)).toEqual([5])
+    expect(transport.mock.calls[0][0]).toContain('workflowStatus=APPROVED')
+    await expect(api.reviewExamResult(scope, exam, candidate)).resolves.toMatchObject({ result: { sgpa: 8 }, validation: { isValid: false } })
+    for (const [url, options] of transport.mock.calls.slice(1)) {
+      expect(url).toMatch(/results\/(calculate|validate)$/)
+      expect(JSON.parse(options.body)).toEqual({ studentId: 5, examId: 7 })
+    }
+    await expect(api.reviewExamResult(scope, exam, { ...candidate, collegeId: 2 })).rejects.toThrow('eligible student')
+    expect(transport).toHaveBeenCalledTimes(3)
+  })
+  it('does not validate or preview a mismatched result response', async () => {
+    transport.mockResolvedValue(response({ examId: 7, studentId: 99, subjects: [] }))
+    await expect(api.reviewExamResult(scope, { ...scope, examId: 7 }, {
+      collegeId: 1, examId: 7, studentId: 5, workflowStatus: 'APPROVED',
+    })).rejects.toThrow('selected student and examination')
+    expect(transport).toHaveBeenCalledOnce()
+  })
+  it('limits student result history to the current academic scope and requested identity', async () => {
+    transport.mockResolvedValue(response([
+      { studentId: 5, examId: 7, sgpa: 0 }, { studentId: 6, examId: 7 }, { studentId: 5, examId: 8 },
+    ]))
+    await expect(api.loadStudentResultHistory(scope, [{ ...scope, examId: 7 }, { ...scope, academicYearId: 99, examId: 8 }], 5))
+      .resolves.toEqual([{ studentId: 5, examId: 7, sgpa: 0 }])
+    expect(transport.mock.calls[0][0]).toContain('/results/student/5')
   })
   it('sends real library category and accession ids instead of generated copy data', async () => {
     transport.mockResolvedValue(response({book_id:2}))
@@ -142,14 +187,100 @@ describe('campus screens with institutional data',()=>{
 function examTransport(url, options) {
   const path=urlPath(url)
   if (options.method !== 'GET') return Promise.resolve(response({}))
-  if(path==='/api/v1/exams')return Promise.resolve(response([{examId:7,collegeId:1,academicYearId:10,examName:'Mid Term',startDate:'2026-11-01',endDate:'2026-11-10'}]))
+  if(path==='/api/v1/exams')return Promise.resolve(response([{examId:7,collegeId:1,academicYearId:10,courseId:3,branchId:4,semesterId:5,examTypeId:2,examCode:'MID',status:true,examName:'Mid Term',startDate:'2026-11-01',endDate:'2026-11-10'}]))
   if(path==='/api/v1/exam-types')return Promise.resolve(response([{examTypeId:2,collegeId:1,name:'Mid Semester',code:'MID',status:'Active'}]))
-  if(path==='/api/v1/exams/lookups')return Promise.resolve(response({courses:[{id:3,name:'B.Tech'}],branches:[{id:4,name:'CSE',courseId:3}],semesters:[{id:5,name:'Semester 1',courseId:3,branchId:4}],subjects:[{id:6,name:'Math'}],classrooms:[{id:8,name:'Hall A'}]}))
+  if(path==='/api/v1/exams/lookups')return Promise.resolve(response({courses:[{id:3,name:'B.Tech'}],branches:[{id:4,name:'CSE',courseId:3}],semesters:[{id:5,name:'Semester 1',courseId:3,branchId:4}],subjects:[{id:6,name:'Math'}],sections:[],classrooms:[{id:8,name:'Hall A'}]}))
   if(path.endsWith('/schedules'))return Promise.resolve(response([{examScheduleId:9,subjectName:'Math',examDate:'2026-11-05',startTime:'09:00:00',endTime:'12:00:00',classroomName:'Hall A',status:'Active'}]))
   if(path.endsWith('/rules'))return Promise.resolve(response([{examRuleId:10,ruleName:'Passing',ruleCode:'PASS',ruleValue:'40'}]))
   return Promise.resolve(response([]))
 }
 describe('examination screens and async state',()=>{
+  it('creates an examination and updates its active status through the existing routes', async () => {
+    const writes = []
+    transport.mockImplementation((url, options) => {
+      if (options.method !== 'GET') { writes.push({ path: urlPath(url), method: options.method, body: JSON.parse(options.body) }); return Promise.resolve(response({ examId: 9 })) }
+      return examTransport(url, options)
+    })
+    render(<MemoryRouter><LiveExaminationWorkspace /></MemoryRouter>)
+    await screen.findByRole('cell', { name: 'Mid Term' })
+    fireEvent.click(screen.getByRole('button', { name: 'Add Examination' }))
+    let dialog = screen.getByRole('dialog', { name: 'Manage Examination' })
+    const set = (label, value) => fireEvent.change(within(dialog).getByLabelText(label), { target: { value } })
+    set('Examination Name *', 'Final Examination'); set('Examination Code *', 'FIN')
+    set('Course *', '3'); set('Branch *', '4'); set('Semester / Term *', '5'); set('Exam Type *', '2')
+    set('Start Date *', '2026-12-01'); set('End Date *', '2026-12-10')
+    fireEvent.submit(dialog.querySelector('form'))
+    await screen.findByText('Record saved successfully.')
+    expect(writes[0]).toMatchObject({ path: '/api/v1/exams', method: 'POST', body: { collegeId: 1, academicYearId: 10, courseId: 3, branchId: 4, semesterId: 5, examTypeId: 2, examCode: 'FIN', status: true } })
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    dialog = screen.getByRole('dialog', { name: 'Manage Examination' })
+    set('Status', 'inactive')
+    fireEvent.submit(dialog.querySelector('form'))
+    await waitFor(() => expect(writes).toHaveLength(2))
+    expect(writes[1]).toMatchObject({ path: '/api/v1/exams/7', method: 'PUT', body: { status: false } })
+  })
+
+  it('creates types and rules with verified college and examination identities', async () => {
+    const writes = []
+    transport.mockImplementation((url, options) => {
+      if (options.method === 'POST') { writes.push([urlPath(url), JSON.parse(options.body)]); return Promise.resolve(response({ id: 20 })) }
+      return examTransport(url, options)
+    })
+    const mounted = render(<MemoryRouter><LiveExaminationWorkspace screen="exam-type" /></MemoryRouter>)
+    await screen.findByRole('cell', { name: 'Mid Semester' })
+    fireEvent.click(screen.getByRole('button', { name: 'Add Exam Type' }))
+    let dialog = screen.getByRole('dialog', { name: 'Manage Exam Type' })
+    fireEvent.change(within(dialog).getByLabelText('Exam Type Name *'), { target: { value: 'Final' } })
+    fireEvent.change(within(dialog).getByLabelText('Type Code *'), { target: { value: 'FIN' } })
+    fireEvent.submit(dialog.querySelector('form'))
+    await screen.findByText('Record saved successfully.')
+    expect(writes[0]).toEqual(['/api/v1/exam-types', expect.objectContaining({ collegeId: 1, name: 'Final', code: 'FIN', status: true })])
+    mounted.unmount()
+    render(<MemoryRouter><LiveExaminationWorkspace screen="exam-rules" /></MemoryRouter>)
+    await screen.findByRole('cell', { name: 'Passing' })
+    fireEvent.click(screen.getByRole('button', { name: 'Add Rule' }))
+    dialog = screen.getByRole('dialog', { name: 'Manage Rule' })
+    for (const [label, value] of [['Examination *','7'],['Rule Code *','PASS'],['Rule Name *','Passing rule'],['Rule Value *','40']]) fireEvent.change(within(dialog).getByLabelText(label), { target: { value } })
+    fireEvent.submit(dialog.querySelector('form'))
+    await waitFor(() => expect(writes).toHaveLength(2))
+    expect(writes[1]).toEqual(['/api/v1/exams/7/rules', expect.objectContaining({ examId: 7, ruleCode: 'PASS', ruleValue: '40' })])
+  })
+
+  it('honors create, edit and delete permissions separately', async () => {
+    actionState.denied = ['edit','delete']
+    transport.mockImplementation(examTransport)
+    render(<MemoryRouter><LiveExaminationWorkspace /></MemoryRouter>)
+    await screen.findByRole('cell', { name: 'Mid Term' })
+    expect(screen.getByRole('button', { name: 'Add Examination' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull()
+  })
+  it('keeps record details available without mutation permission and closes without a write',async()=>{
+    actionState.allowed=false
+    transport.mockImplementation(examTransport)
+    render(<MemoryRouter><LiveExaminationWorkspace screen="exam-type" /></MemoryRouter>)
+    await screen.findByText('Mid Semester')
+    expect(screen.queryByRole('button',{name:'Add Exam Type'})).toBeNull()
+    expect(screen.queryByRole('button',{name:'Edit'})).toBeNull()
+    fireEvent.click(screen.getByRole('button',{name:'View details'}))
+    const dialog=screen.getByRole('dialog',{name:'Exam Type Details'})
+    expect(within(dialog).getByText('MID')).toBeTruthy()
+    fireEvent.click(within(dialog).getByRole('button',{name:'Close details'}))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(transport.mock.calls.every(([,options])=>!options.method || options.method==='GET')).toBe(true)
+  })
+  it('cancels an examination editor without creating a record',async()=>{
+    transport.mockImplementation(examTransport)
+    render(<MemoryRouter><LiveExaminationWorkspace screen="exam-type" /></MemoryRouter>)
+    await screen.findByText('Mid Semester')
+    fireEvent.click(screen.getByRole('button',{name:'Add Exam Type'}))
+    const dialog=screen.getByRole('dialog',{name:'Manage Exam Type'})
+    fireEvent.change(within(dialog).getByLabelText('Exam Type Name *'),{target:{value:'Unsaved draft'}})
+    fireEvent.click(within(dialog).getByRole('button',{name:'Cancel'}))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(transport.mock.calls.every(([,options])=>!options.method || options.method==='GET')).toBe(true)
+  })
+
   it('opens filters on demand and combines status/date filters with a working clear action',async()=>{
     transport.mockImplementation((url,options)=>urlPath(url).endsWith('/schedules')?Promise.resolve(response([
       {examScheduleId:1,subjectName:'Active Math',examDate:'2026-11-05',status:'Active'},
@@ -182,6 +313,8 @@ describe('examination screens and async state',()=>{
     const date=form.getByLabelText(/^Exam Date/)
     expect(date.disabled).toBe(true)
     fireEvent.change(form.getByLabelText('Examination *'),{target:{value:'7'}})
+    await form.findByRole('option',{name:'Math'})
+    expect(transport.mock.calls.some(([url])=>url.includes('courseId=3&branchId=4&semesterId=5'))).toBe(true)
     fireEvent.change(form.getByLabelText('Subject *'),{target:{value:'6'}})
     expect(date.min).toBe('2026-11-01');expect(date.max).toBe('2026-11-10')
     fireEvent.change(date,{target:{value:'2026-11-20'}})
@@ -208,6 +341,7 @@ describe('examination screens and async state',()=>{
     fireEvent.click(screen.getByRole('button',{name:'Add Schedule'}))
     const dialog=screen.getByRole('dialog',{name:'Manage Schedule'}), form=within(dialog)
     fireEvent.change(form.getByLabelText('Examination *'),{target:{value:'7'}})
+    await form.findByRole('option',{name:'Math'})
     fireEvent.change(form.getByLabelText('Subject *'),{target:{value:'6'}})
     fireEvent.change(form.getByLabelText(/^Exam Date/),{target:{value:'2026-11-05'}})
     fireEvent.change(form.getByLabelText('Start Time *'),{target:{value:'09:00'}})

@@ -3,6 +3,8 @@ import { useLocation } from 'react-router-dom'
 import { FiChevronLeft, FiChevronRight, FiX } from 'react-icons/fi'
 import { navigationGroups, unavailableNavigationGroups, activeSidebarEntry } from '../config/sidebarNavigation.js'
 import SidebarNavigation from './navigation/SidebarNavigation.jsx'
+import { MODULE_REGISTRY } from '../config/moduleRegistry.js'
+import { adminWorkspaceForModule, groupAdminWorkspaces } from '../config/adminWorkspaces.js'
 import useSidebarAccess from '../hooks/useSidebarAccess.js'
 import { getUserRole, getAccessToken } from '../auth/auth'
 import { useAcademic } from '../context/AcademicContext'
@@ -18,12 +20,18 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
   const navigationRef = useRef(null)
   const { selectedCollege, selectedCollegeId, colleges = [], loading: collegeLoading = false, collegeAccess = null } = useAcademic()
   const { status, access } = useSidebarAccess({ token: getAccessToken(), collegeId: selectedCollegeId, collegeLoading, providedAccess: collegeAccess })
-  const groups = useMemo(() => status === 'error' || status === 'loading'
-    ? unavailableNavigationGroups(userRole)
-    : navigationGroups({ role: userRole, access, selectedCollegeId }), [status, userRole, access, selectedCollegeId])
-  const activeId = useMemo(() => activeSidebarEntry(pathname, userRole), [pathname, userRole])
+  const groups = useMemo(() => {
+    const modules = userRole === 'admin' ? MODULE_REGISTRY.map(entry => entry.id === 'academic_settings' ? { ...entry, navigation: true, label: 'Working Context' } : entry) : MODULE_REGISTRY
+    const source = status === 'error' || status === 'loading' ? unavailableNavigationGroups(userRole, modules) : navigationGroups({ role: userRole, access, selectedCollegeId, modules })
+    return userRole === 'admin' ? groupAdminWorkspaces(source) : source
+  }, [status, userRole, access, selectedCollegeId])
+  const activeId = useMemo(() => {
+    const module = activeSidebarEntry(pathname, userRole) || (pathname === '/settings' || pathname.startsWith('/settings/') || pathname === '/global-settings' ? 'academic_settings' : null)
+    const workspace = userRole === 'admin' && adminWorkspaceForModule(module)
+    return workspace ? `workspace_${workspace.id}` : module
+  }, [pathname, userRole])
 
-  const collegeDisplayName = selectedCollege?.name || selectedCollege?.collegeName || 'Pirnav Engineering College'
+  const collegeDisplayName = selectedCollege?.name || selectedCollege?.collegeName || 'B-Tech Management'
   const matchingCollege = colleges.find(college => {
     const name = String(college?.name || college?.collegeName || '').toLowerCase().replace(/[^a-z0-9]/g, '')
     const current = String(collegeDisplayName).toLowerCase().replace(/[^a-z0-9]/g, '')

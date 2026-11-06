@@ -4,7 +4,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  color: var(--text-primary, #102A4C);
+  color: var(--text-primary, var(--text-primary));
 }
 
 .acs-form {
@@ -15,8 +15,8 @@
 
 .acs-card {
   padding: 20px 22px;
-  background: var(--surface, #ffffff);
-  border: 1px solid var(--border, #DCE5F2);
+  background: var(--surface, var(--surface));
+  border: 1px solid var(--border, var(--border));
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(16, 42, 76, 0.05);
 }
@@ -27,14 +27,14 @@
   justify-content: space-between;
   margin-bottom: 16px;
   padding-bottom: 10px;
-  border-bottom: 1px solid var(--border, #DCE5F2);
+  border-bottom: 1px solid var(--border, var(--border));
 }
 
 .acs-card-header h3 {
   margin: 0;
   font-size: 15px;
   font-weight: 700;
-  color: var(--text-primary, #102A4C);
+  color: var(--text-primary, var(--text-primary));
 }
 
 .acs-badge {
@@ -42,7 +42,7 @@
   font-weight: 600;
   padding: 3px 8px;
   border-radius: 5px;
-  background: var(--brand-soft, #EFF6FF);
+  background: var(--brand-soft, var(--brand-soft));
   color: var(--brand, #2563EB);
   border: 1px solid #BFDBFE;
   text-transform: uppercase;
@@ -68,7 +68,7 @@
   gap: 8px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-primary, #102A4C);
+  color: var(--text-primary, var(--text-primary));
 }
 
 .acs-label svg {
@@ -76,12 +76,12 @@
 }
 
 .acs-req {
-  color: var(--danger, #EF4444);
+  color: var(--danger, var(--danger));
 }
 
 .acs-hint {
   font-size: 11px;
-  color: var(--text-muted, #526A86);
+  color: var(--text-muted, var(--text-secondary));
   margin-top: 2px;
 }
 
@@ -99,7 +99,7 @@
   gap: 6px;
   font-size: 11px;
   font-weight: 700;
-  color: var(--text-muted, #526A86);
+  color: var(--text-muted, var(--text-secondary));
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 12px;
@@ -120,12 +120,12 @@
 
 .acs-preview-entity small {
   font-size: 11px;
-  color: var(--text-muted, #526A86);
+  color: var(--text-muted, var(--text-secondary));
 }
 
 .acs-preview-entity strong {
   font-size: 14px;
-  color: var(--text-primary, #102A4C);
+  color: var(--text-primary, var(--text-primary));
   font-weight: 700;
 }
 
@@ -140,9 +140,9 @@
   font-size: 11px;
   font-weight: 600;
   border-radius: 4px;
-  background: var(--surface, #ffffff);
-  border: 1px solid var(--border, #DCE5F2);
-  color: var(--text-secondary, #526A86);
+  background: var(--surface, var(--surface));
+  border: 1px solid var(--border, var(--border));
+  color: var(--text-secondary, var(--text-secondary));
   width: fit-content;
 }
 
@@ -161,7 +161,7 @@
   font-size: 13px;
   font-weight: 600;
   color: #ffffff;
-  background: var(--primary, #174C88);
+  background: var(--primary, var(--brand));
   border: none;
   border-radius: 7px;
   cursor: pointer;
@@ -185,13 +185,13 @@
   gap: 6px;
   font-size: 13px;
   font-weight: 500;
-  color: var(--success, #10B981);
+  color: var(--success, var(--success));
 }
 
 .acs-active-summary-card {
   padding: 20px 24px;
-  background: var(--surface, #ffffff);
-  border: 1px solid var(--border, #DCE5F2);
+  background: var(--surface, var(--surface));
+  border: 1px solid var(--border, var(--border));
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(16, 42, 76, 0.05);
 }
@@ -207,7 +207,7 @@
   margin: 0;
   font-size: 14px;
   font-weight: 700;
-  color: var(--text-primary, #102A4C);
+  color: var(--text-primary, var(--text-primary));
 }
 
 .acs-active-indicator {
@@ -234,7 +234,7 @@
 .acs-summary-dl dt {
   font-size: 11px;
   font-weight: 700;
-  color: var(--text-muted, #526A86);
+  color: var(--text-muted, var(--text-secondary));
   text-transform: uppercase;
   margin-bottom: 4px;
 }
@@ -243,7 +243,7 @@
   margin: 0;
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-primary, #102A4C);
+  color: var(--text-primary, var(--text-primary));
 }
 
 :root[data-theme="dark"] .academic-context-settings :is(.acs-card, .acs-active-summary-card) {
@@ -264,11 +264,11 @@
   color: var(--text-muted) !important;
 }
 :root[data-theme="dark"] .academic-context-settings .acs-tag {
-  color: #A9D3F7 !important;
+  color: var(--brand) !important;
   border-color: rgba(43, 120, 197, .46) !important;
   background: rgba(43, 120, 197, .16) !important;
 }
 :root[data-theme="dark"] .academic-context-settings .acs-active-indicator {
-  color: #A9D3F7 !important;
+  color: var(--brand) !important;
   background: rgba(43, 120, 197, .20) !important;
 }

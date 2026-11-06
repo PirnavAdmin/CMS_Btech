@@ -26,7 +26,7 @@
 }
 
 .fa-demo-bar.is-live {
-  border-left: 4px solid #10b981;
+  border-left: 4px solid var(--success);
   background: linear-gradient(90deg, rgba(16, 185, 129, 0.05), transparent 40%);
 }
 
@@ -44,7 +44,7 @@
 
 .is-live .fa-mode-tag {
   background: rgba(16, 185, 129, 0.12);
-  color: #059669;
+  color: var(--success);
 }
 
 .fa-demo-bar span {
@@ -129,17 +129,17 @@
 
 .fa-stat-present .fa-stat-icon {
   background: rgba(16, 185, 129, 0.12);
-  color: #059669;
+  color: var(--success);
 }
 
 .fa-stat-absent .fa-stat-icon {
   background: rgba(239, 68, 68, 0.12);
-  color: #dc2626;
+  color: var(--danger);
 }
 
 .fa-stat-late .fa-stat-icon {
   background: rgba(245, 158, 11, 0.12);
-  color: #d97706;
+  color: var(--warning);
 }
 
 .fa-stat div {
@@ -165,15 +165,15 @@
 }
 
 .fa-stat-present strong {
-  color: #059669;
+  color: var(--success);
 }
 
 .fa-stat-absent strong {
-  color: #dc2626;
+  color: var(--danger);
 }
 
 .fa-stat-late strong {
-  color: #d97706;
+  color: var(--warning);
 }
 
 /* Context / Class Selector */
@@ -296,7 +296,7 @@
 
 .fa-tag-section {
   background: rgba(16, 185, 129, 0.1);
-  color: #059669;
+  color: var(--success);
 }
 
 .fa-tag-year {
@@ -404,7 +404,7 @@
 
 .fa-session-status.is-complete {
   background: rgba(16, 185, 129, 0.12);
-  color: #059669;
+  color: var(--success);
   border-color: rgba(16, 185, 129, 0.3);
 }
 
@@ -437,7 +437,7 @@
 }
 
 .fa-progress-status.is-complete {
-  color: #059669;
+  color: var(--success);
   font-weight: 700;
 }
 
@@ -452,7 +452,7 @@
 
 .fa-progress-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, #1769c2, #10b981);
+  background: linear-gradient(90deg, var(--brand), var(--success));
   border-radius: 6px;
   transition: width 0.3s ease;
 }
@@ -493,26 +493,26 @@
 
 .fa-btn-present {
   background: rgba(16, 185, 129, 0.08);
-  color: #059669;
+  color: var(--success);
   border-color: rgba(16, 185, 129, 0.3);
 }
 
 .fa-btn-present:hover:not(:disabled) {
-  background: #10b981;
+  background: var(--success);
   color: #ffffff;
-  border-color: #10b981;
+  border-color: var(--success);
 }
 
 .fa-btn-absent {
   background: rgba(239, 68, 68, 0.08);
-  color: #dc2626;
+  color: var(--danger);
   border-color: rgba(239, 68, 68, 0.3);
 }
 
 .fa-btn-absent:hover:not(:disabled) {
-  background: #ef4444;
+  background: var(--danger);
   color: #ffffff;
-  border-color: #ef4444;
+  border-color: var(--danger);
 }
 
 .fa-btn-remaining {
@@ -533,9 +533,9 @@
 }
 
 .fa-btn-clear:hover:not(:disabled) {
-  background: #ef4444;
+  background: var(--danger);
   color: #ffffff;
-  border-color: #ef4444;
+  border-color: var(--danger);
 }
 
 .fa-bulk-actions {
@@ -632,7 +632,7 @@
 }
 
 .fa-table th {
-  background: #174c88;
+  background: var(--brand);
   color: #ffffff;
   font-size: 11px;
   font-weight: 700;
@@ -734,13 +734,13 @@
 }
 
 .fa-btn-present.is-active {
-  background: #10b981;
+  background: var(--success);
   color: #ffffff;
   box-shadow: 0 1px 4px rgba(16, 185, 129, 0.35);
 }
 
 .fa-btn-absent.is-active {
-  background: #ef4444;
+  background: var(--danger);
   color: #ffffff;
   box-shadow: 0 1px 4px rgba(239, 68, 68, 0.35);
 }
@@ -787,17 +787,17 @@
 
 .fa-status-present {
   background: rgba(16, 185, 129, 0.12);
-  color: #059669;
+  color: var(--success);
 }
 
 .fa-status-absent {
   background: rgba(239, 68, 68, 0.12);
-  color: #dc2626;
+  color: var(--danger);
 }
 
 .fa-status-late {
   background: rgba(245, 158, 11, 0.12);
-  color: #d97706;
+  color: var(--warning);
 }
 
 .fa-status-leave {
@@ -922,7 +922,7 @@
 
 .fa-notice.is-error {
   background: rgba(239, 68, 68, 0.1);
-  color: #dc2626;
+  color: var(--danger);
   border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
@@ -1007,15 +1007,15 @@
 }
 
 .count-present strong {
-  color: #059669;
+  color: var(--success);
 }
 
 .count-absent strong {
-  color: #dc2626;
+  color: var(--danger);
 }
 
 .count-late strong {
-  color: #d97706;
+  color: var(--warning);
 }
 
 .count-leave strong {

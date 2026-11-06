@@ -1,0 +1,21 @@
+{
+  "vitestFiles": 33,
+  "vitestPassed": 259,
+  "nodePassed": 441,
+  "totalPassed": 700,
+  "finalFocusedVitestPassed": 18,
+  "productionBuildPassed": true,
+  "lintErrors": 0,
+  "lintWarnings": 713,
+  "phase4Warnings": 742,
+  "warningReduction": 29,
+  "protectedFilesChecked": 1663,
+  "changedProtectedFiles": [],
+  "backendFilesChanged": [],
+  "actualBrowserRunPerformed": false,
+  "browserStatus": "blocked",
+  "browserEvidenceSource": "PHASE2_VERIFICATION.json",
+  "visualParityVerified": false,
+  "liveCrudVerified": false,
+  "phase5Complete": false
+}

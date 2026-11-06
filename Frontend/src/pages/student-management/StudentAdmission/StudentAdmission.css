@@ -1,96 +1,13 @@
 
 /* Source styles: pages/student-management/StudentAdmission/StudentAdmission.css */
-.student-admission{width:100%;min-width:0;color:var(--text-primary);font-size:14px}.sa-page-header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin:18px 0 20px}.sa-page-header h1{margin:2px 0 4px;font-size:28px;line-height:1.2;letter-spacing:-.025em}.sa-page-header p,.sa-page-header span{margin:0;color:var(--text-muted)}.sa-page-header>div>span{color:var(--brand);font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.sa-primary,.sa-secondary,.sa-danger,.sa-danger-outline,.sa-link,.sa-back{display:inline-flex;min-height:38px;align-items:center;justify-content:center;gap:7px;padding:0 13px;border:1px solid transparent;border-radius:var(--radius-sm);font-size:12px;font-weight:750}.sa-primary{color:#fff;background:var(--brand)}.sa-primary:hover{color:#fff;background:var(--brand-hover)}.sa-secondary,.sa-back{border-color:var(--border);color:var(--brand);background:var(--surface)}.sa-danger{color:#fff;background:var(--danger)}.sa-danger-outline{border-color:color-mix(in srgb,var(--danger) 45%,var(--border));color:var(--danger);background:var(--surface)}.sa-link{padding-inline:5px;color:var(--brand);background:transparent}.sa-back{margin:16px 0 0;padding:0;border:0;background:transparent}.sa-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:16px}.sa-stats article{position:relative;min-height:82px;padding:15px 16px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);box-shadow:var(--shadow-sm);overflow:hidden}.sa-stats article:before{position:absolute;inset:0 auto 0 0;width:3px;content:"";background:var(--brand)}.sa-stats .approved:before{background:var(--success)}.sa-stats .pending:before,.sa-stats .documents:before{background:var(--warning)}.sa-stats .rejected:before{background:var(--danger)}.sa-stats span{display:block;color:var(--text-muted);font-size:11px;font-weight:700}.sa-stats strong{display:block;margin-top:8px;font-size:24px}.sa-directory,.sa-wizard-card,.sa-documents,.sa-detail-card,.sa-approval{border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);box-shadow:var(--shadow-sm)}.sa-directory>header,.sa-documents>header,.sa-approval>header{display:flex;min-height:58px;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border)}.sa-directory h2,.sa-documents h2,.sa-approval h2{margin:0;font-size:16px}.sa-directory header span,.sa-documents header p{color:var(--text-muted);font-size:12px}.sa-documents header p{margin:3px 0 0}.sa-toolbar{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface-soft)}.sa-search{display:flex;min-width:260px;max-width:520px;height:40px;flex:1;align-items:center;gap:8px;padding:0 11px;border:1px solid var(--border-strong);border-radius:8px;color:var(--text-muted);background:var(--surface)}.sa-search input{all:unset;width:100%;height:100%;color:var(--text-primary);font-size:13px}.sa-filter-grid{display:grid;grid-template-columns:repeat(4,minmax(140px,1fr));gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--surface-soft)}.sa-filter-grid label{display:grid;gap:5px}.sa-filter-grid span{color:var(--text-secondary);font-size:11px;font-weight:700}.sa-filter-grid select,.sa-pagination select{height:38px;padding:0 10px;border:1px solid var(--border);border-radius:7px;color:var(--text-primary);background:var(--surface)}.sa-table-wrap{width:100%;overflow-x:auto}.sa-table-wrap table{width:100%;min-width:1120px;border-collapse:collapse}.sa-table-wrap th{height:40px;padding:9px 12px;border-bottom:0;color:#FFFFFF;background:var(--table-head,#174C88);text-align:left;font-size:10px!important;letter-spacing:.035em;text-transform:uppercase;white-space:nowrap;vertical-align:middle}.sa-table-wrap td{height:46px;padding:9px 12px;border-bottom:1px solid var(--border,#DCE5F2);color:var(--text-primary,#102A4C);background:var(--surface);font-size:12px!important;vertical-align:middle}.sa-table-wrap td>small,.sa-table-wrap td>strong+small{display:block;margin-top:2px;color:var(--text-muted)}.sa-table-wrap tbody tr:hover td{background:var(--surface-soft)}.sa-student{display:flex;align-items:center;gap:9px;min-width:190px}.sa-student>i,.sa-profile-avatar{display:grid;width:34px;height:34px;flex:0 0 34px;place-items:center;border-radius:50%;color:var(--brand);background:var(--brand-soft);font-style:normal;font-weight:800}.sa-student span{display:grid}.sa-student small{color:var(--text-muted)}.sa-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border-radius:999px;color:var(--text-secondary);background:var(--surface-soft);font-size:10px;font-weight:800;white-space:nowrap}.sa-badge i{width:6px;height:6px;border-radius:50%;background:currentColor}.sa-badge.status-approved,.sa-badge.status-admitted,.sa-badge.status-verified{color:var(--success);background:color-mix(in srgb,var(--success) 12%,var(--surface))}.sa-badge.status-rejected,.sa-badge.status-cancelled{color:var(--danger);background:color-mix(in srgb,var(--danger) 12%,var(--surface))}.sa-badge.status-submitted,.sa-badge.status-under_review,.sa-badge.status-document_pending,.sa-badge.status-correction_required{color:var(--warning);background:color-mix(in srgb,var(--warning) 13%,var(--surface))}.sa-doc-summary{color:var(--warning);font-size:11px;font-weight:700}.sa-doc-summary.complete{color:var(--success)}.sa-icon-actions,.sa-row-actions{display:flex;align-items:center;gap:5px}.sa-icon-actions button,.sa-row-actions button{display:inline-flex;min-width:30px;height:30px;align-items:center;justify-content:center;gap:5px;padding:0 7px;border:1px solid var(--border);border-radius:6px;color:var(--brand);background:var(--surface);font-size:10px;font-weight:700}.sa-row-actions .success{color:var(--success)}.sa-row-actions .danger{color:var(--danger)}.sa-pagination{display:flex;min-height:54px;align-items:center;justify-content:space-between;gap:15px;padding:9px 14px;color:var(--text-muted);background:var(--surface-soft);font-size:11px}.sa-pagination label,.sa-pagination div{display:flex;align-items:center;gap:6px}.sa-pagination select{width:60px;height:32px}.sa-pagination button{display:grid;width:32px;height:32px;place-items:center;border:1px solid var(--border);border-radius:6px;color:var(--text-secondary);background:var(--surface)}.sa-pagination button.active{border-color:var(--brand);color:#202225;background:var(--brand)}.sa-empty{display:grid;min-height:260px;place-items:center;align-content:center;gap:7px;padding:30px;color:var(--text-muted);text-align:center}.sa-empty>svg{width:38px;height:38px;color:var(--brand)}.sa-empty h3,.sa-empty p{margin:0}.sa-stepper{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:14px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);overflow:hidden}.sa-stepper button{position:relative;display:grid;min-width:0;place-items:center;gap:6px;padding:12px 5px;border:0;border-right:1px solid var(--border);color:var(--text-muted);background:transparent;font-size:9px;font-weight:700}.sa-stepper button:last-child{border-right:0}.sa-stepper i{display:grid;width:25px;height:25px;place-items:center;border:1px solid var(--border-strong);border-radius:50%;font-style:normal}.sa-stepper button.active{color:var(--brand);background:var(--brand-soft)}.sa-stepper button.active i{border-color:var(--brand);color:#fff;background:var(--brand)}.sa-stepper button.complete i{border-color:var(--success);color:#fff;background:var(--success)}.sa-wizard-card{overflow:hidden}.sa-step-heading{display:flex;align-items:center;justify-content:space-between;padding:17px 20px;border-bottom:1px solid var(--border);background:var(--surface-soft)}.sa-step-heading small,.sa-step-heading>span{color:var(--brand);font-size:10px;font-weight:800;text-transform:uppercase}.sa-step-heading h2{margin:2px 0 0;font-size:18px}.sa-form-section{margin:18px;padding:0 0 18px;border-bottom:1px solid var(--border)}.sa-form-section:last-of-type{border-bottom:0}.sa-form-section>header{margin-bottom:14px}.sa-form-section h2{margin:0;font-size:15px}.sa-form-section p{margin:3px 0 0;color:var(--text-muted);font-size:11px}.sa-form-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px 15px}.sa-field{display:grid;min-width:0;align-content:start;gap:5px;color:var(--text-secondary);font-size:11px;font-weight:700}.sa-field.wide,.sa-form-grid>.wide{grid-column:1/-1}.sa-field b{color:var(--danger)}.sa-field input,.sa-field select,.sa-field textarea,.sa-dialog textarea{width:100%;height:40px;padding:0 10px;border:1px solid var(--border);border-radius:7px;color:var(--text-primary);background:var(--surface);font-size:12px}.sa-field input[readonly]{color:var(--text-muted);background:var(--surface-soft)}.sa-field input[type=file]{height:auto;padding:9px}.sa-field small{color:var(--text-muted);font-size:10px;font-weight:500}.sa-field.invalid input,.sa-field.invalid select{border-color:var(--danger)}.sa-field.invalid small{color:var(--danger)}.sa-check{display:flex;align-items:center;gap:8px;color:var(--text-secondary);font-size:12px;font-weight:650}.sa-check input,.sa-declaration input{width:17px;height:17px;accent-color:var(--brand)}.sa-wizard-actions{display:flex;align-items:center;gap:9px;padding:14px 18px;border-top:1px solid var(--border);background:var(--surface-soft)}.sa-wizard-actions>span{flex:1}.sa-documents{margin-top:18px;overflow:hidden}.sa-documents>header>span{padding:5px 8px;border-radius:999px;color:var(--brand);background:var(--brand-soft);font-size:10px;font-weight:800}.sa-doc-badge{display:inline-block;padding:4px 7px;border-radius:999px;color:var(--text-muted);background:var(--surface-soft);font-size:9px;font-weight:800;white-space:nowrap}.sa-doc-badge.uploaded,.sa-doc-badge.verified{color:var(--success);background:color-mix(in srgb,var(--success) 12%,var(--surface))}.sa-doc-badge.verification-pending{color:var(--warning);background:color-mix(in srgb,var(--warning) 12%,var(--surface))}.sa-doc-badge.rejected{color:var(--danger)}.sa-table-wrap td>strong{display:flex;align-items:center;gap:6px}.sa-review{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:18px}.sa-review>section{border:1px solid var(--border);border-radius:9px;overflow:hidden}.sa-review>section>header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface-soft)}.sa-review h2{margin:0;font-size:13px}.sa-review header button{display:flex;align-items:center;gap:5px;border:0;color:var(--brand);background:transparent;font-size:10px;font-weight:700}.sa-review dl,.sa-info-grid,.sa-approval dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin:0}.sa-review dl div,.sa-info-grid div,.sa-approval dl div{padding:10px 12px;border-top:1px solid var(--border)}.sa-review dt,.sa-info-grid dt,.sa-approval dt{color:var(--text-muted);font-size:9px;font-weight:800;text-transform:uppercase}.sa-review dd,.sa-info-grid dd,.sa-approval dd{margin:3px 0 0;color:var(--text-primary);font-size:12px;font-weight:650}.sa-declaration{display:flex;align-items:flex-start;gap:9px;margin:4px 18px 18px;padding:13px;border:1px solid var(--border);border-radius:8px;background:var(--surface-soft);font-size:12px}.sa-callout{display:grid;grid-column:1/-1;gap:2px;padding:11px 13px;border:1px solid;border-radius:8px;font-size:11px}.sa-callout.danger{border-color:color-mix(in srgb,var(--danger) 35%,var(--border));color:var(--danger);background:color-mix(in srgb,var(--danger) 8%,var(--surface))}.sa-callout.warning{margin-top:16px;border-color:color-mix(in srgb,var(--warning) 35%,var(--border));color:var(--warning);background:color-mix(in srgb,var(--warning) 8%,var(--surface))}.sa-toast{position:fixed;top:78px;right:22px;z-index:90;display:flex;max-width:380px;align-items:center;gap:8px;padding:11px 13px;border:1px solid color-mix(in srgb,var(--success) 40%,var(--border));border-radius:8px;color:var(--success);background:var(--surface-raised);box-shadow:var(--shadow-md);font-size:12px;font-weight:700}.sa-toast button{margin-left:8px;border:0;color:inherit;background:transparent}.sa-overlay{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:16px;background:rgba(3,18,31,.58);backdrop-filter:blur(3px)}.sa-dialog{position:relative;width:min(100%,500px);padding:22px;border:1px solid var(--border);border-radius:var(--radius-lg);color:var(--text-primary);background:var(--surface-raised);box-shadow:var(--shadow-md)}.sa-dialog h2{margin:0;font-size:19px}.sa-dialog>p{margin:6px 0 16px;color:var(--text-muted)}.sa-dialog textarea{height:90px;padding:10px;resize:vertical}.sa-dialog footer{display:flex;justify-content:flex-end;gap:8px;margin-top:15px}.sa-dialog footer button{min-height:38px;padding:0 13px;border:1px solid var(--border);border-radius:7px}.sa-dialog-close{position:absolute;top:12px;right:12px;display:grid;width:30px;height:30px;place-items:center;border:1px solid var(--border);border-radius:6px;color:var(--text-muted);background:var(--surface)}.sa-profile-header{display:flex;align-items:center;gap:14px;margin:16px 0;border:1px solid var(--border);border-radius:var(--radius-md);padding:18px;background:var(--surface);box-shadow:var(--shadow-sm)}.sa-profile-avatar{width:54px;height:54px;flex-basis:54px;font-size:17px}.sa-profile-header h1{margin:1px 0;font-size:23px}.sa-profile-header p,.sa-profile-header span{margin:0;color:var(--text-muted);font-size:11px}.sa-profile-header>.sa-badge{margin-left:auto}.sa-profile-actions{display:flex;gap:7px}.sa-tabs{display:flex;gap:2px;overflow-x:auto;border:1px solid var(--border);border-radius:9px 9px 0 0;padding:5px;background:var(--surface-soft)}.sa-tabs button{padding:8px 12px;border:0;border-radius:6px;color:var(--text-muted);background:transparent;font-size:11px;font-weight:700;white-space:nowrap}.sa-tabs button.active{color:var(--brand);background:var(--surface);box-shadow:var(--shadow-sm)}.sa-detail-card{border-radius:0 0 var(--radius-md) var(--radius-md);padding:18px}.sa-detail-card>header h2{margin:0;font-size:16px}.sa-detail-card>header p{margin:3px 0 14px;color:var(--text-muted)}.sa-info-grid{grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--border);border-radius:8px;overflow:hidden}.sa-info-grid div{border-right:1px solid var(--border)}.sa-progress{display:flex;align-items:center;gap:0;margin-top:18px;padding:18px;border:1px solid var(--border);border-radius:8px;background:var(--surface-soft)}.sa-progress h2{margin:0 25px 0 0;font-size:13px}.sa-progress div{position:relative;display:grid;min-width:95px;place-items:center;gap:5px;color:var(--text-muted);font-size:9px;text-align:center}.sa-progress div:not(:last-child):after{position:absolute;top:12px;left:calc(50% + 14px);width:calc(100% - 28px);height:1px;content:"";background:var(--border)}.sa-progress i{z-index:1;display:grid;width:25px;height:25px;place-items:center;border:1px solid var(--border);border-radius:50%;background:var(--surface);font-style:normal}.sa-progress .complete{color:var(--success)}.sa-progress .complete i{color:#fff;background:var(--success)}.sa-simple-list{display:grid;gap:7px}.sa-simple-list article{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--border);border-radius:7px}.sa-simple-list div{display:grid}.sa-simple-list span{color:var(--text-muted);font-size:10px}.sa-simple-list b{margin-left:auto;color:var(--brand);font-size:10px}.sa-activity{margin:0;padding:0;list-style:none}.sa-activity li{display:flex;gap:12px;padding:0 0 20px}.sa-activity li>i{width:9px;height:9px;margin-top:5px;border-radius:50%;background:var(--brand);box-shadow:0 0 0 4px var(--brand-soft)}.sa-activity li div{display:grid}.sa-activity span{color:var(--text-muted);font-size:10px}.sa-approval{margin-top:16px;overflow:hidden}.sa-approval>header span{padding:5px 9px;border-radius:999px;font-size:10px;font-weight:800}.sa-approval .eligible{color:var(--success);background:color-mix(in srgb,var(--success) 12%,var(--surface))}.sa-approval .blocked{color:var(--warning);background:color-mix(in srgb,var(--warning) 12%,var(--surface))}.sa-approval dl{grid-template-columns:repeat(3,minmax(0,1fr));padding:8px 12px}.sa-approval>footer{display:flex;justify-content:flex-end;gap:8px;padding:15px;border-top:1px solid var(--border);background:var(--surface-soft)}
-:root[data-theme="dark"] .student-admission :is(.sa-directory,.sa-wizard-card,.sa-documents,.sa-detail-card,.sa-approval,.sa-profile-header,.sa-stats article,.sa-stepper){border-color:var(--border);background:var(--surface);color:var(--text-primary)}:root[data-theme="dark"] .student-admission .sa-table-wrap th{background:#0F172A}:root[data-theme="dark"] .student-admission .sa-table-wrap td{background:var(--surface);color:var(--text-secondary)}:root[data-theme="dark"] .student-admission :is(.sa-toolbar,.sa-filter-grid,.sa-step-heading,.sa-wizard-actions,.sa-tabs){background:var(--surface-soft)}:root[data-theme="dark"] .student-admission :is(input,select,textarea,.sa-search){border-color:var(--border-strong);color:var(--text-primary);background:var(--surface-raised)}
-@media(max-width:1100px){.sa-stats{grid-template-columns:repeat(3,1fr)}.sa-form-grid{grid-template-columns:repeat(3,1fr)}.sa-stepper{grid-template-columns:repeat(4,1fr)}.sa-stepper button:nth-child(4){border-right:0}.sa-info-grid{grid-template-columns:repeat(3,1fr)}}
-@media(max-width:760px){.sa-page-header,.sa-profile-header{align-items:stretch;flex-direction:column}.sa-page-header>button{width:100%}.sa-stats{grid-template-columns:repeat(2,1fr)}.sa-toolbar{align-items:stretch;flex-wrap:wrap}.sa-search{min-width:100%}.sa-filter-grid,.sa-form-grid,.sa-review,.sa-info-grid,.sa-approval dl{grid-template-columns:1fr 1fr}.sa-stepper{display:flex;overflow-x:auto}.sa-stepper button{min-width:110px}.sa-wizard-actions{flex-wrap:wrap}.sa-wizard-actions>span{display:none}.sa-wizard-actions button{flex:1}.sa-pagination{align-items:flex-start;flex-direction:column}.sa-profile-header>.sa-badge{margin-left:0;align-self:flex-start}.sa-profile-actions{flex-wrap:wrap}.sa-progress{align-items:flex-start;overflow-x:auto}.sa-progress h2{min-width:120px}.sa-approval>footer{flex-direction:column}.sa-approval>footer button{width:100%}}
-@media(max-width:520px){.sa-stats,.sa-filter-grid,.sa-form-grid,.sa-review,.sa-info-grid,.sa-approval dl{grid-template-columns:1fr}.sa-stats article{min-height:70px}.sa-form-section{margin:14px}.sa-step-heading{padding:14px}.sa-wizard-actions{flex-direction:column}.sa-wizard-actions button{width:100%}.sa-review{padding:14px}.sa-profile-actions{display:grid}.sa-profile-actions button{width:100%}.sa-toast{right:12px;left:12px}.sa-page-header h1{font-size:24px}}
+.student-admission{width:100%;min-width:0;color:var(--text-primary);font-size:14px}.sa-page-header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin:18px 0 20px}.sa-page-header h1{margin:2px 0 4px;font-size:28px;line-height:1.2;letter-spacing:-.025em}.sa-page-header p,.sa-page-header span{margin:0;color:var(--text-muted)}.sa-page-header>div>span{color:var(--brand);font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.sa-primary,.sa-secondary,.sa-danger,.sa-danger-outline,.sa-link,.sa-back{display:inline-flex;min-height:38px;align-items:center;justify-content:center;gap:7px;padding:0 13px;border:1px solid transparent;border-radius:var(--radius-sm);font-size:12px;font-weight:750}.sa-primary{color:#fff;background:var(--brand)}.sa-primary:hover{color:#fff;background:var(--brand-hover)}.sa-secondary,.sa-back{border-color:var(--border);color:var(--brand);background:var(--surface)}.sa-danger{color:#fff;background:var(--danger)}.sa-danger-outline{border-color:color-mix(in srgb,var(--danger) 45%,var(--border));color:var(--danger);background:var(--surface)}.sa-link{padding-inline:5px;color:var(--brand);background:transparent}.sa-back{margin:16px 0 0;padding:0;border:0;background:transparent}.sa-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:16px}.sa-stats article{position:relative;min-height:82px;padding:15px 16px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);box-shadow:var(--shadow-sm);overflow:hidden}.sa-stats article:before{position:absolute;inset:0 auto 0 0;width:3px;content:"";background:var(--brand)}.sa-stats .approved:before{background:var(--success)}.sa-stats .pending:before,.sa-stats .documents:before{background:var(--warning)}.sa-stats .rejected:before{background:var(--danger)}.sa-stats span{display:block;color:var(--text-muted);font-size:11px;font-weight:700}.sa-stats strong{display:block;margin-top:8px;font-size:24px}.sa-directory,.sa-wizard-card,.sa-documents,.sa-detail-card,.sa-approval{border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);box-shadow:var(--shadow-sm)}.sa-directory>header,.sa-documents>header,.sa-approval>header{display:flex;min-height:58px;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border)}.sa-directory h2,.sa-documents h2,.sa-approval h2{margin:0;font-size:16px}.sa-directory header span,.sa-documents header p{color:var(--text-muted);font-size:12px}.sa-documents header p{margin:3px 0 0}.sa-toolbar{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface-soft)}.sa-search{display:flex;min-width:260px;max-width:520px;height:40px;flex:1;align-items:center;gap:8px;padding:0 11px;border:1px solid var(--border-strong);border-radius:8px;color:var(--text-muted);background:var(--surface)}.sa-search input{all:unset;width:100%;height:100%;color:var(--text-primary);font-size:13px}.sa-filter-grid{display:grid;grid-template-columns:repeat(4,minmax(140px,1fr));gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--surface-soft)}.sa-filter-grid label{display:grid;gap:5px}.sa-filter-grid span{color:var(--text-secondary);font-size:11px;font-weight:700}.sa-filter-grid select,.sa-pagination select{height:38px;padding:0 10px;border:1px solid var(--border);border-radius:7px;color:var(--text-primary);background:var(--surface)}.sa-table-wrap{width:100%;overflow-x:auto}.sa-table-wrap table{width:100%;min-width:1120px;border-collapse:collapse}.sa-table-wrap th{height:40px;padding:9px 12px;border-bottom:0;color:#FFFFFF;background:var(--table-head,var(--brand));text-align:left;font-size:10px!important;letter-spacing:.035em;text-transform:uppercase;white-space:nowrap;vertical-align:middle}.sa-table-wrap td{height:46px;padding:9px 12px;border-bottom:1px solid var(--border,var(--border));color:var(--text-primary,var(--text-primary));background:var(--surface);font-size:12px!important;vertical-align:middle}.sa-table-wrap td>small,.sa-table-wrap td>strong+small{display:block;margin-top:2px;color:var(--text-muted)}.sa-table-wrap tbody tr:hover td{background:var(--surface-soft)}.sa-student{display:flex;align-items:center;gap:9px;min-width:190px}.sa-student>i,.sa-profile-avatar{display:grid;width:34px;height:34px;flex:0 0 34px;place-items:center;border-radius:50%;color:var(--brand);background:var(--brand-soft);font-style:normal;font-weight:800}.sa-student span{display:grid}.sa-student small{color:var(--text-muted)}.sa-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border-radius:999px;color:var(--text-secondary);background:var(--surface-soft);font-size:10px;font-weight:800;white-space:nowrap}.sa-badge i{width:6px;height:6px;border-radius:50%;background:currentColor}.sa-badge.status-approved,.sa-badge.status-admitted,.sa-badge.status-verified{color:var(--success);background:color-mix(in srgb,var(--success) 12%,var(--surface))}.sa-badge.status-rejected,.sa-badge.status-cancelled{color:var(--danger);background:color-mix(in srgb,var(--danger) 12%,var(--surface))}.sa-badge.status-submitted,.sa-badge.status-under_review,.sa-badge.status-document_pending,.sa-badge.status-correction_required{color:var(--warning);background:color-mix(in srgb,var(--warning) 13%,var(--surface))}.sa-doc-summary{color:var(--warning);font-size:11px;font-weight:700}.sa-doc-summary.complete{color:var(--success)}.sa-icon-actions,.sa-row-actions{display:flex;align-items:center;gap:5px}.sa-icon-actions button,.sa-row-actions button{display:inline-flex;min-width:30px;height:30px;align-items:center;justify-content:center;gap:5px;padding:0 7px;border:1px solid var(--border);border-radius:6px;color:var(--brand);background:var(--surface);font-size:10px;font-weight:700}.sa-row-actions .success{color:var(--success)}.sa-row-actions .danger{color:var(--danger)}.sa-pagination{display:flex;min-height:54px;align-items:center;justify-content:space-between;gap:15px;padding:9px 14px;color:var(--text-muted);background:var(--surface-soft);font-size:11px}.sa-pagination label,.sa-pagination div{display:flex;align-items:center;gap:6px}.sa-pagination select{width:60px;height:32px}.sa-pagination button{display:grid;width:32px;height:32px;place-items:center;border:1px solid var(--border);border-radius:6px;color:var(--text-secondary);background:var(--surface)}.sa-pagination button.active{border-color:var(--brand);color:#202225;background:var(--brand)}.sa-empty{display:grid;min-height:260px;place-items:center;align-content:center;gap:7px;padding:30px;color:var(--text-muted);text-align:center}.sa-empty>svg{width:38px;height:38px;color:var(--brand)}.sa-empty h3,.sa-empty p{margin:0}.sa-stepper{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:14px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);overflow:hidden}.sa-stepper button{position:relative;display:grid;min-width:0;place-items:center;gap:6px;padding:12px 5px;border:0;border-right:1px solid var(--border);color:var(--text-muted);background:transparent;font-size:9px;font-weight:700}.sa-stepper button:last-child{border-right:0}.sa-stepper i{display:grid;width:25px;height:25px;place-items:center;border:1px solid var(--border-strong);border-radius:50%;font-style:normal}.sa-stepper button.active{color:var(--brand);background:var(--brand-soft)}.sa-stepper button.active i{border-color:var(--brand);color:#fff;background:var(--brand)}.sa-stepper button.complete i{border-color:var(--success);color:#fff;background:var(--success)}.sa-wizard-card{overflow:hidden}.sa-step-heading{display:flex;align-items:center;justify-content:space-between;padding:17px 20px;border-bottom:1px solid var(--border);background:var(--surface-soft)}.sa-step-heading small,.sa-step-heading>span{color:var(--brand);font-size:10px;font-weight:800;text-transform:uppercase}.sa-step-heading h2{margin:2px 0 0;font-size:18px}.sa-dialog textarea{width:100%;height:40px;padding:0 10px;border:1px solid var(--border);border-radius:7px;color:var(--text-primary);background:var(--surface);font-size:12px}.sa-check{display:flex;align-items:center;gap:8px;color:var(--text-secondary);font-size:12px;font-weight:650}.sa-check input,.sa-declaration input{width:17px;height:17px;accent-color:var(--brand)}.sa-documents{margin-top:18px;overflow:hidden}.sa-documents>header>span{padding:5px 8px;border-radius:999px;color:var(--brand);background:var(--brand-soft);font-size:10px;font-weight:800}.sa-doc-badge{display:inline-block;padding:4px 7px;border-radius:999px;color:var(--text-muted);background:var(--surface-soft);font-size:9px;font-weight:800;white-space:nowrap}.sa-doc-badge.uploaded,.sa-doc-badge.verified{color:var(--success);background:color-mix(in srgb,var(--success) 12%,var(--surface))}.sa-doc-badge.verification-pending{color:var(--warning);background:color-mix(in srgb,var(--warning) 12%,var(--surface))}.sa-doc-badge.rejected{color:var(--danger)}.sa-table-wrap td>strong{display:flex;align-items:center;gap:6px}.sa-review{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:18px}.sa-review>section{border:1px solid var(--border);border-radius:9px;overflow:hidden}.sa-review>section>header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface-soft)}.sa-review h2{margin:0;font-size:13px}.sa-review header button{display:flex;align-items:center;gap:5px;border:0;color:var(--brand);background:transparent;font-size:10px;font-weight:700}.sa-review dl,.sa-info-grid,.sa-approval dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin:0}.sa-review dl div,.sa-info-grid div,.sa-approval dl div{padding:10px 12px;border-top:1px solid var(--border)}.sa-review dt,.sa-info-grid dt,.sa-approval dt{color:var(--text-muted);font-size:9px;font-weight:800;text-transform:uppercase}.sa-review dd,.sa-info-grid dd,.sa-approval dd{margin:3px 0 0;color:var(--text-primary);font-size:12px;font-weight:650}.sa-declaration{display:flex;align-items:flex-start;gap:9px;margin:4px 18px 18px;padding:13px;border:1px solid var(--border);border-radius:8px;background:var(--surface-soft);font-size:12px}.sa-callout{display:grid;grid-column:1/-1;gap:2px;padding:11px 13px;border:1px solid;border-radius:8px;font-size:11px}.sa-callout.danger{border-color:color-mix(in srgb,var(--danger) 35%,var(--border));color:var(--danger);background:color-mix(in srgb,var(--danger) 8%,var(--surface))}.sa-callout.warning{margin-top:16px;border-color:color-mix(in srgb,var(--warning) 35%,var(--border));color:var(--warning);background:color-mix(in srgb,var(--warning) 8%,var(--surface))}.sa-toast{position:fixed;top:78px;right:22px;z-index:90;display:flex;max-width:380px;align-items:center;gap:8px;padding:11px 13px;border:1px solid color-mix(in srgb,var(--success) 40%,var(--border));border-radius:8px;color:var(--success);background:var(--surface-raised);box-shadow:var(--shadow-md);font-size:12px;font-weight:700}.sa-toast button{margin-left:8px;border:0;color:inherit;background:transparent}.sa-overlay{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:16px;background:rgba(3,18,31,.58);backdrop-filter:blur(3px)}.sa-dialog{position:relative;width:min(100%,500px);padding:22px;border:1px solid var(--border);border-radius:var(--radius-lg);color:var(--text-primary);background:var(--surface-raised);box-shadow:var(--shadow-md)}.sa-dialog h2{margin:0;font-size:19px}.sa-dialog>p{margin:6px 0 16px;color:var(--text-muted)}.sa-dialog textarea{height:90px;padding:10px;resize:vertical}.sa-dialog footer{display:flex;justify-content:flex-end;gap:8px;margin-top:15px}.sa-dialog footer button{min-height:38px;padding:0 13px;border:1px solid var(--border);border-radius:7px}.sa-dialog-close{position:absolute;top:12px;right:12px;display:grid;width:30px;height:30px;place-items:center;border:1px solid var(--border);border-radius:6px;color:var(--text-muted);background:var(--surface)}.sa-profile-header{display:flex;align-items:center;gap:14px;margin:16px 0;border:1px solid var(--border);border-radius:var(--radius-md);padding:18px;background:var(--surface);box-shadow:var(--shadow-sm)}.sa-profile-avatar{width:54px;height:54px;flex-basis:54px;font-size:17px}.sa-profile-header h1{margin:1px 0;font-size:23px}.sa-profile-header p,.sa-profile-header span{margin:0;color:var(--text-muted);font-size:11px}.sa-profile-header>.sa-badge{margin-left:auto}.sa-profile-actions{display:flex;gap:7px}.sa-tabs{display:flex;gap:2px;overflow-x:auto;border:1px solid var(--border);border-radius:9px 9px 0 0;padding:5px;background:var(--surface-soft)}.sa-tabs button{padding:8px 12px;border:0;border-radius:6px;color:var(--text-muted);background:transparent;font-size:11px;font-weight:700;white-space:nowrap}.sa-tabs button.active{color:var(--brand);background:var(--surface);box-shadow:var(--shadow-sm)}.sa-detail-card{border-radius:0 0 var(--radius-md) var(--radius-md);padding:18px}.sa-detail-card>header h2{margin:0;font-size:16px}.sa-detail-card>header p{margin:3px 0 14px;color:var(--text-muted)}.sa-info-grid{grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--border);border-radius:8px;overflow:hidden}.sa-info-grid div{border-right:1px solid var(--border)}.sa-progress{display:flex;align-items:center;gap:0;margin-top:18px;padding:18px;border:1px solid var(--border);border-radius:8px;background:var(--surface-soft)}.sa-progress h2{margin:0 25px 0 0;font-size:13px}.sa-progress div{position:relative;display:grid;min-width:95px;place-items:center;gap:5px;color:var(--text-muted);font-size:9px;text-align:center}.sa-progress div:not(:last-child):after{position:absolute;top:12px;left:calc(50% + 14px);width:calc(100% - 28px);height:1px;content:"";background:var(--border)}.sa-progress i{z-index:1;display:grid;width:25px;height:25px;place-items:center;border:1px solid var(--border);border-radius:50%;background:var(--surface);font-style:normal}.sa-progress .complete{color:var(--success)}.sa-progress .complete i{color:#fff;background:var(--success)}.sa-simple-list{display:grid;gap:7px}.sa-simple-list article{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--border);border-radius:7px}.sa-simple-list div{display:grid}.sa-simple-list span{color:var(--text-muted);font-size:10px}.sa-simple-list b{margin-left:auto;color:var(--brand);font-size:10px}.sa-activity{margin:0;padding:0;list-style:none}.sa-activity li{display:flex;gap:12px;padding:0 0 20px}.sa-activity li>i{width:9px;height:9px;margin-top:5px;border-radius:50%;background:var(--brand);box-shadow:0 0 0 4px var(--brand-soft)}.sa-activity li div{display:grid}.sa-activity span{color:var(--text-muted);font-size:10px}.sa-approval{margin-top:16px;overflow:hidden}.sa-approval>header span{padding:5px 9px;border-radius:999px;font-size:10px;font-weight:800}.sa-approval .eligible{color:var(--success);background:color-mix(in srgb,var(--success) 12%,var(--surface))}.sa-approval .blocked{color:var(--warning);background:color-mix(in srgb,var(--warning) 12%,var(--surface))}.sa-approval dl{grid-template-columns:repeat(3,minmax(0,1fr));padding:8px 12px}.sa-approval>footer{display:flex;justify-content:flex-end;gap:8px;padding:15px;border-top:1px solid var(--border);background:var(--surface-soft)}
+:root[data-theme="dark"] .student-admission :is(.sa-directory,.sa-wizard-card,.sa-documents,.sa-detail-card,.sa-approval,.sa-profile-header,.sa-stats article,.sa-stepper){border-color:var(--border);background:var(--surface);color:var(--text-primary)}:root[data-theme="dark"] .student-admission .sa-table-wrap th{background:var(--cms-sidebar-bg)}:root[data-theme="dark"] .student-admission .sa-table-wrap td{background:var(--surface);color:var(--text-secondary)}:root[data-theme="dark"] .student-admission :is(.sa-toolbar,.sa-filter-grid,.sa-step-heading,.sa-wizard-actions,.sa-tabs){background:var(--surface-soft)}:root[data-theme="dark"] .student-admission :is(input,select,textarea,.sa-search){border-color:var(--border-strong);color:var(--text-primary);background:var(--surface-raised)}
+@media(max-width:1100px){.sa-stats{grid-template-columns:repeat(3,1fr)}.sa-stepper{grid-template-columns:repeat(4,1fr)}.sa-stepper button:nth-child(4){border-right:0}.sa-info-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:760px){.sa-page-header,.sa-profile-header{align-items:stretch;flex-direction:column}.sa-page-header>button{width:100%}.sa-stats{grid-template-columns:repeat(2,1fr)}.sa-toolbar{align-items:stretch;flex-wrap:wrap}.sa-search{min-width:100%}.sa-filter-grid,.sa-review,.sa-info-grid,.sa-approval dl{grid-template-columns:1fr 1fr}.sa-stepper{display:flex;overflow-x:auto}.sa-stepper button{min-width:110px}.sa-pagination{align-items:flex-start;flex-direction:column}.sa-profile-header>.sa-badge{margin-left:0;align-self:flex-start}.sa-profile-actions{flex-wrap:wrap}.sa-progress{align-items:flex-start;overflow-x:auto}.sa-progress h2{min-width:120px}.sa-approval>footer{flex-direction:column}.sa-approval>footer button{width:100%}}
+@media(max-width:520px){.sa-stats,.sa-filter-grid,.sa-review,.sa-info-grid,.sa-approval dl{grid-template-columns:1fr}.sa-stats article{min-height:70px}.sa-step-heading{padding:14px}.sa-review{padding:14px}.sa-profile-actions{display:grid}.sa-profile-actions button{width:100%}.sa-toast{right:12px;left:12px}.sa-page-header h1{font-size:24px}}
 
 .student-admission nav.sa-stepper {
   display: none;
-}
-
-/* Standard 2-column grid and clean section styling matching AddCollege */
-.student-admission .sa-form-section {
-  margin: 0;
-  padding: 14px 18px;
-  border: 0;
-  border-bottom: 1px solid var(--border, #E2E8F0);
-  background: transparent;
-}
-.student-admission .sa-form-section:last-of-type {
-  border-bottom: 0;
-}
-.student-admission .sa-form-section > header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 14px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--border, #E2E8F0);
-}
-.student-admission .sa-form-section h2 {
-  margin: 0 0 2px;
-  font-size: 0.95rem;
-  font-weight: 750;
-  color: var(--text-primary, #0F172A);
-}
-.student-admission .sa-form-section p {
-  margin: 0;
-  font-size: 0.78rem;
-  color: var(--text-muted, #64748B);
-}
-
-.student-admission .sa-form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px 18px;
-}
-
-.student-admission .sa-field {
-  position: relative;
-  display: grid;
-  align-content: start;
-  gap: 5px;
-  color: #263b50;
-  font-size: 0.82rem;
-  font-weight: 700;
-}
-.student-admission .sa-field b {
-  color: #c43224;
-}
-.student-admission .sa-field input,
-.student-admission .sa-field select,
-.student-admission .sa-field textarea {
-  width: 100%;
-  height: 38px;
-  padding: 0 11px;
-  border: 1px solid #CBD5E1;
-  border-radius: 8px;
-  outline: none;
-  background: var(--surface, #FFFFFF);
-  color: #172b3f;
-  font: inherit;
-  font-size: 0.82rem;
-  font-weight: 400 !important;
-  box-sizing: border-box;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-.student-admission .sa-field input:focus,
-.student-admission .sa-field select:focus,
-.student-admission .sa-field textarea:focus {
-  border-color: var(--brand, #125AA8);
-  box-shadow: 0 0 0 3px rgba(18, 90, 168, 0.13);
-}
-.student-admission .sa-field.invalid input,
-.student-admission .sa-field.invalid select {
-  border-color: #d23d32;
-}
-.student-admission .sa-field small {
-  color: #d23d32;
-  font-size: 0.72rem;
-  font-weight: 600;
-  margin-top: 2px;
 }
 
 /* Photo Upload Banner */
@@ -102,7 +19,7 @@
   padding: 12px 16px;
   border: 1.5px dashed #aabdd0;
   border-radius: 10px;
-  background: var(--surface-soft, #EAF3FF);
+  background: var(--surface-soft, var(--brand-soft));
   margin-bottom: 4px;
 }
 .student-admission .sa-photo-preview {
@@ -112,9 +29,9 @@
   height: 64px;
   flex: 0 0 64px;
   overflow: hidden;
-  border: 1px solid #CBD5E1;
+  border: 1px solid var(--border-strong);
   border-radius: 8px;
-  background: #FFFFFF;
+  background: var(--surface);
 }
 .student-admission .sa-photo-preview img {
   width: 100%;
@@ -129,11 +46,11 @@
 }
 .student-admission .sa-photo-meta strong {
   font-size: 0.84rem;
-  color: var(--text-primary, #0F172A);
+  color: var(--text-primary, var(--text-primary));
 }
 .student-admission .sa-photo-meta span {
   font-size: 0.74rem;
-  color: var(--text-muted, #64748B);
+  color: var(--text-muted, var(--text-muted));
 }
 .student-admission .sa-photo-actions {
   display: flex;
@@ -148,16 +65,16 @@
   padding: 5px 10px;
   border: 1px solid #C7DFFF;
   border-radius: 6px;
-  background: #FFFFFF;
-  color: var(--brand, #125AA8);
+  background: var(--surface);
+  color: var(--brand, var(--brand-hover));
   font-size: 0.76rem;
   font-weight: 750;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 .student-admission .sa-photo-button:hover {
-  border-color: var(--brand, #125AA8);
-  background: #EAF3FF;
+  border-color: var(--brand, var(--brand-hover));
+  background: var(--brand-soft);
 }
 .student-admission .sa-photo-remove {
   display: inline-flex;
@@ -166,13 +83,13 @@
   padding: 5px 8px;
   border: 0;
   background: transparent;
-  color: var(--danger, #EF4444);
+  color: var(--danger, var(--danger));
   font-size: 0.76rem;
   font-weight: 700;
   cursor: pointer;
 }
 .student-admission .sa-photo-remove:hover {
-  background: #FEE2E2;
+  background: var(--cms-red-soft);
   border-radius: 6px;
 }
 .student-admission .sa-photo-button input,
@@ -196,25 +113,25 @@
   align-items: center;
   justify-content: space-between;
   padding: 14px 18px 10px;
-  border-bottom: 1px solid var(--border, #E2E8F0);
+  border-bottom: 1px solid var(--border, var(--border));
 }
 .student-admission .sa-documents-header h2 {
   margin: 0 0 2px;
   font-size: 0.95rem;
   font-weight: 750;
-  color: var(--text-primary, #0F172A);
+  color: var(--text-primary, var(--text-primary));
 }
 .student-admission .sa-documents-header p {
   margin: 0;
   font-size: 0.78rem;
-  color: var(--text-muted, #64748B);
+  color: var(--text-muted, var(--text-muted));
 }
 .student-admission .sa-doc-counter {
   display: inline-flex;
   padding: 4px 10px;
   border-radius: 999px;
-  background: var(--brand-soft, #EAF3FF);
-  color: var(--brand, #125AA8);
+  background: var(--brand-soft, var(--brand-soft));
+  color: var(--brand, var(--brand-hover));
   font-size: 0.72rem;
   font-weight: 800;
 }
@@ -237,8 +154,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 18px;
-  border-bottom: 1px solid var(--border, #E2E8F0);
-  background: var(--surface-soft, #EAF3FF);
+  border-bottom: 1px solid var(--border, var(--border));
+  background: var(--surface-soft, var(--brand-soft));
   flex-shrink: 0;
 }
 
@@ -256,9 +173,9 @@
   gap: 10px;
   min-height: 54px;
   padding: 8px 12px;
-  border: 1px solid var(--border, #CBD5E1);
+  border: 1px solid var(--border, var(--border-strong));
   border-radius: 9px;
-  background: var(--surface, #FFFFFF);
+  background: var(--surface, var(--surface));
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   transition: all 0.15s ease;
 }
@@ -278,17 +195,17 @@
   height: 32px;
   flex: 0 0 32px;
   border-radius: 7px;
-  background: #EAF3FF;
-  color: var(--brand, #125AA8);
+  background: var(--brand-soft);
+  color: var(--brand, var(--brand-hover));
   font-size: 1rem;
 }
 .student-admission .sa-document-item.uploaded .sa-document-icon {
-  background: #DCFCE7;
+  background: var(--cms-green-soft);
   color: #16A34A;
 }
 .student-admission .sa-document-item.pending .sa-document-icon {
-  background: #FEF3C7;
-  color: #D97706;
+  background: var(--cms-amber-soft);
+  color: var(--warning);
 }
 
 .student-admission .sa-document-copy {
@@ -300,7 +217,7 @@
 .student-admission .sa-document-copy strong {
   font-size: 0.79rem;
   font-weight: 750;
-  color: var(--text-primary, #0F172A);
+  color: var(--text-primary, var(--text-primary));
   white-space: normal;
   line-height: 1.25;
   word-break: normal;
@@ -310,14 +227,14 @@
 .student-admission .sa-doc-status-tag {
   font-size: 0.72rem;
   font-weight: 600;
-  color: var(--text-muted, #64748B);
+  color: var(--text-muted, var(--text-muted));
 }
 .student-admission .sa-doc-status-tag.status-submitted {
   color: #16A34A;
   font-weight: 700;
 }
 .student-admission .sa-doc-status-tag.status-pending {
-  color: #D97706;
+  color: var(--warning);
   font-weight: 700;
 }
 
@@ -328,22 +245,21 @@
   width: 112px;
   height: 32px;
   padding: 0 8px;
-  border: 1px solid #CBD5E1;
+  border: 1px solid var(--border-strong);
   border-radius: 7px;
-  background: #EAF3FF;
-  color: var(--text-primary, #0F172A);
+  background: var(--brand-soft);
+  color: var(--text-primary, var(--text-primary));
   font-size: 0.76rem;
   font-weight: 600;
   cursor: pointer;
   outline: none;
 }
 .student-admission .sa-document-actions select:focus {
-  border-color: var(--brand, #125AA8);
+  border-color: var(--brand, var(--brand-hover));
   box-shadow: 0 0 0 3px rgba(18, 90, 168, 0.13);
 }
 
 @media(max-width:760px) {
-  .student-admission .sa-form-grid,
   .student-admission .sa-document-grid {
     grid-template-columns: 1fr;
   }
@@ -376,9 +292,9 @@
 .student-admission .sa-review-section {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--border, #CBD5E1);
+  border: 1px solid var(--border, var(--border-strong));
   border-radius: 11px;
-  background: var(--surface, #FFFFFF);
+  background: var(--surface, var(--surface));
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
   overflow: hidden;
   margin: 0;
@@ -390,16 +306,16 @@
   align-items: center;
   justify-content: space-between;
   padding: 11px 16px;
-  background: var(--surface-soft, #F8FAFC);
-  border-bottom: 1px solid var(--border, #CBD5E1);
-  border-left: 4px solid var(--brand, #125AA8);
+  background: var(--surface-soft, var(--surface-soft));
+  border-bottom: 1px solid var(--border, var(--border-strong));
+  border-left: 4px solid var(--brand, var(--brand-hover));
 }
 
 .student-admission .sa-review-section > header h2 {
   margin: 0;
   font-size: 0.92rem;
   font-weight: 750;
-  color: var(--text-primary, #0F172A);
+  color: var(--text-primary, var(--text-primary));
 }
 
 .student-admission .sa-review-section dl {
@@ -426,7 +342,7 @@
 }
 
 .student-admission .sa-review-section dt {
-  color: var(--text-muted, #64748B);
+  color: var(--text-muted, var(--text-muted));
   font-size: 0.69rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -436,7 +352,7 @@
 
 .student-admission .sa-review-section dd {
   margin: 0;
-  color: var(--text-primary, #0F172A);
+  color: var(--text-primary, var(--text-primary));
   font-size: 0.85rem;
   font-weight: 650;
   line-height: 1.4;
@@ -451,8 +367,8 @@
   flex-wrap: wrap;
   gap: 16px;
   padding: 16px 20px;
-  background: var(--surface, #FFFFFF);
-  border: 1px solid var(--border, #CBD5E1);
+  background: var(--surface, var(--surface));
+  border: 1px solid var(--border, var(--border-strong));
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
 }
@@ -464,9 +380,9 @@
   border-radius: 50%;
   overflow: hidden;
   place-items: center;
-  background: var(--brand-soft, #EAF3FF);
-  color: var(--brand, #125AA8);
-  border: 2px solid var(--brand-soft, #EAF3FF);
+  background: var(--brand-soft, var(--brand-soft));
+  color: var(--brand, var(--brand-hover));
+  border: 2px solid var(--brand-soft, var(--brand-soft));
   flex-shrink: 0;
 }
 
@@ -484,7 +400,7 @@
 .student-admission .sa-preview-identity > span {
   font-size: 0.72rem;
   font-weight: 800;
-  color: var(--brand, #125AA8);
+  color: var(--brand, var(--brand-hover));
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -493,29 +409,29 @@
   margin: 2px 0 3px;
   font-size: 1.25rem;
   font-weight: 750;
-  color: var(--text-primary, #0F172A);
+  color: var(--text-primary, var(--text-primary));
 }
 
 .student-admission .sa-preview-identity p {
   margin: 0;
   font-size: 0.82rem;
-  color: var(--text-muted, #64748B);
+  color: var(--text-muted, var(--text-muted));
   font-weight: 550;
 }
 
 .student-admission .sa-preview-header dl {
   display: flex;
   gap: 0;
-  border: 1px solid var(--border, #CBD5E1);
+  border: 1px solid var(--border, var(--border-strong));
   border-radius: 8px;
   overflow: hidden;
-  background: var(--surface-soft, #F8FAFC);
+  background: var(--surface-soft, var(--surface-soft));
   margin: 0;
 }
 
 .student-admission .sa-preview-header dl div {
   padding: 8px 14px;
-  border-right: 1px solid var(--border, #CBD5E1);
+  border-right: 1px solid var(--border, var(--border-strong));
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -528,7 +444,7 @@
 .student-admission .sa-preview-header dt {
   font-size: 0.68rem;
   font-weight: 750;
-  color: var(--text-muted, #64748B);
+  color: var(--text-muted, var(--text-muted));
   text-transform: uppercase;
 }
 
@@ -536,7 +452,7 @@
   margin: 0;
   font-size: 0.84rem;
   font-weight: 700;
-  color: var(--text-primary, #0F172A);
+  color: var(--text-primary, var(--text-primary));
   white-space: nowrap;
 }
 
@@ -583,7 +499,6 @@
 .student-admission .sa-table-wrap th:last-child{width:100px!important;min-width:100px!important}
 .student-admission .sa-table-wrap td:last-child{width:100px!important;min-width:100px!important;padding-inline:8px!important}
 .student-admission .sa-icon-actions{display:flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;width:100%!important;min-width:0!important;margin:0 auto!important}
-.student-admission .sa-icon-actions .table-action-btn{flex:0 0 34px!important;width:34px!important;min-width:34px!important;height:34px!important;padding:0!important}
 
 
 /* Source styles: pages/student-management/StudentAdmission/AdmissionFixes.css */
@@ -610,10 +525,10 @@
   align-items: center;
   gap: 3px;
   padding: 2px 7px;
-  border: 1px solid var(--border, #E2E8F0);
+  border: 1px solid var(--border, var(--border));
   border-radius: 5px;
-  background: var(--surface, #FFFFFF);
-  color: var(--brand, #125AA8);
+  background: var(--surface, var(--surface));
+  color: var(--brand, var(--brand-hover));
   font-size: 0.68rem;
   font-weight: 700;
   cursor: pointer;
@@ -622,44 +537,13 @@
 }
 
 .preview-edit-btn:hover {
-  background: var(--brand-soft, #EAF3FF);
-  border-color: var(--brand, #125AA8);
-  color: var(--brand, #125AA8);
+  background: var(--brand-soft, var(--brand-soft));
+  border-color: var(--brand, var(--brand-hover));
+  color: var(--brand, var(--brand-hover));
   transform: translateY(-1px);
 }
 
 /* Clean scroll body with clearly visible scrollbar */
-.student-admission .erp-form-scroll-body {
-  display: flex !important;
-  flex-direction: column !important;
-  flex: 1 !important;
-  min-height: 0 !important;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-  scrollbar-width: thin !important;
-  scrollbar-color: #94a3b8 #f1f5f9 !important;
-  padding: 14px 18px 24px !important;
-  box-sizing: border-box !important;
-}
-
-.student-admission .erp-form-scroll-body::-webkit-scrollbar {
-  width: 7px !important;
-  display: block !important;
-}
-
-.student-admission .erp-form-scroll-body::-webkit-scrollbar-track {
-  background: #f1f5f9 !important;
-  border-radius: 6px !important;
-}
-
-.student-admission .erp-form-scroll-body::-webkit-scrollbar-thumb {
-  background: #94a3b8 !important;
-  border-radius: 6px !important;
-}
-
-.student-admission .erp-form-scroll-body::-webkit-scrollbar-thumb:hover {
-  background: #64748b !important;
-}
 
 /* Documents upload section layout */
 .student-admission .sa-documents {
@@ -686,9 +570,9 @@
   gap: 8px !important;
   min-height: 46px !important;
   padding: 6px 10px !important;
-  border: 1px solid var(--border, #CBD5E1) !important;
+  border: 1px solid var(--border, var(--border-strong)) !important;
   border-radius: 8px !important;
-  background: var(--surface, #FFFFFF) !important;
+  background: var(--surface, var(--surface)) !important;
   box-sizing: border-box !important;
 }
 
@@ -711,8 +595,8 @@
   gap: 12px !important;
   margin: 16px 0 0 0 !important;
   padding: 14px 16px !important;
-  background: var(--brand-soft, #EAF3FF) !important;
-  border: 1px solid color-mix(in srgb, var(--brand, #125AA8) 30%, var(--border, #E2E8F0)) !important;
+  background: var(--brand-soft, var(--brand-soft)) !important;
+  border: 1px solid color-mix(in srgb, var(--brand, var(--brand-hover)) 30%, var(--border, var(--border))) !important;
   border-radius: 10px !important;
   cursor: pointer !important;
   flex-shrink: 0 !important;
@@ -724,7 +608,7 @@
   width: 18px !important;
   height: 18px !important;
   margin-top: 2px !important;
-  accent-color: var(--brand, #125AA8) !important;
+  accent-color: var(--brand, var(--brand-hover)) !important;
   cursor: pointer !important;
   flex-shrink: 0 !important;
 }
@@ -734,14 +618,14 @@
   flex-direction: column !important;
   gap: 2px !important;
   font-size: 0.82rem !important;
-  color: var(--text-primary, #0F172A) !important;
+  color: var(--text-primary, var(--text-primary)) !important;
   line-height: 1.4 !important;
 }
 
 .sa-declaration strong {
   font-size: 0.88rem !important;
   font-weight: 750 !important;
-  color: var(--brand, #125AA8) !important;
+  color: var(--brand, var(--brand-hover)) !important;
 }
 
 /* ==========================================================================
@@ -795,7 +679,7 @@
   gap: 20px !important;
   flex-wrap: wrap !important;
   padding: 22px 28px !important;
-  background: linear-gradient(135deg, #123F73 0%, #125AA8 60%, #2B78C5 100%) !important;
+  background: linear-gradient(135deg, var(--brand-dark) 0%, var(--brand-hover) 60%, #2B78C5 100%) !important;
   border: 1px solid rgba(255, 255, 255, 0.16) !important;
   border-radius: 14px !important;
   box-shadow: 0 8px 24px rgba(16, 42, 76, 0.22) !important;
@@ -834,7 +718,7 @@
   overflow: hidden !important;
   place-items: center !important;
   background: linear-gradient(135deg, #ECC15D 0%, #DF9E27 100%) !important;
-  color: #123F73 !important;
+  color: var(--brand-dark) !important;
   font-size: 1.45rem !important;
   font-weight: 850 !important;
   border: 2px solid rgba(255, 255, 255, 0.5) !important;
@@ -996,9 +880,9 @@
   display: flex !important;
   flex-direction: column !important;
   width: 100% !important;
-  border: 1px solid var(--border, #E2E8F0) !important;
+  border: 1px solid var(--border, var(--border)) !important;
   border-radius: 12px !important;
-  background: var(--surface, #FFFFFF) !important;
+  background: var(--surface, var(--surface)) !important;
   box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04) !important;
   overflow: hidden !important;
   margin: 0 !important;
@@ -1010,9 +894,9 @@
   align-items: center !important;
   justify-content: space-between !important;
   padding: 12px 16px !important;
-  background: var(--surface-soft, #F8FAFC) !important;
-  border-bottom: 1px solid var(--border, #E2E8F0) !important;
-  border-left: 4px solid var(--brand, #125AA8) !important;
+  background: var(--surface-soft, var(--surface-soft)) !important;
+  border-bottom: 1px solid var(--border, var(--border)) !important;
+  border-left: 4px solid var(--brand, var(--brand-hover)) !important;
 }
 
 .student-admission .sa-card-header-title {
@@ -1027,8 +911,8 @@
   width: 24px !important;
   height: 24px !important;
   border-radius: 6px !important;
-  background: var(--brand-soft, #EAF3FF) !important;
-  color: var(--brand, #125AA8) !important;
+  background: var(--brand-soft, var(--brand-soft)) !important;
+  color: var(--brand, var(--brand-hover)) !important;
   font-size: 13px !important;
 }
 
@@ -1036,14 +920,14 @@
   margin: 0 !important;
   font-size: 0.92rem !important;
   font-weight: 750 !important;
-  color: var(--text-primary, #0F172A) !important;
+  color: var(--text-primary, var(--text-primary)) !important;
 }
 
 .student-admission .sa-card-count-badge {
   font-size: 0.68rem !important;
   font-weight: 700 !important;
-  color: var(--brand, #125AA8) !important;
-  background: var(--brand-soft, #EAF3FF) !important;
+  color: var(--brand, var(--brand-hover)) !important;
+  background: var(--brand-soft, var(--brand-soft)) !important;
   padding: 2px 7px !important;
   border-radius: 10px !important;
 }
@@ -1053,10 +937,10 @@
   align-items: center !important;
   gap: 4px !important;
   padding: 3px 9px !important;
-  border: 1px solid var(--border, #CBD5E1) !important;
+  border: 1px solid var(--border, var(--border-strong)) !important;
   border-radius: 6px !important;
-  background: var(--surface, #FFFFFF) !important;
-  color: var(--brand, #125AA8) !important;
+  background: var(--surface, var(--surface)) !important;
+  color: var(--brand, var(--brand-hover)) !important;
   font-size: 0.72rem !important;
   font-weight: 700 !important;
   cursor: pointer !important;
@@ -1064,8 +948,8 @@
 }
 
 .student-admission .sa-card-edit-btn:hover {
-  background: var(--brand-soft, #EAF3FF) !important;
-  border-color: var(--brand, #125AA8) !important;
+  background: var(--brand-soft, var(--brand-soft)) !important;
+  border-color: var(--brand, var(--brand-hover)) !important;
 }
 
 /* Key-Value Pill Subgrid inside Review Cards */
@@ -1083,8 +967,8 @@
   flex-direction: column !important;
   gap: 3px !important;
   padding: 8px 12px !important;
-  background: var(--surface-soft, #F8FAFC) !important;
-  border: 1px solid color-mix(in srgb, var(--border, #E2E8F0) 60%, transparent) !important;
+  background: var(--surface-soft, var(--surface-soft)) !important;
+  border: 1px solid color-mix(in srgb, var(--border, var(--border)) 60%, transparent) !important;
   border-radius: 8px !important;
   min-width: 0 !important;
   box-sizing: border-box !important;
@@ -1095,7 +979,7 @@
 }
 
 .student-admission .sa-kv-label {
-  color: var(--text-muted, #64748B) !important;
+  color: var(--text-muted, var(--text-muted)) !important;
   font-size: 0.67rem !important;
   font-weight: 700 !important;
   text-transform: uppercase !important;
@@ -1104,7 +988,7 @@
 }
 
 .student-admission .sa-kv-val {
-  color: var(--text-primary, #0F172A) !important;
+  color: var(--text-primary, var(--text-primary)) !important;
   font-size: 0.85rem !important;
   font-weight: 650 !important;
   line-height: 1.35 !important;
@@ -1118,9 +1002,9 @@
 /* Supporting Documents Card in Review View */
 .student-admission .sa-document-review-card {
   width: 100% !important;
-  border: 1px solid var(--border, #E2E8F0) !important;
+  border: 1px solid var(--border, var(--border)) !important;
   border-radius: 12px !important;
-  background: var(--surface, #FFFFFF) !important;
+  background: var(--surface, var(--surface)) !important;
   box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04) !important;
   overflow: hidden !important;
   box-sizing: border-box !important;
@@ -1146,9 +1030,9 @@
   justify-content: space-between !important;
   gap: 12px !important;
   padding: 10px 14px !important;
-  border: 1px solid var(--border, #E2E8F0) !important;
+  border: 1px solid var(--border, var(--border)) !important;
   border-radius: 9px !important;
-  background: var(--surface-soft, #F8FAFC) !important;
+  background: var(--surface-soft, var(--surface-soft)) !important;
   box-sizing: border-box !important;
 }
 
@@ -1158,8 +1042,8 @@
   width: 30px !important;
   height: 30px !important;
   border-radius: 7px !important;
-  background: var(--brand-soft, #EAF3FF) !important;
-  color: var(--brand, #125AA8) !important;
+  background: var(--brand-soft, var(--brand-soft)) !important;
+  color: var(--brand, var(--brand-hover)) !important;
   font-size: 15px !important;
   flex-shrink: 0 !important;
 }
@@ -1175,7 +1059,7 @@
 .student-admission .sa-doc-item-name {
   font-size: 0.83rem !important;
   font-weight: 700 !important;
-  color: var(--text-primary, #0F172A) !important;
+  color: var(--text-primary, var(--text-primary)) !important;
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
@@ -1194,10 +1078,10 @@
   align-items: center !important;
   gap: 4px !important;
   padding: 4px 10px !important;
-  border: 1px solid var(--border, #CBD5E1) !important;
+  border: 1px solid var(--border, var(--border-strong)) !important;
   border-radius: 6px !important;
-  background: var(--surface, #FFFFFF) !important;
-  color: var(--brand, #125AA8) !important;
+  background: var(--surface, var(--surface)) !important;
+  color: var(--brand, var(--brand-hover)) !important;
   font-size: 0.74rem !important;
   font-weight: 700 !important;
   cursor: pointer !important;
@@ -1205,8 +1089,8 @@
 }
 
 .student-admission .sa-document-preview-button:hover {
-  background: var(--brand-soft, #EAF3FF) !important;
-  border-color: var(--brand, #125AA8) !important;
+  background: var(--brand-soft, var(--brand-soft)) !important;
+  border-color: var(--brand, var(--brand-hover)) !important;
 }
 
 /* Badge Enhancements */
@@ -1222,21 +1106,21 @@
 }
 
 .student-admission .sa-badge.status-submitted {
-  background: #DCFCE7 !important;
+  background: var(--cms-green-soft) !important;
   color: #15803D !important;
   border: 1px solid #86EFAC !important;
 }
 
 .student-admission .sa-badge.status-pending {
-  background: #FEF3C7 !important;
+  background: var(--cms-amber-soft) !important;
   color: #B45309 !important;
   border: 1px solid #FCD34D !important;
 }
 
 .student-admission .sa-badge.status-not-submitted {
-  background: #F1F5F9 !important;
-  color: #64748B !important;
-  border: 1px solid #CBD5E1 !important;
+  background: var(--surface-alt) !important;
+  color: var(--text-muted) !important;
+  border: 1px solid var(--border-strong) !important;
 }
 
 .student-admission .sa-badge.status-approved {
@@ -1246,7 +1130,7 @@
 }
 
 .student-admission .sa-badge.status-rejected {
-  background: #FEE2E2 !important;
+  background: var(--cms-red-soft) !important;
   color: #B91C1C !important;
   border: 1px solid #FCA5A5 !important;
 }
@@ -1254,9 +1138,9 @@
 /* Approval Decision Panel */
 .student-admission .sa-approval {
   margin-top: 18px !important;
-  border: 1px solid var(--border, #CBD5E1) !important;
+  border: 1px solid var(--border, var(--border-strong)) !important;
   border-radius: 12px !important;
-  background: var(--surface, #FFFFFF) !important;
+  background: var(--surface, var(--surface)) !important;
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06) !important;
   padding: 20px !important;
   box-sizing: border-box !important;
@@ -1268,19 +1152,19 @@
   justify-content: space-between !important;
   margin-bottom: 16px !important;
   padding-bottom: 12px !important;
-  border-bottom: 1px solid var(--border, #E2E8F0) !important;
+  border-bottom: 1px solid var(--border, var(--border)) !important;
 }
 
 .student-admission .sa-approval > header h2 {
   margin: 0 !important;
   font-size: 1.1rem !important;
   font-weight: 750 !important;
-  color: var(--text-primary, #0F172A) !important;
+  color: var(--text-primary, var(--text-primary)) !important;
 }
 
 .student-admission .sa-approval > header p {
   margin: 3px 0 0 !important;
-  color: var(--text-muted, #64748B) !important;
+  color: var(--text-muted, var(--text-muted)) !important;
   font-size: 0.82rem !important;
 }
 
@@ -1289,12 +1173,12 @@
   align-items: center !important;
   gap: 10px !important;
   padding: 12px 16px !important;
-  background: var(--surface-soft, #F8FAFC) !important;
-  border: 1px solid var(--border, #E2E8F0) !important;
+  background: var(--surface-soft, var(--surface-soft)) !important;
+  border: 1px solid var(--border, var(--border)) !important;
   border-radius: 8px !important;
   font-size: 0.85rem !important;
   font-weight: 600 !important;
-  color: var(--text-primary, #0F172A) !important;
+  color: var(--text-primary, var(--text-primary)) !important;
   cursor: pointer !important;
   margin-bottom: 14px !important;
 }
@@ -1302,7 +1186,7 @@
 .student-admission .sa-review-confirm input[type="checkbox"] {
   width: 18px !important;
   height: 18px !important;
-  accent-color: var(--brand, #125AA8) !important;
+  accent-color: var(--brand, var(--brand-hover)) !important;
   cursor: pointer !important;
 }
 
@@ -1316,16 +1200,16 @@
 .student-admission .sa-remarks span {
   font-size: 0.82rem !important;
   font-weight: 700 !important;
-  color: var(--text-primary, #0F172A) !important;
+  color: var(--text-primary, var(--text-primary)) !important;
 }
 
 .student-admission .sa-remarks textarea {
   width: 100% !important;
   min-height: 80px !important;
   padding: 10px 14px !important;
-  border: 1px solid var(--border, #CBD5E1) !important;
+  border: 1px solid var(--border, var(--border-strong)) !important;
   border-radius: 8px !important;
-  font-family: inherit !important;
+  font-family: var(--font-family) !important;
   font-size: 0.85rem !important;
   outline: none !important;
   resize: vertical !important;
@@ -1338,7 +1222,7 @@
   justify-content: flex-end !important;
   gap: 10px !important;
   padding-top: 14px !important;
-  border-top: 1px solid var(--border, #E2E8F0) !important;
+  border-top: 1px solid var(--border, var(--border)) !important;
 }
 
 /* ==========================================================================
@@ -1366,9 +1250,9 @@
   display: flex !important;
   flex-direction: column !important;
   width: 100% !important;
-  border: 1px solid var(--border, #E2E8F0) !important;
+  border: 1px solid var(--border, var(--border)) !important;
   border-radius: 14px !important;
-  background: var(--surface, #FFFFFF) !important;
+  background: var(--surface, var(--surface)) !important;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
   overflow: hidden !important;
   box-sizing: border-box !important;
@@ -1379,9 +1263,9 @@
   align-items: center !important;
   gap: 6px !important;
   padding: 8px 16px !important;
-  background: var(--surface-soft, #F8FAFC) !important;
-  border-bottom: 1px solid var(--border, #E2E8F0) !important;
-  border-top: 1px solid var(--border, #E2E8F0) !important;
+  background: var(--surface-soft, var(--surface-soft)) !important;
+  border-bottom: 1px solid var(--border, var(--border)) !important;
+  border-top: 1px solid var(--border, var(--border)) !important;
   overflow-x: auto !important;
   width: 100% !important;
   box-sizing: border-box !important;
@@ -1394,7 +1278,7 @@
   padding: 8px 15px !important;
   border: 1px solid transparent !important;
   border-radius: 8px !important;
-  color: var(--text-muted, #64748B) !important;
+  color: var(--text-muted, var(--text-muted)) !important;
   background: transparent !important;
   font-size: 0.82rem !important;
   font-weight: 650 !important;
@@ -1404,14 +1288,14 @@
 }
 
 .student-admission .sa-tabs button:hover {
-  color: var(--brand, #125AA8) !important;
-  background: var(--brand-soft, #EAF3FF) !important;
+  color: var(--brand, var(--brand-hover)) !important;
+  background: var(--brand-soft, var(--brand-soft)) !important;
 }
 
 .student-admission .sa-tabs button.active {
-  color: var(--brand, #125AA8) !important;
-  background: var(--surface, #FFFFFF) !important;
-  border-color: var(--border, #CBD5E1) !important;
+  color: var(--brand, var(--brand-hover)) !important;
+  background: var(--surface, var(--surface)) !important;
+  border-color: var(--border, var(--border-strong)) !important;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06) !important;
   font-weight: 750 !important;
 }
@@ -1434,9 +1318,9 @@
 
 .student-admission .sa-detail-panel.sa-modern-panel {
   width: 100% !important;
-  border: 1px solid var(--border, #E2E8F0) !important;
+  border: 1px solid var(--border, var(--border)) !important;
   border-radius: 12px !important;
-  background: var(--surface, #FFFFFF) !important;
+  background: var(--surface, var(--surface)) !important;
   box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04) !important;
   overflow: hidden !important;
   margin-bottom: 16px !important;
@@ -1452,9 +1336,9 @@
   align-items: center !important;
   justify-content: space-between !important;
   padding: 12px 18px !important;
-  background: var(--surface-soft, #F8FAFC) !important;
-  border-bottom: 1px solid var(--border, #E2E8F0) !important;
-  border-left: 4px solid var(--brand, #125AA8) !important;
+  background: var(--surface-soft, var(--surface-soft)) !important;
+  border-bottom: 1px solid var(--border, var(--border)) !important;
+  border-left: 4px solid var(--brand, var(--brand-hover)) !important;
 }
 
 .student-admission .sa-panel-title-wrap {
@@ -1469,8 +1353,8 @@
   width: 26px !important;
   height: 26px !important;
   border-radius: 6px !important;
-  background: var(--brand-soft, #EAF3FF) !important;
-  color: var(--brand, #125AA8) !important;
+  background: var(--brand-soft, var(--brand-soft)) !important;
+  color: var(--brand, var(--brand-hover)) !important;
   font-size: 14px !important;
 }
 
@@ -1478,7 +1362,7 @@
   margin: 0 !important;
   font-size: 0.95rem !important;
   font-weight: 750 !important;
-  color: var(--text-primary, #0F172A) !important;
+  color: var(--text-primary, var(--text-primary)) !important;
 }
 
 .student-admission .sa-card-count-badge {
@@ -1488,8 +1372,8 @@
   border-radius: 999px !important;
   font-size: 0.72rem !important;
   font-weight: 750 !important;
-  background: var(--brand-soft, #EAF3FF) !important;
-  color: var(--brand, #125AA8) !important;
+  background: var(--brand-soft, var(--brand-soft)) !important;
+  color: var(--brand, var(--brand-hover)) !important;
 }
 
 .student-admission .sa-detail-kv-grid {
@@ -1506,8 +1390,8 @@
   flex-direction: column !important;
   gap: 4px !important;
   padding: 10px 14px !important;
-  background: var(--surface-soft, #F8FAFC) !important;
-  border: 1px solid var(--border, #E2E8F0) !important;
+  background: var(--surface-soft, var(--surface-soft)) !important;
+  border: 1px solid var(--border, var(--border)) !important;
   border-radius: 8px !important;
   min-width: 0 !important;
 }
@@ -1517,7 +1401,7 @@
 }
 
 .student-admission .sa-kv-label {
-  color: var(--text-muted, #64748B) !important;
+  color: var(--text-muted, var(--text-muted)) !important;
   font-size: 0.72rem !important;
   font-weight: 750 !important;
   letter-spacing: 0.03em !important;
@@ -1525,7 +1409,7 @@
 }
 
 .student-admission .sa-kv-val {
-  color: var(--text-primary, #0F172A) !important;
+  color: var(--text-primary, var(--text-primary)) !important;
   font-size: 0.88rem !important;
   font-weight: 700 !important;
   white-space: nowrap !important;
@@ -1560,9 +1444,9 @@
 
 :root body .student-admission .cm-profile-view .cm-profile-card {
   padding: 0 !important;
-  border: 1px solid var(--border, #E2E8F0) !important;
+  border: 1px solid var(--border, var(--border)) !important;
   border-radius: 14px !important;
-  background: var(--surface, #FFFFFF) !important;
+  background: var(--surface, var(--surface)) !important;
   box-shadow: 0 1px 6px rgba(15, 23, 42, 0.05) !important;
   overflow: hidden !important;
 }
@@ -1583,7 +1467,7 @@
 .student-admission .sa-timeline-wrap {
   padding: 24px 28px !important;
   box-sizing: border-box !important;
-  background: var(--surface, #FFFFFF) !important;
+  background: var(--surface, var(--surface)) !important;
 }
 
 .student-admission .sa-timeline-empty {
@@ -1593,14 +1477,14 @@
   justify-content: center !important;
   gap: 8px !important;
   padding: 30px !important;
-  color: var(--text-muted, #64748B) !important;
+  color: var(--text-muted, var(--text-muted)) !important;
   font-size: 0.86rem !important;
 }
 
 .student-admission .sa-timeline-empty svg {
   width: 32px !important;
   height: 32px !important;
-  color: var(--text-muted, #94A3B8) !important;
+  color: var(--text-muted, var(--text-muted)) !important;
 }
 
 .student-admission .sa-timeline-list {
@@ -1619,7 +1503,7 @@
   bottom: 12px !important;
   left: 9px !important;
   width: 2px !important;
-  background: color-mix(in srgb, var(--brand, #125AA8) 30%, var(--border, #CBD5E1)) !important;
+  background: color-mix(in srgb, var(--brand, var(--brand-hover)) 30%, var(--border, var(--border-strong))) !important;
 }
 
 .student-admission .sa-timeline-item {
@@ -1638,18 +1522,18 @@
   width: 20px !important;
   height: 20px !important;
   border-radius: 50% !important;
-  background: var(--surface, #FFFFFF) !important;
+  background: var(--surface, var(--surface)) !important;
   border: 2px solid var(--border-strong, #94A3B8) !important;
-  color: var(--text-muted, #64748B) !important;
+  color: var(--text-muted, var(--text-muted)) !important;
   font-size: 11px !important;
   z-index: 1 !important;
 }
 
 .student-admission .sa-timeline-item.is-latest .sa-timeline-dot {
-  border-color: var(--success, #10B981) !important;
-  background: var(--success, #10B981) !important;
+  border-color: var(--success, var(--success)) !important;
+  background: var(--success, var(--success)) !important;
   color: #FFFFFF !important;
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--success, #10B981) 20%, transparent) !important;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--success, var(--success)) 20%, transparent) !important;
 }
 
 .student-admission .sa-timeline-body {
@@ -1658,9 +1542,9 @@
   gap: 6px !important;
   width: 100% !important;
   padding: 12px 18px !important;
-  border: 1px solid var(--border, #E2E8F0) !important;
+  border: 1px solid var(--border, var(--border)) !important;
   border-radius: 10px !important;
-  background: var(--surface-soft, #F8FAFC) !important;
+  background: var(--surface-soft, var(--surface-soft)) !important;
   box-sizing: border-box !important;
 }
 
@@ -1675,7 +1559,7 @@
 .student-admission .sa-timeline-event {
   font-size: 0.88rem !important;
   font-weight: 750 !important;
-  color: var(--text-primary, #0F172A) !important;
+  color: var(--text-primary, var(--text-primary)) !important;
 }
 
 .student-admission .sa-timeline-date {
@@ -1683,20 +1567,20 @@
   align-items: center !important;
   padding: 3px 9px !important;
   border-radius: 6px !important;
-  background: var(--surface, #FFFFFF) !important;
-  border: 1px solid var(--border, #E2E8F0) !important;
+  background: var(--surface, var(--surface)) !important;
+  border: 1px solid var(--border, var(--border)) !important;
   font-size: 0.74rem !important;
   font-weight: 600 !important;
-  color: var(--text-muted, #64748B) !important;
+  color: var(--text-muted, var(--text-muted)) !important;
 }
 
 .student-admission .sa-timeline-note {
   font-size: 0.8rem !important;
-  color: var(--text-secondary, #475569) !important;
-  background: var(--surface, #FFFFFF) !important;
+  color: var(--text-secondary, var(--text-secondary)) !important;
+  background: var(--surface, var(--surface)) !important;
   padding: 8px 12px !important;
   border-radius: 6px !important;
-  border-left: 3px solid var(--brand, #125AA8) !important;
+  border-left: 3px solid var(--brand, var(--brand-hover)) !important;
 }
 
 /* ==========================================================================
@@ -1727,9 +1611,9 @@
   min-height: 520px !important;
   overflow: hidden !important;
   overflow-x: hidden !important;
-  border: 1px solid var(--border, #E2E8F0) !important;
+  border: 1px solid var(--border, var(--border)) !important;
   border-radius: 12px !important;
-  background: var(--surface, #FFFFFF) !important;
+  background: var(--surface, var(--surface)) !important;
   box-shadow: var(--shadow-sm, 0 1px 3px rgba(15, 23, 42, .05)) !important;
   box-sizing: border-box !important;
 }
@@ -1742,9 +1626,9 @@
   overflow: hidden !important;
   min-width: 0 !important;
   padding: 12px 16px !important;
-  border: 1px solid var(--border, #E2E8F0) !important;
+  border: 1px solid var(--border, var(--border)) !important;
   border-radius: 12px !important;
-  background: var(--surface, #FFFFFF) !important;
+  background: var(--surface, var(--surface)) !important;
   box-shadow: var(--shadow-sm, 0 1px 3px rgba(15, 23, 42, .05)) !important;
   box-sizing: border-box !important;
 }
@@ -1755,7 +1639,7 @@
   justify-content: space-between !important;
   padding-bottom: 8px !important;
   margin-bottom: 8px !important;
-  border-bottom: 1px solid var(--border, #E2E8F0) !important;
+  border-bottom: 1px solid var(--border, var(--border)) !important;
   flex-shrink: 0 !important;
 }
 
@@ -1779,7 +1663,7 @@
 }
 
 .student-admission .preview-body-container::-webkit-scrollbar-track {
-  background: #F1F5F9 !important;
+  background: var(--surface-alt) !important;
   border-radius: 4px !important;
 }
 
@@ -1819,8 +1703,8 @@
   justify-content: space-between !important;
   padding: 16px 20px !important;
   margin-top: 8px !important;
-  border-top: 1px solid var(--border, #E2E8F0) !important;
-  background: var(--surface-soft, #F8FAFC) !important;
+  border-top: 1px solid var(--border, var(--border)) !important;
+  background: var(--surface-soft, var(--surface-soft)) !important;
 }
 
 
@@ -1833,9 +1717,9 @@
   align-items: flex-start;
   gap: 16px;
   padding: 22px;
-  border: 1px dashed var(--border-strong, #cbd5e1);
+  border: 1px dashed var(--border-strong, var(--border-strong));
   border-radius: 10px;
-  background: var(--surface-soft, #f8fafc);
+  background: var(--surface-soft, var(--surface-soft));
   margin: 12px 0;
 }
 .sa-fee-unconfigured-icon {
@@ -1845,7 +1729,7 @@
   width: 44px;
   height: 44px;
   border-radius: 10px;
-  background: #fef3c7;
+  background: var(--cms-amber-soft);
   color: #b45309;
   font-size: 22px;
   flex-shrink: 0;
@@ -1857,12 +1741,12 @@
   margin: 0 0 6px;
   font-size: 15px;
   font-weight: 700;
-  color: var(--text-primary, #0f172a);
+  color: var(--text-primary, var(--text-primary));
 }
 .sa-fee-unconfigured-body p {
   margin: 0 0 10px;
   font-size: 13px;
-  color: var(--text-secondary, #475569);
+  color: var(--text-secondary, var(--text-secondary));
   line-height: 1.5;
 }
 .sa-fee-unconfigured-hint {
@@ -1893,8 +1777,8 @@
   gap: 6px;
   padding: 16px 18px;
   border-radius: 10px;
-  border: 1px solid var(--border, #e2e8f0);
-  background: var(--surface, #ffffff);
+  border: 1px solid var(--border, var(--border));
+  background: var(--surface, var(--surface));
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
@@ -1916,7 +1800,7 @@
   font-weight: 750;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--text-muted, #64748b);
+  color: var(--text-muted, var(--text-muted));
 }
 .student-admission .fm-summary-card__icon-box,
 .sa-fees-detail-container .fm-summary-card__icon-box {
@@ -1934,12 +1818,12 @@
   font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1.1;
-  color: var(--text-primary, #0f172a);
+  color: var(--text-primary, var(--text-primary));
 }
 .student-admission .fm-summary-card__meta,
 .sa-fees-detail-container .fm-summary-card__meta {
   font-size: 11px;
-  color: var(--text-muted, #64748b);
+  color: var(--text-muted, var(--text-muted));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1947,7 +1831,7 @@
 
 .student-admission .fm-summary-card--blue,
 .sa-fees-detail-container .fm-summary-card--blue {
-  background: linear-gradient(180deg, #f0f7ff 0%, #ffffff 100%);
+  background: linear-gradient(180deg, #f0f7ff 0%, var(--surface) 100%);
   border-color: #bfdbfe;
 }
 .student-admission .fm-summary-card--blue .fm-summary-card__icon-box,
@@ -1962,12 +1846,12 @@
 
 .student-admission .fm-summary-card--green,
 .sa-fees-detail-container .fm-summary-card--green {
-  background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%);
+  background: linear-gradient(180deg, #f0fdf4 0%, var(--surface) 100%);
   border-color: #bbf7d0;
 }
 .student-admission .fm-summary-card--green .fm-summary-card__icon-box,
 .sa-fees-detail-container .fm-summary-card--green .fm-summary-card__icon-box {
-  background: #dcfce7;
+  background: var(--cms-green-soft);
   color: #15803d;
 }
 .student-admission .fm-summary-card--green .fm-summary-card__value,
@@ -1977,12 +1861,12 @@
 
 .student-admission .fm-summary-card--amber,
 .sa-fees-detail-container .fm-summary-card--amber {
-  background: linear-gradient(180deg, #fffbeb 0%, #ffffff 100%);
+  background: linear-gradient(180deg, #fffbeb 0%, var(--surface) 100%);
   border-color: #fde68a;
 }
 .student-admission .fm-summary-card--amber .fm-summary-card__icon-box,
 .sa-fees-detail-container .fm-summary-card--amber .fm-summary-card__icon-box {
-  background: #fef3c7;
+  background: var(--cms-amber-soft);
   color: #b45309;
 }
 .student-admission .fm-summary-card--amber .fm-summary-card__value,
@@ -1992,12 +1876,12 @@
 
 .student-admission .fm-summary-card--red,
 .sa-fees-detail-container .fm-summary-card--red {
-  background: linear-gradient(180deg, #fef2f2 0%, #ffffff 100%);
+  background: linear-gradient(180deg, var(--cms-red-soft) 0%, var(--surface) 100%);
   border-color: #fecaca;
 }
 .student-admission .fm-summary-card--red .fm-summary-card__icon-box,
 .sa-fees-detail-container .fm-summary-card--red .fm-summary-card__icon-box {
-  background: #fee2e2;
+  background: var(--cms-red-soft);
   color: #b91c1c;
 }
 .student-admission .fm-summary-card--red .fm-summary-card__value,
@@ -2016,12 +1900,12 @@
   text-transform: capitalize;
 }
 .student-admission .fm-badge--pending {
-  background: #fef3c7;
+  background: var(--cms-amber-soft);
   color: #b45309;
   border: 1px solid #fde68a;
 }
 .student-admission .fm-badge--paid {
-  background: #dcfce7;
+  background: var(--cms-green-soft);
   color: #15803d;
   border: 1px solid #bbf7d0;
 }
@@ -2031,7 +1915,7 @@
   border: 1px solid #bfdbfe;
 }
 .student-admission .fm-badge--overdue {
-  background: #fee2e2;
+  background: var(--cms-red-soft);
   color: #b91c1c;
   border: 1px solid #fecaca;
 }
@@ -2048,3 +1932,27 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Admission structure adapted from Inter AdmissionPage's grouped form and main tabs. */
+.sa-reference-summary {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.sa-reference-summary article {display:grid;gap:8px;padding:14px 16px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+.sa-reference-summary span {color:var(--text-muted);font-size:12px}.sa-reference-summary strong {font-size:23px;color:var(--text-primary)}
+.student-admission .sa-reference-stepper {display:flex;gap:4px;padding:8px;border-bottom:1px solid var(--border);overflow:auto;background:var(--surface-soft)}
+.sa-reference-stepper button {display:flex;align-items:center;gap:7px;white-space:nowrap;border:0;border-radius:7px;padding:10px 12px;color:var(--text-secondary);background:transparent;font-size:12px;font-weight:600}
+.sa-reference-stepper button span {display:grid;place-items:center;width:22px;height:22px;border:1px solid var(--border);border-radius:50%}
+.sa-reference-stepper button.active {color:var(--brand);background:var(--brand-soft)}.sa-reference-stepper button.completed {color:var(--success)}.sa-reference-stepper button:disabled {opacity:.5;cursor:not-allowed}
+.student-admission .sa-form-section {margin:0;padding:18px;border:0;border-bottom:1px solid var(--border);background:var(--surface)}
+.student-admission .sa-form-section>header {display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px}
+.student-admission .sa-form-section h2 {margin:0;font-size:14px;color:var(--text-primary)}.student-admission .sa-form-section p {margin:4px 0 0;color:var(--text-muted);font-size:12px}
+.student-admission .sa-form-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.student-admission .sa-field {display:grid;align-content:start;gap:6px;min-width:0;color:var(--text-secondary);font-size:12px;font-weight:600}
+.student-admission .sa-field input,.student-admission .sa-field select,.student-admission .sa-field textarea {width:100%;min-height:39px;padding:9px 11px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text-primary);font:inherit}
+.student-admission .sa-field input[readonly] {background:var(--surface-soft);color:var(--text-muted)}.student-admission .sa-field b,.student-admission .sa-field.invalid small {color:var(--danger)}
+.student-admission .sa-field.invalid input {border-color:var(--danger)}.student-admission .sa-field small {font-size:11px;font-weight:400;color:var(--text-muted)}
+.student-admission .sa-field.wide {grid-column:1/-1}.student-admission .sa-wizard-actions {display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding:14px 18px;border-top:1px solid var(--border);background:var(--surface)}
+.sa-wizard-actions>span {flex:1}.sa-sort {display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:8px 16px;color:var(--text-muted);font-size:12px}.sa-sort select {padding:7px;background:var(--surface);color:var(--text-primary);border:1px solid var(--border);border-radius:6px}
+.sa-document-picker {display:grid;gap:4px;color:var(--brand);font-size:12px}.sa-document-picker input {max-width:220px}.sa-document-copy small {overflow-wrap:anywhere;color:var(--text-muted)}
+.student-admission .shared-view-dialog .cm-profile-view {padding:0}.student-admission .shared-view-dialog .cm-profile-card {border:0;box-shadow:none}.student-admission .shared-view-dialog .sa-breadcrumb {display:none}
+.student-admission :is(input,button,select,textarea):focus-visible {outline:2px solid var(--brand);outline-offset:2px}
+@media(max-width:1000px){.student-admission .sa-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.sa-reference-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.student-admission .sa-form-grid{grid-template-columns:1fr}.student-admission .sa-form-section{padding:14px}.student-admission .sa-wizard-actions button{flex:1}.sa-reference-stepper button{padding:8px}.sa-document-item{flex-wrap:wrap}}

@@ -18,7 +18,7 @@
 .section-search input::placeholder,
 .department-search input::placeholder,
 .semester-search input::placeholder {
-  color: #94A3B8;
+  color: var(--text-muted);
 }
 
 .section-search:focus-within,
@@ -55,44 +55,13 @@
   }
 }
 
-body .page-content .section-search,
-body .page-content .department-search,
-body .page-content .semester-search {
-  height: 42px !important;
-  min-height: 42px !important;
-  box-sizing: border-box !important;
-  border: 1px solid #CBD5E1 !important;
-  outline: none !important;
-  box-shadow: 0 1px 2px rgba(16, 42, 76, 0.04) !important;
-}
-
-body .page-content .section-search:focus-within,
-body .page-content .department-search:focus-within,
-body .page-content .semester-search:focus-within {
-  border-color: #1769C2 !important;
-  box-shadow: 0 0 0 3px rgba(43, 120, 197, 0.18), 0 2px 6px rgba(16, 42, 76, 0.06) !important;
-}
-
-body .page-content .section-search > input,
-body .page-content .department-search > input,
-body .page-content .semester-search > input {
-  width: 100% !important;
-  height: 40px !important;
-  min-height: 40px !important;
-  box-sizing: border-box !important;
-  border: 0 !important;
-  outline: 0 !important;
-  box-shadow: none !important;
-  background: transparent !important;
-}
-
 .section-management .section-stats {
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .section-current-students-card .cm-kpi-icon {
-  color: #0F172A;
-  background: #EAF3FF;
+  color: var(--text-primary);
+  background: var(--brand-soft);
 }
 
 @media (max-width: 1180px) {

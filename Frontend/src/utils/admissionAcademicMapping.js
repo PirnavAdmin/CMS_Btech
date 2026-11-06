@@ -8,14 +8,16 @@ export const admissionSemesterOptions = (semesters, academic, collegeId) => seme
   .filter(item => item.id)
 
 export const resetAdmissionAcademicDependents = (next, previous, path) => {
-  if (!['academic.courseId', 'academic.branchId', 'academic.academicYearId'].includes(path)) return next
+  if (!['admission.collegeId', 'academic.departmentId', 'academic.courseId', 'academic.branchId', 'academic.academicYearId'].includes(path)) return next
   const key = path.split('.')[1]
-  if (sameId(next.academic[key], previous.academic[key])) return next
+  if (sameId(path === 'admission.collegeId' ? next.admission?.collegeId : next.academic[key], path === 'admission.collegeId' ? previous.admission?.collegeId : previous.academic[key])) return next
   const academic = { ...next.academic,
     requiresSemesterSelection: Boolean(previous.academic.semesterId || previous.academic.requiresSemesterSelection),
     semesterId: '', semester: '', sectionId: '', section: '',
   }
-  if (key === 'courseId') Object.assign(academic, { departmentId: '', branchId: '', branch: '', branchCode: '' })
+  if (key === 'courseId') Object.assign(academic, { branchId: '', branch: '', branchCode: '' })
+  if (key === 'departmentId' || path === 'admission.collegeId') Object.assign(academic, { courseId:'', course:'', courseCode:'', branchId:'', branch:'', branchCode:'' })
+  if (path === 'admission.collegeId') Object.assign(academic, { departmentId:'', department:'' })
   return { ...next, academic }
 }
 

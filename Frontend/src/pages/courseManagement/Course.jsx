@@ -1,3 +1,7 @@
+import DataTable from '../../components/DataTable'
+import PageHeader from '../../components/PageHeader'
+import { useScreenAccess } from '../../auth/ScreenAccess'
+import AsyncState from '../../components/AsyncState'
 import SearchableSelectImports_default, { ProjectSelect as SearchableSelectImports_ProjectSelect } from '../../components/SearchableSelect'
 import { getSemesters, createSemester } from '../../auth/collegeApi'
 import { ensureBranchSemesters, semesterStructure, semesterRecords } from '../../services/branchSemesterWorkflow.js'
@@ -210,9 +214,9 @@ const typeOf = branchTypeLabel
 
 const Page = ({ children }) => <DashboardLayout><main className="cm-page branch-management">{children}</main></DashboardLayout>
 
-const Header = ({ title, text, children }) => <header className="cm-header"><div><h1>{title}</h1><p>{text}</p></div><div className="cm-row-actions">{children}</div></header>
+const Header = ({ title, text, children }) => <PageHeader title={title} subtitle={text}>{children}</PageHeader>
 
-const Badge = ({ value }) => <span className={`branch-badge ${String(value || 'Active').toLowerCase()}`}><i />{value === 'Inactive' ? 'Deactive' : value || 'Active'}</span>
+const Badge = ({ value }) => <StatusBadge value={value} />
 
 const Notice = ({ children }) => {
   if (!children) return null
@@ -234,7 +238,12 @@ const Field = ({ label, error, children, wide = false }) => {
   })}{error && <small className="cm-error">{error}</small>}</label>
 }
 
-function List() {
+function List({ initialViewId = null }) {
+  const navigate = useNavigate()
+  const [viewId, setViewId] = useState(initialViewId)
+  const closeView = () => { setViewId(null); if (initialViewId) navigate('/branches') }
+  const { canAction } = useScreenAccess()
+  const canCreate = canAction('/branches', 'create'), canEdit = canAction('/branches', 'edit')
   const { scopeRecords, selectedCollegeId, selectedAcademicYearId } = useAcademic()
   const [params] = useSearchParams()
   const [pendingStatus, setPendingStatus] = useState(null)
@@ -243,12 +252,13 @@ function List() {
   const [allBranches, setBranches] = useState([])
   const branches = scopeRecords(allBranches, { courses: allCourses })
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [error, setError] = useToastState('', 'error')
   const [page, setPage] = useState(1)
   const [filters, setFilters] = useState({ query: '', courseId: params.get('course') || '', branchType: '', status: '' })
 
   const load = async () => {
-    setLoading(true)
+    setLoading(true); setLoadError('')
     try {
       const [branchRows, courseRows] = await Promise.all([
         branchApi.getAll(),
@@ -272,7 +282,8 @@ function List() {
       setCourses(safeCourses)
       setError('')
     } catch (requestError) {
-      setError(requestError?.message || 'Unable to load branch data.')
+      setBranches([]); setCourses([])
+      setLoadError(requestError?.message || 'Unable to load branch data.')
     } finally {
       setLoading(false)
     }
@@ -357,78 +368,21 @@ function List() {
 
   return <Page>
     <Header title="Branch Management" text="Manage branches and their course-defined semester structure.">
-      <CompactSummary label="Branch summary" items={[{ label: 'Total', value: stats.total }, { label: 'Active', value: stats.active, tone: 'active' }, { label: 'Inactive', value: stats.inactive, tone: 'inactive' }]} />
+      <CompactSummary label="Branch summary" items={[{ label: 'Total', value: loading || loadError ? '—' : stats.total }, { label: 'Active', value: loading || loadError ? '—' : stats.active, tone: 'active' }, { label: 'Inactive', value: loading || loadError ? '—' : stats.inactive, tone: 'inactive' }]} />
     </Header>
     <Notice>{error}</Notice>
     {pendingStatus && <StatusConfirmDialog entity="Branch" name={`${pendingStatus.branch.branchName} (${pendingStatus.branch.branchCode})`} nextStatus={pendingStatus.nextStatus} onCancel={() => setPendingStatus(null)} onConfirm={confirmStatusChange} details={pendingStatus.nextStatus === 'Inactive' ? [['Associated Students', `${pendingStatus.studentCount} student${pendingStatus.studentCount === 1 ? '' : 's'}`]] : []} description={pendingStatus.nextStatus === 'Inactive' ? pendingStatus.studentCount > 0 ? 'Students are associated with this branch. Deactivation will be checked when you continue.' : 'No students are associated with this branch, so it can be deactivated.' : 'This branch will become active again.'} confirmLabel={pendingStatus.nextStatus === 'Inactive' ? 'Deactivate Branch' : 'Activate Branch'} />}
-    <section className="cm-panel branch-directory-card">
-      <header className="branch-directory-heading"><div><span className="cm-eyebrow">Branch Directory</span><p>{rows.length} records</p></div><div className="directory-export-actions"><ExportMenu rows={rows.map(branch => ({ ...branch, courseName: courseById.get(String(branch.courseId))?.name || branch.courseName }))} columns={branchColumns} title="Branches" filename="branches" loading={loading || Boolean(error)} /><Link className="cm-button" to="/branches/add"><FiPlus /> Add Branch</Link></div></header>
-    <FilterPanel active={hasFilters} onClear={clearFilters}>
-      <div className="branch-filter-toolbar">
-        <label className="branch-search"><FiSearch /><input aria-label="Search branches" value={filters.query} onChange={(event) => setFilter('query', event.target.value)} placeholder="Search branch name, code or course" /></label>
-        <SearchableSelect label="Course" value={filters.courseId} options={courses.filter(course => course.status === 'Active').map((course) => ({ id: course.id, name: course.name, code: course.code }))} onChange={(value) => setFilter('courseId', value)} placeholder="Select Course" searchPlaceholder="Search course..." noOptionsMessage="No courses found." />
-        <ProjectSelect value={filters.branchType} onChange={(event) => setFilter('branchType', event.target.value)}><option value="">Type</option><option value="Core">Core</option><option value="Specialization">Specialization</option></ProjectSelect>
-        <ProjectSelect value={filters.status} onChange={(event) => setFilter('status', event.target.value)}><option value="">Status</option><option value="Active">Active</option><option value="Inactive">Deactive</option></ProjectSelect>
-      </div>
-    </FilterPanel>
-
-    {loading ? <div className="branch-empty">Loading branches...</div> : rows.length ? <>
-      <div className="branch-results">Showing <strong>{rows.length}</strong> branches</div>
-      <div className="branch-table-scroll">
-        <table className="branch-table">
-          <thead>
-            <tr>
-              <th className="table-center" style={{ minWidth: '220px' }}>Branch</th>
-              <th className="table-center" style={{ width: '110px' }}>Code</th>
-              <th className="table-center" style={{ minWidth: '160px', maxWidth: '220px' }}>Course</th>
-              <th className="table-center" style={{ width: '130px' }}>Type</th>
-              <th className="table-center" style={{ width: '110px' }}>Duration</th>
-              <th className="table-center" style={{ width: '110px' }}>Semesters</th>
-              <th className="table-center" style={{ width: '130px' }}>Approved Intake</th>
-              <th className="table-center" style={{ width: '120px' }}>Status</th>
-              <th className="table-center" style={{ width: '140px' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pageRows.map((branch) => {
-              const course = courseById.get(String(branch.courseId))
-              const courseDisplayName = course?.name || branch.courseName || ''
-              return (
-                <tr key={branch.id}>
-                  <td className="table-center" style={{ minWidth: '220px' }}>
-                    <div className="table-primary-cell">
-                      <Link to={`/branches/${branch.id}`} className="branch-name-link table-cell-truncate" title={`Click to view details for ${branch.branchName}`}>
-                        {branch.branchName}
-                      </Link>
-                      {branch.shortName && <small title={branch.shortName}>{branch.shortName}</small>}
-                    </div>
-                  </td>
-                  <td className="table-center" style={{ width: '110px' }}>{branch.branchCode}</td>
-                  <td className="table-center" style={{ minWidth: '160px', maxWidth: '220px' }}><span className="table-cell-truncate" title={courseDisplayName}>{courseDisplayName || '-'}</span></td>
-                  <td className="table-center" style={{ width: '130px' }}>{typeOf(branch)}</td>
-                  <td className="table-center" style={{ width: '110px' }}>{course?.durationValue ? `${course.durationValue} Years` : ''}</td>
-                  <td className="table-center" style={{ width: '110px' }}>{course?.totalSemesters || ''}</td>
-                  <td className="table-center" style={{ width: '130px' }}>{branch.intakeCapacity || ''}</td>
-                  <td className="table-center" style={{ width: '120px' }}><StatusBadge value={branch.status} /></td>
-                  <td className="table-center" style={{ width: '140px' }}>
-                    <div className="branch-actions table-actions-group">
-                      <Link className="table-action-btn action-edit" aria-label={`Edit ${branch.branchName}`} title={`Edit ${branch.branchName}`} to={`/branches/${branch.id}/edit`}><FiEdit2 /></Link>
-                      <button type="button" title={branch.status === 'Active' ? `Deactivate ${branch.branchName}` : `Activate ${branch.branchName}`} aria-label={branch.status === 'Active' ? `Deactivate ${branch.branchName}` : `Activate ${branch.branchName}`} className={`table-action-btn ${branch.status === 'Active' ? 'action-activate erp-action-btn--success' : 'action-deactivate erp-action-btn--danger'}`} onClick={() => onToggleStatus(branch)}>{branch.status === 'Active' ? <FiToggleRight data-status="active" /> : <FiToggleLeft data-status="inactive" />}</button>
-                    </div>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-      <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} />
-    </> : !error && <div className="branch-empty">
-      <strong>No branches found.</strong>
-      <span>Add a branch to get started.</span>
-      <Link className="cm-button" to="/branches/add">Add Branch</Link>
-    </div> }
-    </section>
+    <section className="branch-reference-directory"><div className="branch-reference-toolbar"><label className="branch-reference-search"><FiSearch /><input aria-label="Search branches" placeholder="Search branch name, code or course" value={filters.query} onChange={event => setFilter('query', event.target.value)} /></label><div className="branch-reference-actions"><ExportMenu rows={rows.map(branch => ({ ...branch, courseName: courseById.get(String(branch.courseId))?.name || branch.courseName }))} columns={branchColumns} title="Branches" filename="branches" loading={loading || Boolean(loadError)} />{canCreate && <Link className="erp-btn erp-btn--primary" to="/branches/add"><FiPlus /> Add Branch</Link>}</div></div><div className="branch-reference-filters"><SearchableSelect label="Course" value={filters.courseId} options={courses.filter(course => course.status === 'Active').map(course => ({id:course.id,name:course.name,code:course.code}))} onChange={value => setFilter('courseId',value)} placeholder="All courses" /><ProjectSelect aria-label="Branch type" value={filters.branchType} onChange={event => setFilter('branchType',event.target.value)}><option value="">All types</option><option>Core</option><option>Specialization</option></ProjectSelect><ProjectSelect aria-label="Branch status" value={filters.status} onChange={event => setFilter('status',event.target.value)}><option value="">All statuses</option><option>Active</option><option>Inactive</option></ProjectSelect>{hasFilters && <button className="erp-btn erp-btn--secondary" onClick={clearFilters}>Clear filters</button>}</div>
+      <DataTable caption="Branch directory" tableClassName="branch-reference-table" rows={rows} loading={loading && 'Loading branches…'} error={loadError} onRetry={load} pagination={{ page, pageSize:PAGE_SIZE, onPageChange:setPage }} emptyState={<AsyncState status="empty" title="No branches found." />} columns={[
+        {key:'branchCode',label:'Code',sortable:true,render:row => <code>{row.branchCode}</code>},
+        {key:'branchName',label:'Branch',sortable:true,render:row => <div><button className="branch-reference-name" onClick={() => setViewId(row.id)}>{row.branchName}</button><small>{row.shortName}</small></div>},
+        {key:'course',label:'Course',render:row => courseById.get(String(row.courseId))?.name || row.courseName || '—'},
+        {key:'branchType',label:'Type',render:row => typeOf(row)},
+        {key:'semesters',label:'Semesters',render:row => courseById.get(String(row.courseId))?.totalSemesters || row.totalSemesters || 'Not configured'},
+        {key:'intakeCapacity',label:'Approved intake',sortable:true},
+        {key:'status',label:'Status',render:row => <StatusBadge value={row.status} />},
+      ]} rowActions={row => <div className="branch-reference-actions"><button className="table-action-btn" aria-label={`View ${row.branchName}`} onClick={() => setViewId(row.id)}><FiEye /></button>{canEdit && <><Link className="table-action-btn action-edit" aria-label={`Edit ${row.branchName}`} to={`/branches/${row.id}/edit`}><FiEdit2 /></Link><button className="table-action-btn" aria-label={`${row.status === 'Active' ? 'Deactivate' : 'Activate'} ${row.branchName}`} onClick={() => onToggleStatus(row)}>{row.status === 'Active' ? <FiToggleRight data-status="active" /> : <FiToggleLeft data-status="inactive" />}</button></>}</div>} />
+    </section>{viewId && <Details branchId={viewId} onClose={closeView} />}
   </Page>
 }
 
@@ -739,119 +693,37 @@ function Form() {
   </Page>
 }
 
-function Details() {
-  const navigate = useNavigate()
-  const { id } = useParams()
+function Details({ branchId, onClose }) {
+  const { id: routeId } = useParams()
+  const id = branchId || routeId
+  const [attempt, setAttempt] = useState(0)
   const [branch, setBranch] = useState(null)
   const [error, setError] = useToastState('', 'error')
-
   useEffect(() => {
-    if (!id) return
-    let alive = true
+    let active = true
+    setBranch(null); setError('')
     const load = async () => {
       const row = normalizeBranch(await branchApi.getById(id))
       const [courseRecord, years] = await Promise.all([row.courseId ? courseApi.getById(row.courseId) : null, academicYearApi.getAll()])
       const course = courseMap(courseRecord || {})
-      const year = years.map(academicYearMap).find((item) => item.id === row.startingAcademicYearId)
-      if (alive) setBranch({ ...row, courseName: course.name || row.courseName, courseCode: course.code || row.courseCode, duration: course.durationValue, academicPattern: course.academicPattern, totalSemesters: course.totalSemesters, startingAcademicYearName: year?.name || row.startingAcademicYearName })
+      const year = years.map(academicYearMap).find(item => item.id === row.startingAcademicYearId)
+      if (active) setBranch({ ...row, courseName: course.name || row.courseName, courseCode: course.code || row.courseCode, duration: course.durationValue, academicPattern: course.academicPattern, totalSemesters: course.totalSemesters, startingAcademicYearName: year?.name || row.startingAcademicYearName })
     }
-    load().catch((requestError) => { if (alive) setError(requestError?.message || 'Unable to load branch details.') })
-    return () => { alive = false }
-  }, [id, setError])
-
-  if (error) return <Page><Notice>{error}</Notice></Page>
-  if (!branch) return <Page><div className="branch-empty">Loading branch details...</div></Page>
-
-  const fields = [
-    ['Course Name', branch.courseName],
-    ['Course Code', branch.courseCode],
-    ['Branch Name', branch.branchName],
-    ['Branch Type', typeOf(branch)],
-    ...(branch.specialization ? [['Specialization', branch.specialization]] : []),
-    ['Branch Code', branch.branchCode],
-    ['Duration', branch.duration ? `${branch.duration} Years` : ''],
-    ['Academic Pattern', branch.academicPattern],
-    ['Total Semesters', branch.totalSemesters],
-    ['Approved Intake', branch.intakeCapacity],
-    ['Academic Year', branch.startingAcademicYearName],
-    ['Status', branch.status],
-  ].filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== '')
-
-  return (
-    <Page>
-      <BranchSemesterStructure course={{ id: branch.courseId, name: branch.courseName, durationValue: branch.duration, totalSemesters: branch.totalSemesters }} branchId={id} />
-      <div className="cm-profile-view" data-export-record>
-        <div className="cm-profile-top-bar">
-          <ExportMenu mode="single" title="Branch Details" filename={`branch_${branch.branchCode || branch.id}`} />
-          <Link className="cm-button secondary" to="/branches">
-            &larr; Back 
-          </Link>
-        </div>
-
-        <div className="cm-profile-card">
-          {/* Header Profile Banner */}
-          <div className="cm-profile-banner">
-            <div className="cm-profile-avatar-wrap">
-              <div className="cm-profile-placeholder">
-                <FiGitBranch />
-              </div>
-            </div>
-            <div className="cm-profile-header-info">
-              <div className="cm-profile-badges">
-                <span className="cm-badge cm-badge-code">Code: {branch.branchCode || '-'}</span>
-                <span className="cm-badge cm-badge-type">{typeOf(branch)}</span>
-                <span className={`cm-status-badge ${String(branch.status || 'Active').toLowerCase()}`}>
-                  {branch.status || 'Active'}
-                </span>
-              </div>
-              <h1 className="cm-profile-title">{branch.branchName}</h1>
-              <p className="cm-profile-subtitle">
-                <span>Course: </span>
-                <strong>{branch.courseName || branch.courseCode || '-'}</strong>
-                {branch.specialization && <span> Â| Specialization: {branch.specialization}</span>}
-              </p>
-            </div>
-          </div>
-
-          {/* Profile Information Cards Grid */}
-          <div className="cm-profile-grid">
-            <InfoCard
-              title="Branch Information"
-              icon={FiGitBranch}
-              items={[
-                { label: 'Course Name', value: branch.courseName },
-                { label: 'Course Code', value: branch.courseCode },
-                { label: 'Branch Name', value: branch.branchName },
-                { label: 'Branch Code', value: branch.branchCode },
-                { label: 'Branch Type', value: typeOf(branch) },
-                { label: 'Specialization', value: branch.specialization },
-                { label: 'Status', value: branch.status },
-              ]}
-            />
-            <InfoCard
-              title="Academic Structure"
-              icon={FiLayers}
-              items={[
-                { label: 'Duration', value: branch.duration ? `${branch.duration} Years` : '' },
-                { label: 'Academic Pattern', value: branch.academicPattern },
-                { label: 'Total Semesters', value: branch.totalSemesters },
-                { label: 'Approved Intake', value: branch.intakeCapacity },
-                { label: 'Academic Year', value: branch.startingAcademicYearName },
-                { label: 'Start Date', value: branch.startDate },
-                { label: 'End Date', value: branch.endDate },
-              ]}
-            />
-          </div>
-        </div>
-      </div>
-    </Page>
-  );
+    load().catch(cause => { if (active) setError(cause.message || 'Unable to load branch details.') })
+    return () => { active = false }
+  }, [id, attempt, setError])
+  return <ViewDialog title="Branch Details" subtitle={branch?.branchName} onClose={onClose} showExport={Boolean(branch)} exportFilename={`branch_${id}`} maxWidth="960px">
+    {error || !branch ? <AsyncState status={error ? 'error' : 'loading'} message={error || undefined} onRetry={() => setAttempt(value => value + 1)} /> : <><div className="branch-reference-detail-grid">
+      <InfoCard title="Branch Information" items={[{label:'Course Name',value:branch.courseName},{label:'Course Code',value:branch.courseCode},{label:'Branch Name',value:branch.branchName},{label:'Branch Code',value:branch.branchCode},{label:'Branch Type',value:typeOf(branch)},{label:'Specialization',value:branch.specialization},{label:'Status',value:branch.status}]} />
+      <InfoCard title="Academic Structure" items={[{label:'Duration',value:branch.duration ? `${branch.duration} Years` : ''},{label:'Academic Pattern',value:branch.academicPattern},{label:'Total Semesters',value:branch.totalSemesters},{label:'Approved Intake',value:branch.intakeCapacity},{label:'Academic Year',value:branch.startingAcademicYearName},{label:'Start Date',value:branch.startDate},{label:'End Date',value:branch.endDate}]} />
+    </div><BranchSemesterStructure course={{id:branch.courseId,name:branch.courseName,durationValue:branch.duration,totalSemesters:branch.totalSemesters}} branchId={id} /></>}
+  </ViewDialog>
 }
 
 function Branch({ mode }) {
   const { id } = useParams()
   if (mode === 'form') return <Form key={id || 'add'} />
-  if (mode === 'details' || id) return <Details />
+  if (mode === 'details' || id) return <List initialViewId={id} />
   return <List />
 }
 
@@ -860,6 +732,7 @@ return { normalize, default: Branch }
 
 // Course screen and private helpers.
 const CourseScreen = (() => {
+const ViewDialog = ViewDialogImports_default
 const ProjectSelect = SearchableSelectImports_ProjectSelect
 const DirectoryEmptyState = DirectoryEmptyStateImports_default
 const newestFirst = newestFirstImports_newestFirst
@@ -1080,11 +953,16 @@ const coursesForCollege = (rows, collegeId, collegeName, departments = [], respo
 const codeFor = name => { const known = { 'computer science and engineering': 'CSE', 'electronics and communication engineering': 'ECE', 'electrical and electronics engineering': 'EEE', 'mechanical engineering': 'ME', 'civil engineering': 'CE', 'artificial intelligence and data science': 'AI-DS' }, clean = name.trim().toLowerCase(); return known[clean] || name.split(/\s+/).filter(x => x && !['and', '&', 'of', 'the'].includes(x.toLowerCase())).map(x => x[0]).join('').slice(0, 10).toUpperCase() }
 
 const Page = ({ children }) => <DashboardLayout><main className="cm-page course-management">{children}</main></DashboardLayout>
-const Header = ({ title, text, children }) => <header className="cm-header"><div><h1>{title}</h1><p>{text}</p></div><div className="cm-row-actions">{children}</div></header>
+const Header = ({ title, text, children }) => <PageHeader title={title} subtitle={text}>{children}</PageHeader>
 const Field = ({ label, error, wide, children }) => <label className={`cm-field ${wide ? 'wide' : ''}`}><span>{label.endsWith(' *') ? <>{label.slice(0, -2)} <b className="required-mark">*</b></> : label}</span>{children}{error && <small className="cm-error" role="alert">{error}</small>}</label>
 const Badge = ({ value }) => <span className={`course-badge ${String(value).toLowerCase()}`}><i />{value}</span>
 
-function CourseList() {
+function CourseList({ initialViewId = null }) {
+  const navigate = useNavigate()
+  const [viewId, setViewId] = useState(initialViewId)
+  const closeView = () => { setViewId(null); if (initialViewId) navigate('/courses') }
+  const { canAction } = useScreenAccess()
+  const canCreate = canAction('/courses', 'create'), canEdit = canAction('/courses', 'edit')
   const { scopeRecords, selectedCollegeId, selectedCollege } = useAcademic()
   const [allCourses, setCourses] = useState([])
   const courses = scopeRecords(allCourses)
@@ -1266,74 +1144,19 @@ function CourseList() {
 
   return <Page>
     <Header title="Course Management" text="Manage B.Tech courses, branches and structures.">
-      <CompactSummary label="Course summary" items={[{ label: 'Total', value: stats.total }, { label: 'Active', value: stats.active, tone: 'active' }, { label: 'Inactive', value: stats.inactive, tone: 'inactive' }]} />
+      <CompactSummary label="Course summary" items={[{ label: 'Total', value: isLoading || error ? '—' : stats.total }, { label: 'Active', value: isLoading || error ? '—' : stats.active, tone: 'active' }, { label: 'Inactive', value: isLoading || error ? '—' : stats.inactive, tone: 'inactive' }]} />
     </Header>
 
-    <section className="cm-panel course-directory">
-      <header className="course-directory-heading"><div><span className="cm-eyebrow">Course Directory</span><p>{rows.length} records</p></div><div className="directory-export-actions"><ExportMenu rows={rows} columns={courseColumns} title="Courses" filename="courses" loading={isLoading || Boolean(error)} /><Link className="cm-button" to="/courses/add"><FiPlus /> Add Course</Link></div></header>
-      <FilterPanel active={hasFilters} onClear={clearFilters}>
-        <div className="course-toolbar">
-          <label className="course-search"><FiSearch /><input aria-label="Search courses" value={query} onChange={e => { setQuery(e.target.value); setCurrentPage(1) }} placeholder="Search course name or code" /></label>
-          <ProjectSelect aria-label="Status" value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1) }}><option value="">Select Status</option><option value="Active">Active</option><option value="Inactive">Inactive</option></ProjectSelect>
-        </div>
-      </FilterPanel>
-      {isLoading ? <div className="course-empty"><strong>Loading courses...</strong></div>
-        : error ? <div className="course-empty course-empty--error" role="alert"><strong>{error}</strong><button className="cm-button" onClick={load}>Retry</button></div>
-        : !courses.length ? <div className="course-empty"><strong>No courses have been added yet.</strong></div>
-        : rows.length ? (
-          <>
-            <div className="course-results">Showing <strong>{rows.length}</strong> of <strong>{courses.length}</strong> courses</div>
-            <div className="course-table-scroll">
-              <table className="course-advanced-table">
-                <thead>
-                    <tr>
-                    <th className="table-center" style={{ minWidth: '240px' }}>Course</th>
-                    <th className="table-center" style={{ width: '130px' }}>Duration</th>
-                    <th className="table-center" style={{ width: '130px' }}>Semesters</th>
-                    <th className="table-center" style={{ width: '120px' }}>Status</th>
-                    <th className="table-center" style={{ width: '140px' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pageRows.map(c => {
-                    const semesterText = Number(c.semesters) > 0 ? `${Number(c.semesters)} Semesters` : 'Not available'
-                    const durationText = c.durationValue ? `${c.durationValue} ${c.durationUnit || 'Years'}`.trim() : 'Not available'
-                      const secondaryText = `${c.code || ''}${c.shortName ? ` - ${c.shortName}` : ''}`.trim()
-                    return (
-                      <tr key={c.id}>
-                        <td className="table-center" style={{ minWidth: '240px' }}>
-                          <div className="table-primary-cell">
-                            <Link to={`/courses/${c.id}`} className="course-name-link table-cell-truncate" title={`Click to view details for ${c.name}`}>
-                              {c.name}
-                            </Link>
-                            {secondaryText && <small title={secondaryText}>{secondaryText}</small>}
-                          </div>
-                        </td>
-                        <td className="table-center" style={{ width: '130px' }}>{durationText}</td>
-                        <td className="table-center" style={{ width: '130px' }}>{semesterText}</td>
-                        <td className="table-center" style={{ width: '120px' }}><StatusBadge value={c.status || 'Active'} /></td>
-                        <td className="table-center" style={{ width: '140px' }}>
-                          <div className="course-actions table-actions-group">
-                            <Link className="table-action-btn action-edit" title={`Edit ${c.name}`} aria-label={`Edit ${c.name}`} to={`/courses/${c.id}/edit`}><FiEdit2 /></Link>
-                            <button type="button" className={`table-action-btn ${(c.status || 'Active') === 'Active' ? 'action-deactivate' : 'action-activate'}`} title={(c.status || 'Active') === 'Active' ? `Deactivate ${c.name}` : `Activate ${c.name}`} aria-label={(c.status || 'Active') === 'Active' ? `Deactivate ${c.name}` : `Activate ${c.name}`} onClick={() => toggleStatus(c)}>{(c.status || 'Active') === 'Active' ? <FiToggleRight data-status="active" /> : <FiToggleLeft data-status="inactive" />}</button>
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-            <div className="course-pagination">
-              <button className="pagination-btn" onClick={() => setCurrentPage(value => Math.max(value - 1, 1))} disabled={currentPageClamped === 1}>Previous</button>
-              <span className="pagination-status">Page {currentPageClamped} of {totalPages}</span>
-              <button className="pagination-btn" onClick={() => setCurrentPage(value => Math.min(value + 1, totalPages))} disabled={currentPageClamped === totalPages}>Next</button>
-            </div>
-          </>
-        ) : (
-          <DirectoryEmptyState title="No courses found." actionLabel="Add Course" to="/courses/add" />
-        )}
+    <section className="course-reference-directory"><div className="course-reference-toolbar"><label className="course-reference-search"><FiSearch aria-hidden="true" /><input aria-label="Search courses" placeholder="Search course name or code" value={query} onChange={event => { setQuery(event.target.value); setCurrentPage(1) }} /></label><ProjectSelect aria-label="Status" value={statusFilter} onChange={event => { setStatusFilter(event.target.value); setCurrentPage(1) }}><option value="">All statuses</option><option>Active</option><option>Inactive</option></ProjectSelect><div className="course-reference-actions"><ExportMenu rows={rows} columns={courseColumns} title="Courses" filename="courses" loading={isLoading || Boolean(error)} />{canCreate && <Link className="erp-btn erp-btn--primary" to="/courses/add"><FiPlus /> Add Course</Link>}</div></div>
+      <DataTable caption="Course directory" tableClassName="course-reference-table" rows={rows} pagination={{ page: currentPage, pageSize: itemsPerPage, onPageChange: setCurrentPage }} loading={isLoading && 'Loading courses…'} error={error} onRetry={load} emptyState={<AsyncState status="empty" title={hasFilters ? 'No courses found.' : 'No courses have been added yet.'} action={hasFilters ? <button className="erp-btn erp-btn--secondary" onClick={clearFilters}>Clear filters</button> : canCreate ? <Link className="erp-btn erp-btn--primary" to="/courses/add">Add Course</Link> : null} />} columns={[
+        {key:'code', label:'Code', sortable:true, render:row => <code>{row.code || '—'}</code>},
+        {key:'name', label:'Course', sortable:true, render:row => <div><button className="course-reference-name" onClick={() => setViewId(row.id)}>{row.name}</button><small>{row.shortName}</small></div>},
+        {key:'durationValue',label:'Duration',sortable:true,render:row => row.durationValue ? `${row.durationValue} ${row.durationUnit || 'Years'}` : 'Not available'},
+        {key:'semesters',label:'Semesters',sortable:true,render:row => row.semesters || 'Not configured'},
+        {key:'status',label:'Status',sortable:true,render:row => <StatusBadge value={row.status} />},
+      ]} rowActions={row => <div className="course-reference-actions"><button className="table-action-btn" aria-label={`View ${row.name}`} onClick={() => setViewId(row.id)}><FiEye /></button>{canEdit && <><Link className="table-action-btn action-edit" aria-label={`Edit ${row.name}`} to={`/courses/${row.id}/edit`}><FiEdit2 /></Link><button className="table-action-btn" aria-label={`${row.status === 'Active' ? 'Deactivate' : 'Activate'} ${row.name}`} onClick={() => toggleStatus(row)}>{row.status === 'Active' ? <FiToggleRight data-status="active" /> : <FiToggleLeft data-status="inactive" />}</button></>}</div>} />
     </section>
+    {viewId && <CourseDetails courseId={viewId} onClose={closeView} />}
     {pendingStatus && <StatusConfirmDialog entity="Course" name={`${pendingStatus.course.name} (${pendingStatus.course.code})`} nextStatus={pendingStatus.nextStatus} onCancel={() => { if (!isStatusSaving) { setPendingStatus(null); setCourseImpact(null) } }} onConfirm={confirmStatusChange} busy={isStatusSaving || impactChecking} blocked={Boolean(pendingStatus.blocked)} error={statusError} details={pendingStatus.nextStatus === 'Inactive' && courseImpact?.state === 'known' ? [['Associated Students', `${courseImpact.count} student${courseImpact.count === 1 ? '' : 's'}`]] : []} description={pendingStatus.blocked ? 'Deactivate is unavailable until all associated students are moved or removed from this course.' : pendingStatus.nextStatus === 'Active' ? 'This course will be marked active.' : 'No students are currently associated with this course. This course will be marked inactive for operations that exclude inactive courses.'} confirmLabel={pendingStatus.nextStatus === 'Inactive' ? 'Deactivate Course' : 'Activate Course'} />}
   </Page>
 }
@@ -1436,7 +1259,7 @@ function CourseForm() {
       setSaved(true)
       setValue({ ...blank }); setErrors({})
       showSuccess(id ? 'Course updated successfully.' : 'Course created successfully.')
-      setTimeout(() => navigate('/courses'), 500)
+      navigate('/courses')
     } catch (requestError) {
       const message = apiError(requestError, `Unable to ${id ? 'update' : 'create'} this course. Please try again.`)
       if (/code/i.test(message) && /already exists|duplicate|already in use/i.test(message)) {
@@ -1460,7 +1283,7 @@ function CourseForm() {
 
     {error && <p className="cm-error" role="alert">{error} <button type="button" className="cm-button secondary" disabled={isSaving} onClick={load}>Reload options</button></p>}
     <div className="course-form-layout" data-without-live-preview="true">
-      <section className="cm-panel course-form">
+      <form className="course-reference-form" noValidate onSubmit={event => { event.preventDefault(); submit() }}>
         <div className="course-form-scroll">
           <section><h2>Course Identity</h2><div className="cm-form-grid">
             <Field label="Course Name *" error={errors.name || (value.name ? live.name : '')}><input value={value.name} required onChange={e => update('name', e.target.value)} /></Field>
@@ -1476,16 +1299,17 @@ function CourseForm() {
             <Field label="Status *" error={errors.status}><ProjectSelect required value={value.status} onChange={e => update('status', e.target.value)}><option value="">Select Status</option><option value="Active">Active</option><option value="Inactive">Inactive</option></ProjectSelect></Field>
           </div></section>
         </div>
-        <footer><button type="button" className="cm-button" disabled={isSaving || saved} onClick={submit}>{isSaving ? 'Saving...' : id ? 'Save Changes' : 'Create Course'}</button></footer>
-      </section>
+        <footer><button type="submit" className="erp-btn erp-btn--primary" disabled={isSaving || saved}>{isSaving ? 'Saving...' : id ? 'Save Changes' : 'Create Course'}</button></footer>
+      </form>
       <></>
     </div>
   </Page>
 }
 
-function CourseDetails() {
+function CourseDetails({ courseId, onClose }) {
   const { scopeRecords } = useAcademic()
-  const { id } = useParams()
+  const { id: routeId } = useParams()
+  const id = courseId || routeId
   const [course, setCourse] = useState(null)
   const [allDepartments, setDepartments] = useState([])
   const departments = scopeRecords(allDepartments)
@@ -1544,8 +1368,7 @@ function CourseDetails() {
   }
   useEffect(() => { load() }, [id])
 
-  if (isLoading) return <Page><div className="cm-empty">Loading course...</div></Page>
-  if (error || !course) return <Page><div className="course-empty course-empty--error" role="alert"><strong>{error || 'Course not found.'}</strong><Link className="cm-button" to="/courses">Back</Link></div></Page>
+  if (isLoading || error || !course) return <ViewDialog title="Course Details" onClose={onClose} showExport={false}><AsyncState status={isLoading ? 'loading' : 'error'} message={error || undefined} onRetry={load} /></ViewDialog>
 
   const department = departments.find(x => String(x.id) === String(course.departmentId))
   const valueText = value => value === null || value === undefined || String(value).trim() === '' ? '' : String(value)
@@ -1553,44 +1376,7 @@ function CourseDetails() {
   const duration = course.durationValue ? `${course.durationValue} ${course.durationUnit || 'Years'}` : ''
   const pattern = course.academicSystem || 'Semester'
 
-  return (
-    <Page>
-      <div className="cm-profile-view" data-export-record>
-        <div className="cm-profile-top-bar">
-          <ExportMenu mode="single" title="Course Details" filename={`course_${course.code || course.id}`} />
-          <Link className="cm-button secondary" to="/courses">
-            &larr; Back
-          </Link>
-        </div>
-
-        <div className="cm-profile-card">
-          {/* Header Profile Banner */}
-          <div className="cm-profile-banner">
-            <div className="cm-profile-avatar-wrap">
-              <div className="cm-profile-placeholder">
-                <FiBookOpen />
-              </div>
-            </div>
-            <div className="cm-profile-header-info">
-              <div className="cm-profile-badges">
-                <span className="cm-badge cm-badge-code">Code: {course.code || '-'}</span>
-                <span className="cm-badge cm-badge-type">{course.type || 'Undergraduate'}</span>
-                <span className={`cm-status-badge ${String(course.status || 'Active').toLowerCase()}`}>
-                  {course.status || 'Active'}
-                </span>
-              </div>
-              <h1 className="cm-profile-title">{course.name || 'Course'}</h1>
-              <p className="cm-profile-subtitle">
-                <span>Department: </span>
-                <strong>{department?.name || course.department || '-'}</strong>
-                {duration && <span> {duration}</span>}
-                {course.semesters && <span> {course.semesters} Semesters</span>}
-              </p>
-            </div>
-          </div>
-
-          {/* Profile Information Cards Grid */}
-          <div className="cm-profile-grid">
+  return <ViewDialog title="Course Details" subtitle={course.name} onClose={onClose} exportFilename={`course_${course.id}`}><div className="course-reference-detail-grid">
             <InfoCard
               title="Basic Information"
               icon={FiBookOpen}
@@ -1614,12 +1400,7 @@ function CourseDetails() {
                 { label: 'Academic Pattern', value: pattern },
                 { label: 'Total Semesters', value: course.semesters },
               ]}
-            />
-          </div>
-        </div>
-      </div>
-    </Page>
-  );
+            /></div></ViewDialog>
 }
 
 const branchType = b => b.branchType || (b.specialization ? 'Specialization' : 'Core')
@@ -1676,7 +1457,7 @@ function CourseStructure() {
 function Course({ mode }) {
   const { id } = useParams()
   if (mode === 'form') return <CourseForm key={id || 'add'} />
-  if (mode === 'details' || id) return <CourseDetails />
+  if (mode === 'details' || id) return <CourseList initialViewId={id} />
   return <CourseList />
 }
 

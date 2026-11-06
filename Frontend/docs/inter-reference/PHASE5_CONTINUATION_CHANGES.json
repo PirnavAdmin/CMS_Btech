@@ -1,0 +1,21 @@
+{
+  "files": [
+    "Frontend/src/pages/faculty/FacultyManagement.jsx",
+    "Frontend/src/pages/faculty/FacultyManagement.css",
+    "Frontend/src/pages/credits-management/CreditsManagement.jsx",
+    "Frontend/src/pages/fees/FeeManagement.jsx",
+    "Frontend/src/pages/examinations/marks-management/MarksManagement.jsx",
+    "Frontend/src/pages/examinations/marks-management/MarksManagement.css",
+    "Frontend/src/pages/admin-management/AdminManagement.jsx",
+    "Frontend/src/pages/admin-management/AdminManagement.css",
+    "Frontend/src/services/verifiedFeeCollection.js",
+    "Frontend/src/services/accessGovernanceService.js",
+    "Frontend/src/components/FacultyAllocation.vitest.test.jsx",
+    "Frontend/src/components/FacultyAttendanceEditor.vitest.test.jsx",
+    "Frontend/src/components/CurriculumConfiguration.vitest.test.jsx",
+    "Frontend/src/components/MarksEntryDialog.vitest.test.jsx",
+    "Frontend/src/components/AccessGovernance.vitest.test.jsx",
+    "Frontend/src/components/AccessGovernanceService.vitest.test.js",
+    "Frontend/src/components/VerifiedFeeCollection.vitest.test.js"
+  ]
+}

@@ -19,66 +19,62 @@
 .campus-workspace :is(input,select,textarea,button,a):focus-visible{outline:2px solid var(--brand);outline-offset:3px}
 .campus-search{position:relative}.campus-search svg{position:absolute;top:13px;left:12px;color:var(--text-muted)}.campus-search input{padding-left:36px}
 .campus-table{overflow-x:auto}.campus-table table{width:100%;border-collapse:collapse;white-space:nowrap;font-size:12px}.campus-table caption{text-align:left;padding:0 0 12px}
-.campus-table th{height:40px;text-align:left;background:var(--table-head,#174C88)!important;color:#FFFFFF!important;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:8px 14px;border-bottom:1px solid #0f3661}.campus-table td{height:46px;padding:8px 14px;border-bottom:1px solid var(--border,#DCE5F2);color:var(--text-primary,#102A4C);font-size:12px;vertical-align:middle}.campus-table tbody tr:hover td{background:var(--table-row-hover,#F3F6FC)}
+.campus-table th{height:40px;text-align:left;background:var(--table-head,var(--brand))!important;color:#FFFFFF!important;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:8px 14px;border-bottom:1px solid #0f3661}.campus-table td{height:46px;padding:8px 14px;border-bottom:1px solid var(--border,var(--border));color:var(--text-primary,var(--text-primary));font-size:12px;vertical-align:middle}.campus-table tbody tr:hover td{background:var(--table-row-hover,#F3F6FC)}
 .campus-badge{display:inline-block;background:var(--brand-soft);color:var(--brand);padding:4px 8px;border-radius:5px;font-size:12px}
-.campus-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.campus-actions button:not(.erp-btn){border:0;background:transparent;color:var(--brand);cursor:pointer;font:inherit;text-decoration:underline}
+.campus-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .campus-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin:24px 0}.campus-form textarea{min-height:100px;resize:vertical}.campus-form dd{margin:8px 0;white-space:pre-wrap;overflow-wrap:anywhere}
 .campus-error{color:var(--danger)}
 @media(max-width:760px){.campus-summary,.campus-form{grid-template-columns:1fr}.campus-filters,.campus-panel-heading{flex-direction:column;align-items:stretch}.campus-panel{padding:16px}.campus-notice{flex-wrap:wrap}}
 
 /* Library page polish, kept local so the other campus workspaces retain their UI. */
 .campus-workspace--library{gap:24px;color:var(--text-primary,#172B4D)}
-.campus-workspace--library>.erp-page-header{margin-bottom:0}
-.campus-workspace--library>.campus-notice{padding:14px 18px;border-color:color-mix(in srgb,var(--brand,#1769C2) 18%,var(--border,#DCE3EC));border-radius:10px;background:color-mix(in srgb,var(--brand,#1769C2) 5%,var(--surface,#fff));font-size:13px}
+.campus-workspace--library>.campus-notice{padding:14px 18px;border-color:color-mix(in srgb,var(--brand,var(--brand)) 18%,var(--border,#DCE3EC));border-radius:10px;background:color-mix(in srgb,var(--brand,var(--brand)) 5%,var(--surface,#fff));font-size:13px}
 .campus-workspace--library .campus-tabs{gap:6px;overflow-x:auto;padding:5px;border:1px solid var(--border,#DCE3EC);border-radius:12px;background:var(--surface,#fff);scrollbar-width:thin}
 .campus-workspace--library .campus-tabs a{padding:11px 16px;border:0;border-radius:8px;color:var(--text-secondary,#5D6B82);font-size:13px;font-weight:650;transition:background .16s ease,color .16s ease}
-.campus-workspace--library .campus-tabs a:hover{color:var(--brand,#1769C2);background:var(--surface-soft,#F3F6FA)}
-.campus-workspace--library .campus-tabs a.is-selected{color:var(--brand,#1769C2);background:var(--brand-soft,#EAF3FF);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--brand,#1769C2) 12%,transparent)}
+.campus-workspace--library .campus-tabs a:hover{color:var(--brand,var(--brand));background:var(--surface-soft,#F3F6FA)}
+.campus-workspace--library .campus-tabs a.is-selected{color:var(--brand,var(--brand));background:var(--brand-soft,var(--brand-soft));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--brand,var(--brand)) 12%,transparent)}
 .campus-workspace--library .campus-summary{gap:14px}
 .campus-workspace--library .campus-summary>div{position:relative;gap:8px;min-height:94px;padding:18px 20px;border-radius:12px;box-shadow:var(--shadow-sm,0 2px 8px rgba(15,35,65,.04));overflow:hidden}
-.campus-workspace--library .campus-summary>div:before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--brand,#1769C2)}
-.campus-workspace--library .campus-summary span{font-size:11px;font-weight:700;letter-spacing:.045em;text-transform:uppercase;color:var(--text-secondary,#64748B)}
+.campus-workspace--library .campus-summary>div:before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--brand,var(--brand))}
+.campus-workspace--library .campus-summary span{font-size:11px;font-weight:700;letter-spacing:.045em;text-transform:uppercase;color:var(--text-secondary,var(--text-muted))}
 .campus-workspace--library .campus-summary strong{font-size:17px;line-height:1.35;color:var(--text-primary,#172B4D)}
 .campus-workspace--library .campus-panel{padding:26px;border-radius:12px;border-color:var(--border,#DCE3EC);box-shadow:0 4px 18px rgba(24,45,75,.045)}
 .campus-workspace--library .campus-panel h2{font-size:19px;letter-spacing:-.015em;color:var(--text-primary,#172B4D)}
-.campus-workspace--library .campus-muted{margin-top:4px;color:var(--text-secondary,#64748B);font-size:13px;line-height:1.55}
+.campus-workspace--library .campus-muted{margin-top:4px;color:var(--text-secondary,var(--text-muted));font-size:13px;line-height:1.55}
 .campus-workspace--library .campus-panel-heading{align-items:center;margin-bottom:22px}
 .campus-workspace--library .campus-panel-heading>div{max-width:720px}
-.campus-workspace--library .campus-panel-heading .erp-btn{min-height:40px;padding-inline:16px;border-radius:8px;white-space:nowrap}
 .campus-workspace--library .campus-filters{gap:14px;padding:16px;border-radius:10px;border-color:var(--border,#DCE3EC);background:var(--surface-soft,#F6F8FB)}
 .campus-workspace--library .campus-filters label{gap:7px;color:var(--text-secondary,#52627A);font-size:12px;font-weight:700}
 .campus-workspace--library .campus-filters>label:first-child{min-width:220px}
 .campus-workspace--library input,.campus-workspace--library select,.campus-workspace--library textarea{min-height:42px;padding:10px 12px;border-radius:8px;border-color:var(--border,#D7DFE9);font-size:13px;transition:border-color .15s ease,box-shadow .15s ease}
-.campus-workspace--library :is(input,select,textarea):focus{border-color:var(--brand,#1769C2);outline:0;box-shadow:0 0 0 3px color-mix(in srgb,var(--brand,#1769C2) 13%,transparent)}
+.campus-workspace--library :is(input,select,textarea):focus{border-color:var(--brand,var(--brand));outline:0;box-shadow:0 0 0 3px color-mix(in srgb,var(--brand,var(--brand)) 13%,transparent)}
 .campus-workspace--library .campus-search svg{top:14px;left:13px}
 .campus-workspace--library .campus-search input{padding-left:39px}
-.campus-workspace--library .campus-filters>.erp-btn{height:42px;border-radius:8px;white-space:nowrap}
 .campus-workspace--library .campus-table{border:1px solid var(--border,#DCE3EC);border-radius:10px;background:var(--surface,#fff)}
 .campus-workspace--library .campus-table table{font-size:12.5px}
-.campus-workspace--library .campus-table caption{padding:14px 16px;color:var(--text-secondary,#64748B);font-size:12px}
-.campus-workspace--library .campus-table th{height:40px;background:var(--table-head,#174C88)!important;color:#FFFFFF!important;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
-.campus-workspace--library .campus-table th,.campus-workspace--library .campus-table td{padding:8px 14px;border-bottom:1px solid var(--border,#DCE5F2)}
-.campus-workspace--library .campus-table td{height:46px;color:var(--text-primary,#102A4C);font-size:12px}
+.campus-workspace--library .campus-table caption{padding:14px 16px;color:var(--text-secondary,var(--text-muted));font-size:12px}
+.campus-workspace--library .campus-table th{height:40px;background:var(--table-head,var(--brand))!important;color:#FFFFFF!important;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.campus-workspace--library .campus-table th,.campus-workspace--library .campus-table td{padding:8px 14px;border-bottom:1px solid var(--border,var(--border))}
+.campus-workspace--library .campus-table td{height:46px;color:var(--text-primary,var(--text-primary));font-size:12px}
 .campus-workspace--library .campus-table tbody tr:last-child td{border-bottom:0}
 .campus-workspace--library .campus-table tbody tr{transition:background .12s ease}
 .campus-workspace--library .campus-table tbody tr:hover td{background:var(--table-row-hover,#F3F6FC)}
-.campus-workspace--library .campus-badge{padding:5px 9px;border:1px solid color-mix(in srgb,var(--brand,#1769C2) 16%,transparent);border-radius:999px;font-size:11px;font-weight:650}
+.campus-workspace--library .campus-badge{padding:5px 9px;border:1px solid color-mix(in srgb,var(--brand,var(--brand)) 16%,transparent);border-radius:999px;font-size:11px;font-weight:650}
 .campus-workspace--library .campus-actions{gap:12px}
-.campus-workspace--library .campus-actions button:not(.erp-btn){font-size:12px;font-weight:650;text-decoration:none}
 .campus-workspace--library .campus-form{gap:18px}
 .campus-workspace--library .campus-form label{color:var(--text-secondary,#52627A);font-size:12px;font-weight:700}
 .campus-workspace--library .campus-form textarea{min-height:110px}
-.campus-workspace--library :is(button,a):focus-visible{outline:3px solid color-mix(in srgb,var(--brand,#1769C2) 30%,transparent);outline-offset:2px}
+.campus-workspace--library :is(button,a):focus-visible{outline:3px solid color-mix(in srgb,var(--brand,var(--brand)) 30%,transparent);outline-offset:2px}
 @media(max-width:760px){.campus-workspace--library{gap:18px}.campus-workspace--library .campus-panel{padding:18px}.campus-workspace--library .campus-filters>label:first-child{min-width:0;width:100%}.campus-workspace--library .campus-panel-heading{align-items:stretch}.campus-workspace--library .campus-summary>div{min-height:78px}.campus-workspace--library .campus-table{margin-inline:-2px}}
 
 /* Match the shared CMS management workspace pattern: flat selected tabs,
 quiet summary cards, standard ERP card headers and ERP table styling. */
 .campus-workspace--library .campus-tabs{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-radius:10px;padding:6px;gap:6px}
 .campus-workspace--library .campus-tabs a{display:flex;align-items:center;justify-content:center;min-height:40px;padding:9px 12px}
-.campus-workspace--library .campus-tabs a.is-selected{background:var(--brand,#1769C2);color:#fff;box-shadow:none}
+.campus-workspace--library .campus-tabs a.is-selected{background:var(--brand,var(--brand));color:#fff;box-shadow:none}
 .campus-workspace--library .campus-summary>div{min-height:0;gap:8px;padding:16px;border-radius:10px;box-shadow:none}
 .campus-workspace--library .campus-summary>div:before{display:none}
-.campus-workspace--library .campus-summary span{font-size:12px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--text-secondary,#64748B)}
+.campus-workspace--library .campus-summary span{font-size:12px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--text-secondary,var(--text-muted))}
 .campus-workspace--library .campus-summary strong{font-size:18px}
 .campus-workspace--library .campus-panel.erp-card{padding:0;overflow:hidden;border-radius:10px;box-shadow:none}
 .campus-workspace--library .campus-panel.erp-card>.campus-panel-heading,
@@ -91,14 +87,12 @@ quiet summary cards, standard ERP card headers and ERP table styling. */
 .campus-workspace--library .campus-panel.erp-card>.campus-filters{margin:16px 20px;padding:14px;background:var(--surface-soft,#F7F9FC);border-radius:8px}
 .campus-workspace--library .campus-panel.erp-card>.campus-table{margin:0 20px 18px;border:0;border-radius:0;background:transparent}
 .campus-workspace--library .campus-panel.erp-card>.campus-table table.erp-table{width:100%;border-collapse:collapse}
-.campus-workspace--library .campus-panel.erp-card>.campus-table table.erp-table th{height:40px;background:var(--table-head,#174C88)!important;color:#FFFFFF!important;text-transform:uppercase;letter-spacing:.05em;font-size:10px;font-weight:700}
+.campus-workspace--library .campus-panel.erp-card>.campus-table table.erp-table th{height:40px;background:var(--table-head,var(--brand))!important;color:#FFFFFF!important;text-transform:uppercase;letter-spacing:.05em;font-size:10px;font-weight:700}
 .campus-workspace--library .campus-panel.erp-card>.campus-table table.erp-table td{font-size:13px}
 .campus-workspace--library .campus-panel.erp-card>.campus-table table.erp-table caption{padding:0 0 10px}
 .campus-workspace--library .campus-panel.erp-card>.empty-state{margin:20px}
 .campus-workspace--library .campus-panel.erp-card>.campus-form{margin:20px}
-.campus-workspace--library .campus-panel.erp-card>.campus-panel-heading .erp-btn{border-radius:7px}
 .campus-workspace--library .campus-overview{display:grid;grid-template-columns:minmax(250px,1fr) minmax(440px,1.35fr);align-items:center;gap:20px;min-width:0}
-.campus-workspace--library .campus-overview>.erp-page-header{margin:0}
 .campus-workspace--library .campus-overview .campus-summary{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .campus-workspace--library .campus-overview .campus-summary>div{min-height:70px;padding:12px 14px}
 .campus-workspace--library .campus-overview .campus-summary span{font-size:11px;line-height:1.25}
@@ -106,44 +100,40 @@ quiet summary cards, standard ERP card headers and ERP table styling. */
 .campus-workspace--library .campus-overview .campus-summary{display:flex;justify-self:end;width:max-content;max-width:100%;gap:0;overflow:hidden;border:1px solid var(--border,#D9E2EF);border-radius:9px;background:var(--surface,#fff);box-shadow:0 2px 7px rgba(24,45,75,.04)}
 .campus-workspace--library .campus-overview .campus-summary>div{display:flex;min-width:104px;min-height:0;flex:1 1 104px;flex-direction:column;justify-content:center;align-items:center;gap:3px;padding:8px 13px;border:0;border-right:1px solid var(--border,#D9E2EF);border-radius:0;background:transparent;text-align:center;box-shadow:none}
 .campus-workspace--library .campus-overview .campus-summary>div:last-child{border-right:0}
-.campus-workspace--library .campus-overview .campus-summary span{order:2;color:var(--text-secondary,#64748B);font-size:8px;font-weight:750;line-height:1.15;letter-spacing:.055em;text-transform:uppercase;white-space:nowrap}
-.campus-workspace--library .campus-overview .campus-summary strong{order:1;color:var(--brand,#1769C2);font-size:15px;font-weight:800;line-height:1.1;white-space:nowrap}
+.campus-workspace--library .campus-overview .campus-summary span{order:2;color:var(--text-secondary,var(--text-muted));font-size:8px;font-weight:750;line-height:1.15;letter-spacing:.055em;text-transform:uppercase;white-space:nowrap}
+.campus-workspace--library .campus-overview .campus-summary strong{order:1;color:var(--brand,var(--brand));font-size:15px;font-weight:800;line-height:1.1;white-space:nowrap}
 @media(max-width:1050px){.campus-workspace--library .campus-overview{grid-template-columns:1fr;gap:14px}.campus-workspace--library .campus-overview .campus-summary{max-width:none}}
 @media(max-width:760px){.campus-workspace--library .campus-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}.campus-workspace--library .campus-panel.erp-card>.campus-panel-heading{padding:16px 0}.campus-workspace--library .campus-panel.erp-card>.campus-filters{margin:14px 14px}.campus-workspace--library .campus-panel.erp-card>.campus-table{margin-inline:14px}.campus-workspace--library .campus-overview .campus-summary{justify-self:stretch;width:100%}.campus-workspace--library .campus-overview .campus-summary>div{min-width:0;min-height:0;padding:8px 5px}.campus-workspace--library .campus-overview .campus-summary span{white-space:normal;font-size:7px}}
 
 /* Dashboard finish: deliberate control states and an empty result area that
 feels part of the table card rather than a second, dashed card. */
 .campus-workspace--library .campus-panel.erp-card>.campus-panel-heading{position:relative}
-.campus-workspace--library .campus-panel.erp-card>.campus-panel-heading:after{position:absolute;right:0;bottom:-1px;left:0;height:1px;background:linear-gradient(90deg,var(--brand,#1769C2) 0 46px,var(--border,#E5EAF0) 46px);content:""}
+.campus-workspace--library .campus-panel.erp-card>.campus-panel-heading:after{position:absolute;right:0;bottom:-1px;left:0;height:1px;background:linear-gradient(90deg,var(--brand,var(--brand)) 0 46px,var(--border,#E5EAF0) 46px);content:""}
 .campus-workspace--library .campus-panel.erp-card>.campus-filters{box-shadow:inset 0 1px 0 rgba(255,255,255,.75)}
 .campus-workspace--library .campus-panel.erp-card>.campus-filters>.campus-search{min-width:0}
-.campus-workspace--library .campus-panel.erp-card>.campus-filters .erp-btn{min-height:40px;padding-inline:14px;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
-.campus-workspace--library .campus-panel.erp-card>.campus-filters .erp-btn:hover{transform:translateY(-1px);box-shadow:0 3px 9px rgba(20,55,95,.12)}
 .campus-workspace--library .campus-panel.erp-card>.campus-table table.erp-table thead th{position:sticky;top:0;z-index:1}
-.campus-workspace--library .campus-panel.erp-card>.campus-table table.erp-table tbody tr:hover>td{background:color-mix(in srgb,var(--brand,#1769C2) 4%,var(--surface,#fff))!important}
+.campus-workspace--library .campus-panel.erp-card>.campus-table table.erp-table tbody tr:hover>td{background:color-mix(in srgb,var(--brand,var(--brand)) 4%,var(--surface,#fff))!important}
 .campus-workspace--library .campus-panel.erp-card>.erp-empty-state{min-height:210px;margin:0 20px 20px;padding:32px 20px;border:1px solid var(--border,#E5EAF0);border-radius:10px;background:linear-gradient(180deg,var(--surface-soft,#F7F9FC),var(--surface,#fff));}
-.campus-workspace--library .campus-panel.erp-card>.erp-empty-state .erp-empty-state__icon{width:46px;height:46px;margin-bottom:12px;border-color:color-mix(in srgb,var(--brand,#1769C2) 15%,var(--border,#DCE3EC));border-radius:12px;background:var(--brand-soft,#EAF3FF);color:var(--brand,#1769C2)}
+.campus-workspace--library .campus-panel.erp-card>.erp-empty-state .erp-empty-state__icon{width:46px;height:46px;margin-bottom:12px;border-color:color-mix(in srgb,var(--brand,var(--brand)) 15%,var(--border,#DCE3EC));border-radius:12px;background:var(--brand-soft,var(--brand-soft));color:var(--brand,var(--brand))}
 .campus-workspace--library .campus-panel.erp-card>.erp-empty-state .erp-empty-state__title{font-size:15px}
 .campus-workspace--library .campus-panel.erp-card>.erp-empty-state .erp-empty-state__message{max-width:500px;font-size:12px}
-.campus-workspace--library .campus-panel.erp-card>.table-pagination{padding:0 20px 16px}
 @media(prefers-reduced-motion:reduce){.campus-workspace--library *{scroll-behavior:auto!important;transition:none!important}}
-@media(max-width:760px){.campus-workspace--library .campus-panel.erp-card>.erp-empty-state{margin:0 14px 14px;padding:24px 14px}.campus-workspace--library .campus-panel.erp-card>.table-pagination{padding-inline:14px}}
-.campus-workspace--library .campus-section-kicker{display:block;margin-bottom:5px;color:var(--brand,#1769C2);font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+@media(max-width:760px){.campus-workspace--library .campus-panel.erp-card>.erp-empty-state{margin:0 14px 14px;padding:24px 14px}}
+.campus-workspace--library .campus-section-kicker{display:block;margin-bottom:5px;color:var(--brand,var(--brand));font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
 .campus-workspace--library .campus-panel.erp-card>.campus-panel-heading h2{font-size:18px;letter-spacing:-.02em}
 .campus-workspace--library .campus-panel.erp-card>.campus-panel-heading .campus-muted{font-size:12px}
 .campus-workspace--library .campus-search svg{z-index:1;width:15px;height:15px;pointer-events:none}
 .campus-workspace--library .campus-search input{padding-left:40px}
-.campus-workspace--library .campus-table table.erp-table caption.campus-table-caption{padding:0 0 10px;text-align:left;color:var(--text-secondary,#64748B);font-size:11px;line-height:1.5}
+.campus-workspace--library .campus-table table.erp-table caption.campus-table-caption{padding:0 0 10px;text-align:left;color:var(--text-secondary,var(--text-muted));font-size:11px;line-height:1.5}
 .campus-workspace--library .campus-table-caption__title{color:var(--text-primary,#172B4D);font-size:12px;font-weight:750}
-.campus-workspace--library .campus-table-caption__count{float:right;padding:3px 8px;border:1px solid var(--border,#DCE3EC);border-radius:999px;background:var(--surface,#fff);color:var(--text-secondary,#64748B);font-size:10px;font-weight:700;line-height:1.4}
+.campus-workspace--library .campus-table-caption__count{float:right;padding:3px 8px;border:1px solid var(--border,#DCE3EC);border-radius:999px;background:var(--surface,#fff);color:var(--text-secondary,var(--text-muted));font-size:10px;font-weight:700;line-height:1.4}
 .campus-workspace--library .campus-table-caption__note{display:block;margin-top:2px;color:var(--text-muted,#758399);font-size:10px}
 .campus-workspace--library .campus-overview .campus-summary{box-shadow:0 3px 12px rgba(24,45,75,.05)}
 .campus-workspace--library>.campus-notice{position:relative;overflow:hidden}
-.campus-workspace--library>.campus-notice:before{position:absolute;inset:0 auto 0 0;width:3px;background:var(--brand,#1769C2);content:""}
+.campus-workspace--library>.campus-notice:before{position:absolute;inset:0 auto 0 0;width:3px;background:var(--brand,var(--brand));content:""}
 .campus-workspace--library .campus-tabs a{position:relative;isolation:isolate}
 .campus-workspace--library .campus-tabs a:not(.is-selected):hover{transform:translateY(-1px)}
-.campus-workspace--library .campus-panel.erp-card>.campus-panel-heading .erp-btn{box-shadow:0 3px 9px color-mix(in srgb,var(--brand,#1769C2) 20%,transparent)}
-@media(max-width:760px){.campus-workspace--library .campus-overview .campus-summary strong{font-size:14px}.campus-workspace--library .campus-table-caption__note{max-width:75%}.campus-workspace--library .campus-panel.erp-card>.campus-panel-heading .erp-btn{width:100%}}
+@media(max-width:760px){.campus-workspace--library .campus-overview .campus-summary strong{font-size:14px}.campus-workspace--library .campus-table-caption__note{max-width:75%}}
 .campus-workspace--library .campus-panel.erp-card>.campus-filters{display:grid;grid-template-columns:minmax(0,1fr) minmax(150px,180px) auto;align-items:end;gap:14px}
 .campus-workspace--library .campus-panel.erp-card>.campus-filters>label{min-width:0;width:100%}
 .campus-workspace--library .campus-panel.erp-card>.campus-filters .campus-search{display:block;width:100%;min-width:0}
@@ -173,7 +163,7 @@ feels part of the table card rather than a second, dashed card. */
 
 :root:has(.adv-library-workspace) {
   scrollbar-width: thin;
-  scrollbar-color: var(--scrollbar-thumb, #CBD5E1) transparent;
+  scrollbar-color: var(--scrollbar-thumb, var(--border-strong)) transparent;
   -ms-overflow-style: auto;
 }
 
@@ -183,7 +173,7 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 :root:has(.adv-library-workspace)::-webkit-scrollbar-thumb {
-  background: var(--scrollbar-thumb, #CBD5E1);
+  background: var(--scrollbar-thumb, var(--border-strong));
   border-radius: 999px;
 }
 
@@ -208,7 +198,7 @@ feels part of the table card rather than a second, dashed card. */
   align-items: center;
   gap: 12px;
   padding: 14px 20px;
-  background: #0f172a;
+  background: var(--cms-sidebar-bg);
   color: #f8fafc;
   border-radius: 12px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
@@ -216,12 +206,6 @@ feels part of the table card rather than a second, dashed card. */
   font-weight: 500;
   border: 1px solid rgba(255, 255, 255, 0.1);
   animation: advSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.page-content .adv-library-workspace .adv-toast {
-  border-color: #bbf7d0;
-  background: #f0fdf4;
-  color: #14532d;
 }
 
 @keyframes advSlideUp {
@@ -236,7 +220,7 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 .adv-toast__icon {
-  color: #10b981;
+  color: var(--success);
   font-size: 20px;
   flex-shrink: 0;
 }
@@ -244,7 +228,7 @@ feels part of the table card rather than a second, dashed card. */
 .adv-toast__close {
   background: transparent;
   border: none;
-  color: #94a3b8;
+  color: var(--text-muted);
   cursor: pointer;
   padding: 4px;
   margin-left: 8px;
@@ -265,10 +249,6 @@ feels part of the table card rather than a second, dashed card. */
   align-items: flex-start;
   gap: 20px;
   flex-wrap: wrap;
-}
-
-.adv-library-header .erp-page-header {
-  margin-bottom: 0;
 }
 
 .adv-library-header__actions {
@@ -307,14 +287,14 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 .adv-btn--secondary {
-  background: var(--surface, #ffffff);
-  color: var(--text-primary, #0f172a);
-  border-color: var(--border, #cbd5e1);
+  background: var(--surface, var(--surface));
+  color: var(--text-primary, var(--text-primary));
+  border-color: var(--border, var(--border-strong));
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.04);
 }
 
 .adv-btn--secondary:hover:not(:disabled) {
-  background: var(--surface-soft, #f8fafc);
+  background: var(--surface-soft, var(--surface-soft));
   border-color: var(--brand, #1e40af);
   color: var(--brand, #1e40af);
   transform: translateY(-1px);
@@ -322,17 +302,17 @@ feels part of the table card rather than a second, dashed card. */
 
 .adv-btn--ghost {
   background: transparent;
-  color: var(--text-secondary, #64748b);
+  color: var(--text-secondary, var(--text-muted));
   border-color: transparent;
 }
 
 .adv-btn--ghost:hover {
-  background: var(--surface-soft, #f1f5f9);
-  color: var(--text-primary, #0f172a);
+  background: var(--surface-soft, var(--surface-alt));
+  color: var(--text-primary, var(--text-primary));
 }
 
 .adv-btn--danger {
-  background: #dc2626;
+  background: var(--danger);
   color: #ffffff;
 }
 
@@ -360,23 +340,23 @@ feels part of the table card rather than a second, dashed card. */
   width: 34px;
   height: 34px;
   border-radius: 8px;
-  border: 1px solid var(--border, #e2e8f0);
-  background: var(--surface, #ffffff);
-  color: var(--text-secondary, #64748b);
+  border: 1px solid var(--border, var(--border));
+  background: var(--surface, var(--surface));
+  color: var(--text-secondary, var(--text-muted));
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .adv-icon-btn:hover:not(:disabled) {
-  background: var(--brand-soft, #eff6ff);
+  background: var(--brand-soft, var(--brand-soft));
   color: var(--brand, #1d4ed8);
   border-color: var(--brand, #1d4ed8);
   transform: translateY(-1px);
 }
 
 .adv-icon-btn--danger:hover:not(:disabled) {
-  background: #fef2f2;
-  color: #dc2626;
+  background: var(--cms-red-soft);
+  color: var(--danger);
   border-color: #fca5a5;
 }
 
@@ -394,8 +374,8 @@ feels part of the table card rather than a second, dashed card. */
   align-items: center;
   gap: 16px;
   padding: 18px 20px;
-  background: var(--surface, #ffffff);
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--surface, var(--surface));
+  border: 1px solid var(--border, var(--border));
   border-radius: 14px;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
   transition: all 0.2s ease;
@@ -420,18 +400,18 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 .adv-kpi-card--blue .adv-kpi-card__icon {
-  background: #eff6ff;
+  background: var(--brand-soft);
   color: #2563eb;
 }
 
 .adv-kpi-card--emerald .adv-kpi-card__icon {
   background: #ecfdf5;
-  color: #059669;
+  color: var(--success);
 }
 
 .adv-kpi-card--amber .adv-kpi-card__icon {
   background: #fffbeb;
-  color: #d97706;
+  color: var(--warning);
 }
 
 .adv-kpi-card--indigo .adv-kpi-card__icon {
@@ -451,7 +431,7 @@ feels part of the table card rather than a second, dashed card. */
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--text-secondary, #64748b);
+  color: var(--text-secondary, var(--text-muted));
 }
 
 .adv-kpi-card__value {
@@ -463,13 +443,13 @@ feels part of the table card rather than a second, dashed card. */
 .adv-kpi-card__value strong {
   font-size: 24px;
   font-weight: 800;
-  color: var(--text-primary, #0f172a);
+  color: var(--text-primary, var(--text-primary));
   line-height: 1.1;
 }
 
 .adv-kpi-card__sub {
   font-size: 12px;
-  color: var(--text-secondary, #64748b);
+  color: var(--text-secondary, var(--text-muted));
   white-space: nowrap;
 }
 
@@ -479,12 +459,12 @@ feels part of the table card rather than a second, dashed card. */
   gap: 4px;
   font-size: 11px;
   font-weight: 600;
-  color: #059669;
+  color: var(--success);
   margin-top: 2px;
 }
 
 .adv-kpi-card__badge--warn {
-  color: #d97706;
+  color: var(--warning);
 }
 
 /* Notice Banner */
@@ -494,8 +474,8 @@ feels part of the table card rather than a second, dashed card. */
   justify-content: space-between;
   gap: 16px;
   padding: 14px 20px;
-  background: linear-gradient(90deg, var(--surface, #ffffff) 0%, var(--surface-soft, #f8fafc) 100%);
-  border: 1px solid var(--border, #e2e8f0);
+  background: linear-gradient(90deg, var(--surface, var(--surface)) 0%, var(--surface-soft, var(--surface-soft)) 100%);
+  border: 1px solid var(--border, var(--border));
   border-left: 4px solid #2563eb;
   border-radius: 12px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
@@ -503,8 +483,8 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 .adv-notice-banner--draft {
-  border-left-color: #d97706;
-  background: linear-gradient(90deg, var(--surface, #ffffff) 0%, #fffbeb 100%);
+  border-left-color: var(--warning);
+  background: linear-gradient(90deg, var(--surface, var(--surface)) 0%, #fffbeb 100%);
 }
 
 .adv-notice-banner__left {
@@ -517,7 +497,7 @@ feels part of the table card rather than a second, dashed card. */
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #10b981;
+  background: var(--success);
   box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
   animation: advPulse 2s infinite;
   flex-shrink: 0;
@@ -533,11 +513,11 @@ feels part of the table card rather than a second, dashed card. */
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  background: var(--surface, #ffffff);
-  border: 1px solid var(--border, #cbd5e1);
+  background: var(--surface, var(--surface));
+  border: 1px solid var(--border, var(--border-strong));
   border-radius: 8px;
   font-size: 12px;
-  color: var(--text-secondary, #475569);
+  color: var(--text-secondary, var(--text-secondary));
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -545,7 +525,7 @@ feels part of the table card rather than a second, dashed card. */
 .adv-mode-toggle-btn:hover {
   border-color: #2563eb;
   color: #2563eb;
-  background: #eff6ff;
+  background: var(--brand-soft);
 }
 
 .adv-mode-toggle-btn strong {
@@ -566,14 +546,14 @@ feels part of the table card rather than a second, dashed card. */
 
 .adv-notice-banner__left strong {
   font-size: 13.5px;
-  color: var(--text-primary, #0f172a);
+  color: var(--text-primary, var(--text-primary));
   display: block;
 }
 
 .adv-notice-banner__left p {
   margin: 2px 0 0;
   font-size: 12.5px;
-  color: var(--text-secondary, #64748b);
+  color: var(--text-secondary, var(--text-muted));
 }
 
 .adv-notice-banner__right {
@@ -588,12 +568,12 @@ feels part of the table card rather than a second, dashed card. */
   align-items: center;
   gap: 6px;
   padding: 5px 12px;
-  background: var(--surface-soft, #f1f5f9);
-  color: var(--text-secondary, #475569);
+  background: var(--surface-soft, var(--surface-alt));
+  color: var(--text-secondary, var(--text-secondary));
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
-  border: 1px solid var(--border, #e2e8f0);
+  border: 1px solid var(--border, var(--border));
 }
 
 .adv-btn-text {
@@ -617,8 +597,8 @@ feels part of the table card rather than a second, dashed card. */
   align-items: center;
   gap: 8px;
   padding: 6px;
-  background: var(--surface, #ffffff);
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--surface, var(--surface));
+  border: 1px solid var(--border, var(--border));
   border-radius: 12px;
   overflow-x: auto;
   scrollbar-width: none;
@@ -626,23 +606,6 @@ feels part of the table card rather than a second, dashed card. */
 
 .adv-tabs-bar::-webkit-scrollbar {
   display: none;
-}
-
-#root .page-content .adv-library-workspace .adv-tabs-bar {
-  scrollbar-width: thin;
-  scrollbar-color: var(--scrollbar-thumb, #CBD5E1) transparent;
-  -ms-overflow-style: auto;
-  overscroll-behavior-x: contain;
-}
-
-#root .page-content .adv-library-workspace .adv-tabs-bar::-webkit-scrollbar {
-  height: 8px;
-  display: block;
-}
-
-#root .page-content .adv-library-workspace .adv-tabs-bar::-webkit-scrollbar-thumb {
-  background: var(--scrollbar-thumb, #CBD5E1);
-  border-radius: 999px;
 }
 
 .adv-tab-btn {
@@ -653,7 +616,7 @@ feels part of the table card rather than a second, dashed card. */
   background: transparent;
   border: none;
   border-radius: 8px;
-  color: var(--text-secondary, #64748b);
+  color: var(--text-secondary, var(--text-muted));
   font-size: 13.5px;
   font-weight: 600;
   cursor: pointer;
@@ -662,8 +625,8 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 .adv-tab-btn:hover {
-  background: var(--surface-soft, #f1f5f9);
-  color: var(--text-primary, #0f172a);
+  background: var(--surface-soft, var(--surface-alt));
+  color: var(--text-primary, var(--text-primary));
 }
 
 .adv-tab-btn.is-active {
@@ -682,8 +645,8 @@ feels part of the table card rather than a second, dashed card. */
   border-radius: 999px;
   font-size: 11px;
   font-weight: 700;
-  background: var(--surface-soft, #e2e8f0);
-  color: var(--text-secondary, #475569);
+  background: var(--surface-soft, var(--border));
+  color: var(--text-secondary, var(--text-secondary));
   transition: all 0.16s ease;
 }
 
@@ -693,8 +656,8 @@ feels part of the table card rather than a second, dashed card. */
   align-items: center;
   gap: 12px;
   padding: 14px 18px;
-  background: var(--surface, #ffffff);
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--surface, var(--surface));
+  border: 1px solid var(--border, var(--border));
   border-radius: 12px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
   flex-wrap: wrap;
@@ -710,7 +673,7 @@ feels part of the table card rather than a second, dashed card. */
   left: 14px;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--text-muted, #94a3b8);
+  color: var(--text-muted, var(--text-muted));
   font-size: 16px;
   pointer-events: none;
 }
@@ -719,21 +682,17 @@ feels part of the table card rather than a second, dashed card. */
   width: 100%;
   height: 42px;
   padding: 0 38px 0 40px;
-  background: var(--surface-soft, #f8fafc);
-  border: 1px solid var(--border, #cbd5e1);
+  background: var(--surface-soft, var(--surface-soft));
+  border: 1px solid var(--border, var(--border-strong));
   border-radius: 9px;
   font-size: 13px;
-  color: var(--text-primary, #0f172a);
+  color: var(--text-primary, var(--text-primary));
   transition: all 0.15s ease;
   box-sizing: border-box;
 }
 
-#root .page-content .adv-library-workspace .adv-control-bar__search input {
-  padding: 0 38px 0 40px;
-}
-
 .adv-control-bar__search input:focus {
-  background: var(--surface, #ffffff);
+  background: var(--surface, var(--surface));
   border-color: #2563eb;
   outline: none;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
@@ -746,7 +705,7 @@ feels part of the table card rather than a second, dashed card. */
   transform: translateY(-50%);
   background: transparent;
   border: none;
-  color: var(--text-muted, #94a3b8);
+  color: var(--text-muted, var(--text-muted));
   cursor: pointer;
   padding: 2px;
   display: flex;
@@ -754,7 +713,7 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 .adv-control-bar__clear:hover {
-  color: var(--text-primary, #0f172a);
+  color: var(--text-primary, var(--text-primary));
 }
 
 .adv-control-bar__select-group {
@@ -780,12 +739,12 @@ feels part of the table card rather than a second, dashed card. */
 .adv-control-bar__select-group select {
   height: 42px;
   padding: 0 32px 0 14px;
-  background: var(--surface-soft, #f8fafc);
-  border: 1px solid var(--border, #cbd5e1);
+  background: var(--surface-soft, var(--surface-soft));
+  border: 1px solid var(--border, var(--border-strong));
   border-radius: 9px;
   font-size: 13px;
   font-weight: 500;
-  color: var(--text-primary, #0f172a);
+  color: var(--text-primary, var(--text-primary));
   cursor: pointer;
   transition: all 0.15s ease;
   outline: none;
@@ -802,8 +761,8 @@ feels part of the table card rather than a second, dashed card. */
   align-items: center;
   gap: 2px;
   padding: 3px;
-  background: var(--surface-soft, #f1f5f9);
-  border: 1px solid var(--border, #cbd5e1);
+  background: var(--surface-soft, var(--surface-alt));
+  border: 1px solid var(--border, var(--border-strong));
   border-radius: 9px;
 }
 
@@ -815,7 +774,7 @@ feels part of the table card rather than a second, dashed card. */
   height: 34px;
   border: none;
   background: transparent;
-  color: var(--text-secondary, #64748b);
+  color: var(--text-secondary, var(--text-muted));
   border-radius: 7px;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -823,7 +782,7 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 .adv-view-btn.is-selected {
-  background: var(--surface, #ffffff);
+  background: var(--surface, var(--surface));
   color: #2563eb;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
 }
@@ -841,7 +800,7 @@ feels part of the table card rather than a second, dashed card. */
   justify-content: space-between;
   gap: 12px;
   font-size: 13px;
-  color: var(--text-secondary, #64748b);
+  color: var(--text-secondary, var(--text-muted));
 }
 
 .adv-filter-chip {
@@ -849,7 +808,7 @@ feels part of the table card rather than a second, dashed card. */
   align-items: center;
   gap: 6px;
   padding: 3px 10px;
-  background: #eff6ff;
+  background: var(--brand-soft);
   color: #1d4ed8;
   border-radius: 999px;
   font-size: 12px;
@@ -875,8 +834,8 @@ feels part of the table card rather than a second, dashed card. */
 
 .adv-book-card {
   display: flex;
-  background: var(--surface, #ffffff);
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--surface, var(--surface));
+  border: 1px solid var(--border, var(--border));
   border-radius: 14px;
   overflow: hidden;
   box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
@@ -982,12 +941,12 @@ feels part of the table card rather than a second, dashed card. */
   display: inline-flex;
   align-items: center;
   padding: 3px 8px;
-  background: var(--surface-soft, #f1f5f9);
-  color: var(--text-secondary, #475569);
+  background: var(--surface-soft, var(--surface-alt));
+  color: var(--text-secondary, var(--text-secondary));
   border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
-  border: 1px solid var(--border, #e2e8f0);
+  border: 1px solid var(--border, var(--border));
 }
 
 .adv-stock-badge {
@@ -1001,24 +960,24 @@ feels part of the table card rather than a second, dashed card. */
 
 .adv-stock-badge--avail {
   background: #ecfdf5;
-  color: #059669;
+  color: var(--success);
 }
 
 .adv-stock-badge--low {
   background: #fffbeb;
-  color: #d97706;
+  color: var(--warning);
 }
 
 .adv-stock-badge--out {
-  background: #fef2f2;
-  color: #dc2626;
+  background: var(--cms-red-soft);
+  color: var(--danger);
 }
 
 .adv-book-card__title {
   margin: 0;
   font-size: 15px;
   font-weight: 700;
-  color: var(--text-primary, #0f172a);
+  color: var(--text-primary, var(--text-primary));
   line-height: 1.35;
   cursor: pointer;
   transition: color 0.15s ease;
@@ -1035,7 +994,7 @@ feels part of the table card rather than a second, dashed card. */
 .adv-book-card__author {
   margin: 0;
   font-size: 12px;
-  color: var(--text-secondary, #64748b);
+  color: var(--text-secondary, var(--text-muted));
   display: -webkit-box;
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
@@ -1047,8 +1006,8 @@ feels part of the table card rather than a second, dashed card. */
   flex-direction: column;
   gap: 5px;
   padding: 10px 0;
-  border-top: 1px dashed var(--border, #e2e8f0);
-  border-bottom: 1px dashed var(--border, #e2e8f0);
+  border-top: 1px dashed var(--border, var(--border));
+  border-bottom: 1px dashed var(--border, var(--border));
 }
 
 .adv-book-card__detail-row {
@@ -1078,13 +1037,13 @@ feels part of the table card rather than a second, dashed card. */
   display: flex;
   justify-content: space-between;
   font-size: 11px;
-  color: var(--text-secondary, #64748b);
+  color: var(--text-secondary, var(--text-muted));
   font-weight: 600;
 }
 
 .adv-availability-meter__bar {
   height: 6px;
-  background: var(--surface-soft, #e2e8f0);
+  background: var(--surface-soft, var(--border));
   border-radius: 999px;
   overflow: hidden;
 }
@@ -1105,8 +1064,8 @@ feels part of the table card rather than a second, dashed card. */
 
 /* DENSE DATA TABLE */
 .adv-table-card {
-  background: var(--surface, #ffffff);
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--surface, var(--surface));
+  border: 1px solid var(--border, var(--border));
   border-radius: 14px;
   width: 100%;
   max-width: 100%;
@@ -1131,12 +1090,12 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 .adv-table-responsive::-webkit-scrollbar-track {
-  background: var(--surface-soft, #f8fafc);
+  background: var(--surface-soft, var(--surface-soft));
   border-radius: 999px;
 }
 
 .adv-table-responsive::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: var(--border-strong);
   border-radius: 999px;
 }
 
@@ -1146,7 +1105,7 @@ feels part of the table card rather than a second, dashed card. */
 
 .adv-table-card__header {
   padding: 16px 20px;
-  border-bottom: 1px solid var(--border, #e2e8f0);
+  border-bottom: 1px solid var(--border, var(--border));
 }
 
 .adv-table-card__header h3 {
@@ -1165,26 +1124,26 @@ feels part of the table card rather than a second, dashed card. */
 
 .adv-table th {
   padding: 12px 14px;
-  background: var(--surface-soft, #f8fafc);
-  color: var(--text-secondary, #475569);
+  background: var(--surface-soft, var(--surface-soft));
+  color: var(--text-secondary, var(--text-secondary));
   font-size: 11.5px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  border-bottom: 1px solid var(--border, #e2e8f0);
+  border-bottom: 1px solid var(--border, var(--border));
   white-space: nowrap;
 }
 
 .adv-table td {
   padding: 12px 14px;
   border-bottom: 1px solid var(--border, #f1f5f9);
-  color: var(--text-primary, #0f172a);
+  color: var(--text-primary, var(--text-primary));
   vertical-align: middle;
   white-space: nowrap;
 }
 
 .adv-table tbody tr:hover {
-  background: var(--surface-soft, #f8fafc);
+  background: var(--surface-soft, var(--surface-soft));
 }
 
 .adv-row--warn {
@@ -1207,7 +1166,7 @@ feels part of the table card rather than a second, dashed card. */
 .adv-table-book__title {
   display: block;
   font-weight: 600;
-  color: var(--text-primary, #0f172a);
+  color: var(--text-primary, var(--text-primary));
   cursor: pointer;
 }
 
@@ -1234,22 +1193,22 @@ feels part of the table card rather than a second, dashed card. */
 
 .adv-status-pill--green {
   background: #ecfdf5;
-  color: #059669;
+  color: var(--success);
 }
 
 .adv-status-pill--blue {
-  background: #eff6ff;
+  background: var(--brand-soft);
   color: #1d4ed8;
 }
 
 .adv-status-pill--orange {
   background: #fffbeb;
-  color: #d97706;
+  color: var(--warning);
 }
 
 .adv-status-pill--red {
-  background: #fef2f2;
-  color: #dc2626;
+  background: var(--cms-red-soft);
+  color: var(--danger);
 }
 
 .adv-condition-pill {
@@ -1264,17 +1223,17 @@ feels part of the table card rather than a second, dashed card. */
 .adv-condition-pill--good,
 .adv-condition-pill--mint {
   background: #ecfdf5;
-  color: #059669;
+  color: var(--success);
 }
 
 .adv-condition-pill--worn {
   background: #fffbeb;
-  color: #d97706;
+  color: var(--warning);
 }
 
 .adv-condition-pill--damaged {
-  background: #fef2f2;
-  color: #dc2626;
+  background: var(--cms-red-soft);
+  color: var(--danger);
 }
 
 .adv-barcode-tag {
@@ -1283,8 +1242,8 @@ feels part of the table card rather than a second, dashed card. */
   gap: 5px;
   font-family: monospace;
   font-weight: 600;
-  color: #475569;
-  background: #f1f5f9;
+  color: var(--text-secondary);
+  background: var(--surface-alt);
   padding: 3px 7px;
   border-radius: 5px;
 }
@@ -1307,7 +1266,7 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 .adv-role-badge--student {
-  background: #eff6ff;
+  background: var(--brand-soft);
   color: #2563eb;
 }
 
@@ -1322,13 +1281,13 @@ feels part of the table card rather than a second, dashed card. */
   border-radius: 6px;
   font-size: 11.5px;
   font-weight: 700;
-  background: #fef2f2;
-  color: #dc2626;
+  background: var(--cms-red-soft);
+  color: var(--danger);
 }
 
 .adv-fine-tag--clear {
   background: #ecfdf5;
-  color: #059669;
+  color: var(--success);
 }
 
 .adv-loan-meter {
@@ -1340,7 +1299,7 @@ feels part of the table card rather than a second, dashed card. */
 
 .adv-loan-meter__bar {
   height: 5px;
-  background: #e2e8f0;
+  background: var(--border);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -1353,7 +1312,7 @@ feels part of the table card rather than a second, dashed card. */
 
 .adv-overdue-alert {
   display: block;
-  color: #dc2626;
+  color: var(--danger);
   font-weight: 700;
   margin-top: 2px;
 }
@@ -1361,28 +1320,28 @@ feels part of the table card rather than a second, dashed card. */
 .adv-queue-tag {
   display: inline-flex;
   padding: 3px 8px;
-  background: #eff6ff;
+  background: var(--brand-soft);
   color: #1d4ed8;
   border-radius: 6px;
   font-weight: 700;
 }
 
 .adv-overdue-days {
-  color: #dc2626;
+  color: var(--danger);
   font-weight: 700;
 }
 
 .adv-receipt-tag {
   font-size: 11.5px;
   font-weight: 600;
-  color: #059669;
+  color: var(--success);
 }
 
 .adv-badge-soft {
   display: inline-flex;
   padding: 3px 8px;
-  background: var(--surface-soft, #f1f5f9);
-  color: var(--text-secondary, #475569);
+  background: var(--surface-soft, var(--surface-alt));
+  color: var(--text-secondary, var(--text-secondary));
   border-radius: 6px;
   font-weight: 600;
   font-size: 12px;
@@ -1396,8 +1355,8 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 .adv-analytics-card {
-  background: var(--surface, #ffffff);
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--surface, var(--surface));
+  border: 1px solid var(--border, var(--border));
   border-radius: 14px;
   padding: 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
@@ -1429,7 +1388,7 @@ feels part of the table card rather than a second, dashed card. */
 
 .adv-analytics-bar {
   height: 8px;
-  background: var(--surface-soft, #f1f5f9);
+  background: var(--surface-soft, var(--surface-alt));
   border-radius: 999px;
   overflow: hidden;
 }
@@ -1451,14 +1410,14 @@ feels part of the table card rather than a second, dashed card. */
   flex-direction: column;
   gap: 4px;
   padding: 16px;
-  background: var(--surface-soft, #f8fafc);
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--surface-soft, var(--surface-soft));
+  border: 1px solid var(--border, var(--border));
   border-radius: 10px;
 }
 
 .adv-dept-stat-box span {
   font-size: 12px;
-  color: var(--text-secondary, #64748b);
+  color: var(--text-secondary, var(--text-muted));
   font-weight: 600;
 }
 
@@ -1470,7 +1429,7 @@ feels part of the table card rather than a second, dashed card. */
 
 .adv-dept-stat-box small {
   font-size: 11px;
-  color: var(--text-muted, #94a3b8);
+  color: var(--text-muted, var(--text-muted));
 }
 
 /* Empty State */
@@ -1480,28 +1439,28 @@ feels part of the table card rather than a second, dashed card. */
   align-items: center;
   justify-content: center;
   padding: 60px 20px;
-  background: var(--surface, #ffffff);
-  border: 1px dashed var(--border, #cbd5e1);
+  background: var(--surface, var(--surface));
+  border: 1px dashed var(--border, var(--border-strong));
   border-radius: 14px;
   text-align: center;
 }
 
 .adv-empty-state__icon {
   font-size: 48px;
-  color: #94a3b8;
+  color: var(--text-muted);
   margin-bottom: 14px;
 }
 
 .adv-empty-state h3 {
   margin: 0 0 8px;
   font-size: 18px;
-  color: var(--text-primary, #0f172a);
+  color: var(--text-primary, var(--text-primary));
 }
 
 .adv-empty-state p {
   margin: 0 0 20px;
   font-size: 13.5px;
-  color: var(--text-secondary, #64748b);
+  color: var(--text-secondary, var(--text-muted));
   max-width: 440px;
 }
 
@@ -1520,7 +1479,7 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 .adv-modal {
-  background: var(--surface, #ffffff);
+  background: var(--surface, var(--surface));
   border-radius: 16px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
   width: 100%;
@@ -1528,7 +1487,7 @@ feels part of the table card rather than a second, dashed card. */
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid var(--border, #e2e8f0);
+  border: 1px solid var(--border, var(--border));
 }
 
 .adv-modal--sm {
@@ -1548,21 +1507,21 @@ feels part of the table card rather than a second, dashed card. */
   align-items: center;
   justify-content: space-between;
   padding: 20px 24px;
-  border-bottom: 1px solid var(--border, #e2e8f0);
+  border-bottom: 1px solid var(--border, var(--border));
 }
 
 .adv-modal__header h2 {
   margin: 4px 0 0;
   font-size: 18px;
   font-weight: 700;
-  color: var(--text-primary, #0f172a);
+  color: var(--text-primary, var(--text-primary));
 }
 
 .adv-modal__close {
   background: transparent;
   border: none;
   font-size: 20px;
-  color: var(--text-secondary, #64748b);
+  color: var(--text-secondary, var(--text-muted));
   cursor: pointer;
   padding: 4px;
   display: flex;
@@ -1572,8 +1531,8 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 .adv-modal__close:hover {
-  background: var(--surface-soft, #f1f5f9);
-  color: var(--text-primary, #0f172a);
+  background: var(--surface-soft, var(--surface-alt));
+  color: var(--text-primary, var(--text-primary));
 }
 
 .adv-modal__body {
@@ -1590,8 +1549,8 @@ feels part of the table card rather than a second, dashed card. */
   justify-content: flex-end;
   gap: 12px;
   padding: 16px 24px;
-  border-top: 1px solid var(--border, #e2e8f0);
-  background: var(--surface-soft, #f8fafc);
+  border-top: 1px solid var(--border, var(--border));
+  background: var(--surface-soft, var(--surface-soft));
 }
 
 .adv-modal--md > form {
@@ -1632,7 +1591,7 @@ feels part of the table card rather than a second, dashed card. */
 .adv-form-field label {
   font-size: 12.5px;
   font-weight: 600;
-  color: var(--text-secondary, #475569);
+  color: var(--text-secondary, var(--text-secondary));
 }
 
 .adv-form-field input,
@@ -1640,10 +1599,10 @@ feels part of the table card rather than a second, dashed card. */
 .adv-form-field textarea {
   width: 100%;
   padding: 10px 14px;
-  border: 1px solid var(--border, #cbd5e1);
+  border: 1px solid var(--border, var(--border-strong));
   border-radius: 8px;
-  background: var(--surface, #ffffff);
-  color: var(--text-primary, #0f172a);
+  background: var(--surface, var(--surface));
+  color: var(--text-primary, var(--text-primary));
   font-size: 13px;
   box-sizing: border-box;
   outline: none;
@@ -1660,9 +1619,9 @@ feels part of the table card rather than a second, dashed card. */
 .adv-form-error {
   grid-column: 1 / -1;
   padding: 10px 14px;
-  background: #fef2f2;
+  background: var(--cms-red-soft);
   border: 1px solid #fecaca;
-  color: #dc2626;
+  color: var(--danger);
   border-radius: 8px;
   font-size: 12.5px;
   font-weight: 500;
@@ -1720,7 +1679,7 @@ feels part of the table card rather than a second, dashed card. */
   margin: 0;
   font-size: 13.5px;
   line-height: 1.6;
-  color: var(--text-secondary, #475569);
+  color: var(--text-secondary, var(--text-secondary));
 }
 
 .adv-meta-grid {
@@ -1728,9 +1687,9 @@ feels part of the table card rather than a second, dashed card. */
   grid-template-columns: repeat(2, 1fr);
   gap: 12px;
   padding: 14px;
-  background: var(--surface-soft, #f8fafc);
+  background: var(--surface-soft, var(--surface-soft));
   border-radius: 10px;
-  border: 1px solid var(--border, #e2e8f0);
+  border: 1px solid var(--border, var(--border));
 }
 
 .adv-meta-grid div {
@@ -1757,8 +1716,8 @@ feels part of the table card rather than a second, dashed card. */
   align-items: center;
   justify-content: space-between;
   padding: 10px 14px;
-  background: var(--surface-soft, #f8fafc);
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--surface-soft, var(--surface-soft));
+  border: 1px solid var(--border, var(--border));
   border-radius: 8px;
 }
 
@@ -1768,15 +1727,15 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 .adv-copy-badge-item small {
-  color: var(--text-secondary, #64748b);
+  color: var(--text-secondary, var(--text-muted));
   font-size: 11px;
 }
 
 /* Quick Issue Modal Helper */
 .adv-issue-book-card {
   padding: 16px;
-  background: var(--surface-soft, #f8fafc);
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--surface-soft, var(--surface-soft));
+  border: 1px solid var(--border, var(--border));
   border-radius: 10px;
 }
 
@@ -1789,8 +1748,8 @@ feels part of the table card rather than a second, dashed card. */
   display: flex;
   justify-content: space-between;
   padding: 12px 14px;
-  background: var(--surface-soft, #f8fafc);
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--surface-soft, var(--surface-soft));
+  border: 1px solid var(--border, var(--border));
   border-radius: 8px;
   margin-top: 12px;
   font-size: 12.5px;
@@ -1798,7 +1757,7 @@ feels part of the table card rather than a second, dashed card. */
 
 /* Helpers */
 .adv-muted {
-  color: var(--text-secondary, #64748b);
+  color: var(--text-secondary, var(--text-muted));
 }
 
 .adv-block {
@@ -1856,8 +1815,8 @@ feels part of the table card rather than a second, dashed card. */
   border: 1px solid var(--border, #cfdeef);
   border-radius: 8px;
   background: var(--surface, #fff);
-  color: var(--text-primary, #102a4c);
-  font-family: inherit;
+  color: var(--text-primary, var(--text-primary));
+  font-family: var(--font-family);
   font-size: 13px;
   font-weight: 600;
   line-height: 1.4;
@@ -1866,13 +1825,13 @@ feels part of the table card rather than a second, dashed card. */
 }
 .mew-button svg { width: 17px; height: 17px; flex-shrink: 0; }
 .mew-button--primary {
-  background: var(--brand, #1769c2);
-  border-color: var(--brand, #1769c2);
+  background: var(--brand, var(--brand));
+  border-color: var(--brand, var(--brand));
   color: #fff;
 }
-.mew-button--primary:hover:not(:disabled) { background: var(--brand-hover, #125aa8); border-color: var(--brand-hover, #125aa8); }
-.mew-button:not(.mew-button--primary):not(.mew-btn-delete-confirm):hover:not(:disabled) { background: var(--surface-soft, #eaf3ff); border-color: var(--brand, #1769c2); }
-.mew-button:focus-visible { outline: 2px solid var(--brand, #1769c2); outline-offset: 3px; }
+.mew-button--primary:hover:not(:disabled) { background: var(--brand-hover, var(--brand-hover)); border-color: var(--brand-hover, var(--brand-hover)); }
+.mew-button:not(.mew-button--primary):not(.mew-btn-delete-confirm):hover:not(:disabled) { background: var(--surface-soft, var(--brand-soft)); border-color: var(--brand, var(--brand)); }
+.mew-button:focus-visible { outline: 2px solid var(--brand, var(--brand)); outline-offset: 3px; }
 .mew-button:disabled { opacity: .55; cursor: not-allowed; }
 .mew-form-error{flex:1;flex-basis:100%;margin:0;color:#b42318;font-size:12px;line-height:1.5}
 .mew-workspace {
@@ -1937,8 +1896,8 @@ feels part of the table card rather than a second, dashed card. */
 
 .mew-kpi-icon--blue { background: #e0f2fe; color: #0284c7; }
 .mew-kpi-icon--purple { background: #f3e8ff; color: #9333ea; }
-.mew-kpi-icon--emerald { background: #dcfce7; color: #16a34a; }
-.mew-kpi-icon--amber { background: #fef3c7; color: #d97706; }
+.mew-kpi-icon--emerald { background: var(--cms-green-soft); color: #16a34a; }
+.mew-kpi-icon--amber { background: var(--cms-amber-soft); color: var(--warning); }
 
 .mew-kpi-info {
   display: grid;
@@ -1970,7 +1929,7 @@ feels part of the table card rather than a second, dashed card. */
   align-items: center;
   gap: 4px;
   padding: 4px;
-  background: var(--surface-soft, #f1f5f9);
+  background: var(--surface-soft, var(--surface-alt));
   border: 1px solid var(--border);
   border-radius: 10px;
   width: fit-content;
@@ -2087,15 +2046,6 @@ feels part of the table card rather than a second, dashed card. */
 
 .mew-filter-panel {
   margin-bottom: 20px;
-}
-
-.mew-filter-panel .filter-disclosure__content select.mew-filter-select {
-  max-width: 200px !important;
-  min-width: 140px !important;
-  height: 36px !important;
-  background: #FFFFFF !important;
-  border-radius: 7px !important;
-  font-size: 13px !important;
 }
 
 .mew-toolbar-right {
@@ -2301,19 +2251,19 @@ feels part of the table card rather than a second, dashed card. */
   font-weight: 600;
 }
 
-.mew-status--upcoming { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.mew-status--upcoming { background: var(--brand-soft); color: #1d4ed8; border: 1px solid #bfdbfe; }
 .mew-status--live { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
 .mew-status--completed { background: #f3f4f6; color: #4b5563; border: 1px solid #e5e7eb; }
-.mew-status--cancelled { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+.mew-status--cancelled { background: var(--cms-red-soft); color: #b91c1c; border: 1px solid #fecaca; }
 
 .mew-status--confirmed { background: #ecfdf5; color: #047857; }
 .mew-status--waitlisted { background: #fffbeb; color: #b45309; }
 .mew-status--present { background: #ecfdf5; color: #047857; }
-.mew-status--absent { background: #fef2f2; color: #b91c1c; }
+.mew-status--absent { background: var(--cms-red-soft); color: #b91c1c; }
 .mew-status--late { background: #fffbeb; color: #b45309; }
 
-.mew-priority--high { color: #dc2626; font-weight: 700; }
-.mew-priority--medium { color: #d97706; font-weight: 600; }
+.mew-priority--high { color: var(--danger); font-weight: 700; }
+.mew-priority--medium { color: var(--warning); font-weight: 600; }
 .mew-priority--low { color: #16a34a; font-weight: 500; }
 
 /* Table View */
@@ -2379,45 +2329,45 @@ feels part of the table card rather than a second, dashed card. */
 .mew-btn-icon--edit,
 .mew-btn-icon.action-edit,
 .mew-btn-icon:not(.mew-btn-icon--danger):not(.action-delete) {
-  color: #1769C2 !important;
-  background: #EAF3FF !important;
-  border: 1px solid #D8E4F2 !important;
+  color: var(--brand) !important;
+  background: var(--brand-soft) !important;
+  border: 1px solid var(--border) !important;
 }
 
 .mew-btn-icon--edit:hover,
 .mew-btn-icon.action-edit:hover,
 .mew-btn-icon:not(.mew-btn-icon--danger):not(.action-delete):hover {
-  background: #D8E4F2 !important;
-  border-color: #1769C2 !important;
-  color: #125AA8 !important;
+  background: var(--border) !important;
+  border-color: var(--brand) !important;
+  color: var(--brand-hover) !important;
 }
 
 .mew-btn-icon--edit svg,
 .mew-btn-icon.action-edit svg,
 .mew-btn-icon:not(.mew-btn-icon--danger):not(.action-delete) svg {
-  color: #1769C2 !important;
-  stroke: #1769C2 !important;
+  color: var(--brand) !important;
+  stroke: var(--brand) !important;
 }
 
 .mew-btn-icon--edit:hover svg,
 .mew-btn-icon.action-edit:hover svg,
 .mew-btn-icon:not(.mew-btn-icon--danger):not(.action-delete):hover svg {
-  color: #125AA8 !important;
-  stroke: #125AA8 !important;
+  color: var(--brand-hover) !important;
+  stroke: var(--brand-hover) !important;
 }
 
 /* Delete / Danger action icon - Soft Coral / Red theme from ERP standard */
 .mew-btn-icon--danger,
 .mew-btn-icon.action-delete {
   color: #B91C1C !important;
-  background: #FEE2E2 !important;
+  background: var(--cms-red-soft) !important;
   border: 1px solid #FECACA !important;
 }
 
 .mew-btn-icon--danger:hover,
 .mew-btn-icon.action-delete:hover {
   background: #FECACA !important;
-  border-color: #EF4444 !important;
+  border-color: var(--danger) !important;
   color: #991B1B !important;
 }
 
@@ -2598,8 +2548,8 @@ feels part of the table card rather than a second, dashed card. */
   height: 52px;
   margin: 0 auto 16px;
   border-radius: 50%;
-  background: #fee2e2;
-  color: #dc2626;
+  background: var(--cms-red-soft);
+  color: var(--danger);
   font-size: 24px;
 }
 
@@ -2625,8 +2575,8 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 .mew-btn-delete-confirm {
-  background: #dc2626 !important;
-  border-color: #dc2626 !important;
+  background: var(--danger) !important;
+  border-color: var(--danger) !important;
   color: #ffffff !important;
   font-weight: 600;
 }
@@ -2705,23 +2655,23 @@ feels part of the table card rather than a second, dashed card. */
   color: #047857;
 }
 .mew-radio-chip--present.is-selected .mew-radio-circle {
-  border-color: #10b981;
+  border-color: var(--success);
 }
 .mew-radio-chip--present.is-selected .mew-radio-circle::after {
-  background: #10b981;
+  background: var(--success);
 }
 
 /* Absent Selected */
 .mew-radio-chip--absent.is-selected {
-  background: #fef2f2;
+  background: var(--cms-red-soft);
   border-color: #fecaca;
   color: #b91c1c;
 }
 .mew-radio-chip--absent.is-selected .mew-radio-circle {
-  border-color: #ef4444;
+  border-color: var(--danger);
 }
 .mew-radio-chip--absent.is-selected .mew-radio-circle::after {
-  background: #ef4444;
+  background: var(--danger);
 }
 
 /* Late Selected */
@@ -2738,16 +2688,15 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 /* Consolidated MeetingsEventsCalendar.css */
-.mew-calendar{background:var(--surface,#fff);border:1px solid var(--border,#e5e7eb);border-radius:14px;overflow:hidden;min-width:0}.mew-calendar__toolbar{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 18px;border-bottom:1px solid var(--border,#e5e7eb);flex-wrap:wrap}.mew-calendar__period,.mew-calendar__controls,.mew-calendar__views,.mew-calendar__quick-actions,.mew-calendar__quick-actions>div{display:flex;align-items:center;gap:8px}.mew-calendar__period button,.mew-calendar__views button,.mew-calendar__quick-actions button,.mew-calendar__agenda-item>button{border:1px solid var(--border,#dce3ec);background:var(--surface,#fff);color:var(--text-primary,#26364a);border-radius:7px;padding:8px 10px;font:inherit;cursor:pointer}.mew-calendar__period h2{font-size:18px;margin:0 0 0 8px}.mew-calendar__period .mew-calendar__today{font-weight:700}.mew-calendar__controls{flex-wrap:wrap}.mew-calendar__date{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary,#667085)}.mew-calendar__date input,.mew-calendar__date select{height:34px;border:1px solid var(--border,#dce3ec);border-radius:7px;padding:0 8px;background:var(--surface,#fff);color:inherit}.mew-calendar__views{background:#f3f6fa;padding:3px;border-radius:8px}.mew-calendar__views button{border:0;background:transparent;padding:7px 9px;font-size:12px}.mew-calendar__views button.active{background:#fff;box-shadow:0 1px 4px #182b451c;color:var(--brand,#1769c2);font-weight:700}.mew-calendar__quick-actions{justify-content:space-between;padding:10px 18px;border-bottom:1px solid var(--border,#e5e7eb);font-size:12px;color:var(--text-secondary,#667085)}.mew-calendar__quick-actions>span{display:flex;align-items:center;gap:7px}.mew-calendar__quick-actions button{display:inline-flex;align-items:center;gap:5px;font-size:12px}.mew-calendar__legend-dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-left:8px}.mew-calendar__legend-dot.meeting{background:#3b82f6}.mew-calendar__legend-dot.event{background:#8b5cf6}.mew-calendar__layout{display:grid;grid-template-columns:minmax(0,1fr) 310px;min-height:620px}.mew-calendar__main{min-width:0;overflow:auto}.mew-calendar__month-grid{display:grid;grid-template-columns:repeat(7,minmax(105px,1fr));min-width:735px}.mew-calendar__weekday{text-align:center;padding:10px 4px;font-size:11px;font-weight:750;color:var(--text-secondary,#667085);border-bottom:1px solid var(--border,#e5e7eb)}.mew-calendar__day{appearance:none;text-align:left;min-height:105px;padding:6px;border:0;border-right:1px solid var(--border,#edf0f3);border-bottom:1px solid var(--border,#edf0f3);background:transparent;color:inherit;cursor:pointer;overflow:hidden}.mew-calendar__day:hover,.mew-calendar__day.selected{background:#f4f8ff}.mew-calendar__day.outside{background:#fafbfc;color:#a0a8b3}.mew-calendar__day.today .mew-calendar__day-number{background:var(--brand,#1769c2);color:#fff}.mew-calendar__day-number{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;font-size:12px;font-weight:650}.mew-calendar__day-items{display:grid;gap:3px;margin-top:4px}.mew-calendar__event{display:block;padding:3px 4px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10px}.mew-calendar__event.meeting,.mew-calendar__timed-event.meeting,.mew-calendar__agenda-item.meeting{--calendar-color:#2563eb;--calendar-bg:#eff6ff}.mew-calendar__event.event,.mew-calendar__timed-event.event,.mew-calendar__agenda-item.event{--calendar-color:#7c3aed;--calendar-bg:#f5f3ff}.mew-calendar__event{background:var(--calendar-bg);color:var(--calendar-color)}.mew-calendar__event b{font-size:9px}.mew-calendar__day-items small{font-size:9px;color:var(--text-secondary,#667085)}.mew-calendar__daily{border-left:1px solid var(--border,#e5e7eb);display:flex;flex-direction:column;min-width:0}.mew-calendar__daily>header{display:flex;justify-content:space-between;align-items:center;padding:17px 15px;border-bottom:1px solid var(--border,#e5e7eb);color:var(--brand,#1769c2)}.mew-calendar__daily>header small{font-size:9px;letter-spacing:.08em;font-weight:800}.mew-calendar__daily h3{color:var(--text-primary,#26364a);font-size:14px;margin:5px 0 0}.mew-calendar__daily-list{padding:8px 12px;display:grid;align-content:start;gap:8px;flex:1}.mew-calendar__daily>footer{padding:12px 15px;border-top:1px solid var(--border,#e5e7eb);font-size:12px;color:var(--text-secondary,#667085)}.mew-calendar__agenda-item{display:flex;align-items:flex-start;gap:12px;padding:12px;border:1px solid var(--border,#e5e7eb);border-left:3px solid var(--calendar-color);border-radius:9px;background:var(--calendar-bg);min-width:0}.mew-calendar__agenda-date{display:grid;gap:4px;min-width:60px;color:var(--calendar-color);font-size:11px}.mew-calendar__agenda-date span{font-size:10px;color:var(--text-secondary,#667085)}.mew-calendar__agenda-content{flex:1;min-width:0}.mew-calendar__kind{text-transform:capitalize;font-size:9px;font-weight:800;color:var(--calendar-color)}.mew-calendar__agenda-content h4{font-size:13px;margin:3px 0 6px;color:var(--text-primary,#26364a)}.mew-calendar__agenda-content p,.mew-calendar__agenda-content small{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-secondary,#667085);margin:3px 0}.mew-calendar__agenda-item>button{white-space:nowrap;font-size:10px}.mew-calendar__empty{margin:0;padding:18px 10px;color:var(--text-secondary,#667085);font-size:12px;text-align:center}.mew-calendar__agenda{padding:14px;display:grid;gap:9px}.mew-calendar__time-grid{display:grid;grid-template-columns:repeat(7,minmax(170px,1fr));min-width:1190px;overflow:auto}.mew-calendar__time-grid.day{grid-template-columns:minmax(260px,1fr);min-width:0}.mew-calendar__time-day{border-right:1px solid var(--border,#e5e7eb)}.mew-calendar__time-day>button{width:100%;padding:12px;border:0;border-bottom:1px solid var(--border,#e5e7eb);background:#f8fafc;font-weight:700;color:inherit;cursor:pointer}.mew-calendar__time-day>button.selected{color:var(--brand,#1769c2)}.mew-calendar__hour{display:grid;grid-template-columns:45px 1fr;min-height:60px;border-bottom:1px solid #edf0f3}.mew-calendar__hour>span{padding:6px;font-size:10px;color:var(--text-secondary,#667085)}.mew-calendar__hour>div{padding:3px}.mew-calendar__timed-event{display:grid;text-align:left;gap:4px;width:100%;padding:7px;border:0;border-left:3px solid var(--calendar-color);border-radius:4px;background:var(--calendar-bg);color:var(--text-primary,#26364a);cursor:pointer}.mew-calendar__timed-event strong{font-size:10px}.mew-calendar__timed-event span{font-size:9px;color:var(--text-secondary,#667085)}
+.mew-calendar{background:var(--surface,#fff);border:1px solid var(--border,#e5e7eb);border-radius:14px;overflow:hidden;min-width:0}.mew-calendar__toolbar{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 18px;border-bottom:1px solid var(--border,#e5e7eb);flex-wrap:wrap}.mew-calendar__period,.mew-calendar__controls,.mew-calendar__views,.mew-calendar__quick-actions,.mew-calendar__quick-actions>div{display:flex;align-items:center;gap:8px}.mew-calendar__period button,.mew-calendar__views button,.mew-calendar__quick-actions button,.mew-calendar__agenda-item>button{border:1px solid var(--border,#dce3ec);background:var(--surface,#fff);color:var(--text-primary,#26364a);border-radius:7px;padding:8px 10px;font:inherit;cursor:pointer}.mew-calendar__period h2{font-size:18px;margin:0 0 0 8px}.mew-calendar__period .mew-calendar__today{font-weight:700}.mew-calendar__controls{flex-wrap:wrap}.mew-calendar__date{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary,#667085)}.mew-calendar__date input,.mew-calendar__date select{height:34px;border:1px solid var(--border,#dce3ec);border-radius:7px;padding:0 8px;background:var(--surface,#fff);color:inherit}.mew-calendar__views{background:#f3f6fa;padding:3px;border-radius:8px}.mew-calendar__views button{border:0;background:transparent;padding:7px 9px;font-size:12px}.mew-calendar__views button.active{background:#fff;box-shadow:0 1px 4px #182b451c;color:var(--brand,var(--brand));font-weight:700}.mew-calendar__quick-actions{justify-content:space-between;padding:10px 18px;border-bottom:1px solid var(--border,#e5e7eb);font-size:12px;color:var(--text-secondary,#667085)}.mew-calendar__quick-actions>span{display:flex;align-items:center;gap:7px}.mew-calendar__quick-actions button{display:inline-flex;align-items:center;gap:5px;font-size:12px}.mew-calendar__legend-dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-left:8px}.mew-calendar__legend-dot.meeting{background:#3b82f6}.mew-calendar__legend-dot.event{background:#8b5cf6}.mew-calendar__layout{display:grid;grid-template-columns:minmax(0,1fr) 310px;min-height:620px}.mew-calendar__main{min-width:0;overflow:auto}.mew-calendar__month-grid{display:grid;grid-template-columns:repeat(7,minmax(105px,1fr));min-width:735px}.mew-calendar__weekday{text-align:center;padding:10px 4px;font-size:11px;font-weight:750;color:var(--text-secondary,#667085);border-bottom:1px solid var(--border,#e5e7eb)}.mew-calendar__day{appearance:none;text-align:left;min-height:105px;padding:6px;border:0;border-right:1px solid var(--border,#edf0f3);border-bottom:1px solid var(--border,#edf0f3);background:transparent;color:inherit;cursor:pointer;overflow:hidden}.mew-calendar__day:hover,.mew-calendar__day.selected{background:#f4f8ff}.mew-calendar__day.outside{background:#fafbfc;color:#a0a8b3}.mew-calendar__day.today .mew-calendar__day-number{background:var(--brand,var(--brand));color:#fff}.mew-calendar__day-number{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;font-size:12px;font-weight:650}.mew-calendar__day-items{display:grid;gap:3px;margin-top:4px}.mew-calendar__event{display:block;padding:3px 4px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10px}.mew-calendar__event.meeting,.mew-calendar__timed-event.meeting,.mew-calendar__agenda-item.meeting{--calendar-color:#2563eb;--calendar-bg:#eff6ff}.mew-calendar__event.event,.mew-calendar__timed-event.event,.mew-calendar__agenda-item.event{--calendar-color:#7c3aed;--calendar-bg:#f5f3ff}.mew-calendar__event{background:var(--calendar-bg);color:var(--calendar-color)}.mew-calendar__event b{font-size:9px}.mew-calendar__day-items small{font-size:9px;color:var(--text-secondary,#667085)}.mew-calendar__daily{border-left:1px solid var(--border,#e5e7eb);display:flex;flex-direction:column;min-width:0}.mew-calendar__daily>header{display:flex;justify-content:space-between;align-items:center;padding:17px 15px;border-bottom:1px solid var(--border,#e5e7eb);color:var(--brand,var(--brand))}.mew-calendar__daily>header small{font-size:9px;letter-spacing:.08em;font-weight:800}.mew-calendar__daily h3{color:var(--text-primary,#26364a);font-size:14px;margin:5px 0 0}.mew-calendar__daily-list{padding:8px 12px;display:grid;align-content:start;gap:8px;flex:1}.mew-calendar__daily>footer{padding:12px 15px;border-top:1px solid var(--border,#e5e7eb);font-size:12px;color:var(--text-secondary,#667085)}.mew-calendar__agenda-item{display:flex;align-items:flex-start;gap:12px;padding:12px;border:1px solid var(--border,#e5e7eb);border-left:3px solid var(--calendar-color);border-radius:9px;background:var(--calendar-bg);min-width:0}.mew-calendar__agenda-date{display:grid;gap:4px;min-width:60px;color:var(--calendar-color);font-size:11px}.mew-calendar__agenda-date span{font-size:10px;color:var(--text-secondary,#667085)}.mew-calendar__agenda-content{flex:1;min-width:0}.mew-calendar__kind{text-transform:capitalize;font-size:9px;font-weight:800;color:var(--calendar-color)}.mew-calendar__agenda-content h4{font-size:13px;margin:3px 0 6px;color:var(--text-primary,#26364a)}.mew-calendar__agenda-content p,.mew-calendar__agenda-content small{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-secondary,#667085);margin:3px 0}.mew-calendar__agenda-item>button{white-space:nowrap;font-size:10px}.mew-calendar__empty{margin:0;padding:18px 10px;color:var(--text-secondary,#667085);font-size:12px;text-align:center}.mew-calendar__agenda{padding:14px;display:grid;gap:9px}.mew-calendar__time-grid{display:grid;grid-template-columns:repeat(7,minmax(170px,1fr));min-width:1190px;overflow:auto}.mew-calendar__time-grid.day{grid-template-columns:minmax(260px,1fr);min-width:0}.mew-calendar__time-day{border-right:1px solid var(--border,#e5e7eb)}.mew-calendar__time-day>button{width:100%;padding:12px;border:0;border-bottom:1px solid var(--border,#e5e7eb);background:var(--surface-soft);font-weight:700;color:inherit;cursor:pointer}.mew-calendar__time-day>button.selected{color:var(--brand,var(--brand))}.mew-calendar__hour{display:grid;grid-template-columns:45px 1fr;min-height:60px;border-bottom:1px solid #edf0f3}.mew-calendar__hour>span{padding:6px;font-size:10px;color:var(--text-secondary,#667085)}.mew-calendar__hour>div{padding:3px}.mew-calendar__timed-event{display:grid;text-align:left;gap:4px;width:100%;padding:7px;border:0;border-left:3px solid var(--calendar-color);border-radius:4px;background:var(--calendar-bg);color:var(--text-primary,#26364a);cursor:pointer}.mew-calendar__timed-event strong{font-size:10px}.mew-calendar__timed-event span{font-size:9px;color:var(--text-secondary,#667085)}
 @media(max-width:1000px){.mew-calendar__layout{grid-template-columns:minmax(0,1fr)}.mew-calendar__daily{border:0;border-top:1px solid var(--border,#e5e7eb)}.mew-calendar__daily-list{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}.mew-calendar__toolbar{align-items:flex-start}.mew-calendar__controls{justify-content:flex-start}}
 @media(max-width:600px){.mew-calendar__toolbar{padding:12px}.mew-calendar__period{flex-wrap:wrap}.mew-calendar__period h2{font-size:15px}.mew-calendar__controls{width:100%}.mew-calendar__date{width:100%;justify-content:space-between}.mew-calendar__quick-actions{align-items:flex-start;gap:9px;flex-direction:column}.mew-calendar__quick-actions>div{width:100%}.mew-calendar__quick-actions button{flex:1;justify-content:center}.mew-calendar__views{width:100%;justify-content:space-between}.mew-calendar__views button{flex:1;padding:7px 3px}.mew-calendar__agenda-item{flex-wrap:wrap}.mew-calendar__agenda-item>button{margin-left:auto}}
 .mew-calendar__details .mew-modal-header h2{margin:5px 0 0;font-size:19px}.mew-calendar__details .mew-modal-body dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.mew-calendar__details .mew-modal-body dl>div{display:grid;gap:4px}.mew-calendar__details dt{font-size:10px;color:var(--text-secondary,#667085);font-weight:700}.mew-calendar__details dd{margin:0;font-size:13px;color:var(--text-primary,#26364a)}
 .mew-calendar__main{overflow:visible}.mew-calendar__month-grid{min-width:0;grid-template-columns:repeat(7,minmax(0,1fr))}.mew-calendar__time-grid{min-width:0;grid-template-columns:repeat(7,minmax(0,1fr));overflow:visible}.mew-calendar__time-grid.day{grid-template-columns:minmax(0,1fr)}.mew-calendar__event{min-width:0}.mew-calendar__time-day{min-width:0}
-.mew-calendar__quick-actions-right,.mew-calendar__create-actions{display:flex;align-items:center;gap:8px}.mew-calendar__quick-actions-right{margin-left:auto}.mew-calendar__quick-actions .mew-calendar__views button{flex:initial}
-.filter-disclosure.mew-calendar__filters{margin:0;border:0!important;border-bottom:1px solid var(--border,#e5e7eb)!important;border-radius:0!important;box-shadow:none!important}.mew-calendar__filter-label{font-size:13px;font-weight:650;color:var(--text-secondary,#667085)}
+.mew-calendar__quick-actions-right,.mew-calendar__create-actions{display:flex;align-items:center;gap:8px}.mew-calendar__quick-actions-right{margin-left:auto}.mew-calendar__quick-actions .mew-calendar__views button{flex:initial}.mew-calendar__filter-label{font-size:13px;font-weight:650;color:var(--text-secondary,#667085)}
 @media(max-width:700px){.mew-calendar__time-grid:not(.day){grid-template-columns:minmax(0,1fr)}.mew-calendar__day{min-height:76px;padding:3px}.mew-calendar__event{font-size:8px;padding:2px}.mew-calendar__event b{display:none}}
 .mew-calendar__quick-actions .mew-action-meeting,.grm-button.mew-action-meeting,.mew-calendar__quick-actions .mew-action-event,.grm-button.mew-action-event{background:#2563eb;border-color:#2563eb;color:#fff}.mew-calendar__quick-actions .mew-action-meeting:hover,.grm-button.mew-action-meeting:hover,.mew-calendar__quick-actions .mew-action-event:hover,.grm-button.mew-action-event:hover{background:#1d4ed8;border-color:#1d4ed8;color:#fff}
-.mew-calendar__toolbar{padding:11px 14px;gap:10px}.mew-calendar__period,.mew-calendar__quick-actions-right,.mew-calendar__create-actions{gap:6px}.mew-calendar__period button{padding:6px 8px}.mew-calendar__period h2{font-size:16px}.mew-calendar__quick-actions{padding:8px 14px}.mew-calendar__quick-actions button{padding:6px 9px}.mew-calendar__layout{min-height:0}.mew-calendar__weekday{padding:7px 3px}.mew-calendar__day{min-height:88px;padding:5px}.mew-calendar__daily>header{padding:12px}.mew-calendar__daily-list{padding:7px 9px;gap:6px}.mew-calendar__agenda-item{padding:9px;gap:9px}.mew-calendar__agenda{padding:10px;gap:7px}.filter-disclosure.mew-calendar__filters{margin:0}
+.mew-calendar__toolbar{padding:11px 14px;gap:10px}.mew-calendar__period,.mew-calendar__quick-actions-right,.mew-calendar__create-actions{gap:6px}.mew-calendar__period button{padding:6px 8px}.mew-calendar__period h2{font-size:16px}.mew-calendar__quick-actions{padding:8px 14px}.mew-calendar__quick-actions button{padding:6px 9px}.mew-calendar__layout{min-height:0}.mew-calendar__weekday{padding:7px 3px}.mew-calendar__day{min-height:88px;padding:5px}.mew-calendar__daily>header{padding:12px}.mew-calendar__daily-list{padding:7px 9px;gap:6px}.mew-calendar__agenda-item{padding:9px;gap:9px}.mew-calendar__agenda{padding:10px;gap:7px}
 .mew-calendar__quick-actions{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)}.mew-calendar__quick-actions>span{grid-column:1;justify-self:start}.mew-calendar__quick-actions>.mew-calendar__views{grid-column:2;justify-self:center}.mew-calendar__quick-actions>.mew-calendar__quick-actions-right{grid-column:3;justify-self:end;margin-left:0}
 @media(max-width:600px){.mew-calendar__toolbar{padding:9px 10px}.mew-calendar__quick-actions{padding:7px 10px}.mew-calendar__day{min-height:72px;padding:3px}.mew-calendar__daily-list{padding:6px}.mew-calendar__agenda{padding:8px}}
 @media(max-width:600px){.mew-calendar__quick-actions{grid-template-columns:1fr;justify-items:stretch}.mew-calendar__quick-actions>span,.mew-calendar__quick-actions>.mew-calendar__views,.mew-calendar__quick-actions>.mew-calendar__quick-actions-right{grid-column:1;justify-self:stretch;width:100%}.mew-calendar__quick-actions>.mew-calendar__views{justify-content:center}.mew-calendar__quick-actions>.mew-calendar__quick-actions-right{justify-content:flex-end}.mew-calendar__create-actions{width:100%}}
@@ -2788,8 +2737,8 @@ feels part of the table card rather than a second, dashed card. */
   align-items: center;
   gap: 3px;
   padding: 3px;
-  background: var(--surface-soft, #f1f5f9);
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--surface-soft, var(--surface-alt));
+  border: 1px solid var(--border, var(--border));
   border-radius: 9px;
   width: fit-content;
   max-width: 100%;
@@ -2811,7 +2760,7 @@ feels part of the table card rather than a second, dashed card. */
   border: 0;
   border-radius: 7px;
   background: transparent;
-  color: var(--text-secondary, #475569);
+  color: var(--text-secondary, var(--text-secondary));
   font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
@@ -2821,13 +2770,13 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 .plw-nav button:hover {
-  color: var(--text-primary, #0f172a);
+  color: var(--text-primary, var(--text-primary));
   background: rgba(255, 255, 255, 0.6);
 }
 
 .plw-nav button.active {
-  background: var(--surface, #ffffff);
-  color: var(--brand, #1769c2);
+  background: var(--surface, var(--surface));
+  color: var(--brand, var(--brand));
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
@@ -2855,15 +2804,6 @@ feels part of the table card rather than a second, dashed card. */
   margin-bottom: 8px;
 }
 
-.plw-filter-panel .filter-disclosure__content select.plw-filter-select {
-  max-width: 200px !important;
-  min-width: 140px !important;
-  height: 36px !important;
-  background: #ffffff !important;
-  border-radius: 7px !important;
-  font-size: 13px !important;
-}
-
 .plw-toolbar-right {
   display: flex;
   align-items: center;
@@ -2873,10 +2813,10 @@ feels part of the table card rather than a second, dashed card. */
 .plw-filter-select {
   height: 34px;
   padding: 0 8px;
-  border: 1px solid var(--border, #cbd5e1);
+  border: 1px solid var(--border, var(--border-strong));
   border-radius: 6px;
-  background: var(--surface, #ffffff);
-  color: var(--text-primary, #0f172a);
+  background: var(--surface, var(--surface));
+  color: var(--text-primary, var(--text-primary));
   font-size: 12px;
 }
 
@@ -2884,8 +2824,8 @@ feels part of the table card rather than a second, dashed card. */
 .plw-view-switch {
   display: inline-flex;
   padding: 3px;
-  background: var(--surface-soft, #f1f5f9);
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--surface-soft, var(--surface-alt));
+  border: 1px solid var(--border, var(--border));
   border-radius: 8px;
 }
 
@@ -2898,14 +2838,14 @@ feels part of the table card rather than a second, dashed card. */
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: var(--text-secondary, #64748b);
+  color: var(--text-secondary, var(--text-muted));
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .plw-view-switch button.active {
-  background: var(--surface, #ffffff);
-  color: var(--brand, #1769c2);
+  background: var(--surface, var(--surface));
+  color: var(--brand, var(--brand));
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
@@ -2919,8 +2859,8 @@ feels part of the table card rather than a second, dashed card. */
 .plw-card {
   display: flex;
   flex-direction: column;
-  background: var(--surface, #ffffff);
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--surface, var(--surface));
+  border: 1px solid var(--border, var(--border));
   border-radius: 12px;
   padding: 20px;
   gap: 14px;
@@ -2930,7 +2870,7 @@ feels part of the table card rather than a second, dashed card. */
 
 .plw-card:hover {
   transform: translateY(-2px);
-  border-color: var(--brand, #1769c2);
+  border-color: var(--brand, var(--brand));
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
 }
 
@@ -2956,7 +2896,7 @@ feels part of the table card rather than a second, dashed card. */
   border-radius: 10px;
   font-size: 16px;
   font-weight: 800;
-  background: linear-gradient(135deg, #1769c2, #3b82f6);
+  background: linear-gradient(135deg, var(--brand), #3b82f6);
   color: #ffffff;
   flex-shrink: 0;
   box-shadow: 0 2px 6px rgba(23, 105, 194, 0.25);
@@ -2970,7 +2910,7 @@ feels part of the table card rather than a second, dashed card. */
 .plw-card-title {
   font-size: 15px;
   font-weight: 700;
-  color: var(--text-primary, #0f172a);
+  color: var(--text-primary, var(--text-primary));
   margin: 0 0 3px;
   line-height: 1.35;
 }
@@ -2978,7 +2918,7 @@ feels part of the table card rather than a second, dashed card. */
 .plw-card-role {
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-secondary, #475569);
+  color: var(--text-secondary, var(--text-secondary));
   margin: 0;
 }
 
@@ -3001,7 +2941,7 @@ feels part of the table card rather than a second, dashed card. */
   display: grid;
   gap: 8px;
   font-size: 12px;
-  color: var(--text-secondary, #475569);
+  color: var(--text-secondary, var(--text-secondary));
 }
 
 .plw-card-detail-item {
@@ -3015,27 +2955,27 @@ feels part of the table card rather than a second, dashed card. */
 
 .plw-card-detail-item svg {
   flex-shrink: 0;
-  color: var(--text-muted, #94a3b8);
+  color: var(--text-muted, var(--text-muted));
 }
 
 .plw-funnel-bar {
   display: grid;
   gap: 4px;
-  background: var(--surface-soft, #f8fafc);
+  background: var(--surface-soft, var(--surface-soft));
   padding: 10px 12px;
   border-radius: 8px;
-  border: 1px solid var(--border, #e2e8f0);
+  border: 1px solid var(--border, var(--border));
 }
 
 .plw-funnel-labels {
   display: flex;
   justify-content: space-between;
   font-size: 11px;
-  color: var(--text-secondary, #475569);
+  color: var(--text-secondary, var(--text-secondary));
 }
 
 .plw-funnel-labels strong {
-  color: var(--text-primary, #0f172a);
+  color: var(--text-primary, var(--text-primary));
 }
 
 .plw-card-footer {
@@ -3044,7 +2984,7 @@ feels part of the table card rather than a second, dashed card. */
   justify-content: space-between;
   gap: 12px;
   padding-top: 12px;
-  border-top: 1px solid var(--border, #e2e8f0);
+  border-top: 1px solid var(--border, var(--border));
   margin-top: auto;
 }
 
@@ -3074,7 +3014,7 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 .plw-tier--dream {
-  background: #eff6ff;
+  background: var(--brand-soft);
   color: #1d4ed8;
   border: 1px solid #bfdbfe;
 }
@@ -3095,22 +3035,22 @@ feels part of the table card rather than a second, dashed card. */
   font-weight: 600;
 }
 
-.plw-status--upcoming { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.plw-status--upcoming { background: var(--brand-soft); color: #1d4ed8; border: 1px solid #bfdbfe; }
 .plw-status--active { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
 .plw-status--completed { background: #f3f4f6; color: #4b5563; border: 1px solid #e5e7eb; }
-.plw-status--shortlisted { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+.plw-status--shortlisted { background: var(--cms-amber-soft); color: #b45309; border: 1px solid #fde68a; }
 .plw-status--interviewing { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
 .plw-status--selected { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
-.plw-status--rejected { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+.plw-status--rejected { background: var(--cms-red-soft); color: #b91c1c; border: 1px solid #fecaca; }
 .plw-status--accepted { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
-.plw-status--pending { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+.plw-status--pending { background: var(--cms-amber-soft); color: #b45309; border: 1px solid #fde68a; }
 .plw-status--cleared { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
-.plw-status--scheduled { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.plw-status--scheduled { background: var(--brand-soft); color: #1d4ed8; border: 1px solid #bfdbfe; }
 
 /* Table Wrappers */
 .plw-table-wrap {
-  background: var(--surface, #ffffff);
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--surface, var(--surface));
+  border: 1px solid var(--border, var(--border));
   border-radius: 12px;
   overflow-x: auto;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
@@ -3125,17 +3065,17 @@ feels part of the table card rather than a second, dashed card. */
 
 .plw-table th {
   padding: 12px 16px;
-  background: var(--surface-soft, #f8fafc);
+  background: var(--surface-soft, var(--surface-soft));
   font-weight: 600;
-  color: var(--text-secondary, #475569);
-  border-bottom: 1px solid var(--border, #e2e8f0);
+  color: var(--text-secondary, var(--text-secondary));
+  border-bottom: 1px solid var(--border, var(--border));
   white-space: nowrap;
 }
 
 .plw-table td {
   padding: 14px 16px;
-  border-bottom: 1px solid var(--border, #e2e8f0);
-  color: var(--text-primary, #0f172a);
+  border-bottom: 1px solid var(--border, var(--border));
+  color: var(--text-primary, var(--text-primary));
   vertical-align: middle;
 }
 
@@ -3144,7 +3084,7 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 .plw-table tbody tr:hover td {
-  background: var(--surface-soft, #f8fafc);
+  background: var(--surface-soft, var(--surface-soft));
 }
 
 .plw-table-actions {
@@ -3173,45 +3113,45 @@ feels part of the table card rather than a second, dashed card. */
 .plw-btn-icon--edit,
 .plw-btn-icon.action-edit,
 .plw-btn-icon:not(.plw-btn-icon--danger):not(.action-delete) {
-  color: #1769c2 !important;
-  background: #eaf3ff !important;
-  border: 1px solid #d8e4f2 !important;
+  color: var(--brand) !important;
+  background: var(--brand-soft) !important;
+  border: 1px solid var(--border) !important;
 }
 
 .plw-btn-icon--edit:hover,
 .plw-btn-icon.action-edit:hover,
 .plw-btn-icon:not(.plw-btn-icon--danger):not(.action-delete):hover {
-  background: #d8e4f2 !important;
-  border-color: #1769c2 !important;
-  color: #125aa8 !important;
+  background: var(--border) !important;
+  border-color: var(--brand) !important;
+  color: var(--brand-hover) !important;
 }
 
 .plw-btn-icon--edit svg,
 .plw-btn-icon.action-edit svg,
 .plw-btn-icon:not(.plw-btn-icon--danger):not(.action-delete) svg {
-  color: #1769c2 !important;
-  stroke: #1769c2 !important;
+  color: var(--brand) !important;
+  stroke: var(--brand) !important;
 }
 
 .plw-btn-icon--edit:hover svg,
 .plw-btn-icon.action-edit:hover svg,
 .plw-btn-icon:not(.plw-btn-icon--danger):not(.action-delete):hover svg {
-  color: #125aa8 !important;
-  stroke: #125aa8 !important;
+  color: var(--brand-hover) !important;
+  stroke: var(--brand-hover) !important;
 }
 
 /* Delete / Danger action icon - Soft Coral Red Theme */
 .plw-btn-icon--danger,
 .plw-btn-icon.action-delete {
   color: #b91c1c !important;
-  background: #fee2e2 !important;
+  background: var(--cms-red-soft) !important;
   border: 1px solid #fecaca !important;
 }
 
 .plw-btn-icon--danger:hover,
 .plw-btn-icon.action-delete:hover {
   background: #fecaca !important;
-  border-color: #ef4444 !important;
+  border-color: var(--danger) !important;
   color: #991b1b !important;
 }
 
@@ -3241,8 +3181,8 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 .plw-panel {
-  background: var(--surface, #ffffff);
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--surface, var(--surface));
+  border: 1px solid var(--border, var(--border));
   border-radius: 12px;
   padding: 20px;
   display: flex;
@@ -3255,7 +3195,7 @@ feels part of the table card rather than a second, dashed card. */
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid var(--border, #e2e8f0);
+  border-bottom: 1px solid var(--border, var(--border));
   padding-bottom: 12px;
 }
 
@@ -3263,16 +3203,16 @@ feels part of the table card rather than a second, dashed card. */
   font-size: 16px;
   font-weight: 700;
   margin: 0;
-  color: var(--text-primary, #0f172a);
+  color: var(--text-primary, var(--text-primary));
 }
 
 .plw-tier-item {
   display: grid;
   gap: 6px;
   padding: 12px;
-  background: var(--surface-soft, #f8fafc);
+  background: var(--surface-soft, var(--surface-soft));
   border-radius: 8px;
-  border: 1px solid var(--border, #e2e8f0);
+  border: 1px solid var(--border, var(--border));
 }
 
 .plw-tier-header {
@@ -3285,7 +3225,7 @@ feels part of the table card rather than a second, dashed card. */
 .plw-tier-bar {
   width: 100%;
   height: 8px;
-  background: #e2e8f0;
+  background: var(--border);
   border-radius: 99px;
   overflow: hidden;
 }
@@ -3306,14 +3246,14 @@ feels part of the table card rather than a second, dashed card. */
 .plw-progress-track {
   flex: 1;
   height: 8px;
-  background: #e2e8f0;
+  background: var(--border);
   border-radius: 99px;
   overflow: hidden;
 }
 
 .plw-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #10b981, #059669);
+  background: linear-gradient(90deg, var(--success), var(--success));
   border-radius: 99px;
 }
 
@@ -3333,8 +3273,8 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 .plw-modal {
-  background: var(--surface, #ffffff);
-  border: 1px solid var(--border, #cbd5e1);
+  background: var(--surface, var(--surface));
+  border: 1px solid var(--border, var(--border-strong));
   border-radius: 14px;
   width: min(100%, 640px);
   max-height: 90vh;
@@ -3353,14 +3293,14 @@ feels part of the table card rather than a second, dashed card. */
   align-items: center;
   justify-content: space-between;
   padding: 18px 24px;
-  border-bottom: 1px solid var(--border, #e2e8f0);
+  border-bottom: 1px solid var(--border, var(--border));
 }
 
 .plw-modal-header h3 {
   margin: 0;
   font-size: 17px;
   font-weight: 700;
-  color: var(--text-primary, #0f172a);
+  color: var(--text-primary, var(--text-primary));
 }
 
 .plw-modal-close {
@@ -3371,15 +3311,15 @@ feels part of the table card rather than a second, dashed card. */
   height: 30px;
   border: 0;
   background: transparent;
-  color: var(--text-muted, #94a3b8);
+  color: var(--text-muted, var(--text-muted));
   cursor: pointer;
   border-radius: 6px;
   font-size: 18px;
 }
 
 .plw-modal-close:hover {
-  background: var(--surface-soft, #f1f5f9);
-  color: var(--text-primary, #0f172a);
+  background: var(--surface-soft, var(--surface-alt));
+  color: var(--text-primary, var(--text-primary));
 }
 
 .plw-modal-body {
@@ -3399,7 +3339,7 @@ feels part of the table card rather than a second, dashed card. */
   gap: 6px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-primary, #0f172a);
+  color: var(--text-primary, var(--text-primary));
 }
 
 .plw-form-field input,
@@ -3407,10 +3347,10 @@ feels part of the table card rather than a second, dashed card. */
 .plw-form-field textarea {
   width: 100%;
   padding: 9px 12px;
-  border: 1px solid var(--border, #cbd5e1);
+  border: 1px solid var(--border, var(--border-strong));
   border-radius: 8px;
-  background: var(--surface, #ffffff);
-  color: var(--text-primary, #0f172a);
+  background: var(--surface, var(--surface));
+  color: var(--text-primary, var(--text-primary));
   font: inherit;
   font-size: 13px;
   box-sizing: border-box;
@@ -3419,7 +3359,7 @@ feels part of the table card rather than a second, dashed card. */
 .plw-form-field input:focus,
 .plw-form-field select:focus,
 .plw-form-field textarea:focus {
-  border-color: var(--brand, #1769c2);
+  border-color: var(--brand, var(--brand));
   outline: none;
   box-shadow: 0 0 0 3px rgba(23, 105, 194, 0.12);
 }
@@ -3435,8 +3375,8 @@ feels part of the table card rather than a second, dashed card. */
   justify-content: flex-end;
   gap: 10px;
   padding: 16px 24px;
-  border-top: 1px solid var(--border, #e2e8f0);
-  background: var(--surface-soft, #f8fafc);
+  border-top: 1px solid var(--border, var(--border));
+  background: var(--surface-soft, var(--surface-soft));
   border-bottom-left-radius: 14px;
   border-bottom-right-radius: 14px;
 }
@@ -3447,7 +3387,7 @@ feels part of the table card rather than a second, dashed card. */
   align-items: center;
   gap: 10px;
   padding: 12px 16px;
-  background: #eff6ff;
+  background: var(--brand-soft);
   border: 1px solid #bfdbfe;
   border-radius: 8px;
   font-size: 13px;
@@ -3468,9 +3408,9 @@ feels part of the table card rather than a second, dashed card. */
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: var(--surface-soft, #f8fafc);
+  background: var(--surface-soft, var(--surface-soft));
   padding: 3px 6px;
-  border: 1px solid var(--border, #e2e8f0);
+  border: 1px solid var(--border, var(--border));
   border-radius: 99px;
   white-space: nowrap;
   flex-shrink: 0;
@@ -3487,7 +3427,7 @@ feels part of the table card rather than a second, dashed card. */
   font-weight: 600;
   cursor: pointer;
   border: 1px solid transparent;
-  color: var(--text-secondary, #64748b);
+  color: var(--text-secondary, var(--text-muted));
   background: transparent;
   transition: all 0.15s ease;
   user-select: none;
@@ -3533,17 +3473,17 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 .plw-radio-chip:hover {
-  background: var(--surface, #ffffff);
-  color: var(--text-primary, #0f172a);
+  background: var(--surface, var(--surface));
+  color: var(--text-primary, var(--text-primary));
 }
 
 /* Scheduled (Blue) */
 .plw-radio-chip--scheduled:hover {
-  background: #eff6ff;
+  background: var(--brand-soft);
   color: #1d4ed8;
 }
 .plw-radio-chip--scheduled.is-selected {
-  background: #eff6ff;
+  background: var(--brand-soft);
   border-color: #bfdbfe;
   color: #1d4ed8;
   font-weight: 700;
@@ -3570,37 +3510,37 @@ feels part of the table card rather than a second, dashed card. */
 }
 .plw-radio-chip--cleared.is-selected .plw-radio-circle,
 .plw-radio-chip--accepted.is-selected .plw-radio-circle {
-  border-color: #10b981;
+  border-color: var(--success);
 }
 .plw-radio-chip--cleared.is-selected .plw-radio-circle::after,
 .plw-radio-chip--accepted.is-selected .plw-radio-circle::after {
-  background: #10b981;
+  background: var(--success);
 }
 
 /* Eliminated / Declined (Red) */
 .plw-radio-chip--eliminated:hover,
 .plw-radio-chip--declined:hover {
-  background: #fef2f2;
+  background: var(--cms-red-soft);
   color: #b91c1c;
 }
 .plw-radio-chip--eliminated:hover .plw-radio-circle,
 .plw-radio-chip--declined:hover .plw-radio-circle {
-  border-color: #ef4444;
+  border-color: var(--danger);
 }
 .plw-radio-chip--eliminated.is-selected,
 .plw-radio-chip--declined.is-selected {
-  background: #fee2e2;
+  background: var(--cms-red-soft);
   border-color: #fca5a5;
   color: #b91c1c;
   font-weight: 700;
 }
 .plw-radio-chip--eliminated.is-selected .plw-radio-circle,
 .plw-radio-chip--declined.is-selected .plw-radio-circle {
-  border-color: #ef4444;
+  border-color: var(--danger);
 }
 .plw-radio-chip--eliminated.is-selected .plw-radio-circle::after,
 .plw-radio-chip--declined.is-selected .plw-radio-circle::after {
-  background: #ef4444;
+  background: var(--danger);
 }
 
 /* Pending (Amber) */
@@ -3624,14 +3564,14 @@ feels part of the table card rather than a second, dashed card. */
 .mew-calendar__main:has(.mew-calendar__time-grid){overflow:auto;max-height:680px;isolation:isolate}
 .mew-calendar__main .mew-calendar__time-grid{grid-template-columns:repeat(7,minmax(180px,1fr));min-width:1260px}
 .mew-calendar__main .mew-calendar__time-grid.day{grid-template-columns:minmax(280px,1fr);min-width:280px}
-.mew-calendar__time-grid .mew-calendar__time-day>button{position:sticky;top:0;z-index:2;height:44px;box-sizing:border-box;background:var(--surface-soft,#f8fafc)}
-.mew-calendar__time-grid .mew-calendar__time-day>button.selected{background:var(--brand,#1769c2);color:#fff}
+.mew-calendar__time-grid .mew-calendar__time-day>button{position:sticky;top:0;z-index:2;height:44px;box-sizing:border-box;background:var(--surface-soft,var(--surface-soft))}
+.mew-calendar__time-grid .mew-calendar__time-day>button.selected{background:var(--brand,var(--brand));color:#fff}
 .mew-calendar__time-grid .mew-calendar__hour{height:104px;min-height:104px;box-sizing:border-box;grid-template-columns:42px minmax(0,1fr);overflow:hidden}
 .mew-calendar__time-grid .mew-calendar__hour>div{min-width:0;overflow:auto;padding:5px;display:flex;flex-direction:column;gap:4px}
 .mew-calendar__time-grid .mew-calendar__timed-event{flex-shrink:0;min-width:0;padding:7px;line-height:1.4;overflow:hidden}
 .mew-calendar__time-grid .mew-calendar__timed-event strong{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;font-size:11px;overflow-wrap:anywhere}
 .mew-calendar__time-grid .mew-calendar__timed-event span{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;font-size:10px;overflow-wrap:anywhere}
-.mew-calendar__time-grid button:focus-visible{outline:2px solid var(--brand,#1769c2);outline-offset:-2px}
+.mew-calendar__time-grid button:focus-visible{outline:2px solid var(--brand,var(--brand));outline-offset:-2px}
 .mew-calendar__daily .mew-calendar__agenda-item{flex-wrap:wrap}
 .mew-calendar__daily .mew-calendar__agenda-content{flex-basis:150px}
 .mew-calendar__daily .mew-calendar__agenda-content p,.mew-calendar__daily .mew-calendar__agenda-content small{display:block;line-height:1.6;overflow-wrap:anywhere}

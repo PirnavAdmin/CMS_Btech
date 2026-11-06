@@ -1,0 +1,55 @@
+{
+  "sprint": "6",
+  "scope": "Curriculum and Timetable; OPEN",
+  "frontendOnly": true,
+  "vitest": {
+    "files": 43,
+    "passed": 323,
+    "failed": 0
+  },
+  "focused": {
+    "files": 6,
+    "passed": 52,
+    "failed": 0
+  },
+  "node": {
+    "passed": 443,
+    "failed": 0
+  },
+  "build": {
+    "passed": true,
+    "notes": [
+      "Existing bundle chunk-size warning remains."
+    ]
+  },
+  "lint": {
+    "passed": true,
+    "errors": 0,
+    "warnings": 689,
+    "startWarnings": 710,
+    "reduction": 21
+  },
+  "protectedSources": {
+    "checked": 1663,
+    "mismatches": 0
+  },
+  "browser": {
+    "verified": false,
+    "status": "Pending: previously recorded origin/socket restriction; no bypass or repeated attempts."
+  },
+  "liveApi": {
+    "verified": false
+  },
+  "backendBlocked": [
+    "Elective group update/delete/status and group-wide credits/type/dates: no verified writable endpoint/DTO.",
+    "Institution-wide credit framework/graduation persistence: no existing endpoint.",
+    "Destructive reopening of published timetables is unsupported by the existing backend workflow."
+  ],
+  "remaining": [
+    "Weekly-requirement mutation and recovery coverage.",
+    "Elective report and faculty schedule/assignment screen sign-off.",
+    "Remaining credit negative/context-race and subject direct-route/dependency failure coverage.",
+    "Responsive/light/dark/keyboard browser verification and live authorized API checks.",
+    "Sprints B–E remain queued."
+  ]
+}

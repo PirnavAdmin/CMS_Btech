@@ -1,0 +1,6 @@
+import { expect, test, vi } from 'vitest'
+import { accessGovernance } from '../services/accessGovernanceService'
+import { call } from '../services/scopedModulesService'
+vi.mock('../services/scopedModulesService',()=>({call:vi.fn(async()=>({data:{id:41}})),unwrap:value=>value.data,requireId:(value)=>{if(!/^[1-9]\d*$/.test(String(value)))throw Error('Invalid ID');return Number(value)}}))
+test('designation and employee-profile assignment use verified governance DTOs and college scope',async()=>{await accessGovernance.saveDesignation({title:'Lecturer',code:'LEC',category:'Teaching',level:'Academic',status:'Active'},7);expect(call).toHaveBeenLastCalledWith('access-governance/designations',expect.objectContaining({method:'POST',body:{collegeId:7,title:'Lecturer',code:'LEC',category:'Teaching',level:'Academic',department:null,defaultRoleId:null,status:'Active'}}));await accessGovernance.assignStaff(19,{roleId:3,designationId:41,scope:'Department: Engineering'},7);expect(call).toHaveBeenLastCalledWith('access-governance/staff-assignments/19',{method:'PUT',query:{collegeId:7},body:{roleId:3,designationId:41,scope:'Department: Engineering'}})})
+test('governance never accepts fabricated designation IDs for delete',async()=>{await expect(async()=>accessGovernance.deleteDesignation('DES-123',7)).rejects.toThrow('Invalid ID')})

@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import SectionManagement from './SectionManagement'
 
 const data = vi.hoisted(() => ({
+  sections: [],
   courses: [{ courseId: 10, collegeId: 1, courseName: 'B.Tech', courseCode: 'BTECH', status: 1 }, { courseId: 20, collegeId: 1, courseName: 'Other Course', courseCode: 'OTHER', status: 1 }],
   branches: [{ branchId: 7, courseId: 10, branchName: 'Computer Science', branchCode: 'CSE', status: 1 }, { branchId: 8, courseId: 20, branchName: 'Electronics', branchCode: 'ECE', status: 1 }],
   years: Array.from({ length: 4 }, (_, index) => ({ academicYearId: index + 1, academicYearName: `${2026 + index}-${2027 + index}`, status: index === 0 ? 'ACTIVE' : 'UPCOMING' })),
@@ -27,8 +28,8 @@ vi.mock('../../api/apiEndpoints', () => ({
   courseApi: { getAll: vi.fn(async () => data.courses) },
   branchApi: { getAll: vi.fn(async () => data.branches) },
   academicYearApi: { getAll: vi.fn(async () => data.years) },
-  sectionApi: { getAll: vi.fn(async () => []), summary: vi.fn(async () => null), create: vi.fn(async payload => ({ ...payload, id: 500 })) },
-  sectionAssignmentApi: { list: vi.fn(async () => []) },
+  sectionApi: { getAll: vi.fn(async () => data.sections), getById: vi.fn(async id => data.sections.find(row => String(row.sectionId) === String(id))), summary: vi.fn(async () => null), create: vi.fn(async payload => ({ ...payload, id: 500 })) },
+  sectionAssignmentApi: { list: vi.fn(async () => []), listBySection: vi.fn(async () => []) },
   sectionAllocationApi: {}, studentAdmissionApi: {}, studentProfilesApi: {},
 }))
 vi.mock('../../auth/collegeApi', () => ({ getSemesters: vi.fn(async () => ({ data: { data: data.semesters } })) }))
@@ -36,7 +37,7 @@ vi.mock('../../services/facultyService', () => ({ default: { list: vi.fn(async (
 vi.mock('../../services/studentService', () => ({ default: {} }))
 vi.mock('../../services/roomService', () => ({ default: {} }))
 afterEach(cleanup)
-beforeEach(() => vi.clearAllMocks())
+beforeEach(() => { vi.clearAllMocks(); data.sections = [] })
 import { academicYearApi, sectionApi } from '../../api/apiEndpoints'
 
 it('shows all saved branches and semesters 1–8, including upcoming semesters in later years', async () => {
@@ -104,4 +105,19 @@ it('displays the existing selected academic year even when no years are active',
   expect(field.value).toBe('1')
   expect(within(field).getByRole('option', { name: '2026-2027' }).selected).toBe(true)
   expect(screen.getByRole('button', { name: /Next/ }).disabled).toBe(true)
+})
+
+it('section details and allocation open in native dialogs while keeping the directory', async () => {
+  data.sections = [{ sectionId:5, sectionName:'Section Alpha', sectionCode:'CSE-A', collegeId:1, courseId:10, branchId:7, semesterId:101, academicYearId:1, capacity:30, status:1 }]
+  render(<MemoryRouter><SectionManagement /></MemoryRouter>)
+  fireEvent.click(await screen.findByRole('link', { name:'Section Alpha' }))
+  const dialog = await screen.findByRole('dialog', { name:'Section Details' })
+  await within(dialog).findByText('Academic Mapping')
+  expect(screen.getByRole('table')).toBeTruthy()
+  fireEvent(dialog, new Event('cancel', { cancelable:true }))
+  fireEvent.click(screen.getByRole('button', { name:'Assign Students to Section Alpha' }))
+  const allocation = await screen.findByRole('dialog', { name:'Assign teacher or student' })
+  expect(within(allocation).getByRole('button', { name:/Assign Teacher/ })).toBeTruthy()
+  fireEvent(allocation, new Event('cancel', { cancelable:true }))
+  expect(screen.queryByRole('dialog')).toBeNull()
 })

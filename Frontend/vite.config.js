@@ -4,12 +4,15 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const baseUrl = (env.VITE_API_BASE_URL || 'https://stagnant-craftily-paving.ngrok-free.dev').trim().replace(/\/+$/, '')
+  const baseUrl = (env.VITE_API_BASE_URL || 'https://drivable-shaky-ferocious.ngrok-free.dev').trim().replace(/\/+$/, '')
   return {
   plugins: [react()],
   test: {
     environment: 'jsdom',
-    include: ['src/components/**/*.vitest.test.{js,jsx}', 'src/pages/admin-management/DepartmentManagement.vitest.test.jsx', 'src/pages/admin-management/AcademicYearManagement.vitest.test.jsx', 'src/config/**/*.vitest.test.{js,jsx}', 'src/features/faculty/**/*.vitest.test.{js,jsx}', 'src/pages/semester-management/**/*.vitest.test.{js,jsx}', 'src/pages/section-management/**/*.vitest.test.{js,jsx}', 'src/auth/**/*.vitest.test.{js,jsx}'],
+    pool: 'threads',
+    maxWorkers: 2,
+    setupFiles: ['./tests/browser-environment.js'],
+    include: ['src/pages/examinations/**/*.vitest.test.{js,jsx}', 'src/pages/fees/**/*.vitest.test.{js,jsx}', 'src/components/**/*.vitest.test.{js,jsx}', 'src/pages/admin-management/**/*.vitest.test.{js,jsx}', 'src/config/**/*.vitest.test.{js,jsx}', 'src/features/faculty/**/*.vitest.test.{js,jsx}', 'src/pages/semester-management/**/*.vitest.test.{js,jsx}', 'src/pages/section-management/**/*.vitest.test.{js,jsx}', 'src/auth/**/*.vitest.test.{js,jsx}'],
   },
   resolve: {
     dedupe: ['react', 'react-dom'],

@@ -1,3 +1,5 @@
+import { useScreenAccess } from '../../auth/ScreenAccess'
+import { useAcademic } from '../../context/AcademicContext'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { createPortal } from 'react-dom'
@@ -7,7 +9,6 @@ import { teachingService as liveService } from '../../services/portals/teachingS
 import { PortalDialog } from '../../components/portals/PortalUI.jsx'
 import './faculty-attendance.css'
 import './faculty-attendance-selectors.css'
-import { createAttendanceDemo } from '../../services/portals/attendanceDemo.js'
 
 const statuses = [
   ['PRESENT', 'Present'],
@@ -36,7 +37,7 @@ function Badge({ value }) {
   )
 }
 
-function download(rows, marks, notes, a, date, saved, demo) {
+function download(rows, marks, notes, a, date, saved) {
   const cell = v => `"${String(v ?? '').replace(/^[=+@-]/, "'$&").replaceAll('"', '""')}"`
   const csv = [
     ['Date', 'Subject', 'Section', 'Roll number', 'Student', 'Attendance', 'Remarks', 'Record type'],
@@ -48,7 +49,7 @@ function download(rows, marks, notes, a, date, saved, demo) {
       row.name,
       statusLabel(marks[row.id]),
       notes[row.id] || '',
-      demo ? 'Demo record only' : saved ? 'Saved session' : 'Unsaved draft'
+      saved ? 'Saved session' : 'Unsaved draft'
     ])
   ]
     .map(row => row.map(cell).join(','))
@@ -56,7 +57,7 @@ function download(rows, marks, notes, a, date, saved, demo) {
   const url = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' })),
     link = document.createElement('a')
   link.href = url
-  link.download = `${demo ? 'demo-' : ''}class-attendance-${date}${saved ? '' : '-draft'}.csv`
+  link.download = `class-attendance-${date}${saved ? '' : '-draft'}.csv`
   link.click()
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
@@ -84,40 +85,30 @@ export function FacultyAttendancePage() {
 }
 
 export default function FacultyAttendance({ data, summaryTarget }) {
-  const [demo, setDemo] = useState(() => data ? null : createAttendanceDemo(keyDate(new Date())))
-  const [liveData, setLiveData] = useState(data || null), [liveError, setLiveError] = useState(''), [attempt, setAttempt] = useState(0)
-  useEffect(() => {
-    if (demo || data) return
-    let active = true
-    liveService
-      .getSnapshot()
-      .then(result => {
-        if (active) {
-          setLiveData(result)
-          setLiveError('')
-        }
-      })
-      .catch(error => {
-        if (active) setLiveError(error.message)
-      })
-    return () => {
-      active = false
-    }
-  }, [demo, data, attempt])
+  const {selectedCollegeId,selectedAcademicYearId}=useAcademic()
+  const {canAction}=useScreenAccess()
+  const canEdit=canAction('/faculty-portal/attendance','edit'),canCreate=canAction('/faculty-portal/attendance','create')
+  const [result,setResult]=useState(null),[attempt,setAttempt]=useState(0)
+  const key=[selectedCollegeId,selectedAcademicYearId,attempt].join(':')
+  const liveData=result?.key===key?result.data:null
+  const liveError=result?.key===key?result.error:''
+  useEffect(()=>{
+    if(data)return
+    let active=true
+    liveService.getSnapshot().then(snapshot=>{if(active)setResult({key,data:snapshot,error:''})})
+      .catch(error=>{if(active)setResult({key,data:null,error:error.message || 'Unable to load college attendance.'})})
+    return()=>{active=false}
+  },[data,key])
 
-  if (!demo && !liveData)
+  if (!data && !liveData)
     return (
       <section className="fa-card">
         <Notice error={!!liveError}>{liveError || 'Loading college attendance records...'}</Notice>
         <div className="fa-header-actions">
-          <button className="fa-button" onClick={() => setDemo(createAttendanceDemo(keyDate(new Date())))}>
-            Back to mock students
-          </button>
           {liveError && (
             <button
               className="fa-button"
               onClick={() => {
-                setLiveError('')
                 setAttempt(v => v + 1)
               }}
             >
@@ -130,37 +121,36 @@ export default function FacultyAttendance({ data, summaryTarget }) {
 
   return (
     <AttendanceWorkspace
-      key={demo ? 'demo' : 'live'}
-      data={demo?.data || liveData}
-      service={demo?.api || liveService}
-      demo={!!demo}
+      key={String(selectedCollegeId)+':'+String(selectedAcademicYearId)}
+      data={data || liveData}
+      year={selectedAcademicYearId} college={selectedCollegeId} canCreate={canCreate} canEdit={canEdit}
+      service={liveService}
       summaryTarget={summaryTarget}
-      onToggleDemo={() => setDemo(demo ? null : createAttendanceDemo(keyDate(new Date())))}
     />
   )
 }
 
-function AttendanceWorkspace({ data, service, demo, onToggleDemo, summaryTarget }) {
+function AttendanceWorkspace({ data, service, year, college, canEdit, canCreate, summaryTarget }) {
   const [params] = useSearchParams()
-  const [allocationId, setAllocation] = useState(demo ? data.assignments[0]?.id : params.get('assignment') || '')
-  const [date, setDate] = useState(() => keyDate(new Date()))
-  const [dirty, setDirty] = useState(false)
-  const [pending, setPending] = useState(null)
-  const [busy, setBusy] = useState(false)
-
-  const a = data.assignments.find(row => same(row.id, allocationId))
-  const subjectOptions = [...new Map(data.assignments.map(row => [String(row.subjectId), row])).values()]
-  const semesterOptions = [...new Map(data.assignments.filter(row => !a || same(row.subjectId, a.subjectId)).map(row => [String(row.semesterId ?? row.semesterName), row])).values()]
-  const sectionOptions = [...new Map(data.assignments.filter(row => a && same(row.subjectId, a.subjectId) && same(row.semesterId ?? row.semesterName, a.semesterId ?? a.semesterName)).map(row => [String(row.sectionId), row])).values()]
-  const guard = action => { if (dirty) setPending(() => action); else action() }
-  const chooseClass = predicate => { const selected = data.assignments.find(predicate); guard(() => setAllocation(selected?.id || '')) }
-  return <div className="fa-workspace" data-demo={demo}><div className="fa-demo-bar"><div><strong>{demo ? 'Mock attendance · 8 sample students loaded' : 'Class attendance'}</strong><span>{demo ? 'Practice marking and submission. Records stay in this demo session only.' : 'Use sample students to test marking, filters and submission.'}</span></div><button type="button" className="fa-button" disabled={busy} onClick={() => guard(onToggleDemo)}>{demo ? 'Use college records' : 'Use mock students'}</button></div><section className="fa-card fa-context"><header><div><span className="fa-eyebrow">CLASSROOM ATTENDANCE</span><h2>Choose your class</h2><p>Select the assigned subject, semester, and section to open its register.</p></div><span className="fa-context-icon"><FiCalendar /></span></header><div className="fa-context-fields"><label>Subject<select disabled={busy || !subjectOptions.length} value={a?.subjectId || ''} onChange={e => chooseClass(row => same(row.subjectId, e.target.value))}><option value="">Select subject</option>{subjectOptions.map(row => <option key={row.subjectId} value={row.subjectId}>{row.subjectName}{row.subjectCode ? ` (${row.subjectCode})` : ''}</option>)}</select></label><label>Semester<select disabled={busy || !a} value={a ? String(a.semesterId ?? a.semesterName) : ''} onChange={e => chooseClass(row => same(row.subjectId, a?.subjectId) && same(row.semesterId ?? row.semesterName, e.target.value))}><option value="">Select semester</option>{semesterOptions.map(row => <option key={row.semesterId ?? row.semesterName} value={row.semesterId ?? row.semesterName}>{row.semesterName || `Semester ${row.semesterId}`}</option>)}</select></label><label>Section<select disabled={busy || !a} value={a?.sectionId || ''} onChange={e => chooseClass(row => same(row.subjectId, a?.subjectId) && same(row.semesterId ?? row.semesterName, a?.semesterId ?? a?.semesterName) && same(row.sectionId, e.target.value))}><option value="">Select section</option>{sectionOptions.map(row => <option key={row.sectionId} value={row.sectionId}>{row.sectionName}</option>)}</select></label><label>Attendance date<input disabled={busy} type="date" max={keyDate(new Date())} value={date} onChange={e => { const value = e.target.value; if (value) guard(() => setDate(value)) }} /></label></div>{a && <div className="fa-context-tags"><span>{a.subjectCode || a.subjectName}</span><span>{a.semesterName || `Semester ${a.semesterId}`}</span><span>{a.sectionName}</span><span>{a.academicYearName || 'Academic year not configured'}</span></div>}</section>
-    {!a ? <section className="fa-card fa-start"><FiCheckSquare /><h2>Your class register, ready when you are</h2><p>Select an assigned class above to mark attendance, review saved sessions, and view your recent attendance history.</p><div><span><FiUsers />Assigned students only</span><span><FiCheckCircle />Review before submitting</span><span><FiClock />Recent session history</span></div>{!data.assignments.length && <Notice>No teaching allocations found. Contact your academic coordinator to assign a subject and section.</Notice>}</section> : <ClassRegister key={`${a.id}:${date}`} service={service} demo={demo} summaryTarget={summaryTarget} a={a} data={data} date={date} guard={guard} onDirty={setDirty} onBusy={setBusy} />}
+  const assignments=data.assignments.filter(row=>(!year||same(row.academicYearId,year))&&(!college||!row.collegeId||same(row.collegeId,college)))
+  const fields=[['branchId','Branch','branchName'],['semesterId','Semester','semesterName'],['sectionId','Section','sectionName'],['subjectId','Subject','subjectName']]
+  const [scope,setScope]=useState(()=>{const linked=assignments.find(row=>same(row.id,params.get('assignment')));return linked?Object.fromEntries(fields.map(([key])=>[key,String(linked[key]??'')])):{}})
+  const [date,setDate]=useState(()=>params.get('date')||keyDate(new Date()))
+  const [dirty,setDirty]=useState(false),[pending,setPending]=useState(null),[busy,setBusy]=useState(false)
+  const candidates=assignments.filter(row=>fields.every(([key])=>same(row[key],scope[key])))
+  const a=fields.every(([key])=>scope[key]) && candidates.length===1 ? candidates[0] : null
+  const guard=action=>{if(dirty)setPending(()=>action);else action()}
+  return <div className="fa-workspace"><section className="fa-card fa-context"><header><div><h2>Choose your class</h2><p>Attendance is limited to your assigned classes in the working academic year.</p></div><FiCalendar/></header><div className="fa-context-fields">{fields.map(([key,label,name],index)=>{
+    const parents=fields.slice(0,index)
+    const options=[...new Map(assignments.filter(row=>parents.every(([parent])=>scope[parent]&&same(row[parent],scope[parent]))&&row[key]).map(row=>[String(row[key]),row])).values()]
+    return <label key={key}>{label}<select value={scope[key]||''} disabled={busy||!options.length} onChange={event=>{const value=event.target.value;guard(()=>setScope({...Object.fromEntries(parents.map(([parent])=>[parent,scope[parent]])),[key]:value}))}}><option value="">Select {label.toLowerCase()}</option>{options.map(row=><option key={row[key]} value={row[key]}>{row[name]||label+' '+row[key]}</option>)}</select></label>
+  })}<label>Attendance date<input type="date" value={date} max={keyDate(new Date())} disabled={busy} onChange={event=>{const value=event.target.value;if(value)guard(()=>setDate(value))}}/></label></div></section>
+    {!a ? <section className="fa-card fa-start"><FiCheckSquare /><h2>Your class register, ready when you are</h2><p>Select an assigned class above to mark attendance, review saved sessions, and view your recent attendance history.</p><div><span><FiUsers />Assigned students only</span><span><FiCheckCircle />Review before submitting</span><span><FiClock />Recent session history</span></div>{!assignments.length && <Notice>No teaching allocations found. Contact your academic coordinator to assign a subject and section.</Notice>}</section> : <ClassRegister key={`${a.id}:${date}`} service={service} canCreate={canCreate} canEdit={canEdit} onDate={value=>guard(()=>setDate(value))} summaryTarget={summaryTarget} a={a} date={date} guard={guard} onDirty={setDirty} onBusy={setBusy} />}
     {pending && <PortalDialog title="Discard unsaved attendance?" onClose={() => setPending(null)}><p>Your current register has unsaved changes. Discard them and open the selected class or date?</p><div className="portal-actions"><button onClick={() => setPending(null)}>Keep editing</button><button className="primary" onClick={() => { const action = pending; setPending(null); setDirty(false); action() }}>Discard changes</button></div></PortalDialog>}
   </div>
 }
 
-function ClassRegister({ a, data, date, guard, onDirty, onBusy, service, demo, summaryTarget }) {
+function ClassRegister({ a, date, guard, onDirty, onBusy, service, canCreate, canEdit, onDate, summaryTarget }) {
   const [sessions, setSessions] = useState([])
   const [sessionId, setSessionId] = useState('')
   const [history, setHistory] = useState([])
@@ -169,6 +159,7 @@ function ClassRegister({ a, data, date, guard, onDirty, onBusy, service, demo, s
   const [loading, setLoading] = useState(true)
   const [attempt, setAttempt] = useState(0)
   const [saving, setSaving] = useState(false)
+  const [correction,setCorrection]=useState(false),[correctionError,setCorrectionError]=useState('')
 
   useEffect(() => {
     let active = true
@@ -197,10 +188,12 @@ function ClassRegister({ a, data, date, guard, onDirty, onBusy, service, demo, s
   }, [a.id, date, attempt, service])
 
   const retry = () => {
-    setError('')
+    setError('');setHistoryError('')
     setLoading(true)
     setAttempt(v => v + 1)
   }
+  const selectedSession=sessions.find(row=>same(row.attendanceSessionId,sessionId))
+  const reopen=async()=>{if(!canEdit||saving||!selectedSession)return;setSaving(true);onBusy(true);setCorrectionError('');try{await service.reopenAttendance(a.id,date,sessionId);setCorrection(false);retry()}catch(error){setCorrectionError(error.message)}finally{setSaving(false);onBusy(false)}}
   const saved = async () => {
     onDirty(false)
     try {
@@ -248,19 +241,15 @@ function ClassRegister({ a, data, date, guard, onDirty, onBusy, service, demo, s
             </section>
           )}
 
+          {canEdit && selectedSession?.sessionStatus==='COMPLETED' && <button type="button" className="fa-button" onClick={()=>setCorrection(true)}>Reopen for correction</button>}{correction && <PortalDialog title="Reopen attendance?" onClose={()=>{if(!saving)setCorrection(false)}}><p>Reopen this completed session to correct its saved marks.</p>{correctionError && <Notice error>{correctionError}</Notice>}<button type="button" disabled={saving} onClick={reopen}>Confirm reopen</button></PortalDialog>}
           <RegisterSheet
             key={`${sessionId || 'new'}:${attempt}`}
             service={service}
-            demo={demo}
+            writable={selectedSession ? canEdit : canCreate}
             summaryTarget={summaryTarget}
             a={a}
             date={date}
             session={sessions.find(row => same(row.attendanceSessionId, sessionId))}
-            students={data.students.filter(row => same(row.sectionId, a.sectionId))}
-            rosterUnavailable={data.warnings.some(
-              message =>
-                message.startsWith(`Students in section ${a.sectionId}:`) || message.startsWith('Students:')
-            )}
             onDirty={onDirty}
             onBusy={value => {
               setSaving(value)
@@ -277,7 +266,7 @@ function ClassRegister({ a, data, date, guard, onDirty, onBusy, service, demo, s
           <div className="fa-history-summary-title">
             <FiClock />
             <strong>Recent Attendance Sessions</strong>
-            <span>({history.length} completed sessions in the last 30 days)</span>
+            <span>({history.length} sessions in the last 30 days)</span>
           </div>
           <span className="fa-history-badge">{history.length} sessions</span>
         </summary>
@@ -288,7 +277,7 @@ function ClassRegister({ a, data, date, guard, onDirty, onBusy, service, demo, s
           </div>
         </header>
         {historyError ? (
-          <Notice error>{historyError}</Notice>
+          <Notice error>{historyError} <button type="button" onClick={()=>guard(retry)}>Retry history</button></Notice>
         ) : (
           <div className="fa-table-scroll">
             <table className="fa-table">
@@ -305,7 +294,7 @@ function ClassRegister({ a, data, date, guard, onDirty, onBusy, service, demo, s
                 {history.length ? (
                   history.map(row => (
                     <tr key={row.attendanceSessionId}>
-                      <td>{String(row.attendanceDate || '').slice(0, 10)}</td>
+                      <td><button type="button" onClick={()=>onDate(String(row.attendanceDate || '').slice(0,10))}>{String(row.attendanceDate || '').slice(0,10)}</button></td>
                       <td>{row.subjectName || a.subjectName}</td>
                       <td>{row.sectionName || a.sectionName}</td>
                       <td>{row.slotName || `#${row.attendanceSessionId}`}</td>
@@ -340,16 +329,14 @@ function RegisterSheet({
   a,
   date,
   session,
-  students,
-  rosterUnavailable,
   onDirty,
   onBusy,
   onSaved,
   service,
-  demo,
+  writable,
   summaryTarget
 }) {
-  const [roster, setRoster] = useState(students)
+  const [roster, setRoster] = useState([])
   const [marks, setMarks] = useState({})
   const [notes, setNotes] = useState({})
   const [baseline, setBaseline] = useState({ marks: {}, notes: {} })
@@ -363,21 +350,21 @@ function RegisterSheet({
   const [error, setError] = useState('')
   const [loadError, setLoadError] = useState('')
   const [notice, setNotice] = useState('')
-  const [loading, setLoading] = useState(!!session)
+  const [loading, setLoading] = useState(true)
+  const [rosterAttempt,setRosterAttempt]=useState(0)
   const [busy, setBusy] = useState(false)
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
-    if (!session) return
     let active = true
-    service
-      .getSessionRoster(a.id, date, session.attendanceSessionId)
+    const read=session?service.getSessionRoster(a.id,date,session.attendanceSessionId):service.getClassRoster(a.id).then(students=>({students}))
+    read
       .then(result => {
         if (!active) return
         const rows = result.students.map(row => ({
           ...row,
-          id: String(row.studentId),
-          name: row.studentName || row.fullName || 'Student',
+          id: String(row.studentId ?? row.id),
+          name: row.studentName || row.fullName || row.name || 'Student',
           rollNumber: row.studentCode || row.rollNumber || '—'
         }))
         const values = Object.fromEntries(
@@ -401,10 +388,10 @@ function RegisterSheet({
     return () => {
       active = false
     }
-  }, [a.id, date, session, service])
+  }, [a.id, date, session, service, rosterAttempt])
 
-  const locked = saved || (!!session && session.sessionStatus !== 'OPEN')
-  const blocked = busy || loading || !!loadError || (!session && rosterUnavailable)
+  const locked = !writable || saved || (!!session && session.sessionStatus !== 'OPEN')
+  const blocked = busy || loading || !!loadError
   const marked = roster.filter(row => marks[row.id]).length
   const count = status => roster.filter(row => marks[row.id] === status).length
   const filtered = roster.filter(
@@ -455,6 +442,7 @@ function RegisterSheet({
   }
 
   const submit = async () => {
+    if(locked || blocked || !roster.length || marked!==roster.length)return
     setBusy(true)
     onBusy(true)
     setError('')
@@ -464,7 +452,7 @@ function RegisterSheet({
         date,
         sessionId: session?.attendanceSessionId,
         records: roster.map(row => ({
-          studentId: demo ? row.id : Number(row.id),
+          studentId: Number(row.id),
           attendanceStatus: marks[row.id],
           remarks: notes[row.id] || null
         }))
@@ -473,11 +461,7 @@ function RegisterSheet({
       setDialog(null)
       setSelected([])
       onDirty(false)
-      setNotice(
-        demo
-          ? 'Demo attendance saved locally.'
-          : 'Attendance submitted successfully. This session is locked.'
-      )
+      setNotice('Attendance submitted successfully. This session is locked.')
       await onSaved()
     } catch (e) {
       setError(e.message)
@@ -555,7 +539,7 @@ function RegisterSheet({
             <button
               className="fa-button"
               disabled={loading || !roster.length || !!loadError}
-              onClick={() => download(roster, marks, notes, a, date, locked, demo)}
+              onClick={() => download(roster, marks, notes, a, date, locked)}
             >
               <FiDownload /> Export CSV
             </button>
@@ -563,14 +547,9 @@ function RegisterSheet({
         </header>
 
         {notice && <Notice>{notice}</Notice>}
-        {error && <Notice error>{error}</Notice>}
-        {loadError && <Notice error>{loadError}</Notice>}
+        {error && !dialog && <Notice error>{error}</Notice>}
+        {loadError && <Notice error>{loadError} <button type="button" onClick={()=>{setLoading(true);setLoadError('');setRosterAttempt(value=>value+1)}}>Retry roster</button></Notice>}
         {loading && <Notice>Loading saved attendance records...</Notice>}
-        {!session && rosterUnavailable && (
-          <Notice error>
-            Student records could not be loaded. Submission is unavailable until the roster is restored.
-          </Notice>
-        )}
         {locked && !notice && (
           <Notice>This attendance session is finalized and read-only. Editing is disabled.</Notice>
         )}
@@ -943,9 +922,7 @@ function RegisterSheet({
                   ))}
                 </div>
                 <p className="fa-review-disclaimer">
-                  {demo
-                    ? 'Demo submission only. Records are stored in this preview session.'
-                    : 'Once submitted, this attendance session will be locked and finalized.'}
+                  Once submitted, this attendance session will be locked and finalized.
                 </p>
               </>
             ) : (

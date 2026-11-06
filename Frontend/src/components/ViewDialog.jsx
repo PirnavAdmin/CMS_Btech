@@ -12,8 +12,10 @@ export default function ViewDialog({
   exportFilename,
   recordSections,
   footerActions,
-  maxWidth = '860px',
+  maxWidth = '720px',
   hideFooter = false,
+  showExport = true,
+  busy = false,
 }) {
   const dialog = useRef(null)
 
@@ -21,11 +23,14 @@ export default function ViewDialog({
     const element = dialog.current
     if (!element) return
     const previousFocus = document.activeElement
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
     if (!element.open) {
       element.showModal()
     }
     return () => {
       element.close()
+      document.body.style.overflow = previousOverflow
       previousFocus?.focus()
     }
   }, [])
@@ -39,10 +44,10 @@ export default function ViewDialog({
       style={{ maxWidth }}
       onCancel={(event) => {
         event.preventDefault()
-        onClose?.()
+        if (!busy) onClose?.()
       }}
       onClick={(event) => {
-        if (event.target === dialog.current) onClose?.()
+        if (!busy && event.target === dialog.current) onClose?.()
       }}
     >
       <header className="shared-view-dialog__header">
@@ -58,18 +63,19 @@ export default function ViewDialog({
           </div>
         </div>
         <div className="shared-view-dialog__actions">
-          <ExportMenu
+          {showExport && <ExportMenu
             mode="single"
             title={title}
             filename={exportFilename || title}
             recordSections={recordSections}
-          />
+          />}
           <button
             type="button"
             className="shared-view-dialog__close-btn"
             aria-label="Close details"
             title="Close"
             onClick={onClose}
+            disabled={busy}
           >
             <FiX size={18} />
           </button>

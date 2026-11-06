@@ -48,15 +48,15 @@
 }
 
 .compact-summary__item--active strong {
-  color: var(--success, #125AA8) !important;
+  color: var(--success, var(--brand-hover)) !important;
 }
 
 .compact-summary__item--warning strong {
-  color: #1769C2 !important;
+  color: var(--brand) !important;
 }
 
 .compact-summary__item--upcoming strong {
-  color: var(--brand, #1769C2) !important;
+  color: var(--brand, var(--brand)) !important;
 }
 
 .compact-summary__item--inactive strong {
@@ -64,15 +64,15 @@
 }
 
 .compact-summary__item--archived strong {
-  color: #64748b !important;
+  color: var(--text-muted) !important;
 }
 
 .compact-summary__item--completed strong {
-  color: #1769C2 !important;
+  color: var(--brand) !important;
 }
 
 .compact-summary__item--danger strong {
-  color: var(--danger, #dc2626) !important;
+  color: var(--danger, var(--danger)) !important;
 }
 
 @media (max-width: 620px) {

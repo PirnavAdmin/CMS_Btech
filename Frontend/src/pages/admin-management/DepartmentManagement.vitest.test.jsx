@@ -6,6 +6,7 @@ import { DepartmentManagement } from './AdminManagement'
 import { createDepartment, getDepartments, getDepartmentById, searchDepartments, updateDepartment, updateDepartmentStatus } from '../../auth/collegeApi'
 
 const fixture = vi.hoisted(() => ({ collegeId: '7', rows: [] }))
+vi.mock('../../auth/ScreenAccess', () => ({ useScreenAccess: () => ({ canAction: () => true }) }))
 vi.mock('../../layouts/DashboardLayout', () => ({ default: ({ children }) => <>{children}</> }))
 vi.mock('../../components/ExportMenu', () => ({ default: () => <button type="button">Export</button>, PrintDetailsButton: () => null }))
 vi.mock('../../context/AcademicContext', () => ({ useAcademic: () => ({ selectedCollegeId: fixture.collegeId, selectedCollege: { id: fixture.collegeId, name: 'Selected college' }, scopeRecords: rows => rows.filter(row => String(row.collegeNumericId ?? row.collegeId) === fixture.collegeId) }) }))
@@ -56,7 +57,7 @@ test('new form retains required controls without a preview, native field transfo
  mount(); await openAdd(); expect(screen.getByLabelText(/Department Name/).required).toBe(true); fill()
  fireEvent.change(screen.getByLabelText('Start Date'), { target: { value: '2026-08-01' } }); fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Configured department' } })
  expect(screen.queryByLabelText('Department preview')).toBeNull(); expect(screen.queryByText('Real-time sync')).toBeNull()
- expect(document.querySelector('.erp-form-page [data-without-live-preview="true"]')).toBeTruthy(); expect(screen.getByLabelText(/Department Code/).value).toBe('CSE')
+ expect(document.querySelector('.erp-form-page[data-without-live-preview="true"]')).toBeTruthy(); expect(screen.getByLabelText(/Department Code/).value).toBe('CSE')
  fireEvent.click(screen.getByRole('button', { name: 'Create Department' })); await waitFor(() => expect(createDepartment).toHaveBeenCalledTimes(1))
  expect(createDepartment.mock.calls[0][0]).toEqual({ departmentName: 'Computer Science', departmentCode: 'CSE', collegeId: 7, description: 'Configured department', startDate: '2026-08-01', endDate: null, StartDate: '2026-08-01', EndDate: null, start_date: '2026-08-01', end_date: null })
  await screen.findByRole('heading', { name: 'Department Management' })
@@ -72,7 +73,7 @@ test('duplicate validation remains visible and does not submit a new record', as
 })
 test('existing details and HOD actions remain connected after table migration', async () => {
  mount(); fireEvent.click(await screen.findByRole('button', { name: 'Department A' })); await screen.findByRole('heading', { name: 'Department A' }); expect(getDepartmentById).toHaveBeenCalledWith(1)
- fireEvent.click(screen.getByRole('button', { name: /Back/ })); fireEvent.click(await screen.findByRole('button', { name: 'Assign Head for Department A' })); await screen.findByRole('dialog', { name: 'Assign Head / In-Charge' }); expect(screen.getByRole('button', { name: 'Assign Head' }).disabled).toBe(true)
+ fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Close', exact: true })); fireEvent.click(await screen.findByRole('button', { name: 'Assign Head for Department A' })); await screen.findByRole('dialog', { name: 'Assign Head / In-Charge' }); expect(screen.getByRole('button', { name: 'Assign Head' }).disabled).toBe(true)
  fireEvent.click(screen.getByRole('button', { name: 'Select Faculty Member' })); fireEvent.click(await screen.findByRole('option', { name: /Configured faculty/ })); fireEvent.click(screen.getByRole('button', { name: 'Assign Head' }))
  await waitFor(() => expect(updateDepartment).toHaveBeenCalledTimes(1)); expect(updateDepartment.mock.calls[0][0]).toBe(1); expect(updateDepartment.mock.calls[0][1].hodUserId).toBe(121)
 })

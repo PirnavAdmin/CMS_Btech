@@ -1,7 +1,11 @@
+import PageHeader from '../../components/PageHeader'
+import TablePagination from '../../components/TablePagination'
+import ViewDialog from '../../components/ViewDialog'
+import { useScreenAccess } from '../../auth/ScreenAccess'
 import { ProjectSelect } from '../../components/SearchableSelect'
 import { collegeStorageKey } from '../../utils/collegeScope.js'
 import useCollegeState from '../../hooks/useCollegeState'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import StatusBadge from '../../components/StatusBadge'
 import FilterPanel from '../../components/FilterPanel'
@@ -12,56 +16,9 @@ import { useAcademic } from '../../context/AcademicContext'
 import { creditManagementApi, studentApi } from '../../api/apiEndpoints'
 import subjectService from '../../services/subjectService'
 import academicService from '../../services/academicService'
-import { enrichSubject, idOf } from '../../utils/subjectDirectory'
+import { enrichSubject } from '../../utils/subjectDirectory'
 import './CreditsManagement.css'
-import { FiAlertCircle, FiAlertTriangle, FiArrowDown, FiCheck, FiCheckCircle, FiLayers } from 'react-icons/fi'
-
-const STORAGE_KEYS = {
-  students: 'cms-credit-students-v1',
-  credits: 'cms-student-credits-v1',
-  subjects: 'cms-credit-subjects-v1',
-  framework: 'cms-credit-framework-v1',
-  audit: 'cms-credit-audit-v1',
-}
-
-const BATCHES = [
-  '2019-2023',
-  '2020-2024',
-  '2021-2025',
-  '2022-2026',
-  '2023-2027',
-  '2024-2028',
-  '2025-2029',
-]
-
-const ACADEMIC_YEARS = [
-  '2023-2024',
-  '2024-2025',
-  '2025-2026',
-  '2026-2027',
-]
-
-const SEMESTERS = [
-  'Semester 1',
-  'Semester 2',
-  'Semester 3',
-  'Semester 4',
-  'Semester 5',
-  'Semester 6',
-  'Semester 7',
-  'Semester 8',
-]
-
-const BRANCHES = ['CSE', 'ECE', 'ME', 'EEE']
-
-const COURSES = ['B.Tech', 'M.Tech', 'BCA', 'MCA']
-
-const STUDENT_YEARS = [
-  '1st Year',
-  '2nd Year',
-  '3rd Year',
-  '4th Year',
-]
+import { FiAlertCircle, FiAlertTriangle, FiCheck, FiCheckCircle } from 'react-icons/fi'
 
 const SUBJECT_TYPES = [
   'Core',
@@ -86,11 +43,7 @@ const GRADE_OPTIONS = [
   { grade: 'F', point: 0 },
 ]
 
-const DEFAULT_STUDENTS = []
 
-const DEFAULT_SUBJECTS = []
-
-const DEFAULT_CREDITS = []
 
 const DEFAULT_FRAMEWORK = {
   totalProgramCredits: 160,
@@ -101,26 +54,6 @@ const DEFAULT_FRAMEWORK = {
   requiredElectiveCredits: 18,
   requiredProjectCredits: 15,
   requiredMandatoryCredits: 12,
-}
-
-const DEFAULT_AUDIT = []
-
-function getStoredData(key, fallback) {
-  try {
-    const value = localStorage.getItem(collegeStorageKey(key))
-
-    if (!value) {
-      return fallback
-    }
-
-    return JSON.parse(value)
-  } catch {
-    return fallback
-  }
-}
-
-function saveData(key, data) {
-  localStorage.setItem(collegeStorageKey(key), JSON.stringify(data))
 }
 
 function normalizeAcademicYear(value) {
@@ -148,7 +81,7 @@ function createId(prefix) {
   return `${prefix}-${Date.now()}`
 }
 
-const FALLBACK_ACADEMIC_YEAR = '2026-2027'
+const FALLBACK_ACADEMIC_YEAR = ''
 
 function emptyFilters(academicYear = FALLBACK_ACADEMIC_YEAR) {
   return {
@@ -159,53 +92,6 @@ function emptyFilters(academicYear = FALLBACK_ACADEMIC_YEAR) {
     year: 'All Years',
     course: 'All Courses',
   }
-}
-
-function FilterIcon({ className = '' }) {
-  return (
-    <svg
-      viewBox="0 0 20 20"
-      className={className}
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      <path
-        d="M2 4.5H18L12.2 10.4V15.5L7.8 17V10.4L2 4.5Z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-
-function FilterSelect({
-  label,
-  value,
-  onChange,
-  options,
-}) {
-  return (
-    <div className="cm-filter-field">
-      <label>{label}</label>
-
-      <div className="cm-filter-select-wrap">
-        <ProjectSelect value={value} onChange={(e) => onChange(e.target.value)}>
-          {options.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </ProjectSelect>
-
-        <span className="cm-filter-select-caret" aria-hidden="true">
-          ▾
-        </span>
-      </div>
-    </div>
-  )
 }
 
 function StatCard({ title, value, subtitle, icon }) {
@@ -236,12 +122,26 @@ function EmptyState({ title, message }) {
 }
 
 function CreditsManagement() {
-  const { activeAcademicYears, currentAcademicYear } = useAcademic()
-  const activeTab = 'subjects'
+  const { activeAcademicYears = [], currentAcademicYear, selectedAcademicYear, selectedCollegeId, selectedAcademicYearId, scopeRecords } = useAcademic()
+  const { canAction } = useScreenAccess()
+  const canEdit = canAction('/credits-management','edit'), canCreate = canAction('/credits-management','create')
+  const [creditSaving, setCreditSaving] = useState(false)
+  const [creditLoadError,setCreditLoadError] = useState('')
+  const creditRequest = useRef(0)
+  const workingScope = useRef('')
+  const scopeKey = String(selectedCollegeId)+':'+String(selectedAcademicYearId)
+  workingScope.current = scopeKey
+  const [activeTab, setActiveTab] = useState('subjects')
+  const [registrationPage, setRegistrationPage] = useState(1)
+  const [registrationStatus, setRegistrationStatus] = useState('')
+  const registrationLock = useRef(false), registrationProgress = useRef({})
+  const [dropTarget,setDropTarget] = useState(null)
+  const [viewRegistration,setViewRegistration] = useState(null)
+  const configProgress = useRef({})
 
   const activeAcademicYear =
     normalizeAcademicYear(
-      activeAcademicYears[0]?.academicYearName ||
+      selectedAcademicYear?.name || selectedAcademicYear?.academicYearName || activeAcademicYears[0]?.academicYearName ||
         activeAcademicYears[0]?.name ||
         currentAcademicYear?.academicYearName ||
         currentAcademicYear?.name ||
@@ -255,7 +155,7 @@ function CreditsManagement() {
   const [credits, setCredits] = useCollegeState([], { students, subjects })
 
   const [framework] = useState(() =>
-    getStoredData(STORAGE_KEYS.framework, DEFAULT_FRAMEWORK)
+    Object.fromEntries(Object.keys(DEFAULT_FRAMEWORK).map(key => [key, '']))
   )
 
   const [auditLogs, setAuditLogs] = useCollegeState([])
@@ -265,10 +165,17 @@ function CreditsManagement() {
   const [masterSemesters, setMasterSemesters] = useCollegeState([])
   const [masterYears, setMasterYears] = useState([])
   const [masterDepartments, setMasterDepartments] = useCollegeState([])
+  const values = (rows, keys) => [...new Set(rows.map(row => keys.map(key => row[key]).find(value => value != null && value !== '')).filter(Boolean))]
+  const ACADEMIC_YEARS = values(masterYears,['academicYearName','name'])
+  const SEMESTERS = values(masterSemesters,['semesterName','name'])
+  const BRANCHES = values(masterBranches,['branchName','name'])
+  const COURSES = values(masterCourses,['courseName','name'])
   const [subjectFilters, setSubjectFilters] = useState({ academicYearId: '', courseId: '', branchId: '', level: '', semesterId: '' })
   const [subjectApiError, setSubjectApiError] = useState('')
   const [creditDashboard, setCreditDashboard] = useState(null)
   const [creditSummary, setCreditSummary] = useState(null)
+  const [creditSummaryError,setCreditSummaryError] = useState('')
+  const [summaryAttempt,setSummaryAttempt] = useState(0)
 
   const [dashboardFilters, setDashboardFilters] = useState(emptyFilters())
   const [studentFilters, setStudentFilters] = useState(emptyFilters())
@@ -288,7 +195,8 @@ function CreditsManagement() {
   const [creditForm, setCreditForm] = useState({
     studentId: '',
     subjectId: '',
-    grade: 'A',
+    grade: '',
+      registrationStatus: 'REGISTERED',
     attempt: 1,
   })
 
@@ -296,11 +204,11 @@ function CreditsManagement() {
     code: '',
     name: '',
     shortName: '',
-    branch: 'CSE',
-    course: 'B.Tech',
-    regulation: 'R22',
-    semester: 'Semester 5',
-    academicYear: '2025-2026',
+    branch: '',
+    course: '',
+    regulation: '',
+    semester: '',
+    academicYear: activeAcademicYear,
     type: 'Core',
     category: 'PCC',
     lectureHours: 3,
@@ -359,19 +267,22 @@ function CreditsManagement() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const reloadCreditData = async () => {
-    setCreditLoading(true)
+  const reloadCreditData = async ({ propagate = false } = {}) => {
+    if(workingScope.current !== scopeKey)return
+    const requestVersion = ++creditRequest.current
+    setCreditLoading(true);setCreditLoadError('')
     let subjectLoadError = ''
     let subjectRowsPromise = Promise.resolve([])
     try {
       subjectRowsPromise = subjectService.getSubjects({ liveOnly: true })
-        .then(rows => { setSubjectApiError(''); return rows })
-        .catch(error => { subjectLoadError = error.message || 'Unable to load subjects from the Subject API.'; setSubjectApiError(subjectLoadError); return [] })
-      const [studentRows, subjectRows, registrationRows, courseRows, branchRows, semesterRows, yearRows, departmentRows, dashboard] = await Promise.all([
+        .then(rows => { if(requestVersion===creditRequest.current && workingScope.current===scopeKey)setSubjectApiError(''); return rows })
+        .catch(error => { subjectLoadError = error.message || 'Unable to load subjects from the Subject API.'; if(requestVersion===creditRequest.current && workingScope.current===scopeKey)setSubjectApiError(subjectLoadError); return [] })
+      const [studentRows, subjectRows, registrationRows, courseRows, branchRows, semesterRows, yearRows, departmentRows, dashboard, configurations] = await Promise.all([
         studentApi.getAll(), subjectRowsPromise,
-        creditManagementApi.getRegistrations({ status: 1 }), academicService.getCourses(), academicService.getBranches(), academicService.getSemesters(),
-        academicService.getAcademicYears(), academicService.getDepartments(), creditManagementApi.getDashboard().catch(() => null),
+        creditManagementApi.getRegistrations({ status: 1, academicYearId: selectedAcademicYearId || undefined }), academicService.getCourses(), academicService.getBranches(), academicService.getSemesters(),
+        academicService.getAcademicYears(), academicService.getDepartments(), creditManagementApi.getDashboard({academicYearId:selectedAcademicYearId || undefined}).catch(() => null), creditManagementApi.getConfigurations(),
       ])
+      if (requestVersion !== creditRequest.current || workingScope.current !== scopeKey) return
       const courseList = Array.isArray(courseRows) ? courseRows : []
       const branchList = Array.isArray(branchRows) ? branchRows : []
       const semesterList = Array.isArray(semesterRows) ? semesterRows : []
@@ -388,33 +299,41 @@ function CreditsManagement() {
       }).filter(row => row.id && row.id !== 'undefined')
       const subjectById = new Map((subjectRows || []).map(row => [String(row.subjectId ?? row.id), row]))
       const subjectsLive = [...subjectById.entries()].map(([id, row]) => {
+        const config = (configurations || []).find(item => String(item.subjectId) === id && ['courseId','branchId','semesterId'].every(key => String(item[key]) === String(row[key])))
         const subjectStatus = row.status
         const isActive = subjectStatus === undefined || subjectStatus === null || subjectStatus === true || Number(subjectStatus) === 1 || String(subjectStatus).toLowerCase() === 'active'
         const enriched = enrichSubject(row, { courses: courseList, branches: branchList, semesters: semesterList, years: yearList, departments: departmentList })
-        return { ...enriched, id, subjectId: id, code: row.subjectCode || row.code || '', name: row.subjectName || row.name || '', credits: row.credits ?? null, type: row.subjectType || row.type || '', status: isActive ? 'Active' : 'Inactive', shortName: row.shortName || '' }
+        return { ...enriched, id, subjectId: id, minimumCredits: config?.minimumCredits ?? 0, maximumCredits: config?.maximumCredits ?? null, configurationId: config?.creditConfigurationId ?? config?.configurationId ?? config?.id, code: row.subjectCode || row.code || '', name: row.subjectName || row.name || '', configurationActive: config ? Number(config.status) === 1 || config.status === true || String(config.status).toLowerCase() === 'active' : false, credits: config?.credits ?? row.credits ?? null, type: row.subjectType || row.type || '', status: isActive ? 'Active' : 'Inactive', shortName: row.shortName || '' }
       })
       const creditsLive = (registrationRows || []).map(row => {
         const subject = subjectById.get(String(row.subjectId)) || {}
         const student = studentsLive.find(item => String(item.id) === String(row.studentId)) || {}
         const registrationStatus = String(row.registrationStatus || '').toUpperCase()
-        return { ...row, id: String(row.studentCreditRegistrationId ?? row.id), studentId: String(row.studentId), subjectId: String(row.subjectId), subjectCode: row.subjectCode || subject.subjectCode || subject.code || '', subjectName: row.subjectName || subject.subjectName || subject.name || '', credits: Number(row.registeredCredits || 0), semesterId: row.semesterId, semester: row.semesterName || semesterList.find(item => String(item.semesterId ?? item.id) === String(row.semesterId))?.semesterName || '', academicYearId: row.academicYearId, academicYear: row.academicYearName || activeAcademicYear, grade: row.grade || '', gradePoint: Number(row.gradePoints || 0), status: registrationStatus === 'COMPLETED' ? 'Completed' : registrationStatus === 'FAILED' ? 'Failed' : registrationStatus === 'DROPPED' ? 'Dropped' : 'Registered', type: subject.subjectType || subject.type || 'Core', attempt: Number(row.attempt || 1), studentName: row.studentName || student.name }
+        return { ...row, id: String(row.studentCreditRegistrationId ?? row.id), studentId: String(row.studentId), subjectId: String(row.subjectId), subjectCode: row.subjectCode || subject.subjectCode || subject.code || '', subjectName: row.subjectName || subject.subjectName || subject.name || '', credits: row.registeredCredits == null ? null : Number(row.registeredCredits), semesterId: row.semesterId, semester: row.semesterName || semesterList.find(item => String(item.semesterId ?? item.id) === String(row.semesterId))?.semesterName || '', academicYearId: row.academicYearId, academicYear: row.academicYearName || activeAcademicYear, grade: row.grade || '', gradePoint: row.gradePoints == null ? null : Number(row.gradePoints), status: registrationStatus === 'COMPLETED' ? 'Completed' : registrationStatus === 'FAILED' ? 'Failed' : registrationStatus === 'DROPPED' ? 'Dropped' : registrationStatus === 'REGISTERED' ? 'Registered' : 'Not provided', type: subject.subjectType || subject.type || 'Core', attempt: row.attempt == null ? null : Number(row.attempt), studentName: row.studentName || student.name }
       }).filter(row => row.id && row.id !== 'undefined')
-      setStudents(studentsLive); setSubjects(subjectsLive); setCredits(creditsLive)
+      setStudents(scopeRecords(studentsLive).filter(row=>!selectedAcademicYearId || String(row.academicYearId)===String(selectedAcademicYearId))); setSubjects(scopeRecords(subjectsLive)); setCredits(creditsLive)
       setMasterCourses(courseList); setMasterBranches(branchList); setMasterSemesters(semesterList); setMasterYears(yearList); setMasterDepartments(departmentList)
       setCreditDashboard(dashboard)
+      if (propagate && subjectLoadError) throw new Error(subjectLoadError)
     } catch (error) {
       // The subject table already shows its own retry state; don't repeat the same
       // backend failure in the page-level alert when that request also failed.
       await subjectRowsPromise
+      if (requestVersion !== creditRequest.current || workingScope.current!==scopeKey) return
+      setCreditLoadError(error.message || 'Unable to load credit data.');setCredits([]);setSubjects([])
       if (!subjectLoadError || activeTab !== 'subjects') showNotice('error', error.message || 'Unable to load credit management data from the API.')
+      if (propagate) throw error
     }
-    finally { setCreditLoading(false) }
+    finally { if (requestVersion === creditRequest.current) setCreditLoading(false) }
   }
-  useEffect(() => { reloadCreditData() }, [])
+  const invalidateCreditRequests=useCallback(()=>{creditRequest.current++},[])
+  useEffect(() => { setShowSubjectModal(false); setShowCreditModal(false); setViewRegistration(null); setDropTarget(null); setSelectedStudentId(''); reloadCreditData(); return invalidateCreditRequests }, [selectedCollegeId, selectedAcademicYearId,invalidateCreditRequests])
   useEffect(() => {
-    if (!selectedStudent?.id) { setCreditSummary(null); return }
-    creditManagementApi.getSummary({ studentId: Number(selectedStudent.id) }).then(setCreditSummary).catch(() => setCreditSummary(null))
-  }, [selectedStudentId, students])
+    let current=true
+    setCreditSummary(null);setCreditSummaryError('')
+    if(selectedStudentId) creditManagementApi.getSummary({studentId:Number(selectedStudentId),academicYearId:selectedAcademicYearId || undefined}).then(value=>{if(current)setCreditSummary(value)}).catch(error=>{if(current)setCreditSummaryError(error.message || 'Credit summary unavailable.')})
+    return ()=>{current=false}
+  }, [selectedStudentId, selectedAcademicYearId, selectedCollegeId, summaryAttempt])
 
   useEffect(() => {
     if (!notice.message) return
@@ -511,88 +430,6 @@ function CreditsManagement() {
     return credits.filter((credit) => dashboardStudentIds.has(credit.studentId))
   }, [credits, dashboardStudentIds])
 
-  const dashboardStats = useMemo(() => {
-    const totalCredits = dashboardFilteredCredits.reduce(
-      (sum, item) => sum + Number(item.credits || 0),
-      0
-    )
-
-    const completedCredits = dashboardFilteredCredits
-      .filter((item) => item.status === 'Completed')
-      .reduce((sum, item) => sum + Number(item.credits || 0), 0)
-
-    const failedCredits = dashboardFilteredCredits
-      .filter((item) => item.status === 'Failed')
-      .reduce((sum, item) => sum + Number(item.credits || 0), 0)
-
-    const studentsWithCredits = new Set(
-      dashboardFilteredCredits.map((item) => item.studentId)
-    ).size
-
-    return {
-      students: dashboardFilteredStudents.length,
-      studentsWithCredits,
-      totalCredits,
-      completedCredits,
-      failedCredits,
-      pendingStudents: Math.max(
-        dashboardFilteredStudents.length - studentsWithCredits,
-        0
-      ),
-    }
-  }, [dashboardFilteredStudents, dashboardFilteredCredits])
-
-  const filteredStudents = useMemo(() => {
-    return students.filter((student) => {
-      const query = studentSearch.trim().toLowerCase()
-
-      const matchesSearch =
-        !query ||
-        student.name.toLowerCase().includes(query) ||
-        student.rollNo.toLowerCase().includes(query) ||
-        student.id.toLowerCase().includes(query)
-
-      const matchBatch =
-        studentFilters.batch === 'All Batches' ||
-        student.batch === studentFilters.batch
-
-      const matchAcademicYear =
-        studentFilters.academicYear === 'All Academic Years' ||
-        normalizeAcademicYear(student.academicYear) ===
-          normalizeAcademicYear(studentFilters.academicYear)
-
-      const matchSemester =
-        studentFilters.semester === 'All Semesters' ||
-        student.semester === studentFilters.semester
-
-      const matchBranch =
-        studentFilters.branch === 'All Branches' ||
-        student.branch === studentFilters.branch
-
-      const matchYear =
-        studentFilters.year === 'All Years' ||
-        student.year === studentFilters.year
-
-      const matchCourse =
-        studentFilters.course === 'All Courses' ||
-        student.course === studentFilters.course
-
-      return (
-        matchesSearch &&
-        matchBatch &&
-        matchAcademicYear &&
-        matchSemester &&
-        matchBranch &&
-        matchYear &&
-        matchCourse
-      )
-    })
-  }, [students, studentSearch, studentFilters])
-
-  const selectedStudent = useMemo(() => {
-    return students.find((student) => student.id === selectedStudentId) || null
-  }, [students, selectedStudentId])
-
   const selectedStudentCredits = useMemo(() => {
     if (!selectedStudentId) return []
 
@@ -600,99 +437,6 @@ function CreditsManagement() {
       (credit) => credit.studentId === selectedStudentId
     )
   }, [credits, selectedStudentId])
-
-  const selectedStudentSummary = useMemo(() => {
-    const localTotal = selectedStudentCredits.reduce(
-      (sum, item) => sum + Number(item.credits || 0),
-      0
-    )
-
-    const localCompleted = selectedStudentCredits
-      .filter((item) => item.status === 'Completed')
-      .reduce((sum, item) => sum + Number(item.credits || 0), 0)
-    const total = Number(creditSummary?.registeredCredits ?? localTotal)
-    const completed = Number(creditSummary?.completedCredits ?? localCompleted)
-
-    const failed = selectedStudentCredits
-      .filter((item) => item.status === 'Failed')
-      .reduce((sum, item) => sum + Number(item.credits || 0), 0)
-
-    const core = selectedStudentCredits
-      .filter((item) => item.type === 'Core' && item.status === 'Completed')
-      .reduce((sum, item) => sum + Number(item.credits || 0), 0)
-
-    const elective = selectedStudentCredits
-      .filter(
-        (item) => item.type === 'Elective' && item.status === 'Completed'
-      )
-      .reduce((sum, item) => sum + Number(item.credits || 0), 0)
-
-    const percentage =
-      framework.totalProgramCredits > 0
-        ? Math.min(
-            Math.round((completed / framework.totalProgramCredits) * 100),
-            100
-          )
-        : 0
-
-    const shortage = Math.max(
-      Number(framework.totalProgramCredits) - completed,
-      0
-    )
-
-    const graduationEligible =
-      completed >= Number(framework.totalProgramCredits) &&
-      core >= Number(framework.requiredCoreCredits) &&
-      elective >= Number(framework.requiredElectiveCredits) &&
-      failed === 0
-
-    return {
-      total,
-      completed,
-      failed,
-      core,
-      elective,
-      percentage,
-      shortage,
-      graduationEligible,
-    }
-  }, [selectedStudentCredits, framework, creditSummary])
-
-  const selectedStudentSemesterCredits = useMemo(() => {
-    return SEMESTERS.map((semester) => {
-      const semesterRecords = selectedStudentCredits.filter(
-        (credit) => credit.semester === semester
-      )
-      const registered = semesterRecords.reduce(
-        (sum, item) => sum + Number(item.credits || 0),
-        0
-      )
-      const completed = semesterRecords
-        .filter((item) => item.status === 'Completed')
-        .reduce((sum, item) => sum + Number(item.credits || 0), 0)
-      const failed = semesterRecords
-        .filter((item) => item.status === 'Failed')
-        .reduce((sum, item) => sum + Number(item.credits || 0), 0)
-
-      return { semester, registered, completed, failed }
-    }).filter((item) => item.registered > 0)
-  }, [selectedStudentCredits])
-
-  const selectedStudentDuplicateRecords = useMemo(() => {
-    const seen = new Set()
-
-    return selectedStudentCredits.filter((credit) => {
-      const key = [
-        credit.subjectId,
-        credit.academicYear,
-        credit.semester,
-      ].join('|')
-
-      if (seen.has(key)) return true
-      seen.add(key)
-      return false
-    })
-  }, [selectedStudentCredits])
 
   const subjectContexts = useMemo(() => subjects.map(subject => enrichSubject(subject, {
     courses: masterCourses, branches: masterBranches, semesters: masterSemesters,
@@ -832,75 +576,16 @@ function CreditsManagement() {
     }
   }, [validationResults])
 
-  const resetDashboardFilters = () => {
-    const resetValues = emptyFilters(activeAcademicYear)
-    setDashboardFilters(resetValues)
-    setDashboardFilterDraft(resetValues)
-  }
-
-  const applyDashboardFilters = () => {
-    setDashboardFilters(dashboardFilterDraft)
-    setShowDashboardFilterMenu(false)
-  }
-
-  const resetDashboardFilterDraft = () => {
-    const resetValues = emptyFilters(activeAcademicYear)
-    setDashboardFilterDraft(resetValues)
-    setDashboardFilters(resetValues)
-    setShowDashboardFilterMenu(false)
-  }
-
-  const updateDashboardFilterDraft = (field, value) => {
-    setDashboardFilterDraft((previous) => ({
-      ...previous,
-      [field]: value,
-    }))
-  }
-
-  const resetStudentFilters = () => {
-    const resetValues = emptyFilters(activeAcademicYear)
-    setStudentFilters(resetValues)
-    setStudentFilterDraft(resetValues)
-    setStudentSearch('')
-    setSelectedStudentId('')
-  }
-
-  const applyStudentFilters = () => {
-    setStudentFilters(studentFilterDraft)
-    setSelectedStudentId('')
-    setShowStudentFilterMenu(false)
-  }
-
-  const updateDashboardFilter = (field, value) => {
-    setDashboardFilters((previous) => ({
-      ...previous,
-      [field]: value,
-    }))
-  }
-
-  const updateStudentFilterDraft = (field, value) => {
-    setStudentFilterDraft((previous) => ({
-      ...previous,
-      [field]: value,
-    }))
-  }
-
-  const updateStudentFilter = (field, value) => {
-    setStudentFilters((previous) => ({
-      ...previous,
-      [field]: value,
-    }))
-
-    setSelectedStudentId('')
-  }
-
   const openAddCreditModal = () => {
+    if (!canCreate) return
+    registrationProgress.current = {}
     setEditingCreditId(null)
 
     setCreditForm({
       studentId: selectedStudentId || '',
       subjectId: '',
-      grade: 'A',
+      grade: '',
+      registrationStatus: 'REGISTERED',
       attempt: 1,
     })
 
@@ -908,13 +593,16 @@ function CreditsManagement() {
   }
 
   const openEditCreditModal = (credit) => {
+    if (!canEdit) return
+    registrationProgress.current = {}
     setEditingCreditId(credit.id)
 
     setCreditForm({
       studentId: credit.studentId,
       subjectId: credit.subjectId,
       grade: credit.grade,
-      attempt: credit.attempt || 1,
+      registrationStatus: String(credit.registrationStatus || credit.status || 'REGISTERED').toUpperCase(),
+      attempt: credit.attempt ?? '',
     })
 
     setShowCreditModal(true)
@@ -927,6 +615,7 @@ function CreditsManagement() {
 
   const handleCreditSubmit = async (event) => {
     event.preventDefault()
+    if (creditLoading || creditLoadError || registrationLock.current || !(editingCreditId ? canEdit : canCreate)) return
 
     const student = students.find(
       (item) => item.id === creditForm.studentId
@@ -950,14 +639,17 @@ function CreditsManagement() {
       return
     }
 
-    if (!gradeInfo) {
+    if (creditForm.registrationStatus !== 'REGISTERED' && !gradeInfo) {
       showNotice('error', 'Please select a valid grade.')
       return
     }
 
+    if (['courseId','branchId','semesterId'].some(key => !(Number(student[key]) > 0) || !(Number(subject[key]) > 0))) return showNotice('error', 'Student and subject need valid course, branch and semester mappings.')
+    if (creditForm.registrationStatus === 'FAILED' && gradeInfo?.grade !== 'F') return showNotice('error', 'A failed registration requires the failing grade.')
+    if (creditForm.registrationStatus === 'COMPLETED' && gradeInfo?.grade === 'F') return showNotice('error', 'A failing grade must use Failed registration status.')
     const mappingValid =
-      student.branch === subject.branch &&
-      student.course === subject.course
+      String(student.branchId) === String(subject.branchId) &&
+      String(student.courseId) === String(subject.courseId)
 
     if (!mappingValid) {
       showNotice(
@@ -967,7 +659,7 @@ function CreditsManagement() {
       return
     }
 
-    if (student.semester !== subject.semester) {
+    if (String(student.semesterId) !== String(subject.semesterId)) {
       showNotice(
         'error',
         `Semester mismatch. Student is in ${student.semester}, but the subject belongs to ${subject.semester}.`
@@ -976,7 +668,7 @@ function CreditsManagement() {
     }
 
     const duplicate = credits.some((item) => {
-      if (editingCreditId && item.id === editingCreditId) {
+      if (editingCreditId && String(item.id) === String(editingCreditId)) {
         return false
       }
 
@@ -1001,23 +693,29 @@ function CreditsManagement() {
       showNotice('error', 'Select a student, configured subject, and semester with valid backend IDs.')
       return
     }
-    if (!subject.configurationId) {
+    if (!subject.configurationId || subject.configurationActive === false) {
       showNotice('error', 'This subject has no active credit configuration. Configure the existing subject before registering credits.')
       return
     }
+    registrationLock.current = true; setCreditSaving(true)
     try {
-      let registrationId = editingCreditId
-      if (!editingCreditId) {
+      if (registrationProgress.current.uncertain) throw new Error('Verify registrations before another creation; the previous response did not include an identity.')
+      let registrationId = editingCreditId || registrationProgress.current.id
+      if (!registrationId) {
         const created = await creditManagementApi.createRegistration({ studentId: Number(student.id), subjectId: Number(subject.id), semesterId: Number(semesterId) })
         registrationId = created.studentCreditRegistrationId || created.registrationId || created.id
-        if (!registrationId) throw new Error('Credit registration was created but the API response did not include its ID.')
+        if (!registrationId) { registrationProgress.current.uncertain = true; throw new Error('Credit registration was created but the API response did not include its ID. Verify registrations before creating another.') }
+        registrationProgress.current.id = registrationId
+        setEditingCreditId(registrationId)
       }
-      await creditManagementApi.updateRegistration(registrationId, { registrationStatus: gradeInfo.grade === 'F' ? 'FAILED' : 'COMPLETED', grade: gradeInfo.grade, gradePoints: gradeInfo.point, isCompleted: true, status: 1 })
-      await reloadCreditData()
+      const update = { registrationStatus: creditForm.registrationStatus, grade: gradeInfo?.grade || null, gradePoints: gradeInfo?.point ?? null, isCompleted: creditForm.registrationStatus !== 'REGISTERED', status: 1 }
+      const signature = JSON.stringify(update)
+      if (registrationProgress.current.signature !== signature) { await creditManagementApi.updateRegistration(registrationId, update); registrationProgress.current.signature = signature }
+      await reloadCreditData({ propagate: true })
     } catch (error) {
       showNotice('error', error.message || 'Unable to save the credit registration.')
       return
-    }
+    } finally { registrationLock.current = false; setCreditSaving(false) }
 
     if (editingCreditId) {
 
@@ -1041,50 +739,28 @@ function CreditsManagement() {
   }
 
   const handleDeleteCredit = async (credit) => {
+    if (!canEdit || registrationLock.current) return
+    registrationLock.current = true; setCreditSaving(true)
     try {
-      await creditManagementApi.updateRegistration(credit.id, { registrationStatus: 'DROPPED', grade: credit.grade || null, gradePoints: Number(credit.gradePoint || 0), isCompleted: false, status: 1 })
-      await reloadCreditData()
-      showNotice('success', 'Credit registration marked as dropped.')
-    } catch (error) { showNotice('error', error.message || 'Unable to drop this credit registration.') }
-  }
-
-  const openAddSubjectModal = () => {
-    setEditingSubjectId(null)
-
-    setSubjectForm({
-      code: '',
-      name: '',
-      shortName: '',
-      branch: 'CSE',
-      course: 'B.Tech',
-      regulation: 'R22',
-      semester: 'Semester 5',
-      academicYear: '2025-2026',
-      type: 'Core',
-      category: 'PCC',
-      lectureHours: 3,
-      tutorialHours: 1,
-      practicalHours: 0,
-      credits: 4,
-      internalMarks: 40,
-      externalMarks: 60,
-      totalMarks: 100,
-      status: 'Active',
-    })
-
-    setShowSubjectModal(true)
+      await creditManagementApi.updateRegistration(credit.id, { registrationStatus: 'DROPPED', grade: credit.grade || null, gradePoints: credit.gradePoint ?? null, isCompleted: false, status: 1 })
+      await reloadCreditData({ propagate: true })
+      setDropTarget(null); showNotice('success', 'Credit registration marked as dropped.')
+    } catch (error) { showNotice('error', error.message || 'Unable to drop this credit registration.') } finally { registrationLock.current=false; setCreditSaving(false) }
   }
 
   const openEditSubjectModal = (subject) => {
-    setEditingSubjectId(subject.id)
+    configProgress.current = {}
+    setEditingSubjectId(subject.configurationId || null)
 
     setSubjectForm({
+      subjectId: subject.subjectId || subject.id,
+      minimumCredits: subject.minimumCredits ?? 0, maximumCredits: subject.maximumCredits ?? '',
       code: subject.code,
       name: subject.name,
       shortName: subject.shortName,
       branch: subject.branch,
       course: subject.course,
-      regulation: subject.regulation || 'R22',
+      regulation: subject.regulation || '',
       semester: subject.semester,
       academicYear: subject.academicYear,
       type: subject.type,
@@ -1093,10 +769,10 @@ function CreditsManagement() {
       tutorialHours: subject.tutorialHours ?? 0,
       practicalHours: subject.practicalHours ?? 0,
       credits: subject.credits,
-      internalMarks: subject.internalMarks ?? 40,
-      externalMarks: subject.externalMarks ?? 60,
-      totalMarks: subject.totalMarks ?? subject.maxMarks ?? 100,
-      status: subject.status || 'Active',
+      internalMarks: subject.internalMarks ?? '',
+      externalMarks: subject.externalMarks ?? '',
+      totalMarks: subject.totalMarks ?? subject.maxMarks ?? '',
+      status: subject.configurationId ? subject.configurationActive ? 'Active' : 'Inactive' : 'Active',
     })
 
     setShowSubjectModal(true)
@@ -1104,16 +780,17 @@ function CreditsManagement() {
 
   const handleSubjectSubmit = async (event) => {
     event.preventDefault()
+    if (creditLoading || creditLoadError || creditSaving || !(editingSubjectId ? canEdit : canCreate)) return
 
     const code = subjectForm.code.trim().toUpperCase()
     const name = subjectForm.name.trim()
 
-    if (!code || !name || !subjectForm.shortName.trim()) {
+    if (!code || !name) {
       showNotice('error', 'Please fill all required subject fields.')
       return
     }
 
-    if (Number(subjectForm.credits) <= 0) {
+    if (!Number.isFinite(Number(subjectForm.credits)) || Number(subjectForm.credits) <= 0) {
       showNotice('error', 'Subject credits must be greater than zero.')
       return
     }
@@ -1123,7 +800,7 @@ function CreditsManagement() {
         return false
       }
 
-      return subject.configurationId && String(subject.code).toUpperCase() === code
+      return subject.configurationId && String(subject.id) === String(subjectForm.subjectId) && String(subject.code).toUpperCase() === code
     })
 
     if (duplicateCode) {
@@ -1131,7 +808,7 @@ function CreditsManagement() {
       return
     }
 
-    const masterSubject = subjects.find(subject => String(subject.code).toUpperCase() === code)
+    const masterSubject = subjects.find(subject => String(subject.subjectId || subject.id) === String(subjectForm.subjectId))
     const masterCourse = masterCourses.find(item => String(item.courseName || item.name || item.courseCode || item.code).toLowerCase() === String(subjectForm.course).toLowerCase())
     const masterBranch = masterBranches.find(item => String(item.branchName || item.name || item.branchCode || item.code).toLowerCase() === String(subjectForm.branch).toLowerCase())
     const masterSemester = masterSemesters.find(item => String(item.semesterName || item.name || '').toLowerCase() === String(subjectForm.semester).toLowerCase() || String(item.semesterNumber) === String(subjectForm.semester).replace(/\D/g, ''))
@@ -1143,15 +820,23 @@ function CreditsManagement() {
       showNotice('error', 'Credit configuration needs an existing backend subject, course, branch, and semester. Subject master creation is not available in the credits API.')
       return
     }
-    const configPayload = { subjectId: Number(subjectId), courseId: Number(courseId), branchId: Number(branchId), semesterId: Number(semesterId), credits: Number(subjectForm.credits), minimumCredits: 0, maximumCredits: null, status: subjectForm.status === 'Active' ? 1 : 0 }
+    const configPayload = { subjectId: Number(subjectId), courseId: Number(courseId), branchId: Number(branchId), semesterId: Number(semesterId), credits: Number(subjectForm.credits), minimumCredits: Number(subjectForm.minimumCredits || 0), maximumCredits: subjectForm.maximumCredits === '' || subjectForm.maximumCredits == null ? null : Number(subjectForm.maximumCredits), status: subjectForm.status === 'Active' ? 1 : 0 }
+    if (!Number.isFinite(configPayload.minimumCredits) || configPayload.minimumCredits < 0 || (configPayload.maximumCredits != null && (!Number.isFinite(configPayload.maximumCredits) || configPayload.maximumCredits < configPayload.minimumCredits))) return showNotice('error', 'Maximum credits must be at least minimum credits.')
+    setCreditSaving(true)
     try {
-      if (editingSubjectId) await creditManagementApi.updateConfiguration(editingSubjectId, configPayload)
-      else await creditManagementApi.createConfiguration(configPayload)
-      await reloadCreditData()
+      if(configProgress.current.uncertain) throw new Error('Verify credit configurations before another creation; the previous response did not include an identity.')
+      const signature=JSON.stringify(configPayload)
+      if(configProgress.current.signature !== signature) {
+        const id=editingSubjectId || configProgress.current.id
+        if(id) await creditManagementApi.updateConfiguration(id,configPayload)
+        else {const created=await creditManagementApi.createConfiguration(configPayload);const savedId=created?.creditConfigurationId ?? created?.configurationId ?? created?.id;if(!savedId){configProgress.current.uncertain=true;throw new Error('Configuration was created without an identity. Verify configurations before submitting again.')}configProgress.current.id=savedId;setEditingSubjectId(savedId)}
+        configProgress.current.signature=signature
+      }
+      await reloadCreditData({ propagate: true })
     } catch (error) {
       showNotice('error', error.message || 'Unable to save credit configuration.')
       return
-    }
+    } finally { setCreditSaving(false) }
     if (editingSubjectId) {
       addAudit(
         'Subject Updated',
@@ -1172,7 +857,11 @@ function CreditsManagement() {
     setEditingSubjectId(null)
   }
 
+  const [deactivation, setDeactivation] = useState(null)
+  const [deactivationError, setDeactivationError] = useState('')
+  const deactivationSaved = useRef(false)
   const handleDeleteSubject = async (subject) => {
+    if (!canEdit || creditSaving) return
     const used = credits.some(
       (credit) => credit.subjectId === subject.id
     )
@@ -1185,23 +874,25 @@ function CreditsManagement() {
       return
     }
 
-    const confirmed = window.confirm(
-      `Delete subject ${subject.code}?`
-    )
-
-    if (!confirmed) return
-
+    deactivationSaved.current = false; setDeactivationError(''); setDeactivation(subject)
+  }
+  const confirmDeactivation = async () => {
+    const subject = deactivation
+    if (!subject || !canEdit || creditSaving) return
     if (!subject.configurationId) return showNotice('error', 'This subject has no credit configuration to deactivate.')
+    setCreditSaving(true); setDeactivationError('')
     try {
-      await creditManagementApi.updateConfiguration(subject.configurationId, { subjectId: Number(subject.subjectId || subject.id), courseId: Number(subject.courseId), branchId: Number(subject.branchId), semesterId: Number(subject.semesterId), credits: Number(subject.credits), minimumCredits: 0, maximumCredits: null, status: 0 })
-      await reloadCreditData()
+      if (!deactivationSaved.current) await creditManagementApi.updateConfiguration(subject.configurationId, { subjectId: Number(subject.subjectId || subject.id), courseId: Number(subject.courseId), branchId: Number(subject.branchId), semesterId: Number(subject.semesterId), credits: Number(subject.credits), minimumCredits: Number(subject.minimumCredits || 0), maximumCredits: subject.maximumCredits ?? null, status: 0 })
+      deactivationSaved.current = true
+      await reloadCreditData({ propagate: true })
+      setDeactivation(null)
       showNotice('success', 'Credit configuration marked inactive.')
-    } catch (error) { showNotice('error', error.message || 'Unable to deactivate this credit configuration.') }
+    } catch (error) { setDeactivationError(error.message || 'Unable to deactivate this credit configuration.') } finally { setCreditSaving(false) }
   }
 
   const openFrameworkModal = () => {
     setFrameworkForm(framework)
-    setShowFrameworkModal(true)
+    showNotice('error', 'Program-wide credit framework configuration is unavailable: the backend exposes subject credit configuration only.')
   }
 
   const handleFrameworkSubmit = (event) => {
@@ -1475,6 +1166,8 @@ function CreditsManagement() {
     reloadCreditData().then(() => showNotice('success', 'Credit data refreshed from backend.')).catch(error => showNotice('error', error.message || 'Unable to refresh credit data.'))
   }
 
+  const filteredRegistrations = useMemo(() => credits.filter(row=>(!selectedStudentId||String(row.studentId)===String(selectedStudentId))&&(!registrationStatus||row.status===registrationStatus)&&(!studentSearch||[row.studentName,row.subjectCode,row.subjectName].join(' ').toLowerCase().includes(studentSearch.toLowerCase()))), [credits, selectedStudentId, registrationStatus, studentSearch])
+  const creditPage=Math.min(registrationPage,Math.max(1,Math.ceil(filteredRegistrations.length/10)))
   return (
     <DashboardLayout>
       <div className="cm-page">
@@ -1499,540 +1192,14 @@ function CreditsManagement() {
           </div>
         )}
 
-        {activeTab === 'students' && (
-          <section className="cm-content">
-            <div className="cm-section-heading">
-              <div>
-                <h2>Student Credit Management</h2>
-                <p>
-                  Select a student and manage registered, completed and
-                  failed credits.
-                </p>
-              </div>
-
-              <div className="cm-header-actions">
-                <button
-                  className="cm-btn cm-btn-primary"
-                  onClick={openAddCreditModal}
-                >
-                  + Register Credit
-                </button>
-
-                <button
-                  className="cm-btn cm-btn-secondary"
-                  onClick={runValidation}
-                >
-                  Validate Credits
-                </button>
-              </div>
-            </div>
-
-            <div className="cm-filter-panel">
-              <div className="cm-filter-panel-header">
-                <div className="cm-filter-title">
-                  <FilterIcon className="cm-filter-title-icon" />
-                  Student Selection & Filters
-                </div>
-
-                <div
-                  className="cm-filter-menu-wrap"
-                  ref={studentFilterMenuRef}
-                >
-                  <button
-                    type="button"
-                    className="cm-btn cm-btn-light cm-filter-trigger"
-                    onClick={() => {
-                      setShowStudentFilterMenu((previous) => !previous)
-                      setStudentFilterDraft(studentFilters)
-                    }}
-                  >
-                    <FilterIcon className="cm-filter-trigger-icon" />
-                    <span>Filters</span>
-                    <span className="cm-filter-trigger-caret" aria-hidden="true">
-                      ▾
-                    </span>
-                  </button>
-
-                  {showStudentFilterMenu && (
-                    <div className="cm-filter-popover">
-                      <div className="cm-filter-popover-grid">
-                        <FilterSelect
-                          label="Batch"
-                          value={studentFilterDraft.batch}
-                          onChange={(value) =>
-                            updateStudentFilterDraft('batch', value)
-                          }
-                          options={['All Batches', ...BATCHES]}
-                        />
-
-                        <FilterSelect
-                          label="Academic Year"
-                          value={studentFilterDraft.academicYear}
-                          onChange={(value) =>
-                            updateStudentFilterDraft('academicYear', value)
-                          }
-                          options={[
-                            'All Academic Years',
-                            ...ACADEMIC_YEARS,
-                          ]}
-                        />
-
-                        <FilterSelect
-                          label="Semester"
-                          value={studentFilterDraft.semester}
-                          onChange={(value) =>
-                            updateStudentFilterDraft('semester', value)
-                          }
-                          options={['All Semesters', ...SEMESTERS]}
-                        />
-
-                        <FilterSelect
-                          label="Branch"
-                          value={studentFilterDraft.branch}
-                          onChange={(value) =>
-                            updateStudentFilterDraft('branch', value)
-                          }
-                          options={['All Branches', ...BRANCHES]}
-                        />
-
-                        <FilterSelect
-                          label="Student Year"
-                          value={studentFilterDraft.year}
-                          onChange={(value) =>
-                            updateStudentFilterDraft('year', value)
-                          }
-                          options={['All Years', ...STUDENT_YEARS]}
-                        />
-
-                        <FilterSelect
-                          label="Course"
-                          value={studentFilterDraft.course}
-                          onChange={(value) =>
-                            updateStudentFilterDraft('course', value)
-                          }
-                          options={['All Courses', ...COURSES]}
-                        />
-                      </div>
-
-                      <div className="cm-filter-popover-actions">
-                        <button
-                          type="button"
-                          className="cm-btn cm-btn-light"
-                          onClick={resetStudentFilters}
-                        >
-                          Reset
-                        </button>
-
-                        <button
-                          type="button"
-                          className="cm-btn cm-btn-primary"
-                          onClick={applyStudentFilters}
-                        >
-                          Apply Filters
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="cm-search-row">
-                <div className="cm-search-field">
-                  <label>Search Student</label>
-
-                  <input
-                    type="text"
-                    placeholder="Search by name, ID or roll number..."
-                    value={studentSearch}
-                    onChange={(e) => {
-                      setStudentSearch(e.target.value)
-                      setSelectedStudentId('')
-                    }}
-                  />
-                </div>
-
-                <div className="cm-search-field cm-student-select">
-                  <label>Select Student</label>
-
-                  <ProjectSelect
-                    value={selectedStudentId}
-                    onChange={(e) =>
-                      setSelectedStudentId(e.target.value)
-                    }
-                  >
-                    <option value="">
-                      Select a student
-                    </option>
-
-                    {filteredStudents.map((student) => (
-                      <option
-                        key={student.id}
-                        value={student.id}
-                      >
-                        {student.name} - {student.rollNo}
-                      </option>
-                    ))}
-                  </ProjectSelect>
-                </div>
-              </div>
-            </div>
-
-            {!selectedStudent ? (
-              <div className="cm-card">
-                <EmptyState
-                  title="Select a Student"
-                  message="Use the filters and student selector above to view and manage individual credit records."
-                />
-              </div>
-            ) : (
-              <>
-                <div className="cm-student-profile">
-                  <div className="cm-student-avatar">
-                    {selectedStudent.name.charAt(0)}
-                  </div>
-
-                  <div className="cm-student-main">
-                    <h2>{selectedStudent.name}</h2>
-
-                    <div className="cm-student-meta">
-                      <span>{selectedStudent.id}</span>
-                      <span>{selectedStudent.rollNo}</span>
-                      <span>{selectedStudent.branch}</span>
-                      <span>{selectedStudent.course}</span>
-                      <span>{selectedStudent.batch}</span>
-                      <span>{selectedStudent.semester}</span>
-                    </div>
-                  </div>
-
-                  <div className="cm-student-status">
-                    <span className="cm-label">Student Status</span>
-                    <StatusBadge status={selectedStudent.status} />
-                  </div>
-                </div>
-
-                <div className="cm-stat-grid cm-stat-grid-four">
-                  <StatCard
-                    title="Registered"
-                    value={selectedStudentSummary.total}
-                    subtitle="All registered credits"
-                    icon={<FiLayers />}
-                  />
-
-                  <StatCard
-                    title="Completed"
-                    value={selectedStudentSummary.completed}
-                    subtitle="Passed credits"
-                    icon={<FiCheckCircle />}
-                  />
-
-                  <StatCard
-                    title="Backlog"
-                    value={selectedStudentSummary.failed}
-                    subtitle="Failed credits"
-                    icon={<FiAlertCircle />}
-                  />
-
-                  <StatCard
-                    title="Shortage"
-                    value={selectedStudentSummary.shortage}
-                    subtitle="Credits remaining"
-                    icon={<FiArrowDown />}
-                  />
-                </div>
-
-                <div className="cm-student-insight-grid">
-                  <div className="cm-card cm-student-status-card">
-                    <div className="cm-card-header">
-                      <div>
-                        <h3>Credit Status</h3>
-                        <p>Current standing for this student.</p>
-                      </div>
-
-                      <span
-                        className={
-                          selectedStudentSummary.graduationEligible
-                            ? 'cm-counter cm-counter-success'
-                            : 'cm-counter cm-counter-danger'
-                        }
-                      >
-                        {selectedStudentSummary.graduationEligible
-                          ? 'Eligible'
-                          : 'Pending'}
-                      </span>
-                    </div>
-
-                    <div className="cm-student-status-list">
-                      <div>
-                        <span>Required Credits</span>
-                        <strong>{framework.totalProgramCredits}</strong>
-                      </div>
-                      <div>
-                        <span>Earned Credits</span>
-                        <strong className="cm-success-text">
-                          {selectedStudentSummary.completed}
-                        </strong>
-                      </div>
-                      <div>
-                        <span>Failed Credits</span>
-                        <strong className="cm-danger-text">
-                          {selectedStudentSummary.failed}
-                        </strong>
-                      </div>
-                      <div>
-                        <span>Credit Shortage</span>
-                        <strong>{selectedStudentSummary.shortage}</strong>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="cm-card cm-student-status-card">
-                    <div className="cm-card-header">
-                      <div>
-                        <h3>Backlogs & Duplicates</h3>
-                        <p>Records that need attention.</p>
-                      </div>
-                    </div>
-
-                    <div className="cm-student-status-list">
-                      <div>
-                        <span>Backlog Records</span>
-                        <strong className="cm-danger-text">
-                          {selectedStudentCredits.filter(
-                            (credit) => credit.status === 'Failed'
-                          ).length}
-                        </strong>
-                      </div>
-                      <div>
-                        <span>Backlog Credits</span>
-                        <strong className="cm-danger-text">
-                          {selectedStudentSummary.failed}
-                        </strong>
-                      </div>
-                      <div>
-                        <span>Duplicate Records</span>
-                        <strong
-                          className={
-                            selectedStudentDuplicateRecords.length
-                              ? 'cm-danger-text'
-                              : 'cm-success-text'
-                          }
-                        >
-                          {selectedStudentDuplicateRecords.length}
-                        </strong>
-                      </div>
-                      <div>
-                        <span>Credit History</span>
-                        <strong>{selectedStudentCredits.length} records</strong>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="cm-card">
-                  <div className="cm-card-header">
-                    <div>
-                      <h3>Semester-wise Credits</h3>
-                      <p>Registered, completed and failed credits by semester.</p>
-                    </div>
-                  </div>
-
-                  {selectedStudentSemesterCredits.length === 0 ? (
-                    <EmptyState
-                      title="No Semester Credits"
-                      message="Semester-wise credit details will appear after registration."
-                    />
-                  ) : (
-                    <div className="cm-semester-credit-grid">
-                      {selectedStudentSemesterCredits.map((item) => (
-                        <div className="cm-semester-credit-item" key={item.semester}>
-                          <strong>{item.semester}</strong>
-                          <span>Registered: {item.registered}</span>
-                          <span className="cm-success-text">Completed: {item.completed}</span>
-                          <span className={item.failed ? 'cm-danger-text' : ''}>
-                            Failed: {item.failed}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="cm-card">
-                  <div className="cm-card-header">
-                    <div>
-                      <h3>Graduation Progress</h3>
-                      <p>
-                        Progress against configured program credit
-                        requirements.
-                      </p>
-                    </div>
-
-                    <div
-                      className={
-                        selectedStudentSummary.graduationEligible
-                          ? 'cm-eligibility cm-eligible'
-                          : 'cm-eligibility cm-not-eligible'
-                      }
-                    >
-                      {selectedStudentSummary.graduationEligible
-                        ? 'Eligible for Graduation'
-                        : 'Requirements Pending'}
-                    </div>
-                  </div>
-
-                  <div className="cm-progress-wrapper">
-                    <div className="cm-progress-header">
-                      <span>Program Credits</span>
-                      <strong>
-                        {selectedStudentSummary.completed} /{' '}
-                        {framework.totalProgramCredits}
-                      </strong>
-                    </div>
-
-                    <div className="cm-progress">
-                      <div
-                        style={{
-                          width: `${selectedStudentSummary.percentage}%`,
-                        }}
-                      />
-                    </div>
-
-                    <div className="cm-progress-footer">
-                      <span>
-                        {selectedStudentSummary.percentage}% completed
-                      </span>
-
-                      <span>
-                        Core: {selectedStudentSummary.core} /{' '}
-                        {framework.requiredCoreCredits}
-                      </span>
-
-                      <span>
-                        Elective: {selectedStudentSummary.elective} /{' '}
-                        {framework.requiredElectiveCredits}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="cm-card">
-                  <div className="cm-card-header">
-                    <div>
-                      <h3>Student Credit Records</h3>
-                      <p>
-                        Complete history of this student's academic
-                        credits.
-                      </p>
-                    </div>
-
-                    <button
-                      className="cm-btn cm-btn-primary"
-                      onClick={openAddCreditModal}
-                    >
-                      + Submit Credit
-                    </button>
-                  </div>
-
-                  <div className="cm-table-wrap">
-                    <table className="cm-table">
-                      <thead>
-                        <tr>
-                          <th>Subject</th>
-                          <th>Semester</th>
-                          <th>Academic Year</th>
-                          <th>Type</th>
-                          <th>Credits</th>
-                          <th>Grade</th>
-                          <th>Status</th>
-                          <th>Actions</th>
-                        </tr>
-                      </thead>
-
-                      <tbody>
-                        {selectedStudentCredits.length === 0 ? (
-                          <tr>
-                            <td colSpan="8">
-                              <EmptyState
-                                title="No Credit Records"
-                                message="No credit has been registered for this student yet."
-                              />
-                            </td>
-                          </tr>
-                        ) : (
-                          selectedStudentCredits.map((credit) => (
-                            <tr key={credit.id}>
-                              <td>
-                                <strong>
-                                  {credit.subjectCode}
-                                </strong>
-                                <small>
-                                  {credit.subjectName}
-                                </small>
-                              </td>
-
-                              <td>{credit.semester}</td>
-
-                              <td>{credit.academicYear}</td>
-
-                              <td>
-                                <span className="cm-type-badge">
-                                  {credit.type}
-                                </span>
-                              </td>
-
-                              <td>
-                                <span className="cm-credit-number">
-                                  {credit.credits}
-                                </span>
-                              </td>
-
-                              <td>
-                                <span className="cm-grade">
-                                  {credit.grade}
-                                </span>
-                              </td>
-
-                              <td>
-                                <StatusBadge
-                                  status={credit.status}
-                                />
-                              </td>
-
-                              <td>
-                                <div className="cm-action-group">
-                                  <button
-                                    className="cm-icon-btn"
-                                    title="Edit"
-                                    onClick={() =>
-                                      openEditCreditModal(credit)
-                                    }
-                                  >
-                                    ✎
-                                  </button>
-
-                                  <button
-                                    className="cm-icon-btn cm-icon-danger"
-                                    title="Delete"
-                                    onClick={() =>
-                                      handleDeleteCredit(credit)
-                                    }
-                                  >
-                                    ×
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </>
-            )}
-          </section>
-        )}
-
+        <PageHeader title="Credit Management" subtitle="Configure subject credits and manage student registrations using current academic records." compactSummary={[{label:'Configurations',value:creditDashboard?.totalConfigurations ?? 'Unavailable'},{label:'Active configurations',value:creditDashboard?.activeConfigurations ?? 'Unavailable'}]} />
+        <nav className="cm-header-actions" aria-label="Credit management sections">{[['subjects','Credit Configurations'],['students','Student Credit Registrations']].map(([key,label])=><button key={key} className={activeTab===key?'cm-btn cm-btn-primary':'cm-btn cm-btn-light'} aria-pressed={activeTab===key} onClick={()=>setActiveTab(key)}>{label}</button>)}</nav>
+        {creditLoading && <p role="status">Loading credit records…</p>}{creditLoadError && <p role="alert">{creditLoadError} <button onClick={()=>reloadCreditData()}>Retry credit data</button></p>}
+        {activeTab === 'students' && <section className="cm-card"><FilterPanel actions={<>{canCreate && <button className="cm-btn cm-btn-primary" onClick={openAddCreditModal}>Register Credit</button>}<ExportMenu rows={filteredRegistrations} columns={[{label:'Student',value:'studentName'},{label:'Subject',value:'subjectCode'},{label:'Semester',value:'semester'},{label:'Credits',value:'credits'},{label:'Status',value:'status'},{label:'Grade',value:'grade'}]} title="Student Credit Registrations" filename="student-credit-registrations"/></>} search={<label>Search registrations<input value={studentSearch} onChange={e=>{setStudentSearch(e.target.value);setRegistrationPage(1)}} /></label>} filters={<><label>Student<select value={selectedStudentId} onChange={e=>{setSelectedStudentId(e.target.value);setRegistrationPage(1)}}><option value="">All students</option>{students.map(row=><option key={row.id} value={row.id}>{row.name} · {row.rollNo}</option>)}</select></label><label>Registration status<select value={registrationStatus} onChange={e=>{setRegistrationStatus(e.target.value);setRegistrationPage(1)}}><option value="">All statuses</option>{['Registered','Completed','Failed','Dropped'].map(value=><option key={value}>{value}</option>)}</select></label></>} active={Boolean(selectedStudentId || registrationStatus)} onClear={()=>{setStudentSearch('');setSelectedStudentId('');setRegistrationStatus('');setRegistrationPage(1)}} />
+        {creditSummaryError && <p role="alert">{creditSummaryError} <button type="button" onClick={()=>setSummaryAttempt(value=>value+1)}>Retry credit summary</button></p>}{selectedStudentId && <CompactSummary items={[{label:'Registered credits',value:creditSummary?.registeredCredits ?? 'Unavailable'},{label:'Completed credits',value:creditSummary?.completedCredits ?? 'Unavailable'}]}/>}<p>Only returned registration credits are shown. Graduation eligibility requires an institutional credit framework and is not inferred here.</p>
+        <div className="cm-table-wrap"><table className="cm-table"><thead><tr>{['Student','Subject','Semester','Credits','Grade','Grade points','Status','Actions'].map(label=><th key={label}>{label}</th>)}</tr></thead><tbody>{filteredRegistrations.slice((creditPage-1)*10,creditPage*10).map(row=><tr key={row.id}><td>{row.studentName}</td><td>{row.subjectCode} · {row.subjectName}</td><td>{row.semester}</td><td>{row.credits ?? 'Not provided'}</td><td>{row.grade || 'Not provided'}</td><td>{row.gradePoint ?? 'Not provided'}</td><td><StatusBadge value={row.status}/></td><td><button className="cm-btn cm-btn-light" onClick={()=>setViewRegistration(row)}>View registration</button>{canEdit && row.status !== 'Dropped' && <><button className="cm-btn cm-btn-light" onClick={()=>openEditCreditModal(row)}>Edit registration</button><button className="cm-btn cm-btn-light" onClick={()=>setDropTarget(row)}>Drop registration</button></>}</td></tr>)}</tbody></table></div>{!filteredRegistrations.length && !creditLoading && <p>No student credit registrations were returned.</p>}<TablePagination page={creditPage} totalPages={Math.max(1,Math.ceil(filteredRegistrations.length/10))} onPageChange={setRegistrationPage}/></section>}
+        {viewRegistration && <ViewDialog title="Credit Registration Details" onClose={()=>setViewRegistration(null)} showExport={false}><dl className="view-modal-fields">{[['Student',viewRegistration.studentName],['Subject',viewRegistration.subjectCode+' · '+viewRegistration.subjectName],['Semester',viewRegistration.semester],['Credits',viewRegistration.credits],['Grade',viewRegistration.grade || 'Not provided'],['Grade points',viewRegistration.gradePoint ?? 'Not provided'],['Status',viewRegistration.status]].map(([label,value])=><div className="view-modal-field" key={label}><dt className="view-modal-label">{label}</dt><dd className="view-modal-value">{value}</dd></div>)}</dl></ViewDialog>}
+        {dropTarget && <ViewDialog title="Drop Credit Registration" onClose={()=>setDropTarget(null)} busy={creditSaving} showExport={false} hideFooter><p>Drop {dropTarget.subjectCode} for {dropTarget.studentName}? The existing registration is retained as dropped.</p><button disabled={creditSaving} onClick={()=>setDropTarget(null)}>Cancel</button><button disabled={creditSaving} onClick={()=>handleDeleteCredit(dropTarget)}>Confirm drop</button></ViewDialog>}
         {activeTab === 'subjects' && (
           <section className="cm-content">
             <div className="cm-section-heading cm-subject-section-heading">
@@ -2106,18 +1273,18 @@ function CreditsManagement() {
                     <tr>
                       <th>Subject</th>
                       <th>Academic Mapping</th>
-                      <th>Credits</th>
+                      <th>Credits</th><th>Actions</th>
                     </tr>
                   </thead>
 
                   <tbody>
                     {creditLoading ? (
-                      <tr><td colSpan="3">Loading subjects and credits...</td></tr>
+                      <tr><td colSpan="4">Loading subjects and credits...</td></tr>
                     ) : subjectApiError ? (
-                      <tr><td colSpan="3"><div className="cm-empty cm-empty--error" role="alert"><p>{subjectApiError}</p><button type="button" className="cm-btn cm-btn-light" onClick={reloadCreditData}>Retry</button></div></td></tr>
+                      <tr><td colSpan="4"><div className="cm-empty cm-empty--error" role="alert"><p>{subjectApiError}</p><button type="button" className="cm-btn cm-btn-light" onClick={reloadCreditData}>Retry</button></div></td></tr>
                     ) : !subjectFiltersReady ? (
                       <tr>
-                        <td colSpan="3">
+                        <td colSpan="4">
                           <EmptyState
                             title="Select Academic Filters"
                             message="Choose an academic year, course, branch, and semester to view subject credits."
@@ -2126,7 +1293,7 @@ function CreditsManagement() {
                       </tr>
                     ) : filteredSubjects.length === 0 ? (
                       <tr>
-                        <td colSpan="3">
+                        <td colSpan="4">
                           <EmptyState
                             title="No Subjects Found"
                             message="No subjects found for the selected academic configuration."
@@ -2149,6 +1316,7 @@ function CreditsManagement() {
                             </span>
                           </td>
 
+                          <td>{(subject.configurationId ? canEdit : canCreate) && <button type="button" className="cm-btn cm-btn-light" onClick={() => openEditSubjectModal(subject)}>{subject.configurationId ? 'Edit Credits' : 'Configure Credits'}</button>}{canEdit && subject.configurationId && subject.configurationActive && <button type="button" className="cm-btn cm-btn-light" onClick={() => handleDeleteSubject(subject)}>Deactivate Credits</button>}</td>
                         </tr>
                       ))
                     )}
@@ -2764,9 +1932,9 @@ function CreditsManagement() {
           </section>
         )}
 
+        {deactivation && <ViewDialog title="Deactivate Credit Configuration" onClose={() => setDeactivation(null)} busy={creditSaving} showExport={false} hideFooter><p>Deactivate credits for <strong>{deactivation.name || deactivation.code}</strong>? Subject master records remain available.</p>{deactivationError && <p role="alert">{deactivationError}</p>}<button disabled={creditSaving} onClick={() => setDeactivation(null)}>Cancel</button><button disabled={creditSaving} onClick={confirmDeactivation}>{creditSaving ? 'Saving…' : 'Confirm deactivation'}</button></ViewDialog>}
         {showCreditModal && (
-          <div className="cm-modal-overlay">
-            <div className="cm-modal">
+          <ViewDialog title={editingCreditId ? 'Edit Credit Registration' : 'Register Student Credits'} onClose={() => setShowCreditModal(false)} busy={creditSaving} showExport={false} hideFooter maxWidth="1000px">
               <div className="cm-modal-header">
                 <div>
                   <h2>
@@ -2794,11 +1962,11 @@ function CreditsManagement() {
                     <label>Student *</label>
 
                     <ProjectSelect
-                      value={creditForm.studentId}
+                      aria-label="Credit student" disabled={Boolean(editingCreditId) || creditSaving} value={creditForm.studentId}
                       onChange={(e) =>
                         setCreditForm((previous) => ({
                           ...previous,
-                          studentId: e.target.value,
+                          studentId: e.target.value, subjectId: '',
                         }))
                       }
                       required
@@ -2823,7 +1991,7 @@ function CreditsManagement() {
                     <label>Subject *</label>
 
                     <ProjectSelect
-                      value={creditForm.subjectId}
+                      aria-label="Credit subject" disabled={Boolean(editingCreditId) || creditSaving} value={creditForm.subjectId}
                       onChange={(e) =>
                         setCreditForm((previous) => ({
                           ...previous,
@@ -2836,7 +2004,7 @@ function CreditsManagement() {
                         Select Subject
                       </option>
 
-                      {subjects.map((subject) => (
+                      {subjects.filter(subject => { const student=students.find(row=>row.id===creditForm.studentId); return student && subject.configurationActive && ['courseId','branchId','semesterId'].every(key=>String(student[key])===String(subject[key])) }).map((subject) => (
                         <option
                           key={subject.id}
                           value={subject.id}
@@ -2849,10 +2017,10 @@ function CreditsManagement() {
                   </div>
 
                   <div className="cm-form-field">
-                    <label>Grade *</label>
+                    <label>Grade</label>
 
                     <ProjectSelect
-                      value={creditForm.grade}
+                      aria-label="Credit grade" value={creditForm.grade}
                       onChange={(e) =>
                         setCreditForm((previous) => ({
                           ...previous,
@@ -2860,6 +2028,7 @@ function CreditsManagement() {
                         }))
                       }
                     >
+                      <option value="">Select grade when completing</option>
                       {GRADE_OPTIONS.map((grade) => (
                         <option
                           key={grade.grade}
@@ -2872,10 +2041,11 @@ function CreditsManagement() {
                   </div>
 
                   <div className="cm-form-field">
-                    <label>Attempt</label>
+                    <label>Registration Status</label><ProjectSelect aria-label="Registration status" value={creditForm.registrationStatus} onChange={e=>setCreditForm(previous=>({...previous,registrationStatus:e.target.value}))}><option value="REGISTERED">Registered</option><option value="COMPLETED">Completed</option><option value="FAILED">Failed</option></ProjectSelect><label>Attempt (reported value)</label>
 
                     <input
                       type="number"
+                      readOnly
                       min="1"
                       max="10"
                       value={creditForm.attempt}
@@ -2928,13 +2098,12 @@ function CreditsManagement() {
                   </button>
                 </div>
               </form>
-            </div>
-          </div>
+
+          </ViewDialog>
         )}
 
         {showSubjectModal && (
-          <div className="cm-modal-overlay">
-            <div className="cm-modal cm-modal-large">
+          <ViewDialog title={editingSubjectId ? 'Edit Credit Configuration' : 'Configure Subject Credits'} onClose={() => setShowSubjectModal(false)} busy={creditSaving} showExport={false} hideFooter maxWidth="1000px">
               <div className="cm-modal-header">
                 <div>
                   <h2>
@@ -2944,7 +2113,7 @@ function CreditsManagement() {
                   </h2>
 
                   <p>
-                    Configure subject mapping and credit requirements.
+                    Existing Subject Management owns the academic mapping, hours and marks. This form saves credit configuration and status.
                   </p>
                 </div>
 
@@ -2957,11 +2126,11 @@ function CreditsManagement() {
               </div>
 
               <form onSubmit={handleSubjectSubmit}>
-                <div className="cm-form-grid">
+                <div className="cm-form-grid"><label>Minimum Credits<input type="number" min="0" step="0.01" value={subjectForm.minimumCredits ?? 0} onChange={e=>setSubjectForm(value=>({...value,minimumCredits:e.target.value}))}/></label><label>Maximum Credits<input type="number" min="0" step="0.01" value={subjectForm.maximumCredits ?? ''} onChange={e=>setSubjectForm(value=>({...value,maximumCredits:e.target.value}))}/></label>
                   <div className="cm-form-field">
                     <label>Subject Code *</label>
                     <input
-                      value={subjectForm.code}
+                      readOnly value={subjectForm.code}
                       onChange={(e) =>
                         setSubjectForm((previous) => ({
                           ...previous,
@@ -2976,7 +2145,7 @@ function CreditsManagement() {
                   <div className="cm-form-field">
                     <label>Short Name *</label>
                     <input
-                      value={subjectForm.shortName}
+                      readOnly value={subjectForm.shortName}
                       onChange={(e) =>
                         setSubjectForm((previous) => ({
                           ...previous,
@@ -2991,7 +2160,7 @@ function CreditsManagement() {
                   <div className="cm-form-field cm-field-full">
                     <label>Subject Name *</label>
                     <input
-                      value={subjectForm.name}
+                      readOnly value={subjectForm.name}
                       onChange={(e) =>
                         setSubjectForm((previous) => ({
                           ...previous,
@@ -3006,7 +2175,7 @@ function CreditsManagement() {
                   <div className="cm-form-field">
                     <label>Course *</label>
                     <ProjectSelect
-                      value={subjectForm.course}
+                      disabled value={subjectForm.course}
                       onChange={(e) =>
                         setSubjectForm((previous) => ({
                           ...previous,
@@ -3023,7 +2192,7 @@ function CreditsManagement() {
                   <div className="cm-form-field">
                     <label>Branch *</label>
                     <ProjectSelect
-                      value={subjectForm.branch}
+                      disabled value={subjectForm.branch}
                       onChange={(e) =>
                         setSubjectForm((previous) => ({
                           ...previous,
@@ -3040,7 +2209,7 @@ function CreditsManagement() {
                   <div className="cm-form-field">
                     <label>Regulation *</label>
                     <ProjectSelect
-                      value={subjectForm.regulation}
+                      readOnly value={subjectForm.regulation}
                       onChange={(e) =>
                         setSubjectForm((previous) => ({
                           ...previous,
@@ -3057,7 +2226,7 @@ function CreditsManagement() {
                   <div className="cm-form-field">
                     <label>Semester *</label>
                     <ProjectSelect
-                      value={subjectForm.semester}
+                      disabled value={subjectForm.semester}
                       onChange={(e) =>
                         setSubjectForm((previous) => ({
                           ...previous,
@@ -3074,7 +2243,7 @@ function CreditsManagement() {
                   <div className="cm-form-field">
                     <label>Academic Year *</label>
                     <ProjectSelect
-                      value={subjectForm.academicYear}
+                      disabled value={subjectForm.academicYear}
                       onChange={(e) =>
                         setSubjectForm((previous) => ({
                           ...previous,
@@ -3091,7 +2260,7 @@ function CreditsManagement() {
                   <div className="cm-form-field">
                     <label>Subject Type *</label>
                     <ProjectSelect
-                      value={subjectForm.type}
+                      disabled value={subjectForm.type}
                       onChange={(e) =>
                         setSubjectForm((previous) => ({
                           ...previous,
@@ -3108,7 +2277,7 @@ function CreditsManagement() {
                   <div className="cm-form-field">
                     <label>Category *</label>
                     <input
-                      value={subjectForm.category}
+                      disabled value={subjectForm.category}
                       onChange={(e) =>
                         setSubjectForm((previous) => ({
                           ...previous,
@@ -3124,7 +2293,7 @@ function CreditsManagement() {
                     <input
                       type="number"
                       min="0"
-                      value={subjectForm.lectureHours}
+                      readOnly value={subjectForm.lectureHours}
                       onChange={(e) =>
                         setSubjectForm((previous) => ({
                           ...previous,
@@ -3139,7 +2308,7 @@ function CreditsManagement() {
                     <input
                       type="number"
                       min="0"
-                      value={subjectForm.tutorialHours}
+                      readOnly value={subjectForm.tutorialHours}
                       onChange={(e) =>
                         setSubjectForm((previous) => ({
                           ...previous,
@@ -3154,7 +2323,7 @@ function CreditsManagement() {
                     <input
                       type="number"
                       min="0"
-                      value={subjectForm.practicalHours}
+                      readOnly value={subjectForm.practicalHours}
                       onChange={(e) =>
                         setSubjectForm((previous) => ({
                           ...previous,
@@ -3186,7 +2355,7 @@ function CreditsManagement() {
                     <input
                       type="number"
                       min="0"
-                      value={subjectForm.internalMarks}
+                      readOnly value={subjectForm.internalMarks}
                       onChange={(e) =>
                         setSubjectForm((previous) => ({
                           ...previous,
@@ -3201,7 +2370,7 @@ function CreditsManagement() {
                     <input
                       type="number"
                       min="0"
-                      value={subjectForm.externalMarks}
+                      readOnly value={subjectForm.externalMarks}
                       onChange={(e) =>
                         setSubjectForm((previous) => ({
                           ...previous,
@@ -3216,7 +2385,7 @@ function CreditsManagement() {
                     <input
                       type="number"
                       min="0"
-                      value={subjectForm.totalMarks}
+                      readOnly value={subjectForm.totalMarks}
                       onChange={(e) =>
                         setSubjectForm((previous) => ({
                           ...previous,
@@ -3265,13 +2434,12 @@ function CreditsManagement() {
                   </button>
                 </div>
               </form>
-            </div>
-          </div>
+
+          </ViewDialog>
         )}
 
         {showFrameworkModal && (
-          <div className="cm-modal-overlay">
-            <div className="cm-modal cm-modal-large">
+          <ViewDialog title={'Credit Framework'} onClose={() => setShowFrameworkModal(false)} busy={creditSaving} showExport={false} hideFooter maxWidth="1000px">
               <div className="cm-modal-header">
                 <div>
                   <h2>Configure Credit Framework</h2>
@@ -3442,8 +2610,7 @@ function CreditsManagement() {
                   </button>
                 </div>
               </form>
-            </div>
-          </div>
+          </ViewDialog>
         )}
       </div>
     </DashboardLayout>

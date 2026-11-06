@@ -2,35 +2,6 @@
   background: var(--app-bg);
 }
 
-.portal-shell--faculty .sidebar {
-  background: linear-gradient(165deg, #1d568d 0%, #174675 48%, #133c66 100%);
-}
-
-.portal-shell--faculty .sidebar-brand {
-  border-bottom: 1px solid #ffffff20;
-}
-
-.portal-shell--faculty .sidebar-brand__mark {
-  box-shadow: 0 8px 20px #092f592e;
-}
-
-.portal-shell--faculty .sidebar-section-label {
-  color: #a9c8e9;
-}
-
-.portal-shell--faculty .sidebar-link {
-  transition: background 0.18s ease, transform 0.18s ease, color 0.18s ease;
-}
-
-.portal-shell--faculty .sidebar-link:hover {
-  transform: translateX(2px);
-}
-
-.portal-shell--faculty .sidebar-link.active {
-  background: #ffffff1a;
-  box-shadow: inset 3px 0 #72c4ff, 0 6px 16px #0e34551a;
-}
-
 .portal-shell--faculty .portal-topbar {
   position: sticky;
   top: 0;

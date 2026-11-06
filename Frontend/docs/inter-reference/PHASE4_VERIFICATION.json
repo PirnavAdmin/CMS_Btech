@@ -1,0 +1,30 @@
+{
+  "vitestFiles": 31,
+  "vitestPassed": 254,
+  "nodePassed": 441,
+  "nodeFailed": 0,
+  "totalPassed": 695,
+  "postCleanupFocusedVitestPassed": 23,
+  "postCleanupFocusedNodePassed": 20,
+  "productionBuildPassed": true,
+  "lintErrors": 0,
+  "lintWarnings": 742,
+  "largeChunkWarning": true,
+  "navigation": {
+    "modules": 41,
+    "inventoryEntries": 190,
+    "distinctRoutes": 187,
+    "duplicateDeclarations": [],
+    "unclassified": []
+  },
+  "protectedFilesChecked": 1663,
+  "changedProtectedFiles": [],
+  "backendFilesChanged": [],
+  "actualBrowserRunPerformed": false,
+  "browserStatus": "blocked",
+  "browserEvidenceSource": "PHASE2_VERIFICATION.json",
+  "previousConfirmedDevelopmentUrl": "http://127.0.0.1:5173/",
+  "visualParityVerified": false,
+  "liveCrudVerified": false,
+  "phase4Complete": false
+}

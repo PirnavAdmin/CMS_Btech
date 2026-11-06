@@ -1,8 +1,57 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
-import { editableMark, markValueError, marksWorkflowPayload, workflowSummary } from '../src/utils/marksWorkflow.js'
+import { createOrVerifyMark, importVerifiedMarks, editableMark, markValueError, marksWorkflowPayload, workflowSummary } from '../src/utils/marksWorkflow.js'
 import { validateExam } from '../src/services/examService.js'
+
+test('bulk import preserves acknowledged partial results and rejected rows', async () => {
+  const result = { uploadId: 8, totalRows: 3, validRows: 2, insertedRows: 1, updatedRows: 1, rejectedRows: 1, errors: [{ rowNumber: 3, message: 'Unknown subject' }] }
+  const pending = new Map()
+  const api = { upload: async () => result }
+  assert.deepEqual(await importVerifiedMarks(api, {}, { examId: 7 }, pending), result)
+  assert.equal(pending.size, 0)
+})
+
+test('an ambiguous bulk import cannot be repeated or presented as successful', async () => {
+  let writes = 0
+  const pending = new Map()
+  const api = { upload: async () => { writes++; throw new Error('Connection lost') } }
+  await assert.rejects(importVerifiedMarks(api, {}, { examId: 7 }, pending), /Connection lost/)
+  await assert.rejects(importVerifiedMarks(api, {}, { examId: 7 }, pending), /unconfirmed/)
+  assert.equal(writes, 1)
+})
+
+test('missing bulk identity or inconsistent counts retain the recovery guard', async () => {
+  const pending = new Map()
+  await assert.rejects(importVerifiedMarks({ upload: async () => ({ totalRows: 1 }) }, {}, { examId: 7 }, pending), /did not confirm/)
+  assert.equal(pending.size, 1)
+})
+
+test('an ambiguous marks create is reconciled without repeating the write', async () => {
+  const payload = { examId: 1, studentId: 2, subjectId: 3, marksObtained: 0, maxMarks: 100, grade: null, remarks: null, sectionId: null }
+  const pending = new Map()
+  let writes = 0
+  const api = {
+    create: async () => { writes++; throw new Error('Connection lost') },
+    list: async () => [{ ...payload, markId: 9 }],
+  }
+  await assert.rejects(createOrVerifyMark(api, payload, pending), /Connection lost/)
+  assert.equal((await createOrVerifyMark(api, payload, pending)).markId, 9)
+  assert.equal(writes, 1)
+})
+
+test('an unresolved marks submission cannot be repeated or replaced silently', async () => {
+  const payload = { examId: 1, studentId: 2, subjectId: 3, marksObtained: 20, maxMarks: 100 }
+  const pending = new Map()
+  let writes = 0
+  const api = { create: async () => { writes++; return {} }, list: async () => [] }
+  await assert.rejects(createOrVerifyMark(api, payload, pending), /identity/)
+  await assert.rejects(createOrVerifyMark(api, payload, pending), /unconfirmed/)
+  assert.equal(writes, 1)
+  api.list = async () => [{ ...payload, markId: 9 }]
+  await assert.rejects(createOrVerifyMark(api, { ...payload, marksObtained: 30 }, pending), /already exists/)
+  assert.equal(writes, 1)
+})
 
 test('marks values preserve zero and reject missing/out-of-range/nonfinite values', () => {
   assert.equal(markValueError({ marksObtained: 0, maxMarks: 100 }), '')

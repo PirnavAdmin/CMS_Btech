@@ -1,0 +1,242 @@
+[
+  {
+    "file": "Frontend/src/App.css",
+    "convertedValues": 7
+  },
+  {
+    "file": "Frontend/src/auth/ScreenPermissionBoundary.css",
+    "convertedValues": 2
+  },
+  {
+    "file": "Frontend/src/components/AcademicContextSelect.css",
+    "convertedValues": 10
+  },
+  {
+    "file": "Frontend/src/components/CompactSummary.css",
+    "convertedValues": 2
+  },
+  {
+    "file": "Frontend/src/components/CompanyLogo.css",
+    "convertedValues": 1
+  },
+  {
+    "file": "Frontend/src/components/ContextGuard.css",
+    "convertedValues": 18
+  },
+  {
+    "file": "Frontend/src/components/FilterPanel.css",
+    "convertedValues": 11
+  },
+  {
+    "file": "Frontend/src/components/HeaderAcademicYear.css",
+    "convertedValues": 8
+  },
+  {
+    "file": "Frontend/src/components/portals/FacultyNavbarActions.css",
+    "convertedValues": 1
+  },
+  {
+    "file": "Frontend/src/components/portals/FacultySignOutDialog.css",
+    "convertedValues": 13
+  },
+  {
+    "file": "Frontend/src/components/RequestDemo.css",
+    "convertedValues": 5
+  },
+  {
+    "file": "Frontend/src/components/SearchableSelect.css",
+    "convertedValues": 10
+  },
+  {
+    "file": "Frontend/src/components/ToastProvider.css",
+    "convertedValues": 1
+  },
+  {
+    "file": "Frontend/src/components/ViewDialog.css",
+    "convertedValues": 25
+  },
+  {
+    "file": "Frontend/src/features/faculty/workspace.css",
+    "convertedValues": 4
+  },
+  {
+    "file": "Frontend/src/index.css",
+    "convertedValues": 54
+  },
+  {
+    "file": "Frontend/src/layouts/DashboardLayout.css",
+    "convertedValues": 18
+  },
+  {
+    "file": "Frontend/src/pages/admin-management/AdminManagement.css",
+    "convertedValues": 376
+  },
+  {
+    "file": "Frontend/src/pages/admin-management/UserAccessManagement.css",
+    "convertedValues": 2
+  },
+  {
+    "file": "Frontend/src/pages/attendance/Attendance.css",
+    "convertedValues": 10
+  },
+  {
+    "file": "Frontend/src/pages/campus/CampusWorkspace.css",
+    "convertedValues": 270
+  },
+  {
+    "file": "Frontend/src/pages/courseManagement/Course.css",
+    "convertedValues": 39
+  },
+  {
+    "file": "Frontend/src/pages/credits-management/CreditsManagement.css",
+    "convertedValues": 25
+  },
+  {
+    "file": "Frontend/src/pages/elective-management/ElectiveManagement.css",
+    "convertedValues": 67
+  },
+  {
+    "file": "Frontend/src/pages/examinations/exam-timetable/ExamModule.css",
+    "convertedValues": 42
+  },
+  {
+    "file": "Frontend/src/pages/examinations/examination-setup/ExaminationSetup.css",
+    "convertedValues": 28
+  },
+  {
+    "file": "Frontend/src/pages/examinations/grade-result-management/GradeResultManagement.css",
+    "convertedValues": 237
+  },
+  {
+    "file": "Frontend/src/pages/examinations/marks-management/MarksManagement.css",
+    "convertedValues": 22
+  },
+  {
+    "file": "Frontend/src/pages/faculty/FacultyManagement.css",
+    "convertedValues": 140
+  },
+  {
+    "file": "Frontend/src/pages/fees/fees.css",
+    "convertedValues": 84
+  },
+  {
+    "file": "Frontend/src/pages/Pages.css",
+    "convertedValues": 218
+  },
+  {
+    "file": "Frontend/src/pages/portals/faculty-attendance.css",
+    "convertedValues": 30
+  },
+  {
+    "file": "Frontend/src/pages/portals/faculty-self-attendance.css",
+    "convertedValues": 24
+  },
+  {
+    "file": "Frontend/src/pages/portals/student-dashboard.css",
+    "convertedValues": 1
+  },
+  {
+    "file": "Frontend/src/pages/portals/teaching-leave.css",
+    "convertedValues": 40
+  },
+  {
+    "file": "Frontend/src/pages/portals/teaching-marks.css",
+    "convertedValues": 19
+  },
+  {
+    "file": "Frontend/src/pages/portals/teaching-portal.css",
+    "convertedValues": 4
+  },
+  {
+    "file": "Frontend/src/pages/profile/MyProfile.css",
+    "convertedValues": 27
+  },
+  {
+    "file": "Frontend/src/pages/section-management/SectionManagement.css",
+    "convertedValues": 64
+  },
+  {
+    "file": "Frontend/src/pages/semester-management/SemesterManagement.css",
+    "convertedValues": 80
+  },
+  {
+    "file": "Frontend/src/pages/settings/AcademicContextSettings.css",
+    "convertedValues": 24
+  },
+  {
+    "file": "Frontend/src/pages/staff-portal/staff-leave.css",
+    "convertedValues": 7
+  },
+  {
+    "file": "Frontend/src/pages/staff-portal/staff-meetings.css",
+    "convertedValues": 6
+  },
+  {
+    "file": "Frontend/src/pages/staff-portal/staff-notices.css",
+    "convertedValues": 5
+  },
+  {
+    "file": "Frontend/src/pages/staff-portal/staff-portal.css",
+    "convertedValues": 35
+  },
+  {
+    "file": "Frontend/src/pages/staff-portal/staff-tasks.css",
+    "convertedValues": 7
+  },
+  {
+    "file": "Frontend/src/pages/student-management/StudentAdmission/StudentAdmission.css",
+    "convertedValues": 156
+  },
+  {
+    "file": "Frontend/src/pages/student-management/StudentProfile/StudentProfile.css",
+    "convertedValues": 27
+  },
+  {
+    "file": "Frontend/src/pages/student-management/StudentPromotion/StudentPromotion.css",
+    "convertedValues": 63
+  },
+  {
+    "file": "Frontend/src/pages/subject-management/SubjectManagement.css",
+    "convertedValues": 77
+  },
+  {
+    "file": "Frontend/src/pages/timetable/TimetableManagement.css",
+    "convertedValues": 44
+  },
+  {
+    "file": "Frontend/src/styles/dark-mode-contrast.css",
+    "convertedValues": 9
+  },
+  {
+    "file": "Frontend/src/styles/dark-mode-fixes.css",
+    "convertedValues": 2
+  },
+  {
+    "file": "Frontend/src/styles/dark-mode.css",
+    "convertedValues": 3
+  },
+  {
+    "file": "Frontend/src/styles/details-layout.css",
+    "convertedValues": 3
+  },
+  {
+    "file": "Frontend/src/styles/directory-search.css",
+    "convertedValues": 2
+  },
+  {
+    "file": "Frontend/src/styles/erp-theme.css",
+    "convertedValues": 34
+  },
+  {
+    "file": "Frontend/src/styles/global.css",
+    "convertedValues": 23
+  },
+  {
+    "file": "Frontend/src/styles/tableActions.css",
+    "convertedValues": 22
+  },
+  {
+    "file": "Frontend/src/styles/view-cards.css",
+    "convertedValues": 19
+  }
+]

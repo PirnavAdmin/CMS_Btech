@@ -1,0 +1,38 @@
+[
+  {
+    "file": "src/index.css",
+    "restoredNonTargetGroups": 4
+  },
+  {
+    "file": "src/pages/admin-management/AdminManagement.css",
+    "restoredNonTargetGroups": 1
+  },
+  {
+    "file": "src/styles/dark-mode-contrast.css",
+    "restoredNonTargetGroups": 1
+  },
+  {
+    "file": "src/styles/dark-mode.css",
+    "restoredNonTargetGroups": 3
+  },
+  {
+    "file": "src/styles/erp-theme.css",
+    "restoredNonTargetGroups": 5
+  },
+  {
+    "file": "src/styles/error-notices.css",
+    "restoredNonTargetGroups": 3
+  },
+  {
+    "file": "src/styles/global.css",
+    "restoredNonTargetGroups": 4
+  },
+  {
+    "file": "src/styles/view-cards.css",
+    "restoredNonTargetGroups": 3
+  },
+  {
+    "file": "src/pages/fees/fees.css",
+    "restoredNonTargetGroups": 2
+  }
+]

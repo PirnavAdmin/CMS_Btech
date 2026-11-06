@@ -1,0 +1,64 @@
+{
+  "attendance": {
+    "codeStatus": "Code-complete for the existing frontend-supported workflows",
+    "visual": "Pending",
+    "liveApi": "Pending"
+  },
+  "fees": {
+    "codeStatus": "Started; academic structure directory and draft edits, receipt acknowledgement and missing-data handling implemented",
+    "remaining": [
+      "Academic directory backend pagination",
+      "Hostel and transport backend persistence",
+      "End-to-end student fee assignment and partial/full collection checks",
+      "Individual and consolidated payment history, overdue reports and filtered exports"
+    ]
+  },
+  "verification": {
+    "initialFull": {
+      "files": 48,
+      "passed": 356,
+      "failed": 0
+    },
+    "finalFull": {
+      "files": 48,
+      "passed": 359,
+      "failed": 1,
+      "failure": "Unchanged publicRoutes test for / with a saved session and unavailable backend timed out. Passed on separate rerun. No timeouts or assertions were relaxed."
+    },
+    "workflowFocused": {
+      "passed": 28,
+      "failed": 0
+    },
+    "updatedFocused": {
+      "passed": 16,
+      "failed": 0
+    },
+    "publicRouteAndFeesRecheck": {
+      "passed": 16,
+      "failed": 0
+    },
+    "serviceContractTests": {
+      "passed": 460,
+      "failed": 0
+    },
+    "productionBuild": {
+      "passed": true
+    },
+    "lint": {
+      "warningsBefore": 679,
+      "warningsAfter": 676,
+      "errors": 0
+    },
+    "protectedSources": {
+      "checked": 1663,
+      "mismatches": 0
+    },
+    "browserInspected": false,
+    "liveApiVerified": false
+  },
+  "backendLimitations": [
+    "Fee Types have no verified writable endpoint.",
+    "Academic draft deletion is not exposed."
+  ],
+  "frontendOnly": true
+}

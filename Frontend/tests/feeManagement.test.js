@@ -18,7 +18,7 @@ test('academic fee configuration retains three sections and validates before app
   assert.match(source, /checkDuplicateStructure/)
   assert.match(source, /validateFeeStructure/)
   assert.match(source, /existingStructures/)
-  assert.match(source, /studentMatchesFee/)
+  assert.ok(source.includes('livePlans.some(sameScope)'))
 })
 
 test('fee sidebar maps existing routes and contextual screens to one owning section', () => {

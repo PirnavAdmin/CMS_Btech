@@ -1,6 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { FiEdit2, FiSearch, FiTrash2 } from 'react-icons/fi'
+import { FiEdit2, FiSearch, FiTrash2, FiEye } from 'react-icons/fi'
+import ViewDialog from '../../components/ViewDialog'
+import PageHeader from '../../components/PageHeader'
+import { useScreenAccess } from '../../auth/ScreenAccess'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import ScopedModuleNotice from '../../components/ScopedModuleNotice'
 import TablePagination from '../../components/TablePagination'
@@ -10,7 +13,7 @@ import { useAcademic } from '../../context/AcademicContext'
 import { getUserRole } from '../../auth/auth'
 import { studentProfileApi } from '../../api/apiEndpoints'
 import { call, list, record, requireId, dateOnly } from '../../services/scopedModulesService'
-import { loadExaminationData } from '../../services/examinationWorkspaceService'
+import { loadExaminationData, loadScheduleLookups, scheduleConflict } from '../../services/examinationWorkspaceService'
 import useScopedModule from '../../services/useScopedModule'
 import './examination-setup/ExaminationSetup.css'
 import './exam-timetable/ExamModule.css'
@@ -40,6 +43,10 @@ export default function LiveExaminationWorkspace({ screen = 'examination-list', 
 
 function Workspace({ academic, screen, timetable }) {
   const location = useLocation()
+  const { canAction } = useScreenAccess()
+  const accessPath = timetable ? '/exam/timetable' : '/examination-setup/examination-list'
+  const canCreate = canAction(accessPath, 'create'), canEdit = canAction(accessPath, 'edit'), canDelete = canAction(accessPath, 'delete')
+  const [viewing, setViewing] = useState(null)
   const collection = screen === 'exam-type' ? 'types' : screen === 'exam-rules' ? 'rules' : screen === 'halls' ? 'halls' : timetable || screen === 'exam-schedule' ? 'schedules' : 'examinations'
   const scope = { collegeId: academic.selectedCollegeId, academicYearId: academic.selectedAcademicYearId,area:collection,resource:collection,enabled:!academic.loading && Boolean(academic.selectedCollegeId) }
   const { data, state, mutate, reload, clearSaveError } = useScopedModule(getUserRole() === 'student' ? loadStudentExaminationData : loadExaminationData, scope, { examinations: [], types: [], schedules: [], rules: [], halls: [], lookups: {},loaded:[],resourceErrors:{} })
@@ -62,10 +69,22 @@ function Workspace({ academic, screen, timetable }) {
   const courses = lookup(['courses'], academic.activeCourses || academic.courses || [])
   const branches = lookup(['branches'], academic.activeBranches || academic.branches || [])
   const semesters = lookup(['semesters'], academic.activeSemesters || academic.semesters || [])
-  const subjects = lookup(['subjects'])
-  const sections = lookup(['sections'], academic.sections || [])
   const classrooms = lookup(['classrooms', 'rooms'])
   const selectedExam = data.examinations.find(exam => String(exam.examId) === String(editor?.examId))
+  const [scheduleMappings, setScheduleMappings] = useState(null)
+  const [mappingAttempt, setMappingAttempt] = useState(0)
+  const mappingCollege = scope.collegeId
+  useEffect(() => {
+    if (collection !== 'schedules' || !selectedExam) return
+    const controller = new AbortController()
+    loadScheduleLookups({ collegeId: mappingCollege }, selectedExam, controller.signal)
+      .then(data => { if (!controller.signal.aborted) setScheduleMappings({ exam: selectedExam, attempt: mappingAttempt, data }) })
+      .catch(error => { if (!controller.signal.aborted) setScheduleMappings({ exam: selectedExam, attempt: mappingAttempt, error: error.message }) })
+    return () => controller.abort()
+  }, [collection, selectedExam, mappingCollege, mappingAttempt])
+  const currentMappings = scheduleMappings?.exam === selectedExam && scheduleMappings?.attempt === mappingAttempt ? scheduleMappings : null
+  const subjects = currentMappings?.data?.subjects ?? []
+  const sections = currentMappings?.data?.sections ?? []
   const examStart = dateOnly(selectedExam?.startDate), examEnd = dateOnly(selectedExam?.endDate)
   const displayDate = date => new Date(`${date}T00:00:00`).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})
   const dateHint = examStart && examEnd ? `Choose a date between ${displayDate(examStart)} and ${displayDate(examEnd)}.` : 'Select an examination to choose the exam date.'
@@ -75,7 +94,11 @@ function Workspace({ academic, screen, timetable }) {
     setFieldErrors(current=>({...current,[key]:'',...(key==='examId'?{examDate:''}:{})}))
     setEditor(current=>{
       const next={...current,[key]:value}
+      if (key==='courseId') { next.branchId=''; next.semesterId='' }
+      if (key==='branchId') next.semesterId=''
       if (key==='examId' && collection==='schedules') {
+        next.subjectId = ''
+        next.sectionId = ''
         const parent=data.examinations.find(exam=>String(exam.examId)===String(value))
         if (next.examDate && (dateOnly(next.examDate)<dateOnly(parent?.startDate) || dateOnly(next.examDate)>dateOnly(parent?.endDate))) next.examDate=''
       }
@@ -117,17 +140,36 @@ function Workspace({ academic, screen, timetable }) {
   }), [data, collection, query, examFilter, screen, filters])
   const pathFor = item => collection === 'examinations' ? `exams${item.examId ? `/${requireId(item.examId)}` : ''}` : collection === 'types' ? `exam-types${item.examTypeId ? `/${requireId(item.examTypeId)}` : ''}` : collection === 'halls' ? `exam-schedules/hall-allocations${item.examHallAllocationId ? `/${requireId(item.examHallAllocationId)}` : ''}` : `exams/${requireId(item.examId, 'examination')}/${collection}${item[idKey] ? `/${requireId(item[idKey])}` : ''}`
   const save = async e => {
-    e.preventDefault(); setFormError(''); setFieldErrors({}); setNotice('')
+    e.preventDefault(); if (state.saving || !(editor[idKey] ? canEdit : canCreate)) return; setFormError(''); setFieldErrors({}); setNotice('')
     try {
       const body = Object.fromEntries(fields.map(([key,,type,options,,,required]) => [key, type === 'number' || type === 'select' ? editor[key] === '' || editor[key] == null ? null : Number(editor[key]) : editor[key] || (required === false || options === false ? null : '')]))
       body.status = editor.status == null ? true : active(editor.status)
-      if (collection === 'examinations') { body.collegeId = requireId(scope.collegeId, 'college'); body.academicYearId = requireId(scope.academicYearId, 'academic year'); if (body.endDate < body.startDate) throw new Error('End date must not precede start date.') }
+      if (collection === 'examinations') {
+        body.collegeId = requireId(scope.collegeId, 'college')
+        body.academicYearId = requireId(scope.academicYearId, 'academic year')
+        const course = courses.find(row => Number(row.courseId ?? row.id) === body.courseId)
+        const branch = branches.find(row => Number(row.branchId ?? row.id) === body.branchId)
+        const semester = semesters.find(row => Number(row.semesterId ?? row.id) === body.semesterId)
+        if (!course || !branch || Number(branch.courseId) !== body.courseId || !semester ||
+          (semester.courseId && Number(semester.courseId) !== body.courseId) || (semester.branchId && Number(semester.branchId) !== body.branchId)) {
+          throw new Error('Select a matching course, branch and semester from the current academic configuration.')
+        }
+        if (!data.types.some(type => Number(type.examTypeId) === body.examTypeId)) throw new Error('Select a configured examination type.')
+        if (body.endDate < body.startDate) throw new Error('End date must not precede start date.')
+      }
       if (collection === 'types') body.collegeId = requireId(scope.collegeId, 'college')
       if (collection === 'schedules') {
         if (!selectedExam) throw new Error('Select an examination before saving the schedule.')
+        if (!currentMappings?.data || !subjects.some(subject => String(subject.id ?? subject.subjectId) === String(body.subjectId)) ||
+          (body.sectionId != null && !sections.some(section => String(section.id ?? section.sectionId) === String(body.sectionId)))) {
+          throw new Error('Select a mapped subject and, if applicable, a section for this examination.')
+        }
         if (!examStart || !examEnd) throw new Error('This examination needs valid start and end dates before a schedule can be added.')
         if (!body.examDate || body.examDate<examStart || body.examDate>examEnd) {setFieldErrors({examDate:dateHint});return}
         if (body.endTime <= body.startTime) {setFieldErrors({endTime:'End time must be later than start time.'});return}
+        if (body.reportingTime && body.reportingTime > body.startTime) throw new Error('Reporting time must not be later than the examination start time.')
+        const conflict = body.status && scheduleConflict(body, data.schedules, editor[idKey])
+        if (conflict) throw new Error(conflict)
       }
       const path = pathFor(editor)
       if (blocked) throw new Error('Load this screen successfully before saving records.')
@@ -136,19 +178,19 @@ function Workspace({ academic, screen, timetable }) {
     } catch (error) { showSaveError(error) }
   }
   const remove = async () => {
-    if (!deleteTarget) return
+    if (!deleteTarget || !canDelete || state.saving) return
     if (await mutate(() => call(pathFor(deleteTarget), { method: 'DELETE',query:{collegeId:scope.collegeId} }))) { setDeleteTarget(null); setNotice('Record deleted successfully.') }
   }
   const columns = collection === 'examinations' ? [['examName','Examination'],['examCode','Code'],['examTypeName','Exam Type'],['semesterName','Semester'],['startDate','Start Date'],['endDate','End Date']] : collection === 'types' ? [['name','Exam Type'],['code','Code'],['description','Description']] : collection === 'rules' ? [['examName','Examination'],['ruleName','Rule'],['ruleValue','Value'],['description','Description']] : collection === 'halls' ? [['examName','Examination'],['subjectName','Subject'],['roomName','Hall'],['allocatedStudents','Students'],['seatStartNumber','First Seat'],['seatEndNumber','Last Seat']] : [['examName','Examination'],['subjectName','Subject'],['sectionName','Section'],['examDate','Date'],['startTime','Start'],['endTime','End'],['roomName','Hall']]
   const count = key => state.loading || !scope.enabled || !data.loaded?.includes(key) || data.resourceErrors?.[key] ? '—' : data[key].length
   const addLabel = collection === 'schedules' ? 'Schedule' : collection === 'halls' ? 'Allocation' : collection === 'types' ? 'Exam Type' : collection === 'rules' ? 'Rule' : 'Examination'
   return <DashboardLayout><main className="examination-setup examination-setup--connected">
-    <header className="examination-setup__header"><div><h1>{title}</h1><p>{collection === 'types' ? 'Configure examination types used by examinations and schedules.' : collection === 'rules' ? 'Manage rules for the selected examination.' : collection === 'halls' ? 'Allocate examination halls and seats.' : 'Create and manage examination cycles and schedules.'}</p></div><div className="examination-setup__summary"><div><strong>{count('examinations')}</strong><small>Examinations</small></div><div><strong>{count('types')}</strong><small>Exam Types</small></div><div><strong>{count('schedules')}</strong><small>Schedules</small></div></div></header>
+    <PageHeader title={title} subtitle={collection === 'types' ? 'Configure examination types used by examinations and schedules.' : collection === 'rules' ? 'Manage rules for the selected examination.' : collection === 'halls' ? 'Allocate examination halls and seats.' : 'Create and manage examination cycles and schedules.'} compactSummary={[{label:'Examinations',value:count('examinations')},{label:'Exam Types',value:count('types')},{label:'Schedules',value:count('schedules')}]} />
     <nav className="examination-setup__tabs" aria-label={title}>{(timetable ? timetableTabs : setupTabs.map(([label,slug]) => [label,`/examination-setup/${slug}`])).map(([label,url]) => <Link key={url} to={url} className={location.pathname === url ? 'active' : ''}>{label}</Link>)}</nav>
     {scope.enabled ? <ScopedModuleNotice state={state} data={data} resource={collection} onRetry={reload} /> : <p role="status" className="campus-notice">{academic.loading ? 'Loading college configuration…' : 'Select a college to view examination records.'}</p>}{notice && <p role="status" className="examination-setup__success">{notice}</p>}
     {scope.enabled && !scope.academicYearId && collection !== 'types' && <p role="status" className="campus-notice">No active academic year is available for this college. Existing records can be reviewed; an academic year is required to save examinations and schedules.</p>}
     <section className="examination-setup__card">
-    <FilterPanel className="examination-setup__filter-panel" active={hasFilters} onClear={clearFilters} actions={!readonly && <button type="button" className="examination-setup__primary" disabled={state.loading || state.saving || blocked} onClick={() => openEditor({})}>Add {addLabel}</button>}>
+    <FilterPanel className="examination-setup__filter-panel" active={hasFilters} onClear={clearFilters} actions={!readonly && canCreate && <button type="button" className="examination-setup__primary" disabled={state.loading || state.saving || blocked} onClick={() => openEditor({})}>Add {addLabel}</button>}>
       <label className="examination-setup__search"><FiSearch aria-hidden="true" /><input aria-label="Search records" placeholder="Search records…" value={query} onChange={e=>{setQuery(e.target.value);setPage(1)}} /></label>
       <div className="examination-setup__filter-fields">
         {['rules','schedules','halls'].includes(collection) && <label><span>Examination</span><ProjectSelect value={examFilter} onChange={e=>{setExamFilter(e.target.value);setPage(1)}} aria-label="Filter examination"><option value="">All examinations</option>{data.examinations.map(row=><option key={row.examId} value={row.examId}>{row.examName}</option>)}</ProjectSelect></label>}
@@ -157,14 +199,18 @@ function Workspace({ academic, screen, timetable }) {
         {dated && <><label><span>From date</span><input aria-label="From date" type="date" value={filters.from} max={filters.to || undefined} onChange={e=>changeFilter('from',e.target.value)} /></label><label><span>To date</span><input aria-label="To date" type="date" value={filters.to} min={filters.from || undefined} onChange={e=>changeFilter('to',e.target.value)} /></label></>}
       </div>
     </FilterPanel>
-    {!scope.enabled ? <p className="examination-setup__empty">Select a college to continue.</p> : state.loading ? <p role="status">Loading records…</p> : blocked ? null : <div className="examination-setup__table-wrap"><table><thead><tr>{columns.map(([key,label]) => <th key={key}>{label}</th>)}<th>Status</th>{!readonly && <th>Actions</th>}</tr></thead><tbody>{filtered.slice((page-1)*10,page*10).map((r,index) => <tr key={r[idKey] ?? index}>{columns.map(([key]) => <td key={key}>{/Date$/.test(key) ? dateOnly(r[key]) : r[key] ?? '—'}</td>)}<td>{active(r.status) ? 'Active' : 'Inactive'}</td>{!readonly && <td><div className="examination-setup__actions"><button type="button" className="table-action-btn action-edit" title="Edit" aria-label="Edit" disabled={state.saving} onClick={() => openEditor({...r})}><FiEdit2 aria-hidden="true" /></button>{collection !== 'types' && <button type="button" className="table-action-btn action-delete" title="Delete" aria-label="Delete" disabled={state.saving} onClick={() => setDeleteTarget(r)}><FiTrash2 aria-hidden="true" /></button>}</div></td>}</tr>)}{!filtered.length && <tr><td colSpan={columns.length+2}>No matching institutional records.</td></tr>}</tbody></table></div>}
+    {!scope.enabled ? <p className="examination-setup__empty">Select a college to continue.</p> : state.loading ? <p role="status">Loading records…</p> : blocked ? null : <div className="examination-setup__table-wrap"><table><thead><tr>{columns.map(([key,label]) => <th key={key}>{label}</th>)}<th>Status</th><th>Actions</th></tr></thead><tbody>{filtered.slice((page-1)*10,page*10).map((r,index) => <tr key={r[idKey] ?? index}>{columns.map(([key]) => <td key={key}>{/Date$/.test(key) ? dateOnly(r[key]) : r[key] ?? '—'}</td>)}<td>{active(r.status) ? 'Active' : 'Inactive'}</td><td><div className="examination-setup__actions"><button type="button" className="table-action-btn action-view" aria-label="View details" onClick={() => setViewing(r)}><FiEye /></button>{!readonly && canEdit && <button type="button" className="table-action-btn action-edit" title="Edit" aria-label="Edit" disabled={state.saving} onClick={() => openEditor({...r})}><FiEdit2 aria-hidden="true" /></button>}{!readonly && canDelete && collection !== 'types' && <button type="button" className="table-action-btn action-delete" title="Delete" aria-label="Delete" disabled={state.saving} onClick={() => setDeleteTarget(r)}><FiTrash2 aria-hidden="true" /></button>}</div></td></tr>)}{!filtered.length && <tr><td colSpan={columns.length+2}>No matching institutional records.</td></tr>}</tbody></table></div>}
     {scope.enabled && !blocked && !state.loading && <TablePagination page={page} totalPages={Math.max(1,Math.ceil(filtered.length/10))} onPageChange={setPage} />}
     </section>
-    {editor && !readonly && <div className="examination-setup__modal-backdrop"><section className="examination-setup__modal" role="dialog" aria-modal="true" aria-label={`Manage ${addLabel}`}><header><h2>{editor[idKey] ? 'Edit' : 'Add'} {addLabel}</h2><button type="button" aria-label="Close editor" onClick={() => setEditor(null)}>×</button></header><form className="examination-setup__form" onSubmit={save}>
+    {editor && !readonly && (editor[idKey] ? canEdit : canCreate) && <ViewDialog title={`Manage ${addLabel}`} subtitle={`${editor[idKey] ? "Edit" : "Add"} ${addLabel}`} onClose={() => setEditor(null)} showExport={false} hideFooter busy={state.saving} maxWidth="820px"><form className="examination-setup__form" onSubmit={save}>
       {fields.map(([key,label,type = 'text', options, optionKey, optionLabel, required]) => <label key={key}><span>{label}{options === false || required === false ? '' : ' *'}</span>{type === 'select' ? <ProjectSelect required={required !== false} value={editor[key] ?? ''} onChange={e => changeField(key,e.target.value)}><option value="">Select {label.toLowerCase()}</option>{options.map((o,index) => <option key={o[optionKey] ?? o.id ?? index} value={o[optionKey] ?? o.id}>{o[optionLabel] || o.name || o.classroomName || o.roomNumber || o.code || o.id}</option>)}</ProjectSelect> : type === 'textarea' ? <textarea value={editor[key] || ''} onChange={e => changeField(key,e.target.value)} /> : <input required={options !== false} type={type} aria-invalid={Boolean(fieldErrors[key])} aria-describedby={fieldErrors[key] || key === 'examDate' ? `exam-field-${key}-hint` : undefined} disabled={key === 'examDate' && collection === 'schedules' && (!examStart || !examEnd)} min={key === 'examDate' && collection === 'schedules' ? examStart : type === 'number' ? key === 'allocatedStudents' ? 0 : 1 : undefined} max={key === 'examDate' && collection === 'schedules' ? examEnd : undefined} value={type === 'date' ? dateOnly(editor[key]) : editor[key] ?? ''} onChange={e => changeField(key,e.target.value)} />}{(fieldErrors[key] || key === 'examDate' && collection === 'schedules') && <small id={`exam-field-${key}-hint`} className={fieldErrors[key] ? 'examination-setup__field-error' : 'examination-setup__field-hint'} role={fieldErrors[key] ? 'alert' : undefined}>{fieldErrors[key] || dateHint}</small>}</label>)}
+      {collection === 'schedules' && selectedExam && !currentMappings && <p role="status">Loading examination subject and section mappings…</p>}
+      {currentMappings?.error && <div role="alert">{currentMappings.error} <button type="button" className="examination-setup__secondary" onClick={() => setMappingAttempt(attempt => attempt + 1)}>Retry mappings</button></div>}
+      {currentMappings?.data && !subjects.length && <p role="status">No subjects are mapped to this examination’s course, branch and semester.</p>}
       <label><span>Status</span><ProjectSelect value={editor.status == null || active(editor.status) ? 'active' : 'inactive'} onChange={e => setEditor(v => ({...v,status:e.target.value==='active'}))}><option value="active">Active</option><option value="inactive">Inactive</option></ProjectSelect></label>
       {formError && <p role="alert" className="examination-setup__form-feedback">{formError}</p>}<footer><button type="button" className="examination-setup__secondary" onClick={() => setEditor(null)}>Cancel</button><button className="examination-setup__primary" disabled={state.loading || state.saving || blocked} type="submit">{state.saving ? 'Saving…' : 'Save'}</button></footer>
-    </form></section></div>}
-    {deleteTarget && <section className="examination-setup__card" role="dialog" aria-label="Confirm deletion"><p>Delete this institutional record?</p><button className="examination-setup__secondary" disabled={state.saving} onClick={() => setDeleteTarget(null)}>Cancel</button><button className="examination-setup__primary" disabled={state.saving} onClick={remove}>Delete</button></section>}
+    </form></ViewDialog>}
+    {deleteTarget && canDelete && <ViewDialog title="Confirm deletion" showExport={false} hideFooter busy={state.saving} onClose={() => setDeleteTarget(null)}><p>Delete this institutional record? Existing backend dependency rules still apply.</p>{state.saveError && <p role="alert">{String(state.saveError.message || state.saveError)}</p>}<div className="examination-setup__actions"><button className="examination-setup__secondary" disabled={state.saving} onClick={() => setDeleteTarget(null)}>Cancel</button><button className="examination-setup__primary" disabled={state.saving} onClick={remove}>Delete</button></div></ViewDialog>}
+    {viewing && <ViewDialog title={addLabel+' Details'} subtitle={viewing.examName || viewing.name || viewing.subjectName} onClose={() => setViewing(null)} showExport={false}><dl className="examination-record-details">{[...columns,['courseName','Course'],['branchName','Branch'],['description','Description']].filter(([key],index,all)=>all.findIndex(([k])=>k===key)===index).map(([key,label])=><div key={key}><dt>{label}</dt><dd>{/Date$/.test(key) ? dateOnly(viewing[key]) || '—' : viewing[key] ?? '—'}</dd></div>)}<div><dt>Status</dt><dd>{active(viewing.status)?'Active':'Inactive'}</dd></div></dl></ViewDialog>}
   </main></DashboardLayout>
 }

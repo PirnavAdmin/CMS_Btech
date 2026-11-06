@@ -9,7 +9,7 @@
     "test:architecture": "node --test src/config/moduleRegistry.test.js && vitest run src/config/navigation.vitest.test.jsx",
     "build": "vite build",
     "lint": "oxlint",
-    "test": "vitest run && node --test",
+    "test": "vitest run && node scripts/run-node-tests.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

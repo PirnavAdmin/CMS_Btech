@@ -1,0 +1,70 @@
+[
+  {
+    "file": "Frontend\\src\\index.css",
+    "removedSelectors": 1
+  },
+  {
+    "file": "Frontend\\src\\pages\\attendance\\Attendance.css",
+    "removedSelectors": 5
+  },
+  {
+    "file": "Frontend\\src\\pages\\campus\\CampusWorkspace.css",
+    "removedSelectors": 9
+  },
+  {
+    "file": "Frontend\\src\\pages\\courseManagement\\Course.css",
+    "removedSelectors": 14
+  },
+  {
+    "file": "Frontend\\src\\pages\\examinations\\exam-timetable\\ExamModule.css",
+    "removedSelectors": 4
+  },
+  {
+    "file": "Frontend\\src\\pages\\examinations\\examination-setup\\ExaminationSetup.css",
+    "removedSelectors": 2
+  },
+  {
+    "file": "Frontend\\src\\pages\\examinations\\marks-management\\MarksManagement.css",
+    "removedSelectors": 3
+  },
+  {
+    "file": "Frontend\\src\\pages\\faculty\\FacultyManagement.css",
+    "removedSelectors": 6
+  },
+  {
+    "file": "Frontend\\src\\pages\\fees\\fees.css",
+    "removedSelectors": 12
+  },
+  {
+    "file": "Frontend\\src\\pages\\semester-management\\SemesterManagement.css",
+    "removedSelectors": 1
+  },
+  {
+    "file": "Frontend\\src\\pages\\student-management\\StudentAdmission\\StudentAdmission.css",
+    "removedSelectors": 1
+  },
+  {
+    "file": "Frontend\\src\\pages\\student-management\\StudentProfile\\StudentProfile.css",
+    "removedSelectors": 1
+  },
+  {
+    "file": "Frontend\\src\\styles\\dark-mode.css",
+    "removedSelectors": 4
+  },
+  {
+    "file": "Frontend\\src\\styles\\erp-theme.css",
+    "removedSelectors": 43
+  },
+  {
+    "file": "Frontend\\src\\styles\\global.css",
+    "removedSelectors": 10
+  },
+  {
+    "file": "Frontend\\src\\styles\\tableActions.css",
+    "removedSelectors": 54
+  },
+  {
+    "file": "Frontend\\src\\styles\\view-cards.css",
+    "removedSelectors": 5
+  }
+]

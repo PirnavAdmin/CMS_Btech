@@ -109,7 +109,7 @@ const handler = source.slice(source.indexOf('  const nextStep = async () => {'),
 function setup({ result = { admissionId: 123 }, failure, recordIds = {}, allErrors = {} } = {}) {
   const events = []
   const context = {
-    savingStep: false, step: 0, allErrors, recordIds, STEPS: Array(8),
+    savingStep: false, submitting: false, savingDraft: false, canAction: () => true, creationUncertain: { current: false }, setFurthestStep: () => {}, step: 0, allErrors, recordIds, STEPS: Array(7),
     data: { personal: {} }, locallySavedAdmission: { current: null },
     setSaveError: value => events.push(['error', value]),
     setTouched: () => {}, setErrors: () => {}, focusFirst: () => {},
@@ -131,7 +131,7 @@ function setup({ result = { admissionId: 123 }, failure, recordIds = {}, allErro
   return { events, context, save: runInNewContext(`${handler}; nextStep`, context) }
 }
 
-test('successful creation caches the draft before navigation and resumes on Contact & Address', async () => {
+test('successful creation caches the draft before navigation and resumes on Academic Details', async () => {
   const { events, context, save } = setup()
   await save()
   const navigation = events.find(event => event[0] === 'navigate')

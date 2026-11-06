@@ -1,3 +1,10 @@
+import { updateAcademicFeeDraft } from '../../services/academicFeeDraftUpdate'
+import { collectVerifiedPayment, hasOfficialFeeReceipt, feeAmountReported, canPrintFeeReceipt } from '../../services/verifiedFeeCollection'
+import { useScreenAccess } from '../../auth/ScreenAccess'
+import { assignPublishedStudentFees, matchesPublishedFeeScope } from '../../services/studentFeeAssignmentWorkflow'
+import SharedFeeDialog from '../../components/ViewDialog'
+import SharedFeeHeader from '../../components/PageHeader'
+import FeeTypesConfiguration from './FeeTypesConfiguration'
 import { ADMISSION_QUOTAS } from '../../utils/admissionQuotaOptions'
 import { approveForAdmission } from '../../services/academicFeePlanApproval.js'
 import '../admin-management/AdminManagement.css'
@@ -15,7 +22,6 @@ import * as SearchableSelectModule from '../../components/SearchableSelect';
 import * as TablePaginationModule from '../../components/TablePagination';
 import * as EmptyStateModule from '../../components/EmptyState';
 import * as DirectoryEmptyStateModule from '../../components/DirectoryEmptyState';
-import * as useToastStateModule from '../../hooks/useToastState';
 import * as ExportMenuModule from '../../components/ExportMenu';
 import * as DashboardLayoutModule from '../../layouts/DashboardLayout';
 import * as AcademicContextModule from '../../context/AcademicContext';
@@ -29,6 +35,35 @@ import * as apiEndpointsModule from '../../api/apiEndpoints';
 import * as collegeApiModule from '../../auth/collegeApi';
 import * as authModule from '../../auth/auth';
 import * as collegeScopeModule from '../../utils/collegeScope';
+
+async function loadAcademicPlans(collegeId) {
+  const plans = new Map();
+  for (let page = 1; ; page += 1) {
+    const rows = await apiEndpointsModule.academicFeePlanApi.list(collegeId, { page, pageSize: 100 });
+    const previousCount = plans.size;
+    for (const row of rows) if (row.feeStructureId) plans.set(String(row.feeStructureId), row);
+    if (rows.length < 100) return [...plans.values()];
+    if (plans.size === previousCount) throw new Error('Fee plan pagination returned a repeated page.');
+  }
+}
+
+const liveFeePlanRow=plan=>({
+                      ...feeStructureServiceModule.newFeeStructure(String(plan.academicYearId)),
+                      id: String(plan.feeStructureId), name: plan.name, code: plan.code,
+                      status: ({DRAFT:"Draft",SUBMITTED:"Pending Approval",APPROVED:"Approved",PUBLISHED:"Published",ARCHIVED:"Archived"})[String(plan.status).toUpperCase()] || "Not reported",
+                      collegeId: String(plan.collegeId), academicYearId: String(plan.academicYearId), courseId: String(plan.courseId), branchId: String(plan.branchId), semesterId: String(plan.semesterId), batch: plan.batch,
+                      quota: plan.quota || "", studentCategory: plan.studentCategory || "", category: plan.quota || "", applicableTo: "Selected Category",
+                      cycle: plan.cycle === "SEMESTER" ? "Semester-wise" : "Yearly", plan: plan.paymentMode === "INSTALLMENTS" ? "Installment Plan" : "Full Payment",
+                      feeCategoryId: plan.feeCategoryId, effectiveFrom: String(plan.effectiveFrom || "").slice(0, 10), effectiveTo: String(plan.effectiveTo || "").slice(0, 10), dueDate: String(plan.dueDate || "").slice(0, 10), discount: 0,
+                      components: (plan.components || []).map(component => ({ masterId: component.code, code: component.code, name: component.name, amount: Number(component.amount), category: "Academic", mandatory: true, refundable: false, recurring: true, frequency: plan.cycle })),
+                      installments: (plan.installments || []).map(row => ({ id: `API-${row.number}`, name: `Payment ${row.number}`, amount: Number(row.amount), dueDate: String(row.dueDate || "").slice(0, 10) })),
+                      workflowStructure: true, previousFeeStructureId: plan.previousFeeStructureId, backendRevision: plan.revision, backendVersion: plan.version, version: plan.version,
+                    });
+
+const reportedMoney = value => feeAmountReported(value) ? feeStructureServiceModule.feeMoney(value) : 'Unavailable';
+const reportedTotal = (rows, field) => rows.every(row => feeAmountReported(row[field]))
+  ? rows.reduce((sum, row) => sum + Number(row[field]), 0)
+  : null;
 
 function FeeRequestState({ loading, error, children }) {
   if (loading) return <div className="fm-request-state" role="status">Loading fee records...</div>;
@@ -58,13 +93,7 @@ function calculatedFeeBatch(year, course) {
 }
 
 function FeePageHeading({ title, description, icon: Icon = external3.FiCreditCard, children }) {
-  return <header className="fm-page-header">
-    <div className="fm-heading-identity">
-      <span className="fm-heading-icon" aria-hidden="true"><Icon /></span>
-      <div><h1>{title}</h1><p>{description}</p></div>
-    </div>
-    {children && <div className="fm-header-actions">{children}</div>}
-  </header>;
+  return <SharedFeeHeader title={title} subtitle={description} secondaryActions={children} />;
 }
 
 function FeeMetric({ label, value, meta, tone = "blue", icon: Icon = external3.FiBarChart2 }) {
@@ -325,7 +354,6 @@ export const FeeStructureWizardModule = (() => {
     feeMoney,
     feeTotal,
     rupees,
-    studentMatchesFee,
     uid,
     validateFeeStructure,
   } = feeStructureServiceModule;
@@ -511,62 +539,7 @@ export const FeeStructureWizardModule = (() => {
     );
   }
 
-  function FeeDialog({ title, close, children, footer, wide = false, busy = false }) {
-    const ref = useRef(null),
-      titleId = useId();
-    useEffect(() => {
-      const previous = document.activeElement,
-        overflow = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
-      ref.current?.focus();
-      return () => {
-        document.body.style.overflow = overflow;
-        previous?.focus();
-      };
-    }, []);
-    const keydown = (e) => {
-      if (e.key === "Tab") {
-        const controls = [...ref.current.querySelectorAll('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex="0"]')].filter(el => el.getClientRects().length);
-        const first = controls[0], last = controls.at(-1);
-        if (!first) { e.preventDefault(); return; }
-        if (e.shiftKey && (document.activeElement === first || document.activeElement === ref.current)) { e.preventDefault(); last.focus(); }
-        else if (!e.shiftKey && (document.activeElement === last || document.activeElement === ref.current)) { e.preventDefault(); first.focus(); }
-      }
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        if (!busy) close();
-      }
-    };
-    return (
-      <div className="fs-overlay" onClick={() => { if (!busy) close(); }} onKeyDown={keydown}>
-        <div
-          ref={ref}
-          role="dialog"
-          aria-modal="true"
-          aria-busy={busy}
-          aria-labelledby={titleId}
-          className={`fm-dialog ${wide ? "fm-dialog--wide" : ""}`}
-          onClick={(e) => e.stopPropagation()}
-          tabIndex={-1}
-        >
-          <header className="fm-dialog__header">
-            <h2 id={titleId}>{title}</h2>
-            <button
-              type="button"
-              className="fm-dialog__close"
-              onClick={close}
-              aria-label="Close"
-              disabled={busy}
-            >
-              <FiX />
-            </button>
-          </header>
-          <div className="fm-dialog__body">{children}</div>
-          {footer && <footer className="fm-dialog__footer">{footer}</footer>}
-        </div>
-      </div>
-    );
-  }
+  function FeeDialog({title,close,children,footer,wide=false,busy=false}) { return <SharedFeeDialog title={title} onClose={close} busy={busy} showExport={false} hideFooter={!footer} footerActions={footer} maxWidth={wide ? '1100px' : '640px'}><div className="fm-dialog__body">{children}</div></SharedFeeDialog> }
 
   function FeeReview({ value: s, section = "all", showTotals = true, showLateRules = true }) {
     return (
@@ -770,7 +743,7 @@ export const FeeStructureWizardModule = (() => {
       setServerPlans([]);
       Promise.all([
         apiEndpointsModule.feeConfigurationApi.categories(),
-        collegeId ? apiEndpointsModule.academicFeePlanApi.list(collegeId) : Promise.resolve([]),
+        collegeId ? loadAcademicPlans(collegeId) : Promise.resolve([]),
       ]).then(([categories, plans]) => {
         if (!active) return;
         setFeeCategories(Array.isArray(categories) ? categories : []);
@@ -976,7 +949,7 @@ export const FeeStructureWizardModule = (() => {
         if (legacyLocalEdit) { await save(payload, targetStatus); return; }
         const planNameBase = payload.name;
         const results = [];
-        const livePlans = await apiEndpointsModule.academicFeePlanApi.list(collegeId);
+        const livePlans = await loadAcademicPlans(collegeId);
         setServerPlans(Array.isArray(livePlans) ? livePlans : []);
         for (const [index, config] of configurations.entries()) {
           let saved = completedSavesRef.current[config.id];
@@ -1198,14 +1171,14 @@ export const FeeStructureWizardModule = (() => {
               aria-expanded={advancedOpen}
               onClick={() => setAdvancedOpen((o) => !o)}
             >
-              <span>{legacyLocalEdit ? "Advanced Options (Grace Period, Late Fees & Penalty Rules)" : "Plan Validity"}</span>
+              <span>{legacyLocalEdit && !value.workflowStructure ? "Advanced Options (Grace Period, Late Fees & Penalty Rules)" : "Plan Validity"}</span>
               {advancedOpen ? <FiChevronDown /> : <FiChevronRight />}
             </button>
 
-            {!legacyLocalEdit && <p className="fm-contract-note">Set the validity period for all payment due dates. Grace periods and late-fee rules are not supported by this API.</p>}
+            {(!legacyLocalEdit || value.workflowStructure) && <p className="fm-contract-note">Set the validity period for all payment due dates. Grace periods and late-fee rules are not supported by this API.</p>}
             {advancedOpen && (
               <div className="fm-form-grid fm-advanced-content">
-                {legacyLocalEdit && <>
+                {legacyLocalEdit && !value.workflowStructure && <>
                 <FeeInput
                   label="Grace Period (days)"
                   type="number"
@@ -1287,7 +1260,7 @@ export const FeeStructureWizardModule = (() => {
               {saving ? "Saving configurations…" : "Save Draft"}
             </button>
             {submissionComplete && <button type="button" className="erp-btn erp-btn--primary" onClick={finishSubmission} disabled={saving}>{saving ? "Refreshing list…" : "Return to Fee Structure List"}</button>}
-            {formTab === 'schedule' && !submissionComplete && <button
+            {formTab === 'schedule' && !submissionComplete && !value.workflowStructure && <button
               type="button"
               className="erp-btn erp-btn--primary"
               disabled={saving}
@@ -1350,7 +1323,6 @@ export const FeeStructureModule = (() => {
   const { Link, useLocation, useNavigate, useParams } = external1;
   const {
     FiCheck,
-    FiCopy,
     FiEdit2,
     FiEye,
     FiFilter,
@@ -1371,8 +1343,6 @@ export const FeeStructureModule = (() => {
   const { default: ExportMenu } = ExportMenuModule;
   const {
     feeStructureColumns,
-    hostelFeeColumns,
-    transportFeeColumns,
   } = exportColumnsModule;
   const { default: DashboardLayout } = DashboardLayoutModule;
   const { academicYearApi, branchApi, courseApi, departmentApi } =
@@ -1382,11 +1352,7 @@ export const FeeStructureModule = (() => {
     blankAcademic,
     componentTotals,
     money,
-    persistStructures,
-    persistHostelStructures,
-    persistTransportStructures,
     readHostelStructures,
-    readStructures,
     readTransportStructures,
     saveAcademic,
     uid,
@@ -1394,7 +1360,6 @@ export const FeeStructureModule = (() => {
   } = feeStructureServiceModule;
   const { useAcademic } = AcademicContextModule;
   const { showError, showSuccess } = toastModule;
-  const { default: useToastState } = useToastStateModule;
 
   const STATUSES = ["All", "Active", "Draft", "Inactive"];
 
@@ -1639,6 +1604,7 @@ export const FeeStructureModule = (() => {
             <button
               type="button"
               className="erp-btn erp-btn--secondary"
+              disabled
               onClick={() => submit("Draft")}
             >
               Save Draft
@@ -1646,6 +1612,7 @@ export const FeeStructureModule = (() => {
             <button
               type="button"
               className="erp-btn erp-btn--primary"
+              disabled
               onClick={() => submit("Active")}
             >
               Activate Fee Plan
@@ -1800,6 +1767,8 @@ export const FeeStructureModule = (() => {
     viewPlan = false,
   }) {
     const navigate = useNavigate();
+    const {canAction}=useScreenAccess();
+    const canCreatePlan=canAction('/fees','create'),canEditPlan=canAction('/fees','edit');
     const location = useLocation();
     const { facilityId, structureId } = useParams();
     const { scopeRecords, academicYears, selectedCollegeId, selectedAcademicYearId, selectedAcademicYear } =
@@ -1816,11 +1785,10 @@ export const FeeStructureModule = (() => {
       setTab(category);
       navigate('/fees/structures' + (category === 'academic' ? '' : '?category=' + category), { replace: true });
     };
-    const [rows, setRows] = useState(readStructures);
+
     const [hostels, setHostels] = useState(readHostelStructures);
     const [transports, setTransports] = useState(readTransportStructures);
     useEffect(() => {
-      setRows(readStructures());
       setHostels(readHostelStructures());
       setTransports(readTransportStructures());
       setQuery('');
@@ -1834,7 +1802,7 @@ export const FeeStructureModule = (() => {
     });
     const [loading, setLoading] = useState(true);
     const [lookupError, setLookupError] = useState("");
-    const [, setToast] = useToastState("", "success");
+    const [lookupAttempt,setLookupAttempt]=useState(0);
     const [query, setQuery] = useState("");
     const [filters, setFilters] = useState({
       academicYearId: "",
@@ -1897,20 +1865,12 @@ export const FeeStructureModule = (() => {
       return () => {
         active = false;
       };
-    }, [selectedCollegeId]);
+    }, [selectedCollegeId,lookupAttempt]);
 
-    const academicRows = useMemo(() => {
-      return [
-        ...rows,
-        ...(workflow?.rows || []).map((s) => ({
-          ...workflowAcademicRow(s),
-          status: s.status === "Published" ? "Approved" : s.status,
-          assignedCount: (workflow?.assignments || []).filter(
-            (a) => a.structureId === s.id
-          ).length,
-        })),
-      ];
-    }, [rows, workflow?.rows, workflow?.assignments]);
+    const academicRows = useMemo(() => (workflow?.rows || []).map(plan => ({
+      ...workflowAcademicRow(plan),status:plan.status,effectiveFrom:plan.effectiveFrom,effectiveTo:plan.effectiveTo,
+      assignedCount:plan.assignedCount ?? 'Unavailable',
+    })),[workflow?.rows]);
 
     const uniqueBatches = useMemo(() => {
       return [...new Set(academicRows.map((r) => r.batch).filter(Boolean))];
@@ -2062,6 +2022,7 @@ export const FeeStructureModule = (() => {
     };
 
     const handleCreate = () => {
+      if (!canCreatePlan) return;
       if (tab === "academic") {
         navigate("/fees/structures/create");
       } else if (tab === "hostel") {
@@ -2071,58 +2032,15 @@ export const FeeStructureModule = (() => {
       }
     };
 
-    const handleDuplicateDraft = (row) => {
-      if (row.workflowStructure) { workflow.duplicate(row.workflowStructure); return; }
-      const clone = {
-        ...structuredClone(row),
-        id: uid("FS"),
-        name: `${row.name} (Copy)`,
-        status: "Draft",
-        assignedCount: 0,
-      };
-      const next = [clone, ...rows];
-      persistStructures(next);
-      setRows(next);
-      setToast("Fee plan duplicated as draft.");
-    };
-
-    const handleDeleteDraft = (row) => {
-      if (row.status !== "Draft") {
-        alert("Only Draft fee plans can be deleted.");
-        return;
-      }
-      if (!window.confirm(`Delete draft plan "${row.name}"?`)) return;
-      if (row.workflowStructure) { workflow.remove(row.id); return; }
-      const next = rows.filter((r) => r.id !== row.id);
-      persistStructures(next);
-      setRows(next);
-      setToast("Draft fee plan deleted.");
-    };
-
-    const saveFacility = (type, val) => {
-      if (type === "hostel") {
-        const conflict = hostels.some(existing => existing.id !== val.id && existing.status !== "Inactive" && String(existing.academicYearId) === String(val.academicYearId) && feeHeadName(existing.hostelName).toLowerCase() === feeHeadName(val.hostelName).toLowerCase() && existing.frequency === val.frequency && (existing.roomPricing || [existing]).some(room => val.roomPricing.some(next => hostelRoomKey(room) === hostelRoomKey(next))));
-        if (conflict) throw new Error("Pricing already exists for this hostel, academic year, room category and fee cycle. Edit the existing plan.");
-      }
-      val = { ...val, id: val.id || uid(type === "hostel" ? "HF" : "TF") };
-      const target = type === "hostel" ? hostels : transports;
-      const next = [val, ...target.filter((x) => x.id !== val.id)];
-      if (type === "hostel") {
-        persistHostelStructures(next);
-        setHostels(next);
-      } else {
-        persistTransportStructures(next);
-        setTransports(next);
-      }
-      setToast(`${type === "hostel" ? "Hostel" : "Transport"} fee plan saved.`);
-      backToPlans(type);
+    const saveFacility = () => {
+      throw new Error('Facility fee writes require a college-scoped backend configuration API.');
     };
 
     if (viewPlan) {
       const category = facilityType === "hostel" ? "Hostel" : facilityType === "transport" ? "Transport" : "Academic";
-      const row = facilityType ? (facilityType === "hostel" ? hostels : transports).find(item => String(item.id) === String(facilityId)) : (workflow?.rows || []).find(item => String(item.id) === String(structureId)) || rows.find(item => String(item.id) === String(structureId));
+      const row = facilityType ? (facilityType === "hostel" ? hostels : transports).find(item => String(item.id) === String(facilityId)) : (workflow?.rows || []).find(item => String(item.id) === String(structureId));
       if (!row) return <div className="fm-page-container"><FeePageHeading title="Fee Plan Not Found" description="This fee plan is unavailable in the selected college." /><button type="button" className="erp-btn erp-btn--secondary" onClick={() => backToPlans()}>Back to Fee Plans</button></div>;
-      const canEdit = facilityType ? true : row.status === "Draft" && !(workflow?.assignments || []).some(item => item.structureId === row.id);
+      const canEdit = canEditPlan && !facilityType && row.status === "Draft";
       return <FeePlanDetailsPage row={row} category={category} masters={masters} close={() => backToPlans()} canEdit={canEdit} edit={() => navigate(facilityType ? "/fees/structures/" + facilityType + "/" + row.id + "/edit" : "/fees/structures/" + row.id + "/edit", {state: {initialStructure: row}})} />;
     }
 
@@ -2142,27 +2060,25 @@ export const FeeStructureModule = (() => {
         };
 
       return (
-        <FacilityEditor
+        <> <p role="status">Facility configuration is read-only until college-scoped writes are available.</p><FacilityEditor
           type={facilityType}
           value={initial}
           masters={masters}
           close={() => backToPlans()}
           save={saveFacility}
           existingHostels={hostels}
-        />
+        /></>
       );
     }
 
     return (
       <div className="fm-page-container">
         {/* Page Header */}
-        <FeePageHeading title="Fee Structures" description="Configure academic, accommodation and transport fees." icon={external3.FiLayers}>
+        <FeePageHeading title="Fee Structures" description="Configure fee applicability, components and payment schedules.">{tab === "academic" && <ExportMenu rows={filteredAcademicRows} columns={feeStructureColumns} title="Academic fee structures" filename="academic-fee-structures" loading={workflow?.loading} unavailable={workflow?.error}/>}</FeePageHeading>
 
-
-
-        </FeePageHeading>
-
-        {lookupError && <div className="fm-error-banner" role="alert">{lookupError}</div>}
+        {tab==="academic" && workflow?.error && <p role="alert" className="fm-error-banner">{workflow.error} <button type="button" onClick={workflow.retry}>Retry fee structures</button></p>}
+        {tab==="academic" && workflow?.loading && <p role="status">Loading academic fee plans…</p>}
+        {lookupError && <div className="fm-error-banner" role="alert">{lookupError} <button type="button" onClick={()=>setLookupAttempt(value=>value+1)}>Retry academic options</button></div>}
         {loading && <div className="fm-request-state" role="status">Loading fee plan filters...</div>}
         {/* Fee Type Navigation (Segmented Tabs) */}
         <nav className="fm-fee-type-nav" role="tablist" aria-label="Fee plan categories">
@@ -2198,6 +2114,7 @@ export const FeeStructureModule = (() => {
           </button>
         </nav>
 
+        {tab !== "academic" && <p role="status">Legacy facility configurations are shown for reference. Saving requires college-scoped backend configuration support.</p>}
         {/* Main Workspace */}
         <div className={`fm-plan-workspace fm-category--${tab}`}>
           {/* Workspace Context Header */}
@@ -2222,7 +2139,7 @@ export const FeeStructureModule = (() => {
             <button
               type="button"
               className="fm-btn-context-primary"
-              onClick={handleCreate}
+              disabled={!canCreatePlan || tab!=="academic" || (tab==="academic" && (workflow?.loading || Boolean(workflow?.error)))} onClick={handleCreate}
             >
               <FiPlus />
               <span>
@@ -2438,7 +2355,7 @@ export const FeeStructureModule = (() => {
           )}
 
           {/* Academic Table / Empty State */}
-          {tab === "academic" && (
+          {tab === "academic" && !workflow?.loading && !workflow?.error && (
             <>
               {filteredAcademicRows.length === 0 ? (
                 <div className="fm-plan-empty-state">
@@ -2517,7 +2434,7 @@ export const FeeStructureModule = (() => {
                           >
                             <FiEye />
                           </button>
-                          {r.status === "Draft" && (
+                          {canEditPlan && r.status === "Draft" && (
                             <button
                               type="button"
                               className="fm-icon-btn"
@@ -2531,30 +2448,14 @@ export const FeeStructureModule = (() => {
                               <FiEdit2 />
                             </button>
                           )}
-                          {r.workflowStructure && (feeStructureServiceModule.feeTransitions[r.workflowStructure.status] || []).map(status => (
+                          {canEditPlan && r.workflowStructure && (feeStructureServiceModule.feeTransitions[r.workflowStructure.status] || []).map(status => (
                             <button key={status} type="button"
                               disabled={Boolean(workflow.transitioning)}
                               title={status === "Pending Approval" ? "Submit for Approval" : status === "Approved" || status === "Published" ? "Approve Plan" : status === "Archived" ? "Archive Plan" : "Return to Draft"}
                               onClick={() => workflow.transition(r.id, status)}><FiCheck /></button>
                           ))}
-                          <button
-                            type="button"
-                            className="fm-icon-btn"
-                            title="Duplicate as Draft"
-                            onClick={() => handleDuplicateDraft(r)}
-                          >
-                            <FiCopy />
-                          </button>
-                          {r.status === "Draft" && (
-                            <button
-                              type="button"
-                              className="fm-icon-btn fm-icon-btn--danger"
-                              title="Delete Draft"
-                              onClick={() => handleDeleteDraft(r)}
-                            >
-                              <FiTrash2 />
-                            </button>
-                          )}
+                          {canCreatePlan && ["Published", "Archived"].includes(r.status) && <button type="button" onClick={()=>navigate("/fees/structures/create?revisionOf="+encodeURIComponent(r.id))}>New revision</button>}
+                          {canEditPlan && r.status==="Draft" && <button type="button" disabled className="fm-icon-btn" title="Draft deletion is not supported by the academic fee plan API" aria-label="Delete draft unavailable"><FiTrash2/></button>}
                         </FeeRowActions>
                       ),
                     },
@@ -2633,7 +2534,7 @@ export const FeeStructureModule = (() => {
                             type="button"
                             className="fm-icon-btn"
                             title="Edit"
-                            onClick={() => navigate(`/fees/structures/hostel/${h.id}/edit`)}
+                            disabled
                           >
                             <FiEdit2 />
                           </button>
@@ -2642,14 +2543,7 @@ export const FeeStructureModule = (() => {
                               type="button"
                               className="fm-icon-btn fm-icon-btn--danger"
                               title="Delete"
-                              onClick={() => {
-                                if (window.confirm("Delete this draft hostel fee plan?")) {
-                                  const next = hostels.filter((x) => x.id !== h.id);
-                                  persistHostelStructures(next);
-                                  setHostels(next);
-                                  setToast("Hostel fee plan deleted.");
-                                }
-                              }}
+                              disabled
                             >
                               <FiTrash2 />
                             </button>
@@ -2729,7 +2623,7 @@ export const FeeStructureModule = (() => {
                             type="button"
                             className="fm-icon-btn"
                             title="Edit"
-                            onClick={() => navigate(`/fees/structures/transport/${t.id}/edit`)}
+                            disabled
                           >
                             <FiEdit2 />
                           </button>
@@ -2738,14 +2632,7 @@ export const FeeStructureModule = (() => {
                               type="button"
                               className="fm-icon-btn fm-icon-btn--danger"
                               title="Delete"
-                              onClick={() => {
-                                if (window.confirm("Delete this draft transport plan?")) {
-                                  const next = transports.filter((x) => x.id !== t.id);
-                                  persistTransportStructures(next);
-                                  setTransports(next);
-                                  setToast("Transport fee plan deleted.");
-                                }
-                              }}
+                              disabled
                             >
                               <FiTrash2 />
                             </button>
@@ -2843,6 +2730,7 @@ export const ServerFeeCollectionModule = (() => {
   }
 
   function ServerReceiptDialog({ data: r, close }) {
+    const printable = canPrintFeeReceipt(r);
     const rows = [
       ["Receipt Number", r.receiptNumber],
       ["Student", r.studentName],
@@ -2851,9 +2739,9 @@ export const ServerFeeCollectionModule = (() => {
       ["Component", r.feeCategory || "Fee Payment"],
       ["Payment Mode", r.paymentMode],
       ["Transaction Reference", r.transactionReference || "—"],
-      ["Fee Amount", feeMoney(r.feeAmount || r.totalAmount)],
-      ["Total Amount", feeMoney(r.totalAmount)],
-      ["Collected By", r.issuedByName || "Accounts Desk"],
+      ["Fee Amount", reportedMoney(r.feeAmount ?? r.totalAmount)],
+      ["Total Amount", reportedMoney(r.totalAmount)],
+      ["Collected By", r.issuedByName || "Unavailable"],
       ["Remarks", r.remarks || "—"],
     ];
 
@@ -2873,6 +2761,7 @@ export const ServerFeeCollectionModule = (() => {
             <button
               type="button"
               className="erp-btn erp-btn--primary"
+              disabled={!printable}
               onClick={() => {
                 try {
                   printSingleRecord({
@@ -3107,14 +2996,14 @@ export const ServerFeeCollectionModule = (() => {
         { label: "Student", render: (r) => <FeeIdentity name={r.studentName} detail={r.studentCode} /> },
         { label: "Category", render: (r) => r.feeCategory || "Academic" },
         { label: "Due Date", render: (r) => formatReportDate(r.dueDate) },
-        { label: "Total Fee", align: "right", render: (r) => feeMoney(r.payableAmount) },
-        { label: "Paid", align: "right", render: (r) => feeMoney(r.paidAmount) },
+        { label: "Total Fee", align: "right", render: (r) => reportedMoney(r.payableAmount) },
+        { label: "Paid", align: "right", render: (r) => reportedMoney(r.paidAmount) },
         {
           label: "Balance",
           align: "right",
           render: (r) => (
             <strong style={{ color: Number(r.balanceAmount) > 0 ? "var(--fee-warning, #F59E0B)" : "inherit" }}>
-              {feeMoney(r.balanceAmount)}
+              {reportedMoney(r.balanceAmount)}
             </strong>
           ),
         },
@@ -3138,7 +3027,7 @@ export const ServerFeeCollectionModule = (() => {
     } else if (reportType === "transactions") {
       reportRows = Array.isArray(reportResult) ? reportResult : [];
       reportColumns = [
-        { label: "Receipt #", render: (r) => <button type="button" className="fm-text-link" onClick={() => setReceiptView(r)}>{r.receiptNumber || `REC-${r.receiptId || r.paymentId}`}</button> },
+        { label: "Receipt #", render: (r) => <button type="button" className="fm-text-link" onClick={() => setReceiptView(r)}>{r.receiptNumber || "Number unavailable"}</button> },
         { label: "Student", render: (r) => <FeeIdentity name={r.studentName} detail={r.studentCode} /> },
         { label: "Payment Date", render: (r) => formatReportDate(r.paymentDate || r.issuedAt) },
         { label: "Payment Mode", render: (r) => <FeePaymentMethod value={r.paymentMode} /> },
@@ -3567,7 +3456,7 @@ export const ServerFeeCollectionModule = (() => {
                 {
                   label: "Amount",
                   align: "right",
-                  render: (r) => <strong>{feeMoney(r.totalAmount)}</strong>,
+                  render: (r) => <strong>{reportedMoney(r.totalAmount)}</strong>,
                 },
                 { label: "Date", render: (r) => date(r.paymentDate) },
                 { label: "Status", render: () => <FeeBadge value="Completed" /> },
@@ -3735,12 +3624,13 @@ export const ServerFeeCollectionModule = (() => {
       };
     }, [search, paymentMode, fromDate, toDate, page, academic.selectedCollegeId]);
 
-    const openReceipt = async (id, payment) => {
+    const openReceipt = async (id) => {
       try {
         const full = await feeCollectionApi.receipt(id);
-        setReceiptModal(full || payment);
-      } catch {
-        setReceiptModal(payment);
+        if (!full || !hasOfficialFeeReceipt(full)) throw new Error("Official receipt details are unavailable.");
+        setReceiptModal(full);
+      } catch (reason) {
+        setError(reason.message || "Unable to load official receipt details.");
       }
     };
 
@@ -3748,6 +3638,16 @@ export const ServerFeeCollectionModule = (() => {
       <div className="fm-page-container">
         {/* Page Header */}
         <FeePageHeading title="Receipts & History" description="Search confirmed transactions, open official receipts and review payment methods." icon={external3.FiCreditCard} />
+        <ExportMenu title="Filtered payment history" filename="payment-history" loading={loading} unavailable={error}
+          onDownload={async options => {
+            const rows = await feeCollectionApi.allHistory({ search, paymentMode, fromDate, toDate });
+            exportUtilsModule.exportToCsv({ ...options, rows, columns: [
+              {label:'Receipt',value:'receiptNumber'},{label:'Student',value:'studentName'},
+              {label:'Date',value:'paymentDate'},{label:'Method',value:'paymentMode'},
+              {label:'Amount',value:'totalAmount'},
+            ] });
+          }}/>
+
 
         <div className="fm-summary-strip">
           <FeeMetric label="Collected Today" value={feeMoney(dailySummary?.totalCollected || 0)} meta="Today's collections" tone="green" icon={external3.FiDollarSign} />
@@ -3855,7 +3755,7 @@ export const ServerFeeCollectionModule = (() => {
               {
                 label: "Amount",
                 align: "right",
-                render: (r) => <strong>{feeMoney(r.totalAmount)}</strong>,
+                render: (r) => <strong>{reportedMoney(r.totalAmount)}</strong>,
               },
               {
                 label: "Status",
@@ -3950,7 +3850,10 @@ export const ServerFeeCollectionModule = (() => {
     }, [searchQuery, academic.selectedCollegeId]);
 
     // When student selected, load their unpaid dues
+    const duesRequest = useRef(0);
+    useEffect(() => () => { duesRequest.current += 1; }, [academic.selectedCollegeId]);
     const handleSelectStudent = (st) => {
+      const request = ++duesRequest.current;
       setSelectedStudent(st);
       setLoadingDues(true);
       setStudentDues([]);
@@ -3959,18 +3862,20 @@ export const ServerFeeCollectionModule = (() => {
       feeCollectionApi
         .allPending({ studentId: st.studentId })
         .then((dues) => {
+          if (request !== duesRequest.current) return;
+          dues = dues.filter(row => String(row.studentId) === String(st.studentId));
           setStudentDues(dues || []);
           if (dues && dues.length > 0) {
             setSelectedDues([dues[0].studentFeeId]);
             setForm((f) => ({
               ...f,
-              feeAmount: String(dues[0].balanceAmount || dues[0].payableAmount || ""),
+              feeAmount: String(dues[0].balanceAmount ?? ""),
             }));
           }
           setStep(2);
         })
-        .catch(reason => { setError(reason.message || "Unable to load the student's dues."); })
-        .finally(() => setLoadingDues(false));
+        .catch(reason => { if (request === duesRequest.current) setError(reason.message || "Unable to load the student's dues."); })
+        .finally(() => { if (request === duesRequest.current) setLoadingDues(false); });
     };
 
     // Calculate total balance from selected items
@@ -3980,8 +3885,11 @@ export const ServerFeeCollectionModule = (() => {
         .reduce((sum, d) => sum + (Number(d.balanceAmount) || 0), 0);
     }, [studentDues, selectedDues]);
 
+    const { canAction } = useScreenAccess();
+    const collectionProgress = useRef({});
     const handleConfirmPayment = async () => {
-      if (submitting || selectedDues.length !== 1 || !form.paymentDate || Number(form.feeAmount) <= 0 || Number(form.feeAmount) > selectedTotalBalance) { setError("Select an installment, a payment date and an amount within its outstanding balance."); return; }
+      if (!canAction("/fees", "create") && !canAction("/fees", "edit")) { setError("You do not have permission to collect payments."); return; }
+      if (submitting || loadingDues || selectedDues.length !== 1 || !form.paymentDate || !validFeeHeadAmount(form.feeAmount) || !form.paymentMode || Number(form.feeAmount) <= 0 || Number(form.feeAmount) > selectedTotalBalance) { setError("Select an installment, a payment date and an amount within its outstanding balance."); return; }
       setSubmitting(true);
       setError("");
       try {
@@ -3994,7 +3902,7 @@ export const ServerFeeCollectionModule = (() => {
           paymentDate: form.paymentDate,
           remarks: form.remarks,
         };
-        const receipt = await feeCollectionApi.collect(payload);
+        const receipt = await collectVerifiedPayment(feeCollectionApi.collect, payload, collectionProgress.current, academic.selectedCollegeId);
         if (!receipt) {
           showError("The server returned no receipt. Check payment history before collecting again.");
           navigate("/fees/receipts");
@@ -4039,12 +3947,12 @@ export const ServerFeeCollectionModule = (() => {
               <FiCheckCircle size={48} />
             </div>
             <h2>Payment Successful</h2>
-            <p>Receipt {successReceipt.receiptNumber} recorded in institution accounts.</p>
+            <p>{hasOfficialFeeReceipt(successReceipt) ? 'The server returned an official receipt.' : 'The payment was acknowledged. Check payment history for the official receipt.'}</p>
 
             <dl className="fm-review-grid" style={{ margin: "24px 0" }}>
               <div>
                 <dt>Receipt No</dt>
-                <dd><strong>{successReceipt.receiptNumber}</strong></dd>
+                <dd><strong>{successReceipt.receiptNumber || 'Unavailable'}</strong></dd>
               </div>
               <div>
                 <dt>Student</dt>
@@ -4052,37 +3960,38 @@ export const ServerFeeCollectionModule = (() => {
               </div>
               <div>
                 <dt>Amount Paid</dt>
-                <dd><strong>{feeMoney(successReceipt.totalAmount || form.feeAmount)}</strong></dd>
+                <dd><strong>{feeAmountReported(successReceipt.totalAmount ?? successReceipt.feeAmount) ? feeMoney(successReceipt.totalAmount ?? successReceipt.feeAmount) : 'Unavailable'}</strong></dd>
               </div>
               <div>
                 <dt>Method</dt>
-                <dd>{successReceipt.paymentMode || form.paymentMode}</dd>
+                <dd>{successReceipt.paymentMode || 'Unavailable'}</dd>
               </div>
               <div>
                 <dt>Date</dt>
-                <dd>{successReceipt.issuedAt || form.paymentDate}</dd>
+                <dd>{successReceipt.issuedAt || successReceipt.paymentDate || 'Unavailable'}</dd>
               </div>
             </dl>
 
             <div className="fm-success-actions">
-              <button
+              {canPrintFeeReceipt(successReceipt) && <button
                 type="button"
                 className="erp-btn erp-btn--secondary"
                 onClick={() => {
                   try {
                     printSingleRecord({
-                      title: `Fee Receipt ${successReceipt.receiptNumber}`,
+                      title: `Fee Receipt ${successReceipt.receiptNumber || 'ID ' + successReceipt.receiptId}`,
                       receipt: true,
                       sections: [
                         {
                           title: "Payment Summary",
                           rows: [
-                            ["Receipt Number", successReceipt.receiptNumber],
+                            ["Receipt Number", successReceipt.receiptNumber || 'Unavailable'],
+                            ["Receipt ID", successReceipt.receiptId || 'Unavailable'],
                             ["Student Name", selectedStudent?.studentName],
                             ["Student ID", selectedStudent?.studentCode],
-                            ["Amount Paid", feeMoney(form.feeAmount)],
-                            ["Payment Mode", form.paymentMode],
-                            ["Date", form.paymentDate],
+                            ["Amount Paid", feeAmountReported(successReceipt.totalAmount ?? successReceipt.feeAmount) ? feeMoney(successReceipt.totalAmount ?? successReceipt.feeAmount) : 'Unavailable'],
+                            ["Payment Mode", successReceipt.paymentMode || 'Unavailable'],
+                            ["Date", successReceipt.issuedAt || successReceipt.paymentDate || 'Unavailable'],
                           ],
                         },
                       ],
@@ -4093,7 +4002,7 @@ export const ServerFeeCollectionModule = (() => {
                 }}
               >
                 <FiPrinter /> Print Receipt
-              </button>
+              </button>}
               <button
                 type="button"
                 className="erp-btn erp-btn--primary"
@@ -4347,7 +4256,7 @@ export const ServerFeeCollectionModule = (() => {
     return date(val);
   }
 
-  function FeeReports({ academic }) {
+  function FeeReports({ academic, page }) {
     const reportTypes = [
       { id: "summary", name: "Monthly Collection Report" },
       { id: "daily", name: "Daily Collection Report" },
@@ -4358,7 +4267,7 @@ export const ServerFeeCollectionModule = (() => {
       { id: "transactions", name: "Payment Transactions" },
       { id: "ledger", name: "Student Payment History" },
     ];
-    const [type, setType] = useState("summary");
+    const [type, setType] = useState(page === "dues" ? "overdue" : "summary");
     const [academicYearId, setAcademicYearId] = useState(academic.selectedAcademicYearId || "");
     const [courseId, setCourseId] = useState("");
     const [branchId, setBranchId] = useState("");
@@ -4366,6 +4275,7 @@ export const ServerFeeCollectionModule = (() => {
     const [toDate, setToDate] = useState("");
     const [studentId, setStudentId] = useState("");
     const [reportSearch, setReportSearch] = useState("");
+    const [reportCategory, setReportCategory] = useState("");
     const [result, setResult] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -4406,7 +4316,7 @@ export const ServerFeeCollectionModule = (() => {
       value: key,
       width,
       align: "right",
-      render: row => feeMoney(row[key]),
+      render: row => reportedMoney(row[key]),
     });
 
     if (outstanding) {
@@ -4558,30 +4468,31 @@ export const ServerFeeCollectionModule = (() => {
     }));
     const rangeError = invalidRange ? "From Date must be on or before To Date." : error;
 
-    const filteredRows = useMemo(() => {
-      if (!reportSearch.trim()) return rows;
+    const filteredRows = (() => {
+      const matchingCategory = rows.filter(row => !reportCategory || (row.feeCategory || row.categoryName) === reportCategory);
+      if (!reportSearch.trim()) return matchingCategory;
       const q = reportSearch.toLowerCase().trim();
-      return rows.filter((r) =>
+      return matchingCategory.filter((r) =>
         columns.some((col) => {
           const val = typeof col.value === "function" ? col.value(r) : r[col.value];
           return String(val || "").toLowerCase().includes(q);
         })
       );
-    }, [rows, reportSearch, columns]);
+    })();
 
     // Keep one totals presentation: the KPI strip above the report table.
     totalRow = null;
 
     return (
       <div className="fm-page-container fm-reports-container">
-        <FeePageHeading title="Fee Reports & Analytics" description="Review collections, outstanding dues and confirmed payment activity." icon={external3.FiFileText}>
+        <FeePageHeading title={page === "dues" ? "Overdues" : "Fee Reports & Analytics"} description="Review collections, outstanding dues and confirmed payment activity." icon={external3.FiFileText}>
           <ExportMenu rows={filteredRows} columns={columns} filename={"fee-report-" + type} title={title} loading={loading} unavailable={rangeError} />
         </FeePageHeading>
 
         <div className="fm-workspace fm-reports-workspace">
           {/* 2. Standard report filter toolbar */}
           <FilterPanel
-            active={Boolean(academicYearId || courseId || branchId || fromDate || toDate || studentId || reportSearch)}
+            active={Boolean(academicYearId || courseId || branchId || fromDate || toDate || studentId || reportSearch || reportCategory)}
             onClear={() => {
               setAcademicYearId(academic.selectedAcademicYearId || "");
               setCourseId("");
@@ -4590,6 +4501,7 @@ export const ServerFeeCollectionModule = (() => {
               setToDate("");
               setStudentId("");
               setReportSearch("");
+              setReportCategory("");
             }}
           >
             <div className="course-toolbar">
@@ -4609,6 +4521,7 @@ export const ServerFeeCollectionModule = (() => {
                 value={type}
                 onChange={(e) => {
                   setType(e.target.value);
+                  setReportCategory("");
                   setReportSearch("");
                 }}
               >
@@ -4617,6 +4530,10 @@ export const ServerFeeCollectionModule = (() => {
                 ))}
               </select>
 
+              {(outstanding || transactions || type === "category") && <select aria-label="Fee category" value={reportCategory} onChange={event=>setReportCategory(event.target.value)}>
+                <option value="">All fee categories</option>
+                {[...new Set(rows.map(row=>row.feeCategory || row.categoryName).filter(Boolean))].sort().map(category=><option key={category}>{category}</option>)}
+              </select>}
               {type === "ledger" ? (
                 <input
                   type="text"
@@ -4742,7 +4659,7 @@ export const ServerFeeCollectionModule = (() => {
     if (props.page === "receipts") {
       return <Payments {...props} />;
     }
-    if (props.page === "reports") {
+    if (props.page === "reports" || props.page === "dues") {
       return <FeeReports {...props} />;
     }
     return <FinanceOverview {...props} />;
@@ -4779,7 +4696,6 @@ export const FeeManagementModule = (() => {
     FiCheck,
     FiCheckCircle,
     FiClock,
-    FiCopy,
     FiCreditCard,
     FiDollarSign,
     FiDownload,
@@ -4809,7 +4725,6 @@ export const FeeManagementModule = (() => {
   const { collegeField } = collegeScopeModule;
   const { printSingleRecord } = exportUtilsModule;
   const { showError, showSuccess } = toastModule;
-  const { default: useToastState } = useToastStateModule;
   const { default: FeeStructureConfiguration } = FeeStructureModule;
   const {
     FeeBadge,
@@ -4824,8 +4739,6 @@ export const FeeManagementModule = (() => {
   const { default: CreateAcademicFeePlan } = FeeStructureWizardModule;
   const { default: ServerFeeCollection } = ServerFeeCollectionModule;
   const {
-    assignFeeStructure,
-    cents,
     emptyFeeWorkspace,
     feeLedger,
     feeMoney,
@@ -4834,39 +4747,10 @@ export const FeeManagementModule = (() => {
     newFeeStructure,
     readFeeWorkspace,
     rupees,
-    saveWorkflowStructure,
     transitionFeeStructure,
-    studentMatchesFee,
-    writeFeeWorkspace,
   } = feeStructureServiceModule;
 
   // Resolve fee heads through the existing local master model. Never send local IDs to an API.
-  function saveAcademicPlanWithHeads(state, form, status) {
-    const normalizeName = name => String(name || "").trim().replace(/\s+/g, " ");
-    const heads = [...state.components];
-    const seen = new Set();
-    const planComponents = form.components.map(row => {
-      const name = normalizeName(row.name);
-      const key = name.toLowerCase();
-      if (!name || seen.has(key)) throw new Error("Enter unique, non-empty fee head names.");
-      seen.add(key);
-      const amount = Number(row.amount);
-      if (!Number.isFinite(amount) || amount <= 0 || amount > 100000000 || Math.abs(amount * 100 - cents(amount)) > 0.00001) throw new Error("Fee heads require positive amounts with at most two decimal places.");
-      const existing = heads.find(head => head.status === "Active" && feeStructureServiceModule.academicFeeComponent(head) && normalizeName(head.name).toLowerCase() === key);
-      let master = existing;
-      // Preserve an unchanged saved reference, including legacy total-fee rows.
-      const original = state.structures.find(plan => plan.id === form.id)?.components.find(component => component.masterId === row.masterId && normalizeName(component.name).toLowerCase() === key);
-      if (original) master = heads.find(head => head.id === original.masterId) || master;
-      if (!master && original && row.masterId === "structure-total-fee") return { ...row, name, amount };
-      if (!master && original) throw new Error("A saved fee head is missing from the master records. Restore it before saving this plan.");
-      if (!master) {
-        master = { ...feeStructureServiceModule.feeComponent(), name, category: row.category || "Academic", frequency: row.frequency || form.cycle, mandatory: row.mandatory ?? true, refundable: row.refundable ?? false, recurring: row.recurring ?? true, status: "Active" };
-        heads.push(master);
-      }
-      return { ...row, name, amount, masterId: master.id };
-    });
-    return saveWorkflowStructure({ ...state, components: heads }, { ...form, components: planComponents }, status, "Admin");
-  }
 
   function studentRecord(r) {
     const personal = r.personalDetails || r.personal || {};
@@ -4896,7 +4780,11 @@ export const FeeManagementModule = (() => {
       batch: text(r.batch, academic.batch, admission.batch),
       courseName: text(r.courseName, r.course, academic.courseName),
       branchName: text(r.branchName, r.branch, academic.branchName),
+      collegeId: text(merged.collegeId),
       category: text(r.admissionQuota, r.quota, r.studentCategory),
+      quota: text(academic.quotaOther, academic.quota, merged.admissionQuota, merged.quota),
+      studentCategory: text(merged.studentCategory),
+      admissionType: text(merged.admissionType),
     };
   }
 
@@ -4950,10 +4838,14 @@ export const FeeManagementModule = (() => {
   // OFFICIAL ERP STUDENT FEE RECEIPT MODAL
   // ==========================================================================
   function StudentReceiptModal({ receipt, student, academic, onClose }) {
-    const collegeName = academic?.collegeName || academic?.currentCollege?.name || "Academic ERP Institute";
-    const amountVal = Number(receipt?.feeAmount || receipt?.totalAmount || 0);
-    const balanceVal = Number(receipt?.balanceAmount ?? receipt?.remainingBalance ?? 0);
-    const receiptNum = receipt?.receiptNumber || (receipt?.receiptId ? String(receipt.receiptId) : 'Not provided');
+    if (!hasOfficialFeeReceipt(receipt)) return <FeeDialog title="Payment acknowledged" close={onClose}><p>An official receipt was not returned. Check payment history for the receipt.</p></FeeDialog>;
+    const collegeName = academic?.collegeName || academic?.currentCollege?.name || "College unavailable";
+    const amountVal = receipt?.totalAmount ?? receipt?.feeAmount;
+    const balanceVal = receipt?.balanceAmount ?? receipt?.remainingBalance;
+    const amountLabel = feeAmountReported(amountVal) ? feeMoney(amountVal) : "Unavailable";
+    const balanceLabel = feeAmountReported(balanceVal) ? feeMoney(balanceVal) : "Unavailable";
+    const amountWords = feeAmountReported(amountVal) ? inrWords(Number(amountVal)) : "Unavailable";
+    const receiptNum = receipt?.receiptNumber || ('ID ' + receipt.receiptId);
     const dateStr = receipt?.issuedAt || receipt?.paymentDate || 'Not provided';
 
     const handlePrint = () => {
@@ -4965,12 +4857,12 @@ export const FeeManagementModule = (() => {
           ["Course / Program", receipt?.courseName || student?.courseName || "—"],
           ["Branch", receipt?.branchName || student?.branchName || "—"],
           ["Payment Date", dateStr],
-          ["Payment Mode", receipt?.paymentMode || "CASH"],
+          ["Payment Mode", receipt?.paymentMode || "Unavailable"],
           ["Transaction Ref", receipt?.transactionReference || "—"],
-          ["Amount Paid", feeMoney(amountVal)],
-          ["Amount in Words", inrWords(amountVal)],
-          ["Remaining Balance", feeMoney(balanceVal)],
-          ["Collected By", receipt?.issuedByName || "Accounts Desk"],
+          ["Amount Paid", amountLabel],
+          ["Amount in Words", amountWords],
+          ["Remaining Balance", balanceLabel],
+          ["Collected By", receipt?.issuedByName || "Unavailable"],
         ];
         printSingleRecord({
           title: `Fee Receipt - ${receiptNum}`,
@@ -4992,7 +4884,7 @@ export const FeeManagementModule = (() => {
             <button type="button" className="erp-btn erp-btn--secondary" onClick={onClose}>
               Close
             </button>
-            <button type="button" className="erp-btn erp-btn--primary" onClick={handlePrint}>
+            <button type="button" className="erp-btn erp-btn--primary" disabled={!canPrintFeeReceipt(receipt)} onClick={handlePrint}>
               <FiPrinter /> Print Receipt
             </button>
           </>
@@ -5044,20 +4936,20 @@ export const FeeManagementModule = (() => {
                 <tbody>
                   <tr>
                     <td>1</td>
-                    <td>{receipt?.feeCategory || receipt?.planName || "Academic Tuition & Institutional Fee"}</td>
+                    <td>{receipt?.feeCategory || receipt?.planName || "Unavailable"}</td>
                     <td>
-                      {receipt?.paymentMode || "CASH"}
+                      {receipt?.paymentMode || "Unavailable"}
                       {receipt?.transactionReference && receipt.transactionReference !== "Cash payment" ? ` · Ref: ${receipt.transactionReference}` : ""}
                     </td>
                     <td className="text-right">
-                      <strong>{feeMoney(amountVal)}</strong>
+                      <strong>{amountLabel}</strong>
                     </td>
                   </tr>
                 </tbody>
                 <tfoot>
                   <tr>
                     <td colSpan="3">Total Received</td>
-                    <td className="text-right">{feeMoney(amountVal)}</td>
+                    <td className="text-right">{amountLabel}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -5065,21 +4957,21 @@ export const FeeManagementModule = (() => {
 
             <div className="fm-receipt-words-box">
               <strong>Amount in Words:</strong>
-              <span>{inrWords(amountVal)}</span>
+              <span>{amountWords}</span>
             </div>
 
             <div className="fm-collect-calc-strip" style={{ marginBottom: 16 }}>
               <div className="fm-collect-calc-item">
                 <span>Amount Paid</span>
-                <strong style={{ color: "#059669" }}>{feeMoney(amountVal)}</strong>
+                <strong style={{ color: "#059669" }}>{amountLabel}</strong>
               </div>
               <div className="fm-collect-calc-item">
                 <span>Payment Mode</span>
-                <strong>{receipt?.paymentMode || "CASH"}</strong>
+                <strong>{receipt?.paymentMode || "Unavailable"}</strong>
               </div>
               <div className="fm-collect-calc-item">
                 <span>Remaining Balance</span>
-                <strong style={{ color: balanceVal > 0 ? "#b45309" : "#059669" }}>{feeMoney(balanceVal)}</strong>
+                <strong style={{ color: balanceVal > 0 ? "#b45309" : "#059669" }}>{balanceLabel}</strong>
               </div>
             </div>
 
@@ -5090,7 +4982,7 @@ export const FeeManagementModule = (() => {
               </div>
               <div className="fm-receipt-signature">
                 <div>Authorized Signatory / Cashier</div>
-                <small style={{ color: "#64748b" }}>{receipt?.issuedByName || "Accounts Section"}</small>
+                <small style={{ color: "#64748b" }}>{receipt?.issuedByName || "Unavailable"}</small>
               </div>
             </div>
           </div>
@@ -5103,6 +4995,8 @@ export const FeeManagementModule = (() => {
   // CASHIER IN-ROW COLLECT PAYMENT MODAL
   // ==========================================================================
   function CollectPaymentModal({ student, academic, onClose, onSuccess }) {
+    const { canAction } = useScreenAccess();
+    const paymentProgress = useRef({});
     const [amount, setAmount] = useState(String(student.balance || ""));
     const [paymentMode, setPaymentMode] = useState("CASH");
     const [paymentDate, setPaymentDate] = useState(feeToday());
@@ -5140,13 +5034,14 @@ export const FeeManagementModule = (() => {
       };
     }, [student.id, student.balance]);
 
-    const activeDue = studentDues.find((d) => String(d.studentFeeId) === String(selectedDueId)) || studentDues[0];
+    const activeDue = studentDues.find((d) => String(d.studentFeeId) === String(selectedDueId));
     const maxBalance = activeDue ? Number(activeDue.balanceAmount ?? 0) : 0;
     const numAmount = Number(amount) || 0;
     const balanceAfter = Math.max(0, maxBalance - numAmount);
 
     const handleSubmit = async (e) => {
       e?.preventDefault();
+      if (!canAction("/fees", "create") && !canAction("/fees", "edit")) { setError("You do not have permission to collect payments."); return; }
       if (submitting) return;
       setError("");
 
@@ -5196,9 +5091,9 @@ export const FeeManagementModule = (() => {
           paymentDate: paymentDate || feeToday(),
           remarks: remarks.trim() || undefined,
         };
-        const receipt = await feeCollectionApi.collect(payload);
-        showSuccess(`Payment of ${feeMoney(numAmount)} recorded successfully!`);
-        onSuccess(receipt || null, student);
+        const receipt = await collectVerifiedPayment(feeCollectionApi.collect, payload, paymentProgress.current, academic.selectedCollegeId);
+        showSuccess('Payment acknowledged by the server.');
+        onSuccess(receipt, student);
       } catch (err) {
         setError(err.message || "Failed to record payment. Please check network and try again.");
       } finally {
@@ -5268,7 +5163,7 @@ export const FeeManagementModule = (() => {
               >
                 {studentDues.map((d) => (
                   <option key={d.studentFeeId} value={d.studentFeeId}>
-                    {d.feePlanName || d.feeCategory || "Installment"} — Due: {feeMoney(d.balanceAmount)} (Due Date: {date(d.dueDate)})
+                    {d.feePlanName || d.feeCategory || "Installment"} — Due: {reportedMoney(d.balanceAmount)} (Due Date: {date(d.dueDate)})
                   </option>
                 ))}
               </ProjectSelect>
@@ -5401,6 +5296,8 @@ export const FeeManagementModule = (() => {
       ])
         .then(([pRes, hRes]) => {
           if (!active) return;
+          const failure = [pRes,hRes].find(result => result.status === 'rejected');
+          if (failure) setError(failure.reason?.message || 'Some fee records could not be loaded. Retry by reopening this profile.');
           const dues = pRes.status === "fulfilled" ? pRes.value || [] : [];
           const payments = hRes.status === "fulfilled" ? hRes.value || [] : [];
           setDetails({ dues, payments });
@@ -5437,15 +5334,6 @@ export const FeeManagementModule = (() => {
           target.balance += Number(d.balanceAmount || 0);
           target.count += 1;
         });
-      } else {
-        const cat = String(student.feeCategory || student.planName || "Academic").toLowerCase();
-        let target = cats.academic;
-        if (cat.includes("hostel")) target = cats.hostel;
-        else if (cat.includes("transport")) target = cats.transport;
-        target.payable = Number(student.totalFee || 0);
-        target.paid = Number(student.paid || 0);
-        target.balance = Number(student.balance || 0);
-        target.count = 1;
       }
       return [cats.academic, cats.hostel, cats.transport];
     }, [dues, student]);
@@ -5495,7 +5383,7 @@ export const FeeManagementModule = (() => {
           <div className="fm-detail-kpis">
             <div className="fm-detail-kpi-box">
               <small>Total Demand</small>
-              <strong style={{ color: "#1d4ed8" }}>{feeMoney(student.totalFee)}</strong>
+              <strong style={{ color: "#1d4ed8" }}>{(student.totalFee == null ? "Unavailable" : feeMoney(student.totalFee))}</strong>
             </div>
             <div className="fm-detail-kpi-box">
               <small>Discount / Concession</small>
@@ -5503,12 +5391,12 @@ export const FeeManagementModule = (() => {
             </div>
             <div className="fm-detail-kpi-box">
               <small>Total Paid</small>
-              <strong style={{ color: "#059669" }}>{feeMoney(student.paid)}</strong>
+              <strong style={{ color: "#059669" }}>{(student.paid == null ? "Unavailable" : feeMoney(student.paid))}</strong>
             </div>
             <div className="fm-detail-kpi-box">
               <small>Outstanding Balance</small>
               <strong style={{ color: student.balance > 0 ? "#b45309" : "#059669" }}>
-                {feeMoney(student.balance)}
+                {(student.balance == null ? "Unavailable" : feeMoney(student.balance))}
               </strong>
             </div>
           </div>
@@ -5570,11 +5458,11 @@ export const FeeManagementModule = (() => {
                       <tr key={d.studentFeeId || idx}>
                         <td><strong>{d.feePlanName || d.feeCategory || "Academic Fee"}</strong></td>
                         <td>{date(d.dueDate)}</td>
-                        <td className="text-right">{feeMoney(d.payableAmount)}</td>
-                        <td className="text-right">{feeMoney(d.paidAmount)}</td>
+                        <td className="text-right">{reportedMoney(d.payableAmount)}</td>
+                        <td className="text-right">{reportedMoney(d.paidAmount)}</td>
                         <td className="text-right">
                           <strong style={{ color: d.balanceAmount > 0 ? "#b45309" : "#059669" }}>
-                            {feeMoney(d.balanceAmount)}
+                            {reportedMoney(d.balanceAmount)}
                           </strong>
                         </td>
                         <td>
@@ -5586,11 +5474,11 @@ export const FeeManagementModule = (() => {
                     <tr>
                       <td><strong>{student.planName || "Academic Fee Plan"}</strong></td>
                       <td>{student.nextDue || "—"}</td>
-                      <td className="text-right">{feeMoney(student.totalFee)}</td>
-                      <td className="text-right">{feeMoney(student.paid)}</td>
+                      <td className="text-right">{(student.totalFee == null ? "Unavailable" : feeMoney(student.totalFee))}</td>
+                      <td className="text-right">{(student.paid == null ? "Unavailable" : feeMoney(student.paid))}</td>
                       <td className="text-right">
                         <strong style={{ color: student.balance > 0 ? "#b45309" : "#059669" }}>
-                          {feeMoney(student.balance)}
+                          {(student.balance == null ? "Unavailable" : feeMoney(student.balance))}
                         </strong>
                       </td>
                       <td><FeeBadge value={student.status} /></td>
@@ -5623,7 +5511,7 @@ export const FeeManagementModule = (() => {
                   <tbody>
                     {payments.map((p, idx) => (
                       <tr key={p.paymentId || p.receiptId || idx}>
-                        <td><strong>{p.receiptNumber || `REC-${p.receiptId || idx + 1}`}</strong></td>
+                        <td><strong>{p.receiptNumber || "Number unavailable"}</strong></td>
                         <td>{date(p.issuedAt || p.paymentDate)}</td>
                         <td>{p.paymentMode || "CASH"}</td>
                         <td>{p.transactionReference || "—"}</td>
@@ -5792,15 +5680,15 @@ export const FeeManagementModule = (() => {
 
       const buildServerRow = (rList, baseStudent = null, studentHistory = []) => {
         const r = rList[0];
-        const payable = rList.reduce((sum, item) => sum + Number(item.payableAmount || 0), 0);
-        const serverPaid = rList.reduce((sum, item) => sum + Number(item.paidAmount || 0), 0);
+        const payable = reportedTotal(rList, "payableAmount");
+        const serverPaid = reportedTotal(rList, "paidAmount");
         const histPaid = studentHistory.reduce((sum, item) => sum + Number(item.feeAmount || item.totalAmount || 0), 0);
-        const paid = Math.max(serverPaid, histPaid);
-        const balance = Math.max(0, rList.reduce((sum, item) => sum + Number(item.balanceAmount || 0), 0));
+        const paid = serverPaid;
+        const balance = reportedTotal(rList, "balanceAmount");
         const isOverdue = rList.some((item) =>
           Boolean(item.overdue || (item.dueDate && new Date(item.dueDate) < new Date() && Number(item.balanceAmount || 0) > 0))
         );
-        const status = isOverdue
+        const status = balance === null ? "Balance Unavailable" : isOverdue
           ? "Overdue"
           : balance === 0 && payable > 0
           ? "Paid"
@@ -5857,15 +5745,15 @@ export const FeeManagementModule = (() => {
           semesterId: String(baseStudent?.semesterId || first.semesterId || ""),
           semesterName: baseStudent?.semesterName || first.semesterName,
           batch: baseStudent?.batch || first.batch || "—",
-          totalFee: totalPaid,
+          totalFee: null,
           discount: 0,
           paid: totalPaid,
-          balance: 0,
+          balance: null,
           nextDue: "—",
           overdue: false,
-          status: "Paid",
-          statusSlug: "paid",
-          receiptId: first.receiptId || first.paymentId,
+          status: "Balance Unavailable",
+          statusSlug: "unavailable",
+          receiptId: first.receiptId,
           paymentHistory: hList,
         };
       };
@@ -5893,102 +5781,10 @@ export const FeeManagementModule = (() => {
             return;
           }
 
-          // Priority 3: Workspace assignment ledger
-          const ledgerItem = sid ? ledgerMap.get(sid) : null;
-          if (ledgerItem) {
-            const bal = rupees(ledgerItem.ledger.outstanding);
-            const isOverdue = Boolean(ledgerItem.ledger.overdue);
-            const total = rupees(ledgerItem.ledger.total);
-            const paid = rupees(ledgerItem.ledger.paid);
-            const status = isOverdue
-              ? "Overdue"
-              : bal === 0 && total > 0
-              ? "Paid"
-              : paid > 0
-              ? "Partially Paid"
-              : total > 0
-              ? "Pending"
-              : "Fee Not Assigned";
-            const statusSlug = status.toLowerCase().replace(/\s+/g, "-");
-            rows.push({
-              id: st.id,
-              assignmentId: ledgerItem.id,
-              planName: ledgerItem.structure.name,
-              feeCategory: ledgerItem.structure.category || "Academic",
-              name: st.name,
-              roll: st.roll || st.code,
-              admissionNumber: st.application || st.roll || st.code,
-              application: st.application || st.code,
-              courseId: String(st.courseId || ledgerItem.structure.courseId || ""),
-              courseName: st.courseName || ledgerItem.structure.courseName,
-              branchId: String(st.branchId || ledgerItem.structure.branchId || ""),
-              branchName: st.branchName || ledgerItem.structure.branchName,
-              semesterId: String(st.semesterId || ""),
-              semesterName: st.semesterName,
-              batch: st.batch || ledgerItem.structure.batch,
-              totalFee: total,
-              discount: rupees(ledgerItem.ledger.concession),
-              paid,
-              balance: bal,
-              nextDue: "—",
-              overdue: isOverdue,
-              status,
-              statusSlug,
-              receiptId: ledgerItem.ledger.payments?.[0]?.receiptId,
-              paymentHistory: ledgerItem.ledger.payments || [],
-            });
-            return;
-          }
-
-          // Priority 4: Student profile embedded fees
-          if (st.fees && (Number(st.fees.totalFee || 0) > 0 || st.fees.configured)) {
-            const total = Number(st.fees.totalFee || 0);
-            const paid = Number(st.fees.paidAmount || (st.fees.paymentStatus === "Paid" ? total : 0));
-            const bal = Math.max(0, total - paid);
-            const isOverdue = st.fees.paymentStatus === "Overdue";
-            const status = total === 0
-              ? "Fee Not Assigned"
-              : isOverdue
-              ? "Overdue"
-              : bal === 0 && total > 0
-              ? "Paid"
-              : paid > 0
-              ? "Partially Paid"
-              : "Pending";
-            const statusSlug = status.toLowerCase().replace(/\s+/g, "-");
-            rows.push({
-              id: st.id,
-              planName: total === 0 ? "Fee Not Assigned" : (st.fees.planName || st.fees.structureName || "Academic Fee"),
-              feeCategory: "Academic",
-              name: st.name,
-              roll: st.roll || st.code,
-              admissionNumber: st.application || st.roll || st.code,
-              application: st.application || st.code,
-              courseId: String(st.courseId || ""),
-              courseName: st.courseName,
-              branchId: String(st.branchId || ""),
-              branchName: st.branchName,
-              semesterId: String(st.semesterId || ""),
-              semesterName: st.semesterName,
-              batch: st.batch,
-              totalFee: total,
-              discount: Number(st.fees.scholarshipAmount || 0),
-              paid,
-              balance: bal,
-              nextDue: st.fees.dueDate ? date(st.fees.dueDate) : "—",
-              overdue: isOverdue,
-              status,
-              statusSlug,
-              receiptId: st.fees.receiptId,
-              paymentHistory: [],
-            });
-            return;
-          }
-
           // Priority 5: Unassigned student (Fee Not Assigned with zero liability)
           rows.push({
             id: st.id,
-            planName: "Fee Not Assigned",
+            planName: "Fee information unavailable",
             feeCategory: "Academic",
             name: st.name,
             roll: st.roll || st.code,
@@ -6001,10 +5797,10 @@ export const FeeManagementModule = (() => {
             semesterId: String(st.semesterId || ""),
             semesterName: st.semesterName,
             batch: st.batch,
-            totalFee: 0,
+            totalFee: null,
             discount: 0,
-            paid: 0,
-            balance: 0,
+            paid: null,
+            balance: null,
             nextDue: "—",
             overdue: false,
             status: "Fee Not Assigned",
@@ -6129,26 +5925,19 @@ export const FeeManagementModule = (() => {
     }, [filteredStudents]);
 
     // Open receipt modal for a student
-    const handleOpenReceipt = async (st, specificReceipt = null) => {
-      if (specificReceipt) {
-        setReceiptModalData({ receipt: specificReceipt, student: st });
-        return;
-      }
+    const handleOpenReceipt = async (student, payment = null) => {
       try {
-        if (st.receiptId) {
-          const res = await feeCollectionApi.receipt(st.receiptId);
-          if (res) {
-            setReceiptModalData({ receipt: res, student: st });
-            return;
-          }
+        let receiptId = payment ? payment.receiptId : student.receiptId;
+        if (!receiptId && !payment) {
+          const history = await feeCollectionApi.allHistory({ studentId: student.id });
+          receiptId = history.find(row => row.receiptId)?.receiptId;
         }
-        const hist = await feeCollectionApi.allHistory({ studentId: st.id });
-        if (hist && hist.length > 0) {
-          setReceiptModalData({ receipt: hist[0], student: st });
-          return;
-        }
-      } catch {}
-      showError('An official receipt is not available. Refresh Payment History or contact the accounts desk.');
+        if (!receiptId) throw new Error('An official receipt is unavailable for this payment.');
+        const receipt = await feeCollectionApi.receipt(receiptId);
+        setReceiptModalData({ receipt, student });
+      } catch (reason) {
+        showError(reason.message || 'Unable to verify the official receipt.');
+      }
     };
 
     const fetchTransactions = () => {
@@ -6184,29 +5973,9 @@ export const FeeManagementModule = (() => {
       }
     }, [activeView, txPage, txQuery, txMode, txFromDate, txToDate, academic.selectedCollegeId]);
 
-    const handleOpenTxReceipt = async (tx) => {
-      try {
-        if (tx.receiptId) {
-          const full = await feeCollectionApi.receipt(tx.receiptId);
-          if (full) {
-            setReceiptModalData({
-              receipt: full,
-              student: { name: tx.studentName, roll: tx.studentCode, ...tx },
-            });
-            return;
-          }
-        }
-      } catch {}
-      setReceiptModalData({
-        receipt: tx,
-        student: {
-          name: tx.studentName,
-          roll: tx.studentCode,
-          courseName: tx.courseName,
-          branchName: tx.branchName,
-        },
-      });
-    };
+    const handleOpenTxReceipt = payment => handleOpenReceipt(
+      { name: payment.studentName, roll: payment.studentCode, ...payment }, payment
+    );
 
     const handlePaymentSuccess = (receipt, student) => {
       setCollectModalStudent(null);
@@ -6268,7 +6037,8 @@ export const FeeManagementModule = (() => {
         {/* DIRECTORY VIEW: SUMMARY CARDS + STUDENT TABLE */}
         {activeView === "directory" && (
           <>
-            {/* 4 Colorful Financial Summary Cards */}
+            <p role="status">Totals include only confirmed fee records. Unavailable student liabilities are excluded.</p>
+            {/* Financial Summary Cards */}
             <div className="fm-summary-cards-grid">
               {/* 1. Total Payable - Royal Blue */}
               <div className="fm-summary-card fm-summary-card--blue">
@@ -6481,14 +6251,14 @@ export const FeeManagementModule = (() => {
                   {
                     label: "Total Fee",
                     align: "right",
-                    render: (st) => feeMoney(st.totalFee),
+                    render: (st) => st.totalFee == null ? "Unavailable" : feeMoney(st.totalFee),
                   },
                   {
                     label: "Paid Amount",
                     align: "right",
                     render: (st) => (
                       <span style={{ color: "#059669", fontWeight: 700 }}>
-                        {feeMoney(st.paid)}
+                        {st.paid == null ? "Unavailable" : feeMoney(st.paid)}
                       </span>
                     ),
                   },
@@ -6502,7 +6272,7 @@ export const FeeManagementModule = (() => {
                           fontWeight: 800,
                         }}
                       >
-                        {feeMoney(st.balance)}
+                        {st.balance == null ? "Unavailable" : feeMoney(st.balance)}
                       </strong>
                     ),
                   },
@@ -6644,7 +6414,7 @@ export const FeeManagementModule = (() => {
                       className="fm-text-link"
                       onClick={() => handleOpenTxReceipt(r)}
                     >
-                      {r.receiptNumber || `REC-${r.receiptId || r.paymentId}`}
+                      {r.receiptNumber || "Number unavailable"}
                     </button>
                   ),
                 },
@@ -6733,7 +6503,7 @@ export const FeeManagementModule = (() => {
             academic={academic}
             onClose={() => setDetailsModalStudent(null)}
             onCollect={(st) => setCollectModalStudent(st)}
-            onOpenReceipt={(rec, st) => setReceiptModalData({ receipt: rec, student: st })}
+            onOpenReceipt={(rec, st) => handleOpenReceipt(st, rec)}
           />
         )}
       </div>
@@ -6753,17 +6523,17 @@ export const FeeManagementModule = (() => {
     const [error, setError] = useState("");
 
     const assignment = state.assignments.find((a) => a.id === assignmentId);
-    const localLedger = assignment ? feeLedger(state, assignment) : null;
+    const resolvedStudentId = studentId || assignment?.student?.id;
 
     useEffect(() => {
       let active = true;
-      if (studentId) {
+      if (resolvedStudentId) {
         setLoading(true);
         setStudentData(null);
         setError("");
         Promise.allSettled([
-          feeCollectionApi.allPending({ studentId }),
-          feeCollectionApi.allHistory({ studentId }),
+          feeCollectionApi.allPending({ studentId:resolvedStudentId }),
+          feeCollectionApi.allHistory({ studentId:resolvedStudentId }),
         ])
           .then(([pRes, hRes]) => {
             if (!active) return;
@@ -6783,27 +6553,21 @@ export const FeeManagementModule = (() => {
       return () => {
         active = false;
       };
-    }, [studentId, academic.selectedCollegeId]);
+    }, [resolvedStudentId, academic.selectedCollegeId]);
 
     const s = assignment?.student || studentData?.dues?.[0] || studentData?.payments?.[0];
     const dues = studentData?.dues || [];
-    const payments = studentData?.payments || localLedger?.payments || [];
+    const payments = studentData?.payments || [];
 
-    const totalFee = localLedger
-      ? rupees(localLedger.total)
-      : dues.reduce((a, b) => a + Number(b.payableAmount || 0), 0);
-    const discount = localLedger
-      ? rupees(localLedger.concession)
-      : dues.reduce((a, b) => a + Number(b.concessionAmount || 0), 0);
-    const paid = localLedger
-      ? rupees(localLedger.paid)
-      : dues.reduce((a, b) => a + Number(b.paidAmount || 0), 0);
-    const balance = localLedger
-      ? rupees(localLedger.outstanding)
-      : dues.reduce((a, b) => a + Number(b.balanceAmount || 0), 0);
-    const overdue = localLedger
-      ? rupees(localLedger.overdue)
-      : dues.reduce((a, b) => a + (b.overdue ? Number(b.balanceAmount || 0) : 0), 0);
+    // Pending installment records are authoritative only when the API returns them.
+    // Payment history alone cannot establish a student's total liability or balance.
+    const sumDue = key => dues.length ? dues.reduce((sum, row) => sum + Number(row[key] || 0), 0) : null;
+    const totalFee = sumDue('payableAmount');
+    const discount = sumDue('concessionAmount');
+    const paid = sumDue('paidAmount');
+    const balance = sumDue('balanceAmount');
+    const overdue = dues.length ? dues.reduce((sum, row) => sum + (row.overdue ? Number(row.balanceAmount || 0) : 0), 0) : null;
+    const displayAmount = value => value == null ? 'Unavailable' : feeMoney(value);
 
     return (
       <div className="fm-page-container">
@@ -6835,11 +6599,12 @@ export const FeeManagementModule = (() => {
         </header>
 
         <FeeRequestState loading={loading} error={error}>
+        {!dues.length && <p className="fm-info-banner" role="status">No fee installment configuration was returned. Total liability and outstanding balance are unavailable. Recorded payments remain available below.</p>}
         <div className="fm-kpis-grid">
-          <FeeMetric label="Total Fee" value={feeMoney(totalFee)} icon={external3.FiLayers} />
-          <FeeMetric label="Discount" value={feeMoney(discount)} tone="lavender" icon={external3.FiTag} />
-          <FeeMetric label="Paid" value={feeMoney(paid)} tone="green" icon={external3.FiCheckCircle} />
-          <FeeMetric label="Balance" value={feeMoney(balance)} tone="amber" icon={external3.FiClock} />
+          <FeeMetric label="Total Fee" value={displayAmount(totalFee)} icon={external3.FiLayers} />
+          <FeeMetric label="Discount" value={displayAmount(discount)} tone="lavender" icon={external3.FiTag} />
+          <FeeMetric label="Paid" value={displayAmount(paid)} tone="green" icon={external3.FiCheckCircle} />
+          <FeeMetric label="Balance" value={displayAmount(balance)} tone="amber" icon={external3.FiClock} />
         </div>
 
         {/* Main Content Surface with Underline Tabs */}
@@ -6881,23 +6646,23 @@ export const FeeManagementModule = (() => {
               <div className="fm-summary-calculation">
                 <div className="fm-calc-row">
                   <span>Academic Fee</span>
-                  <strong>{feeMoney(totalFee)}</strong>
+                  <strong>{displayAmount(totalFee)}</strong>
                 </div>
                 {discount > 0 && (
                   <div className="fm-calc-row">
                     <span>Scholarship / Concession</span>
-                    <strong style={{ color: "var(--success)" }}>-{feeMoney(discount)}</strong>
+                    <strong style={{ color: "var(--success)" }}>-{displayAmount(discount)}</strong>
                   </div>
                 )}
                 {paid > 0 && (
                   <div className="fm-calc-row">
                     <span>Payments Recorded</span>
-                    <strong style={{ color: "var(--brand)" }}>-{feeMoney(paid)}</strong>
+                    <strong style={{ color: "var(--brand)" }}>-{displayAmount(paid)}</strong>
                   </div>
                 )}
                 <div className="fm-calc-total-row">
                   <span>Remaining Balance</span>
-                  <strong>{feeMoney(balance)}</strong>
+                  <strong>{displayAmount(balance)}</strong>
                 </div>
               </div>
             </div>
@@ -6928,7 +6693,7 @@ export const FeeManagementModule = (() => {
           {tab === "installments" && (
             <div className="fm-tab-body">
               <FeeTable
-                rows={dues.length > 0 ? dues : localLedger?.cells || []}
+                rows={dues}
                 empty="No scheduled installments found."
                 columns={[
                   {
@@ -6944,12 +6709,12 @@ export const FeeManagementModule = (() => {
                   {
                     label: "Paid",
                     align: "right",
-                    render: (d) => feeMoney(d.paidAmount || d.paid || 0),
+                    render: (d) => reportedMoney(d.paidAmount ?? d.paid),
                   },
                   {
                     label: "Balance",
                     align: "right",
-                    render: (d) => <strong>{feeMoney(d.balanceAmount || d.balance || 0)}</strong>,
+                    render: (d) => <strong>{reportedMoney(d.balanceAmount ?? d.balance)}</strong>,
                   },
                   {
                     label: "Status",
@@ -6975,9 +6740,7 @@ export const FeeManagementModule = (() => {
             <div className="fm-tab-body">
               <FeeTable
                 rows={
-                  assignment && localLedger
-                    ? financialLedgerRows(assignment, localLedger, state.concessions.filter(c => c.assignmentId === assignment.id))
-                    : []
+                  payments.map(row => ({ date:row.paymentDate, reference:row.receiptNumber || row.transactionReference || "—", description:row.feeCategory || "Payment", debit:0, credit:Math.round(Number(row.totalAmount) * 100) }))
                 }
                 empty="Chronological financial transactions will appear here as fees and payments are posted."
                 columns={[
@@ -7014,19 +6777,20 @@ export const FeeManagementModule = (() => {
   // ==========================================================================
   function AssignFeePlan({
     state,
-    commit,
     students,
-    masters,
-    filter,
-    setFilter,
+    assignmentProgress,
   }) {
+    const [assigning, setAssigning] = useState(false);
+    const assignmentLock = useRef(false);
+    const { canAction } = useScreenAccess();
     const navigate = useNavigate();
     const location = useLocation();
     const targetStudentId = location.state?.feeStudentId;
-    const [step, setStep] = useState(1);
     const [selectedPlanId, setSelectedPlanId] = useState("");
     const [selectedStudents, setSelectedStudents] = useState([]);
     const [searchStudent, setSearchStudent] = useState("");
+    const [replaceExisting, setReplaceExisting] = useState(false);
+    const [replacementReason, setReplacementReason] = useState("");
 
     const publishedPlans = state.structures.filter(
       (s) =>
@@ -7038,7 +6802,7 @@ export const FeeManagementModule = (() => {
     const eligibleStudents = useMemo(() => {
       if (!plan) return [];
       return students.filter((s) => {
-        const matchesPlan = studentMatchesFee(s, plan);
+        const matchesPlan = matchesPublishedFeeScope(s, plan);
         const text = `${s.name} ${s.code} ${s.roll}`.toLowerCase();
         const matchesSearch =
           !searchStudent || text.includes(searchStudent.toLowerCase());
@@ -7046,14 +6810,21 @@ export const FeeManagementModule = (() => {
       });
     }, [plan, students, searchStudent, targetStudentId]);
 
-    const handleConfirm = () => {
-      const chosen = students.filter((s) => studentMatchesFee(s, plan) &&
-        selectedStudents.includes(s.id)
-      );
-      try { commit(assignFeeStructure(state, plan.id, chosen)); }
-      catch (reason) { showError(reason.message); return; }
-      showSuccess(`Assigned fee plan to ${chosen.length} students.`);
-      navigate("/fees/students");
+    const handleConfirm = async () => {
+      if (assignmentLock.current || assigning || (!canAction('/fees','edit') && !canAction('/fees','create'))) return;
+      const chosen = students.filter(student => matchesPublishedFeeScope(student, plan) && selectedStudents.includes(student.id));
+      assignmentLock.current = true;
+      setAssigning(true);
+      try {
+        if (replaceExisting && !canAction('/fees', 'edit')) throw new Error('Editing permission is required to replace an existing fee plan.');
+        if (replaceExisting && !replacementReason.trim()) throw new Error('Enter a reason to replace an existing fee plan.');
+        const saved = await assignPublishedStudentFees(plan, chosen, assignmentProgress.current, {
+          replacementReason: replaceExisting ? replacementReason : '',
+        });
+        showSuccess('Backend confirmed fee assignments for ' + saved.length + ' students.');
+        navigate('/fees/students');
+      } catch (reason) { showError(reason.message); }
+      finally { assignmentLock.current = false; setAssigning(false); }
     };
 
     return (
@@ -7090,8 +6861,10 @@ export const FeeManagementModule = (() => {
                 ]}
                 onChange={(id) => {
                   setSelectedPlanId(id);
+                  setReplaceExisting(false);
+                  setReplacementReason("");
                   const selectedPlan = publishedPlans.find(p => String(p.id) === String(id));
-                  setSelectedStudents(targetStudentId && selectedPlan ? students.filter(s => (String(s.id) === String(targetStudentId) || String(s.studentId) === String(targetStudentId)) && studentMatchesFee(s, selectedPlan)).map(s => s.id) : []);
+                  setSelectedStudents(targetStudentId && selectedPlan ? students.filter(s => (String(s.id) === String(targetStudentId) || String(s.studentId) === String(targetStudentId)) && matchesPublishedFeeScope(s, selectedPlan)).map(s => s.id) : []);
                 }}
               />
             </div>
@@ -7155,7 +6928,7 @@ export const FeeManagementModule = (() => {
                   { label: "Course", key: "courseName" },
                   { label: "Branch", key: "branchName" },
                   { label: "Batch", key: "batch" },
-                  { label: "Category", render: (s) => s.category || "General" },
+                  { label: "Category", render: (s) => s.studentCategory || s.category || "—" },
                 ]}
               />
             </section>
@@ -7167,6 +6940,14 @@ export const FeeManagementModule = (() => {
               <div className="fm-section-header">
                 <h2>3. Review &amp; Confirm</h2>
               </div>
+              <label>
+                <input type="checkbox" checked={replaceExisting} disabled={assigning || !canAction('/fees', 'edit')} onChange={event => setReplaceExisting(event.target.checked)} />
+                Replace different fee plans for eligible Draft or Registered admissions
+              </label>
+              {replaceExisting && <label>
+                Reason for replacing existing plans
+                <textarea value={replacementReason} maxLength={500} disabled={assigning} onChange={event => setReplacementReason(event.target.value)} />
+              </label>}
               <div className="fm-summary-calculation">
                 <div className="fm-calc-row">
                   <span>Selected Fee Plan</span>
@@ -7202,6 +6983,7 @@ export const FeeManagementModule = (() => {
               type="button"
               className="erp-btn erp-btn--primary"
               onClick={handleConfirm}
+              disabled={assigning || (replaceExisting && !replacementReason.trim()) || (!canAction('/fees', 'edit') && !canAction('/fees', 'create'))}
             >
               Confirm &amp; Assign to {selectedStudents.length} Students
             </button>
@@ -7211,38 +6993,34 @@ export const FeeManagementModule = (() => {
     );
   }
 
-  // Dues & Penalties
-  function Dues({ academic }) {
-    const navigate = useNavigate();
-    return (
-      <div className="fm-page-container">
-        <header className="fm-page-header">
-          <div>
-            <button type="button" className="fm-back-btn" onClick={() => navigate("/fees/students")}>
-              <FiArrowLeft /> Back to Student Fees
-            </button>
-            <h1>Dues &amp; Penalties</h1>
-            <p>Review overdue student fee balances and assess late fees.</p>
-          </div>
-        </header>
-        <div className="fm-workspace">
-          <p className="fm-empty-text">Dues and penalties records.</p>
-        </div>
-      </div>
-    );
-  }
-
   // ==========================================================================
   // ROOT WORKSPACE: ORCHESTRATOR FOR ALL 5 DESTINATIONS
   // ==========================================================================
   function FeeWorkspace() {
+    const { canAction } = useScreenAccess()
     const academic = useAcademic();
     const navigate = useNavigate();
-    const { pathname } = useLocation();
+    const { pathname, search: routeSearch } = useLocation();
+    const revisionOf = new URLSearchParams(routeSearch).get("revisionOf");
+    const draftWrites = useRef(new Map());
+    const assignmentProgress = useRef(new Map());
 
     const [state, setState] = useState(emptyFeeWorkspace);
     const [transitioningPlan, setTransitioningPlan] = useState(false);
     const [storageError, setStorageError] = useState("");
+    const [livePlans,setLivePlans]=useState([]),[planError,setPlanError]=useState(''),[planLoading,setPlanLoading]=useState(true),[planAttempt,setPlanAttempt]=useState(0);
+    const isStructureWorkspace=pathname.startsWith('/fees/structures') || /^\/fees\/assignments\/?$/.test(pathname);
+    const feeCollege=academic.selectedCollegeId;
+    useEffect(()=>{
+      if(!isStructureWorkspace)return;
+      let active=true;
+      const load=async()=>{
+        setPlanLoading(true);setPlanError('');setLivePlans([]);
+        try{if(!feeCollege)throw new Error('Select a college to load its fee structures.');const rows=await loadAcademicPlans(feeCollege);if(active)setLivePlans(rows.filter(plan=>plan.feeStructureId && (!plan.collegeId || String(plan.collegeId)===String(feeCollege))).map(liveFeePlanRow));}
+        catch(error){if(active)setPlanError(error.message || 'Unable to load fee structures.');}
+        finally{if(active)setPlanLoading(false);}
+      };load();return()=>{active=false;};
+    },[isStructureWorkspace,feeCollege,planAttempt]);
     const [workspaceReady, setWorkspaceReady] = useState(false);
     const [students, setStudents] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -7279,12 +7057,6 @@ export const FeeManagementModule = (() => {
       };
     }, [academic.selectedCollegeId]);
 
-    const commit = (next) => {
-      const saved = writeFeeWorkspace(next, academic.selectedCollegeId);
-      setState(saved);
-      showSuccess("Fee configuration saved.");
-    };
-
     const masters = {
       years: activeFeeYearOptions(academic.academicYears || []),
       courses: (academic.courses || []).map((c) => ({
@@ -7319,29 +7091,26 @@ export const FeeManagementModule = (() => {
       categories: ["Convener", "Management", "NRI", "Lateral Entry"],
     };
 
-    const ledgers = state.assignments.map((a) => ({
-      ...a,
-      ledger: feeLedger(state, a),
-    }));
+    const ledgers = []; // Financial rows are loaded from backend fee APIs only.
 
     const feeManagementTabs = [
-      { label: 'Overview', to: '/fees/overview', active: pathname === '/fees' || pathname === '/fees/overview' },
-      { label: 'Student Fees', to: '/fees/students', active: /\/fees\/(students|accounts|ledger|assignments|concessions|dues|refunds)(\/|$)/.test(pathname) },
-      { label: 'Collect Payment', to: '/fees/collection', active: pathname.startsWith('/fees/collection') },
-      { label: 'Receipts & History', to: '/fees/receipts', active: pathname.startsWith('/fees/receipts') },
-      { label: 'Reports', to: '/fees/reports', active: pathname.startsWith('/fees/reports') },
-    ];
+      ['Overview','overview'],['Fee Types','types'],['Fee Structures','structures'],['Student Fees','students'],['Payments','collection'],['Receipts & History','receipts'],['Overdues','dues'],['Reports','reports']
+    ].map(([label,path]) => ({label,to:'/fees/' + path,active:pathname === '/fees/' + path || pathname.startsWith('/fees/' + path + '/')}));
 
+
+    const mutationRoute = /\/(create|edit|assignments|collection)(\/|$)/.test(pathname)
+    if (mutationRoute && !canAction('/fees','edit') && !canAction('/fees','create')) return <DashboardLayout><p role="alert">You do not have permission to change fee records.</p><Link to="/fees/students">Back to Student Fees</Link></DashboardLayout>
     return (
       <DashboardLayout>
         <main className="fs-page fm-page">
           <FeeRequestState loading={!workspaceReady} error={storageError}>
-          {!pathname.startsWith('/fees/structures') && pathname !== '/fees/components' && (
+          {(
             <nav className="fm-workspace-tabs fm-fee-workspace-nav" role="tablist" aria-label="Fee management sections">
               {feeManagementTabs.map(tab => <Link key={tab.to} to={tab.to} role="tab" aria-selected={tab.active} className={`fm-workspace-tab ${tab.active ? 'is-active' : ''}`}>{tab.label}</Link>)}
             </nav>
           )}
           <Routes>
+            <Route path="types" element={<FeeTypesConfiguration />} />
             <Route index element={<Navigate to="/fees/overview" replace />} />
 
             {/* 1. OVERVIEW */}
@@ -7363,27 +7132,29 @@ export const FeeManagementModule = (() => {
                 <FeeStructureConfiguration
                   masters={masters}
                   state={state}
-                  workflow={{ rows: state.structures, assignments: state.assignments,
+                  workflow={{ rows: livePlans, assignments: state.assignments, loading:planLoading,error:planError,retry:()=>setPlanAttempt(value=>value+1),
                     transitioning: transitioningPlan,
-                    duplicate: row => { try { commit(saveWorkflowStructure(state, { ...structuredClone(row), id: "", name: row.name + " (Copy)" }, "Draft", "Admin")); } catch (reason) { showError(reason.message); } },
                     transition: async (id, status) => {
+                      if (!canAction('/fees','edit')) return showError('You do not have permission to change fee plans.');
                       if (transitioningPlan) return;
                       setTransitioningPlan(true);
                       try {
                         if (status === "Approved" || status === "Published") {
                           const saved = await approveForAdmission(apiEndpointsModule.academicFeePlanApi, id, academic.selectedCollegeId);
-                          commit({ ...state, structures: state.structures.map(row => String(row.id) === String(id) ? { ...row, status: "Published", backendRevision: saved.revision } : row) });
+                          if(!saved?.revision)throw new Error("The fee plan revision was not confirmed. Refresh before retrying.");
+                          setPlanAttempt(value=>value+1);
                           showSuccess("Fee plan approved and available for Student Admission.");
                         } else if (/^[1-9]\d*$/.test(String(id))) {
                           const actions = { "Pending Approval": "submit", Draft: "return-to-draft", Archived: "archive" };
                           const current = await apiEndpointsModule.academicFeePlanApi.get(id, academic.selectedCollegeId);
-                          const saved = await apiEndpointsModule.academicFeePlanApi.transition(id, academic.selectedCollegeId, actions[status], current.revision);
-                          commit({ ...state, structures: state.structures.map(row => String(row.id) === String(id) ? { ...row, status, backendRevision: saved.revision } : row) });
-                        } else { commit(transitionFeeStructure(state, id, status, "Admin")); }
+                          const target = { "Pending Approval": "SUBMITTED", Draft: "DRAFT", Archived: "ARCHIVED" }[status];
+                          const saved = current.status === target ? current : await apiEndpointsModule.academicFeePlanApi.transition(id, academic.selectedCollegeId, actions[status], current.revision);
+                          if(!saved?.revision)throw new Error("The fee plan revision was not confirmed. Refresh before retrying.");
+                          setPlanAttempt(value=>value+1);
+                        } else { throw new Error("Save this draft through the backend workflow before changing its status."); }
                       } catch (reason) { showError(reason.message); }
                       finally { setTransitioningPlan(false); }
                     },
-                    remove: id => { try { commit({ ...state, structures: state.structures.filter(row => row.id !== id) }); } catch (reason) { showError(reason.message); } },
                   }}
                 />
               }
@@ -7394,7 +7165,17 @@ export const FeeManagementModule = (() => {
             />
             <Route
               path="structures/create"
-              element={
+              element={!canAction("/fees","create") ? <p role="alert">You do not have permission to create fee plans.</p> : revisionOf ? (() => {
+                const parent = livePlans.find(plan=>plan.id===revisionOf);
+                if(planLoading || planError)return <FeeRequestState loading={planLoading} error={planError}/>;
+                if(!canAction("/fees","create") || !parent || !["Published","Archived"].includes(parent.status))return <p role="alert">Select a published or archived plan to revise.</p>;
+                return <CreateAcademicFeePlan key={feeCollege+":revision:"+parent.id} value={parent} collegeId={feeCollege} masters={masters} components={state.components} close={()=>navigate("/fees/structures")} save={async(form)=>{
+                  const key=feeCollege+":revision:"+parent.id;
+                  if(!draftWrites.current.has(key))draftWrites.current.set(key,{});
+                  await updateAcademicFeeDraft(apiEndpointsModule.academicFeePlanApi,parent,form,feeCollege,{revision:true,progress:draftWrites.current.get(key)});
+                  draftWrites.current.delete(key);setPlanAttempt(value=>value+1);navigate("/fees/structures");
+                }}/>;
+              })() :
                 <CreateAcademicFeePlan
                   key={`${pathname}:${academic.selectedCollegeId}`}
                   collegeId={academic.selectedCollegeId}
@@ -7409,48 +7190,26 @@ export const FeeManagementModule = (() => {
                   students={students}
                   close={() => navigate("/fees/structures")}
                   save={(form, status, configurations, savedPlans) => {
-                    const rows = savedPlans.map(plan => ({
-                      ...newFeeStructure(String(plan.academicYearId)),
-                      id: String(plan.feeStructureId), name: plan.name, code: plan.code,
-                      status: String(plan.status).toUpperCase() === "SUBMITTED" ? "Pending Approval" : "Draft",
-                      collegeId: String(plan.collegeId), academicYearId: String(plan.academicYearId), courseId: String(plan.courseId), branchId: String(plan.branchId), semesterId: String(plan.semesterId), batch: plan.batch,
-                      quota: plan.quota || "", studentCategory: plan.studentCategory || "", category: plan.quota || "", applicableTo: "Selected Category",
-                      cycle: plan.cycle === "SEMESTER" ? "Semester-wise" : "Yearly", plan: plan.paymentMode === "INSTALLMENTS" ? "Installment Plan" : "Full Payment",
-                      feeCategoryId: plan.feeCategoryId, effectiveFrom: String(plan.effectiveFrom || "").slice(0, 10), effectiveTo: String(plan.effectiveTo || "").slice(0, 10), dueDate: String(plan.dueDate || "").slice(0, 10), discount: 0,
-                      components: (plan.components || []).map(component => ({ masterId: component.code, code: component.code, name: component.name, amount: Number(component.amount), category: "Academic", mandatory: true, refundable: false, recurring: true, frequency: plan.cycle })),
-                      installments: (plan.installments || []).map(row => ({ id: `API-${row.number}`, name: `Payment ${row.number}`, amount: Number(row.amount), dueDate: String(row.dueDate || "").slice(0, 10) })),
-                      workflowStructure: true, backendRevision: plan.revision, backendVersion: plan.version,
-                    }));
-                    const byId = new Map(state.structures.map(row => [String(row.id), row]));
-                    rows.forEach(row => byId.set(String(row.id), row));
-                    commit({ ...state, structures: [...byId.values()] });
+                    if(!savedPlans.every(plan=>plan.feeStructureId))throw new Error("The backend did not confirm all fee plan identities.");
+                    setPlanAttempt(value=>value+1);
                     navigate("/fees/structures");
                   }}
                 />
               }
             />
-            <Route
-              path="structures/:structureId/edit"
-              element={
-                <CreateAcademicFeePlan
-                  key={`${pathname}:${academic.selectedCollegeId}`}
-                  value={
-                    state.structures.find(
-                      (s) => s.id === window.location.pathname.split("/")[3]
-                    ) || newFeeStructure()
-                  }
-                  masters={masters}
-                  components={state.components}
-                  students={students}
-                  close={() => navigate("/fees/structures")}
-                  save={(form, status) => {
-                    commit(saveAcademicPlanWithHeads(state, form, status));
-                    navigate("/fees/structures");
-                  }}
-                />
-              }
-            />
-            <Route path="structures/:structureId/view" element={<FeeStructureConfiguration viewPlan workflow={{ rows: state.structures, assignments: state.assignments }} />} />
+            <Route path="structures/:structureId/edit" element={(() => {
+              const original=livePlans.find(plan=>plan.id===pathname.split('/')[3]);
+              if(planLoading || planError)return <><FeeRequestState loading={planLoading} error={planError}/>{planError && <button type="button" onClick={()=>setPlanAttempt(value=>value+1)}>Retry fee structures</button>}</>;
+              if(!original || original.status!=='Draft' || !canAction('/fees','edit'))return <p role="alert">Only a saved draft can be edited. <Link to="/fees/structures">Back to fee structures</Link></p>;
+              return <CreateAcademicFeePlan key={pathname+':'+feeCollege} collegeId={feeCollege} value={original} masters={masters} components={state.components} students={students} close={()=>navigate('/fees/structures')} save={async(form,status)=>{
+                if(status!=='Draft')throw new Error('Save the draft first, then submit it from the fee structure directory.');
+                const key=feeCollege+":draft:"+original.id+":"+original.backendRevision;
+                if(!draftWrites.current.has(key))draftWrites.current.set(key,{});
+                await updateAcademicFeeDraft(apiEndpointsModule.academicFeePlanApi,original,form,feeCollege,{progress:draftWrites.current.get(key)});
+                setPlanAttempt(value=>value+1);showSuccess('Fee draft saved.');navigate('/fees/structures');
+              }}/>;
+            })()}/>
+            <Route path="structures/:structureId/view" element={<FeeStructureConfiguration viewPlan workflow={{ rows: livePlans, assignments: state.assignments,loading:planLoading,error:planError,retry:()=>setPlanAttempt(value=>value+1) }} />} />
             {["hostel", "transport"].map((type) => (
               <Route key={type} path={`structures/${type}`}><Route path=":facilityId/view" element={<FeeStructureConfiguration facilityType={type} viewPlan />} />
                 <Route
@@ -7500,19 +7259,17 @@ export const FeeManagementModule = (() => {
             />
             <Route
               path="assignments"
-              element={
+              element={planLoading || planError ? <><FeeRequestState loading={planLoading} error={planError}/>{planError && <button type="button" onClick={()=>setPlanAttempt(value=>value+1)}>Retry fee plans</button>}</> :
                 <AssignFeePlan
-                  state={state}
-                  commit={commit}
+                  key={`${feeCollege}:${academic.selectedAcademicYearId}`}
+                  state={{ ...state, structures: livePlans }}
                   students={students}
-                  masters={masters}
-                  filter={filter}
-                  setFilter={setFilter}
+                  assignmentProgress={assignmentProgress}
                 />
               }
             />
             <Route path="concessions" element={<Navigate to="/fees/students" replace />} />
-            <Route path="dues" element={<Dues academic={academic} />} />
+            <Route path="dues" element={<ServerFeeCollection page="dues" academic={academic} />} />
 
             {/* 4. PAYMENTS */}
             <Route

@@ -1,3 +1,5 @@
+import { useScreenAccess } from '../../../auth/ScreenAccess'
+import NativeMarksDialog from '../../../components/ViewDialog'
 import { NavLink as react_router_domImports_NavLink, Link as react_router_domImports_Link, Navigate as react_router_domImports_Navigate } from 'react-router-dom'
 import { FiCheckSquare as fiImports_FiCheckSquare, FiEdit3 as fiImports_FiEdit3, FiUploadCloud as fiImports_FiUploadCloud, FiUser as fiImports_FiUser, FiFileText as fiImports_FiFileText, FiSearch as fiImports_FiSearch, FiX as fiImports_FiX, FiCheck as fiImports_FiCheck, FiEye as fiImports_FiEye, FiEdit2 as fiImports_FiEdit2, FiPlus as fiImports_FiPlus, FiTrash2 as fiImports_FiTrash2, FiBookOpen as fiImports_FiBookOpen, FiAlertCircle as fiImports_FiAlertCircle } from 'react-icons/fi'
 import SearchableSelectImports_default, { ProjectSelect as SearchableSelectImports_ProjectSelect } from '../../../components/SearchableSelect'
@@ -13,33 +15,17 @@ import StatusBadgeImports_default from '../../../components/StatusBadge'
 import ViewDialogImports_default from '../../../components/ViewDialog'
 import { useAcademic as AcademicContextImports_useAcademic } from '../../../context/AcademicContext'
 import { getUserRole as authImports_getUserRole } from '../../../auth/auth'
-import { marksWorkflowPayload as marksWorkflowImports_marksWorkflowPayload } from '../../../utils/marksWorkflow'
+import { createOrVerifyMark, importVerifiedMarks, marksWorkflowPayload as marksWorkflowImports_marksWorkflowPayload } from '../../../utils/marksWorkflow'
+import { list as listScopedRecords } from '../../../services/scopedModulesService'
 import { showError as toastImports_showError, showSuccess as toastImports_showSuccess } from '../../../utils/toast'
 import eventBusImports_default, { ERP_EVENTS as eventBusImports_ERP_EVENTS } from '../../../services/eventBus'
-import { createPortal as react_domImports_createPortal } from 'react-dom'
 import facultyServiceImports_default from '../../../services/facultyService'
 import studentServiceImports_default from '../../../services/studentService'
 import subjectServiceImports_default from '../../../services/subjectService'
 import academicServiceImports_default from '../../../services/academicService'
 import { getExamTypes as examServiceImports_getExamTypes } from '../../../services/examService'
-import { fetchExams as collegeApiImports_fetchExams, fetchExamTypes as collegeApiImports_fetchExamTypes } from '../../../auth/collegeApi'
+import { fetchExamTypes as collegeApiImports_fetchExamTypes } from '../../../auth/collegeApi'
 import './MarksManagement.css'
-
-const exportMarksFile = async (action, params = {}) => {
-  try {
-    const result = await apiEndpointsImports_marksApi[action](params)
-    const url = URL.createObjectURL(result.blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `marks-${action}-${new Date().toISOString().slice(0, 10)}.csv`
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    URL.revokeObjectURL(url)
-  } catch (error) {
-    toastImports_showError(error)
-  }
-}
 
 // MarksModuleNav screen and private helpers.
 const MarksModuleNavScreen = (() => {
@@ -97,7 +83,6 @@ const EmptyState = EmptyStateImports_default
 const marksApi = apiEndpointsImports_marksApi
 const showError = toastImports_showError
 const showSuccess = toastImports_showSuccess
-const fetchExams = collegeApiImports_fetchExams
 
 const PAGE_SIZE = 10
 const normalized = value => String(value ?? '').trim().toLowerCase()
@@ -173,6 +158,16 @@ const parseDelimitedFile = (text, filename) => {
 }
 
 function BulkMarksUpload() {
+  const academic = AcademicContextImports_useAcademic()
+  const pendingImports = reactImports_useRef(new Map())
+  return <BulkMarksWorkspace key={`${academic.selectedCollegeId || ''}:${academic.selectedAcademicYearId || ''}`} academic={academic} pendingImports={pendingImports} />
+}
+
+function BulkMarksWorkspace({ academic, pendingImports }) {
+  const { canAction } = useScreenAccess()
+  const canImport = canAction('/marks-management/bulk-marks-upload', 'create')
+  const canUpdate = canAction('/marks-management/bulk-marks-upload', 'edit')
+  const uploadLock = reactImports_useRef(false)
   const [selectedFile, setSelectedFile] = useState(null)
   const [uploadScope, setUploadScope] = useState(null)
   const [fileName, setFileName] = useState('')
@@ -195,9 +190,12 @@ function BulkMarksUpload() {
 
   useEffect(() => {
     let active = true
-    fetchExams({ Page: 1, PageSize: 500, Status: true })
+    const request = academic.selectedCollegeId && academic.selectedAcademicYearId
+      ? listScopedRecords('exams', { collegeId: academic.selectedCollegeId, academicYearId: academic.selectedAcademicYearId })
+      : Promise.reject(new Error('Select a working college and academic year to load examinations.'))
+    request
       .then(result => {
-        if (active) setExams(Array.isArray(result?.items) ? result.items : [])
+        if (active) setExams(result.filter(exam => String(exam.collegeId) === String(academic.selectedCollegeId) && String(exam.academicYearId) === String(academic.selectedAcademicYearId)))
       })
       .catch(error => {
         if (active) setExamLoadError(error.message || 'Examinations could not be loaded.')
@@ -206,7 +204,7 @@ function BulkMarksUpload() {
         if (active) setExamLoading(false)
       })
     return () => { active = false }
-  }, [])
+  }, [academic.selectedCollegeId, academic.selectedAcademicYearId])
 
   const selectedExam = exams.find(exam => String(exam.examId) === String(selectedExamId))
 
@@ -254,6 +252,7 @@ function BulkMarksUpload() {
     setReading(true)
     try {
       if (!file.size) throw new Error('The selected file is empty.')
+      if (!selectedExam) throw new Error('Select an examination in the working college and academic year before previewing marks.')
       if (file.size > 10 * 1024 * 1024) throw new Error('Choose a file smaller than 10 MB.')
       const isWorkbook = /\.xlsx$/i.test(file.name)
       if (!isWorkbook && !/\.(csv|tsv|txt)$/i.test(file.name)) {
@@ -384,14 +383,16 @@ function BulkMarksUpload() {
   }
 
   const confirmUpload = async () => {
-    if (!selectedFile || !uploadPreview || Number(uploadPreview.validRows) < 1) return
+    if (!canImport || uploadLock.current || !selectedFile || !uploadPreview || Number(uploadPreview.validRows) < 1) return
+    if (!selectedExam || Number(uploadScope?.examId) !== Number(selectedExam.examId)) return setFileError('Reload the examination preview before importing.')
+    uploadLock.current = true
     setUploading(true)
     setFileError('')
     try {
-      const result = await marksApi.upload(selectedFile, {
+      const result = await importVerifiedMarks(marksApi, selectedFile, {
         ...uploadScope,
-        upsertDrafts: true,
-      }, false)
+        upsertDrafts: canUpdate,
+      }, pendingImports.current)
       showSuccess(`Marks upload completed: ${result.insertedRows || 0} inserted, ${result.updatedRows || 0} updated, ${result.rejectedRows || 0} rejected.`)
       setUploadPreview(result)
       setUploadComplete(true)
@@ -410,6 +411,7 @@ function BulkMarksUpload() {
       setFileError(error.message || 'The workbook could not be uploaded.')
       showError(error)
     } finally {
+      uploadLock.current = false
       setUploading(false)
     }
   }
@@ -514,7 +516,7 @@ function BulkMarksUpload() {
           </label>
           {uploadPreview && <div className="bulk-marks-upload-status" role="status">
             <p><strong>{uploadComplete ? 'Import completed' : previewMode === 'workbook' ? 'Workbook validated' : 'Preview validated'}</strong><span>{uploadPreview.totalRows} rows · {uploadPreview.validRows} ready · {uploadPreview.rejectedRows} need attention</span></p>
-            {selectedFile && uploadPreview.validRows > 0 && <button type="button" className="erp-btn erp-btn--primary" onClick={confirmUpload} disabled={uploading}>{uploading ? 'Importing…' : `Import ${uploadPreview.validRows} valid rows`}</button>}
+            {canImport && selectedFile && uploadPreview.validRows > 0 && <button type="button" className="erp-btn erp-btn--primary" onClick={confirmUpload} disabled={uploading}>{uploading ? 'Importing…' : `Import ${uploadPreview.validRows} valid rows`}</button>}
           </div>}
           {fileError && <p className="bulk-marks-upload-error" role="alert">{fileError}</p>}
           {fileName && !fileError && <p className="bulk-marks-upload-status"><FiFileText /><span>{fileName} · {previewMode === 'delimited' ? 'Preview only. Convert the validated file to XLSX to import it.' : uploadComplete ? 'Import finished. Rejected rows remain available below.' : 'Review validation results before importing.'}</span></p>}
@@ -1616,13 +1618,12 @@ const ProjectSelect = SearchableSelectImports_ProjectSelect
 const useEffect = reactImports_useEffect
 const useMemo = reactImports_useMemo
 const useState = reactImports_useState
-const createPortal = react_domImports_createPortal
 const FiEdit2 = fiImports_FiEdit2
 const FiPlus = fiImports_FiPlus
 const FiSearch = fiImports_FiSearch
 const FiCheck = fiImports_FiCheck
 const FiTrash2 = fiImports_FiTrash2
-const FiX = fiImports_FiX
+
 const DashboardLayout = DashboardLayoutImports_default
 const PageHeader = PageHeaderImports_default
 const EmptyState = EmptyStateImports_default
@@ -1641,7 +1642,6 @@ const subjectService = subjectServiceImports_default
 const sectionAssignmentApi = apiEndpointsImports_sectionAssignmentApi
 const useRef = reactImports_useRef
 const FiAlertCircle = fiImports_FiAlertCircle
-const fetchExams = collegeApiImports_fetchExams
 const fetchExamTypes = collegeApiImports_fetchExamTypes
 
 const columns = [
@@ -1691,8 +1691,8 @@ const initialAssessment = {
   examType: '',
   assessmentType: 'Internal',
   examDate: '',
-  maximumMarks: '100',
-  passingMarks: '35',
+  maximumMarks: '',
+  passingMarks: '',
   studentMarks: '',
 }
 
@@ -1816,6 +1816,7 @@ const getMarksSummary = ({
   studentMarks,
   maximumMarks,
   passingMarks,
+  examStatus: reportedStatus,
 }) => {
   const numericValue = value =>
     value == null || String(value).trim() === ''
@@ -1840,21 +1841,10 @@ const getMarksSummary = ({
     (Number.isFinite(maximum) && maximum <= 0) ||
     (Number.isFinite(passing) && (passing < 0 || (hasMaximum && passing > maximum))) ||
     (hasMarks && hasMaximum && marks > maximum)
-  const examStatus =
-    hasMarks &&
-      hasMaximum &&
-      Number.isFinite(passing) &&
-      marks >= 0 &&
-      marks <= maximum &&
-      passing >= 0 &&
-      passing <= maximum
-      ? marks >= passing
-        ? 'Pass'
-        : 'Fail'
-      : ''
+  const examStatus = reportedStatus || ''
 
   const examStatusMessage = examStatus
-    || (hasInvalidValues ? 'Check values' : 'Awaiting marks')
+    || (hasInvalidValues ? 'Check values' : 'Awaiting backend review')
 
   return {
     percentage,
@@ -1865,6 +1855,15 @@ const getMarksSummary = ({
 }
 
 function MarksEntry() {
+  const academic = useAcademic()
+  const pendingMarks = useRef(new Map())
+  return <MarksEntryWorkspace key={`${academic.selectedCollegeId || ''}:${academic.selectedAcademicYearId || ''}`} pendingMarks={pendingMarks} />
+}
+
+function MarksEntryWorkspace({ pendingMarks }) {
+  const { canAction } = useScreenAccess()
+  const canCreate = canAction('/marks-management/marks-entry','create'), canEdit = canAction('/marks-management/marks-entry','edit')
+  const saveLock = useRef(false)
   const {
     academicYears = [],
     selectedAcademicYear = null,
@@ -1872,6 +1871,8 @@ function MarksEntry() {
     branches = [],
     semesters = [],
     sections = [],
+    selectedCollegeId,
+    selectedAcademicYearId,
   } = useAcademic()
   const createAssessmentDraft = () => ({
     ...initialAssessment,
@@ -1909,7 +1910,6 @@ function MarksEntry() {
   const [page, setPage] = useState(1)
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingId, setEditingId] = useState('')
-  const [deletingRow, setDeletingRow] = useState(null)
   const [submittingMarkId, setSubmittingMarkId] = useState('')
   const [examsList, setExamsList] = useState([])
   const [examTypesList, setExamTypesList] = useState([])
@@ -1938,7 +1938,15 @@ function MarksEntry() {
     setLoadError('')
     try {
       const records = await marksApi.list()
-      const rows = records.map(toEntryRow)
+      const scopedExams = selectedCollegeId && selectedAcademicYearId
+        ? await listScopedRecords('exams', { collegeId: selectedCollegeId, academicYearId: selectedAcademicYearId })
+        : null
+      const examRows = Array.isArray(scopedExams) ? scopedExams : scopedExams?.items ?? scopedExams?.data ?? []
+      const examIds = new Set(examRows.filter(exam => String(exam.collegeId) === String(selectedCollegeId) && String(exam.academicYearId) === String(selectedAcademicYearId)).map(exam => String(exam.examId ?? exam.id)))
+      const scopedRecords = selectedCollegeId && selectedAcademicYearId
+        ? records.filter(mark => String(mark.collegeId) === String(selectedCollegeId) && examIds.has(String(mark.examId)))
+        : []
+      const rows = scopedRecords.map(toEntryRow)
       setDraftRows(rows)
       if (rows.length) {
         const examId = Number(rows[0].examId)
@@ -2020,10 +2028,15 @@ function MarksEntry() {
   }, [])
 
   useEffect(() => {
-    fetchExams({ Page: 1, PageSize: 500 })
-      .then(res => setExamsList(Array.isArray(res?.items) ? res.items : []))
-      .catch(() => setExamsList([]))
-  }, [])
+    let current = true
+    const request = selectedCollegeId && selectedAcademicYearId
+      ? listScopedRecords('exams', { collegeId: selectedCollegeId, academicYearId: selectedAcademicYearId })
+      : Promise.resolve([])
+    request.then(rows => {
+      if (current) setExamsList(rows.filter(exam => String(exam.collegeId) === String(selectedCollegeId) && String(exam.academicYearId) === String(selectedAcademicYearId)))
+    }).catch(() => { if (current) setExamsList([]) })
+    return () => { current = false }
+  }, [selectedCollegeId, selectedAcademicYearId])
 
   useEffect(() => {
     fetchExamTypes({ Status: true })
@@ -3102,8 +3115,14 @@ function MarksEntry() {
 
   const submitAssessment = async event => {
     event.preventDefault()
+    if (saveLock.current || !(editingId ? canEdit : canCreate)) return
     setModalError('')
     setFieldErrors({})
+
+    if (!selectedCollegeId || !selectedAcademicYearId) {
+      setModalError('Select a working college and academic year before saving marks.')
+      return
+    }
 
     let student = sectionEligibleStudents.find(item =>
       (assessment.studentId && (String(item.studentId) === String(assessment.studentId) || String(item.id) === String(assessment.studentId)))
@@ -3164,7 +3183,6 @@ function MarksEntry() {
 
     const marksObtained = Number(assessment.studentMarks)
     const maxMarks = Number(assessment.maximumMarks)
-    const passingMarks = Number(assessment.passingMarks)
 
     const errors = {}
     const errorMessages = []
@@ -3204,23 +3222,23 @@ function MarksEntry() {
       return
     }
 
-    setSaving(true)
+    saveLock.current = true; setSaving(true)
     try {
       const payload = {
         marksObtained,
         maxMarks,
-        grade: assessment.grade || (marksObtained >= passingMarks ? 'Pass' : 'Fail'),
+        grade: assessment.grade?.trim() || null,
         remarks: assessment.remarks || null,
       }
       const saved = editingId
         ? await marksApi.update(editingId, payload)
-        : await marksApi.create({
+        : await createOrVerifyMark(marksApi, {
           examId,
           studentId,
           subjectId,
           sectionId: Number.isSafeInteger(sectionId) && sectionId > 0 ? sectionId : null,
           ...payload,
-        })
+        }, pendingMarks.current)
       const record = toEntryRow(saved)
       setDraftRows(current => editingId
         ? current.map(row => row.id === editingId ? record : row)
@@ -3239,11 +3257,12 @@ function MarksEntry() {
         formRef.current.scrollTop = 0
       }
     } finally {
-      setSaving(false)
+      saveLock.current = false; setSaving(false)
     }
   }
 
   const editAssessment = async row => {
+    if (!canEdit) return
     if (!['DRAFT', 'REJECTED'].includes(String(row.workflowStatus || '').toUpperCase())) {
       showError('Only draft or rejected marks can be edited.')
       return
@@ -3282,12 +3301,8 @@ function MarksEntry() {
     showError(`Marks record ${row.markId || row.id} cannot be removed because the backend does not expose a marks DELETE endpoint.`)
   }
 
-  const confirmDeleteAssessment = () => {
-    if (!deletingRow) return
-    setDeletingRow(null)
-  }
-
   const submitMark = async row => {
+    if (!canEdit) return
     if (!['DRAFT', 'REJECTED'].includes(String(row.workflowStatus || '').toUpperCase())) {
       showError('Only draft or rejected marks can be submitted for approval.')
       return
@@ -3342,120 +3357,6 @@ function MarksEntry() {
           {loadError && <div className="marks-approval-error" role="alert"><span>{loadError}</span><button type="button" className="erp-btn erp-btn--secondary" onClick={loadMarks} disabled={loading}>Retry</button></div>}
           {loading && <p className="marks-approval-loading" role="status">Loading marks from the server…</p>}
 
-          {deletingRow &&
-            createPortal(
-              <div
-                className="marks-entry-delete-backdrop"
-                onMouseDown={() =>
-                  setDeletingRow(null)
-                }
-              >
-                <section
-                  className="marks-entry-delete-modal"
-                  role="alertdialog"
-                  aria-modal="true"
-                  aria-labelledby="marks-entry-delete-title"
-                  aria-describedby="marks-entry-delete-description"
-                  onMouseDown={event =>
-                    event.stopPropagation()
-                  }
-                >
-                  <header className="marks-entry-delete-modal__header">
-                    <span className="marks-entry-delete-modal__icon">
-                      <FiTrash2 aria-hidden="true" />
-                    </span>
-
-                    <div>
-                      <h2 id="marks-entry-delete-title">
-                        Delete Marks Confirmation
-                      </h2>
-
-                      <p>
-                        Marks record deletion
-                        confirmation.
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      className="marks-entry-delete-modal__close"
-                      onClick={() =>
-                        setDeletingRow(null)
-                      }
-                      aria-label="Close confirmation"
-                    >
-                      <FiX aria-hidden="true" />
-                    </button>
-                  </header>
-
-                  <div className="marks-entry-delete-modal__body">
-                    <div className="marks-entry-delete-record">
-                      <span className="marks-entry-delete-record__badge">
-                        MARKS
-                      </span>
-
-                      <div>
-                        <strong>
-                          {deletingRow.studentName ||
-                            deletingRow.registrationNumber ||
-                            'Student marks'}
-                        </strong>
-
-                        <p>
-                          {[
-                            deletingRow.subjectName ||
-                            deletingRow.subject,
-                            deletingRow.subjectCode,
-                            deletingRow.examType,
-                            deletingRow.course,
-                            deletingRow.branch,
-                            deletingRow.section,
-                          ]
-                            .filter(Boolean)
-                            .join(' | ') ||
-                            'Marks entry record'}
-                        </p>
-                      </div>
-                    </div>
-
-                    <p
-                      id="marks-entry-delete-description"
-                      className="marks-entry-delete-modal__message"
-                    >
-                      Are you sure you want
-                      to permanently delete
-                      this marks record? This
-                      action cannot be undone.
-                    </p>
-                  </div>
-
-                  <footer className="marks-entry-delete-modal__footer">
-                    <button
-                      type="button"
-                      className="marks-entry-delete-modal__cancel"
-                      onClick={() =>
-                        setDeletingRow(null)
-                      }
-                    >
-                      Cancel
-                    </button>
-
-                    <button
-                      type="button"
-                      className="marks-entry-delete-modal__confirm"
-                      onClick={
-                        confirmDeleteAssessment
-                      }
-                    >
-                      <FiTrash2 aria-hidden="true" />
-                      Confirm &amp; Delete Marks
-                    </button>
-                  </footer>
-                </section>
-              </div>,
-              document.body
-            )}
-
           <FilterPanel
             active={hasFilters}
             onClear={clearFilters}
@@ -3471,10 +3372,11 @@ function MarksEntry() {
                   allowEmpty
                   printLabel="Save as PDF"
                 />
-                <button
+                <button hidden={!canCreate}
                   type="button"
                   className="erp-btn erp-btn--primary"
                   onClick={() => {
+                    if (!canCreate) return
                     setEditingId('')
                     setAssessment(createAssessmentDraft())
                     setModalError('')
@@ -3589,64 +3491,8 @@ function MarksEntry() {
             )}
           </FilterPanel>
 
-          {showAddForm &&
-            createPortal(
-              <div
-                className={`marks-entry-modal${localStorage.getItem(
-                  'pirnav-sidebar-collapsed'
-                ) === 'true'
-                    ? ' sidebar-collapsed'
-                    : ''
-                  }`}
-                onMouseDown={() =>
-                  setShowAddForm(false)
-                }
-              >
-                <form
-                  ref={formRef}
-                  className="marks-entry-form"
-                  noValidate
-                  role="dialog"
-                  aria-modal="true"
-                  aria-labelledby="marks-entry-form-title"
-                  onMouseDown={event =>
-                    event.stopPropagation()
-                  }
-                  onSubmit={
-                    submitAssessment
-                  }
-                >
-                  <div className="marks-entry-form__heading">
-                    <div>
-                      <h3 id="marks-entry-form-title">
-                        {editingId
-                          ? 'Edit Marks Assessment'
-                          : 'Add Marks Assessment'}
-                      </h3>
-
-                      <p>
-                        Enter the assessment
-                        details. Existing
-                        values are available
-                        as suggestions.
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      className="marks-entry-form__close"
-                      onClick={() => {
-                        setShowAddForm(false)
-                        setEditingId('')
-                        setModalError('')
-                        setFieldErrors({})
-                      }}
-                      aria-label="Close form"
-                    >
-                      &times;
-                    </button>
-                  </div>
-
+          {showAddForm && <NativeMarksDialog title={editingId ? 'Edit Marks Assessment' : 'Add Marks Assessment'} subtitle="Student assessment, academic mapping and marks" onClose={() => { setShowAddForm(false); setEditingId(''); setModalError(''); setFieldErrors({}) }} busy={saving} showExport={false} hideFooter maxWidth="1120px"><form ref={formRef} className="marks-entry-form" noValidate onSubmit={submitAssessment}>
+                  <p className="campus-notice">Missing marks remain blank. This marks API does not support recording absence; absence values are shown only when returned in examination results.</p>
                   {modalError && (
                     <div className="marks-modal-error-banner" role="alert">
                       <FiAlertCircle className="marks-modal-error-icon" />
@@ -4071,10 +3917,7 @@ function MarksEntry() {
                         : 'Confirm'}
                     </button>
                   </div>
-                </form>
-              </div>,
-              document.body
-            )}
+                </form></NativeMarksDialog>}
 
           <div className="marks-entry-table-wrap">
             <table className="erp-table marks-entry-records-table">
@@ -4126,7 +3969,7 @@ function MarksEntry() {
                   const examDate = row.examDate
                     ? String(row.examDate).replace('T', ' ').slice(0, 16)
                     : ''
-                  const canManageMark = ['DRAFT', 'REJECTED'].includes(String(row.workflowStatus || '').toUpperCase())
+                  const canManageMark = canEdit && ['DRAFT', 'REJECTED'].includes(String(row.workflowStatus || '').toUpperCase())
                   const rowMarkId = String(row.markId || row.id)
 
                   return (

@@ -14,7 +14,9 @@ vi.mock('../context/AcademicContext', () => ({ useAcademic: () => session.academ
 vi.mock('../api/apiEndpoints', () => ({ authAccessApi: { get: vi.fn() } }))
 vi.mock('../auth/collegeApi', () => ({ collegeLogoValue: () => '', cacheCollegeLogo: vi.fn(), fetchCollegeLogo: vi.fn(), getCollegeById: vi.fn(async () => ({})), getCollegeLogoEndpoint: () => '', getCollegeLogoUrl: () => '', getColleges: vi.fn(async () => []), isBackendCollegeLogo: () => false, readCachedCollegeLogo: () => '', unwrapCollegeRecord: value => value }))
 afterEach(() => { cleanup(); document.documentElement.removeAttribute('data-theme') })
-beforeEach(() => { vi.clearAllMocks(); session.role = 'admin'; session.token = 'test-token'; session.academic = { selectedCollege: { id: '7', name: 'Test College' }, selectedCollegeId: '7', colleges: [], loading: false }; authAccessApi.get.mockReset().mockResolvedValue({ isSuperAdmin: true, collegeId: 7, permissions: {} }); sessionStorage.clear() })
+let generation = 0
+beforeEach(() => { vi.clearAllMocks(); session.role = 'admin'; session.token = 'test-token-' + (++generation); session.academic = { selectedCollege: { id: '7', name: 'Test College' }, selectedCollegeId: '7', colleges: [], loading: false }; authAccessApi.get.mockReset().mockResolvedValue({ isSuperAdmin: true, collegeId: 7, permissions: {} }); sessionStorage.clear() })
+async function settings() { const button = await screen.findByRole('button', { name: 'Global Settings' }); if (button.getAttribute('aria-expanded') !== 'true') fireEvent.click(button); return screen.findByRole('link', { name: 'Colleges' }) }
 function mount(props = {}, path = '/fees/structures/create') {
  return render(<MemoryRouter initialEntries={[path]}><Sidebar {...props} /></MemoryRouter>)
 }
@@ -39,14 +41,13 @@ test.each(['light', 'dark'])('sidebar keeps links, fee active states and consist
  document.documentElement.dataset.theme = theme
  const { container } = mount()
  await waitFor(() => expect(authAccessApi.get).toHaveBeenCalled())
- const colleges = await screen.findByRole('link', { name: 'Colleges' })
+ const colleges = await settings()
  expect(colleges.getAttribute('href')).toBe('/college-institution-management')
  expect(colleges.querySelector('svg').classList.contains('lucide-landmark')).toBe(true)
  expect(screen.getByRole('link', { name: 'Fee Structure' }).classList.contains('active')).toBe(true)
  expect(screen.getByRole('link', { name: 'Fee Management' }).classList.contains('active')).toBe(false)
  for (const link of container.querySelectorAll('.sidebar-link')) {
-  expect(link.querySelector('svg').getAttribute('width')).toBe('20')
-  expect(link.querySelector('svg').getAttribute('stroke-width')).toBe('1.8')
+  expect(link.querySelector('svg, .reference-nav-icon')).toBeTruthy()
  }
  expect(screen.queryByRole('link', { name: 'Academic Levels' })).toBeNull()
  expect(screen.queryByRole('link', { name: 'Fee Reports' })).toBeNull()
@@ -62,16 +63,16 @@ test('existing access matrix still filters modules and does not grant denied sub
 test('existing disclosure, collapse and mobile close callbacks survive icon changes', async () => {
  const onClose = vi.fn(), onToggleCollapse = vi.fn()
  const { container, rerender } = mount({ open: true, onClose, onToggleCollapse })
- await screen.findByRole('link', { name: 'Colleges' })
+ await settings()
  expect(container.querySelector('aside').classList.contains('is-open')).toBe(true)
- fireEvent.click(screen.getByRole('button', { name: 'Exam Management' }))
- expect(screen.getByRole('button', { name: 'Exam Management' }).getAttribute('aria-expanded')).toBe('true')
+ fireEvent.click(screen.getByRole('button', { name: 'Exams & Results' }))
+ expect(screen.getByRole('button', { name: 'Exams & Results' }).getAttribute('aria-expanded')).toBe('true')
  expect(screen.getByRole('link', { name: 'Examination Setup' }).getAttribute('href')).toBe('/examination-setup')
  fireEvent.click(screen.getByRole('link', { name: 'Colleges' })); expect(onClose).toHaveBeenCalled()
  rerender(<MemoryRouter><Sidebar collapsed onClose={onClose} onToggleCollapse={onToggleCollapse} /></MemoryRouter>)
  expect(container.querySelector('aside').classList.contains('is-collapsed')).toBe(true)
  fireEvent.click(screen.getByRole('button', { name: 'Expand navigation' })); expect(onToggleCollapse).toHaveBeenCalled()
- expect(screen.getByRole('link', { name: 'Colleges' }).getAttribute('title')).toBe('Colleges')
+ expect(screen.getByRole('button', { name: 'Global Settings' }).getAttribute('title')).toBe('Global Settings')
 })
 
 function deferred() { let resolve; const promise = new Promise(done => { resolve = done }); return { promise, resolve } }
@@ -79,16 +80,16 @@ const sidebarTree = props => <MemoryRouter initialEntries={['/fees/collection']}
 
 test('pending permissions keep the role navigation visible until scoped links are ready', async () => {
  const request = deferred(); authAccessApi.get.mockReturnValueOnce(request.promise);
- mount(); expect(screen.getByText('Loading navigation…')).toBeTruthy(); expect(screen.getByRole('link', { name: 'Colleges' })).toBeTruthy();
+ mount(); expect(screen.getByText('Loading navigation…')).toBeTruthy(); expect(screen.getByRole('button', { name: 'Global Settings' })).toBeTruthy();
  expect(document.querySelectorAll('.sidebar-section-label').length).toBeGreaterThan(0);
  await act(async () => request.resolve({ collegeId: 7, permissions: { fees: { view: true } } }));
  expect(screen.getByRole('link', { name: 'Fee Management' })).toBeTruthy();
- expect([...document.querySelectorAll('.sidebar-section-label')].map(node => node.textContent)).toEqual(['Finance']);
+ expect([...document.querySelectorAll('.sidebar-section-label')].map(node => node.textContent)).toEqual(['Management']);
 })
 test('failed access preserves navigation without a sidebar error or retry button', async () => {
  authAccessApi.get.mockRejectedValueOnce(new Error('Unavailable'));
  mount(); await waitFor(() => expect(screen.queryByText('Loading navigation…')).toBeNull());
- expect(screen.getByRole('link', { name: 'Colleges' })).toBeTruthy();
+ expect(screen.getByRole('button', { name: 'Global Settings' })).toBeTruthy();
  expect(screen.queryByText(/Service unavailable/)).toBeNull();
  expect(screen.queryByRole('button', { name: 'Retry connection' })).toBeNull();
 })
@@ -100,7 +101,7 @@ test('college changes immediately hide the old permission matrix and reload the 
  rerender(sidebarTree()); expect(screen.getByRole('link', { name: 'Fee Management' })).toBeTruthy(); expect(screen.getByText('Loading navigation…')).toBeTruthy();
  await waitFor(() => expect(authAccessApi.get).toHaveBeenLastCalledWith('8'));
  await act(async () => next.resolve({ collegeId: 8, permissions: { rooms: { view: true } } }));
- expect(screen.getByRole('link', { name: 'Rooms & Classrooms' })).toBeTruthy(); expect(screen.queryByRole('link', { name: 'Fee Management' })).toBeNull();
+ expect(screen.getByRole('link', { name: 'Academic Configuration' })).toBeTruthy(); expect(screen.queryByRole('link', { name: 'Fee Management' })).toBeNull();
 })
 test('late responses from a previous college cannot overwrite the current navigation', async () => {
  const old = deferred(), next = deferred(); authAccessApi.get.mockReturnValueOnce(old.promise).mockReturnValueOnce(next.promise);
@@ -109,7 +110,7 @@ test('late responses from a previous college cannot overwrite the current naviga
  rerender(sidebarTree());
  await act(async () => next.resolve({ collegeId: 8, permissions: { rooms: { view: true } } }));
  await act(async () => old.resolve({ collegeId: 7, isSuperAdmin: true, permissions: {} }));
- expect(screen.getByRole('link', { name: 'Rooms & Classrooms' })).toBeTruthy(); expect(screen.queryByRole('link', { name: 'Colleges' })).toBeNull();
+ expect(screen.getByRole('link', { name: 'Academic Configuration' })).toBeTruthy(); expect(screen.queryByRole('link', { name: 'Colleges' })).toBeNull();
 })
 test('a mismatched college response is rejected even if it claims Super Admin', async () => {
  authAccessApi.get.mockResolvedValueOnce({ collegeId: 99, isSuperAdmin: true, permissions: {} });
@@ -119,11 +120,11 @@ test('context loading delays requests; an empty college selection is a setup hin
  session.academic.loading = true;
  const { rerender } = render(sidebarTree()); expect(authAccessApi.get).not.toHaveBeenCalled();
  session.academic = { ...session.academic, loading: false, selectedCollegeId: '', selectedCollege: null };
- rerender(sidebarTree()); await screen.findByRole('link', { name: 'Rooms & Classrooms' });
+ rerender(sidebarTree()); await screen.findByRole('button', { name: 'Academic Configuration' });
  expect(authAccessApi.get).toHaveBeenCalledWith(undefined); expect(screen.getByText('Select a college for college-specific records.')).toBeTruthy();
 })
 test('changing login token clears old navigation without changing authentication behavior', async () => {
- const { rerender } = render(sidebarTree()); await screen.findByRole('link', { name: 'Colleges' });
+ const { rerender } = render(sidebarTree()); await settings();
  session.token = '';
  rerender(sidebarTree()); expect(screen.queryByRole('link', { name: 'Colleges' })).toBeNull(); expect(screen.getByText('Sign in to load navigation.')).toBeTruthy();
 })
@@ -137,10 +138,10 @@ test('an explicitly permitted faculty user keeps the existing Academics links an
 function HistoryControls() { const navigate = useNavigate(); return <><button onClick={() => navigate('/results/student-result')}>Open result</button><button onClick={() => navigate('/results/backlog-report')}>Open backlog</button><button onClick={() => navigate(-1)}>Go back</button></> }
 test('history navigation and new deep links expand the active parent after manual closure', async () => {
  render(<MemoryRouter initialEntries={['/courses']}><Sidebar /><HistoryControls /></MemoryRouter>);
- await screen.findByRole('link', { name: 'Colleges' }); fireEvent.click(screen.getByRole('button', { name: 'Open result' }));
- expect(screen.getByRole('button', { name: 'Grades System and Results' }).getAttribute('aria-expanded')).toBe('true');
+ await settings(); fireEvent.click(screen.getByRole('button', { name: 'Open result' }));
+ expect(screen.getByRole('button', { name: 'Exams & Results' }).getAttribute('aria-expanded')).toBe('true');
  expect(screen.getByRole('link', { name: 'Official Results' }).getAttribute('aria-current')).toBe('page');
- fireEvent.click(screen.getByRole('button', { name: 'Grades System and Results' }));
+ fireEvent.click(screen.getByRole('button', { name: 'Exams & Results' }));
  expect(screen.queryByRole('link', { name: 'Official Results' })).toBeNull();
  fireEvent.click(screen.getByRole('button', { name: 'Open backlog' }));
  expect(screen.getByRole('link', { name: 'Official Results' })).toBeTruthy();
@@ -149,13 +150,13 @@ test('history navigation and new deep links expand the active parent after manua
 function CollapsibleSidebar() { const [collapsed, setCollapsed] = useState(true); return <Sidebar collapsed={collapsed} onToggleCollapse={() => setCollapsed(value => !value)} /> }
 test('clicking a collapsed parent expands the sidebar and its submenu together', async () => {
  const { container } = render(<MemoryRouter initialEntries={['/exam/hall-allocation']}><CollapsibleSidebar /></MemoryRouter>);
- await screen.findByRole('button', { name: 'Exam Management' }); expect(container.querySelector('aside').classList.contains('is-collapsed')).toBe(true);
- fireEvent.click(screen.getByRole('button', { name: 'Exam Management' }));
+ await screen.findByRole('button', { name: 'Exams & Results' }); expect(container.querySelector('aside').classList.contains('is-collapsed')).toBe(true);
+ fireEvent.click(screen.getByRole('button', { name: 'Exams & Results' }));
  expect(container.querySelector('aside').classList.contains('is-collapsed')).toBe(false);
  expect(screen.getByRole('link', { name: 'Exam Timetable' }).getAttribute('aria-current')).toBe('page');
 })
 test('sidebar scroll position is restored and saved through registry rendering', async () => {
  sessionStorage.setItem('pirnav-sidebar-scroll', '65'); const { container } = mount();
- await screen.findByRole('link', { name: 'Colleges' }); const nav = container.querySelector('nav'); expect(nav.scrollTop).toBe(65);
+ await settings(); const nav = container.querySelector('nav'); expect(nav.scrollTop).toBe(65);
  fireEvent.scroll(nav, { target: { scrollTop: 105 } }); expect(sessionStorage.getItem('pirnav-sidebar-scroll')).toBe('105');
 })

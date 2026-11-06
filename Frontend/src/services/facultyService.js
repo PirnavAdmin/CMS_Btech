@@ -1,7 +1,7 @@
 import { collegeStorageKey } from '../utils/collegeScope.js'
 import { facultyCreatePayload, facultyUpdatePayload, facultyProfilePayload, normalizeAllocation, allocationPayload, facultyEmployeeCode } from './facultyContracts'
 import { newestFirst } from '../utils/newestFirst'
-import { API_BASE_URL, facultyApi, facultyAttendanceApi, facultyDocumentApi, facultyLeaveApi, facultyPayrollApi, facultyProfileApi, facultySubjectAllocationApi } from '../api/apiEndpoints'
+import { API_BASE_URL, facultyApi, facultyAttendanceApi, facultyDocumentApi, facultyProfileApi, facultySubjectAllocationApi } from '../api/apiEndpoints'
 
 const first = (source, keys, fallback = '') => keys.map(key => source?.[key]).find(value => value !== undefined && value !== null && String(value).trim() !== '') ?? fallback
 const list = value => Array.isArray(value) ? value : []
@@ -102,156 +102,9 @@ export const normalizeFaculty = (source = {}) => {
 const LOCAL_FACULTY_KEY = 'pirnav-faculty-local-records-v1'
 const LOCAL_PROFILE_KEY = 'pirnav-faculty-local-profiles-v1'
 const LOCAL_ALLOCATIONS_KEY = 'pirnav-faculty-local-allocations-v1'
-const LOCAL_ATTENDANCE_KEY = 'pirnav-faculty-local-attendance-v1'
-
-const getAttendanceFacultyId = row => {
-  if (!row || typeof row !== 'object') return ''
-  return String(
-    row.facultyId ??
-    row.FacultyId ??
-    row.faculty?.facultyId ??
-    row.faculty?.FacultyId ??
-    row.faculty?.id ??
-    row.faculty?.Id ??
-    row.employeeProfileId ??
-    row.EmployeeProfileId ??
-    row.facultyProfileId ??
-    row.FacultyProfileId ??
-    row.employeeProfile?.id ??
-    row.employeeProfile?.Id ??
-    row.employeeId ??
-    row.EmployeeId ??
-    row.facultyCode ??
-    row.FacultyCode ??
-    row.id ??
-    row.Id ??
-    ''
-  )
-}
-
-const getAttendanceDate = row => {
-  if (!row || typeof row !== 'object') return ''
-  const val = String(row.attendanceDate ?? row.AttendanceDate ?? row.date ?? row.Date ?? '')
-  return val.includes('T') ? val.split('T')[0] : val.slice(0, 10)
-}
-
-const getLocalAttendance = () => {
-  try {
-    const raw = localStorage.getItem(toCollegeKey(LOCAL_ATTENDANCE_KEY)) || localStorage.getItem(LOCAL_ATTENDANCE_KEY)
-    return JSON.parse(raw) || []
-  } catch {
-    return []
-  }
-}
-
-export const saveLocalAttendanceRecord = (record) => {
-  try {
-    const list = getLocalAttendance()
-    const facId = getAttendanceFacultyId(record)
-    const date = getAttendanceDate(record)
-    if (!facId || !date) return record
-    const index = list.findIndex(item => (getAttendanceFacultyId(item) === facId || (item.employeeId && record.employeeId && item.employeeId === record.employeeId) || (item.facultyCode && record.facultyCode && item.facultyCode === record.facultyCode)) && getAttendanceDate(item) === date)
-    const normalized = {
-      ...record,
-      id: record.id || record.attendanceId || (index >= 0 ? list[index].id : `ATT-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`),
-      attendanceId: record.attendanceId || record.id || (index >= 0 ? list[index].attendanceId : null),
-      facultyId: facId,
-      date,
-      attendanceDate: date,
-      status: record.status || record.Status || record.attendanceStatus || record.AttendanceStatus || 'Present',
-      checkIn: record.checkIn || record.CheckIn || record.checkInTime || record.CheckInTime || '',
-      checkOut: record.checkOut || record.CheckOut || record.checkOutTime || record.CheckOutTime || '',
-      remarks: record.remarks || record.Remarks || '',
-    }
-    if (index >= 0) {
-      list[index] = { ...list[index], ...normalized }
-    } else {
-      list.push(normalized)
-    }
-    const json = JSON.stringify(list)
-    localStorage.setItem(toCollegeKey(LOCAL_ATTENDANCE_KEY), json)
-    localStorage.setItem(LOCAL_ATTENDANCE_KEY, json)
-    return normalized
-  } catch {
-    return record
-  }
-}
-
-const sameFaculty = (left, right) => {
-  const a = normalizeFaculty(left); const b = normalizeFaculty(right)
-  if (a.id && b.id && /^\d+$/.test(String(a.id)) && /^\d+$/.test(String(b.id))) {
-    return String(a.id) === String(b.id)
-  }
-  if (a.id && b.id && String(a.id) === String(b.id)) return true
-  if (a.collegeId && b.collegeId && String(a.collegeId) !== String(b.collegeId)) return false
-  if (!a.collegeId || !b.collegeId) return false
-  if (a.employeeId && b.employeeId && String(a.employeeId).toLowerCase() === String(b.employeeId).toLowerCase()) return true
-  return Boolean(a.facultyCode && b.facultyCode && String(a.facultyCode).toLowerCase() === String(b.facultyCode).toLowerCase())
-}
-
-const getLocalFaculty = () => {
-  try {
-    const raw = localStorage.getItem(toCollegeKey(LOCAL_FACULTY_KEY)) || localStorage.getItem(LOCAL_FACULTY_KEY)
-    const list = JSON.parse(raw) || []
-    return list.map(item => {
-      if (String(item.id).startsWith('FAC-LOC-')) {
-        const num = String(item.employeeId || '10').replace(/\D/g, '') || '10'
-        return { ...item, id: num, facultyId: num }
-      }
-      if (typeof item.employeeId === 'string' && item.employeeId.match(/\d{5,}$/)) {
-        const cleanEmpId = item.employeeId.replace(/\d{5,}$/, '').replace(/-+$/, '')
-        return { ...item, employeeId: cleanEmpId }
-      }
-      return item
-    })
-  } catch {
-    return []
-  }
-}
-
-const saveLocalFaculty = (record) => {
-  try {
-    const list = getLocalFaculty()
-    const index = list.findIndex(item => String(item.id) === String(record.id) || String(item.facultyId) === String(record.id) || (record.employeeId && item.employeeId && String(item.employeeId).toLowerCase() === String(record.employeeId).toLowerCase()) || sameFaculty(item, record))
-    if (index >= 0) {
-      list[index] = { ...list[index], ...record }
-    } else {
-      list.unshift(record)
-    }
-    const json = JSON.stringify(list)
-    localStorage.setItem(toCollegeKey(LOCAL_FACULTY_KEY), json)
-    localStorage.setItem(LOCAL_FACULTY_KEY, json)
-  } catch { /* ignore */ }
-}
-
-const getLocalProfile = (id) => {
-  try {
-    const raw = localStorage.getItem(toCollegeKey(LOCAL_PROFILE_KEY)) || localStorage.getItem(LOCAL_PROFILE_KEY)
-    const profiles = JSON.parse(raw) || {}
-    return profiles[String(id)] || profiles[id] || null
-  } catch {
-    return null
-  }
-}
-
-const saveLocalProfile = (id, profile) => {
-  try {
-    const raw = localStorage.getItem(toCollegeKey(LOCAL_PROFILE_KEY)) || localStorage.getItem(LOCAL_PROFILE_KEY)
-    const profiles = JSON.parse(raw) || {}
-    profiles[String(id)] = { ...(profiles[String(id)] || {}), ...profile }
-    const json = JSON.stringify(profiles)
-    localStorage.setItem(toCollegeKey(LOCAL_PROFILE_KEY), json)
-    localStorage.setItem(LOCAL_PROFILE_KEY, json)
-  } catch { /* ignore */ }
-}
-
-// Attendance fallback rows do not contain profile photos. Recover the photo
-// from the profile store/API while retaining the faculty record's identity.
 const withFacultyPhoto = async (row, requestOptions) => {
   const member = normalizeFaculty(row)
   if (member.photo || !member.id) return member
-  const cachedPhoto = normalizeFaculty(getLocalProfile(member.id)).photo
-  if (cachedPhoto) return { ...member, photo: cachedPhoto }
   try {
     const profile = await facultyProfileApi.get(member.id, requestOptions)
     const photo = normalizeFaculty(profile).photo
@@ -260,143 +113,13 @@ const withFacultyPhoto = async (row, requestOptions) => {
   return member
 }
 
-const getLocalAllocations = () => {
-  try {
-    return JSON.parse(localStorage.getItem(toCollegeKey(LOCAL_ALLOCATIONS_KEY))) || []
-  } catch {
-    return []
-  }
-}
-
-const saveLocalAllocation = (allocation) => {
-  try {
-    const list = getLocalAllocations()
-    const index = list.findIndex(item => String(item.id) === String(allocation.id))
-    if (index >= 0) {
-      list[index] = { ...list[index], ...allocation }
-    } else {
-      list.push(allocation)
-    }
-    localStorage.setItem(toCollegeKey(LOCAL_ALLOCATIONS_KEY), JSON.stringify(list))
-  } catch { /* ignore */ }
-}
-
-const removeLocalAllocation = (id) => {
-  try {
-    const list = getLocalAllocations().filter(item => String(item.id) !== String(id))
-    localStorage.setItem(toCollegeKey(LOCAL_ALLOCATIONS_KEY), JSON.stringify(list))
-  } catch { /* ignore */ }
-}
-
 const listFaculty = async (params, search = false, requestOptions) => {
-  const records = []; let page = 1
-  try {
-    while (true) {
-      const rows = await (search ? facultyApi.search : facultyApi.getAll)({ ...params, PageNumber: page, PageSize: 100 }, requestOptions)
-      const validRows = rows.filter(row => row && typeof row === 'object')
-      const fresh = validRows.filter(row => !records.some(existing => String(existing.facultyId ?? existing.id) === String(row.facultyId ?? row.id)))
-      records.push(...fresh)
-      if (rows.length < 100 || !fresh.length) break
-      page++
-    }
-  } catch {
-    // API request complete
+  const rows = await (search ? facultyApi.search(params, requestOptions) : facultyApi.getAll(params, requestOptions))
+  const members = []
+  for (let index = 0; index < rows.length; index += 4) {
+    members.push(...await Promise.all(rows.slice(index, index + 4).map(row => withFacultyPhoto(row, requestOptions))))
   }
-
-  // If backend GET /api/v1/faculty returns empty due to query join bug,
-  // harvest active faculty records from live attendance, balances, and payroll endpoints:
-  if (!records.length) {
-    try {
-      const dailyRows = await facultyAttendanceApi.getDaily({ date: new Date().toISOString().slice(0, 10) }, requestOptions)
-      const dailyList = Array.isArray(dailyRows) ? dailyRows : (dailyRows?.rows || [])
-      for (const row of dailyList) {
-        if (row && (row.facultyId || row.id) && !records.some(r => String(r.facultyId ?? r.id) === String(row.facultyId ?? row.id))) {
-          records.push(normalizeFaculty({
-            ...row,
-            id: String(row.facultyId ?? row.id),
-            facultyId: row.facultyId ?? row.id,
-            collegeId: row.collegeId,
-            facultyCode: row.facultyCode,
-            employeeId: row.employeeId,
-            fullName: row.facultyName || row.fullName || row.name,
-            designation: row.designation,
-            department: row.department,
-            employeeCategory: row.facultyType || row.employeeCategory || '',
-            status: 'Working'
-          }))
-        }
-      }
-    } catch { /* ignore */ }
-  }
-
-  if (!records.length) {
-    try {
-      const balances = await facultyLeaveApi.getBalances(undefined, requestOptions)
-      const balList = Array.isArray(balances) ? balances : []
-      for (const row of balList) {
-        if (row && (row.facultyId || row.id) && !records.some(r => String(r.facultyId ?? r.id) === String(row.facultyId ?? row.id))) {
-          records.push(normalizeFaculty({
-            ...row,
-            id: String(row.facultyId ?? row.id),
-            facultyId: row.facultyId ?? row.id,
-            employeeId: row.employeeId,
-            fullName: row.fullName || row.facultyName || row.name,
-            designation: row.designation,
-            department: row.department,
-            employeeCategory: row.employeeCategory || '',
-            status: 'Working'
-          }))
-        }
-      }
-    } catch { /* ignore */ }
-  }
-
-  if (!records.length) {
-    try {
-      const payroll = await facultyPayrollApi.getAll(undefined, requestOptions)
-      const payList = Array.isArray(payroll) ? payroll : []
-      for (const row of payList) {
-        if (row?.facultyId && !records.some(r => String(r.facultyId ?? r.id) === String(row.facultyId))) {
-          records.push(normalizeFaculty({
-            ...row,
-            id: String(row.facultyId),
-            facultyId: row.facultyId,
-            employeeId: row.employeeId,
-            fullName: row.fullName || row.facultyName || row.name,
-            designation: row.designation,
-            department: row.department,
-            employeeCategory: row.type || row.employeeCategory || '',
-            status: 'Working'
-          }))
-        }
-      }
-    } catch { /* ignore */ }
-  }
-
-  // Merge user-entered / local faculty records so newly created faculty are always present
-  const local = getLocalFaculty()
-  for (const item of local) {
-    if (item && (item.id || item.facultyId || item.fullName)) {
-      const idx = records.findIndex(r =>
-        (item.id && /^\d+$/.test(String(item.id)) && String(r.facultyId ?? r.id) === String(item.id)) ||
-        (item.facultyId && /^\d+$/.test(String(item.facultyId)) && String(r.facultyId ?? r.id) === String(item.facultyId)) ||
-        sameFaculty(r, item)
-      )
-      if (idx >= 0) {
-        records[idx] = normalizeFaculty(mergeFacultyData(item, records[idx]))
-      } else {
-        records.unshift(normalizeFaculty(item))
-      }
-    }
-  }
-
-  const members = records.filter(row => row && typeof row === 'object').map(row => normalizeFaculty(row))
-  const enriched = []
-  // Bound requests when the backend list omits photos for many faculty.
-  for (let index = 0; index < members.length; index += 4) {
-    enriched.push(...await Promise.all(members.slice(index, index + 4).map(member => withFacultyPhoto(member, requestOptions))))
-  }
-  return newestFirst('faculty', enriched)
+  return newestFirst('faculty', members)
 }
 
 export const clearFacultyLocalStorage = () => {
@@ -404,7 +127,7 @@ export const clearFacultyLocalStorage = () => {
     localStorage.removeItem(toCollegeKey(LOCAL_FACULTY_KEY))
     localStorage.removeItem(toCollegeKey(LOCAL_PROFILE_KEY))
     localStorage.removeItem(toCollegeKey(LOCAL_ALLOCATIONS_KEY))
-    localStorage.removeItem(toCollegeKey(LOCAL_ATTENDANCE_KEY))
+    localStorage.removeItem(toCollegeKey('pirnav-faculty-local-attendance-v1'))
     localStorage.removeItem(toCollegeKey('pirnav-faculty-local-payroll-status-v1'))
     localStorage.removeItem(toCollegeKey('pirnav-faculty-local-salary-structures-v1'))
     localStorage.removeItem(toCollegeKey('pirnav-faculty-local-leave-decisions-v1'))
@@ -416,20 +139,7 @@ export const clearFacultyLocalStorage = () => {
 export const facultyService = {
   list: (params, requestOptions) => listFaculty(params, false, requestOptions),
   search: (params, requestOptions) => listFaculty(params, true, requestOptions),
-  getById: async id => {
-    const local = getLocalFaculty().find(item => String(item.id) === String(id) || String(item.facultyId) === String(id) || (item.employeeId && String(item.employeeId) === String(id)))
-    try {
-      const res = await facultyApi.getById(id)
-      if (res && (res.id || res.facultyId || res.fullName || res.facultyName)) return withFacultyPhoto(mergeFacultyData(local, normalizeFaculty(res), local))
-    } catch { /* fallback */ }
-    try {
-      const all = await listFaculty()
-      const matched = all.find(item => String(item.id) === String(id) || String(item.facultyId) === String(id) || String(item.employeeId) === String(id))
-      if (matched) return normalizeFaculty(mergeFacultyData(matched, local))
-    } catch { /* fallback */ }
-    if (local) return normalizeFaculty(local)
-    return normalizeFaculty({ id: String(id), facultyId: String(id) })
-  },
+  getById: async id => withFacultyPhoto(await facultyApi.getById(id)),
   create: async (payload, collegeId = payload.collegeId) => {
     const createCollegeId = Number(collegeId)
     const createData = { ...payload, collegeId: createCollegeId }
@@ -443,20 +153,9 @@ export const facultyService = {
       facultyCode: created.facultyCode ?? '',
       employeeCategory: created.employeeCategory || payload.employeeCategory || 'Teaching',
     })
-    saveLocalFaculty(result)
     return result
   },
-  update: async (id, payload) => {
-    let response = null
-    try {
-      response = await facultyApi.update(id, facultyUpdatePayload(payload))
-    } catch (err) {
-      console.warn('Backend faculty update error, saving to local store:', err)
-    }
-    const updated = normalizeFaculty({ ...mergeFacultyData(payload, response), ...payload, id: String(id), facultyId: String(id) })
-    saveLocalFaculty(updated)
-    return updated
-  },
+  update: async (id,payload) => { const result = await facultyApi.update(id,facultyUpdatePayload(payload)); return normalizeFaculty({ ...payload,...result,id:String(id),facultyId:String(id) }) },
   getSummary: async params => {
     try {
       return await facultyApi.getSummary(params)
@@ -472,300 +171,29 @@ export const facultyService = {
     }
   },
   updateStatus: facultyApi.updateStatus,
-  getStatusHistory: async id => {
-    try {
-      const res = await facultyApi.getStatusHistory(id)
-      return Array.isArray(res) ? res : []
-    } catch {
-      return []
-    }
-  },
-  uploadProfilePhoto: async (id, file, metadata = {}) => {
-    try {
-      const result = await facultyApi.uploadProfilePhoto(id, file, metadata)
-      const photo = resolveFacultyPhoto(typeof result === 'string' ? result : first(result, ['profilePhotoUrl', 'photoUrl', 'profilePhoto', 'photoPath', 'photo', 'fileUrl', 'url']))
-      if (photo) {
-        const cached = getLocalFaculty().find(item => String(item.id) === String(id))
-        saveLocalFaculty({ ...cached, id: String(id), photo, profilePhotoUrl: photo })
-      }
-      return result
-    } catch (err) {
-      console.warn('Backend photo upload failed:', err)
-      return null
-    }
-  },
-  getProfile: async id => {
-    try {
-      const res = await facultyProfileApi.get(id)
-      if (res && typeof res === 'object' && Object.keys(res).length) return mergeFacultyData(getLocalProfile(id), res)
-    } catch { /* fallback */ }
-    return getLocalProfile(id)
-  },
-  createProfile: async (id, payload) => {
-    saveLocalProfile(id, payload)
-    try {
-      return await facultyProfileApi.create(id, facultyProfilePayload(payload))
-    } catch {
-      return payload
-    }
-  },
-  updateProfile: async (id, payload) => {
-    saveLocalProfile(id, payload)
-    try {
-      return await facultyProfileApi.update(id, facultyProfilePayload(payload))
-    } catch {
-      return payload
-    }
-  },
-  getDocuments: async id => {
-    try {
-      const res = await facultyDocumentApi.getAll(id)
-      return Array.isArray(res) ? res : []
-    } catch {
-      return []
-    }
-  },
+  getStatusHistory: id => facultyApi.getStatusHistory(id),
+  uploadProfilePhoto: (id,file,metadata={}) => facultyApi.uploadProfilePhoto(id,file,metadata),
+  getProfile: id => facultyProfileApi.get(id),
+  createProfile: (id,payload) => facultyProfileApi.create(id,facultyProfilePayload(payload)),
+  updateProfile: (id,payload) => facultyProfileApi.update(id,facultyProfilePayload(payload)),
+  getDocuments: id => facultyDocumentApi.getAll(id),
   uploadDocument: facultyDocumentApi.upload,
   deleteDocument: facultyDocumentApi.remove,
-  getSubjectAllocations: async params => {
-    let remote = []
-    try {
-      const res = await facultySubjectAllocationApi.getAll(params)
-      remote = (Array.isArray(res) ? res : []).map(normalizeAllocation)
-    } catch {
-      // Continue to local
-    }
-    const local = getLocalAllocations().map(normalizeAllocation)
-    const facultyFilter = params?.FacultyId || params?.facultyId
-    const filteredLocal = facultyFilter ? local.filter(item => String(item.facultyId) === String(facultyFilter)) : local
-    const merged = [...remote]
-    for (const item of filteredLocal) {
-      if (!merged.some(r => String(r.id) === String(item.id))) {
-        merged.push(item)
-      }
-    }
-    return merged
-  },
-  createSubjectAllocation: async payload => {
-    let result = null
-    try {
-      const created = await facultySubjectAllocationApi.create(allocationPayload(payload))
-      result = normalizeAllocation({ ...payload, ...created })
-    } catch {
-      // Fallback to local
-    }
-    const finalAllocation = result || normalizeAllocation({
-      ...payload,
-      id: String(payload.id || Date.now() + Math.random().toString(36).substr(2, 4)),
-      facultyId: String(payload.facultyId),
-    })
-    saveLocalAllocation(finalAllocation)
-    return finalAllocation
-  },
-  updateSubjectAllocation: async (id, payload) => {
-    let result = null
-    try {
-      const updated = await facultySubjectAllocationApi.update(id, allocationPayload(payload, true))
-      result = normalizeAllocation({ ...payload, ...updated, id: String(id) })
-    } catch {
-      // Fallback
-    }
-    const finalAllocation = result || normalizeAllocation({ ...payload, id: String(id) })
-    saveLocalAllocation(finalAllocation)
-    return finalAllocation
-  },
-  deleteSubjectAllocation: async id => {
-    removeLocalAllocation(id)
-    try {
-      await facultySubjectAllocationApi.remove(id)
-    } catch {
-      // Fallback
-    }
-    return true
-  },
-  getAttendance: async params => {
-    let remote = []
-    try {
-      remote = await facultyAttendanceApi.getAll(params)
-    } catch { /* ignore */ }
-    const local = getLocalAttendance()
-    const list = Array.isArray(remote) ? [...remote] : []
-    for (const item of local) {
-      const itemFacId = getAttendanceFacultyId(item)
-      const itemDate = getAttendanceDate(item)
-      const matchIndex = list.findIndex(r => {
-        const rFacId = getAttendanceFacultyId(r)
-        const rDate = getAttendanceDate(r)
-        return (rFacId === itemFacId || (r.employeeId && item.employeeId && r.employeeId === item.employeeId) || (r.facultyCode && item.facultyCode && r.facultyCode === item.facultyCode)) && rDate === itemDate
-      })
-      if (matchIndex >= 0) {
-        list[matchIndex] = {
-          ...list[matchIndex],
-          ...item,
-          status: item.status && item.status !== 'Not Marked' ? item.status : (list[matchIndex].status || list[matchIndex].Status || 'Not Marked'),
-          checkIn: item.checkIn || list[matchIndex].checkIn || list[matchIndex].CheckIn || '',
-          checkOut: item.checkOut || list[matchIndex].checkOut || list[matchIndex].CheckOut || '',
-        }
-      } else {
-        list.push(item)
-      }
-    }
-    return list
-  },
+  getSubjectAllocations: async params => (await facultySubjectAllocationApi.getAll(params)).map(normalizeAllocation),
+  createSubjectAllocation: async payload => normalizeAllocation(await facultySubjectAllocationApi.create(allocationPayload(payload))),
+  updateSubjectAllocation: async (id,payload) => normalizeAllocation(await facultySubjectAllocationApi.update(id,allocationPayload(payload,true))),
+  deleteSubjectAllocation: id => facultySubjectAllocationApi.remove(id),
+  getAttendance: params => facultyAttendanceApi.getAll(params),
   getAttendanceById: facultyAttendanceApi.getById,
-  createAttendance: async payload => {
-    const numFacultyId = Number(payload.facultyId)
-    const validFacultyId = Number.isSafeInteger(numFacultyId) && numFacultyId > 0 ? numFacultyId : payload.facultyId
-    let result = null
-    try {
-      result = await facultyAttendanceApi.create({ ...payload, facultyId: validFacultyId })
-    } catch (err) {
-      const targetDate = String(payload.attendanceDate || '').slice(0, 10)
-      if (validFacultyId && targetDate) {
-        result = await facultyAttendanceApi.bulk({
-          facultyIds: [validFacultyId],
-          attendanceDate: targetDate,
-          status: payload.status,
-          remarks: payload.remarks || null,
-        })
-      } else {
-        throw err
-      }
-    }
-    const local = saveLocalAttendanceRecord({
-      ...payload,
-      ...(result || {}),
-      id: result?.attendanceId || result?.id || `ATT-${Date.now()}`,
-      attendanceId: result?.attendanceId || result?.id || `ATT-${Date.now()}`,
-      facultyId: String(payload.facultyId),
-      date: payload.attendanceDate,
-    })
-    return result || local
-  },
-  updateAttendance: async (id, payload) => {
-    const numId = Number(id)
-    const isBackendId = Number.isSafeInteger(numId) && numId > 0 && !String(id).startsWith('ATT-')
-    const numFacultyId = Number(payload.facultyId)
-    const validFacultyId = Number.isSafeInteger(numFacultyId) && numFacultyId > 0 ? numFacultyId : payload.facultyId
-    const targetDate = String(payload.attendanceDate || payload.date || '').slice(0, 10)
-
-    let result = null
-    if (isBackendId) {
-      result = await facultyAttendanceApi.update(numId, payload)
-    } else if (validFacultyId && targetDate) {
-      result = await facultyAttendanceApi.bulk({
-        facultyIds: [validFacultyId],
-        attendanceDate: targetDate,
-        status: payload.status,
-        remarks: payload.remarks || null,
-      })
-    }
-    saveLocalAttendanceRecord({
-      ...payload,
-      id,
-      attendanceId: id,
-      date: targetDate,
-    })
-    return result || { id, ...payload }
-  },
-  checkIn: async (id, payload = {}) => {
-    let result = null
-    try {
-      result = await facultyAttendanceApi.checkIn(id, payload)
-    } catch { /* ignore */ }
-    const timeVal = payload?.checkIn ? (payload.checkIn.includes('T') ? payload.checkIn.split('T')[1].slice(0, 5) : payload.checkIn) : ''
-    const list = getLocalAttendance()
-    const item = list.find(r => String(r.id) === String(id) || String(r.attendanceId) === String(id))
-    if (item) {
-      item.checkIn = timeVal
-      localStorage.setItem(toCollegeKey(LOCAL_ATTENDANCE_KEY), JSON.stringify(list))
-    }
-    return result || { success: true }
-  },
-  checkOut: async (id, payload = {}) => {
-    let result = null
-    try {
-      result = await facultyAttendanceApi.checkOut(id, payload)
-    } catch { /* ignore */ }
-    const timeVal = payload?.checkOut ? (payload.checkOut.includes('T') ? payload.checkOut.split('T')[1].slice(0, 5) : payload.checkOut) : ''
-    const list = getLocalAttendance()
-    const item = list.find(r => String(r.id) === String(id) || String(r.attendanceId) === String(id))
-    if (item) {
-      item.checkOut = timeVal
-      localStorage.setItem(toCollegeKey(LOCAL_ATTENDANCE_KEY), JSON.stringify(list))
-    }
-    return result || { success: true }
-  },
-  getDailyAttendance: async params => {
-    let remote = []
-    try {
-      remote = await facultyAttendanceApi.getDaily(params)
-    } catch { /* ignore */ }
-    const targetDate = String(params?.date || new Date().toISOString().slice(0, 10)).slice(0, 10)
-    const local = getLocalAttendance().filter(item => getAttendanceDate(item) === targetDate)
-    const list = Array.isArray(remote) ? [...remote] : []
-    for (const item of local) {
-      const itemFacId = getAttendanceFacultyId(item)
-      const matchIndex = list.findIndex(r => {
-        const rFacId = getAttendanceFacultyId(r)
-        return rFacId === itemFacId || (r.employeeId && item.employeeId && r.employeeId === item.employeeId) || (r.facultyCode && item.facultyCode && r.facultyCode === item.facultyCode)
-      })
-      if (matchIndex >= 0) {
-        list[matchIndex] = {
-          ...list[matchIndex],
-          ...item,
-          status: item.status && item.status !== 'Not Marked' ? item.status : (list[matchIndex].status || list[matchIndex].Status || 'Not Marked'),
-          statusName: item.status && item.status !== 'Not Marked' ? item.status : (list[matchIndex].statusName || list[matchIndex].StatusName || 'Not Marked'),
-          attendanceId: list[matchIndex].attendanceId || list[matchIndex].AttendanceId || item.attendanceId || item.id,
-          checkIn: item.checkIn || list[matchIndex].checkIn || list[matchIndex].CheckIn || '',
-          checkOut: item.checkOut || list[matchIndex].checkOut || list[matchIndex].CheckOut || '',
-        }
-      } else {
-        list.push(item)
-      }
-    }
-    return list
-  },
-  bulkAttendance: async payload => {
-    const result = await facultyAttendanceApi.bulk(payload)
-    const facultyIds = payload.facultyIds || []
-    const date = String(payload.attendanceDate || new Date().toISOString().slice(0, 10)).slice(0, 10)
-    const status = payload.status || 'Present'
-    const remarks = payload.remarks || ''
-    for (const facId of facultyIds) {
-      saveLocalAttendanceRecord({
-        facultyId: String(facId),
-        date,
-        attendanceDate: date,
-        status,
-        checkIn: payload.checkIn || '',
-        checkOut: payload.checkOut || '',
-        remarks,
-      })
-    }
-    return result || { success: true }
-  },
-  getWeeklyAttendance: async params => {
-    try {
-      return await facultyAttendanceApi.getWeekly(params)
-    } catch {
-      return []
-    }
-  },
-  getMonthlyAttendance: async params => {
-    try {
-      return await facultyAttendanceApi.getMonthly(params)
-    } catch {
-      return []
-    }
-  },
-  getAttendanceReports: async params => {
-    try {
-      return await facultyAttendanceApi.getReports(params)
-    } catch {
-      return []
-    }
-  },
+  createAttendance: payload => facultyAttendanceApi.create(payload),
+  updateAttendance: (id,payload) => facultyAttendanceApi.update(id,payload),
+  checkIn: (id,payload={}) => facultyAttendanceApi.checkIn(id,payload),
+  checkOut: (id,payload={}) => facultyAttendanceApi.checkOut(id,payload),
+  getDailyAttendance: params => facultyAttendanceApi.getDaily(params),
+  bulkAttendance: payload => facultyAttendanceApi.bulk(payload),
+  getWeeklyAttendance: params => facultyAttendanceApi.getWeekly(params),
+  getMonthlyAttendance: params => facultyAttendanceApi.getMonthly(params),
+  getAttendanceReports: params => facultyAttendanceApi.getReports(params),
   exportAttendance: facultyAttendanceApi.export,
 }
 

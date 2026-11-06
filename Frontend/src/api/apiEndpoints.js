@@ -16,7 +16,7 @@ if (typeof window !== 'undefined' && window.localStorage) {
 }
 
 const normalizeBaseUrl = (value = '') => value.trim().replace(/\/+$/, '')
-const DEFAULT_API_BASE_URL = 'https://stagnant-craftily-paving.ngrok-free.dev'
+const DEFAULT_API_BASE_URL = 'https://drivable-shaky-ferocious.ngrok-free.dev'
 
 // Results endpoints are optional until the institution's result service is integrated.
 export const RESULTS_API_ENABLED = String(import.meta.env.VITE_RESULTS_API_ENABLED || '').toLowerCase() === 'true'
@@ -527,15 +527,15 @@ export const userDirectoryApi = {
   create: body => request(endpoint('/api/v1/admin/users'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
   update: (id, body) => request(endpoint(`/api/v1/admin/users/${encodeURIComponent(id)}`), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
   setStatus: (id, status) => request(endpoint(`/api/v1/admin/users/${encodeURIComponent(id)}/status`), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) }),
-  invitations: async () => {
-    const response = await request(endpoint('/api/v1/admin/users/invitations'))
+  invitations: async (params = {}) => {
+    const response = await request(withQuery(endpoint('/api/v1/admin/users/invitations'), params))
     const rows = extractListResponse(response)
     if (!rows) throw new Error('The invitation list returned an unexpected response.')
     return rows
   },
   resendInvitation: id => request(endpoint(`/api/v1/admin/users/${encodeURIComponent(id)}/resend-invitation`), { method: 'POST' }),
   resetPassword: id => request(endpoint(`/api/v1/admin/users/${encodeURIComponent(id)}/reset-password`), { method: 'POST' }),
-  activity: async id => (await request(endpoint(`/api/v1/admin/users/${encodeURIComponent(id)}/activity`)))?.data ?? [],
+  activity: async (id, params = {}) => (await request(withQuery(endpoint(`/api/v1/admin/users/${encodeURIComponent(id)}/activity`), params)))?.data ?? [],
   exportCsv: params => screenExportsApi.download('users', { Format: 'csv', ...params }),
 }
 
@@ -1102,7 +1102,7 @@ const addressText = (address) => {
   return [address.line1 ?? address.addressLine1, address.line2 ?? address.addressLine2, address.town ?? address.village, address.city, address.district, address.state, address.pincode ?? address.postalCode].filter(value => value !== undefined && value !== null && String(value).trim() !== '').join(', ')
 }
 
-const studentAdmissionPayload = (form = {}) => {
+const studentAdmissionPayload = (form = {}, { feePlanChangeReason } = {}) => {
   const currentAddress = form.currentAddress ?? form.contact?.currentAddress
   const permanentAddress = form.permanentAddress ?? form.contact?.permanentAddress
   const parents = form.parents ?? {}
@@ -1240,6 +1240,7 @@ const studentAdmissionPayload = (form = {}) => {
     transport: form.transport ?? admission.transport,
     transportRoute: form.transportRoute ?? admission.transportRoute,
     feeStructureId,
+    feePlanChangeReason,
     tuitionFee: form.tuitionFee ?? fees.tuitionFee,
     admissionFee: form.admissionFee ?? fees.admissionFee,
     scholarshipAmount: form.scholarshipAmount ?? fees.scholarshipAmount,
@@ -1321,7 +1322,7 @@ export const studentAdmissionApi = {
   getAll: async (params) => markApiResult((listData(await request(withQuery(API_ENDPOINTS.studentAdmissions.list, params))) || []).map(normalizeAdmission)),
   getById: async (id) => normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.detail(requiredId(id, 'Admission ID')))),
   create: async (form) => normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(studentAdmissionPayload(form)) })),
-  update: async (id, form, { preserveAcademicMapping = false } = {}) => {
+  update: async (id, form, { preserveAcademicMapping = false, feePlanChangeReason } = {}) => {
     const admissionId = requiredId(id, 'Admission ID')
     if (preserveAcademicMapping) {
       // Personal/contact saves must not reassign enrollment from a browser draft.
@@ -1337,7 +1338,7 @@ export const studentAdmissionApi = {
       }
       form = { ...form, academic, admission: { ...form.admission, collegeId: saved.collegeId ?? form.admission?.collegeId } }
     }
-    return normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.update(admissionId), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(studentAdmissionPayload(form)) }))
+    return normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.update(admissionId), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(studentAdmissionPayload(form, { feePlanChangeReason })) }))
   },
   submit: async (id) => normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.submit(requiredId(id, 'Admission ID')), { method: 'POST' })),
 }
@@ -1478,6 +1479,7 @@ export const admissionFeePlanApi = {
 }
 
 export const academicFeePlanApi = {
+  update: async (id,body) => dataResponse(await jsonRequest(API_ENDPOINTS.academicFeePlans.create + '/' + encodeURIComponent(requiredId(id,'Fee plan ID')), 'PUT', body)),
   get: async (id, collegeId) => dataResponse(await request(withQuery(endpoint(`/api/v1/academic-fee-plans/${encodeURIComponent(id)}`), { collegeId }))),
   transition: async (id, collegeId, action, expectedRevision) => {
     if (!['submit', 'approve', 'publish', 'return-to-draft', 'archive'].includes(action)) throw new Error('Unsupported fee plan action.')

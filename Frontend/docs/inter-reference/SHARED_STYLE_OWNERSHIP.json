@@ -1,0 +1,114 @@
+[
+  {
+    "file": "App.css",
+    "removedSelectors": 15
+  },
+  {
+    "file": "index.css",
+    "removedSelectors": 5
+  },
+  {
+    "file": "pages/admin-management/AdminManagement.css",
+    "removedSelectors": 37
+  },
+  {
+    "file": "pages/attendance/Attendance.css",
+    "removedSelectors": 14
+  },
+  {
+    "file": "pages/campus/CampusWorkspace.css",
+    "removedSelectors": 9
+  },
+  {
+    "file": "pages/courseManagement/Course.css",
+    "removedSelectors": 1
+  },
+  {
+    "file": "pages/credits-management/CreditsManagement.css",
+    "removedSelectors": 6
+  },
+  {
+    "file": "pages/elective-management/ElectiveManagement.css",
+    "removedSelectors": 17
+  },
+  {
+    "file": "pages/examinations/exam-timetable/ExamModule.css",
+    "removedSelectors": 16
+  },
+  {
+    "file": "pages/examinations/examination-setup/ExaminationSetup.css",
+    "removedSelectors": 4
+  },
+  {
+    "file": "pages/examinations/grade-result-management/GradeResultManagement.css",
+    "removedSelectors": 3
+  },
+  {
+    "file": "pages/examinations/marks-management/MarksManagement.css",
+    "removedSelectors": 59
+  },
+  {
+    "file": "pages/faculty/FacultyManagement.css",
+    "removedSelectors": 31
+  },
+  {
+    "file": "pages/fees/fees.css",
+    "removedSelectors": 27
+  },
+  {
+    "file": "pages/portals/teaching-portal.css",
+    "removedSelectors": 13
+  },
+  {
+    "file": "pages/section-management/SectionManagement.css",
+    "removedSelectors": 7
+  },
+  {
+    "file": "pages/semester-management/SemesterManagement.css",
+    "removedSelectors": 26
+  },
+  {
+    "file": "pages/student-management/StudentAdmission/StudentAdmission.css",
+    "removedSelectors": 5
+  },
+  {
+    "file": "pages/student-management/StudentProfile/StudentProfile.css",
+    "removedSelectors": 3
+  },
+  {
+    "file": "pages/student-management/StudentPromotion/StudentPromotion.css",
+    "removedSelectors": 6
+  },
+  {
+    "file": "pages/subject-management/SubjectManagement.css",
+    "removedSelectors": 3
+  },
+  {
+    "file": "styles/dark-mode-contrast.css",
+    "removedSelectors": 8
+  },
+  {
+    "file": "styles/dark-mode.css",
+    "removedSelectors": 11
+  },
+  {
+    "file": "styles/erp-theme.css",
+    "removedSelectors": 9
+  },
+  {
+    "file": "styles/global.css",
+    "removedSelectors": 27
+  },
+  {
+    "file": "styles/tableActions.css",
+    "removedSelectors": 1
+  },
+  {
+    "file": "styles/view-cards.css",
+    "removedSelectors": 16
+  },
+  {
+    "file": "styles/view-status-colors.css",
+    "removedSelectors": 3
+  }
+]

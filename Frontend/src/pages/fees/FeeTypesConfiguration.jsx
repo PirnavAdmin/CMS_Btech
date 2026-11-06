@@ -1,0 +1,28 @@
+import ViewDialog from '../../components/ViewDialog'
+import { useEffect, useState } from 'react'
+import { useAcademic } from '../../context/AcademicContext'
+import { feeConfigurationApi } from '../../api/apiEndpoints'
+import PageHeader from '../../components/PageHeader'
+import ExportMenu from '../../components/ExportMenu'
+import TablePagination, { PAGE_SIZE } from '../../components/TablePagination'
+
+export default function FeeTypesConfiguration() {
+  const { selectedCollegeId } = useAcademic()
+  const [rows, setRows] = useState([]), [loading, setLoading] = useState(true), [error, setError] = useState('')
+  const [query, setQuery] = useState(''), [page, setPage] = useState(1), [attempt, setAttempt] = useState(0)
+  useEffect(() => {
+    let active = true; setLoading(true); setError(''); setRows([]); setDetail(null); setCode('')
+    feeConfigurationApi.categories().then(result => { if (active) setRows(result) }).catch(reason => { if (active) setError(reason.message || 'Unable to load fee types.') }).finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+  }, [selectedCollegeId, attempt])
+  const [code, setCode] = useState(''), [detail, setDetail] = useState(null)
+  const filtered = rows.filter(row => (!code || row.code === code) && [row.code, row.name, row.description].join(' ').toLowerCase().includes(query.trim().toLowerCase()))
+  const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)), current = Math.min(page, pages)
+  return <section className="fm-fee-types">
+    <PageHeader title="Fee Types" subtitle="Backend fee categories available for fee structures and student assignments." />
+    <p className="fm-request-state" role="status">Fee type creation and editing are unavailable: the current backend exposes a read-only fee category API. Configure categories on the backend before creating dependent fee structures.</p>
+    <div className="fm-plan-table-head"><label>Search fee types<input value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} placeholder="Search code or name" /></label><label>Category code<select value={code} onChange={event => { setCode(event.target.value); setPage(1) }}><option value="">All codes</option>{[...new Set(rows.map(row => row.code).filter(Boolean))].sort().map(value => <option key={value}>{value}</option>)}</select></label><ExportMenu rows={filtered} columns={[{label:'Code',value:'code'},{label:'Name',value:'name'},{label:'Description',value:'description'}]} title="Fee Types" filename="fee-types" loading={loading || Boolean(error)} /></div>
+    {loading ? <p role="status">Loading fee types...</p> : error ? <div role="alert"><p>{error}</p><button type="button" onClick={() => setAttempt(value => value + 1)}>Retry fee types</button></div> : !filtered.length ? <p>No fee types found.</p> : <><div className="fm-table-wrap"><table className="fm-table" aria-label="Fee types"><thead><tr><th>Code</th><th>Fee Type</th><th>Description</th><th>Details</th></tr></thead><tbody>{filtered.slice((current-1)*PAGE_SIZE,current*PAGE_SIZE).map(row => <tr key={row.id}><td>{row.code}</td><td>{row.name}</td><td>{row.description || '—'}</td><td><button type="button" aria-label={'View '+row.name} onClick={()=>setDetail(row)}>View</button></td></tr>)}</tbody></table></div><TablePagination page={current} totalPages={pages} onPageChange={setPage} /></>}
+    {detail && <ViewDialog title={detail.name} onClose={()=>setDetail(null)} showExport={false}><dl><dt>Code</dt><dd>{detail.code || '—'}</dd><dt>Description</dt><dd>{detail.description || '—'}</dd></dl></ViewDialog>}
+  </section>
+}

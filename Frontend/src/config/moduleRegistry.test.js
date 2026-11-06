@@ -48,7 +48,7 @@ test('audit includes all literal App routes and resolves nested fee facility and
  const fee = inventory.screens.find(row => row.route === '/fees/structures/create')
  assert.deepEqual(fee.roles, ['admin'])
  assert.deepEqual(inventory.screens.find(row => row.route === '/exam/student-schedule').roles, ['admin'])
- assert.deepEqual(inventory.duplicates.map(row => row.route), ['/roles-designations'])
+ assert.deepEqual(inventory.duplicates.map(row => row.route), [])
 })
 
 // Stage 2 sidebar-only behavior. No route-guard or API authorization replacement.
