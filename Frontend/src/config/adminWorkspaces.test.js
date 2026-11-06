@@ -22,11 +22,11 @@ test('grouping cannot add a denied configuration or fee action', () => {
   assert.equal(paths.includes('/college-institution-management'), false)
   assert.equal(paths.includes('/subject-management'), false)
 })
-test('flattened exam children retain their own aliases and deep-link active state', () => {
+test('the merged exam workspace stays active on setup and timetable deep links', () => {
   const exams = grouped({ isSuperAdmin: true })[0].items.find(entry => entry.id === 'workspace_exams')
-  assert.equal(activeSidebarChild(exams, '/exam/hall-allocation'), 'exam_timetable')
-  assert.equal(activeSidebarChild(exams, '/results/backlog-report'), 'official_results')
-  assert.equal(activeSidebarChild(exams, '/examination-setup'), 'examination_setup')
+  assert.equal(activeSidebarChild(exams, '/exam/hall-allocation'), 'examinations')
+  assert.equal(activeSidebarChild(exams, '/results/backlog-report'), 'results')
+  assert.equal(activeSidebarChild(exams, '/examination-setup'), 'examinations')
 })
 test('certificates is explicitly unavailable and has no fabricated route', () => {
   const certificates = grouped({ isSuperAdmin: true })[0].items.find(entry => entry.id === 'workspace_certificates')

@@ -696,7 +696,12 @@ return { default: ExamType }
 })()
 
 export const CreateExamination = () => <LiveExaminationWorkspace screen="create-examination" />
-export const ExaminationSetup = () => <LiveExaminationWorkspace screen="examination-list" />
+export const ExaminationSetup = () => {
+  const { pathname } = react_router_domImports_useLocation()
+  const segment = pathname.split('/').filter(Boolean).at(-1)
+  const screen = ['exam-type', 'exam-rules', 'exam-schedule'].includes(segment) ? segment : 'examination-list'
+  return <LiveExaminationWorkspace screen={screen} />
+}
 export const ExaminationList = () => <LiveExaminationWorkspace screen="examination-list" />
 export const ExamRules = () => <LiveExaminationWorkspace screen="exam-rules" />
 export const ExamSchedule = () => <LiveExaminationWorkspace screen="exam-schedule" />

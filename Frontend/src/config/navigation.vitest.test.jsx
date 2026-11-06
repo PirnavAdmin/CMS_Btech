@@ -67,7 +67,7 @@ test('existing disclosure, collapse and mobile close callbacks survive icon chan
  expect(container.querySelector('aside').classList.contains('is-open')).toBe(true)
  fireEvent.click(screen.getByRole('button', { name: 'Exams & Results' }))
  expect(screen.getByRole('button', { name: 'Exams & Results' }).getAttribute('aria-expanded')).toBe('true')
- expect(screen.getByRole('link', { name: 'Examination Setup' }).getAttribute('href')).toBe('/examination-setup')
+ expect(screen.getByRole('link', { name: 'Exam Management' }).getAttribute('href')).toBe('/examination-setup')
  fireEvent.click(screen.getByRole('link', { name: 'Colleges' })); expect(onClose).toHaveBeenCalled()
  rerender(<MemoryRouter><Sidebar collapsed onClose={onClose} onToggleCollapse={onToggleCollapse} /></MemoryRouter>)
  expect(container.querySelector('aside').classList.contains('is-collapsed')).toBe(true)
@@ -140,12 +140,12 @@ test('history navigation and new deep links expand the active parent after manua
  render(<MemoryRouter initialEntries={['/courses']}><Sidebar /><HistoryControls /></MemoryRouter>);
  await settings(); fireEvent.click(screen.getByRole('button', { name: 'Open result' }));
  expect(screen.getByRole('button', { name: 'Exams & Results' }).getAttribute('aria-expanded')).toBe('true');
- expect(screen.getByRole('link', { name: 'Official Results' }).getAttribute('aria-current')).toBe('page');
+ expect(screen.getByRole('link', { name: 'Grades & Results' }).getAttribute('aria-current')).toBe('page');
  fireEvent.click(screen.getByRole('button', { name: 'Exams & Results' }));
- expect(screen.queryByRole('link', { name: 'Official Results' })).toBeNull();
+ expect(screen.queryByRole('link', { name: 'Grades & Results' })).toBeNull();
  fireEvent.click(screen.getByRole('button', { name: 'Open backlog' }));
- expect(screen.getByRole('link', { name: 'Official Results' })).toBeTruthy();
- fireEvent.click(screen.getByRole('button', { name: 'Go back' })); expect(screen.getByRole('link', { name: 'Official Results' })).toBeTruthy();
+ expect(screen.getByRole('link', { name: 'Grades & Results' })).toBeTruthy();
+ fireEvent.click(screen.getByRole('button', { name: 'Go back' })); expect(screen.getByRole('link', { name: 'Grades & Results' })).toBeTruthy();
 })
 function CollapsibleSidebar() { const [collapsed, setCollapsed] = useState(true); return <Sidebar collapsed={collapsed} onToggleCollapse={() => setCollapsed(value => !value)} /> }
 test('clicking a collapsed parent expands the sidebar and its submenu together', async () => {
@@ -153,7 +153,7 @@ test('clicking a collapsed parent expands the sidebar and its submenu together',
  await screen.findByRole('button', { name: 'Exams & Results' }); expect(container.querySelector('aside').classList.contains('is-collapsed')).toBe(true);
  fireEvent.click(screen.getByRole('button', { name: 'Exams & Results' }));
  expect(container.querySelector('aside').classList.contains('is-collapsed')).toBe(false);
- expect(screen.getByRole('link', { name: 'Exam Timetable' }).getAttribute('aria-current')).toBe('page');
+ expect(screen.getByRole('link', { name: 'Exam Management' }).getAttribute('aria-current')).toBe('page');
 })
 test('sidebar scroll position is restored and saved through registry rendering', async () => {
  sessionStorage.setItem('pirnav-sidebar-scroll', '65'); const { container } = mount();
