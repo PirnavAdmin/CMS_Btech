@@ -42,24 +42,28 @@ function normalize(schedule, index = 0) {
   }
 }
 
-function ExaminationSummary({ examCount }) {
-  const [apiCounts, setApiCounts] = reactImports_useState({ totalCount: null, loading: true, error: '' })
+function ExaminationSummary({ types = [], examCount, scheduleCount }) {
+  const [apiCounts, setApiCounts] = reactImports_useState({ totalCount: null, scheduleRows: null, loading: true, error: '' })
   reactImports_useEffect(() => {
     let active = true
     Promise.all([
       fetchExams({ Page: 1, PageSize: 1 }),
       hasExamSetup(),
-    ]).then(([examResult, setupExists]) => {
-      if (active) setApiCounts({ totalCount: setupExists ? examResult.totalCount : 0, loading: false, error: '' })
+      scheduleCount === undefined ? fetchScheduleRows() : Promise.resolve(null),
+    ]).then(([examResult, setupExists, rows]) => {
+      if (active) setApiCounts({ totalCount: setupExists ? examResult.totalCount : 0, scheduleRows: rows, loading: false, error: '' })
     }).catch(error => {
       if (active) setApiCounts(current => ({ ...current, loading: false, error: error?.message || 'Unable to load examination totals.' }))
     })
     return () => { active = false }
-  }, [])
+  }, [scheduleCount === undefined])
 
   const examinationTotal = examCount ?? (apiCounts.loading ? '…' : apiCounts.error ? '—' : apiCounts.totalCount)
+  const scheduleTotal = scheduleCount ?? (apiCounts.loading ? '…' : apiCounts.error ? '—' : apiCounts.scheduleRows?.length ?? 0)
   return <div className="examination-setup__summary" aria-label="Examination setup totals">
     <div title={apiCounts.error}><strong>{examinationTotal}</strong><small>Examinations</small></div>
+    <div><strong>{types.length}</strong><small>Exam Types</small></div>
+    <div title={apiCounts.error}><strong>{scheduleTotal}</strong><small>Schedules</small></div>
   </div>
 }
 
@@ -74,9 +78,9 @@ const useNavigate = react_router_domImports_useNavigate
 const DashboardLayout = DashboardLayoutImports_default
 const useAcademic = useAcademicImports_useAcademic
 
-const tabs = [['Examination List', '/examination-setup/examination-list'], ['Create Examination', '/examination-setup/create-examination']]
+const tabs = [['Examination List', '/examination-setup/examination-list'], ['Create Examination', '/examination-setup/create-examination'], ['Exam Type', '/examination-setup/exam-type']]
 const key = 'cms-examination-setup-demo-v1'
-const blank = { name: '', academicYear: '', term: '', startDate: '', endDate: '', description: '', status: 'Draft' }
+const blank = { name: '', academicYear: '', examType: '', term: '', startDate: '', endDate: '', description: '', status: 'Draft' }
 const load = () => { try { return JSON.parse(localStorage.getItem(key)) || {} } catch { return {} } }
 
 function CreateExamination() {
@@ -98,7 +102,7 @@ function CreateExamination() {
   const change = (name, value) => { setForm(current => ({ ...current, [name]: value })); setErrors(current => ({ ...current, [name]: '' })); setSaved(false) }
   const submit = event => {
     event.preventDefault()
-    const next = Object.fromEntries(['name', 'academicYear', 'term', 'startDate', 'endDate'].filter(name => !String(form[name] || '').trim()).map(name => [name, 'This field is required.']))
+    const next = Object.fromEntries(['name', 'academicYear', 'examType', 'term', 'startDate', 'endDate'].filter(name => !String(form[name] || '').trim()).map(name => [name, 'This field is required.']))
     if (form.startDate && form.endDate && form.endDate < form.startDate) next.endDate = 'End date must be on or after the start date.'
     setErrors(next)
     if (Object.keys(next).length) return
@@ -110,13 +114,14 @@ function CreateExamination() {
   }
 
   return <DashboardLayout><main className="examination-setup">
-    <header className="examination-setup__header"><div><h1>Examination Setup</h1><p>Create and manage examination cycles.</p></div><ExaminationSummary examCount={summaryData.examinations?.length || 0} /></header>
+    <header className="examination-setup__header"><div><h1>Examination Setup</h1><p>Create and manage examination cycles.</p></div><ExaminationSummary types={summaryData.types || []} /></header>
     <section className="examination-setup__card"><header className="examination-setup__card-header"><div><p>CREATE EXAMINATION</p><h2>Enter examination details and academic period.</h2></div></header>
-      <nav className="examination-setup__tabs" aria-label="Examination setup sections">{tabs.filter(([, path]) => path !== '/examination-setup/create-examination').map(([label, path]) => { const isCurrent = path === location.pathname || (path === '/examination-setup/examination-list' && location.pathname === '/examination-setup'); return <Link key={path} to={path} className={isCurrent ? 'active' : ''} aria-current={isCurrent ? 'page' : undefined}>{label}</Link> })}</nav>
+      <nav className="examination-setup__tabs" aria-label="Examination setup sections">{tabs.filter(([label, path]) => path !== '/examination-setup/create-examination' && label !== 'Exam Schedule' && label !== 'Exam Rules').map(([label, path]) => { const isCurrent = path === location.pathname || (path === '/examination-setup/examination-list' && location.pathname === '/examination-setup'); return <Link key={path} to={path} className={isCurrent ? 'active' : ''} aria-current={isCurrent ? 'page' : undefined}>{label}</Link> })}</nav>
       {saved && <div className="examination-setup__success examination-setup__toast" role="status"><span>Examination saved successfully.</span><button type="button" className="examination-setup__toast-close" onClick={() => setSaved(false)} aria-label="Dismiss notification">×</button></div>}
       <div className="examination-setup__form-wrap"><form className="examination-setup__form" onSubmit={submit} noValidate>
         <label><span>Examination Name <b>*</b></span><input value={form.name} aria-invalid={Boolean(errors.name)} onChange={event => change('name', event.target.value)} />{errors.name && <small className="examination-setup__field-error">{errors.name}</small>}</label>
         <label><span>Active Academic Year</span><input value={form.academicYear || activeYearName || 'No active academic year configured'} readOnly aria-label="Active academic year" />{!activeYearName && <small className="examination-setup__field-error">Configure an active academic year before creating examinations.</small>}</label>
+        <label><span>Exam Type <b>*</b></span><ProjectSelect value={form.examType} aria-invalid={Boolean(errors.examType)} onChange={event => change('examType', event.target.value)}><option value="">Select exam type</option>{(load().types || [{ id: 'type-mid', name: 'Mid Semester', status: 'Active' }, { id: 'type-end', name: 'End Semester', status: 'Active' }, { id: 'type-practical', name: 'Practical', status: 'Active' }]).filter(type => type.status === 'Active').map(type => <option key={type.id}>{type.name}</option>)}</ProjectSelect>{errors.examType && <small className="examination-setup__field-error">{errors.examType}</small>}</label>
         <label><span>Semester / Term <b>*</b></span><ProjectSelect value={form.term} aria-invalid={Boolean(errors.term)} onChange={event => change('term', event.target.value)}><option value="">Select semester / term</option>{['Semester 1', 'Semester 2', 'Semester 3', 'Semester 4', 'Semester 5', 'Semester 6', 'Semester 7', 'Semester 8', 'Annual'].map(term => <option key={term}>{term}</option>)}</ProjectSelect>{errors.term && <small className="examination-setup__field-error">{errors.term}</small>}</label>
         <label><span>Start Date <b>*</b></span><input type="date" value={form.startDate} aria-invalid={Boolean(errors.startDate)} onChange={event => change('startDate', event.target.value)} />{errors.startDate && <small className="examination-setup__field-error">{errors.startDate}</small>}</label>
         <label><span>End Date <b>*</b></span><input type="date" value={form.endDate} aria-invalid={Boolean(errors.endDate)} onChange={event => change('endDate', event.target.value)} />{errors.endDate && <small className="examination-setup__field-error">{errors.endDate}</small>}</label>
@@ -282,7 +287,7 @@ function LocalExaminationSetup() {
     <header className="examination-setup__header"><div><h1>Examination Setup</h1><p>Configure and manage examination cycles.</p></div><ExaminationSummary types={data.types} /></header>
     <section className="examination-setup__card">
       <header className="examination-setup__card-header"><div><p>{activeTab.toUpperCase()}</p><h2>{activeTab === 'Examination List' ? 'Search and manage examination cycles.' : activeTab === 'Create Examination' ? 'Enter examination details and academic period.' : `Manage ${activeTab.toLowerCase()} records.`}</h2></div>{activePath !== tabs[1][1] && <div className="examination-setup__header-actions">{activePath === tabs[0][1] && <><ExportMenu rows={filteredExams} columns={examinationColumns} title="Examination List" filename="examinations" scope="All matching examinations" allowEmpty /><button type="button" className="examination-setup__filter-button" aria-expanded={showFilters} onClick={() => setShowFilters(value => !value)}><FiFilter /> Filters</button><button type="button" className="examination-setup__primary" onClick={() => { setForm(blankExam); setEditing(null); setErrors({}); setShowEntryForm(true); setMessage('') }}><FiPlus /> Create Examination</button></>}{activePath !== tabs[0][1] && <><button type="button" className="examination-setup__filter-button" aria-expanded={showFilters} onClick={() => setShowFilters(value => !value)}><FiFilter /> Filters</button><button type="button" className="examination-setup__primary" onClick={() => { setForm({}); setEditing(null); setShowEntryForm(true); setMessage('') }}><FiPlus /> Add {activeTab === 'Exam Type' ? 'Exam Type' : activeTab === 'Exam Schedule' ? 'Schedule' : 'Rule'}</button></>}</div>}</header>
-      <nav className="examination-setup__tabs" aria-label="Examination setup sections">{tabs.filter(([, path]) => path !== tabs[1][1]).map(([label, path]) => { const isCurrent = activePath === path || (path === tabs[0][1] && (pathname === '/examination-setup' || pathname === tabs[0][1])); return <Link key={path} to={path} className={isCurrent ? 'active' : ''} aria-current={isCurrent ? 'page' : undefined}>{label}</Link> })}</nav>
+      <nav className="examination-setup__tabs" aria-label="Examination setup sections">{tabs.filter(([label, path]) => path !== tabs[1][1] && label !== 'Exam Schedule' && label !== 'Exam Rules').map(([label, path]) => { const isCurrent = activePath === path || (path === tabs[0][1] && (pathname === '/examination-setup' || pathname === tabs[0][1])); return <Link key={path} to={path} className={isCurrent ? 'active' : ''} aria-current={isCurrent ? 'page' : undefined}>{label}</Link> })}</nav>
       {message && <div className="examination-setup__success examination-setup__toast" role="status"><span>{message}</span><button type="button" className="examination-setup__toast-close" onClick={() => setMessage('')} aria-label="Dismiss notification">×</button></div>}
 
       {activePath === tabs[1][1] ? <div className="examination-setup__form-wrap"><form className="examination-setup__form" onSubmit={event => save(event, 'examinations', ['name', 'academicYear', 'examType', 'term', 'startDate', 'endDate'], 'examination')} noValidate>
@@ -426,7 +431,7 @@ function ExamRules() {
 
   return <DashboardLayout><main className="examination-setup"><header className="examination-setup__header"><div><h1>Examination Setup</h1><p>Define the assessment requirements and eligibility rules.</p></div><ExaminationSummary types={types} /></header><section className="examination-setup__card">
     <header className="examination-setup__card-header"><div><p>EXAM RULES</p><h2>Search and manage examination rules.</h2></div><div className="examination-setup__header-actions"><button type="button" className="examination-setup__filter-button" aria-expanded={showFilters} onClick={() => setShowFilters(value => !value)}><FiFilter /> Filters</button><button type="button" className="examination-setup__primary" onClick={() => { setForm(blank); setEditing(null); setShowForm(value => !value); setError('') }}><FiPlus /> Add Rule</button></div></header>
-    <nav className="examination-setup__tabs" aria-label="Examination setup sections">{tabs.filter(([, path]) => path !== '/examination-setup/create-examination').map(([label, path]) => { const isCurrent = path === location.pathname || (path === '/examination-setup/examination-list' && location.pathname === '/examination-setup'); return <Link key={path} to={path} className={isCurrent ? 'active' : ''} aria-current={isCurrent ? 'page' : undefined}>{label}</Link> })}</nav>
+    <nav className="examination-setup__tabs" aria-label="Examination setup sections">{tabs.filter(([label, path]) => path !== '/examination-setup/create-examination' && label !== 'Exam Schedule' && label !== 'Exam Rules').map(([label, path]) => { const isCurrent = path === location.pathname || (path === '/examination-setup/examination-list' && location.pathname === '/examination-setup'); return <Link key={path} to={path} className={isCurrent ? 'active' : ''} aria-current={isCurrent ? 'page' : undefined}>{label}</Link> })}</nav>
     {message && <div className="examination-setup__success examination-setup__toast" role="status"><span>{message}</span><button type="button" className="examination-setup__toast-close" onClick={() => setMessage('')} aria-label="Dismiss notification">×</button></div>}
     <div className="examination-setup__toolbar"><label className="examination-setup__search"><FiSearch /><input aria-label="Search exam rules" placeholder="Search rule or exam type..." value={query} onChange={event => setQuery(event.target.value)} /></label></div>
     {showFilters && <div className="examination-setup__filters"><label>Exam Type<ProjectSelect value={typeFilter} onChange={event => setTypeFilter(event.target.value)}><option value="">All Exam Types</option>{types.map(row => <option key={row.id}>{row.name}</option>)}</ProjectSelect></label><label>Status<ProjectSelect value={statusFilter} onChange={event => setStatusFilter(event.target.value)}><option value="">All Statuses</option><option>Active</option><option>Inactive</option></ProjectSelect></label><button type="button" onClick={() => { setQuery(''); setTypeFilter(''); setStatusFilter('') }}>Clear Filters</button></div>}
@@ -594,7 +599,7 @@ function ExamSchedule() {
 
   return <DashboardLayout><main className="examination-setup"><header className="examination-setup__header"><div><h1>Examination Setup</h1><p>Plan examination dates, sessions and venues.</p></div><ExaminationSummary types={types} examCount={examCount ?? undefined} scheduleCount={loading ? undefined : rows.length} /></header><section className="examination-setup__card">
     <header className="examination-setup__card-header"><div><p>EXAM SCHEDULE</p><h2>Search and manage examination schedules.</h2></div><div className="examination-setup__header-actions"><button type="button" className="examination-setup__primary" onClick={openAddForm}><FiPlus /> Add Schedule</button></div></header>
-    <nav className="examination-setup__tabs" aria-label="Examination setup sections">{tabs.filter(([, path]) => path !== '/examination-setup/create-examination').map(([label, path]) => { const isCurrent = path === location.pathname || (path === '/examination-setup/examination-list' && location.pathname === '/examination-setup'); return <Link key={path} to={path} className={isCurrent ? 'active' : ''} aria-current={isCurrent ? 'page' : undefined}>{label}</Link> })}</nav>
+    <nav className="examination-setup__tabs" aria-label="Examination setup sections">{tabs.filter(([label, path]) => path !== '/examination-setup/create-examination' && label !== 'Exam Schedule' && label !== 'Exam Rules').map(([label, path]) => { const isCurrent = path === location.pathname || (path === '/examination-setup/examination-list' && location.pathname === '/examination-setup'); return <Link key={path} to={path} className={isCurrent ? 'active' : ''} aria-current={isCurrent ? 'page' : undefined}>{label}</Link> })}</nav>
     {message && <div className="examination-setup__success examination-setup__toast" role="status"><span>{message}</span><button type="button" className="examination-setup__toast-close" onClick={() => setMessage('')} aria-label="Dismiss notification">×</button></div>}
     <div className="examination-setup__toolbar"><label className="examination-setup__search"><FiSearch /><input aria-label="Search schedules" placeholder="Search exam, subject or room..." value={query} onChange={event => setQuery(event.target.value)} /></label><button type="button" className="examination-setup__filter-button" aria-expanded={showFilters} onClick={() => setShowFilters(value => !value)}><FiFilter /> Filters {showFilters ? <FiChevronUp /> : <FiChevronDown />}</button></div>
     {showFilters && <div className="examination-setup__filters"><label>Examination<ProjectSelect value={examFilter} onChange={event => setExamFilter(event.target.value)}><option value="">All Examinations</option>{exams.map(row => { const examId = row.examId ?? row.id; const examName = row.examName ?? row.name; return <option key={examId} value={examName}>{examName}</option> })}</ProjectSelect></label><label>Status<ProjectSelect value={statusFilter} onChange={event => setStatusFilter(event.target.value)}><option value="">All Statuses</option><option>Scheduled</option><option>Completed</option><option>Cancelled</option><option>Active</option><option>Inactive</option></ProjectSelect></label><button type="button" onClick={() => { setQuery(''); setExamFilter(''); setStatusFilter('') }}>Clear Filters</button></div>}
@@ -682,7 +687,7 @@ function ExamType() {
 
   return <DashboardLayout><main className="examination-setup"><header className="examination-setup__header"><div><h1>Examination Setup</h1><p>Configure examination types used by examinations and schedules.</p></div><ExaminationSummary types={rows} /></header><section className="examination-setup__card">
     <header className="examination-setup__card-header"><div><p>EXAM TYPE</p><h2>Search and manage examination types.</h2></div><div className="examination-setup__header-actions"><button type="button" className="erp-btn erp-btn--secondary examination-setup__filter-button" aria-expanded={showFilters} onClick={() => setShowFilters(value => !value)}><FiFilter /> Filters</button><button type="button" className="erp-btn erp-btn--primary examination-setup__primary" onClick={() => { setForm({ name: '', code: '', description: '', status: '' }); setEditing(null); setShowForm(true); setError('') }}><FiPlus /> Add Exam Type</button></div></header>
-    <nav className="examination-setup__tabs" aria-label="Examination setup sections">{tabs.filter(([, path]) => path !== '/examination-setup/create-examination').map(([label, path]) => { const isCurrent = path === location.pathname || (path === '/examination-setup/examination-list' && location.pathname === '/examination-setup'); return <Link key={path} to={path} className={isCurrent ? 'active' : ''} aria-current={isCurrent ? 'page' : undefined}>{label}</Link> })}</nav>
+    <nav className="examination-setup__tabs" aria-label="Examination setup sections">{tabs.filter(([label, path]) => path !== '/examination-setup/create-examination' && label !== 'Exam Schedule' && label !== 'Exam Rules').map(([label, path]) => { const isCurrent = path === location.pathname || (path === '/examination-setup/examination-list' && location.pathname === '/examination-setup'); return <Link key={path} to={path} className={isCurrent ? 'active' : ''} aria-current={isCurrent ? 'page' : undefined}>{label}</Link> })}</nav>
     {message && <div className="examination-setup__success examination-setup__toast" role="status"><span>{message}</span><button type="button" className="examination-setup__toast-close" onClick={() => setMessage('')} aria-label="Dismiss notification">×</button></div>}
     <div className="examination-setup__toolbar"><label className="examination-setup__search"><FiSearch /><input aria-label="Search exam types" placeholder="Search exam type or code..." value={query} onChange={event => setQuery(event.target.value)} /></label></div>
     {showFilters && <div className="examination-setup__filters"><label>Status<ProjectSelect value={status} onChange={event => setStatus(event.target.value)}><option value="">All Statuses</option><option>Active</option><option>Inactive</option></ProjectSelect></label><button type="button" onClick={() => { setStatus(''); setQuery('') }}>Clear Filters</button></div>}

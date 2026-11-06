@@ -127,7 +127,7 @@ export default function DashboardLayout({ children }) {
     ? 'Administrator'
     : userRole.charAt(0).toUpperCase() + userRole.slice(1)
   const pageName = ({
-    '/dashboard': 'Overview', '/my-profile': 'My Profile', '/settings': 'Settings',
+    '/dashboard': 'Overview', '/academic-structure': 'Academic Structure', '/my-profile': 'My Profile', '/settings': 'Settings',
     '/college-institution-management': 'College', '/academic-year-management': 'Academic Years',
     '/department-management': 'Departments', '/semester-management': 'Semesters', '/section-management': 'Sections',
     '/student-management/admissions': 'Student Admissions',
