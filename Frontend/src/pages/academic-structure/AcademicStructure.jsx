@@ -12,11 +12,9 @@ import {
   FiCheckCircle,
   FiXCircle,
   FiFilter,
-  FiChevronRight,
   FiChevronDown,
   FiAlertCircle,
   FiX,
-  FiCheck,
   FiInfo,
 } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
@@ -162,6 +160,14 @@ export default function AcademicStructure() {
       showToast('Error loading academic structure data. Please try again.', 'error')
     } finally {
       setIsLoading(false)
+    }
+  }, [])
+
+  // Scoped class for page-specific layout adjustments (e.g. header college dropdown)
+  useEffect(() => {
+    document.body.classList.add('page-academic-structure')
+    return () => {
+      document.body.classList.remove('page-academic-structure')
     }
   }, [])
 
@@ -755,167 +761,173 @@ export default function AcademicStructure() {
     }
   }, [isFilterOpen])
 
-  // Render Search Bar & Button Dropdown Filters for the card
+  // Render Search Bar & Inline Expandable Filter Drawer for the card
   const renderCardFilterBar = () => (
-    <div className="as-card-filter-bar">
-      <div className="as-search-box">
-        <FiSearch className="as-search-box__icon" />
-        <input
-          id="as-search-query"
-          type="text"
-          className="as-search-box__input"
-          placeholder={searchPlaceholder}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          aria-label="Search"
-        />
-        {searchQuery && (
+    <div className="as-filter-container" ref={filterDropdownRef}>
+      <div className="as-card-filter-bar">
+        <div className="as-search-box">
+          <FiSearch size={16} className="as-search-box__icon" aria-hidden="true" />
+          <input
+            id="as-search-query"
+            type="text"
+            className="as-search-box__input"
+            placeholder={searchPlaceholder}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Search"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              className="as-search-box__clear"
+              onClick={() => setSearchQuery('')}
+              title="Clear search"
+              aria-label="Clear search"
+            >
+              <FiX size={14} />
+            </button>
+          )}
+        </div>
+
+        <div className="as-filters-dropdown-wrapper">
           <button
             type="button"
-            className="as-search-box__clear"
-            onClick={() => setSearchQuery('')}
-            title="Clear search"
-            aria-label="Clear search"
+            className={`as-filters-btn ${isFilterOpen ? 'is-active' : ''} ${activeDropdownFilterCount > 0 ? 'has-active' : ''}`}
+            onClick={() => setIsFilterOpen((prev) => !prev)}
+            aria-expanded={isFilterOpen}
+            aria-haspopup="true"
           >
-            <FiX size={13} />
+            <FiFilter size={14} className="as-filters-btn__icon" aria-hidden="true" />
+            <span>Filters</span>
+            {activeDropdownFilterCount > 0 && (
+              <span className="as-filter-count-badge">{activeDropdownFilterCount}</span>
+            )}
+            <FiChevronDown size={14} className={`as-chevron ${isFilterOpen ? 'is-rotated' : ''}`} aria-hidden="true" />
           </button>
-        )}
+        </div>
       </div>
 
-      <div className="as-filters-dropdown-wrapper" ref={filterDropdownRef}>
-        <button
-          type="button"
-          className={`as-filters-btn ${isFilterOpen ? 'is-active' : ''} ${activeDropdownFilterCount > 0 ? 'has-active' : ''}`}
-          onClick={() => setIsFilterOpen((prev) => !prev)}
-          aria-expanded={isFilterOpen}
-          aria-haspopup="true"
-        >
-          <FiFilter size={15} />
-          <span>Filters</span>
-          {activeDropdownFilterCount > 0 && (
-            <span className="as-filter-count-badge">{activeDropdownFilterCount}</span>
-          )}
-          <FiChevronDown size={14} className={`as-chevron ${isFilterOpen ? 'is-rotated' : ''}`} />
-        </button>
-
-        {isFilterOpen && (
-          <div className="as-filters-dropdown-menu" role="dialog" aria-label="Filter Options">
-            <div className="as-filters-dropdown__header">
-              <div className="as-filters-dropdown__title">
-                <FiFilter size={14} />
-                <span className="as-filter-title">Connected Academic Filters</span>
-                {activeDropdownFilterCount > 0 && (
-                  <span className="as-filter-active-pill">{activeDropdownFilterCount} active</span>
-                )}
-              </div>
+      {isFilterOpen && (
+        <div className="as-filters-drawer" role="region" aria-label="Filter Options">
+          <div className="as-filters-drawer__header">
+            <div className="as-filters-drawer__title">
+              <FiFilter size={13} aria-hidden="true" />
+              <span className="as-filter-title">Connected Academic Filters</span>
               {activeDropdownFilterCount > 0 && (
-                <button
-                  type="button"
-                  className="as-filter-reset"
-                  onClick={() => {
-                    setSelectedDeptFilter('')
-                    setSelectedCourseFilter('')
-                    setSelectedBranchFilter('')
-                    setStatusFilter('')
-                  }}
-                  title="Reset all dropdown filters"
-                >
-                  <FiX size={12} />
-                  <span>Reset Filters</span>
-                </button>
+                <span className="as-filter-active-pill">{activeDropdownFilterCount} active</span>
               )}
             </div>
+            {activeDropdownFilterCount > 0 && (
+              <button
+                type="button"
+                className="as-filter-reset"
+                onClick={() => {
+                  setSelectedDeptFilter('')
+                  setSelectedCourseFilter('')
+                  setSelectedBranchFilter('')
+                  setStatusFilter('')
+                }}
+                title="Reset all dropdown filters"
+              >
+                <FiX size={12} />
+                <span>Reset Filters</span>
+              </button>
+            )}
+          </div>
 
-            <div className="as-filters-dropdown__body">
-              {/* Department Filter */}
-              <div className="as-filter-control">
-                <label htmlFor="as-dept-filter" className="as-control-label">
-                  Department
-                </label>
-                <select
-                  id="as-dept-filter"
-                  className="as-control-select"
-                  value={selectedDeptFilter}
-                  onChange={(e) => setSelectedDeptFilter(e.target.value)}
-                >
-                  <option value="">All Departments</option>
-                  {departments.map((d) => {
-                    const id = String(d.departmentId ?? d.id)
-                    return (
-                      <option key={id} value={id}>
-                        {d.departmentName ?? d.name} ({d.departmentCode ?? d.code})
-                      </option>
-                    )
-                  })}
-                </select>
-              </div>
+          <div className="as-filters-drawer__body">
+            {/* Department Filter */}
+            <div className="as-filter-control">
+              <label htmlFor="as-dept-filter" className="as-control-label visually-hidden">
+                Department
+              </label>
+              <select
+                id="as-dept-filter"
+                aria-label="Department"
+                className="as-control-select"
+                value={selectedDeptFilter}
+                onChange={(e) => setSelectedDeptFilter(e.target.value)}
+              >
+                <option value="">All Departments</option>
+                {departments.map((d) => {
+                  const id = String(d.departmentId ?? d.id)
+                  return (
+                    <option key={id} value={id}>
+                      {d.departmentName ?? d.name} ({d.departmentCode ?? d.code})
+                    </option>
+                  )
+                })}
+              </select>
+            </div>
 
-              {/* Course Filter */}
-              <div className="as-filter-control">
-                <label htmlFor="as-course-filter" className="as-control-label">
-                  Course
-                </label>
-                <select
-                  id="as-course-filter"
-                  className="as-control-select"
-                  value={selectedCourseFilter}
-                  onChange={(e) => setSelectedCourseFilter(e.target.value)}
-                >
-                  <option value="">All Courses</option>
-                  {filterCoursesOptions.map((c) => {
-                    const id = String(c.courseId ?? c.id)
-                    return (
-                      <option key={id} value={id}>
-                        {c.courseName ?? c.name} ({c.courseCode ?? c.code})
-                      </option>
-                    )
-                  })}
-                </select>
-              </div>
+            {/* Course Filter */}
+            <div className="as-filter-control">
+              <label htmlFor="as-course-filter" className="as-control-label visually-hidden">
+                Course
+              </label>
+              <select
+                id="as-course-filter"
+                aria-label="Course"
+                className="as-control-select"
+                value={selectedCourseFilter}
+                onChange={(e) => setSelectedCourseFilter(e.target.value)}
+              >
+                <option value="">All Courses</option>
+                {filterCoursesOptions.map((c) => {
+                  const id = String(c.courseId ?? c.id)
+                  return (
+                    <option key={id} value={id}>
+                      {c.courseName ?? c.name} ({c.courseCode ?? c.code})
+                    </option>
+                  )
+                })}
+              </select>
+            </div>
 
-              {/* Branch Filter */}
-              <div className="as-filter-control">
-                <label htmlFor="as-branch-filter" className="as-control-label">
-                  Branch
-                </label>
-                <select
-                  id="as-branch-filter"
-                  className="as-control-select"
-                  value={selectedBranchFilter}
-                  onChange={(e) => setSelectedBranchFilter(e.target.value)}
-                >
-                  <option value="">All Branches</option>
-                  {filterBranchesOptions.map((b) => {
-                    const id = String(b.branchId ?? b.id)
-                    return (
-                      <option key={id} value={id}>
-                        {b.branchName ?? b.name} ({b.branchCode ?? b.code})
-                      </option>
-                    )
-                  })}
-                </select>
-              </div>
+            {/* Branch Filter */}
+            <div className="as-filter-control">
+              <label htmlFor="as-branch-filter" className="as-control-label visually-hidden">
+                Branch
+              </label>
+              <select
+                id="as-branch-filter"
+                aria-label="Branch"
+                className="as-control-select"
+                value={selectedBranchFilter}
+                onChange={(e) => setSelectedBranchFilter(e.target.value)}
+              >
+                <option value="">All Branches</option>
+                {filterBranchesOptions.map((b) => {
+                  const id = String(b.branchId ?? b.id)
+                  return (
+                    <option key={id} value={id}>
+                      {b.branchName ?? b.name} ({b.branchCode ?? b.code})
+                    </option>
+                  )
+                })}
+              </select>
+            </div>
 
-              {/* Status Filter */}
-              <div className="as-filter-control">
-                <label htmlFor="as-status-filter" className="as-control-label">
-                  Status
-                </label>
-                <select
-                  id="as-status-filter"
-                  className="as-control-select"
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                  <option value="">All Statuses</option>
-                  <option value="Active">Active Only</option>
-                  <option value="Inactive">Inactive Only</option>
-                </select>
-              </div>
+            {/* Status Filter */}
+            <div className="as-filter-control">
+              <label htmlFor="as-status-filter" className="as-control-label visually-hidden">
+                Status
+              </label>
+              <select
+                id="as-status-filter"
+                aria-label="Status"
+                className="as-control-select"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="">All Statuses</option>
+                <option value="Active">Active Only</option>
+                <option value="Inactive">Inactive Only</option>
+              </select>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 
@@ -1052,7 +1064,7 @@ export default function AcademicStructure() {
                   className="as-btn as-btn--primary"
                   onClick={() => openAddModal('department')}
                 >
-                  <FiPlus /> Add Department
+                  <FiPlus size={16} /> Add Department
                 </button>
               </div>
             </div>
@@ -1160,7 +1172,7 @@ export default function AcademicStructure() {
                   className="as-btn as-btn--primary"
                   onClick={() => openAddModal('course')}
                 >
-                  <FiPlus /> Add Course
+                  <FiPlus size={16} /> Add Course
                 </button>
               </div>
             </div>
@@ -1284,7 +1296,7 @@ export default function AcademicStructure() {
                   className="as-btn as-btn--primary"
                   onClick={() => openAddModal('branch')}
                 >
-                  <FiPlus /> Add Branch
+                  <FiPlus size={16} /> Add Branch
                 </button>
               </div>
             </div>
@@ -1406,7 +1418,7 @@ export default function AcademicStructure() {
                   className="as-btn as-btn--primary"
                   onClick={() => openAddModal('semester')}
                 >
-                  <FiPlus /> Add Semester
+                  <FiPlus size={16} /> Add Semester
                 </button>
               </div>
             </div>
