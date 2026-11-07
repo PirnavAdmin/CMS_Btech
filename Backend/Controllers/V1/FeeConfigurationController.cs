@@ -1,3 +1,4 @@
+using BTech.Services;
 using BTech.DTOs.Fees;
 using Dapper;
 using Microsoft.AspNetCore.Authorization;
@@ -94,7 +95,8 @@ public sealed class FeeConfigurationController : ControllerBase
                 fs.effective_to AS EffectiveTo,
                 fs.status AS Status
             FROM fee_structures fs
-            WHERE (@feeCategoryId IS NULL OR fs.fee_category_id = @feeCategoryId)
+            WHERE (@collegeScope IS NULL OR fs.college_id=@collegeScope)
+              AND (@feeCategoryId IS NULL OR fs.fee_category_id = @feeCategoryId)
               AND (@academicYearId IS NULL OR fs.academic_year_id = @academicYearId)
               AND (@courseId IS NULL OR fs.course_id = @courseId)
               AND (@branchId IS NULL OR fs.branch_id = @branchId)
@@ -110,6 +112,7 @@ public sealed class FeeConfigurationController : ControllerBase
 
         var data = (await connection.QueryAsync<FeeStructureDto>(sql, new
         {
+            collegeScope=CollegeDataScope.Resolve(HttpContext),
             feeCategoryId,
             academicYearId,
             courseId,
@@ -334,9 +337,12 @@ public sealed class FeeConfigurationController : ControllerBase
         if (request.FeeStructureId <= 0)
             return BadRequest(new { success = false, message = "A valid feeStructureId is required." });
 
+        if (!request.DueDate.HasValue || request.DueDate.Value.Year < 1000)
+            return BadRequest(new { success = false, message = "dueDate is required to create the student's fee installment." });
+
         await using var connection = await OpenConnectionAsync();
 
-        if (!await RequiredTablesExistAsync(connection, "students", "fee_structures", "fee_assignments"))
+        if (!await RequiredTablesExistAsync(connection, "students", "fee_structures", "fee_assignments", "student_fees", "backend_contract_audit"))
             return FeeTablesNotInstalled();
 
         await BTech.Services.Fees.FeePlanLegacyGuard.EnsureLegacyStructureAsync(connection, request.FeeStructureId);
@@ -442,6 +448,19 @@ public sealed class FeeConfigurationController : ControllerBase
                 request.Remarks
             }, transaction);
 
+            var actor=CollegeDataScope.Actor(HttpContext);
+            await connection.ExecuteAsync("UPDATE fee_assignments SET created_by=@actor,updated_by=@actor WHERE fee_assignment_id=@assignmentId",new{actor,assignmentId},transaction);
+            var dueDate=request.DueDate.Value.Date;
+            var studentFeeId=await connection.ExecuteScalarAsync<long>("""
+                INSERT INTO student_fees(fee_code,fee_assignment_id,installment_number,amount,due_date,status,remarks,created_by)
+                VALUES(@code,@assignmentId,1,@assignedAmount,@dueDate,'ACTIVE',@Remarks,@actor);
+                SELECT LAST_INSERT_ID();
+                """,new{code=$"SF-{assignmentId}-1",assignmentId,assignedAmount,dueDate,request.Remarks,actor},transaction);
+            await connection.ExecuteAsync("""
+                INSERT INTO backend_contract_audit(college_id,resource,record_id,action,actor_id,correlation_id)
+                VALUES(@college,'fee-assignment',@assignmentId,'ASSIGNED',@actor,@trace)
+                """,new{college=student.CollegeId,assignmentId,actor,trace=HttpContext.TraceIdentifier},transaction);
+
             await transaction.CommitAsync();
 
             return StatusCode(StatusCodes.Status201Created, new
@@ -451,12 +470,13 @@ public sealed class FeeConfigurationController : ControllerBase
                 data = new
                 {
                     assignmentId,
+                    studentFeeId,
                     assignmentCode,
                     studentId,
                     feeStructureId = request.FeeStructureId,
                     assignedAmount,
                     assignedOn,
-                    dueDate = request.DueDate,
+                    dueDate,
                     request.Remarks
                 }
             });

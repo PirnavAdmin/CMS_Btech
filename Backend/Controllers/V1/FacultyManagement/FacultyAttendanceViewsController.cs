@@ -1,3 +1,4 @@
+using BTech.Services;
 using BTech.Data;
 using Dapper;
 using Microsoft.AspNetCore.Authorization;
@@ -18,6 +19,8 @@ public class FacultyAttendanceViewsController : ControllerBase
         _configuration = configuration;
     }
 
+    private long? Scope()=>CollegeDataScope.Resolve(HttpContext);
+    private long? OwnUser()=>new[]{"SUPER_ADMIN","COLLEGE_ADMIN","PRINCIPAL","HOD"}.Any(x=>CollegeDataScope.HasRole(HttpContext,x))?null:CollegeDataScope.Actor(HttpContext);
     private MySqlConnection Connection() =>
         new(_configuration.GetConnectionString("DefaultConnection"));
 
@@ -52,7 +55,7 @@ INNER JOIN departments d
 LEFT JOIN faculty_attendance a
     ON a.faculty_id = f.faculty_id
    AND a.attendance_date = @attendanceDate
-WHERE f.deleted_at IS NULL
+WHERE (@collegeScope IS NULL OR f.college_id=@collegeScope) AND (@ownUser IS NULL OR f.user_id=@ownUser) AND f.deleted_at IS NULL
   AND f.status = 1
   AND (@department IS NULL OR @department = '' OR d.department_name = @department)
   AND (
@@ -76,7 +79,7 @@ ORDER BY f.faculty_id;";
                 sql,
                 new
                 {
-                    attendanceDate,
+                    attendanceDate, collegeScope=Scope(),ownUser=OwnUser(),
                     department,
                     facultyId,
                     search
@@ -148,13 +151,13 @@ ORDER BY f.faculty_id;";
             const string facultyCheckSql = @"
 SELECT faculty_id
 FROM faculty
-WHERE faculty_id IN @FacultyIds
+WHERE (@collegeScope IS NULL OR college_id=@collegeScope) AND (@ownUser IS NULL OR user_id=@ownUser) AND faculty_id IN @FacultyIds
   AND status = 1
   AND deleted_at IS NULL;";
 
             var validFacultyIds = (await connection.QueryAsync<long>(
                 facultyCheckSql,
-                new { request.FacultyIds },
+                new { request.FacultyIds,collegeScope=Scope(),ownUser=OwnUser() },
                 transaction)).ToHashSet();
 
             var invalidIds = request.FacultyIds
@@ -339,7 +342,7 @@ INNER JOIN departments d
 LEFT JOIN faculty_attendance a
     ON a.faculty_id = f.faculty_id
    AND a.attendance_date BETWEEN @startDate AND @endDate
-WHERE f.deleted_at IS NULL
+WHERE (@collegeScope IS NULL OR f.college_id=@collegeScope) AND (@ownUser IS NULL OR f.user_id=@ownUser) AND f.deleted_at IS NULL
   AND f.status = 1
   AND (@department IS NULL OR @department = '' OR d.department_name = @department)
   AND (
@@ -363,7 +366,7 @@ ORDER BY f.faculty_id, a.attendance_date;";
                 sql,
                 new
                 {
-                    startDate = start.Date,
+                    startDate = start.Date, collegeScope=Scope(),ownUser=OwnUser(),
                     endDate = end.Date,
                     department,
                     facultyId,

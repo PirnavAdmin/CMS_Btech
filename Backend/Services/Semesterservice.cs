@@ -443,23 +443,5 @@ namespace BTech.Services
 
             return await GetByIdAsync(semesterId);
         }
-
-        public async Task<bool> DeleteAsync(long semesterId)
-        {
-            var semester = await ScopedSemesters()
-                .FirstOrDefaultAsync(x => x.SemesterId == semesterId && x.IsArchived == 0);
-
-            if (semester == null)
-            {
-                return false;
-            }
-
-            semester.IsArchived = 1;
-            semester.Status = 0;
-            semester.UpdatedAt = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync();
-            return true;
-        }
     }
 }
