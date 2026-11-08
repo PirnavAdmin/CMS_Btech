@@ -707,6 +707,14 @@
   position: static !important;
 }
 
+/* Keep academic table labels readable when the app-wide table theme loads later. */
+:root .academic-structure .as-content-card .as-table thead tr th {
+  background: #eef2df !important;
+  background-color: #eef2df !important;
+  color: #34420b !important;
+  border-bottom: 1px solid #d8dfc4 !important;
+}
+
 /* Responsive label shown only on small screens (card-style layout) */
 .as-table td[data-label]::before {
   content: attr(data-label);
