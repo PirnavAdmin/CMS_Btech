@@ -1,5 +1,6 @@
 using BTech.DTOs.FacultyLeave;
 using BTech.Helpers;
+using BTech.Services;
 using System.Security.Claims;
 using Dapper;
 using Microsoft.AspNetCore.Authorization;
@@ -21,6 +22,7 @@ public class FacultyLeaveController : ControllerBase
         _logger = logger;
     }
     private MySqlConnection Connection() => new(_configuration.GetConnectionString("DefaultConnection"));
+    private bool CanManageLeaves() => new[]{"SUPER_ADMIN","COLLEGE_ADMIN","PRINCIPAL","HOD"}.Any(x=>CollegeDataScope.HasRole(HttpContext,x));
     private long? CurrentUserId()
     {
         var value = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("user_id")?.Value ?? User.FindFirst("sub")?.Value;
@@ -43,11 +45,11 @@ JOIN faculty f ON f.faculty_id = r.faculty_id
 JOIN departments d ON d.department_id = f.department_id
 LEFT JOIN faculty_leave_types t ON t.leave_type_id = r.leave_type_id
 LEFT JOIN faculty_leave_policies p ON p.policy_id = r.policy_id
-WHERE f.deleted_at IS NULL
-  AND (@status IS NULL OR r.status = @status)
-  AND (@facultyType IS NULL OR (CASE WHEN UPPER(COALESCE(f.employment_type,'')) LIKE '%NON%' THEN 'Non-Teaching' ELSE 'Teaching' END) = @facultyType)
-  AND (@department IS NULL OR d.department_name = @department)
-  AND (@search IS NULL OR r.request_code LIKE CONCAT('%',@search,'%') OR f.faculty_name LIKE CONCAT('%',@search,'%') OR f.faculty_code LIKE CONCAT('%',@search,'%') OR t.name LIKE CONCAT('%',@search,'%'))
+WHERE (@collegeScope IS NULL OR f.college_id=@collegeScope) AND (@ownUser IS NULL OR f.user_id=@ownUser) AND f.deleted_at IS NULL
+  AND ((CAST(@status AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci) IS NULL OR r.status = (CAST(@status AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci))
+  AND ((CAST(@facultyType AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci) IS NULL OR (CASE WHEN UPPER(COALESCE(f.employment_type,'')) LIKE '%NON%' THEN 'Non-Teaching' ELSE 'Teaching' END) = (CAST(@facultyType AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci))
+  AND ((CAST(@department AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci) IS NULL OR d.department_name = (CAST(@department AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci))
+  AND ((CAST(@search AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci) IS NULL OR r.request_code LIKE CONCAT('%',(CAST(@search AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci),'%') OR f.faculty_name LIKE CONCAT('%',(CAST(@search AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci),'%') OR f.faculty_code LIKE CONCAT('%',(CAST(@search AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci),'%') OR t.name LIKE CONCAT('%',(CAST(@search AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci),'%'))
 ORDER BY r.applied_on DESC, r.leave_request_id DESC;";
         return await Query(sql, new { search = Null(search), facultyType = Null(facultyType), department = Null(department), status = Null(status) }, "Leave requests retrieved successfully.");
     }
@@ -154,11 +156,11 @@ JOIN faculty f ON f.faculty_id=r.faculty_id
 JOIN departments d ON d.department_id=f.department_id
 LEFT JOIN faculty_leave_types t ON t.leave_type_id=r.leave_type_id
 LEFT JOIN faculty_leave_policies p ON p.policy_id=r.policy_id
-WHERE r.status IN ('Approved','Rejected','Cancelled')
-  AND (@status IS NULL OR r.status=@status)
-  AND (@facultyType IS NULL OR (CASE WHEN UPPER(COALESCE(f.employment_type,'')) LIKE '%NON%' THEN 'Non-Teaching' ELSE 'Teaching' END)=@facultyType)
-  AND (@department IS NULL OR d.department_name=@department)
-  AND (@search IS NULL OR r.request_code LIKE CONCAT('%',@search,'%') OR f.faculty_name LIKE CONCAT('%',@search,'%') OR f.faculty_code LIKE CONCAT('%',@search,'%') OR t.name LIKE CONCAT('%',@search,'%'))
+WHERE (@collegeScope IS NULL OR f.college_id=@collegeScope) AND (@ownUser IS NULL OR f.user_id=@ownUser) AND r.status IN ('Approved','Rejected','Cancelled')
+  AND ((CAST(@status AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci) IS NULL OR r.status=(CAST(@status AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci))
+  AND ((CAST(@facultyType AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci) IS NULL OR (CASE WHEN UPPER(COALESCE(f.employment_type,'')) LIKE '%NON%' THEN 'Non-Teaching' ELSE 'Teaching' END)=(CAST(@facultyType AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci))
+  AND ((CAST(@department AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci) IS NULL OR d.department_name=(CAST(@department AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci))
+  AND ((CAST(@search AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci) IS NULL OR r.request_code LIKE CONCAT('%',(CAST(@search AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci),'%') OR f.faculty_name LIKE CONCAT('%',(CAST(@search AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci),'%') OR f.faculty_code LIKE CONCAT('%',(CAST(@search AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci),'%') OR t.name LIKE CONCAT('%',(CAST(@search AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci),'%'))
 ORDER BY r.decision_date DESC, r.leave_request_id DESC;";
         return await Query(sql,new { search=Null(search), facultyType=Null(facultyType), department=Null(department), status=Null(status) },"Leave history retrieved successfully.");
     }
@@ -178,9 +180,9 @@ LEFT JOIN faculty_leave_policies p ON p.status='Active' AND p.from_date<=CURDATE
 LEFT JOIN faculty_leave_policy_entitlements e ON e.policy_id=p.policy_id
 LEFT JOIN faculty_leave_types t ON t.leave_type_id=e.leave_type_id AND (t.college_id IS NULL OR t.college_id=f.college_id)
 LEFT JOIN faculty_leave_requests r ON r.faculty_id=f.faculty_id AND r.policy_id=p.policy_id AND r.leave_type_id=t.leave_type_id
-WHERE f.deleted_at IS NULL AND (e.leave_type_id IS NULL OR t.leave_type_id IS NOT NULL) AND (@facultyId IS NULL OR f.faculty_id=@facultyId) AND (@department IS NULL OR d.department_name=@department)
-AND (@facultyType IS NULL OR (CASE WHEN UPPER(COALESCE(f.employment_type,'')) LIKE '%NON%' THEN 'Non-Teaching' ELSE 'Teaching' END)=@facultyType)
-AND (@search IS NULL OR f.faculty_name LIKE CONCAT('%',@search,'%') OR f.faculty_code LIKE CONCAT('%',@search,'%'))
+WHERE (@collegeScope IS NULL OR f.college_id=@collegeScope) AND (@ownUser IS NULL OR f.user_id=@ownUser) AND f.deleted_at IS NULL AND (e.leave_type_id IS NULL OR t.leave_type_id IS NOT NULL) AND (@facultyId IS NULL OR f.faculty_id=@facultyId) AND ((CAST(@department AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci) IS NULL OR d.department_name=(CAST(@department AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci))
+AND ((CAST(@facultyType AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci) IS NULL OR (CASE WHEN UPPER(COALESCE(f.employment_type,'')) LIKE '%NON%' THEN 'Non-Teaching' ELSE 'Teaching' END)=(CAST(@facultyType AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci))
+AND ((CAST(@search AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci) IS NULL OR f.faculty_name LIKE CONCAT('%',(CAST(@search AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci),'%') OR f.faculty_code LIKE CONCAT('%',(CAST(@search AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci),'%'))
 GROUP BY f.faculty_id,f.faculty_code,f.faculty_name,f.designation,d.department_name,employeeCategory,p.policy_id,p.name,t.leave_type_id,t.name,t.code,t.pay_category,e.entitlement
 ORDER BY f.faculty_name,t.name;";
         return await Query(sql,new{facultyId,department=Null(department),facultyType=Null(facultyType),search=Null(search)},"Leave balances retrieved successfully.");
@@ -197,8 +199,8 @@ ORDER BY f.faculty_name,t.name;";
             category, pay_category AS payCategory, description, status
             FROM faculty_leave_types
             WHERE (@collegeId IS NULL OR college_id=@collegeId)
-              AND (@status IS NULL OR status=@status)
-              AND (@search IS NULL OR name LIKE CONCAT('%',@search,'%') OR code LIKE CONCAT('%',@search,'%'))
+              AND ((CAST(@status AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci) IS NULL OR status=(CAST(@status AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci))
+              AND ((CAST(@search AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci) IS NULL OR name LIKE CONCAT('%',(CAST(@search AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci),'%') OR code LIKE CONCAT('%',(CAST(@search AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci),'%'))
             ORDER BY name", new { collegeId, status=Null(status), search=Null(search) },
             "Leave types retrieved successfully.");
     }
@@ -297,7 +299,7 @@ ORDER BY f.faculty_name,t.name;";
     {
         try
         {
-            CollegeSelection.Resolve(collegeId, null);
+            collegeId=CollegeDataScope.Resolve(HttpContext,collegeId);
             if (departmentId is <= 0 || branchId is <= 0) throw new ArgumentException("Scope IDs must be positive numbers.");
             var year=string.IsNullOrWhiteSpace(academicYear) ? null : NormalizePolicyYear(academicYear);
             var employeeType=string.IsNullOrWhiteSpace(applicableTo) ? null : NormalizePolicyType(applicableTo);
@@ -311,12 +313,12 @@ ORDER BY f.faculty_name,t.name;";
                 LEFT JOIN departments d ON d.department_id=p.department_id
                 LEFT JOIN branches b ON b.branch_id=p.branch_id
                 WHERE (@collegeId IS NULL OR p.college_id=@collegeId)
-                  AND (@year IS NULL OR fn_flp_academic_year_key(p.academic_year)=@year)
-                  AND (@employeeType IS NULL OR fn_flp_employee_type(p.applicable_to)='Both' OR @employeeType='Both' OR fn_flp_employee_type(p.applicable_to)=@employeeType)
+                  AND ((CAST(@year AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci) IS NULL OR fn_flp_academic_year_key(p.academic_year)=(CAST(@year AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci))
+                  AND ((CAST(@employeeType AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci) IS NULL OR fn_flp_employee_type(p.applicable_to) COLLATE utf8mb4_unicode_ci='Both' OR (CAST(@employeeType AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci)='Both' OR fn_flp_employee_type(p.applicable_to) COLLATE utf8mb4_unicode_ci=(CAST(@employeeType AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci))
                   AND (@departmentId IS NULL OR p.department_id IS NULL OR p.department_id=@departmentId)
                   AND (@branchId IS NULL OR p.branch_id IS NULL OR p.branch_id=@branchId)
-                  AND (@status IS NULL OR p.status=@status)
-                  AND (@search IS NULL OR p.name LIKE CONCAT('%',@search,'%'))
+                  AND ((CAST(@status AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci) IS NULL OR p.status=(CAST(@status AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci))
+                  AND ((CAST(@search AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci) IS NULL OR p.name LIKE CONCAT('%',(CAST(@search AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci),'%'))
                 ORDER BY p.from_date DESC,p.name", new {collegeId,year,employeeType,departmentId,branchId,status=Null(status),search=Null(search)},
                 "Leave policies retrieved successfully.");
         }
@@ -406,6 +408,38 @@ ORDER BY f.faculty_name,t.name;";
         catch (MySqlException ex) when (ex.Number is 1205 or 1213)
         { return Conflict(new {success=false,code="POLICY_BUSY",message="Another policy change is in progress. Retry this request."}); }
         catch (MySqlException ex) { return DbError(ex); }
+    }
+
+    [HttpGet("policies/{id}")]
+    public async Task<IActionResult> GetPolicy(string id)
+    {
+        var scope=CollegeDataScope.Resolve(HttpContext);
+        await using var c=Connection();
+        var policy=await c.QuerySingleOrDefaultAsync(@"SELECT policy_id AS id,college_id AS collegeId,name,
+            academic_year AS academicYear,applicable_to AS applicableTo,department_id AS departmentId,
+            branch_id AS branchId,from_date AS `from`,to_date AS `to`,status
+            FROM faculty_leave_policies WHERE policy_id=@id AND (@scope IS NULL OR college_id=@scope)",new{id,scope});
+        if(policy is null)return NotFound(new{success=false,message="Leave policy not found."});
+        var data=(IDictionary<string,object>)policy;
+        data["entitlements"]=(await c.QueryAsync(@"SELECT leave_type_id AS typeId,entitlement,max_days AS maxDays,
+            carry_forward AS carryForward,max_carry_forward AS maxCarryForward,document_required AS documentRequired
+            FROM faculty_leave_policy_entitlements WHERE policy_id=@id ORDER BY leave_type_id",new{id})).ToList();
+        return Ok(new{success=true,data});
+    }
+
+    [HttpPost("policies/{id}/deactivate")]
+    public async Task<IActionResult> DeactivatePolicy(string id)
+    {
+        var scope=CollegeDataScope.Resolve(HttpContext);
+        await using var c=Connection();await c.OpenAsync();
+        var policy=await ReadPolicy(c,id);
+        if(policy is null||scope.HasValue&&policy.CollegeId!=scope)return NotFound(new{success=false,message="Leave policy not found."});
+        await using var tx=await c.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted);
+        await LockPolicyCollege(c,tx,policy.CollegeId);
+        await c.ExecuteAsync("UPDATE faculty_leave_policies SET status='Inactive',updated_by=@actor,updated_at=UTC_TIMESTAMP() WHERE policy_id=@id AND college_id=@college",new{id,actor=CurrentUserId(),college=policy.CollegeId},tx);
+        await tx.CommitAsync();
+        _logger.LogInformation("Leave policy deactivated. PolicyId={PolicyId}, CollegeId={CollegeId}, UserId={UserId}, CorrelationId={CorrelationId}",id,policy.CollegeId,CurrentUserId(),HttpContext.TraceIdentifier);
+        return Ok(new{success=true,data=new{id,status="Inactive",collegeId=policy.CollegeId}});
     }
 
     [HttpPost("policies/{id}/activate")]
@@ -551,7 +585,7 @@ ORDER BY f.faculty_name,t.name;";
     // A legacy allocation without an academic year applies across years.
     private const string PolicyFacultyScopeSql = @"
         p.college_id=f.college_id
-        AND (fn_flp_employee_type(p.applicable_to)='Both' OR fn_flp_employee_type(p.applicable_to)=
+        AND (fn_flp_employee_type(p.applicable_to) COLLATE utf8mb4_unicode_ci='Both' OR fn_flp_employee_type(p.applicable_to) COLLATE utf8mb4_unicode_ci=
             CASE WHEN UPPER(COALESCE(f.employment_type,'')) LIKE '%NON%' THEN 'Non-Teaching' ELSE 'Teaching' END)
         AND (COALESCE(p.department_id,(SELECT pb.department_id FROM branches pb WHERE pb.branch_id=p.branch_id)) IS NULL
             OR COALESCE(p.department_id,(SELECT pb.department_id FROM branches pb WHERE pb.branch_id=p.branch_id))=f.department_id)
@@ -561,7 +595,7 @@ ORDER BY f.faculty_name,t.name;";
               AND (a.academic_year_id IS NULL OR fn_flp_academic_year_key(ay.academic_year_name)=fn_flp_academic_year_key(p.academic_year))))";
 
     private static string? Null(string? value)=>string.IsNullOrWhiteSpace(value)?null:value.Trim();
-    private async Task<IActionResult> Query(string sql,object args,string message){try{await using var c=Connection();await c.OpenAsync();var rows=(await c.QueryAsync(sql,args)).ToList();return Ok(new{success=true,message,data=rows});}catch(MySqlException ex){return DbError(ex);}}
+    private async Task<IActionResult> Query(string sql,object args,string message){try{await using var c=Connection();await c.OpenAsync();var parameters=new DynamicParameters(args);parameters.Add("collegeScope",CollegeDataScope.Resolve(HttpContext)); parameters.Add("ownUser", CanManageLeaves() ? null : CurrentUserId()); var rows=(await c.QueryAsync(sql,parameters)).ToList();return Ok(new{success=true,message,data=rows});}catch(MySqlException ex){return DbError(ex);}}
     private async Task<IActionResult> Query(string sql,object args,string message, bool unused=false)=>await Query(sql,args,message);
     private IActionResult DbError(MySqlException ex)
     {

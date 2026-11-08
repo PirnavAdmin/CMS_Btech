@@ -113,14 +113,6 @@ namespace BTech.Services.Implementations
             return updated == null ? null : Map(updated);
         }
 
-        public async Task<bool> DeleteAsync(long courseId, long? userId)
-        {
-            if (courseId <= 0)
-                throw new ArgumentException("Valid course ID is required.");
-
-            return await _courseRepository.DeleteAsync(courseId, userId);
-        }
-
         private async Task<long> ResolveCollegeIdAsync(
             long? requestedCollegeId,
             long? userId)

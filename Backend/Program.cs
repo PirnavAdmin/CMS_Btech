@@ -29,6 +29,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers(options =>
 {
     options.Filters.AddService<ApiErrorSanitizationFilter>();
+    options.Filters.AddService<ForeignRecordScopeFilter>();
 });
 
 builder.Services.Configure<Microsoft.AspNetCore.Mvc.ApiBehaviorOptions>(options =>
@@ -55,6 +56,7 @@ builder.Services.Configure<Microsoft.AspNetCore.Mvc.ApiBehaviorOptions>(options 
 
 builder.Services.AddScoped<SemesterRequestDiagnosticsFilter>();
 builder.Services.AddScoped<ApiErrorSanitizationFilter>();
+builder.Services.AddScoped<ForeignRecordScopeFilter>();
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddScoped<IFacultyDocumentService, FacultyDocumentService>();
@@ -898,6 +900,19 @@ catch(Exception ex) when(ex is MySqlConnector.MySqlException or BTech.Services.I
 app.UseSwagger();
 
 app.UseSwaggerUI();
+
+// Expose only the photo directories used by profile image URLs. Private student
+// and faculty documents continue through their authenticated download endpoints.
+foreach (var photoDirectory in new[] { "profile-photos", "faculty-profile-photos" })
+{
+    var directory = Path.Combine(app.Environment.ContentRootPath, "wwwroot", "uploads", photoDirectory);
+    Directory.CreateDirectory(directory);
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(directory),
+        RequestPath = "/uploads/" + photoDirectory
+    });
+}
 
 
 // ============================================================
