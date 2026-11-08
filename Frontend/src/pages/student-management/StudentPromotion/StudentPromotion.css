@@ -1,6 +1,19 @@
-@import "tailwindcss/theme.css" layer(theme);
-@import "tailwindcss/utilities.css" layer(utilities);
+@import "../../../../node_modules/tailwindcss/theme.css" layer(theme);
+@import "../../../../node_modules/tailwindcss/utilities.css" layer(utilities);
 @source "./StudentPromotion.jsx";
+
+.promotion-motion-enter {
+  animation: promotion-motion-enter 220ms ease-out both;
+}
+
+@keyframes promotion-motion-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .promotion-motion-enter { animation: none; }
+}
 
 .student-promotion.p-module {
   width: 100%;
