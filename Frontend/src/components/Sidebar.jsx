@@ -21,7 +21,7 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
   const { selectedCollege, selectedCollegeId, colleges = [], loading: collegeLoading = false, collegeAccess = null } = useAcademic()
   const { status, access } = useSidebarAccess({ token: getAccessToken(), collegeId: selectedCollegeId, collegeLoading, providedAccess: collegeAccess })
   const groups = useMemo(() => {
-    const modules = userRole === 'admin' ? MODULE_REGISTRY.map(entry => entry.id === 'academic_settings' ? { ...entry, navigation: true, label: 'Working Context' } : entry) : MODULE_REGISTRY
+    const modules = userRole === 'admin' ? MODULE_REGISTRY.map(entry => entry.id === 'academic_settings' ? { ...entry, navigation: true, label: 'Global Settings' } : entry) : MODULE_REGISTRY
     const source = status === 'error' || status === 'loading' ? unavailableNavigationGroups(userRole, modules) : navigationGroups({ role: userRole, access, selectedCollegeId, modules })
     return userRole === 'admin' ? groupAdminWorkspaces(source) : source
   }, [status, userRole, access, selectedCollegeId])

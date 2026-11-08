@@ -15,5 +15,5 @@ public sealed class TransportFeesController : AdditionalApiControllerBase {
  [HttpGet("student/{studentId:long}")] public Task<IActionResult> StudentFees(long studentId)=>List("transport-fee-assignments",studentId.ToString());
  [HttpGet("dues")] public Task<IActionResult> Dues()=>List("transport-fee-dues");
  [HttpGet("payments")] public Task<IActionResult> Payments()=>List("transport-fee-payments");
- [HttpGet("reports")] public async Task<IActionResult> Reports() { var p=await Store.ListAsync("transport-fee-payments",null,HttpContext.RequestAborted); var d=await Store.ListAsync("transport-fee-dues",null,HttpContext.RequestAborted); return Ok(new{success=true,data=new{paymentCount=p.Count,dueCount=d.Count,payments=p,dues=d}}); }
+ [HttpGet("reports")] public Task<IActionResult> Reports() => throw BTech.Services.CollegeDataScope.NotImplemented("Transport fee reporting");
 }

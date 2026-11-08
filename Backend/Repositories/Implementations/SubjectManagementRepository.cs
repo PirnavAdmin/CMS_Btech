@@ -2,13 +2,27 @@ using System.Data;
 using BTech.DTOs.Subjects;
 using Dapper;
 using MySqlConnector;
+using BTech.Services;
 namespace BTech.Repositories.Implementations;
 
 public sealed class SubjectManagementRepository
 {
     private readonly string _connectionString;
-    public SubjectManagementRepository(IConfiguration configuration) => _connectionString =
-        configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Database connection is missing.");
+    private readonly IHttpContextAccessor _accessor;
+    public SubjectManagementRepository(IConfiguration configuration, IHttpContextAccessor accessor)
+    {
+        _connectionString = configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Database connection is missing.");
+        _accessor = accessor;
+    }
+    private long? Scope(long? requested = null) => CollegeDataScope.Resolve(_accessor.HttpContext!, requested);
+    private async Task CheckWrite(MySqlConnection c,long id,CancellationToken ct)
+    {
+        var scope=Scope();
+        if(id<=0||!scope.HasValue)return;
+        var owners=(await c.QueryAsync<long>(new CommandDefinition("SELECT DISTINCT college_id FROM vw_sm_subject_mappings WHERE subject_id=@id",new{id},cancellationToken:ct))).ToList();
+        if(!owners.Contains(scope.Value))throw new ContractException(404,"RECORD_NOT_FOUND","Subject not found.");
+        if(owners.Any(x=>x!=scope.Value))throw new ContractException(403,"SHARED_SUBJECT_REQUIRES_SUPER_ADMIN","Only Super Admin can change a subject shared by multiple colleges.");
+    }
     private MySqlConnection Connection() => new(_connectionString);
     private static CommandDefinition Command(string name, object args, CancellationToken ct) =>
         new(name, args, commandType: CommandType.StoredProcedure, cancellationToken: ct);
@@ -25,6 +39,7 @@ public sealed class SubjectManagementRepository
 
     public async Task<List<Dictionary<string, object?>>> ListAsync(SubjectSearchRequest r, long? id, int? level, CancellationToken ct)
     {
+        r.CollegeId=Scope(r.CollegeId);
         await using var c = Connection();
         using var results = await c.QueryMultipleAsync(Command("sp_sm_subject_list", new
         {
@@ -50,6 +65,7 @@ public sealed class SubjectManagementRepository
     public async Task<long> SaveAsync(long id, SubjectWriteRequestBase r, long? actor, CancellationToken ct)
     {
         await using var c = Connection();
+        await CheckWrite(c,id,ct);
         return await c.ExecuteScalarAsync<long>(Command("sp_sm_subject_save", new
         {
             p_id=id,p_code=r.NormalizedSubjectCode,p_name=r.NormalizedSubjectName,p_year=r.AcademicYearId,
@@ -63,6 +79,7 @@ public sealed class SubjectManagementRepository
     public async Task StatusAsync(long id, byte status, bool delete, long? actor, CancellationToken ct)
     {
         await using var c = Connection();
+        await CheckWrite(c,id,ct);
         await c.ExecuteAsync(Command("sp_sm_subject_status", new { p_id=id,p_status=status,p_delete=delete ? 1 : 0,p_actor=actor }, ct));
     }
     public async Task<List<Dictionary<string, object?>>> DependenciesAsync(long id, CancellationToken ct)
@@ -72,6 +89,7 @@ public sealed class SubjectManagementRepository
     }
     public async Task<object> LookupsAsync(SubjectSearchRequest r, CancellationToken ct)
     {
+        r.CollegeId=Scope(r.CollegeId);
         await using var c = Connection();
         using var sets = await c.QueryMultipleAsync(Command("sp_sm_subject_lookups", new
         { p_college=r.CollegeId,p_year=r.AcademicYearId,p_course=r.CourseId,p_branch=r.BranchId }, ct));

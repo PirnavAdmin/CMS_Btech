@@ -1,6 +1,6 @@
 import { useScreenAccess } from '../../../auth/ScreenAccess'
 import NativeMarksDialog from '../../../components/ViewDialog'
-import { NavLink as react_router_domImports_NavLink, Link as react_router_domImports_Link, Navigate as react_router_domImports_Navigate } from 'react-router-dom'
+import { NavLink as react_router_domImports_NavLink, Link as react_router_domImports_Link, Navigate as react_router_domImports_Navigate, useSearchParams } from 'react-router-dom'
 import { FiCheckSquare as fiImports_FiCheckSquare, FiEdit3 as fiImports_FiEdit3, FiUploadCloud as fiImports_FiUploadCloud, FiUser as fiImports_FiUser, FiFileText as fiImports_FiFileText, FiSearch as fiImports_FiSearch, FiX as fiImports_FiX, FiCheck as fiImports_FiCheck, FiEye as fiImports_FiEye, FiEdit2 as fiImports_FiEdit2, FiPlus as fiImports_FiPlus, FiTrash2 as fiImports_FiTrash2, FiBookOpen as fiImports_FiBookOpen, FiAlertCircle as fiImports_FiAlertCircle } from 'react-icons/fi'
 import SearchableSelectImports_default, { ProjectSelect as SearchableSelectImports_ProjectSelect } from '../../../components/SearchableSelect'
 import { useMemo as reactImports_useMemo, useState as reactImports_useState, useCallback as reactImports_useCallback, useEffect as reactImports_useEffect, useRef as reactImports_useRef } from 'react'
@@ -26,6 +26,19 @@ import academicServiceImports_default from '../../../services/academicService'
 import { getExamTypes as examServiceImports_getExamTypes } from '../../../services/examService'
 import { fetchExamTypes as collegeApiImports_fetchExamTypes } from '../../../auth/collegeApi'
 import './MarksManagement.css'
+
+function marksHandoffPath(path, examId, studentId) {
+  if (!/^[1-9]\d*$/.test(String(examId))) return null
+  const query = new URLSearchParams({ examId: String(examId) })
+  if (/^[1-9]\d*$/.test(String(studentId))) query.set('studentId', String(studentId))
+  return `${path}?${query}`
+}
+
+function ReviewResultLink({ examId, studentId }) {
+  const to = marksHandoffPath('/results', examId, studentId)
+  if (!to) return null
+  return <react_router_domImports_Link className="erp-btn erp-btn--secondary" to={to}>Review results</react_router_domImports_Link>
+}
 
 // MarksModuleNav screen and private helpers.
 const MarksModuleNavScreen = (() => {
@@ -1048,6 +1061,12 @@ function actorFromHistory(history, target) {
 }
 
 function MarksApproval() {
+  const { canAction } = useScreenAccess()
+  const canReviewResults = canAction('/results', 'create') || canAction('/results', 'edit')
+  const [params] = useSearchParams()
+  const linkedExam = params.get('examId')
+  const examFilter = /^[1-9]\d*$/.test(linkedExam || '') ? linkedExam : ''
+  const [approvedSelection, setApprovedSelection] = useState(null)
   const academic = useAcademic()
   const role = getUserRole() || ''
   const canDecide = approverRoles.has(role)
@@ -1061,9 +1080,9 @@ function MarksApproval() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('All')
+  const [statusFilter, setStatusFilter] = useState(examFilter ? 'Pending' : 'All')
   const [filters, setFilters] = useState({
-    academicYear: '', course: '', branch: '', semester: '', section: '', subject: '', exam: '', faculty: '',
+    academicYear: '', course: '', branch: '', semester: '', section: '', subject: '', exam: examFilter, faculty: '',
   })
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState(null)
@@ -1240,9 +1259,10 @@ function MarksApproval() {
   }
 
   const confirmDecision = async remarks => {
-    if (!selected || !canDecide || selected.status !== 'Pending') return
+    if (busy || !selected || !canDecide || selected.status !== 'Pending') return
     setBusy(true)
     const action = decision
+    setApprovedSelection(null)
     try {
       const payload = marksWorkflowPayload(action, selected.rawMarks, remarks)
       const sectionId = Number(selected.sectionId)
@@ -1271,14 +1291,7 @@ function MarksApproval() {
       } else {
         response = await marksApi.workflow(action, payload)
       }
-      if (patchedApproval) {
-        showSuccess(action === 'approve' ? 'Marks approved successfully.' : 'Marks rejected successfully.')
-        setDecision('')
-        closeDetails()
-        await load()
-        return
-      }
-      const completed = decisionResultCount(response, action)
+      const completed = patchedApproval ? payload.markIds.length : decisionResultCount(response, action)
       if (completed !== payload.markIds.length) {
         const details = Array.isArray(response?.errors)
           ? response.errors.map(error => error?.message || error?.errorCode).filter(Boolean).join(' ')
@@ -1290,6 +1303,12 @@ function MarksApproval() {
         return
       }
 
+      if (action === 'approve') {
+        setApprovedSelection({
+          examId: payload.examId,
+          studentId: selected.rawMarks.length === 1 ? pick(selected.rawMarks[0], 'studentId') : undefined,
+        })
+      }
       showSuccess(action === 'approve' ? 'Marks approved successfully.' : 'Marks rejected successfully.')
       setDecision('')
       closeDetails()
@@ -1380,6 +1399,10 @@ function MarksApproval() {
           ] : undefined}
         />
         <MarksModuleNav />
+        {approvedSelection && <div className="erp-card marks-workflow-handoff" role="status">
+          <span>Marks approved successfully.</span>
+          {canReviewResults && <ReviewResultLink {...approvedSelection} />}
+        </div>}
 
         {forbidden ? (
           <article className="erp-card marks-approval-forbidden">
@@ -1483,6 +1506,7 @@ function MarksApproval() {
                               <button type="button" className="marks-approval-view-btn" onClick={() => openDetails(batch)}>
                                 <FiEye aria-hidden="true" /> View
                               </button>
+                              {canReviewResults && batch.status === 'Approved' && <ReviewResultLink examId={batch.examId} studentId={batch.rawMarks.length === 1 ? pick(batch.rawMarks[0], 'studentId') : undefined} />}
                             </td>
                           </tr>
                         ))}
@@ -1861,8 +1885,10 @@ function MarksEntry() {
 }
 
 function MarksEntryWorkspace({ pendingMarks }) {
+  const [handoff, setHandoff] = useState(null)
   const { canAction } = useScreenAccess()
   const canCreate = canAction('/marks-management/marks-entry','create'), canEdit = canAction('/marks-management/marks-entry','edit')
+  const canReviewResults = canAction('/results', 'create') || canAction('/results', 'edit')
   const saveLock = useRef(false)
   const {
     academicYears = [],
@@ -3240,6 +3266,7 @@ function MarksEntryWorkspace({ pendingMarks }) {
           ...payload,
         }, pendingMarks.current)
       const record = toEntryRow(saved)
+      setHandoff({ row: record, submitted: false })
       setDraftRows(current => editingId
         ? current.map(row => row.id === editingId ? record : row)
         : [record, ...current])
@@ -3314,6 +3341,7 @@ function MarksEntryWorkspace({ pendingMarks }) {
       const payload = marksWorkflowPayload('submit', [row])
       const result = await marksApi.workflow('submit', payload)
       if (Number(result?.processedCount) !== 1) throw new Error('The server did not confirm that this mark was submitted.')
+      setHandoff({ row, submitted: true })
       showSuccess('Marks submitted for approval.')
       await loadMarks()
     } catch (error) {
@@ -3341,7 +3369,18 @@ function MarksEntryWorkspace({ pendingMarks }) {
         />
 
         <MarksModuleNav />
-
+        {handoff && <div className="erp-card marks-workflow-handoff" role="status">
+          <span>{handoff.submitted ? 'Marks submitted. Review them in Marks Approval.' : 'Marks saved as a draft. Submit for approval to continue to Results.'}</span>
+          {handoff.submitted ? (
+            <react_router_domImports_Link className="erp-btn erp-btn--secondary" to={marksHandoffPath('/marks-management/marks-approval', handoff.row.examId) || '/marks-management/marks-approval'}>
+              Open Marks Approval
+            </react_router_domImports_Link>
+          ) : canEdit && ['DRAFT', 'REJECTED'].includes(String(handoff.row.workflowStatus || '').toUpperCase()) && (
+            <button type="button" className="erp-btn erp-btn--primary" disabled={Boolean(submittingMarkId)} onClick={() => submitMark(handoff.row)}>
+              {submittingMarkId ? 'Submitting…' : 'Submit saved marks'}
+            </button>
+          )}
+        </div>}
         <article className="erp-card marks-entry-card">
           <header className="erp-card-header marks-entry-card__header">
             <div>
@@ -4066,6 +4105,7 @@ function MarksEntryWorkspace({ pendingMarks }) {
 
                       <td className="marks-entry-actions-cell">
                         <div className="table-actions-group marks-entry-row-actions">
+                          {canReviewResults && String(row.workflowStatus).toUpperCase() === 'APPROVED' && <ReviewResultLink examId={row.examId} studentId={row.studentId} />}
                           {canManageMark && (
                             <>
                               <button

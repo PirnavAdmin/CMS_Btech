@@ -24,3 +24,69 @@
 @media(max-width:700px){.examination-setup--connected .examination-setup__header{grid-template-columns:1fr}.examination-setup--connected .examination-setup__toolbar>.examination-setup__primary{margin-left:0}.examination-setup--connected .examination-setup__form{grid-template-columns:1fr}}
 
 .examination-setup--connected .shared-view-dialog__body>.examination-setup__form{padding:0;box-shadow:none;border:0;background:transparent}.examination-record-details{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin:0}.examination-record-details dt{font-size:12px;color:var(--text-secondary)}.examination-record-details dd{margin:4px 0 0;font-size:14px;overflow-wrap:anywhere}
+
+.exam-workspace-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 24px;
+  padding: 14px 16px;
+  border: 1px solid var(--es-line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.exam-workspace-navigation__group {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.exam-workspace-navigation__group > span {
+  color: var(--text-secondary);
+  font-size: .75rem;
+  font-weight: 700;
+}
+
+.exam-workspace-navigation__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.exam-workspace-navigation__links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: .875rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.exam-workspace-navigation__links a:hover,
+.exam-workspace-navigation__links a[aria-current="page"] {
+  background: var(--es-soft);
+  color: var(--text-primary);
+}
+
+.exam-workspace-navigation__links a[aria-current="page"] {
+  border-color: var(--brand);
+}
+
+.exam-workspace-view {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--es-line);
+}
+
+.exam-workspace-view h2 { margin: 0; font-size: 1.125rem; }
+.exam-workspace-view p { margin: 4px 0 0; color: var(--text-secondary); }
+
+.examination-setup--connected .examination-setup__table-wrap table thead th {
+  background: var(--es-soft);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--es-line);
+}

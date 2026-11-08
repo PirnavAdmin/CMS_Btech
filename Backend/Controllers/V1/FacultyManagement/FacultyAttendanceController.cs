@@ -1,3 +1,4 @@
+using BTech.Services;
 using System.Data;
 using BTech.Data;
 using ClosedXML.Excel;
@@ -24,6 +25,8 @@ public class FacultyAttendanceController : ControllerBase
         _context = context;
     }
 
+    private long? Scope()=>CollegeDataScope.Resolve(HttpContext);
+    private long? OwnUser()=>new[]{"SUPER_ADMIN","COLLEGE_ADMIN","PRINCIPAL","HOD"}.Any(x=>CollegeDataScope.HasRole(HttpContext,x))?null:CollegeDataScope.Actor(HttpContext);
     private MySqlConnection Connection() => new(_configuration.GetConnectionString("DefaultConnection"));
 
     // GET: api/v1/faculty-attendance
@@ -32,7 +35,8 @@ public class FacultyAttendanceController : ControllerBase
     {
         const string sql = @"
 SELECT * FROM faculty_attendance
-WHERE (@facultyId IS NULL OR faculty_id = @facultyId)
+WHERE EXISTS(SELECT 1 FROM faculty scope_f WHERE scope_f.faculty_id=faculty_attendance.faculty_id AND (@collegeScope IS NULL OR scope_f.college_id=@collegeScope) AND (@ownUser IS NULL OR scope_f.user_id=@ownUser))
+AND (@facultyId IS NULL OR faculty_id = @facultyId)
   AND (@fromDate IS NULL OR attendance_date >= @fromDate)
   AND (@toDate IS NULL OR attendance_date <= @toDate)
   AND (@status IS NULL OR status = @status)
@@ -41,7 +45,7 @@ ORDER BY attendance_date DESC, attendance_id DESC;";
         {
             await using var connection = Connection();
             await connection.OpenAsync();
-            var rows = await connection.QueryAsync(sql, new { facultyId, fromDate, toDate, status });
+            var rows = await connection.QueryAsync(sql, new { facultyId, fromDate, toDate, status, collegeScope=Scope(), ownUser=OwnUser() });
             return Ok(new { success = true, message = "Faculty attendance retrieved successfully.", data = rows });
         }
         catch (MySqlException)
@@ -242,7 +246,8 @@ SELECT faculty_id,
        SUM(CASE WHEN status = 'LEAVE' THEN 1 ELSE 0 END) AS leave_days,
        ROUND(100.0 * SUM(CASE WHEN status = 'PRESENT' THEN 1 ELSE 0 END) / NULLIF(COUNT(*),0), 2) AS attendance_percentage
 FROM faculty_attendance
-WHERE (@facultyId IS NULL OR faculty_id = @facultyId)
+WHERE EXISTS(SELECT 1 FROM faculty scope_f WHERE scope_f.faculty_id=faculty_attendance.faculty_id AND (@collegeScope IS NULL OR scope_f.college_id=@collegeScope) AND (@ownUser IS NULL OR scope_f.user_id=@ownUser))
+AND (@facultyId IS NULL OR faculty_id = @facultyId)
   AND (@fromDate IS NULL OR attendance_date >= @fromDate)
   AND (@toDate IS NULL OR attendance_date <= @toDate)
 GROUP BY faculty_id
@@ -251,7 +256,7 @@ ORDER BY faculty_id;";
         {
             await using var connection = Connection();
             await connection.OpenAsync();
-            var rows = await connection.QueryAsync(sql, new { facultyId, fromDate, toDate });
+            var rows = await connection.QueryAsync(sql, new { facultyId, fromDate, toDate, collegeScope=Scope(), ownUser=OwnUser() });
             return Ok(new { success = true, message = "Faculty attendance reports retrieved successfully.", data = rows });
         }
         catch (MySqlException) { return DbError(); }
@@ -274,7 +279,8 @@ SELECT
     check_out AS CheckOut,
     remarks AS Remarks
 FROM faculty_attendance
-WHERE (@facultyId IS NULL OR faculty_id = @facultyId)
+WHERE EXISTS(SELECT 1 FROM faculty scope_f WHERE scope_f.faculty_id=faculty_attendance.faculty_id AND (@collegeScope IS NULL OR scope_f.college_id=@collegeScope) AND (@ownUser IS NULL OR scope_f.user_id=@ownUser))
+AND (@facultyId IS NULL OR faculty_id = @facultyId)
   AND (@fromDate IS NULL OR attendance_date >= @fromDate)
   AND (@toDate IS NULL OR attendance_date <= @toDate)
 ORDER BY attendance_date DESC, attendance_id DESC;";
@@ -290,7 +296,7 @@ ORDER BY attendance_date DESC, attendance_id DESC;";
                 {
                     facultyId,
                     fromDate,
-                    toDate
+                    toDate, collegeScope=Scope(), ownUser=OwnUser()
                 })).ToList();
 
             using var workbook = new XLWorkbook();

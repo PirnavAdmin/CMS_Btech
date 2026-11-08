@@ -8,8 +8,8 @@ import { academicYearApi, studentApi } from '../../api/apiEndpoints'
 import eventBus, { ERP_EVENTS } from '../../services/eventBus'
 import { showDeactivationBlocked } from '../../components/DeactivationBlockedDialog'
 
-const fixture = vi.hoisted(() => ({ collegeId: '7', rows: [], contextLoading: false }))
-vi.mock('../../auth/ScreenAccess', () => ({ useScreenAccess: () => ({ canAction: () => true }) }))
+const fixture = vi.hoisted(() => ({ collegeId: '7', rows: [], contextLoading: false, canCreate: true }))
+vi.mock('../../auth/ScreenAccess', () => ({ useScreenAccess: () => ({ canAction: (_path, action) => action !== 'create' || fixture.canCreate }) }))
 vi.mock('../../auth/collegeApi', async original => ({ ...await original(), generateNextAcademicYear: vi.fn() }))
 vi.mock('../../layouts/DashboardLayout', () => ({ default: ({ children }) => <>{children}</> }))
 vi.mock('../../components/ExportMenu', () => ({ default: ({ loading }) => <button type="button" disabled={loading}>Export</button>, PrintDetailsButton: () => null }))
@@ -22,7 +22,7 @@ const year = (id = 1, overrides = {}) => ({ academicYearId: id, collegeId: 7, ac
 const writeCollege = value => { fixture.collegeId = value; localStorage.setItem('pirnav_academic_context', JSON.stringify({ collegeId: value, academicYearId: '' })) }
 const deferred = () => { let resolve, reject; const promise = new Promise((done, fail) => { resolve = done; reject = fail }); return { promise, resolve, reject } }
 beforeEach(() => {
- vi.clearAllMocks(); localStorage.clear(); sessionStorage.clear(); fixture.contextLoading = false; writeCollege('7'); fixture.rows = [year()]
+ vi.clearAllMocks(); localStorage.clear(); sessionStorage.clear(); fixture.contextLoading = false; fixture.canCreate = true; writeCollege('7'); fixture.rows = [year()]
  vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-11-03T06:00:00Z'))
  generateNextAcademicYear.mockReset().mockImplementation(async payload => { const base = [...fixture.rows].sort((a,b) => b.endDate.localeCompare(a.endDate))[0]; const start = base ? `${Number(base.endDate.slice(0,4))}-06-01` : payload.startDate; const result = year(99, { startDate: start, endDate: `${Number(start.slice(0,4))+1}-05-31` }); fixture.rows.push(result); return { data: { data: result } } });
  academicYearApi.getAll.mockReset().mockImplementation(async () => [...fixture.rows])
@@ -34,6 +34,20 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.useRealTimers(); document.documentElement.removeAttribute('data-theme') })
 const tree = () => <MemoryRouter><AcademicYearManagement /></MemoryRouter>
 const mount = () => render(tree())
+
+test('settings add handoff opens the existing dialog once without creating or activating a year', async () => {
+ render(<MemoryRouter initialEntries={['/academic-year-management?action=add']}><AcademicYearManagement /></MemoryRouter>)
+ const dialog = await screen.findByRole('dialog', { name: 'Add Academic Year' })
+ fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+ await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+ expect(academicYearApi.create).not.toHaveBeenCalled(); expect(academicYearApi.activate).not.toHaveBeenCalled(); expect(academicYearApi.deactivate).not.toHaveBeenCalled()
+})
+
+test('settings add handoff cannot bypass create permission', async () => {
+ fixture.canCreate = false
+ render(<MemoryRouter initialEntries={['/academic-year-management?action=add']}><AcademicYearManagement /></MemoryRouter>)
+ await directory(); expect(screen.queryByRole('dialog')).toBeNull(); expect(academicYearApi.create).not.toHaveBeenCalled()
+})
 
 test('a dated but inactive year is not displayed as the backend active year', async () => {
  fixture.rows = [year(1, { academicYearName: '2026 - 2027', startDate: '2026-06-01', endDate: '2027-05-31', backendStatus: 0, status: 'Inactive', isActive: false })]

@@ -58,7 +58,7 @@ const portalModules = { dashboard: 'dashboard', profile: 'my_profile', notificat
 export const additionalScreens = [
   ['/subject-management', 'Subject Management'], ['/timetable', 'Timetable Management'], ['/student-management/profiles', 'Student Profiles'], ['/student-management/attendance', 'Student Attendance'], ['/marks-management/marks-entry', 'Marks Management'], ['/faculty/leave-management', 'Faculty Leave Management'],
   ['/college-institution-management', 'Colleges'], ['/academic-year-management', 'Academic Years'], ['/department-management', 'Departments'], ['/courses', 'Courses'], ['/branches', 'Branches'], ['/semester-management', 'Semesters'], ['/section-management', 'Sections'], ['/rooms-management', 'Rooms & Classrooms'],
-  ['/faculty', 'Faculty Directory'], ['/faculty/attendance', 'Faculty Attendance'], ['/faculty/payroll', 'Faculty Payroll'], ['/student-management/admissions', 'Student Admissions'], ['/student-management/promotions', 'Student Promotions'], ['/credits-management', 'Credits'], ['/elective-management', 'Electives'], ['/examination-setup', 'Examination Setup'], ['/exam-timetable', 'Exam Timetable'], ['/results', 'Official Results'], ['/grade-result-management', 'Grade Management'], ['/fees', 'Fee Management'], ['/library', 'Library'], ['/meetings-events', 'Meetings / Events'], ['/placement', 'Placement'], ['/roles-designations', 'Roles & Designations'], ['/settings', 'Settings'],
+  ['/faculty', 'Faculty Directory'], ['/faculty/attendance', 'Faculty Attendance'], ['/faculty/payroll', 'Faculty Payroll'], ['/student-management/admissions', 'Student Admissions'], ['/student-management/promotions', 'Student Promotions'], ['/credits-management', 'Credits'], ['/elective-management', 'Electives'], ['/examination-setup', 'Exam Management'], ['/results', 'Grades & Results'], ['/fees', 'Fee Management'], ['/library', 'Library'], ['/meetings-events', 'Meetings / Events'], ['/placement', 'Placement'], ['/roles-designations', 'Roles & Designations'], ['/settings', 'Settings'],
 ]
 
 export function permissionModuleForScreen(path) {
@@ -70,6 +70,9 @@ export function canViewScreen(path, role, permissions = {}, access = {}) {
   if (isPersonalWorkspace(path, role)) return true
   // Own-profile access is necessary for the existing first-login completion flow.
   if (path === '/my-profile') return true
+  if (role === 'admin' && /^\/(?:settings(?:\/academic-context)?|global-settings)\/?$/.test(path)) {
+    return ['academic_settings', 'colleges', 'academic_years'].some(module => hasModuleAction({ ...access, permissions }, module))
+  }
   const portal = path.match(/^\/(faculty|student|staff)-portal(?:\/([^/]+))?\/?$/)
   if (portal && portal[1] !== role) return false
   if (!portal && role === 'student' && path !== '/my-subjects') return false
