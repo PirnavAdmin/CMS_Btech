@@ -70,6 +70,9 @@ export function canViewScreen(path, role, permissions = {}, access = {}) {
   if (isPersonalWorkspace(path, role)) return true
   // Own-profile access is necessary for the existing first-login completion flow.
   if (path === '/my-profile') return true
+  if (role === 'admin' && /^\/(?:settings(?:\/academic-context)?|global-settings)\/?$/.test(path)) {
+    return ['academic_settings', 'colleges', 'academic_years'].some(module => hasModuleAction({ ...access, permissions }, module))
+  }
   const portal = path.match(/^\/(faculty|student|staff)-portal(?:\/([^/]+))?\/?$/)
   if (portal && portal[1] !== role) return false
   if (!portal && role === 'student' && path !== '/my-subjects') return false
