@@ -36,6 +36,8 @@
 .section-reference-heading p { margin:3px 0 0; color:var(--text-muted); font-size:12px; }
 .section-table { width:100%; min-width:1150px; border-collapse:collapse; }
 .section-table th { padding:10px 12px; text-align:left; font-size:11px; background:var(--cms-table-header); color:var(--text-muted); white-space:nowrap; }
+#root .section-table thead tr th { display:table-cell!important; visibility:visible!important; position:static!important; opacity:1!important; padding:12px 16px!important; border-top:0!important; border-bottom:1px solid #d8dfc4!important; background:#eef2df!important; background-color:#eef2df!important; color:#34420b!important; font-size:11px!important; font-weight:700!important; text-transform:uppercase!important; letter-spacing:.06em!important; white-space:nowrap!important; vertical-align:middle!important; line-height:1.4!important; }
+:root[data-theme="dark"] #root .section-table thead tr th { border-color:#9aac35!important; background:#849d12!important; background-color:#849d12!important; color:#fff!important; }
 .section-table td { padding:11px 12px; text-align:left; color:var(--text-secondary); font-size:12px; border-bottom:1px solid var(--border); }
 .section-table tbody tr:hover { background:var(--cms-hover); }
 .section-reference-detail-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }

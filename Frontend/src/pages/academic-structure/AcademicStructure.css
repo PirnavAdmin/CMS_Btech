@@ -938,6 +938,19 @@ select.as-form-control::-ms-expand {
   display: none;
 }
 
+/* Keep every control in the Branch editor on one consistent size. */
+.academic-structure .as-modal:has(#branch-status) .as-form-control,
+.academic-structure .as-modal:has(#course-status) .as-form-control {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 52px;
+  height: 52px;
+  padding: 0 0.75rem;
+  line-height: 1.25;
+}
+.academic-structure .as-modal:has(#branch-status) select.as-form-control,
+.academic-structure .as-modal:has(#course-status) select.as-form-control { padding-right:2.25rem; }
+
 .as-form-control.is-invalid {
   border-color: #dc2626;
   background-color: #fffafb;
@@ -1200,3 +1213,13 @@ select.as-form-control::-ms-expand {
 .academic-structure .as-modal--semester .as-modal__footer { padding:1rem 1.25rem; }
 .academic-structure .as-modal--semester .as-modal__body { gap:.8rem; padding:1rem 1.25rem; }
 .academic-structure .as-modal--semester .as-form-row { gap:.8rem; }
+.academic-structure .as-modal--semester .as-form-control {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 52px;
+  height: 52px;
+  padding: 0 0.75rem;
+  line-height: 1.25;
+}
+.academic-structure .as-modal--semester select.as-form-control { padding-right: 2.25rem; }

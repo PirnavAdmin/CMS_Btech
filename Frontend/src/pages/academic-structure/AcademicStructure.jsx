@@ -2088,18 +2088,20 @@ export default function AcademicStructure() {
                     </div>
                   </div>
 
-                  <div className="as-form-group">
-                    <label htmlFor="sem-status">Semester Status</label>
-                    <select
-                      id="sem-status"
-                      className="as-form-control"
-                      value={semesterForm.status}
-                      onChange={(e) => setSemesterForm({ ...semesterForm, status: e.target.value })}
-                    >
-                      <option value="Upcoming">Upcoming</option>
-                      <option value="Active">Active</option>
-                      <option value="Completed">Completed</option>
-                    </select>
+                  <div className="as-form-row">
+                    <div className="as-form-group">
+                      <label htmlFor="sem-status">Semester Status</label>
+                      <select
+                        id="sem-status"
+                        className="as-form-control"
+                        value={semesterForm.status}
+                        onChange={(e) => setSemesterForm({ ...semesterForm, status: e.target.value })}
+                      >
+                        <option value="Upcoming">Upcoming</option>
+                        <option value="Active">Active</option>
+                        <option value="Completed">Completed</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
                 <div className="as-modal__footer">
