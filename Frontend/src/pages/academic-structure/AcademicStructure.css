@@ -707,6 +707,14 @@
   position: static !important;
 }
 
+/* Keep academic table labels readable when the app-wide table theme loads later. */
+:root .academic-structure .as-content-card .as-table thead tr th {
+  background: #eef2df !important;
+  background-color: #eef2df !important;
+  color: #34420b !important;
+  border-bottom: 1px solid #d8dfc4 !important;
+}
+
 /* Responsive label shown only on small screens (card-style layout) */
 .as-table td[data-label]::before {
   content: attr(data-label);
@@ -1171,3 +1179,53 @@ select.as-form-control::-ms-expand {
     flex-wrap: wrap;
   }
 }
+
+/* Dark olive directory palette, matched to the Section Directory reference. */
+:root[data-theme="dark"] .academic-structure {
+  --as-surface: #192219;
+  --as-surface-raised: #1d281e;
+  --as-surface-hover: #263226;
+  --as-line: #3a4932;
+  --as-text: #f1f3eb;
+  --as-muted: #9aa493;
+  --as-accent: #849d12;
+  --as-accent-border: #98ad2d;
+  color: var(--as-text);
+}
+:root[data-theme="dark"] .academic-structure :is(.as-breadcrumb,.as-breadcrumb a,.as-title-group p,.as-card-header__count,.as-tab-count,.as-cell-hierarchy__sub,.as-loading-state) { color:var(--as-muted); }
+:root[data-theme="dark"] .academic-structure :is(.as-breadcrumb__current,.as-title-group h1,.as-card-header__title,.as-card-toolbar__title,.as-cell-hierarchy__main) { color:var(--as-text); }
+:root[data-theme="dark"] .academic-structure .as-tab-button { border-color:var(--as-line); background:var(--as-surface); color:var(--as-text); }
+:root[data-theme="dark"] .academic-structure .as-tab-button:hover { border-color:var(--as-accent-border); background:var(--as-surface-hover); }
+:root[data-theme="dark"] .academic-structure .as-tab-button.is-active { border-color:var(--as-accent); background:var(--as-accent); color:#fff; }
+:root[data-theme="dark"] .academic-structure .as-tab-count { background:#263226; color:#dce3d2; }
+:root[data-theme="dark"] .academic-structure .as-tab-button.is-active .as-tab-count { background:#71870c; color:#fff; }
+:root[data-theme="dark"] .academic-structure .as-content-card { border-color:var(--as-line); background:var(--as-surface); box-shadow:0 8px 24px rgba(0,0,0,.18); }
+:root[data-theme="dark"] .academic-structure :is(.as-card-header,.as-card-toolbar) { border-color:var(--as-line); background:var(--as-surface); }
+:root[data-theme="dark"] .academic-structure :is(.as-filter-container,.as-card-filter-bar) { border-color:var(--as-line); background:var(--as-surface); }
+:root[data-theme="dark"] .academic-structure .as-card-filter-bar .as-search-box__input { border-color:var(--as-line); background:var(--as-surface-raised); color:var(--as-text); }
+:root[data-theme="dark"] .academic-structure .as-card-filter-bar .as-search-box__input::placeholder { color:var(--as-muted); }
+:root[data-theme="dark"] .academic-structure :is(.as-filters-btn,.as-filter-reset,.as-control-select) { border-color:var(--as-line); background-color:var(--as-surface-raised); color:var(--as-text); }
+:root[data-theme="dark"] .academic-structure .as-filters-btn { background:var(--as-surface-raised); }
+:root[data-theme="dark"] .academic-structure :is(.as-filters-btn:hover,.as-filters-btn.is-active,.as-filters-btn.has-active) { border-color:var(--as-accent); background:#26331e; color:#c4d95e; }
+:root[data-theme="dark"] .academic-structure .as-filters-drawer { border-color:var(--as-line); background:var(--as-surface-raised); }
+:root[data-theme="dark"] .academic-structure :is(.as-filters-drawer__title,.as-filter-title,.as-context-banner) { color:var(--as-text); }
+:root[data-theme="dark"] .academic-structure .as-context-banner { border-color:var(--as-line); background:#26331e; }
+:root[data-theme="dark"] .academic-structure .as-context-banner span strong { color:var(--as-text); }
+:root[data-theme="dark"] .academic-structure .as-btn--primary { border-color:var(--as-accent); background:var(--as-accent); color:#fff; }
+:root[data-theme="dark"] .academic-structure .as-btn--outline { border-color:var(--as-line); background:var(--as-surface-raised); color:var(--as-text); }
+:root[data-theme="dark"] .academic-structure .as-btn--outline:hover:not(:disabled) { border-color:var(--as-accent-border); background:#26331e; color:#d1e46d; }
+:root[data-theme="dark"] .academic-structure .as-btn--icon-only { border-color:var(--as-line); background:var(--as-surface-raised); color:var(--as-muted); }
+:root[data-theme="dark"] .academic-structure .as-table { background:var(--as-surface); }
+:root[data-theme="dark"] .academic-structure .as-content-card .as-table thead tr th { border-color:#9aac35!important; background:#849d12!important; background-color:#849d12!important; color:#fff!important; }
+:root[data-theme="dark"] .academic-structure .as-table td { border-color:var(--as-line); background:var(--as-surface); color:var(--as-text); }
+:root[data-theme="dark"] .academic-structure .as-table tr:hover td { background:var(--as-surface-hover); }
+:root[data-theme="dark"] .academic-structure :is(.as-badge-code,.as-tab-count) { border-color:var(--as-line); background:#263226; color:#dce3d2; }
+:root[data-theme="dark"] .academic-structure .as-cell-hierarchy__sub { color:var(--as-muted); }
+:root[data-theme="dark"] .academic-structure .as-action-btn { color:var(--as-muted); }
+:root[data-theme="dark"] .academic-structure .as-action-btn:hover { border-color:var(--as-line); background:var(--as-surface-hover); color:var(--as-text); }
+:root[data-theme="dark"] .academic-structure .as-modal { border:1px solid var(--as-line); background:var(--as-surface); }
+:root[data-theme="dark"] .academic-structure .as-modal :is(.as-modal__header,.as-modal__footer) { border-color:var(--as-line); background:var(--as-surface-raised); }
+:root[data-theme="dark"] .academic-structure .as-modal__header h3 { color:var(--as-text); }
+:root[data-theme="dark"] .academic-structure .as-form-group label { color:#dce3d2; }
+:root[data-theme="dark"] .academic-structure .as-form-control { border-color:var(--as-line); background-color:var(--as-surface-raised); color:var(--as-text); }
+:root[data-theme="dark"] .academic-structure .as-form-control::placeholder { color:var(--as-muted); }

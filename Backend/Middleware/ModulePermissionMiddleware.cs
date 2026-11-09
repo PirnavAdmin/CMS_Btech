@@ -142,6 +142,7 @@ public sealed class ModulePermissionMiddleware
             }
 
             if (path.Equals("/api/v1/account/profile", StringComparison.OrdinalIgnoreCase) ||
+                path.Equals("/api/v1/profile/photo", StringComparison.OrdinalIgnoreCase) ||
                 (path.Equals("/api/v1/profile", StringComparison.OrdinalIgnoreCase) &&
                  (HttpMethods.IsGet(context.Request.Method) || HttpMethods.IsPatch(context.Request.Method))))
             {
@@ -304,6 +305,33 @@ public sealed class ModulePermissionMiddleware
     private static string? ResolveModule(string path)
     {
         var p = path.ToLowerInvariant();
+        // Classify the collection, so nested "students", "subjects", "rooms"
+        // and "faculty" segments cannot change the permission being enforced.
+        var parts=p.Split('/',StringSplitOptions.RemoveEmptyEntries);
+        var index=parts.Length>1&&parts[1]=="v1"?2:1;
+        var resource=parts.Length>index?parts[index]:"";
+        var mapped=resource switch
+        {
+            "results" or "grades" or "grade-policies" => "results",
+            "marks" => "marks",
+            "exams" or "exam-types" or "exam-schedules" => "examinations",
+            "electives" or "elective-approvals" or "elective-allocations" or "student-electives" => "electives",
+            "credits" or "credit-configurations" or "credit-registrations" => "credits",
+            "timetables" or "timetable-entries" or "timetable-management" => "timetable",
+            "library" => "library",
+            "placements" => "placement",
+            "meetings" or "events" => "meetings_events",
+            "faculty-attendance" => "faculty_attendance",
+            "faculty-leave" => "faculty_leaves",
+            "faculty-payroll" => "faculty_payroll",
+            "faculty" or "faculty-profile" or "faculty-documents" or "faculty-subject-allocations" => "faculty_directory",
+            "student-attendance" => "student_attendance",
+            "student-admissions" or "admissions" => "student_admissions",
+            "promotions" => "student_promotions",
+            "academic-fee-plans" or "fee-students" or "fee-structures" or "fee-categories" or "fee-components" or "fee-assignments" or "fee-collection" or "hostel-fees" or "transport-fees" => "fees",
+            _ => null
+        };
+        if(mapped!=null)return mapped;
         if (p.StartsWith("/api/v1/academic-fee-plans", StringComparison.Ordinal)) return "fees";
         if (p.Contains("access-governance") || p.StartsWith("/api/roles") || p.Contains("role-permission") || p.Contains("screen-exports/role")) return "roles_permissions";
         if (p.Contains("academic-year")) return "academic_years";
@@ -342,6 +370,7 @@ public sealed class ModulePermissionMiddleware
         if (p.Contains("student")) return "student_profiles";
         if (p.Contains("examination") || p.Contains("/exams") || p.Contains("exam-schedule") || p.Contains("exam-type") || p.Contains("grade-policy")) return "examinations";
         if (p.Contains("mark")) return "marks";
+        if (p.StartsWith("/api/v1/grades", StringComparison.Ordinal)) return "results";
         if (p.Contains("result")) return "results";
         if (p.Contains("fee") || p.Contains("hostel-fee") || p.Contains("transport-fee")) return "fees";
         if (p.Contains("library")) return "library";
@@ -369,6 +398,9 @@ public sealed class ModulePermissionMiddleware
         if (path.Contains("export", StringComparison.OrdinalIgnoreCase) || path.Contains("download", StringComparison.OrdinalIgnoreCase)) return "export";
         var p = path.ToLowerInvariant();
         if (method.Equals("POST", StringComparison.OrdinalIgnoreCase) && p.StartsWith("/api/v1/academic-fee-plans/", StringComparison.Ordinal)) return "edit";
+        if (method.Equals("POST", StringComparison.OrdinalIgnoreCase) && p.StartsWith("/api/v1/student-admissions/", StringComparison.Ordinal) && p.EndsWith("/fee-ledger",StringComparison.Ordinal)) return "edit";
+        if (method.Equals("POST", StringComparison.OrdinalIgnoreCase) && p.StartsWith("/api/v1/faculty-leave/policies/", StringComparison.Ordinal) &&
+            (p.EndsWith("/activate", StringComparison.Ordinal) || p.EndsWith("/deactivate", StringComparison.Ordinal))) return "edit";
         if (method.Equals("POST", StringComparison.OrdinalIgnoreCase) &&
             (p.Contains("/search") || p.Contains("/filter") || p.Contains("/summary") || p.Contains("/query") || p.Contains("/list") || p.Contains("/preview") || p.Contains("/validate")))
             return "view";

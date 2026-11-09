@@ -11,7 +11,7 @@ import { getUserCollegeId } from '../../auth/auth.js'
 import { newestFirst as newestFirstImports_newestFirst, rememberCreated as newestFirstImports_rememberCreated } from '../../utils/newestFirst'
 import { showWarning as toastImports_showWarning, showSuccess as toastImports_showSuccess, showError as toastImports_showError } from '../../utils/toast'
 import useToastStateImports_default from '../../hooks/useToastState'
-import { useEffect as reactImports_useEffect, useMemo as reactImports_useMemo, useState as reactImports_useState, useRef as reactImports_useRef, Fragment as reactImports_Fragment, useCallback as reactImports_useCallback } from 'react'
+import { useLayoutEffect as reactImports_useLayoutEffect, useEffect as reactImports_useEffect, useMemo as reactImports_useMemo, useState as reactImports_useState, useRef as reactImports_useRef, Fragment as reactImports_Fragment, useCallback as reactImports_useCallback } from 'react'
 import ExportMenuImports_default, { PrintDetailsButton as ExportMenuImports_PrintDetailsButton } from '../../components/ExportMenu'
 import { yearColumns as exportColumnsImports_yearColumns, collegeColumns as exportColumnsImports_collegeColumns, collegeSettingsColumns as exportColumnsImports_collegeSettingsColumns, departmentColumns as exportColumnsImports_departmentColumns } from '../../utils/exportColumns'
 import DashboardLayoutImports_default from '../../layouts/DashboardLayout'
@@ -24,7 +24,7 @@ import InfoCardImports_default from '../../components/InfoCard'
 import { academicYearApi as apiEndpointsImports_academicYearApi, studentApi as apiEndpointsImports_studentApi, facultyApi as apiEndpointsImports_facultyApi, courseApi as apiEndpointsImports_courseApi, roleApi as apiEndpointsImports_roleApi, sectionApi as apiEndpointsImports_sectionApi, sectionAssignmentApi as apiEndpointsImports_sectionAssignmentApi } from '../../api/apiEndpoints'
 import eventBusImports_default, { ERP_EVENTS as eventBusImports_ERP_EVENTS } from '../../services/eventBus'
 import { showDeactivationBlocked as DeactivationBlockedDialogImports_showDeactivationBlocked } from '../../components/DeactivationBlockedDialog'
-import { FiEye, FiEdit2, FiToggleLeft, FiToggleRight, FiPlus, FiCalendar, FiClock, FiSearch, FiX, FiCheck, FiArrowLeft, FiAlertCircle, FiHome, FiFilter, FiTrash2, FiUserPlus, FiLayers, FiBookOpen, FiUser, FiUserCheck, FiShield, FiAward, FiUsers, FiKey, FiSliders, FiChevronLeft, FiChevronRight, FiInfo, FiRotateCcw, FiGrid, FiCheckCircle, FiBookmark, FiLink, FiUnlock, FiCpu, FiMonitor, FiMapPin, FiAlertTriangle, FiSlash, FiDownload, FiZap } from 'react-icons/fi'
+import { FiEye, FiEdit2, FiToggleLeft, FiToggleRight, FiPlus, FiCalendar, FiClock, FiSearch, FiX, FiCheck, FiArrowLeft, FiAlertCircle, FiHome, FiFilter, FiTrash2, FiUserPlus, FiLayers, FiBookOpen, FiUser, FiUserCheck, FiShield, FiAward, FiUsers, FiKey, FiSliders, FiChevronLeft, FiChevronRight, FiInfo, FiRotateCcw, FiGrid, FiCheckCircle, FiBookmark, FiLink, FiUnlock, FiCpu, FiMonitor, FiMapPin, FiAlertTriangle, FiSlash, FiDownload, FiZap, FiUploadCloud } from 'react-icons/fi'
 import SearchableSelectImports_default, { ProjectSelect as SearchableSelectImports_ProjectSelect } from '../../components/SearchableSelect'
 import { GENERIC_ERROR_MESSAGE as userErrorImports_GENERIC_ERROR_MESSAGE } from '../../utils/userError.js'
 import { collegeLogoValue as collegeLogoImports_collegeLogoValue } from '../../utils/collegeLogo'
@@ -210,6 +210,7 @@ const mapYear = (x) => {
 };
 
 function AcademicYear() {
+  const [settingsParams, setSettingsParams] = react_router_domImports_useSearchParams();
   const { selectedCollegeId, selectedCollege, loading: contextLoading } = AcademicContextImports_useAcademic();
   const loadRequest = reactImports_useRef(0);
   const { canAction } = screenAccessImports_useScreenAccess();
@@ -250,6 +251,17 @@ function AcademicYear() {
     setNoticeTone(tone);
   };
 
+  const openAdd = () => {
+    if (!selectedCollegeId || contextLoading) {
+      showWarning('Select a college before adding an academic year.');
+      return;
+    }
+    setSelected(null);
+    setForm(blank);
+    setErrors({});
+    setModal('add');
+  };
+
   const loadYears = async () => {
     const requestId = ++loadRequest.current;
     setLoadError('');
@@ -265,6 +277,12 @@ function AcademicYear() {
       const list = Array.isArray(data) ? data : data?.records || data?.items || [];
       const scoped = createCollegeScope(selectedCollegeId)(list);
       setYears(newestFirst('academic-years', scoped).map(mapYear));
+      if (settingsParams.get('action') === 'add' && mayCreate && !contextLoading) {
+        openAdd();
+        const nextParams = new URLSearchParams(settingsParams);
+        nextParams.delete('action');
+        setSettingsParams(nextParams, { replace: true });
+      }
     } catch (error) {
       if (requestId !== loadRequest.current || String(selectedCollegeId) !== readSelectedCollegeId()) return;
       setLoadError(error.message || 'Unable to load academic years.');
@@ -311,16 +329,7 @@ function AcademicYear() {
 
   useEffect(() => setPage(1), [search, filter]);
 
-  const openAdd = () => {
-    if (!selectedCollegeId || contextLoading) {
-      showWarning('Select a college before adding an academic year.');
-      return;
-    }
-    setSelected(null);
-    setForm(blank);
-    setErrors({});
-    setModal('add');
-  };
+
 
   const edit = (x) => {
     if (isPresentYear(x)) {
@@ -842,13 +851,14 @@ function validate(values) {
 }
 
 function Field({ label, name, values, errors, touched, onChange, required, maxLength, ...props }) {
+  const showCounter = maxLength && values[name].length >= maxLength * .8
   const error = (touched?.[name] || Boolean(values?.[name])) && errors?.[name]
   return <label className="ac-field" htmlFor={`ac-${name}`}>
     <span>{label}{required && <b aria-hidden="true"> *</b>}</span>
     <input id={`ac-${name}`} name={name} value={values[name]} onChange={onChange} required={required} maxLength={maxLength} aria-invalid={Boolean(error)} aria-describedby={error ? `ac-${name}-error` : undefined} {...props} />
-    {(error || maxLength) && <span className="ac-field-meta">
+    {(error || showCounter) && <span className="ac-field-meta">
       {error && <small id={`ac-${name}-error`} className="ac-error" role="alert">{error}</small>}
-      {maxLength && <small className="ac-counter">{values[name].length}/{maxLength}</small>}
+      {showCounter && <small className="ac-counter">{values[name].length}/{maxLength}</small>}
     </span>}
   </label>
 }
@@ -863,6 +873,9 @@ function AddCollege() {
   const { access: effectiveAccess, loading: accessLoading } = screenAccessImports_useScreenAccess()
   const [searchParams] = useSearchParams()
   const editId = searchParams.get('edit')
+  // This route shares the window scroll owner with the directory. Reset it
+  // before paint instead of offsetting content beneath the in-flow sticky header.
+  reactImports_useLayoutEffect(() => { window.scrollTo({ top: 0, left: 0, behavior: 'instant' }) }, [editId])
   const assignedCollegeId = getUserCollegeId()
   const isSuperAdmin = collegeAccess?.isSuperAdmin === true || effectiveAccess?.isSuperAdmin === true
   const isOutsideAssignedCollege = !isSuperAdmin && Boolean(assignedCollegeId && editId && String(editId) !== String(assignedCollegeId))
@@ -874,6 +887,11 @@ function AddCollege() {
     ? { ...storedValues, universityName: storedValues.collegeName }
     : storedValues
   const [logoFile, setLogoFile] = useState(null)
+  const [readingLogo, setReadingLogo] = useState(false)
+  const logoReadSequence = reactImports_useRef(0)
+  const [submitError, setSubmitError] = useState('')
+  const submitLock = reactImports_useRef(false)
+  useEffect(() => () => { logoReadSequence.current++ }, [logoReadSequence])
   const [removeExistingLogo, setRemoveExistingLogo] = useState(false)
   const [pendingLogoCollegeId, setPendingLogoCollegeId] = useState(null)
   const [existingCollegeCodes, setExistingCollegeCodes] = useState([])
@@ -936,6 +954,9 @@ function AddCollege() {
     const formScope = `${editId || 'new'}:${formUserId}:${isOutsideAssignedCollege}:${loadAttempt}`
     if (loadedFormScope.current === formScope) return undefined
     setCollegeLoadError('')
+    logoReadSequence.current++
+    setReadingLogo(false)
+    setSubmitError('')
     if (logoObjectUrlRef.current) {
       URL.revokeObjectURL(logoObjectUrlRef.current)
       logoObjectUrlRef.current = ''
@@ -1014,7 +1035,7 @@ function AddCollege() {
         logoObjectUrlRef.current = ''
       }
     }
-  }, [editId, isOutsideAssignedCollege, navigate, setNotice, contextLoading, accessLoading, accessReady, formUserId, loadAttempt])
+  }, [editId, isOutsideAssignedCollege, navigate, setNotice, contextLoading, accessLoading, accessReady, formUserId, loadAttempt, logoReadSequence])
 
   useEffect(() => {
     if (!dirty) return
@@ -1080,22 +1101,21 @@ function AddCollege() {
   }
 
   const selectLogo = (file) => {
-    setLogoError('')
     if (!file) return
+    const sequence = ++logoReadSequence.current
+    setReadingLogo(false)
+    setLogoError('')
     if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) return setLogoError('Choose a PNG, JPG, JPEG, or WEBP image.')
     if (file.size > 2 * 1024 * 1024) {
-      setLogoFile(null)
-      setValues((current) => ({ ...current, logo: '', logoName: '' }))
       if (fileRef.current) fileRef.current.value = ''
       setLogoError('Logo must be 2 MB or smaller. Save was stopped.')
       setDirty(true)
       return
     }
-    setLogoFile(file)
-    setRemoveExistingLogo(false)
+    setReadingLogo(true)
     const reader = new FileReader()
-    reader.onload = () => { setValues((current) => ({ ...current, logo: reader.result, logoName: file.name })); setDirty(true) }
-    reader.onerror = () => { setLogoFile(null); setLogoError('The image could not be read. Please try another file.') }
+    reader.onload = () => { if (sequence !== logoReadSequence.current) return; setLogoFile(file); setRemoveExistingLogo(false); setValues((current) => ({ ...current, logo: reader.result, logoName: file.name })); setDirty(true); setReadingLogo(false) }
+    reader.onerror = () => { if (sequence !== logoReadSequence.current) return; setReadingLogo(false); setLogoError('The image could not be read. Please try another file.') }
     reader.readAsDataURL(file)
   }
 
@@ -1104,8 +1124,14 @@ function AddCollege() {
   const saveDraft = () => { localStorage.setItem(draftKey(editId), JSON.stringify({ values, activeTab, progress: draftProgress(values), savedAt: new Date().toISOString() })) }
   const requestLeave = () => { if (dirty) { saveDraft(); setNotice(`Draft saved | ${progress}% complete.`); setDialog('leave'); return } navigate('/college-institution-management') }
   const showTab = (tabId) => {
+    if (FORM_TABS.findIndex(tab => tab.id === tabId) > FORM_TABS.findIndex(tab => tab.id === activeTab)) {
+      const fields = TAB_FIELDS[activeTab]
+      setTouched(current => fields.reduce((next, field) => ({ ...next, [field]: true }), { ...current }))
+      if (fields.some(field => errors[field]) || duplicateReasonForTab || (activeTab === 'college' && (logoError || readingLogo))) return
+    }
     setActiveTab(tabId)
-    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+    return true
   }
 
   const goPrevious = () => {
@@ -1143,6 +1169,7 @@ function AddCollege() {
       setNotice(errors[fields.find((field) => errors[field])] || 'Please correct the highlighted fields before continuing.', 'warning')
       return
     }
+    if (activeTab === 'college' && (logoError || readingLogo)) return
     const currentIndex = FORM_TABS.findIndex((tab) => tab.id === activeTab)
     const nextIndex = currentIndex + 1
     if (nextIndex < FORM_TABS.length) {
@@ -1155,8 +1182,10 @@ function AddCollege() {
 
   const submit = async () => {
     touchAll()
-    if (logoError || !isValid || submitting) { setDialog(null); return }
+    if (logoError || readingLogo || !isValid || submitting || submitLock.current) { setDialog(null); return }
+    submitLock.current = true
     setSubmitting(true)
+    setSubmitError('')
     let collegeId = editId || pendingLogoCollegeId
     try {
       // Re-read the directory immediately before writing.  The form-level
@@ -1263,23 +1292,26 @@ function AddCollege() {
       navigate('/college-institution-management')
     } catch (error) {
       const partialSave = !editId && collegeId
-      setNotice(partialSave
+      const message = partialSave
         ? `College was created, but the logo upload failed: ${getApiErrorMessage(error)} Submit again to retry the logo upload.`
-        : getApiErrorMessage(error), 'error')
+        : getApiErrorMessage(error)
+      setSubmitError(message)
+      setNotice(message, 'error')
       setDialog(null)
     }
-    finally { setSubmitting(false) }
+    finally { submitLock.current = false; setSubmitting(false) }
   }
 
   const section = (title, subtitle, content) => <section className="ac-section"><header><h2>{title}</h2><p>{subtitle}</p></header><div className="ac-grid">{content}</div></section>
 
   if (collegeLoadError) return <DashboardLayout><main className="add-college"><PageHeaderImports_default title="Edit College" /><AsyncState status="error" message={collegeLoadError} onRetry={() => setLoadAttempt(value => value + 1)} /></main></DashboardLayout>
   return <DashboardLayout><main className="add-college">
-    <header className="ac-page-header"><div><h1>{editId ? 'Edit College' : 'Add College'}</h1><p>{editId ? 'Update the college information below.' : 'Create and configure a new college in the college management system.'}</p><span className="ac-draft-progress">Draft progress: <b>{progress}%</b></span></div><button className="ac-back" type="button" onClick={requestLeave}><FiArrowLeft aria-hidden="true" />Back</button></header>
+    <nav className="ac-breadcrumb" aria-label="Breadcrumb"><Link to="/settings">Global Settings</Link><span aria-hidden="true">/</span><Link to="/college-institution-management">College Configuration</Link><span aria-hidden="true">/</span><span aria-current="page">{editId ? 'Edit College' : 'Add College'}</span></nav>
+    <header className="ac-page-header"><div><h1>{editId ? 'Edit College' : 'Add College'}</h1><p>{editId ? 'Update the college information below.' : 'Create and configure a new college in the college management system.'}</p><span className="ac-draft-progress">Step {FORM_TABS.findIndex(tab => tab.id === activeTab) + 1} of {FORM_TABS.length} · {FORM_TABS.find(tab => tab.id === activeTab)?.shortLabel}</span></div><button className="ac-back" type="button" onClick={requestLeave}><FiArrowLeft aria-hidden="true" />Back</button></header>
     {loadingCollege && <div className="ac-notice" role="status">Loading college details...</div>}
     <div className="college-form-layout" data-without-live-preview="true">
-      <form className="college-form-main" onSubmit={(event) => event.preventDefault()} noValidate>
-        <nav ref={tabsNavRef} className="ac-tabs erp-tabs-bar" aria-label="College form sections" role="tablist">
+      <form className="college-form-main" aria-busy={submitting || loadingCollege || readingLogo} onSubmit={(event) => event.preventDefault()} noValidate>
+        <nav ref={tabsNavRef} className="ac-tabs" aria-label="College form sections" role="tablist">
           {FORM_TABS.map((tab, index) => {
             const isCompleted = index < highestUnlockedTab
             const isActive = activeTab === tab.id
@@ -1291,12 +1323,13 @@ function AddCollege() {
                 id={`college-tab-${tab.id}`}
                 aria-controls={`college-panel-${tab.id}`}
                 tabIndex={isActive ? 0 : -1}
-                onKeyDown={event => { if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return; event.preventDefault(); const next = event.key === 'Home' ? 0 : event.key === 'End' ? highestUnlockedTab : (index + (event.key === 'ArrowRight' ? 1 : -1) + highestUnlockedTab + 1) % (highestUnlockedTab + 1); showTab(FORM_TABS[next].id); document.getElementById(`college-tab-${FORM_TABS[next].id}`)?.focus() }}
+                onKeyDown={event => { if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return; event.preventDefault(); const next = event.key === 'Home' ? 0 : event.key === 'End' ? highestUnlockedTab : (index + (event.key === 'ArrowRight' ? 1 : -1) + highestUnlockedTab + 1) % (highestUnlockedTab + 1); if (showTab(FORM_TABS[next].id)) document.getElementById(`college-tab-${FORM_TABS[next].id}`)?.focus({ preventScroll: true }) }}
                 aria-selected={isActive}
+                aria-current={isActive ? 'step' : undefined}
                 aria-label={tab.label}
                 title={tab.label}
-                aria-disabled={index > highestUnlockedTab}
-                disabled={index > highestUnlockedTab}
+                aria-disabled={index > highestUnlockedTab || submitting || loadingCollege}
+                disabled={index > highestUnlockedTab || submitting || loadingCollege}
                 className={isActive ? 'active' : isCompleted ? 'completed' : ''}
                 onClick={() => showTab(tab.id)}
               >
@@ -1306,7 +1339,7 @@ function AddCollege() {
             )
           })}
         </nav>
-        <div role="tabpanel" id={`college-panel-${activeTab}`} aria-labelledby={`college-tab-${activeTab}`} tabIndex={0}>
+        <fieldset className="ac-panel" disabled={submitting || loadingCollege} role="tabpanel" id={`college-panel-${activeTab}`} aria-labelledby={`college-tab-${activeTab}`} tabIndex={0}>
         {activeTab === 'college' && <>
         {section('College Information', 'Core identity and affiliation details.', <>
           <Field label="College Name" name="collegeName" values={values} errors={{ ...errors, ...(duplicateName ? { collegeName: 'A college with this name already exists.' } : {}) }} touched={touched} onChange={update} required maxLength={120} placeholder="e.g. Crescent Institute of Technology" />
@@ -1316,25 +1349,26 @@ function AddCollege() {
           <Field label="University Name" name="universityName" values={values} errors={errors} touched={touched} onChange={update} required maxLength={120} placeholder="Affiliated university" readOnly={values.collegeType === 'Deemed University'} />
           <Field label="Start Date" name="startDate" type="date" values={values} errors={errors} touched={touched} onChange={update} />
           <Field label="End Date" name="endDate" type="date" values={values} errors={errors} touched={touched} onChange={update} />
-          <div className="ac-upload ac-span-2" onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); selectLogo(e.dataTransfer.files[0]) }}>
-            <input ref={fileRef} type="file" accept=".png,.jpg,.jpeg,.webp" onChange={(e) => selectLogo(e.target.files?.[0])} hidden />
+          <div className="ac-upload ac-span-2" role="group" aria-label="College logo" aria-busy={readingLogo} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); selectLogo(e.dataTransfer.files[0]) }}>
+            <input ref={fileRef} type="file" aria-label="Choose college logo" accept=".png,.jpg,.jpeg,.webp" onChange={(e) => selectLogo(e.target.files?.[0])} hidden />
             {values.logo ? (
               <div className="ac-logo-preview">
                 <img src={values.logo} alt="College logo preview" onError={() => setValues((v) => ({ ...v, logo: '' }))} />
                 <div>
                   <strong>{values.logoName || (logoFile ? logoFile.name : 'College logo')}</strong>
-                  <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+                  <div className="ac-logo-actions">
                     <button type="button" className="ac-change-btn" onClick={() => fileRef.current?.click()}>Change image</button>
-                    <button type="button" onClick={() => { setLogoFile(null); setRemoveExistingLogo(Boolean(editId)); setValues((v) => ({ ...v, logo: '', logoName: '' })); if (fileRef.current) fileRef.current.value = ''; setDirty(true) }}>Remove image</button>
+                    <button type="button" onClick={() => { logoReadSequence.current++; setReadingLogo(false); setLogoError(''); setLogoFile(null); setRemoveExistingLogo(Boolean(editId)); setValues((v) => ({ ...v, logo: '', logoName: '' })); if (fileRef.current) fileRef.current.value = ''; setDirty(true) }}>Remove image</button>
                   </div>
                 </div>
               </div>
             ) : (
               <button type="button" className="ac-upload-button" onClick={() => fileRef.current?.click()}>
-                <strong>Upload college logo</strong>
-                <span>Click or drag and drop PNG, JPG, JPEG, or WEBP | Max 2 MB</span>
+                <FiUploadCloud aria-hidden="true" />
+                <span className="ac-upload-copy"><strong>Upload college logo</strong><span>Select a file or drag and drop · PNG, JPG, JPEG or WEBP · Max 2 MB</span></span>
               </button>
             )}
+            {readingLogo && <small role="status">Reading logo preview…</small>}
             {logoError && <small className="ac-error" role="alert">{logoError}</small>}
           </div>
         </>)}
@@ -1365,29 +1399,32 @@ function AddCollege() {
         </>)}
         {activeTab === 'accreditation' && section('Accreditation Details', 'Current accreditation standing and validity.', <>
           <label className="ac-field" htmlFor="ac-accreditationStatus"><span>Accreditation Status</span><ProjectSelect id="ac-accreditationStatus" name="accreditationStatus" value={values.accreditationStatus} onChange={update}><option value="">Select Accreditation Status</option>{ACCREDITATION_STATUSES.map((status) => <option key={status}>{status}</option>)}</ProjectSelect></label>
+          <Field label="Accreditation Body" name="accreditationBody" values={values} errors={errors} touched={touched} onChange={update} maxLength={120} placeholder="e.g. NAAC or NBA" />
           <Field label="Accreditation Grade" name="accreditationGrade" values={values} errors={errors} touched={touched} onChange={update} maxLength={20} placeholder="e.g. A+" />
           <Field label="Accreditation Number" name="accreditationNumber" values={values} errors={errors} touched={touched} onChange={update} maxLength={50} />
           <Field label="Valid From" name="validFrom" type="date" values={values} errors={errors} touched={touched} onChange={update} />
           <Field label="Valid Until" name="validUntil" type="date" values={values} errors={errors} touched={touched} onChange={update} />
           {values.accreditationStatus === 'Accredited' && <p className="ac-hint ac-span-2">Complete the accreditation grade, number, and validity dates for a comprehensive record.</p>}
         </>)}
-        </div>
+        {activeTab === 'accreditation' && <section className="ac-review" aria-labelledby="college-review-title"><h2 id="college-review-title">Review college details</h2><p>Check the information below before submitting. Return to any section to make changes.</p><div className="ac-review-grid">{FORM_TABS.map(tab => <section key={tab.id}><h3>{tab.label}</h3><dl>{TAB_FIELDS[tab.id].map(name => <div key={name}><dt>{name.replace(/([A-Z])/g, ' $1').replace(/^./, letter => letter.toUpperCase())}</dt><dd>{values[name] || 'Not provided'}</dd></div>)}</dl></section>)}</div>{values.logo && <p>Logo: {values.logoName || 'Existing college logo'}</p>}</section>}
+        </fieldset>
+        {submitError && <div className="ac-submit-error" role="alert">{submitError}</div>}
         <footer className="ac-actions ac-next-actions">
           {FORM_TABS.findIndex((tab) => tab.id === activeTab) > 0 && (
-            <button type="button" className="ac-secondary" onClick={goPrevious}>
+            <button type="button" className="ac-secondary" disabled={submitting || loadingCollege} onClick={goPrevious}>
               ← Previous
             </button>
           )}
           {activeTab !== 'accreditation' ? (
-            <button type="button" className="ac-primary" onClick={saveAndNext}>
-              Save &amp; Next →
+            <button type="button" className="ac-primary" disabled={submitting || readingLogo || loadingCollege} onClick={saveAndNext}>
+              Next →
             </button>
           ) : (
             <button
               type="button"
               className="ac-primary"
               onClick={submit}
-              disabled={!isValid || submitting || loadingCollege || saved}
+              disabled={!isValid || submitting || readingLogo || loadingCollege || saved}
             >
               {submitting ? 'Saving...' : saved ? 'Saved. Redirecting...' : editId ? 'Save Changes' : 'Submit College'}
             </button>
@@ -2280,10 +2317,12 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
         {['list', 'details'].includes(viewMode) && (
           <>
             <Link className="college-back-link" to="/settings"><FiArrowLeft /> Global Settings</Link>
-            <header className="college-config-banner"><div><FiHome aria-hidden="true" /><h1>College Configuration</h1></div><div className="college-config-actions"><ExportMenu rows={filteredColleges} columns={collegeColumns} title="Colleges" filename="colleges" loading={isCollegesLoading || Boolean(collegeError)} />{canCreateCollege && <button className="erp-btn erp-btn--primary" onClick={openAdd}><Plus aria-hidden="true" /> Add College</button>}</div></header>
-            <div className="college-config-stats">{summaryCards.map(({ label, value, tone }) => <article key={label}><span className={`college-config-stat-mark is-${tone}`}>{label === 'Total' ? <FiHome /> : label === 'Active' ? <FiCheck /> : <FiClock />}</span><div><h2>{label} Colleges</h2><strong>{collegeSummary.loading || value === null ? '—' : Number(value).toLocaleString('en-IN')}</strong></div></article>)}<article><div><h2>Working College</h2><strong className="college-config-selected">{selectedCollege?.name || selectedCollege?.collegeName || 'Not selected'}</strong><small>{selectedCollege?.code || selectedCollege?.collegeCode || ''}</small></div></article></div>
+            <header className="college-config-banner"><div><FiHome aria-hidden="true" /><h1>College Configuration</h1></div><div className="college-config-actions">{canCreateCollege && <button className="erp-btn erp-btn--primary" onClick={openAdd}><Plus aria-hidden="true" /> Add College</button>}</div></header>
+            <p className="college-config-context"><span>Working College</span><strong title={selectedCollege?.name || selectedCollege?.collegeName}>{selectedCollege?.name || selectedCollege?.collegeName || 'Not selected'}</strong><small>{selectedCollege?.code || selectedCollege?.collegeCode || ''}</small></p>
+            <div className="college-config-stats" aria-label="College summary">{summaryCards.map(({ label, value, tone }) => <article key={label}><span className={`college-config-stat-mark is-${tone}`}>{label === 'Total' ? <FiHome /> : label === 'Active' ? <FiCheck /> : <FiClock />}</span><div><h2>{label} Colleges</h2><strong>{collegeSummary.loading || value === null ? '—' : Number(value).toLocaleString('en-IN')}</strong></div></article>)}</div>
             {collegeSummary.error && !collegeError && <p role="alert">{collegeSummary.error}</p>}
-            <div className="college-config-toolbar"><label className="college-config-search"><FiSearch aria-hidden="true" /><input type="search" placeholder="Search by name, code or city…" value={searchTerm} onChange={handleSearchChange} aria-label="Search colleges" /></label><ProjectSelect aria-label="Filter colleges by type" value={typeFilter} onChange={event => { setTypeFilter(event.target.value); setCurrentPage(1) }}><option value="">All types</option>{availableCollegeTypes.map(type => <option key={type}>{type}</option>)}</ProjectSelect><div className="college-config-filter-tabs" role="group" aria-label="College status">{[['','All'],['active','Active'],['inactive','Inactive']].map(([value,label]) => <button key={label} type="button" aria-pressed={statusFilter === value} onClick={() => { setStatusFilter(value); setCurrentPage(1) }}>{label}</button>)}</div></div>
+            <div className="college-config-toolbar"><label className="college-config-search"><FiSearch aria-hidden="true" /><input type="search" placeholder="Search by name, code or city…" value={searchTerm} onChange={handleSearchChange} aria-label="Search colleges" /></label><ProjectSelect aria-label="Filter colleges by type" value={typeFilter} onChange={event => { setTypeFilter(event.target.value); setCurrentPage(1) }}><option value="">All types</option>{availableCollegeTypes.map(type => <option key={type}>{type}</option>)}</ProjectSelect><div className="college-config-filter-tabs" role="group" aria-label="College status">{[['','All'],['active','Active'],['inactive','Inactive']].map(([value,label]) => <button key={label} type="button" aria-pressed={statusFilter === value} onClick={() => { setStatusFilter(value); setCurrentPage(1) }}>{label}</button>)}</div><ExportMenu rows={filteredColleges} columns={collegeColumns} title="Colleges" filename="colleges" loading={isCollegesLoading || Boolean(collegeError)} /></div>
+            {(searchTerm || typeFilter || statusFilter) && <div className="college-config-filter-summary"><span role="status">Filters applied{typeFilter ? ` · ${typeFilter}` : ''}{statusFilter ? ` · ${statusFilter}` : ''}</span><button type="button" className="erp-btn erp-btn--secondary" onClick={() => { setSearchTerm(''); setTypeFilter(''); setStatusFilter(''); setCurrentPage(1) }}>Clear filters</button></div>}
             {visibleCollegeDraft?.values && canCreateCollege && <aside className="college-config-draft"><span><b>{collegeDraft.values.collegeName || 'New college draft'}</b> · Unsaved draft</span><button className="erp-btn erp-btn--secondary" onClick={() => navigate('/college-institution-management/add')}>Resume draft</button><button className="erp-btn erp-btn--secondary" onClick={() => { localStorage.removeItem(NEW_COLLEGE_DRAFT_KEY); setCollegeDraft(null) }}>Discard draft</button></aside>}
             <section className="college-config-directory" aria-label="College directory">
             {isCollegesLoading ? (
@@ -2305,13 +2344,13 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
             ) : (
               <>
                 <DataTable caption="Colleges" tableClassName="college-config-table" rows={filteredColleges} pagination={{ page: currentPage, pageSize: itemsPerPage, onPageChange: setCurrentPage }} columns={[
-                  { key:'name', label:'College', render:college => <div className="college-config-identity"><CollegeLogoImage src={college.logo} fallbackSrc={getCollegeLogoEndpoint(college.id)} alt="" code={college.code} className="college-config-logo" /><div><button type="button" className="college-config-name" aria-label={`View details for ${college.name}`} onClick={() => openDetails(college)}>{college.name}</button><small>{college.type}</small>{String(selectedCollegeId) === String(college.id) && <span className="college-config-working">Working college</span>}</div></div> },
-                  { key:'code', label:'Code', render:college => <code>{college.code}</code> },
-                  { key:'university', label:'Affiliation', render:college => college.university || '—' },
-                  { key:'address', label:'Address', render:college => <span className="college-config-address">{[college.addressLine1 || college.address, college.city, college.state].filter(Boolean).join(', ') || '—'}</span> },
-                  { key:'contact', label:'Contact', render:college => <div>{college.contact || '—'}<small className="college-config-email">{college.email || '—'}</small></div> },
-                  { key:'status', label:'Status', render:college => <StatusBadge value={college.status === 'active' ? 'Active' : 'Inactive'} /> },
-                ]} rowActions={college => <div className="college-config-actions"><button type="button" className="table-action-btn" title={`View ${college.name}`} aria-label={`View ${college.name}`} onClick={() => openDetails(college)}><FiEye /></button>{canEditCollege && canManageCollege(college) && <><button type="button" className="table-action-btn action-edit" aria-label={`Edit ${college.name}`} onClick={() => openEdit(college)}><EditIcon /></button><button type="button" className="table-action-btn" aria-label={`${college.status === 'active' ? 'Deactivate' : 'Activate'} ${college.name}`} onClick={() => toggleStatus(college)}>{college.status === 'active' ? <FiToggleRight data-status="active" /> : <FiToggleLeft data-status="inactive" />}</button></>}</div>} />
+                  { key:'name', label:'College', className:'college-col-identity', render:college => <div className="college-config-identity"><CollegeLogoImage src={college.logo} fallbackSrc={getCollegeLogoEndpoint(college.id)} alt="" code={college.code} className="college-config-logo" /><div><button type="button" className="college-config-name" title={college.name} aria-label={`View details for ${college.name}`} onClick={() => openDetails(college)}>{college.name}</button><small title={college.type}>{college.type}</small>{String(selectedCollegeId) === String(college.id) && <span className="college-config-working">Working college</span>}</div></div> },
+                  { key:'code', label:'College Code', className:'college-col-code', render:college => <code className="college-config-truncate" title={college.code}>{college.code}</code> },
+                  { key:'university', label:'Affiliation / University', className:'college-col-affiliation', render:college => <span className="college-config-truncate" title={college.university}>{college.university || '—'}</span> },
+                  { key:'address', label:'Location', className:'college-col-location', render:college => <span className="college-config-truncate" title={[college.addressLine1 || college.address, college.city, college.state].filter(Boolean).join(', ')}>{[college.addressLine1 || college.address, college.city, college.state].filter(Boolean).join(', ') || '—'}</span> },
+                  { key:'contact', label:'Contact', className:'college-col-contact', render:college => <div><span className="college-config-truncate" title={college.contact}>{college.contact || '—'}</span><small className="college-config-email college-config-truncate" title={college.email}>{college.email || '—'}</small></div> },
+                  { key:'status', label:'Status', className:'college-col-status', render:college => <StatusBadge value={college.status === 'active' ? 'Active' : 'Inactive'} /> },
+                ]} rowActions={college => <div className="college-config-row-actions"><button type="button" className="table-action-btn" title={`View ${college.name}`} aria-label={`View ${college.name}`} onClick={() => openDetails(college)}><FiEye /></button>{canEditCollege && canManageCollege(college) && <><button type="button" className="table-action-btn action-edit" title={`Edit ${college.name}`} aria-label={`Edit ${college.name}`} onClick={() => openEdit(college)}><EditIcon /></button><button type="button" className="table-action-btn" title={`${college.status === 'active' ? 'Deactivate' : 'Activate'} ${college.name}`} aria-label={`${college.status === 'active' ? 'Deactivate' : 'Activate'} ${college.name}`} onClick={() => toggleStatus(college)}>{college.status === 'active' ? <FiToggleRight data-status="active" /> : <FiToggleLeft data-status="inactive" />}</button></>}</div>} />
               </>
             )}
             </section>

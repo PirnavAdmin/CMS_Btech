@@ -58,9 +58,17 @@ namespace BTech.Controllers
         // =====================================================
 
         [HttpGet]
-        public async Task<IActionResult> GetAll([FromQuery] long? collegeId)
+        public async Task<IActionResult> GetAll([FromQuery] long? collegeId,
+            [FromQuery] long? courseId, [FromQuery] long? branchId, [FromQuery] long? academicYearId,
+            [FromQuery] byte? status)
         {
+            if (courseId is <= 0 || branchId is <= 0 || academicYearId is <= 0 || status is > 1)
+                return BadRequest(new { success = false, message = "Use positive identifiers and status 0 or 1." });
             var result = await _service.GetAllAsync();
+            result = result.Where(x => (!courseId.HasValue || x.CourseId == courseId)
+                && (!branchId.HasValue || x.BranchId == branchId)
+                && (!academicYearId.HasValue || x.AcademicYearId == academicYearId)
+                && (!status.HasValue || x.Status == status)).ToList();
 
             return Ok(new
             {
@@ -172,26 +180,6 @@ namespace BTech.Controllers
                 success = true,
                 message = "Semester updated successfully",
                 data = result
-            });
-        }
-
-        [HttpDelete("{semesterId:long}")]
-        public async Task<IActionResult> Delete(long semesterId)
-        {
-            var deleted = await _service.DeleteAsync(semesterId);
-            if (!deleted)
-            {
-                return NotFound(new
-                {
-                    success = false,
-                    message = "Semester not found"
-                });
-            }
-
-            return Ok(new
-            {
-                success = true,
-                message = "Semester deleted successfully"
             });
         }
     }

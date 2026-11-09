@@ -186,6 +186,7 @@ public class SubjectsController : ControllerBase
             var message = parts.Length == 2 ? parts[1] : ex.Number == 1062 ? "Subject code already exists." : "Subject data conflicts with a related record.";
             return Failure(ex.Number == 30001 ? 404 : ex.Number is 30002 or 1062 or 1451 ? 409 : 400, field, message);
         }
+        catch (BTech.Services.ContractException) { throw; }
         catch (ArgumentException ex) { _logger.LogWarning("Subject validation: {Message}", ex.Message); return Failure(400, ex.ParamName ?? "subject", ex.Message); }
         catch (KeyNotFoundException ex) { return Failure(404, "subjectId", ex.Message); }
         catch (OperationCanceledException) when (Cancellation.IsCancellationRequested) { throw; }

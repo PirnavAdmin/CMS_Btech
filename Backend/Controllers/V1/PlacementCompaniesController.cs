@@ -1,3 +1,4 @@
+using BTech.Services;
 using BTech.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -26,13 +27,15 @@ public sealed class PlacementCompaniesController : ControllerBase
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     [HttpGet]
-    public async Task<IActionResult> GetCompanies(CancellationToken ct)
+    public async Task<IActionResult> GetCompanies(CancellationToken ct, [FromQuery] long? collegeId = null)
     {
         var c = await OpenAsync(ct);
+        var scope=CollegeDataScope.Resolve(HttpContext,collegeId);
         await using var cmd = c.CreateCommand();
         cmd.CommandText = @"SELECT company_id, college_id, company_code, company_name, website, industry,
             contact_person_name, email, phone, address, status, created_at
-            FROM companies WHERE deleted_at IS NULL ORDER BY company_name";
+            FROM companies WHERE deleted_at IS NULL AND (@scope IS NULL OR college_id=@scope) ORDER BY company_name";
+        Add(cmd,"@scope",scope);
         await using var r = await cmd.ExecuteReaderAsync(ct);
         var rows = new List<object>();
         while (await r.ReadAsync(ct)) rows.Add(new {
@@ -59,22 +62,21 @@ public sealed class PlacementCompaniesController : ControllerBase
         var c = await OpenAsync(ct);
         try
         {
-            long collegeId;
-            await using (var college = c.CreateCommand())
+            var collegeId=CollegeDataScope.Resolve(HttpContext,request.CollegeId,required:true)!.Value;
+            await using (var selected=c.CreateCommand())
             {
-                college.CommandText = "SELECT college_id FROM colleges ORDER BY college_id LIMIT 1";
-                var v = await college.ExecuteScalarAsync(ct);
-                if (v is null || v == DBNull.Value) return BadRequest(new { success = false, message = "No college record exists; a company cannot be created without college_id." });
-                collegeId = Convert.ToInt64(v);
+                selected.CommandText="SELECT COUNT(*) FROM colleges WHERE college_id=@college AND status=1 AND deleted_at IS NULL";
+                Add(selected,"@college",collegeId);
+                if(Convert.ToInt64(await selected.ExecuteScalarAsync(ct))!=1)return BadRequest(new{success=false,message="Select an active college."});
             }
             var code = "API-" + Guid.NewGuid().ToString("N")[..12].ToUpperInvariant();
             await using var cmd = c.CreateCommand();
             cmd.CommandText = @"INSERT INTO companies (college_id, company_code, company_name, website, industry,
-                contact_person_name, email, phone, address, status) VALUES (@college,@code,@name,@website,@industry,@contact,@email,@phone,@address,@status); SELECT LAST_INSERT_ID();";
+                contact_person_name, email, phone, address, status, created_by) VALUES (@college,@code,@name,@website,@industry,@contact,@email,@phone,@address,@status,@actor); SELECT LAST_INSERT_ID();";
             Add(cmd,"@college",collegeId); Add(cmd,"@code",code); Add(cmd,"@name",request.CompanyName.Trim());
             Add(cmd,"@website",Clean(request.Website)); Add(cmd,"@industry",Clean(request.Industry));
             Add(cmd,"@contact",Clean(request.ContactPerson)); Add(cmd,"@email",Clean(request.Email)?.ToLowerInvariant());
-            Add(cmd,"@phone",Clean(request.Phone)); Add(cmd,"@address",Clean(request.Address)); Add(cmd,"@status",status);
+            Add(cmd,"@phone",Clean(request.Phone)); Add(cmd,"@address",Clean(request.Address)); Add(cmd,"@status",status); Add(cmd,"@actor",CollegeDataScope.Actor(HttpContext));
             var id = Convert.ToInt64(await cmd.ExecuteScalarAsync(ct));
             return Created($"/api/v1/placements/companies/{id}", new { success = true, companyId = id, collegeId, companyCode = code,
                 companyName = request.CompanyName.Trim(), website = Clean(request.Website), industry = Clean(request.Industry),
@@ -86,4 +88,4 @@ public sealed class PlacementCompaniesController : ControllerBase
 }
 
 public sealed record CreateCompanyRequest(string CompanyName, string? Website = null, string? Industry = null,
-    string? ContactPerson = null, string? Email = null, string? Phone = null, string? Address = null, string? Status = "Active");
+    string? ContactPerson = null, string? Email = null, string? Phone = null, string? Address = null, string? Status = "Active", long? CollegeId = null);

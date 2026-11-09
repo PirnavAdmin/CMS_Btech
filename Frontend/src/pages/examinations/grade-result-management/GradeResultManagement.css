@@ -3087,3 +3087,61 @@
   .grm-policy-lab .grm-lab-section { padding: 14px; }
   .grm-simulator-inputs { grid-template-columns: 1fr; }
 }
+
+.res-workspace > .grade-tools-nav {
+  margin: 0;
+}
+
+.grade-workspace-panel {
+  padding: clamp(14px, 2vw, 24px);
+}
+
+.grade-workspace-panel__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.grade-workspace-panel h2 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.grade-workspace-panel p {
+  margin: 6px 0 12px;
+  color: var(--text-secondary);
+}
+
+.grade-workspace-panel .res-table-wrapper {
+  margin: 12px 0 0;
+}
+
+.grade-workspace-field {
+  display: grid;
+  gap: 6px;
+  max-width: 420px;
+  margin-top: 12px;
+  font-weight: 600;
+}
+
+.grade-workspace-field input {
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+.grade-workspace-preview {
+  margin-top: 16px;
+}
+
+.grade-workspace-preview summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--brand);
+  font-weight: 600;
+}

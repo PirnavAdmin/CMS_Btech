@@ -264,5 +264,5 @@ export async function loadGradePolicy(scope) {
 }
 export async function saveGradePolicy(scope, bands, policy) {
   const response = await call(`grade-policies${policy ? `/${requireId(policy.id)}` : ''}`, { method: policy ? 'PUT' : 'POST', body: { ...scope, bands } })
-  return { ...scope, bands, id: response.id || policy?.id }
+  return { ...scope, bands, id: requireId(response?.id, 'saved grade policy') }
 }

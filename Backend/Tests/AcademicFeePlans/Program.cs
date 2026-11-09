@@ -194,4 +194,39 @@ Check(await c.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM academic_fee_plan_au
 await c.ExecuteAsync("UPDATE role_permissions SET can_edit=0 WHERE role_id=@role AND module_key='fees' AND college_id=@college",new{role=admin.role,college=aScope.college});
 await RejectAsync(()=>service.TransitionAsync(editable.FeeStructureId,editable.CollegeId,"SUBMITTED",new(){ExpectedRevision=editable.Revision}),403,"Live permission revocation blocks existing session");
 await c.ExecuteAsync("UPDATE role_permissions SET can_edit=1 WHERE role_id=@role AND module_key='fees' AND college_id=@college",new{role=admin.role,college=aScope.college});
+// Approval must create collectible installments from the immutable snapshot, atomically.
+await c.ExecuteAsync("UPDATE studentadmissions SET AdmissionStatus='Application Submitted',Status='Application Submitted',IsApproved=0,StudentEmail=@email WHERE AdmissionId=@id",new{id=saved.AdmissionId,email=prefix+"@example.invalid"});
+await using var approvalDb=new UserRoleManagement.API.Data.AppDbContext(new DbContextOptionsBuilder<UserRoleManagement.API.Data.AppDbContext>().UseMySql(cs,new MySqlServerVersion(new Version(8,0,46))).Options);
+var setupCapture=new FeeApprovalSetupCapture();
+var approvalService=new AdmissionService(approvalDb,NullLogger<AdmissionService>.Instance,setupCapture);
+var approval=await approvalService.ApproveAdmissionAsync(saved.AdmissionId,new BTech.DTOs.AdmissionStatusRequestDto(),admin.user);
+Check(approval is not null&&approval.IsApproved,"Student approval completes with immutable academic fee plan");
+var approvedStudent=await c.ExecuteScalarAsync<long>("SELECT student_id FROM students WHERE admission_id=@id",new{id=saved.AdmissionId});
+var ledgerCount=await c.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM student_fees sf JOIN fee_assignments fa ON fa.fee_assignment_id=sf.fee_assignment_id WHERE fa.student_id=@id",new{id=approvedStudent});
+Check(ledgerCount==1,"Approval creates the fee installment used by collection");
+Check(await c.ExecuteScalarAsync<decimal>("SELECT SUM(sf.amount) FROM student_fees sf JOIN fee_assignments fa ON fa.fee_assignment_id=sf.fee_assignment_id WHERE fa.student_id=@id",new{id=approvedStudent})==0.40m,"Collectible amount comes from selected server snapshot");
+await approvalService.ApproveAdmissionAsync(saved.AdmissionId,new BTech.DTOs.AdmissionStatusRequestDto(),admin.user);
+Check(await c.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM student_fees sf JOIN fee_assignments fa ON fa.fee_assignment_id=sf.fee_assignment_id WHERE fa.student_id=@id",new{id=approvedStudent})==ledgerCount,"Approval retry does not duplicate charges");
+Check(setupCapture.Count>0,"Student setup links captured by test double, never sent");
+var apiBase=Environment.GetEnvironmentVariable("CMS_AUDIT_BASE_URL");
+var apiToken=Environment.GetEnvironmentVariable("CMS_AUDIT_SUPER_TOKEN");
+if(!string.IsNullOrWhiteSpace(apiBase)&&!string.IsNullOrWhiteSpace(apiToken))
+{
+ using var http=new HttpClient{BaseAddress=new Uri(apiBase)};
+ http.DefaultRequestHeaders.Authorization=new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer",apiToken);
+ var repair=await http.PostAsync($"/api/v1/student-admissions/{saved.AdmissionId}/fee-ledger?collegeId={aScope.college}",null);
+ Check(repair.IsSuccessStatusCode,"Authenticated fee-ledger repair endpoint accepts approved snapshot and does not duplicate installments");
+ var pending=await http.GetAsync($"/api/v1/fee-collection/pending?studentId={approvedStudent}&collegeId={aScope.college}");
+ var payload=JsonSerializer.Deserialize<JsonElement>(await pending.Content.ReadAsStringAsync());
+ Check(pending.IsSuccessStatusCode&&payload.GetProperty("data").GetProperty("items").GetArrayLength()==1,"Approved academic plan installment is visible through real HTTP fee collection API");
+}
+else Console.WriteLine("HTTP ledger checks skipped: set CMS_AUDIT_BASE_URL and CMS_AUDIT_SUPER_TOKEN for an isolated backend.");
 Console.WriteLine($"SUCCESS: {passed} tests passed, including real MySQL service/repository admission transactions.");
+
+sealed class FeeApprovalSetupCapture : BTech.Services.Interfaces.IAccountSetupService
+{
+ public int Count;
+ public Task SendSetupLinkAsync(long userId,string accountType){Count++;return Task.CompletedTask;}
+ public Task SendPasswordResetLinkAsync(long userId,string accountType)=>Task.CompletedTask;
+ public Task<(bool Success,string Message)> CompleteSetupAsync(string loginId,string token,string newPassword,string confirmNewPassword)=>Task.FromResult((true,"Captured"));
+}

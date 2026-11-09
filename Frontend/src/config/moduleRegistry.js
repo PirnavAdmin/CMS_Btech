@@ -204,8 +204,7 @@ const entries = [
     permission: {"module":"examinations","action":"view","source":"existing access matrix"}, authorization: "existing-guards-and-permissions",
     roles: ["admin"], scope: "college", navigation: true,
     component: "src/pages/examinations/examination-setup/ExaminationSetup.jsx", exportName: "ExaminationSetup",
-    aliases: ["/exam-timetable","/exam","/examination"], children: [{"id":"examination_setup","order":10,"label":"Examination Setup","path":"/examination-setup","icon":"file-pen-line"},{"id":"exam_timetable","order":20,"label":"Exam Timetable","path":"/exam-timetable","icon":"calendar-days","aliases":["/exam","/examination"]}], prerequisites: ["college"],
-    disclosureId: "exam-management-links", sidebarClass: "sidebar-exam-parent", submenuClass: "sidebar-exam-submenu",
+    aliases: ["/exam-timetable", "/exam", "/examination"], prerequisites: ["college"],
   },
   {
     id: "marks", label: "Marks Management", icon: "chart-no-axes-column",
@@ -216,13 +215,12 @@ const entries = [
     aliases: ["/marks-management"], children: [], prerequisites: ["college"],
   },
   {
-    id: "results", label: "Grades System and Results", icon: "medal",
-    path: "/grade-result-management", section: "examinations", order: 30,
+    id: "results", label: "Grades & Results", icon: "medal",
+    path: "/results", section: "examinations", order: 30,
     permission: {"module":"results","action":"view","source":"existing access matrix"}, authorization: "existing-guards-and-permissions",
     roles: ["admin"], scope: "college", navigation: true,
-    component: "src/pages/examinations/grade-result-management/GradeResultManagement.jsx", exportName: "GradeResultManagement",
-    aliases: ["/results"], children: [{"id":"grade_configuration","order":10,"label":"Grade Management","path":"/grade-result-management/grade-configuration","icon":"award","aliases":["/grade-result-management"]},{"id":"official_results","order":20,"label":"Official Results","path":"/results","icon":"file-check-2"}], prerequisites: ["college"],
-    disclosureId: "grade-results-links", sidebarClass: "sidebar-grade-parent", submenuClass: "sidebar-grade-submenu",
+    component: "src/pages/examinations/grade-result-management/GradeResultManagement.jsx", exportName: "ResultGeneration",
+    aliases: ["/grade-result-management"], prerequisites: ["college"],
   },
   {
     id: "library", label: "Library", icon: "library-big",

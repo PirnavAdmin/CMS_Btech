@@ -55,3 +55,21 @@ test('ignores a stale roster after changing examination', async () => {
   await waitFor(() => expect(screen.queryByRole('option', { name: 'Old roster' })).toBeNull())
   expect(screen.getByRole('button', { name: 'Review result' }).disabled).toBe(true)
 })
+
+test('opens the linked examination and selects the approved student before review', async () => {
+  reviewExamResult.mockRejectedValue(Object.assign(new Error('Result not found'), { status: 404 }))
+  render(<ResultReview collegeId={1} academicYearId={10} initialExamId="7" initialStudentId="5" />)
+  await screen.findByRole('option', { name: 'Asha' })
+  expect(screen.getByLabelText('Examination').value).toBe('7')
+  expect(screen.getByLabelText('Student').value).toBe('5')
+  expect(reviewExamResult).not.toHaveBeenCalled()
+  fireEvent.click(screen.getByRole('button', { name: 'Review result' }))
+  expect((await screen.findByRole('alert')).textContent).toContain('server has no calculated result')
+})
+
+test('a linked examination outside the active scope cannot load candidates', async () => {
+  render(<ResultReview collegeId={1} academicYearId={10} initialExamId="99" initialStudentId="5" />)
+  expect(await screen.findByText(/linked examination is outside/)).toBeTruthy()
+  expect(loadResultCandidates).not.toHaveBeenCalled()
+  expect(screen.getByRole('button', { name: 'Review result' }).disabled).toBe(true)
+})

@@ -50,6 +50,11 @@ namespace UserRoleManagement.API.Data
             modelBuilder.Entity<User>()
                 .ToTable("users");
 
+            modelBuilder.Entity<User>().Property(x => x.ProfileCompleted).HasColumnName("profile_completed");
+            modelBuilder.Entity<User>().Property(x => x.InternalIdentifier).HasColumnName("internal_identifier");
+            modelBuilder.Entity<User>().Property(x => x.AcademicYearRestricted).HasColumnName("academic_year_restricted");
+            modelBuilder.Entity<User>().Property(x => x.AccessVersion).HasColumnName("access_version");
+
             modelBuilder.Entity<User>()
                 .HasKey(x => x.user_id);
 

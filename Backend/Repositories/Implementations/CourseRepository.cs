@@ -89,18 +89,6 @@ namespace BTech.Repositories.Implementations
                 ("p_status", status),
                 ("p_updated_by", updatedBy));
 
-        public async Task<bool> DeleteAsync(long courseId, long? updatedBy)
-        {
-            var course = await _context.Courses.FirstOrDefaultAsync(c => c.CourseId == courseId && c.DeletedAt == null);
-            if (course == null) return false;
-
-            course.Status = 0;
-            course.DeletedAt = DateTime.UtcNow;
-            course.DeletedBy = updatedBy;
-            await _context.SaveChangesAsync();
-            return true;
-        }
-
         public async Task<bool> ExistsCodeAsync(
             long collegeId,
             string courseCode,

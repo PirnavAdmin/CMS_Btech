@@ -946,6 +946,8 @@ function Attendance() {
                   <label>Course <span className="attendance-required-mark">*</span></label>
                   <ProjectSelect
                     className="erp-select"
+                    forceCustom
+                    menuPlacement="bottom"
                     aria-label="Attendance course" value={takeScope.courseId}
                     onChange={(e) => setTakeScope(prev => ({ ...prev, courseId: e.target.value, branchId: '', semesterId: '', sectionId: '', subjectId: '', subject: '', subjectCode: '', facultyId: '', faculty: '' }))}
                   >
@@ -971,6 +973,8 @@ function Attendance() {
                   <label>Branch <span className="attendance-required-mark">*</span></label>
                   <ProjectSelect
                     className="erp-select"
+                    forceCustom
+                    menuPlacement="bottom"
                     aria-label="Attendance branch" value={takeScope.branchId}
                     disabled={!takeScope.courseId}
                     onChange={(e) => setTakeScope(prev => ({ ...prev, branchId: e.target.value, semesterId: '', sectionId: '', subjectId: '', subject: '', subjectCode: '', facultyId: '', faculty: '' }))}
@@ -997,6 +1001,8 @@ function Attendance() {
                   <label>Semester <span className="attendance-required-mark">*</span></label>
                   <ProjectSelect
                     className="erp-select"
+                    forceCustom
+                    menuPlacement="bottom"
                     aria-label="Attendance semester" value={takeScope.semesterId}
                     disabled={!takeScope.courseId}
                     onChange={(e) => setTakeScope(prev => ({ ...prev, semesterId: e.target.value, sectionId: '', subjectId: '', subject: '', subjectCode: '' }))}
@@ -1012,6 +1018,8 @@ function Attendance() {
                   <label>Section <span className="attendance-required-mark">*</span></label>
                   <ProjectSelect
                     className="erp-select"
+                    forceCustom
+                    menuPlacement="bottom"
                     aria-label="Attendance section" value={takeScope.sectionId}
                     onChange={(e) => setTakeScope(prev => ({ ...prev, sectionId: e.target.value }))}
                   >
@@ -1036,6 +1044,8 @@ function Attendance() {
                   <label>Subject / Course Module <span className="attendance-required-mark">*</span></label>
                   <ProjectSelect
                     className="erp-select"
+                    forceCustom
+                    menuPlacement="bottom"
                     aria-label="Attendance subject" value={takeScope.subjectId || ''}
                     disabled={loadingSubjects || !takeScope.branchId}
                     onChange={(e) => {
@@ -1092,6 +1102,8 @@ function Attendance() {
                   <label>Faculty In-Charge <span className="attendance-required-mark">*</span></label>
                   <ProjectSelect
                     className="erp-select"
+                    forceCustom
+                    menuPlacement="bottom"
                     aria-label="Attendance faculty" value={takeScope.facultyId || ''}
                     disabled={loadingFaculty || !takeScope.branchId}
                     onChange={(e) => {

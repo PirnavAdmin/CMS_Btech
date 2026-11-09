@@ -6,6 +6,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Security.Cryptography;
 using UserRoleManagement.API.Data;
+using Dapper;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace BTech.Services.Implementations
 {
@@ -14,15 +16,18 @@ namespace BTech.Services.Implementations
         private readonly AppDbContext _context;
         private readonly ILogger<AdmissionService> _logger;
         private readonly IAccountSetupService _accountSetupService;
+        private readonly IHttpContextAccessor? _httpContext;
 
         public AdmissionService(
             AppDbContext context,
             ILogger<AdmissionService> logger,
-            IAccountSetupService accountSetupService)
+            IAccountSetupService accountSetupService,
+            IHttpContextAccessor? httpContext = null)
         {
             _context = context;
             _logger = logger;
             _accountSetupService = accountSetupService;
+            _httpContext = httpContext;
         }
 
 
@@ -80,7 +85,13 @@ namespace BTech.Services.Implementations
             string deliveryStatus = "NotAttempted";
             AdmissionActionResponseDto response;
 
-            await using var transaction = await _context.Database.BeginTransactionAsync();
+            await using var transaction = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted);
+            // The dump's approval trigger also materializes students. Serialize this
+            // admission before reading it so approval retries share the same row.
+            var lockedAdmission=await _context.Database.GetDbConnection().ExecuteScalarAsync<long?>(
+                "SELECT AdmissionId FROM studentadmissions WHERE AdmissionId=@admissionId AND IsDeleted=0 FOR UPDATE",
+                new{admissionId},transaction.GetDbTransaction());
+            if(!lockedAdmission.HasValue)return null;
             var admission = await _context.Admissions
                 .FirstOrDefaultAsync(x => x.AdmissionId == admissionId && !x.IsDeleted);
             if (admission == null) return null;
@@ -130,6 +141,10 @@ namespace BTech.Services.Implementations
                 });
             }
 
+            // Persist the approved state before looking up the student. An AFTER UPDATE
+            // trigger may create it; the fallback below remains valid without a trigger.
+            await _context.SaveChangesAsync();
+
             // Use the existing students.admission_id -> students.user_id relationship.
             // This makes approval retries idempotent without introducing a new table.
             if (string.IsNullOrWhiteSpace(admission.AdmissionNo))
@@ -147,15 +162,22 @@ namespace BTech.Services.Implementations
             var creator = admission.CreatedBy.HasValue
                 ? await _context.Users.SingleOrDefaultAsync(x => x.user_id == admission.CreatedBy.Value)
                 : null;
+            var declaredCollege = await _context.Database.GetDbConnection().ExecuteScalarAsync<long?>(
+                "SELECT AcademicCollegeId FROM studentadmissions WHERE AdmissionId=@admissionId",
+                new { admissionId },transaction.GetDbTransaction());
             var collegeId = student != null && student.CollegeId > 0
                 ? student.CollegeId
-                : approver?.college_id ?? creator?.college_id;
+                : declaredCollege ?? approver?.college_id ?? creator?.college_id;
 
-            // The Admission entity/table has no college column. Use the existing student
-            // mapping first, then the approver/creator's college, and enforce tenant isolation.
-            if (student != null && approver?.college_id.HasValue == true &&
-                student.CollegeId != approver.college_id.Value)
-                throw new UnauthorizedAccessException("Approver is not authorized for this student's college.");
+            if(declaredCollege.HasValue&&collegeId!=declaredCollege)
+                throw new InvalidOperationException("The admission and existing student college differ; approval requires review.");
+            if(_httpContext?.HttpContext is { } http && http.Items.ContainsKey(BTech.Middleware.ModulePermissionMiddleware.ActiveRolesItem))
+                CollegeDataScope.Resolve(http,collegeId);
+            else if(approver?.college_id.HasValue==true&&approver.college_id!=collegeId)
+            {
+                var super=await _context.Database.GetDbConnection().ExecuteScalarAsync<int>("SELECT COUNT(*) FROM user_roles ur JOIN roles r ON r.role_id=ur.role_id WHERE ur.user_id=@userId AND ur.status=1 AND ur.removed_at IS NULL AND r.status=1 AND r.deleted_at IS NULL AND r.role_code='SUPER_ADMIN'",new{userId},transaction.GetDbTransaction());
+                if(super==0)throw new UnauthorizedAccessException("Approver is not authorized for this student's college.");
+            }
             if (!collegeId.HasValue || !await _context.Colleges.AnyAsync(c => c.CollegeId == collegeId.Value))
                 throw new InvalidOperationException("Cannot provision student account: owning college could not be established.");
 
@@ -325,6 +347,10 @@ namespace BTech.Services.Implementations
             }
 
             await _context.SaveChangesAsync();
+            if(student is not null)
+                await BTech.Services.Fees.AdmissionFeeLedger.EnsureAsync(_context.Database.GetDbConnection(),
+                    transaction.GetDbTransaction(),admissionId,student.StudentId,userId??account?.user_id??0,
+                    _httpContext?.HttpContext?.TraceIdentifier);
             await transaction.CommitAsync();
 
             // Setup links are delivered only after the account/admission transaction commits.

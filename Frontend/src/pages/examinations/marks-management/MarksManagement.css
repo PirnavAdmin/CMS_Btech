@@ -1039,3 +1039,16 @@
 }
 
 .marks-entry .shared-view-dialog .marks-entry-form,.shared-view-dialog .marks-entry-form{width:100%;max-height:none;overflow:visible;padding:0;border:0;background:transparent;box-shadow:none}
+
+.marks-workflow-handoff {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  padding: 12px 16px;
+  margin-bottom: 14px;
+}
+
+.marks-workflow-handoff > span {
+  flex: 1 1 240px;
+}

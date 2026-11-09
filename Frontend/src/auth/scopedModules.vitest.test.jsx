@@ -8,17 +8,18 @@ const roleState = vi.hoisted(() => ({role:'admin'}))
 vi.mock('../auth/ScreenAccess', () => ({ useScreenAccess: () => ({ canAction: (_path, action) => actionState.allowed && !actionState.denied.includes(action) && roleState.role !== 'student' }) }))
 const actionState = vi.hoisted(() => ({allowed:true, denied:[]}))
 const myProfile = vi.hoisted(() => vi.fn())
-const academic = vi.hoisted(() => ({ selectedCollegeId: 1, selectedAcademicYearId: 10, courses: [], branches: [], semesters: [], sections: [] }))
+const academic = vi.hoisted(() => ({ selectedCollegeId: 1, selectedAcademicYearId: 10, courses: [], branches: [], semesters: [], sections: [], scopeRecords: rows => rows.filter(row => String(row.collegeId) === String(academic.selectedCollegeId)) }))
 vi.mock('../api/apiEndpoints', () => ({ API_BASE_URL: '', authenticatedRequest: transport, studentProfileApi: {getMyProfile:myProfile} }))
 vi.mock('../context/AcademicContext', () => ({ useAcademic: () => academic }))
 vi.mock('../layouts/DashboardLayout', () => ({ default: ({children}) => <div>{children}</div> }))
 vi.mock('../auth/auth', () => ({ getUserRole: () => roleState.role, getUserCollegeId: () => '' }))
-vi.mock('../components/SearchableSelect', () => ({ ProjectSelect: props => <select {...props} /> }))
+vi.mock('../components/SearchableSelect', async importOriginal => ({ ...await importOriginal(), ProjectSelect: props => <select {...props} /> }))
 vi.mock('../services/academicService',()=>({default:{getDepartments:async()=>[]}}))
 vi.mock('../services/roomService',()=>({default:{getRooms:async()=>[]}}))
 import * as api from '../services/scopedModulesService'
 import useScopedModule from '../services/useScopedModule'
 import LiveExaminationWorkspace from '../pages/examinations/LiveExaminationWorkspace'
+import { GradeConfiguration, CGPACalculatorPage } from '../pages/examinations/grade-result-management/GradeResultManagement'
 import { loadExaminationData, scheduleConflict } from '../services/examinationWorkspaceService'
 import { LibraryWorkspace, MeetingsEventsWorkspace, PlacementWorkspace } from '../pages/campus/CampusWorkspace'
 
@@ -445,5 +446,40 @@ describe('examination screens and async state',()=>{
     await waitFor(()=>expect(result.current.data).toEqual([{collegeId:2}]))
     await act(async()=>{finish([{collegeId:1}])})
     expect(result.current.data).toEqual([{collegeId:2}])
+  })
+})
+
+describe('merged grades and results workspace', () => {
+  it('shows a scoped saved grade scale and recovers after a backend error', async () => {
+    transport.mockRejectedValueOnce(Object.assign(new Error('Service unavailable'), { status: 500 }))
+    transport.mockResolvedValueOnce(response([
+      { id: 21, data: { ...scope, collegeId: 2, bands: [{ grade: 'OTHER', min: 0, max: 100, points: 9, pass: true }] } },
+      { id: 22, data: { ...scope, bands: [{ grade: 'LOCAL', min: 0, max: 100, points: 8, pass: true }] } },
+    ]))
+    render(<MemoryRouter initialEntries={['/grade-result-management/grade-configuration']}><GradeConfiguration /></MemoryRouter>)
+    expect((await screen.findByRole('alert')).textContent).toContain('grade scale service')
+    expect(screen.queryByRole('button', { name: 'Manage Preview Scale' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(await screen.findByRole('cell', { name: 'LOCAL' })).toBeTruthy()
+    expect(screen.queryByRole('cell', { name: 'OTHER' })).toBeNull()
+    expect(screen.getByRole('link', { name: 'Grade Scale' }).getAttribute('aria-current')).toBe('page')
+  })
+
+  it('shows official GPA including a zero value for the selected student', async () => {
+    transport.mockImplementation(async url => {
+      switch (urlPath(url)) {
+        case '/api/v1/exams': return response([{ ...scope, examId: 7, examName: 'Mid Term', semesterId: 3, semesterName: 'Semester 1' }])
+        case '/api/v1/student-profiles': return response([{ studentId: 5, collegeId: 1, fullName: 'Asha' }])
+        case '/api/v1/results/student/5': return response([{ examId: 7, studentId: 5, sgpa: 0, cgpa: 6.25, resultStatus: 'FAIL', subjects: [{ resultId: 1, subjectId: 2, credits: 4, marksObtained: 0, maximumMarks: 100, grade: 'F', gradePoint: 0 }] }])
+        case '/api/v1/results/student/5/backlogs': return response([])
+        default: throw new Error('Unexpected request')
+      }
+    })
+    render(<MemoryRouter initialEntries={['/grade-result-management/cgpa-calculator']}><CGPACalculatorPage /></MemoryRouter>)
+    await screen.findByRole('option', { name: 'Asha' })
+    fireEvent.change(screen.getByRole('combobox', { name: 'Student' }), { target: { value: '5' } })
+    expect(screen.getByRole('cell', { name: '6.25' })).toBeTruthy()
+    expect(screen.getByRole('cell', { name: '0', exact: true })).toBeTruthy()
+    expect(screen.getByRole('cell', { name: 'Mid Term' })).toBeTruthy()
   })
 })
