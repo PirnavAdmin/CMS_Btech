@@ -1740,38 +1740,6 @@ export default function AcademicStructure() {
                 <div className="as-modal__body">
                   <div className="as-form-row">
                     <div className="as-form-group">
-                      <label htmlFor="branch-dept">
-                        Select Department <span className="required">*</span>
-                      </label>
-                      <select
-                        id="branch-dept"
-                        className={`as-form-control ${formErrors.departmentId ? 'is-invalid' : ''}`}
-                        value={branchForm.departmentId}
-                        onChange={(e) => {
-                          const newDeptId = e.target.value
-                          const deptCourses = courses.filter((c) => String(c.departmentId ?? c.DepartmentId) === String(newDeptId))
-                          setBranchForm({
-                            ...branchForm,
-                            departmentId: newDeptId,
-                            courseId: deptCourses[0]?.courseId ?? deptCourses[0]?.id ?? '',
-                          })
-                        }}
-                        required
-                      >
-                        <option value="">-- Choose Department --</option>
-                        {departments.map((d) => {
-                          const id = String(d.departmentId ?? d.id)
-                          return (
-                            <option key={id} value={id}>
-                              {d.departmentName ?? d.name} ({d.departmentCode ?? d.code})
-                            </option>
-                          )
-                        })}
-                      </select>
-                      {formErrors.departmentId && <span className="as-form-error">{formErrors.departmentId}</span>}
-                    </div>
-
-                    <div className="as-form-group">
                       <label htmlFor="branch-course">
                         Select Course <span className="required">*</span>
                       </label>
@@ -1796,6 +1764,39 @@ export default function AcademicStructure() {
                         })}
                       </select>
                       {formErrors.courseId && <span className="as-form-error">{formErrors.courseId}</span>}
+                    </div>
+
+                    <div className="as-form-group">
+                      <label htmlFor="branch-dept">
+                        Select Department <span className="required">*</span>
+                      </label>
+                      <select
+                        id="branch-dept"
+                        className={`as-form-control ${formErrors.departmentId ? 'is-invalid' : ''}`}
+                        value={branchForm.departmentId}
+                        onChange={(e) => {
+                          const newDeptId = e.target.value
+                          const deptCourses = courses.filter((c) => String(c.departmentId ?? c.DepartmentId) === String(newDeptId))
+                          const selectedCourseInDepartment = deptCourses.some((c) => String(c.courseId ?? c.id) === String(branchForm.courseId))
+                          setBranchForm({
+                            ...branchForm,
+                            departmentId: newDeptId,
+                            courseId: selectedCourseInDepartment ? branchForm.courseId : (deptCourses[0]?.courseId ?? deptCourses[0]?.id ?? ''),
+                          })
+                        }}
+                        required
+                      >
+                        <option value="">-- Choose Department --</option>
+                        {departments.map((d) => {
+                          const id = String(d.departmentId ?? d.id)
+                          return (
+                            <option key={id} value={id}>
+                              {d.departmentName ?? d.name} ({d.departmentCode ?? d.code})
+                            </option>
+                          )
+                        })}
+                      </select>
+                      {formErrors.departmentId && <span className="as-form-error">{formErrors.departmentId}</span>}
                     </div>
                   </div>
 
