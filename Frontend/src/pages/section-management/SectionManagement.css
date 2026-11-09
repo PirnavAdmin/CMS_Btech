@@ -102,6 +102,25 @@
 .section-teacher-form>div{grid-template-columns:minmax(0,1fr) auto}.section-assignment-form-head+div{margin-top:0}@media(max-width:620px){.section-teacher-form>div{grid-template-columns:1fr}}.section-assignment-chooser{gap:12px;padding:18px 20px}.section-assignment-chooser button{min-height:82px;padding:14px 16px;border-color:#c7dbe9;border-radius:9px;color:var(--text-primary);background:var(--surface, #fff)}.section-assignment-chooser button:hover{border-color:var(--brand);background:#f3f8fc}.section-assignment-chooser svg{width:20px;height:20px;flex-basis:20px}.section-assignment-chooser strong{font-size:.88rem}.section-assignment-form,.section-assigned-list{padding:16px 20px}.section-assignment-form>div{gap:9px}
 @media(max-width:620px){.section-assignment-chooser{grid-template-columns:1fr;padding:16px}.section-assignment-chooser button{min-height:74px}.section-assignment-form, .section-assigned-list{padding-inline:16px}}
 
+/* Match Academic Structure's compact, theme-aware directory filters. */
+.section-management .filter-disclosure { border-color:var(--border); background:var(--surface); }
+.section-management .filter-disclosure__bar { gap:10px; padding:12px 16px; background:var(--surface); }
+.section-management .filter-disclosure__search { flex:0 1 420px; min-width:min(240px,100%); max-width:420px; }
+.section-management .filter-disclosure__search .section-filter-bar { display:block; width:100%; padding:0; border:0; background:transparent; }
+.section-management .section-search { box-sizing:border-box; width:100%; height:38px; gap:8px; border-color:var(--border); border-radius:8px; background:var(--surface); }
+.section-management .section-search input { height:36px; color:var(--text-primary); font-size:.8125rem; }
+.section-management .section-search input::placeholder { color:var(--text-muted); }
+.section-management .filter-disclosure__search .section-search:focus-within { border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-soft); }
+.section-management .filter-disclosure__search .section-search input:focus { outline:0!important; border:0!important; box-shadow:none!important; }
+.section-management .filter-disclosure__toggle { min-height:38px; border-radius:8px; }
+.section-management .filter-disclosure__content { padding:12px 16px; border-color:var(--border); background:var(--surface-soft); }
+.section-management .filter-disclosure__content-inner { width:100%; gap:8px; align-items:center; }
+.section-management .filter-disclosure__content-inner .section-filter-bar { display:grid; flex:1 1 100%; grid-template-columns:repeat(5,minmax(140px,1fr)); gap:8px; width:100%; padding:0; border:0; background:transparent; }
+.section-management .section-filter-bar>.searchable-select .searchable-select__trigger { box-sizing:border-box; width:100%; height:38px; min-height:38px; padding:0 10px; border-color:var(--border); border-radius:8px; background:var(--surface); color:var(--text-primary); font-size:.8125rem; }
+.section-management .filter-disclosure__content-inner>.filter-disclosure__clear-btn { min-height:38px; border-radius:8px; }
+@media(max-width:900px){.section-management .filter-disclosure__content-inner .section-filter-bar{grid-template-columns:repeat(2,minmax(140px,1fr))}}
+@media(max-width:480px){.section-management .filter-disclosure__content-inner .section-filter-bar{grid-template-columns:1fr}}
+
 /* Keep status markers and allocation navigation consistently aligned. */
 .section-status{display:inline-flex!important;width:fit-content;max-width:100%;align-items:center;align-self:flex-start;gap:6px;padding:5px 9px;border-radius:999px;color:var(--brand);background:var(--brand-soft);font-size:.72rem!important;font-weight:750;line-height:1;text-transform:none!important;white-space:nowrap}
 .section-status::before{width:7px;height:7px;flex:0 0 7px;border-radius:50%;background:currentColor;content:""}
