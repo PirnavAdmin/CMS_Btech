@@ -37,7 +37,7 @@ export default defineConfig(({ mode }) => {
   server: {
     proxy: {
       '/postal-lookup': {
-        target: 'https://api.postalpincode.in',
+        target: 'https://www.pincodesinfo.in/api',
         changeOrigin: true,
         secure: true,
         rewrite: path => path.replace(/^\/postal-lookup/, ''),

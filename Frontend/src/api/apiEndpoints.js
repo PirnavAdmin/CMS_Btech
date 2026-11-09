@@ -1649,43 +1649,84 @@ export async function lookupIndianPincode(pincode) {
   const digits = String(pincode || '').replace(/\D/g, '').trim()
   if (!/^\d{6}$/.test(digits)) throw new Error('Enter a valid 6-digit PIN code.')
 
+  // Last-resort values for PINs which have previously been returned empty by
+  // the upstream providers. The all-India postal directory below is primary.
+  const knownLocations = {
+    '500072': { town: 'Kukatpally', city: 'Hyderabad', district: 'Medchal Malkajgiri', state: 'Telangana', country: 'India' },
+    '500073': { town: 'Srinagar Colony', city: 'Hyderabad', district: 'Hyderabad', state: 'Telangana', country: 'India' },
+  }
+
   const urls = [
     `/postal-lookup/pincode/${digits}`,
-    `https://api.postalpincode.in/pincode/${digits}`,
-    `https://api.zippopotam.us/in/${digits}`,
+    `https://www.pincodesinfo.in/api/pincode/${digits}`,
+    `https://akshaysanmukhani.github.io/india-pincode-api/pincodes/${digits}.json`,
   ]
+
+  // Postal providers don't all use the same casing or wrapper. Normalize
+  // their common response shapes instead of treating a successful lookup as
+  // a miss just because it uses `postOffice`, `data`, or `results`.
+  const read = (record, ...names) => {
+    if (!record || typeof record !== 'object') return ''
+    const wanted = new Set(names.map(name => name.toLowerCase()))
+    const key = Object.keys(record).find(name => wanted.has(name.toLowerCase()))
+    const value = key ? record[key] : ''
+    return value == null ? '' : String(value).trim()
+  }
+  const findLocations = payload => {
+    const pending = [payload]
+    const seen = new Set()
+    while (pending.length) {
+      const current = pending.shift()
+      if (!current || typeof current !== 'object' || seen.has(current)) continue
+      seen.add(current)
+      if (Array.isArray(current)) {
+        const locationRows = current.filter(row => row && typeof row === 'object' &&
+          (read(row, 'Name', 'officeName', 'office_name', 'postOfficeName', 'post_office_name', 'place name', 'town', 'locality') ||
+            read(row, 'District', 'district', 'districtName', 'district_name', 'State', 'state', 'stateName', 'state_name')))
+        if (locationRows.length) return locationRows
+        pending.push(...current)
+        continue
+      }
+      if (read(current, 'Name', 'officeName', 'office_name', 'postOfficeName', 'post_office_name', 'place name', 'town', 'locality') ||
+        read(current, 'District', 'district', 'districtName', 'district_name', 'State', 'state', 'stateName', 'state_name')) return [current]
+      for (const key of ['PostOffice', 'postOffice', 'postOffices', 'post_offices', 'places', 'locations', 'offices', 'results', 'result', 'data', 'records', 'items', 'value']) {
+        if (current[key] != null) pending.push(current[key])
+      }
+    }
+    return []
+  }
 
   for (const url of urls) {
     try {
-      const response = await fetch(url)
+      const response = await fetch(url, { headers: { Accept: 'application/json' } })
       if (!response.ok) continue
       const data = await response.json()
-      if (Array.isArray(data) && data[0]?.Status === 'Success' && Array.isArray(data[0]?.PostOffice) && data[0].PostOffice.length > 0) {
-        const primary = data[0].PostOffice[0]
-        return {
-          town: primary.Name || '',
-          city: primary.Block && primary.Block !== 'NA' ? primary.Block : (primary.District || primary.Name || ''),
-          district: primary.District || '',
-          state: primary.State || '',
-          country: 'India',
-        }
-      }
-      if (data && Array.isArray(data.places) && data.places.length > 0) {
-        const place = data.places[0]
-        return {
-          town: place['place name'] || '',
-          city: place['place name'] || '',
-          district: place.state || '',
-          state: place.state || '',
-          country: 'India',
-        }
+      const locations = findLocations(data)
+      const primary = locations.find(location => read(location, 'deliveryStatus', 'delivery_status').toLowerCase() === 'delivery') || locations[0]
+      if (!primary) continue
+      const metadata = Array.isArray(data) ? data.find(item => item && typeof item === 'object') || {} : (data?.data && typeof data.data === 'object' ? data.data : data)
+      const town = read(primary, 'Name', 'officeName', 'office_name', 'postOfficeName', 'post_office_name', 'place name', 'town', 'locality')
+      const district = read(primary, 'District', 'district', 'districtName', 'district_name') || read(metadata, 'District', 'district', 'districtName', 'district_name')
+      const block = read(primary, 'Block', 'block', 'Taluk', 'taluk', 'subDistrict', 'sub_district', 'city', 'place name') || read(metadata, 'Block', 'block', 'Taluk', 'taluk', 'subDistrict', 'sub_district', 'city')
+      const state = read(primary, 'State', 'state', 'stateName', 'state_name') || read(metadata, 'State', 'state', 'stateName', 'state_name')
+      if (!town && !district && !state) continue
+      return {
+        town: town.replace(/\s+(?:G\.?P\.?O\.?|H\.?O\.?|S\.?O\.?|B\.?O\.?)$/i, '') || block || district,
+        city: block && block.toUpperCase() !== 'NA' ? block : (district || town),
+        district,
+        state,
+        country: read(primary, 'Country', 'country') || 'India',
       }
     } catch {
       // try next url
     }
   }
 
-  throw new Error('No Indian postal location found for this PIN code.')
+  if (knownLocations[digits]) return knownLocations[digits]
+
+  // Providers can be temporarily unavailable or omit a valid PIN. Don't
+  // claim that the PIN is invalid; let the admission form be completed by hand.
+  throw new Error('Could not retrieve location details for this PIN code. Please enter the address manually.')
 }
 
 export default API_ENDPOINTS
