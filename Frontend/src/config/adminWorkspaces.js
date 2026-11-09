@@ -22,7 +22,20 @@ export function groupAdminWorkspaces(groups) {
     const paths = new Set()
     const children = members.flatMap(entry => entry.children.length ? entry.children.map(child => ({ ...entry, ...child, aliases: child.aliases || [], moduleId: entry.id, children: [] })) : [{ ...entry, children: [] }])
       .filter(entry => { if (paths.has(entry.path)) return false; paths.add(entry.path); return true })
-    return [{ ...members[0], id: `workspace_${workspace.id}`, label: workspace.label, icon: workspace.icon, children: workspace.path ? [] : children.length > 1 ? children : [], path: workspace.path || children[0].path, aliases: members.flatMap(entry => [entry.path, ...entry.aliases]), members }]
+    const spatialDirectory = workspace.id === 'academic'
+      ? children.find(entry => entry.id === 'sections' || entry.id === 'rooms')
+      : undefined
+    const directPath = workspace.path || spatialDirectory?.path
+    return [{
+      ...members[0],
+      id: `workspace_${workspace.id}`,
+      label: workspace.label,
+      icon: workspace.icon,
+      children: !directPath && children.length > 1 ? children : [],
+      path: directPath || children[0].path,
+      aliases: members.flatMap(entry => [entry.path, ...entry.aliases]),
+      members,
+    }]
   })
   if (!items.length) return []
   items.splice(items.some(item => item.id === 'workspace_administration') ? items.findIndex(item => item.id === 'workspace_administration') : items.length, 0, { id: 'workspace_certificates', label: 'Certificates', icon: 'file-check-2', children: [], unavailable: true })

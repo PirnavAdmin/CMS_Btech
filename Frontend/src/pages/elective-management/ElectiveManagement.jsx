@@ -572,33 +572,35 @@ export default function ElectiveManagement() {
           ))}
         </section>
         {activeTab === 'subjects' && (
-          <section className="sm-card em-subject-directory-card">
+          <section className="sm-card em-subject-directory-card" aria-labelledby="elective-directory-title">
+            <div className="sm-card-header">
+              <h2 id="elective-directory-title">Elective Subject Directory</h2>
+              <ExportMenu rows={electiveTableRows} columns={electiveTableExportColumns} title="Elective Subject Directory" filename="elective-subject-directory" scope="All matching subject records" loading={directoryLoading || Boolean(directoryError) || mastersLoading || Boolean(mastersError)} />
+            </div>
             <FilterPanel
               className="em-subject-filter-panel"
               active={hasAcademicFilter(filters) || filters.status !== 'All'}
-              hideClear
-              leadingActions={(
-                <div className="em-subject-toolbar-actions">
-                  <ExportMenu rows={electiveTableRows} columns={electiveTableExportColumns} title="Elective Subject Directory" filename="elective-subject-directory" scope="All matching subject records" loading={directoryLoading || Boolean(directoryError) || mastersLoading || Boolean(mastersError)} />
-                </div>
+              onClear={() => setFilters(old => ({ ...old, course: 'All', branch: 'All', semester: 'All', academicYear: 'All', level: 'All', status: 'All' }))}
+              search={(
+                <label className="em-subject-search">
+                  <FiSearch aria-hidden="true" />
+                  <input type="search" aria-label="Search elective subjects" placeholder="Search by subject code or name" value={search} onChange={event => setSearch(event.target.value)} />
+                </label>
               )}
-              actions={(hasAcademicFilter(filters) || filters.status !== 'All') && <button type="button" className="sm-btn sm-btn--secondary em-clear-subject-filters" onClick={() => setFilters(old => ({ ...old, course: 'All', branch: 'All', semester: 'All', academicYear: 'All', level: 'All', status: 'All' }))}>Clear Filters</button>}
-            >
-              <div className="em-toolbar">
-                <div className="em-search"><FiSearch /><input aria-label="Search subjects" placeholder="Search subject code or name..." value={search} onChange={event => setSearch(event.target.value)} /></div>
+              filters={(
                 <div className="em-filters">
                   {['course', 'branch', 'semester', 'academicYear', 'level', 'status'].map(key => {
                     const labels = { course: 'Course', branch: 'Branch', semester: 'Semester', academicYear: 'Academic Year', level: 'Level', status: 'Status' }
                     const label = labels[key]
                     return (
                       <label key={key}>
-                        <span>{label}</span>
+                        <span className="em-filter-label">{label}</span>
                         <SearchableSelect
                           label={`Select ${label}`}
                           value={filters[key]}
-                          options={[{ value: 'All', label: `Select ${label}` }, ...directoryFilterOptions(key)]}
+                          options={[{ value: 'All', label: 'All' }, ...directoryFilterOptions(key)]}
                           onChange={value => setFilters(old => changeAcademicFilter(old, key, value))}
-                          placeholder={`Select ${label}`}
+                          placeholder="All"
                           searchPlaceholder={`Search ${label.toLowerCase()}...`}
                           noOptionsMessage={`No ${label.toLowerCase()} options found.`}
                         />
@@ -606,15 +608,15 @@ export default function ElectiveManagement() {
                     )
                   })}
                 </div>
-              </div>
-            </FilterPanel>
+              )}
+            />
             <div className="sm-table-wrap">
               {directoryLoading || mastersLoading ? (
                 <div className="em-loading">Loading subjects...</div>
               ) : directoryError || mastersError ? (
                 <div className="em-alert" role="alert">{directoryError || mastersError}<button type="button" onClick={() => { loadDirectory(); loadMasters() }}>Retry</button></div>
               ) : !electiveTableRows.length ? (
-                <EmptyState title={hasSubjectFilter ? 'No elective subjects found.' : 'Choose filters to view elective subjects.'} description={hasSubjectFilter ? 'Try different filters or search terms.' : 'Subjects appear here after you select an academic filter or search.'} />
+                <EmptyState className="em-subject-empty" icon={FiBookOpen} title={hasSubjectFilter ? 'No matching elective subjects' : 'Find elective subjects'} description={hasSubjectFilter ? 'Try a different search or adjust the filters.' : 'Search by subject code or name, or open Filters to narrow the directory.'} />
               ) : (
                 <table className="em-table em-group-table">
                   <thead>

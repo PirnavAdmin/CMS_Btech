@@ -1,3 +1,4 @@
+import FilterPanel from '../../../components/FilterPanel'
 import StudentDocumentActions from '../../../components/StudentDocumentActions'
 import { studentIntegrationFees } from '../../../utils/studentIntegrationFees'
 import PageHeader from '../../../components/PageHeader'
@@ -497,22 +498,28 @@ function AdmissionFilters({ rows, query, setQuery, filters, setFilters, hidden =
   const clear = () => { setQuery(''); setFilters(Object.fromEntries(FILTERS.map(([key]) => [key, '']))) }
   return (
     <section id="admission-filters" className="sa-admission-filters" aria-label="Search and filter admissions" hidden={hidden}>
-      <div className="sa-admission-filterbar">
-        <label className="sa-search">
+      <FilterPanel
+        className="sa-admission-filter-panel"
+        active={active.length > 0}
+        search={<label className="sa-search">
           <FiSearch aria-hidden="true" />
           <input value={query} onChange={event => setQuery(event.target.value)} title="Search name, registration, admission, mobile or email" placeholder="Search name, registration, admission, mobile or email" />
-        </label>
-        {Boolean(query || active.length) && <button type="button" className="sa-clear-filters" onClick={clear}><FiX aria-hidden="true" /> Clear filters</button>}
-      </div>
-      <div className="sa-filter-grid">
-        {FILTERS.map(([key,label]) => <label key={key}>
-          <span>{label}</span>
-          <ProjectSelect value={filters[key]} onChange={event => setFilters(current => ({ ...current, [key]: event.target.value, ...(key === 'course' ? { branch: '' } : {}) }))}>
-            <option value="">All {label}</option>
-            {options(key).map(value => <option value={value} key={value}>{key === 'status' ? (STATUS[value] || value) : value}</option>)}
-          </ProjectSelect>
-        </label>)}
-      </div>
+        </label>}
+        actions={Boolean(query || active.length) && (
+          <button type="button" className="sa-clear-filters" onClick={clear}><FiX aria-hidden="true" /> Clear filters</button>
+        )}
+        filters={(
+          <div className="sa-filter-grid">
+            {FILTERS.map(([key,label]) => <label key={key}>
+              <span>{label}</span>
+              <ProjectSelect value={filters[key]} onChange={event => setFilters(current => ({ ...current, [key]: event.target.value, ...(key === 'course' ? { branch: '' } : {}) }))}>
+                <option value="">All {label}</option>
+                {options(key).map(value => <option value={value} key={value}>{key === 'status' ? (STATUS[value] || value) : value}</option>)}
+              </ProjectSelect>
+            </label>)}
+          </div>
+        )}
+      />
       {active.length > 0 && <div className="sa-filter-chips">{active.map(([key,value]) => <button type="button" key={key} onClick={() => setFilters(current => ({ ...current, [key]: '' }))}>{FILTERS.find(item => item[0] === key)?.[1]}: {key === 'status' ? (STATUS[value] || value) : value} <FiX aria-hidden="true" /></button>)}</div>}
     </section>
   )
@@ -615,10 +622,16 @@ function AdmissionList() {
 
   return (
     <>
-      <div className="sa-overview-header">
-        <PageHeader title="Student Admissions" subtitle="Manage registrations, review and approval in the selected college and academic year." />
-      <div className="sa-reference-summary" aria-label="Admission summary">{[['Applications',stats.total],['Approved',stats.approved],['Awaiting review',stats.pending],['Drafts',stats.draft]].map(([label,value]) => <article key={label}><span>{label}</span><strong>{loading ? '—' : value}</strong></article>)}</div>
-      </div>
+      <PageHeader
+        title="Student Admissions"
+        subtitle="Manage registrations, review and approval in the selected college and academic year."
+        compactSummary={[
+          { label: 'Applications', value: loading ? '—' : stats.total },
+          { label: 'Approved', value: loading ? '—' : stats.approved, tone: 'active' },
+          { label: 'Awaiting review', value: loading ? '—' : stats.pending, tone: 'upcoming' },
+          { label: 'Drafts', value: loading ? '—' : stats.draft },
+        ]}
+      />
       <section className="sa-directory cm-panel">
         <header className="course-directory-heading">
           <div>

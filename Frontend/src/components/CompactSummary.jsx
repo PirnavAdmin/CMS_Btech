@@ -1,5 +1,3 @@
-import './CompactSummary.css'
-
 export default function CompactSummary({ items = [], label = 'Summary' }) {
   return (
     <div className="compact-summary" aria-label={label}>

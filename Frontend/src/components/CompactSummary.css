@@ -1,86 +1,139 @@
-.compact-summary {
-  display: inline-flex;
-  align-items: center;
-  gap: 0;
+/* Keep the shared summary and existing metric groups on the same visual system.
+   Explicit group names keep this styling away from detail cards and form fields. */
+:root :is(#root, [role="dialog"]) :is(
+  .compact-summary,
+  .college-config-stats,
+  .sm-summary-strip, .em-kpi-grid, .em-report-summary, .cm-stat-grid, .cm-report-summary,
+  .promotion-kpis, .user-directory__stats, .rooms-detail-summary-bar,
+  .examination-setup__summary, .exm-summary, .grm-insight-metrics, .marks-approval-detail-summary,
+  .fm-kpis-grid, .fm-summary-cards-grid, .fm-report-summary-strip, .fm-summary-strip,
+  .fm-collect-student-kpis, .fm-detail-kpis,
+  .campus-summary, .adv-kpi-grid, .tt-dashboard-stats, .tt-live-summary, .tt-validation-summary,
+  .ym-hero-stats, .dashboard-curriculum-summary, .faculty-dashboard-metrics,
+  .portal-stats, .student-metrics, .td-metrics, .fc-summary, .fa-stats, .flm-summary,
+  .tl-kpi-grid, .tm-analytics-grid, .tk-stats, .nt-stats, .me-stats, .dr-stats,
+  .sd-summary-grid, .sp-att-summary-grid,
+  .fw-personal-attendance-stats, .fw-attendance-class-metrics, .fw-student-overview,
+  .fw-timetable-overview, .fw-marks-overview, .fw-material-overview, .fw-leave-overview
+):not([hidden]) {
+  --summary-surface: var(--surface-soft, var(--surface));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 1px;
+  width: fit-content;
+  flex: 0 1 auto;
+  justify-self: start;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0;
   border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface-soft, var(--surface));
+  border-radius: 11px;
+  background: var(--border);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
   box-sizing: border-box;
+
+  & > :is(article, div, a, button):not([hidden]) {
+    display: flex;
+    position: relative;
+    flex: 1 1 auto;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-width: min(64px, 100%);
+    max-width: 100%;
+    min-height: 46px;
+    margin: 0;
+    padding: 7px 12px;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: var(--summary-surface);
+    text-align: center;
+    text-decoration: none;
+    box-sizing: border-box;
+    overflow-wrap: anywhere;
+  }
+
+  & > :is(article, div, a, button)::before,
+  & > :is(article, div, a, button)::after {
+    content: none;
+  }
+
+  & > :is(a, button):hover {
+    background: var(--brand-soft, var(--surface));
+  }
+
+  & > :is(a, button):focus-visible {
+    z-index: 1;
+    outline: 2px solid var(--brand);
+    outline-offset: -3px;
+  }
+
+  /* Existing cards sometimes wrap the value and label in a separate block. */
+  & > :is(article, div, a, button) > :is(div, span):has(> strong),
+  & :is(.adv-kpi-card__body, .adv-kpi-card__value, .fm-summary-card__header,
+         .fm-metric-heading, .cm-stat-top, .tl-kpi-info, .stat-content) {
+    display: contents;
+  }
+
+  & :is(.adv-kpi-card__icon, .fm-metric-icon, .fm-summary-card__icon-box,
+         .sm-kpi-icon, .cm-stat-icon, .college-config-stat-mark, .metric-icon-box,
+         .student-metric-icon, .td-metric-icon, .td-metric-arrow, .ym-hero-stat-icon,
+         .faculty-dashboard-metric-icon, .faculty-dashboard-metric-arrow,
+         .sp-att-card-icon, .sd-summary-icon, .fa-stat-icon, .tl-kpi-icon, .stat-icon,
+         .fw-personal-attendance-stat-icon, .user-directory__stat-icon),
+  & .exm-summary__card > span:first-child,
+  & > :is(article, div, a, button) > :is(span, strong) > svg {
+    display: none;
+  }
+
+  & > :is(article, div, a, button) :is(strong, .cm-stat-value, dd) {
+    order: -1;
+    margin: 0;
+    font-size: clamp(1rem, 1.5vw, 1.15rem);
+    font-weight: 800;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+  }
+
+  & > :is(article, div, a, button) > :is(small:first-child, span:first-child, dt),
+  & > :is(article, div, a, button) > strong:first-child + :is(small, span),
+  & :is(.compact-summary__item small, .college-config-stats h2, .fm-metric-heading > span,
+         .fm-summary-card__label, .cm-stat-title, .adv-kpi-card__label, .metric-label,
+         .td-metric-label, .faculty-dashboard-metric-label, .student-metric-label,
+         .sp-att-card-label, .fw-leave-stat-label, .fw-material-stat-label,
+         .tl-kpi-info > small, .stat-content > small, .fa-stat small, .sd-summary-card div > span,
+         .user-directory__stats article small, .em-kpi-content > small,
+         .fw-personal-attendance-stat-copy > span, .ym-hero-stat small, .exm-summary__card small) {
+    max-width: 100%;
+    margin: 0;
+    color: var(--text-muted);
+    font-size: .625rem;
+    font-weight: 750;
+    letter-spacing: .06em;
+    line-height: 1.25;
+    text-transform: uppercase;
+  }
 }
 
-.compact-summary__item {
-  display: flex;
-  min-width: 64px;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 6px 10px;
-  gap: 1px;
-  border-right: 1px solid var(--border);
-  text-align: center;
-  box-sizing: border-box;
-}
-
-.compact-summary__item:last-child {
-  border-right: 0;
-}
 
 .compact-summary__item strong {
-  display: block;
   color: var(--text-primary);
-  font-size: 1.15rem;
-  font-weight: 800;
-  line-height: 1.1;
 }
 
-.compact-summary__item small {
-  display: block;
-  margin-top: 2px;
-  color: var(--text-muted);
-  font-size: 0.60rem;
-  font-weight: 750;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  max-width: 95px;
-  line-height: 1.2;
-}
-
-.compact-summary__item--active strong {
-  color: var(--success, var(--brand-hover)) !important;
-}
-
-.compact-summary__item--warning strong {
-  color: var(--brand) !important;
-}
-
-.compact-summary__item--upcoming strong {
-  color: var(--brand, var(--brand)) !important;
-}
-
-.compact-summary__item--inactive strong {
-  color: var(--danger, #c43d3d) !important;
-}
-
-.compact-summary__item--archived strong {
-  color: var(--text-muted) !important;
-}
-
-.compact-summary__item--completed strong {
-  color: var(--brand) !important;
-}
-
-.compact-summary__item--danger strong {
-  color: var(--danger, var(--danger)) !important;
-}
+.compact-summary__item--active strong { color: var(--success); }
+.compact-summary__item--warning strong,
+.compact-summary__item--upcoming strong,
+.compact-summary__item--completed strong { color: var(--brand); }
+.compact-summary__item--inactive strong,
+.compact-summary__item--danger strong { color: var(--danger); }
+.compact-summary__item--archived strong { color: var(--text-muted); }
 
 @media (max-width: 620px) {
-  .compact-summary__item {
-    min-width: 58px;
-    padding: 0 8px;
-  }
-  .compact-summary__item strong {
-    font-size: 0.88rem;
+  :root :is(#root, [role="dialog"]) .compact-summary > .compact-summary__item {
+    padding-inline: 8px;
   }
 }

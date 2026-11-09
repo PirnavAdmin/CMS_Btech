@@ -67,12 +67,12 @@ export default function ResultReview({ collegeId, academicYearId, onReviewed, in
   }
 
   return <section className="erp-card res-card">
-    <div className="res-card-header"><div>
+    <div className="res-review-heading"><div>
       <h3 className="res-card-title">Examination Result Review</h3>
       <p className="res-card-subtitle">Select an examination and a student with approved marks. Review the result and validation returned by the server.</p>
-    </div></div>
-    <form className="res-card-header" onSubmit={openReview}>
-      <label>Examination
+    </div><a className="res-btn res-btn--outline res-review-grade-link" href="/grade-result-management/grade-configuration">View Grade Scale</a></div>
+    <form className="res-review-form" onSubmit={openReview}>
+      <label className="res-review-field">Examination
         <ProjectSelect value={exam ? examId : ''} disabled={busy || !exams?.length} onChange={event => {
           setExamId(event.target.value); setStudentId(''); setRoster(null); setRosterError(''); setReviewError('')
         }}>
@@ -80,7 +80,7 @@ export default function ResultReview({ collegeId, academicYearId, onReviewed, in
           {exams?.map(row => <option key={row.examId} value={row.examId}>{row.examName}</option>)}
         </ProjectSelect>
       </label>
-      <label>Student
+      <label className="res-review-field">Student
         <ProjectSelect value={candidate ? studentId : ''} disabled={busy || !roster?.length} onChange={event => { setStudentId(event.target.value); setReviewError('') }}>
           <option value="">Select student</option>
           {roster?.map(row => <option key={row.studentId} value={row.studentId}>{row.studentName || row.studentCode || row.studentId}</option>)}
@@ -94,7 +94,7 @@ export default function ResultReview({ collegeId, academicYearId, onReviewed, in
     {roster?.length > 0 && studentId && !candidate && <p role="status">The linked student has no approved marks for this examination. Select a student with approved marks.</p>}
     {reviewError && <p role="alert">{reviewError}</p>}
     {!exams && !examError && <p role="status">Loading examinations…</p>}
-    {exams?.length === 0 && <p role="status">No examinations in this college and academic year.</p>}
+    {exams?.length === 0 && <div className="res-review-empty" role="status"><strong>No examinations found for this academic year</strong><span>Set up an examination first, then approved marks and calculated results will appear here.</span><a href="/examination-setup">Go to Examination Setup</a><a href="/grade-result-management/grade-configuration">View Grade Scale</a></div>}
     {exam && !roster && !rosterError && <p role="status">Loading students with approved marks…</p>}
     {roster?.length === 0 && <p role="status">No approved marks for this examination.</p>}
     {review && <ViewDialog title="Examination Result Review" subtitle={candidate?.studentName} onClose={() => setReview(null)} showExport={false}>

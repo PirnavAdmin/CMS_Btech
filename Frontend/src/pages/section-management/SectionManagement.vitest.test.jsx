@@ -10,6 +10,7 @@ const data = vi.hoisted(() => ({
   years: Array.from({ length: 4 }, (_, index) => ({ academicYearId: index + 1, academicYearName: `${2026 + index}-${2027 + index}`, status: index === 0 ? 'ACTIVE' : 'UPCOMING' })),
   semesters: Array.from({ length: 8 }, (_, index) => ({ semesterId: 101 + index, courseId: 10, branchId: 7, semesterNumber: index + 1, academicYearId: Math.floor(index / 2) + 1, academicYearName: `${2026 + Math.floor(index / 2)}-${2027 + Math.floor(index / 2)}`, status: 0 })),
 }))
+vi.mock('../../auth/ScreenAccess', () => ({ useScreenAccess: () => ({ canAction: () => true }) }))
 vi.mock('../../layouts/DashboardLayout', () => ({ default: ({ children }) => <>{children}</> }))
 vi.mock('../../components/ExportMenu', () => ({ default: () => null, PrintDetailsButton: () => null }))
 vi.mock('../../components/SearchableSelect', () => ({

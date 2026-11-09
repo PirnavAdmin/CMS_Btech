@@ -1,3 +1,4 @@
+import SectionsRoomsHeader from '../../components/SectionsRoomsHeader'
 import { accessGovernance } from '../../services/accessGovernanceService'
 import { generateNextAcademicYear } from '../../auth/collegeApi'
 import ViewDialog from '../../components/ViewDialog'
@@ -491,7 +492,11 @@ function AcademicYear() {
         <PageHeader
           title="Academic Year"
           subtitle="Add and manage academic years separately for each college."
-        />
+        >
+          <Link className="erp-btn erp-btn--secondary" to="/settings" aria-label="Back to Global Settings">
+            <FiArrowLeft aria-hidden="true" /> Back
+          </Link>
+        </PageHeader>
         {modal === 'view' && selected && <ViewDialog title="Academic Year Details" subtitle={selected.name} onClose={close} exportFilename={`academic-year_${selected.id}`}><div className="ay-detail-grid">{viewLoading ? <AsyncState status="loading" title="Loading academic year details…" /> : viewError ? <AsyncState status="error" message={viewError} onRetry={() => openView(selected)} /> : <>
                 <InfoCard
                   title="Cycle Information"
@@ -2317,14 +2322,53 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
         {['list', 'details'].includes(viewMode) && (
           <>
             <Link className="college-back-link" to="/settings"><FiArrowLeft /> Global Settings</Link>
-            <header className="college-config-banner"><div><FiHome aria-hidden="true" /><h1>College Configuration</h1></div><div className="college-config-actions">{canCreateCollege && <button className="erp-btn erp-btn--primary" onClick={openAdd}><Plus aria-hidden="true" /> Add College</button>}</div></header>
-            <p className="college-config-context"><span>Working College</span><strong title={selectedCollege?.name || selectedCollege?.collegeName}>{selectedCollege?.name || selectedCollege?.collegeName || 'Not selected'}</strong><small>{selectedCollege?.code || selectedCollege?.collegeCode || ''}</small></p>
-            <div className="college-config-stats" aria-label="College summary">{summaryCards.map(({ label, value, tone }) => <article key={label}><span className={`college-config-stat-mark is-${tone}`}>{label === 'Total' ? <FiHome /> : label === 'Active' ? <FiCheck /> : <FiClock />}</span><div><h2>{label} Colleges</h2><strong>{collegeSummary.loading || value === null ? '—' : Number(value).toLocaleString('en-IN')}</strong></div></article>)}</div>
+            <header className="college-config-heading">
+              <div>
+                <h1>College Configuration</h1>
+                <p className="college-config-context"><span>Working College</span><strong>{selectedCollege?.name || selectedCollege?.collegeName || 'Not selected'}</strong><small>{selectedCollege?.code || selectedCollege?.collegeCode || ''}</small></p>
+              </div>
+              <CompactSummaryImports_default label="College summary" items={summaryCards.map(({ label, value, tone }) => ({
+                label: `${label} Colleges`,
+                value: collegeSummary.loading || value === null ? '—' : Number(value).toLocaleString('en-IN'),
+                tone: tone === 'inactive' ? 'danger' : tone,
+              }))} />
+            </header>
             {collegeSummary.error && !collegeError && <p role="alert">{collegeSummary.error}</p>}
-            <div className="college-config-toolbar"><label className="college-config-search"><FiSearch aria-hidden="true" /><input type="search" placeholder="Search by name, code or city…" value={searchTerm} onChange={handleSearchChange} aria-label="Search colleges" /></label><ProjectSelect aria-label="Filter colleges by type" value={typeFilter} onChange={event => { setTypeFilter(event.target.value); setCurrentPage(1) }}><option value="">All types</option>{availableCollegeTypes.map(type => <option key={type}>{type}</option>)}</ProjectSelect><div className="college-config-filter-tabs" role="group" aria-label="College status">{[['','All'],['active','Active'],['inactive','Inactive']].map(([value,label]) => <button key={label} type="button" aria-pressed={statusFilter === value} onClick={() => { setStatusFilter(value); setCurrentPage(1) }}>{label}</button>)}</div><ExportMenu rows={filteredColleges} columns={collegeColumns} title="Colleges" filename="colleges" loading={isCollegesLoading || Boolean(collegeError)} /></div>
-            {(searchTerm || typeFilter || statusFilter) && <div className="college-config-filter-summary"><span role="status">Filters applied{typeFilter ? ` · ${typeFilter}` : ''}{statusFilter ? ` · ${statusFilter}` : ''}</span><button type="button" className="erp-btn erp-btn--secondary" onClick={() => { setSearchTerm(''); setTypeFilter(''); setStatusFilter(''); setCurrentPage(1) }}>Clear filters</button></div>}
-            {visibleCollegeDraft?.values && canCreateCollege && <aside className="college-config-draft"><span><b>{collegeDraft.values.collegeName || 'New college draft'}</b> · Unsaved draft</span><button className="erp-btn erp-btn--secondary" onClick={() => navigate('/college-institution-management/add')}>Resume draft</button><button className="erp-btn erp-btn--secondary" onClick={() => { localStorage.removeItem(NEW_COLLEGE_DRAFT_KEY); setCollegeDraft(null) }}>Discard draft</button></aside>}
-            <section className="college-config-directory" aria-label="College directory">
+            {visibleCollegeDraft?.values && canCreateCollege && (
+              <aside className="college-config-draft">
+                <div><small>Unsaved college draft</small><strong>{visibleCollegeDraft.values.collegeName || 'New college draft'}</strong></div>
+                <div className="college-config-actions">
+                  <button type="button" className="erp-btn erp-btn--primary" onClick={() => navigate('/college-institution-management/add')}>Resume draft</button>
+                  <button type="button" className="erp-btn erp-btn--secondary" onClick={() => { localStorage.removeItem(NEW_COLLEGE_DRAFT_KEY); setCollegeDraft(null) }}>Discard draft</button>
+                </div>
+              </aside>
+            )}
+            <section className="college-config-directory" aria-labelledby="college-directory-title">
+              <header className="college-config-directory-header">
+                <h2 id="college-directory-title">College Directory</h2>
+                <div className="college-config-actions">
+                  <ExportMenu rows={filteredColleges} columns={collegeColumns} title="Colleges" filename="colleges" loading={isCollegesLoading || Boolean(collegeError)} />
+                  {canCreateCollege && <button type="button" className="erp-btn erp-btn--primary" onClick={openAdd}><Plus aria-hidden="true" /> Add College</button>}
+                </div>
+              </header>
+              <FilterPanelImports_default
+                className="college-config-filters"
+                active={Boolean(typeFilter || statusFilter)}
+                appliedFilters={[typeFilter, statusFilter === 'active' ? 'Active' : statusFilter === 'inactive' ? 'Inactive' : ''].filter(Boolean)}
+                onClear={() => { setTypeFilter(''); setStatusFilter(''); setCurrentPage(1) }}
+                search={<label className="college-config-search"><FiSearch aria-hidden="true" /><input type="search" placeholder="Search by name, code or city…" value={searchTerm} onChange={handleSearchChange} aria-label="Search colleges" /></label>}
+                filters={<div className="college-config-toolbar">
+                  <ProjectSelect aria-label="Filter colleges by type" value={typeFilter} onChange={event => { setTypeFilter(event.target.value); setCurrentPage(1) }}>
+                    <option value="">All types</option>
+                    {availableCollegeTypes.map(type => <option key={type}>{type}</option>)}
+                  </ProjectSelect>
+                  <div className="college-config-filter-tabs" role="group" aria-label="College status">
+                    {[['', 'All'], ['active', 'Active'], ['inactive', 'Inactive']].map(([value, label]) => (
+                      <button key={label} type="button" aria-pressed={statusFilter === value} onClick={() => { setStatusFilter(value); setCurrentPage(1) }}>{label}</button>
+                    ))}
+                  </div>
+                </div>}
+              />
             {isCollegesLoading ? (
               <div className="cm-empty">
                 <p>Loading colleges...</p>
@@ -2336,11 +2380,12 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
                   Retry
                 </button>
               </div>
-            ) : filteredColleges.length === 0 && !visibleCollegeDraft?.values ? (
-              <div className="cm-empty">
-                <p>{isAssignedCollegeAdmin ? 'No assigned or created colleges were found.' : 'No colleges found.'}</p>
-                {canCreateCollege && <button type="button" className="erp-btn erp-btn--primary" onClick={openAdd}><Plus aria-hidden="true" /> Add your first college</button>}
-              </div>
+            ) : filteredColleges.length === 0 ? (
+              <EmptyStateImports_default
+                className="college-config-empty"
+                title={searchTerm || typeFilter || statusFilter ? 'No matching colleges' : 'No colleges found'}
+                description={searchTerm || typeFilter || statusFilter ? 'Try a different search or adjust the filters.' : isAssignedCollegeAdmin ? 'No assigned or created colleges were found.' : visibleCollegeDraft?.values && canCreateCollege ? 'Resume your draft above to finish adding a college.' : undefined}
+              />
             ) : (
               <>
                 <DataTable caption="Colleges" tableClassName="college-config-table" rows={filteredColleges} pagination={{ page: currentPage, pageSize: itemsPerPage, onPageChange: setCurrentPage }} columns={[
@@ -7402,12 +7447,7 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
   return (
     <DashboardLayout>
       <div className="rooms-page">
-        {/* Page Header with Compact Top-Right Summary */}
-        <PageHeader
-          title="Rooms & Classrooms Management"
-          subtitle="Manage campus classrooms, lecture halls, laboratories, seating capacities, and allocate sections to rooms."
-          compactSummary={compactSummaryItems}
-        />
+        <SectionsRoomsHeader view="rooms" compactSummary={compactSummaryItems} />
 
         {/* Main Directory Card */}
         <div className="erp-directory-card rooms-directory-card">
@@ -7417,9 +7457,8 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
                 <FiGrid />
               </div>
               <div>
-                <span className="cm-eyebrow">CAMPUS SPATIAL DIRECTORY</span>
-                <h2>Classrooms & Facilities</h2>
-                <p>{filteredRooms.length} room{filteredRooms.length === 1 ? '' : 's'} configured in directory</p>
+                <h2>Room Directory</h2>
+                <p>{filteredRooms.length} records</p>
               </div>
             </div>
             <div className="directory-export-actions">
@@ -7440,14 +7479,16 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
           </div>
 
           {/* Controls Toolbar */}
-          <FilterPanel active={Boolean(query || typeFilter || blockFilter || statusFilter)} onClear={clearFilters}>
-          <div className="course-toolbar rooms-toolbar">
-            <label className="rooms-search">
+          <FilterPanel
+            className="rooms-directory-filters"
+            active={Boolean(query || typeFilter || blockFilter || statusFilter)}
+            onClear={clearFilters}
+            search={<label className="rooms-search">
               <FiSearch aria-hidden="true" />
               <input
                 type="search"
                 aria-label="Search rooms and classrooms"
-                placeholder="Search room number, name, block, floor, section, branch, course..."
+                placeholder="Search rooms or sections…"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
@@ -7456,9 +7497,8 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
                   <FiX />
                 </button>
               )}
-            </label>
-
-            <div className="rooms-filters-group">
+            </label>}
+            filters={<div className="rooms-filters-group">
               <ProjectSelect
                 className="rooms-filter"
                 aria-label="Filter by room type"
@@ -7496,9 +7536,8 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
                 <option value="Inactive">Inactive</option>
               </ProjectSelect>
 
-            </div>
-          </div>
-          </FilterPanel>
+            </div>}
+          />
 
           {/* Rooms Data Table */}
           <div className="rooms-table-wrap">
