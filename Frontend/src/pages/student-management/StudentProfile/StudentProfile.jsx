@@ -1041,6 +1041,7 @@ export default function StudentProfile() {
   const body = (
     <>
       <PageHeader
+        className="student-profile-page-header"
         title="Student Management"
         subtitle="Find and manage approved students in the selected college and academic year."
         compactSummary={studentSummaryItems}

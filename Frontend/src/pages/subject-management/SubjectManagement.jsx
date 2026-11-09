@@ -3,7 +3,7 @@ import ViewDialog from '../../components/ViewDialog'
 import { useScreenAccess } from '../../auth/ScreenAccess'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { FiPlus, FiSearch, FiBookOpen, FiTrash2 } from 'react-icons/fi'
+import { FiPlus, FiSearch, FiBookOpen, FiTrash2, FiX } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import EmptyState from '../../components/EmptyState'
 import ExportMenu from '../../components/ExportMenu'
@@ -17,7 +17,7 @@ import subjectService from '../../services/subjectService'
 import academicService, { isRecordActive } from '../../services/academicService'
 import { showError, showSuccess } from '../../utils/toast'
 import { useAcademic } from '../../context/AcademicContext'
-import { enrichSubject } from '../../utils/subjectDirectory'
+import { classificationOf, enrichSubject } from '../../utils/subjectDirectory'
 import { subjectTypeOptions } from '../../utils/subjectTypes'
 import { downloadServerExport } from '../../utils/exportUtils'
 import './SubjectManagement.css'
@@ -48,7 +48,7 @@ export default function SubjectManagement() {
   const [page, setPage] = useState(1)
   const [allMasters, setMasters] = useState({ years: [], courses: [], branches: [], semesters: [] })
   const masters = { ...allMasters, ...Object.fromEntries(['courses', 'branches', 'semesters'].map(type => [type, scopeRecords(allMasters[type])])) }
-  const [filters, updateFilters] = useState({ search: '', academicYearId: '', courseId: '', branchId: '', level: '', semesterId: '', subjectType: '', status: '' })
+  const [filters, updateFilters] = useState({ search: '', academicYearId: '', courseId: '', branchId: '', level: '', semesterId: '', subjectType: '', electiveType: '', status: '' })
   const [form, setForm] = useState(blank), [editing, setEditing] = useState(null), [editorOpen, setEditorOpen] = useState(false), [saving, setSaving] = useState(false), [recentId, setRecentId] = useState('')
   const [returnToElectives, setReturnToElectives] = useState(false)
   const [confirmingSubject, setConfirmingSubject] = useState(null), [statusSaving, setStatusSaving] = useState(false)
@@ -90,7 +90,7 @@ export default function SubjectManagement() {
     })
   }, [subjects, scopeRecords, selectedAcademicYearId, selectedCollegeId, masters.courses, masters.branches])
 
-  const records = useMemo(() => scopedSubjects.filter(s => { const q = filters.search.trim().toLowerCase(), n = semNo(s); return (!q || `${s.subjectCode} ${s.subjectName}`.toLowerCase().includes(q)) && (!filters.academicYearId || key(s.academicYearId) === key(filters.academicYearId)) && (!filters.courseId || key(s.courseId) === key(filters.courseId)) && (!filters.branchId || key(s.branchId) === key(filters.branchId)) && (!filters.semesterId || key(s.semesterId) === key(filters.semesterId)) && (!filters.level || getAcademicLevelFromSemester({ semesterNumber: n }) === filters.level) && (!filters.subjectType || s.subjectType === filters.subjectType) && (!filters.status || s.status === filters.status) }).sort((left, right) => key(left.id) === key(recentId) ? -1 : key(right.id) === key(recentId) ? 1 : 0), [scopedSubjects, filters, recentId])
+  const records = useMemo(() => scopedSubjects.filter(s => { const q = filters.search.trim().toLowerCase(), n = semNo(s), isElective = classificationOf(s) === 'Elective'; return (!q || `${s.subjectCode} ${s.subjectName}`.toLowerCase().includes(q)) && (!filters.academicYearId || key(s.academicYearId) === key(filters.academicYearId)) && (!filters.courseId || key(s.courseId) === key(filters.courseId)) && (!filters.branchId || key(s.branchId) === key(filters.branchId)) && (!filters.semesterId || key(s.semesterId) === key(filters.semesterId)) && (!filters.level || getAcademicLevelFromSemester({ semesterNumber: n }) === filters.level) && (!filters.subjectType || s.subjectType === filters.subjectType) && (!filters.electiveType || (filters.electiveType === 'Elective' ? isElective : !isElective)) && (!filters.status || s.status === filters.status) }).sort((left, right) => key(left.id) === key(recentId) ? -1 : key(right.id) === key(recentId) ? 1 : 0), [scopedSubjects, filters, recentId])
   const totalPages = Math.max(1, Math.ceil(records.length / PAGE_SIZE))
   const currentPage = Math.min(page, totalPages)
   const paginatedRecords = records.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
@@ -150,9 +150,18 @@ export default function SubjectManagement() {
     finally { setStatusSaving(false) }
   }
   const columns = [{ label: 'Subject Code', value: 'subjectCode' }, { label: 'Subject Name', value: 'subjectName' }, { label: 'Academic Year', value: s => mapping(s).year }, { label: 'Course', value: s => mapping(s).course }, { label: 'Branch', value: s => mapping(s).branch }, { label: 'Academic Level', value: s => getAcademicLevelFromSemester(s) }, { label: 'Semester', value: s => mapping(s).semester }, { label: 'Subject Type', value: s => formatSubjectType(s.subjectType) }, { label: 'Credits', value: 'credits' }, { label: 'Status', value: 'status' }]
-  const activeFilterText = [filters.academicYearId && entityName(masters.years, filters.academicYearId), filters.courseId && entityName(masters.courses, filters.courseId), filters.branchId && entityName(masters.branches, filters.branchId), filters.level, filters.semesterId && entityName(masters.semesters, filters.semesterId)].filter(Boolean)
+  const activeFilters = [
+    filters.academicYearId && { label: 'Academic year', value: masters.years.find(row => key(row.id) === key(filters.academicYearId))?.name || filters.academicYearId, field: 'academicYearId' },
+    filters.courseId && { label: 'Course', value: masters.courses.find(row => key(row.id) === key(filters.courseId))?.name || filters.courseId, field: 'courseId' },
+    filters.branchId && { label: 'Branch', value: masters.branches.find(row => key(row.id) === key(filters.branchId))?.name || filters.branchId, field: 'branchId' },
+    filters.level && { label: 'Academic level', value: filters.level, field: 'level' },
+    filters.semesterId && { label: 'Semester', value: (() => { const semester = masters.semesters.find(row => key(row.id) === key(filters.semesterId)); return semester ? semester.semesterName || semester.name || `Semester ${semNo(semester)}` : filters.semesterId })(), field: 'semesterId' },
+    filters.subjectType && { label: 'Subject type', value: formatSubjectType(filters.subjectType), field: 'subjectType' },
+    filters.electiveType && { label: 'Elective classification', value: filters.electiveType, field: 'electiveType' },
+    filters.status && { label: 'Status', value: filters.status, field: 'status' },
+  ].filter(Boolean)
   const detailSections = s => { const m = mapping(s); return [{ title: 'Subject Information', rows: [['Subject Code', s.subjectCode], ['Subject Name', s.subjectName], ['Subject Type', formatSubjectType(s.subjectType)], ['Elective Type', s.electiveType], ['Credits', s.credits], ['Status', s.status]] }, { title: 'Academic Mapping', rows: [['Academic Year', m.year], ['Course', m.course], ['Branch', m.branch], ['Academic Level', getAcademicLevelFromSemester({ semester: m.semester })], ['Semester', m.semester]] }, { title: 'Academic Configuration', rows: [['Lecture Hours', s.lectureHours], ['Tutorial Hours', s.tutorialHours], ['Practical Hours', s.practicalHours], ['Internal Marks', s.internalMarks], ['External Marks', s.externalMarks]].filter(([, v]) => v !== '' && v != null) }].filter(x => x.rows.length) }
-  const editor = editorOpen && <ViewDialog title={editing ? 'Edit Subject' : 'Add Subject'} onClose={closeEditor} busy={saving} showExport={false} hideFooter maxWidth="1000px">{saveError && <p role="alert" className="sm-error">{saveError}</p>}<Editor
+  const editor = editorOpen && <ViewDialog title={editing ? 'Edit Subject' : 'Add Subject'} subtitle="Map the subject to its academic program, then complete its details and workload." icon={FiBookOpen} onClose={closeEditor} busy={saving} showExport={false} hideFooter maxWidth="1000px">{saveError && <p role="alert" className="sm-error">{saveError}</p>}<Editor
             form={form}
             editing={editing}
             masters={{ ...masters, courses: scopedCourses }}
@@ -197,18 +206,20 @@ export default function SubjectManagement() {
               <h2>Subject Directory</h2>
               <p>{loading ? 'Loading subjects...' : `${records.length} subjects found`}</p>
             </div>
-            <div className="sm-directory-tools">
-              <div className="sm-actions">
-                <ExportMenu rows={records} columns={columns} filename="subject-directory" title="Subject Directory" scope="All matching subjects" onDownload={async () => downloadServerExport(await subjectService.exportSubjects({ search: filters.search, academicYearId: filters.academicYearId, courseId: filters.courseId, branchId: filters.branchId, semesterId: filters.semesterId, subjectType: filters.subjectType, status: filters.status }), 'subject-directory')} />
-                <button hidden={!canCreate} className="sm-btn sm-btn--primary" onClick={openAdd}><FiPlus /> Add Subject</button>
-              </div>
-            </div>
           </div>
           <FilterPanel
-            active={Boolean(filters.search || activeFilterText.length || filters.subjectType || filters.status)}
-            appliedFilters={[...activeFilterText, filters.subjectType, filters.status].filter(Boolean)}
-            onClear={() => setFilters({ search: '', academicYearId: '', courseId: '', branchId: '', level: '', semesterId: '', subjectType: '', status: '' })}
+            active={activeFilters.length > 0}
+            activeCount={activeFilters.length}
+            appliedFilters={[]}
+            onClear={() => setFilters({ search: '', academicYearId: '', courseId: '', branchId: '', level: '', semesterId: '', subjectType: '', electiveType: '', status: '' })}
+            hideClear
             className="sm-filter-panel"
+            leadingActions={(
+              <ExportMenu rows={records} columns={columns} filename="subject-directory" title="Subject Directory" scope="All matching subjects" onDownload={async () => downloadServerExport(await subjectService.exportSubjects({ search: filters.search, academicYearId: filters.academicYearId, courseId: filters.courseId, branchId: filters.branchId, semesterId: filters.semesterId, subjectType: filters.subjectType, electiveType: filters.electiveType === 'Non-Elective' ? 'Core Subject' : filters.electiveType, status: filters.status }), 'subject-directory')} />
+            )}
+            actions={(
+              <button hidden={!canCreate} className="sm-btn sm-btn--primary" onClick={openAdd}><FiPlus /> Add Subject</button>
+            )}
             search={(
               <label className="sm-search-wrap">
                 <FiSearch aria-hidden="true" />
@@ -216,14 +227,34 @@ export default function SubjectManagement() {
               </label>
             )}
             filters={(
-              <div className="sm-filter-grid">
-              <Select label="Academic Year" value={filters.academicYearId} options={masters.years} onChange={v => changeFilter('academicYearId', v)} />
-              <Select label="Course" value={filters.courseId} options={scopedCourses} onChange={v => changeFilter('courseId', v)} />
-              <Select label="Branch" value={filters.branchId} options={branches(filters.courseId)} onChange={v => changeFilter('branchId', v)} disabled={!filters.courseId} />
-              <Select label="Academic Level" value={filters.level} options={levels(filterSemesters)} onChange={v => changeFilter('level', v)} disabled={!filters.branchId} />
-              <Select label="Semester" value={filters.semesterId} options={getSemestersForAcademicLevel(filterSemesters, filters.level)} onChange={v => changeFilter('semesterId', v)} disabled={!filters.level} semester />
-              <Select label="Subject Type" value={filters.subjectType} options={types} onChange={v => changeFilter('subjectType', v)} />
-              <Select label="Status" value={filters.status} options={['Active', 'Inactive']} onChange={v => changeFilter('status', v)} />
+              <div className="sm-filter-content">
+                {activeFilters.length > 0 && (
+                  <div className="sm-filter-summary" aria-label="Selected filters">
+                    <div className="sm-filter-summary__heading">
+                      <strong>Selected filters</strong>
+                      <span>{activeFilters.length} applied</span>
+                    </div>
+                    <div className="sm-filter-chips">
+                      {activeFilters.map(filter => (
+                        <button key={filter.field} type="button" className="sm-filter-chip" title={`${filter.label}: ${filter.value} · click to remove`} onClick={() => changeFilter(filter.field, '')} aria-label={`Remove ${filter.label} filter`}>
+                          <span><small>{filter.label}</small><strong>{filter.value}</strong></span>
+                          <FiX aria-hidden="true" />
+                        </button>
+                      ))}
+                      <button type="button" className="sm-filter-clear" onClick={() => setFilters({ search: '', academicYearId: '', courseId: '', branchId: '', level: '', semesterId: '', subjectType: '', electiveType: '', status: '' })}>Clear filters</button>
+                    </div>
+                  </div>
+                )}
+                <div className="sm-filter-grid">
+                  <Select label="Academic Year" value={filters.academicYearId} options={masters.years} onChange={v => changeFilter('academicYearId', v)} />
+                  <Select label="Course" value={filters.courseId} options={scopedCourses} onChange={v => changeFilter('courseId', v)} />
+                  <Select label="Branch" value={filters.branchId} options={branches(filters.courseId)} onChange={v => changeFilter('branchId', v)} disabled={!filters.courseId} />
+                  <Select label="Academic Level" value={filters.level} options={levels(filterSemesters)} onChange={v => changeFilter('level', v)} disabled={!filters.branchId} />
+                  <Select label="Semester" value={filters.semesterId} options={getSemestersForAcademicLevel(filterSemesters, filters.level)} onChange={v => changeFilter('semesterId', v)} disabled={!filters.level} semester />
+                  <Select label="Subject Type" value={filters.subjectType} options={types} onChange={v => changeFilter('subjectType', v)} />
+                  <Select label="Elective Classification" value={filters.electiveType} options={['Elective', 'Non-Elective']} onChange={v => changeFilter('electiveType', v)} />
+                  <Select label="Status" value={filters.status} options={['Active', 'Inactive']} onChange={v => changeFilter('status', v)} />
+                </div>
               </div>
             )}
           />
@@ -244,7 +275,7 @@ export default function SubjectManagement() {
               />
             ) : (
               <table className="sm-table">
-                <colgroup>{[145, 240, 320, 150, 150, 125, 100, 260, 140, 160].map((width, index) => <col key={index} style={{ width: `${width}px` }} />)}</colgroup>
+                <colgroup>{[8, 13, 18, 9, 9, 7, 5, 12, 8, 11].map((width, index) => <col key={index} style={{ width: `${width}%` }} />)}</colgroup>
                 <thead>
                   <tr>
                     <th className="table-center">Subject Code</th>
@@ -407,6 +438,7 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
               key={t.id}
               type="button"
               className={`erp-tab-btn ${activeTab === t.id ? 'active' : ''}`}
+              aria-current={activeTab === t.id ? 'step' : undefined}
               onClick={() => goToTab(t.id)}
             >
               <span>{idx + 1}</span> {t.label.replace(/^\d+\.\s*/, '')}
@@ -414,37 +446,35 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
           ))}
         </div>
 
-        <form className="erp-form-scroll-body" onSubmit={handleSubmit}>
+        <form className="erp-form-scroll-body sm-editor-form" onSubmit={handleSubmit}>
+          <div className="sm-editor-step-content">
           {activeTab === 'mapping' && (
             <section>
-              <h3 style={{ margin: '0 0 16px', fontSize: '1.05rem', color: 'var(--text-primary)' }}>Academic Mapping</h3>
-              {mappingError && <p role="alert" style={{ margin: '0 0 12px', color: 'var(--danger)', fontSize: '.85rem' }}>{mappingError}</p>}
+              <h3 className="sm-editor-section-title">Academic Mapping</h3>
+              <p className="sm-editor-section-description">Choose the academic year and program placement for this subject.</p>
+              {mappingError && <p role="alert" className="sm-editor-error">{mappingError}</p>}
               <div className="sm-form-grid-2">
                 <Field label={<>Academic Year <span className="sm-required">*</span></>}>
                   <Select label="Academic Year" value={form.academicYearId} options={masters.years} onChange={v => change('academicYearId', v)} />
                   {!masters.years.length && <small>Academic years are unavailable. Check Academic Year setup and reopen this form.</small>}
                 </Field>
                 <Field label={<>Course <span className="sm-required">*</span></>}>
-                  <Select label="Course" value={form.courseId} options={masters.courses} onChange={v => change('courseId', v)} />
-                </Field>
-                <Field label="Course Code">
-                  <div className="sm-active-year-field" style={{ minHeight: '38px', display: 'flex', alignItems: 'center', background: 'var(--surface-soft)', border: '1px solid var(--border)', borderRadius: '6px', padding: '0 12px', fontSize: '0.88rem', color: 'var(--text-muted)' }}>
-                    {selectedCourse?.code || 'Auto-filled'}
+                  <div className="sm-select-with-meta">
+                    <Select label="Course" value={form.courseId} options={masters.courses} onChange={v => change('courseId', v)} />
+                    <small>{selectedCourse?.code ? <>Course code <strong>{selectedCourse.code}</strong></> : 'Course code will appear after selection'}</small>
                   </div>
                 </Field>
                 <Field label={<>Branch <span className="sm-required">*</span></>}>
-                  <Select label="Branch" value={form.branchId} options={branches} onChange={v => change('branchId', v)} disabled={!form.courseId} />
-                </Field>
-                <Field label="Branch Code">
-                  <div className="sm-active-year-field" style={{ minHeight: '38px', display: 'flex', alignItems: 'center', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '0 12px', fontSize: '0.88rem', color: '#64748b' }}>
-                    {selectedBranch?.code || 'Auto-filled'}
+                  <div className="sm-select-with-meta">
+                    <Select label="Branch" value={form.branchId} options={branches} onChange={v => change('branchId', v)} disabled={!form.courseId} placeholder={form.courseId ? 'Select branch' : 'Choose a course first'} />
+                    <small>{selectedBranch?.code ? <>Branch code <strong>{selectedBranch.code}</strong></> : 'Branch code will appear after selection'}</small>
                   </div>
                 </Field>
                 <Field label={<>Academic Level <span className="sm-required">*</span></>}>
-                  <Select label="Academic Level" value={formLevel} options={levels} onChange={selectLevel} disabled={!form.branchId} />
+                  <Select label="Academic Level" value={formLevel} options={levels} onChange={selectLevel} disabled={!form.branchId} placeholder={form.branchId ? 'Select academic level' : 'Choose a branch first'} />
                 </Field>
                 <Field label={<>Semester <span className="sm-required">*</span></>}>
-                  <Select label="Semester" hideSearch value={form.semesterId} options={getSemestersForAcademicLevel(semesters, formLevel)} onChange={v => change('semesterId', v)} disabled={!form.branchId || !formLevel} semester />
+                  <Select label="Semester" hideSearch value={form.semesterId} options={getSemestersForAcademicLevel(semesters, formLevel)} onChange={v => change('semesterId', v)} disabled={!form.branchId || !formLevel} placeholder={formLevel ? 'Select semester' : 'Choose an academic level first'} semester />
                 </Field>
               </div>
             </section>
@@ -452,7 +482,8 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
 
           {activeTab === 'info' && (
             <section>
-              <h3 style={{ margin: '0 0 16px', fontSize: '1.05rem', color: 'var(--erp-text-main, #0f172a)' }}>Subject Information</h3>
+              <h3 className="sm-editor-section-title">Subject Information</h3>
+              <p className="sm-editor-section-description">Add the subject identity, type, credit value, and availability.</p>
               <div className="sm-form-grid-2">
                 <Input label={<>Subject Name <span className="sm-required">*</span></>} value={form.subjectName} change={v => change('subjectName', v)} />
                 <Input label={<>Subject Code <span className="sm-required">*</span></>} value={form.subjectCode} change={v => change('subjectCode', v)} />
@@ -472,7 +503,8 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
 
           {activeTab === 'config' && (
             <section>
-              <h3 style={{ margin: '0 0 16px', fontSize: '1.05rem', color: 'var(--erp-text-main, #0f172a)' }}>Hours & Marks Configuration</h3>
+              <h3 className="sm-editor-section-title">Hours & Marks Configuration</h3>
+              <p className="sm-editor-section-description">Set the weekly teaching hours and assessment marks for the subject.</p>
               <div className="sm-form-grid-3">
                 <Input label="Lecture Hours" type="number" value={form.lectureHours} change={v => change('lectureHours', v)} />
                 <Input label="Tutorial Hours" type="number" value={form.tutorialHours} change={v => change('tutorialHours', v)} />
@@ -482,8 +514,9 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
               </div>
             </section>
           )}
+          </div>
 
-          <div className="erp-actions-bar" style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="erp-actions-bar sm-editor-footer">
             {stepIndex > 0 ? (
               <button
                 type="button"
@@ -502,7 +535,7 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
               </button>
             )}
 
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div className="sm-editor-footer-actions">
               {stepIndex < tabs.length - 1 ? (
                 <button
                   key="continue"

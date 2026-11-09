@@ -871,3 +871,31 @@ main.student-profile .sp-directory-table .student-name-link:focus-visible{outlin
     margin-left: auto;
   }
 }
+
+/* Keep the four Student Profiles KPIs aligned in a single row. */
+#root main.student-profile .student-profile-page-header > .erp-page-header__right {
+  flex: 0 1 440px;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  width: min(440px, 100%);
+  max-width: 100%;
+  margin-left: auto;
+}
+
+#root main.student-profile .student-profile-page-header .erp-page-header__right > .compact-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  flex: 1 1 100%;
+  flex-wrap: nowrap;
+  width: 100%;
+  max-width: 100%;
+}
+
+#root main.student-profile .student-profile-page-header .compact-summary > .compact-summary__item {
+  min-width: 0;
+  padding-inline: 6px;
+}
+
+#root main.student-profile .student-profile-page-header .compact-summary > .compact-summary__item small {
+  white-space: nowrap;
+}

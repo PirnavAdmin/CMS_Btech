@@ -156,9 +156,13 @@
 .college-config-draft>div:first-child { flex:1 1 200px; min-width:0; overflow-wrap:anywhere; }
 .college-config-draft :is(small,strong) { display:block; }
 .college-config-draft small { color:var(--text-muted); margin-bottom:3px; }
-.college-config-detail-identity { padding-bottom:16px; margin-bottom:16px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
-.college-config-detail-identity h3 { margin:0 0 4px; font-size:16px; }
-.college-config-detail-identity p { margin:0; font-size:12px; color:var(--text-muted); }
+.college-config-detail-identity { display:grid; grid-template-columns:56px minmax(0,1fr) auto; align-items:center; gap:16px; min-width:0; padding:18px 20px; margin-bottom:18px; border:1px solid var(--border); border-radius:14px; background:linear-gradient(110deg,var(--surface-soft),var(--surface)); }
+.college-config-detail-identity .college-config-logo { width:56px; height:56px; flex:0 0 56px; border-radius:12px; box-shadow:var(--shadow-sm); }
+.college-config-detail-identity>div { min-width:0; }
+.college-config-detail-identity h3 { margin:0 0 5px; overflow-wrap:anywhere; color:var(--text-primary); font-size:clamp(18px,2vw,22px); font-weight:750; line-height:1.25; letter-spacing:-.25px; }
+.college-config-detail-identity p { margin:0; color:var(--text-muted); font-size:14px; line-height:1.45; overflow-wrap:anywhere; }
+.college-config-detail-identity .erp-status-badge { justify-self:end; padding:7px 13px; font-size:13px; font-weight:700; }
+.college-config-detail-identity .erp-status-badge i { width:8px; height:8px; flex-basis:8px; }
 .college-config-detail-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
 /* The reference campus modal form, adapted to the B-Tech multi-step field set. */
 .add-college { box-sizing:border-box; min-width:0; max-width:1100px; width:100%; margin:0 auto; color:var(--text-primary); }
@@ -252,7 +256,7 @@
  .college-config-stats h2 { font-size:9px; letter-spacing:0; }
  .college-config-stat-mark { width:24px; height:24px; flex-basis:24px; border-radius:6px; }
 }
-@media(max-width:640px) { .college-config-banner { padding:14px; align-items:flex-start; flex-direction:column; }.college-config-banner h1 { font-size:17px; }.college-config-stats { grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }.college-config-toolbar { align-items:stretch; }.college-config-search { flex-basis:100%; }.college-config-toolbar select { max-width:none; flex:1; }.college-config-filter-tabs { justify-content:space-between; }.college-config-detail-grid,.ac-grid,.ac-review-grid { grid-template-columns:1fr; }.ac-span-2 { grid-column:span 1; }.ac-page-header { align-items:flex-start; }.ac-page-header h1 { font-size:19px; }.ac-section { padding:16px; }.ac-actions { padding:12px; flex-wrap:wrap; } }
+@media(max-width:640px) { .college-config-banner { padding:14px; align-items:flex-start; flex-direction:column; }.college-config-banner h1 { font-size:17px; }.college-config-stats { grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }.college-config-toolbar { align-items:stretch; }.college-config-search { flex-basis:100%; }.college-config-toolbar select { max-width:none; flex:1; }.college-config-filter-tabs { justify-content:space-between; }.college-config-detail-grid,.ac-grid,.ac-review-grid { grid-template-columns:1fr; }.college-config-detail-identity { grid-template-columns:48px minmax(0,1fr); gap:12px; padding:14px; }.college-config-detail-identity .college-config-logo { width:48px; height:48px; flex-basis:48px; }.college-config-detail-identity .erp-status-badge { grid-column:2; justify-self:start; }.ac-span-2 { grid-column:span 1; }.ac-page-header { align-items:flex-start; }.ac-page-header h1 { font-size:19px; }.ac-section { padding:16px; }.ac-actions { padding:12px; flex-wrap:wrap; } }
 
 /* AcademicYearManagement.css */
 
