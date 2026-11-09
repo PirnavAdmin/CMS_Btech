@@ -1,3 +1,4 @@
+import SectionsRoomsHeader from '../../components/SectionsRoomsHeader'
 import PageHeader from '../../components/PageHeader'
 import ViewDialog from '../../components/ViewDialog'
 import SharedInfoCard from '../../components/InfoCard'
@@ -247,9 +248,7 @@ function SectionList({ initialViewId = null }) {
   const hasFilters = Object.values(filters).some(Boolean)
   return <Page>
 
-    <Header title="Section Management" text="Manage sections as student groups under Course, Branch, Semester, and Academic Year.">
-      <CompactSummary label="Section summary" items={[{ label: 'Total', value: summary.total }, { label: 'Active', value: summary.active, tone: 'active' }, { label: 'Inactive', value: summary.inactive, tone: 'inactive' }, { label: 'Students', value: summary.students }]} />
-    </Header>
+    <SectionsRoomsHeader view="sections" compactSummary={<CompactSummary label="Section summary" items={[{ label: 'Total', value: summary.total }, { label: 'Active', value: summary.active, tone: 'active' }, { label: 'Inactive', value: summary.inactive, tone: 'inactive' }, { label: 'Students', value: summary.students }]} />} />
     <section className="section-table-card">
       <header className="section-reference-heading">
         <div>
@@ -261,16 +260,19 @@ function SectionList({ initialViewId = null }) {
           <Link className="cm-button" to="/section-management/add"><FiPlus /> Add Section</Link>
         </div>
       </header>
-      <FilterPanel active={hasFilters} onClear={clearFilters}>
-        <div className="section-filter-bar">
-          <label className="section-search"><FiSearch /><input aria-label="Search sections" value={filters.query} onChange={(event) => changeFilter('query', event.target.value)} placeholder="Search sections..." /></label>
+      <FilterPanel
+        className="section-directory-filters"
+        active={hasFilters}
+        onClear={clearFilters}
+        search={<label className="section-search"><FiSearch aria-hidden="true" /><input aria-label="Search sections" value={filters.query} onChange={(event) => changeFilter('query', event.target.value)} placeholder="Search sections..." /></label>}
+        filters={<div className="section-filter-bar">
           <Select label="course" value={filters.course} change={changeFilter} first="All Courses" values={courses} />
           <Select label="branch" value={filters.branch} change={changeFilter} first="All Branches" values={branches} />
           <Select label="semester" value={filters.semester} change={changeFilter} first="All Semesters" values={semesters} />
           <Select label="academicYear" value={filters.academicYear} change={changeFilter} first="All Years" values={years} />
           <Select label="status" value={filters.status} change={changeFilter} first="All Status" values={['Active', 'Inactive']} />
-        </div>
-      </FilterPanel>
+        </div>}
+      />
       {loading ? <Empty icon={FiClock} title="Loading sections..." /> : error ? <Empty icon={FiLayers} title={error} action={<button className="section-primary" onClick={load}>Retry</button>} isError /> : visible.length ? (
         <>
           <div className="section-table-wrap">
@@ -560,7 +562,7 @@ function SectionForm({ editMode = false }) {
                   <h3>Academic Mapping</h3>
                   <p>Select Course, Branch, and Semester for this section.</p>
                 </header>
-                <div className="semester-form-grid">
+                <div className="section-form-grid">
                   <Field label="Course *" error={errors.courseId}>
                     <SearchableSelect label="Course" value={form.courseId} options={scopedCourses.map((item) => ({ id: item.id, value: item.id, name: item.name, code: item.code }))} onChange={setCourse} disabled={editMode} placeholder="Select Course" searchPlaceholder="Search course name or code..." />
                   </Field>
@@ -597,7 +599,7 @@ function SectionForm({ editMode = false }) {
                   <h3>Section Information</h3>
                   <p>Specify section name, code, capacity, and classroom details.</p>
                 </header>
-                <div className="semester-form-grid">
+                <div className="section-form-grid">
                   <Field label="Section Name *" error={errors.name}>
                     <input value={form.name} onChange={(event) => setField('name', event.target.value)} placeholder="Enter section name" />
                   </Field>

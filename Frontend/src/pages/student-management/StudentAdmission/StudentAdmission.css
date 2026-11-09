@@ -2035,19 +2035,33 @@
   background: var(--surface-soft);
 }
 
-.student-admission .sa-admission-filterbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
+.student-admission .sa-admission-filter-panel {
+  border: 0;
+  background: transparent;
 }
 
-.student-admission .sa-admission-filterbar .sa-search {
-  width: min(100%, 560px);
-  min-width: min(260px, 100%);
+.student-admission .sa-admission-filter-panel .filter-disclosure__bar {
+  padding: 0;
+}
+
+.student-admission .sa-admission-filter-panel .filter-disclosure__search {
   max-width: 560px;
-  flex: 1 1 400px;
-  background: var(--surface);
+}
+
+.student-admission .sa-admission-filter-panel .filter-disclosure__search .sa-search {
+  width: 100%;
+  padding-inline: 12px;
+}
+
+.student-admission .sa-admission-filter-panel .sa-search input {
+  border: 0;
+  padding-inline: 0;
+  background: transparent;
+}
+
+.student-admission .sa-admission-filter-panel .filter-disclosure__content {
+  margin-top: 14px;
+  padding: 14px 0 0;
 }
 
 .student-admission .sa-clear-filters {
@@ -2150,13 +2164,7 @@
 }
 
 @media (max-width: 520px) {
-  .student-admission .sa-admission-filterbar {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .student-admission .sa-admission-filterbar .sa-search {
-    width: 100%;
+  .student-admission .sa-admission-filter-panel .filter-disclosure__search {
     max-width: none;
   }
 

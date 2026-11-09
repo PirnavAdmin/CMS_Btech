@@ -1034,3 +1034,44 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 .project-select > .searchable-select { width: 100%; }
 #root .project-select .searchable-select__trigger { min-height: var(--control-height, 40px); align-items: center; text-align: left; }
 .searchable-select__option:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Icon searches are one control. The shell owns the border and focus state. */
+:is(label, div):has(> svg):has(> input:is([type="search"], [placeholder^="search" i], [aria-label^="search" i])) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 38px;
+  box-sizing: border-box;
+  padding-inline: 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control, 8px);
+  background: var(--surface);
+  color: var(--text-muted);
+}
+
+:is(label, div):has(> svg):has(> input:is([type="search"], [placeholder^="search" i], [aria-label^="search" i])):focus-within {
+  border-color: var(--brand);
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+:is(label, div):has(> svg) > input:is([type="search"], [placeholder^="search" i], [aria-label^="search" i]) {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  box-sizing: border-box;
+  padding: 0;
+  /* Page-level form styles must not paint a second field inside the search shell. */
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--text-primary);
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+:is(label, div):has(> input:is([type="search"], [placeholder^="search" i], [aria-label^="search" i])) > svg {
+  flex-shrink: 0;
+}

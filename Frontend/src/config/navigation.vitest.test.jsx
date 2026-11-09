@@ -120,7 +120,7 @@ test('context loading delays requests; an empty college selection is a setup hin
  session.academic.loading = true;
  const { rerender } = render(sidebarTree()); expect(authAccessApi.get).not.toHaveBeenCalled();
  session.academic = { ...session.academic, loading: false, selectedCollegeId: '', selectedCollege: null };
- rerender(sidebarTree()); await screen.findByRole('button', { name: 'Academic Configuration' });
+ rerender(sidebarTree()); await screen.findByRole('link', { name: 'Academic Configuration' });
  expect(authAccessApi.get).toHaveBeenCalledWith(undefined); expect(screen.getByText('Select a college for college-specific records.')).toBeTruthy();
 })
 test('changing login token clears old navigation without changing authentication behavior', async () => {

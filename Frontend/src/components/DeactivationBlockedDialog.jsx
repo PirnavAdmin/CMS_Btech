@@ -1,3 +1,4 @@
+import CompactSummary from './CompactSummary'
 import { useEffect, useState } from 'react'
 import { FiAlertTriangle, FiX } from 'react-icons/fi'
 import './DeactivationBlockedDialog.css'
@@ -68,13 +69,11 @@ export default function DeactivationBlockedDialog() {
       {!hasSpecificCounts && <p>{message}</p>}
 
       {hasSpecificCounts ? (
-        <div className="deactivation-blocked-stats-grid" style={{ display: 'grid', gridTemplateColumns: statItems.length > 1 ? 'repeat(auto-fit, minmax(130px, 1fr))' : '1fr', gap: '12px', margin: '0 0 16px' }}>
-          {statItems.map((item, index) => (
-            <dl key={index} className="deactivation-blocked-count" style={{ margin: 0, padding: '12px 14px', background: 'var(--surface-soft, #f8fafc)', borderRadius: '10px', border: '1px solid var(--border, #e2e8f0)', textAlign: 'center' }}>
-              <dt style={{ color: 'var(--text-muted, #64748b)', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{item.label}</dt>
-              <dd style={{ margin: '4px 0 0', color: 'var(--text-primary, #0f172a)', fontSize: '18px', fontWeight: 800 }}>{item.count} {item.unit}</dd>
-            </dl>
-          ))}
+        <div style={{ marginBottom: '16px' }}>
+          <CompactSummary label="Associated record counts" items={statItems.map(item => ({
+            label: item.label,
+            value: [item.count, item.unit].filter(value => value != null).join(' '),
+          }))} />
         </div>
       ) : (
         <dl className="deactivation-blocked-count"><div><dt>Associated Records</dt><dd>{count === undefined ? 'Associated records' : `${count} ${count === 1 ? 'record' : 'records'}`}</dd></div></dl>

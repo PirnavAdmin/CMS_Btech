@@ -185,40 +185,78 @@
     margin: 4px 0 0;
 }
 
-.em-subject-filter-panel .em-toolbar {
-    flex-wrap: wrap;
-    padding: 8px 12px;
+.em-screen.em-screen--group-table {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    margin: 0;
+    padding: 0;
 }
 
 .sm-card.em-subject-directory-card {
     overflow: visible;
+    border-radius: 14px;
+    background: var(--surface);
 }
 
-.em-subject-toolbar-actions .export-control {
-    z-index: 6;
+.em-subject-directory-card .sm-card-header {
+    flex-wrap: wrap;
+    padding-block: 12px;
 }
 
-.em-subject-filter-panel .export-options {
-    z-index: 20;
+.em-subject-filter-panel .filter-disclosure__content {
+    container-type: inline-size;
 }
 
-.em-subject-filter-panel .em-search {
-    width: min(260px, 100%);
-}
-
-.em-subject-toolbar-actions {
-    display: inline-flex;
-    align-items: center;
+.em-subject-filter-panel .filter-disclosure__search .em-subject-search {
     gap: 10px;
-    flex: 0 0 auto;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text-muted);
+}
+
+.em-subject-search svg {
+    flex: none;
+}
+
+.em-subject-search:focus-within {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+}
+
+.em-subject-filter-panel .em-subject-search input {
+    padding-inline: 0;
+    border: 0;
+    background: transparent;
+    outline: none;
+    box-shadow: none;
 }
 
 .em-subject-filter-panel .em-filters {
-    flex-basis: 100%;
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px 12px;
     width: 100%;
-    justify-content: stretch;
+}
+
+@container (min-width: 300px) {
+    .em-subject-filter-panel .em-filters {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@container (min-width: 480px) {
+    .em-subject-filter-panel .em-filters {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@container (min-width: 900px) {
+    .em-subject-filter-panel .em-filters {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
 }
 
 .em-subject-filter-panel .em-filters label {
@@ -229,10 +267,23 @@
     text-transform: capitalize;
 }
 
-.em-subject-filter-panel .em-clear-subject-filters {
-    align-self: end;
-    min-height: 40px;
-    white-space: nowrap;
+.em-subject-filter-panel .em-filter-label {
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 650;
+}
+
+.em-subject-filter-panel .searchable-select__trigger {
+    min-height: 38px;
+    padding: 6px 10px;
+    font-size: 13px;
+}
+
+.em-subject-directory-card .em-subject-empty {
+    min-height: 0;
+    padding: 28px 20px;
+    border: 0;
+    background: transparent;
 }
 
 .em-toolbar {

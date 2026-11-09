@@ -1,3 +1,4 @@
+import { FiCalendar, FiCreditCard, FiFileText, FiSearch, FiUsers } from 'react-icons/fi'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import PageHeader from '../../components/PageHeader'
@@ -8,7 +9,7 @@ import { useAcademic } from '../../context/AcademicContext'
 import { useScreenAccess } from '../../auth/ScreenAccess'
 import { facultyPayrollApi } from '../../api/apiEndpoints'
 import ExportMenu from '../../components/ExportMenu'
-import './FacultyManagement.css'
+import './PayrollWorkspace.css'
 import facultyService from '../../services/facultyService'
 
 const amount = value => value == null || value === '' || !Number.isFinite(Number(value)) ? 'Unavailable' : new Intl.NumberFormat('en-IN', { style:'currency', currency:'INR' }).format(Number(value))
@@ -52,18 +53,79 @@ export default function PayrollWorkspace() {
   const details=[['Employee',selected?.fullName],['Employee code',selected?.employeeId],['Department',selected?.department],['Payroll month',selected?.payrollMonth || month],['Status',selected?.status],['Working days',selected?.working],['Present',selected?.present],['Paid leave',selected?.paidLeave],['LOP',selected?.lop],['Gross salary',amount(selected?.grossSalary)],['Deductions',amount(selected?.deductions)],['Net salary',amount(selected?.netSalary)],['Hold reason',selected?.holdReason]]
   return <DashboardLayout><main className="faculty-payroll">
     <PageHeader title="Faculty Payroll" subtitle="Review payroll, salary records and payslips." compactSummary={[{label:'Records',value:loading?'—':rows.length}]} />
-    <nav className="flm-tabs" aria-label="Payroll sections">{tabs.map(value=><button key={value} className={tab===value?'active':''} onClick={()=>{setTab(value);setPage(1)}}>{value}</button>)}</nav>
-    <p role="status">Salary configuration, processing and marking payments require backend capabilities that are not available. These actions cannot be saved here.</p>
-    <FilterPanel active={Boolean(type || status)} onClear={()=>{setQuery('');setType('');setStatus('');setPage(1)}} actions={<ExportMenu rows={rows} columns={exportColumns} screen="faculty-payroll" filename={`faculty-payroll-${month}`} title={`Faculty payroll ${month}`} scope="Filtered college records" />}>
-      <label>Search payroll<input value={query} onChange={event=>{setQuery(event.target.value);setPage(1)}} /></label>
-      <label>Payroll month<input type="month" required value={month} onChange={event=>{setMonth(event.target.value);setPage(1)}} /></label>
-      <label>Employee type<select value={type} onChange={event=>{setType(event.target.value);setPage(1)}}><option value="">All types</option><option>Teaching</option><option>Non-Teaching</option></select></label>
-      <label>Status<select value={status} onChange={event=>{setStatus(event.target.value);setPage(1)}}><option value="">All statuses</option>{['Draft','Processed','Paid','Hold'].map(value=><option key={value}>{value}</option>)}</select></label>
-    </FilterPanel>
-    {notice && <p role="status">{notice}</p>}{error && <p role="alert">{error} <button onClick={load}>Retry payroll</button></p>}
-    {!selectedCollegeId ? <p>Select a college to view payroll.</p> : loading ? <p role="status">Loading payroll…</p> : <div className="fp-table"><table ><thead><tr>{['Employee','Department','Working days','LOP','Gross','Deductions','Net salary','Status','Actions'].map(label=><th key={label}>{label}</th>)}</tr></thead><tbody>{rows.slice((current-1)*10,current*10).map((row,index)=><tr key={row.payrollRecordId || row.employeeId || index}><td>{row.fullName}<small> {row.employeeId}</small></td><td>{display(row.department)}</td><td>{display(row.working)}</td><td>{display(row.lop)}</td><td>{amount(row.grossSalary)}</td><td>{amount(row.deductions)}</td><td>{amount(row.netSalary)}</td><td>{display(row.status)}</td><td><button onClick={()=>setSelected(row)}>View payroll</button>{canHold && row.payrollRecordId && <button disabled={busy || row.status==='Paid'} onClick={()=>{setHold(row);setReason(row.holdReason || '')}}>Place hold</button>}</td></tr>)}{!rows.length && <tr><td colSpan="9">No payroll records returned for this college and month.</td></tr>}</tbody></table></div>}
-    <TablePagination page={current} totalPages={pages} onPageChange={setPage} />
+    <nav className="payroll-navigation" aria-label="Payroll sections">
+      {tabs.map((value, index) => {
+        const Icon = [FiCreditCard, FiUsers, FiFileText][index]
+        return <button key={value} type="button" aria-pressed={tab === value} onClick={() => { setTab(value); setPage(1) }}>
+          <Icon aria-hidden="true" />{value}
+        </button>
+      })}
+    </nav>
+    <p className="payroll-notice" role="status">
+      <FiFileText aria-hidden="true" />
+      <span>Salary configuration, processing and marking payments are unavailable on this screen.</span>
+    </p>
+
+    <section className="payroll-directory" aria-labelledby="payroll-directory-title">
+      <header className="payroll-directory-heading">
+        <h2 id="payroll-directory-title">{tab === 'Payroll Processing' ? 'Payroll Directory' : tab}</h2>
+        <ExportMenu rows={rows} columns={exportColumns} screen="faculty-payroll" filename={`faculty-payroll-${month}`} title={`Faculty payroll ${month}`} scope="Filtered college records" />
+      </header>
+
+      <FilterPanel
+        className="payroll-filters"
+        active={Boolean(type || status)}
+        onClear={() => { setQuery(''); setType(''); setStatus(''); setPage(1) }}
+        search={<label className="payroll-search">
+          <FiSearch aria-hidden="true" />
+          <input type="search" aria-label="Search payroll" placeholder="Search employee or department…" value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} />
+        </label>}
+        leadingActions={<label className="payroll-period">
+          <FiCalendar aria-hidden="true" />
+          <input aria-label="Payroll month" type="month" required value={month} onChange={event => { setMonth(event.target.value); setPage(1) }} />
+        </label>}
+        filters={<>
+          <label>Employee type<select value={type} onChange={event => { setType(event.target.value); setPage(1) }}>
+            <option value="">All types</option><option>Teaching</option><option>Non-Teaching</option>
+          </select></label>
+          <label>Status<select value={status} onChange={event => { setStatus(event.target.value); setPage(1) }}>
+            <option value="">All statuses</option>{['Draft','Processed','Paid','Hold'].map(value => <option key={value}>{value}</option>)}
+          </select></label>
+        </>}
+      />
+
+      {notice && <p className="payroll-feedback" role="status">{notice}</p>}
+      {error && <p className="payroll-feedback" role="alert">{error} <button type="button" className="erp-btn erp-btn--secondary" onClick={load}>Retry payroll</button></p>}
+      {!selectedCollegeId ? <p className="payroll-empty">Select a college to view payroll.</p>
+        : loading ? <p className="payroll-empty" role="status">Loading payroll…</p>
+        : rows.length ? <>
+          <div className="payroll-table" role="region" aria-label="Payroll records" tabIndex={0}>
+            <table>
+              <thead><tr>{['Employee','Department','Working days','LOP','Gross','Deductions','Net salary','Status','Actions'].map(label => <th key={label} scope="col">{label}</th>)}</tr></thead>
+              <tbody>{rows.slice((current - 1) * 10, current * 10).map((row, index) => <tr key={row.payrollRecordId || row.employeeId || index}>
+                <td><strong>{row.fullName}</strong><small>{row.employeeId}</small></td>
+                <td>{display(row.department)}</td>
+                <td>{display(row.working)}</td>
+                <td>{display(row.lop)}</td>
+                <td>{amount(row.grossSalary)}</td>
+                <td>{amount(row.deductions)}</td>
+                <td>{amount(row.netSalary)}</td>
+                <td><span className="payroll-status">{display(row.status)}</span></td>
+                <td><div className="payroll-row-actions">
+                  <button type="button" className="erp-btn erp-btn--secondary" onClick={() => setSelected(row)}>View payroll</button>
+                  {canHold && row.payrollRecordId && <button type="button" className="erp-btn erp-btn--secondary" disabled={busy || row.status === 'Paid'} onClick={() => { setHold(row); setReason(row.holdReason || '') }}>Place hold</button>}
+                </div></td>
+              </tr>)}</tbody>
+            </table>
+          </div>
+          {pages > 1 && <TablePagination page={current} totalPages={pages} onPageChange={setPage} />}
+        </> : !error && <div className="payroll-empty">
+          <FiUsers aria-hidden="true" />
+          <h3>{query || type || status ? 'No matching records' : 'No payroll records'}</h3>
+          <p>{query || type || status ? 'Try a different search or filter.' : 'No payroll records returned for this college and month.'}</p>
+        </div>}
+    </section>
     {selected && <ViewDialog title="Payroll details" subtitle={selected.fullName} onClose={()=>setSelected(null)} showExport={false} footerActions={<button onClick={()=>window.print()}>Print / Save PDF</button>}><dl className="view-modal-fields">{details.map(([label,value])=><div className="view-modal-field" key={label}><dt className="view-modal-label">{label}</dt><dd className="view-modal-value">{display(value)}</dd></div>)}</dl></ViewDialog>}
-    {hold && <ViewDialog title="Place payroll on hold" onClose={()=>setHold(null)} busy={busy} showExport={false} hideFooter><form onSubmit={saveHold}><label>Hold reason<textarea required value={reason} onChange={event=>setReason(event.target.value)} /></label>{error && <p role="alert">{error}</p>}<button type="button" disabled={busy} onClick={()=>setHold(null)}>Cancel</button><button disabled={busy}>{busy?'Saving…':'Confirm hold'}</button></form></ViewDialog>}
+    {hold && <ViewDialog title="Place payroll on hold" onClose={()=>setHold(null)} busy={busy} showExport={false} hideFooter><form className="payroll-hold-form" onSubmit={saveHold}><label>Hold reason<textarea required value={reason} onChange={event=>setReason(event.target.value)} /></label>{error && <p role="alert">{error}</p>}<div className="payroll-row-actions"><button type="button" className="erp-btn erp-btn--secondary" disabled={busy} onClick={()=>setHold(null)}>Cancel</button><button type="submit" className="erp-btn erp-btn--primary" disabled={busy}>{busy?'Saving…':'Confirm hold'}</button></div></form></ViewDialog>}
   </main></DashboardLayout>
 }

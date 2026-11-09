@@ -12,7 +12,7 @@ test('every existing admin destination belongs to exactly one workspace', () => 
   for (const module of modules.filter(entry => entry.navigation && (entry.sidebarRoles || entry.roles).includes('admin'))) assert.ok(ids.includes(module.id), module.id)
   const old = navigationGroups({ role: 'admin', access: { isSuperAdmin: true }, modules }).flatMap(group => group.items).flatMap(entry => entry.children.length ? entry.children : [entry])
   const next = grouped({ isSuperAdmin: true }).flatMap(group => group.items).filter(entry => !entry.unavailable).flatMap(entry => entry.children.length ? entry.children : [entry])
-  const configurationRoutes = ['/college-institution-management', '/academic-year-management']
+  const configurationRoutes = ['/college-institution-management', '/academic-year-management', '/rooms-management']
   assert.deepEqual(new Set(next.map(entry => entry.path)), new Set(old.map(entry => entry.path).filter(path => !configurationRoutes.includes(path))))
   for (const path of configurationRoutes) assert.ok(MODULE_REGISTRY.some(entry => entry.path === path && entry.component))
 })
@@ -43,4 +43,14 @@ test('certificates is explicitly unavailable and has no fabricated route', () =>
   assert.equal(certificates.unavailable, true)
   assert.equal(certificates.path, undefined)
   assert.deepEqual(groupAdminWorkspaces([]), [])
+})
+
+test('Academic Configuration opens the directory directly and preserves room-only access', () => {
+  const academic = grouped({ isSuperAdmin: true })[0].items.find(entry => entry.id === 'workspace_academic')
+  assert.deepEqual(academic.children, [])
+  assert.equal(academic.path, '/section-management')
+  assert.ok(academic.aliases.includes('/rooms-management'))
+  const roomsOnly = grouped({ permissions: { rooms: { view: true } } })[0].items.find(entry => entry.id === 'workspace_academic')
+  assert.equal(roomsOnly.path, '/rooms-management')
+  assert.ok(!roomsOnly.aliases.includes('/section-management'))
 })

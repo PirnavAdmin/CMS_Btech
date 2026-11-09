@@ -3,7 +3,7 @@ import ViewDialog from '../../components/ViewDialog'
 import { useScreenAccess } from '../../auth/ScreenAccess'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { FiPlus, FiRotateCcw, FiSearch, FiBookOpen, FiTrash2 } from 'react-icons/fi'
+import { FiPlus, FiSearch, FiBookOpen, FiTrash2 } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import EmptyState from '../../components/EmptyState'
 import ExportMenu from '../../components/ExportMenu'
@@ -170,18 +170,27 @@ export default function SubjectManagement() {
   return (
     <DashboardLayout>
       <main className="sm-screen">
-        <header className="sm-header"><PageHeader title="Subject Management" subtitle="Configure subjects, academic mappings, credits, teaching hours and marks." />
-          <div className="sm-header-side">
+        <PageHeader
+          className="sm-page-header"
+          title="Subject Management"
+          subtitle="Configure subjects, academic mappings, credits, teaching hours and marks."
+          compactSummary={(
             <section className="sm-summary-strip" aria-label="Subject summary">
-              {[["Total Subjects", kpis.total, 'total'], ["Active Subjects", kpis.active, 'active'], ["Theory Subjects", kpis.theory, 'theory'], ["Practical / Lab", kpis.lab, 'lab'], ["Total Credits", kpis.credits, 'credits']].map(([label, value, tone]) => (
+              {[
+                ['Total Subjects', kpis.total, 'total'],
+                ['Active Subjects', kpis.active, 'active'],
+                ['Theory Subjects', kpis.theory, 'theory'],
+                ['Practical / Lab', kpis.lab, 'lab'],
+                ['Total Credits', kpis.credits, 'credits'],
+              ].map(([label, value, tone]) => (
                 <div className={`sm-summary-item sm-summary-item--${tone}`} key={label}>
                   <strong>{value}</strong>
                   <span>{label}</span>
                 </div>
               ))}
             </section>
-          </div>
-        </header>
+          )}
+        />
         <section className="sm-card">
           <div className="sm-directory-title">
             <div>
@@ -189,14 +198,6 @@ export default function SubjectManagement() {
               <p>{loading ? 'Loading subjects...' : `${records.length} subjects found`}</p>
             </div>
             <div className="sm-directory-tools">
-              {activeFilterText.length > 0 && (
-                <div className="sm-filter-context">
-                  {activeFilterText.join(' / ')}{' '}
-                  <button onClick={() => setFilters({ search: '', academicYearId: '', courseId: '', branchId: '', level: '', semesterId: '', subjectType: '', status: '' })}>
-                    <FiRotateCcw /> Clear filters
-                  </button>
-                </div>
-              )}
               <div className="sm-actions">
                 <ExportMenu rows={records} columns={columns} filename="subject-directory" title="Subject Directory" scope="All matching subjects" onDownload={async () => downloadServerExport(await subjectService.exportSubjects({ search: filters.search, academicYearId: filters.academicYearId, courseId: filters.courseId, branchId: filters.branchId, semesterId: filters.semesterId, subjectType: filters.subjectType, status: filters.status }), 'subject-directory')} />
                 <button hidden={!canCreate} className="sm-btn sm-btn--primary" onClick={openAdd}><FiPlus /> Add Subject</button>
@@ -205,14 +206,17 @@ export default function SubjectManagement() {
           </div>
           <FilterPanel
             active={Boolean(filters.search || activeFilterText.length || filters.subjectType || filters.status)}
+            appliedFilters={[...activeFilterText, filters.subjectType, filters.status].filter(Boolean)}
             onClear={() => setFilters({ search: '', academicYearId: '', courseId: '', branchId: '', level: '', semesterId: '', subjectType: '', status: '' })}
             className="sm-filter-panel"
-          >
-            <div className="sm-filter-grid">
-              <div className="sm-search-wrap">
+            search={(
+              <label className="sm-search-wrap">
                 <FiSearch aria-hidden="true" />
-                <input className="sm-search-input" aria-label="Search subjects" value={filters.search} onChange={e => changeFilter('search', e.target.value)} placeholder="Search subject code or name" />
-              </div>
+                <input type="search" className="sm-search-input" aria-label="Search subjects" value={filters.search} onChange={e => changeFilter('search', e.target.value)} placeholder="Search by code or name" />
+              </label>
+            )}
+            filters={(
+              <div className="sm-filter-grid">
               <Select label="Academic Year" value={filters.academicYearId} options={masters.years} onChange={v => changeFilter('academicYearId', v)} />
               <Select label="Course" value={filters.courseId} options={scopedCourses} onChange={v => changeFilter('courseId', v)} />
               <Select label="Branch" value={filters.branchId} options={branches(filters.courseId)} onChange={v => changeFilter('branchId', v)} disabled={!filters.courseId} />
@@ -220,15 +224,18 @@ export default function SubjectManagement() {
               <Select label="Semester" value={filters.semesterId} options={getSemestersForAcademicLevel(filterSemesters, filters.level)} onChange={v => changeFilter('semesterId', v)} disabled={!filters.level} semester />
               <Select label="Subject Type" value={filters.subjectType} options={types} onChange={v => changeFilter('subjectType', v)} />
               <Select label="Status" value={filters.status} options={['Active', 'Inactive']} onChange={v => changeFilter('status', v)} />
-            </div>
-          </FilterPanel>
+              </div>
+            )}
+          />
           <div className="sm-table-wrap">
             {loading ? (
               <div className="sm-loading">Loading subject directory...</div>
             ) : loadError ? (
-              <div className="sm-error" role="alert">
-                <span>{loadError}</span>
-                <button className="sm-btn sm-btn--secondary" onClick={loadSubjects}>Retry</button>
+              <div className="sm-directory-feedback">
+                <div className="sm-error" role="alert">
+                  <span>{loadError}</span>
+                  <button type="button" className="sm-btn sm-btn--secondary" onClick={loadSubjects}>Retry</button>
+                </div>
               </div>
             ) : !records.length ? (
               <EmptyState

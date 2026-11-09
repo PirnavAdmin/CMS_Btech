@@ -129,6 +129,7 @@ export default function DashboardLayout({ children }) {
   const pageName = ({
     '/dashboard': 'Overview', '/academic-structure': 'Academic Structure', '/my-profile': 'My Profile', '/settings': 'Settings',
     '/college-institution-management': 'College', '/academic-year-management': 'Academic Years',
+    '/student-management/attendance': 'Student Attendance',
     '/department-management': 'Departments', '/semester-management': 'Semesters', '/section-management': 'Sections',
     '/student-management/admissions': 'Student Admissions',
     '/student-management/profiles': 'Student Profiles', '/student-management/promotions': 'Student Promotions',

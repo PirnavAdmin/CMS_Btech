@@ -2305,7 +2305,12 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
     { label: 'Late Today', value: todaySummary.Late || 0, tone: 'danger' },
     { label: 'On Leave Today', value: todaySummary['On Leave'] || 0, tone: 'upcoming' },
   ]
-  const searchControl = <div className="fm-attendance-search-row"><label className="fm-attendance-field fm-attendance-search-field"><span className="fm-attendance-input-label">Search</span><span className="fm-attendance-search"><FiSearch aria-hidden="true" /><input value={filters.search} onChange={event => updateFilter('search', event.target.value)} placeholder="Search attendance..." /></span></label></div>
+  const searchControl = (
+    <label className="fm-attendance-search">
+      <FiSearch aria-hidden="true" />
+      <input type="search" aria-label="Search attendance" value={filters.search} onChange={event => updateFilter('search', event.target.value)} placeholder="Search attendance…" />
+    </label>
+  )
   const facultyCategoryControl = <div className="fm-attendance-category-toggle flm-category-toggle" role="group" aria-label="Filter attendance by faculty type"><button type="button" className={`flm-cat-btn ${filters.facultyType === 'Teaching' ? 'active' : ''}`} onClick={() => updateFilter('facultyType', 'Teaching')}>Teaching Faculty ({faculty.filter(item => employeeCategoryOf(item) === 'Teaching').length})</button><button type="button" className={`flm-cat-btn ${filters.facultyType === 'Non-Teaching' ? 'active' : ''}`} onClick={() => updateFilter('facultyType', 'Non-Teaching')}>Non-Teaching Staff ({faculty.filter(item => employeeCategoryOf(item) === 'Non-Teaching').length})</button></div>
   const filterControl = <button type="button" className="fm-attendance-filter-toggle" aria-expanded={showFilters} aria-controls="faculty-attendance-filters-panel" onClick={() => setShowFilters(value => !value)}><FiFilter aria-hidden="true" /><span>Filters</span>{showFilters ? <FiChevronUp aria-hidden="true" /> : <FiChevronDown aria-hidden="true" />}</button>
   const normalizeViewRemark = value => {
@@ -2437,32 +2442,41 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
   const empty = <EmptyState title={noSource ? 'No attendance records are available yet.' : 'No attendance records match the selected filters.'} description={noSource ? 'Daily Attendance shows missing records as Not Marked; these are not saved historical records.' : undefined} action={noSource ? 'Go to Daily Attendance' : 'Clear Filters'} onAction={noSource ? () => setTab('daily') : clearFilters} />
   return (
     <div className="fm-attendance-screen">
-      <ReferencePageHeader title="Faculty Attendance" subtitle="Manage daily employee attendance, check-in/out and recorded weekly or monthly reports." compactSummary={attendanceLoading || attendanceError ? facultySummary.map(item=>({...item,value:'Unavailable'})):facultySummary}/>
+      <ReferencePageHeader
+        className="fm-attendance-page-header"
+        title="Faculty Attendance"
+        subtitle="Manage daily employee attendance, check-in/out and weekly or monthly reports."
+        compactSummary={attendanceLoading || attendanceError
+          ? facultySummary.map(item => ({ ...item, value: '—', tone: 'archived' }))
+          : facultySummary}
+      />
 
       <section className="fm-attendance-workspace">
         <div className="fm-attendance-panel">
           <header className="fm-attendance-directory-header">
-            <div className="fm-attendance-header-actions">{searchControl}{facultyCategoryControl}{filterControl}{contextualExport}</div>
+            <div className="fm-attendance-header-actions">{searchControl}{filterControl}{facultyCategoryControl}{contextualExport}</div>
           </header>
 
           {showFilters && (
-            <div id="faculty-attendance-filters-panel" className={'fm-attendance-filters' + (tab !== 'daily' ? ' fm-attendance-extended-filters' : '')}>
-              {tab === 'daily' && dateControl('date', 'Date')}
-              {tab === 'reports' && reportType === 'daily' && dateControl('date', 'Date')}
-              {tab === 'reports' && reportType === 'weekly' && dateControl('weekStart', 'Week Start')}
-              {tab === 'reports' && reportType === 'monthly' && (
-                <>
-                  {selectControl('month', 'Month', Array.from({ length: 12 }, (_, index) => ({ value: String(index + 1).padStart(2, '0'), label: new Date(2000, index, 1).toLocaleDateString('en-GB', { month: 'long' }) })), 'Select month')}
-                  <label className="fm-attendance-field">
-                    <span>Year</span>
-                    <input type="number" min="1900" max="9999" step="1" value={filters.year} aria-invalid={Boolean(periodInvalid)} onChange={event => updateFilter('year', event.target.value)} />
-                  </label>
-                </>
-              )}
-              {selectControl('department', 'Department', attendanceDepartmentOptions, 'All Departments')}
-              {tab !== 'daily' && selectControl('facultyId', 'Faculty', facultyOptions, 'All Faculty')}
-              {(tab === 'reports' || !aggregated) && selectControl('status', 'Status', ATTENDANCE_STATUSES, 'All Statuses')}
-              <button className="fm-attendance-clear" type="button" onClick={clearFilters}>Clear Filters</button>
+            <div id="faculty-attendance-filters-panel" className="fm-attendance-filters">
+              <div className="fm-attendance-filter-fields">
+                {tab === 'daily' && dateControl('date', 'Date')}
+                {tab === 'reports' && reportType === 'daily' && dateControl('date', 'Date')}
+                {tab === 'reports' && reportType === 'weekly' && dateControl('weekStart', 'Week Start')}
+                {tab === 'reports' && reportType === 'monthly' && (
+                  <>
+                    {selectControl('month', 'Month', Array.from({ length: 12 }, (_, index) => ({ value: String(index + 1).padStart(2, '0'), label: new Date(2000, index, 1).toLocaleDateString('en-GB', { month: 'long' }) })), 'Select month')}
+                    <label className="fm-attendance-field">
+                      <span>Year</span>
+                      <input type="number" min="1900" max="9999" step="1" value={filters.year} aria-invalid={Boolean(periodInvalid)} onChange={event => updateFilter('year', event.target.value)} />
+                    </label>
+                  </>
+                )}
+                {selectControl('department', 'Department', attendanceDepartmentOptions, 'All Departments')}
+                {tab !== 'daily' && selectControl('facultyId', 'Faculty', facultyOptions, 'All Faculty')}
+                {(tab === 'reports' || !aggregated) && selectControl('status', 'Status', ATTENDANCE_STATUSES, 'All Statuses')}
+              </div>
+              <button className="erp-btn erp-btn--secondary fm-attendance-clear" type="button" onClick={clearFilters}>Clear Filters</button>
             </div>
           )}
 
@@ -3706,8 +3720,11 @@ function FacultyManagement() {
     ]
     content = (
       <>
-        <ReferencePageHeader title="Faculty & Staff Management" subtitle="Manage employment profiles, academic responsibilities and staff records." />
-        <div className="fm-reference-summary">{summary.map(item => <article key={item.label}><span>{item.label}</span><strong>{item.value}</strong></article>)}</div>
+        <ReferencePageHeader
+          title="Faculty & Staff Management"
+          subtitle="Manage employment profiles, academic responsibilities and staff records."
+          compactSummary={summary}
+        />
         <nav className="fm-reference-categories" aria-label="Employee category">{[['Teaching','Teaching Faculty'],['Non-Teaching','Non-Teaching Staff']].map(([value,label]) => <button type="button" key={value} aria-current={selectedCategory === value ? 'page' : undefined} className={selectedCategory === value ? 'active' : ''} onClick={() => { clear(); navigate('/faculty?category=' + value) }}>{label}</button>)}</nav>
 
         <section className="faculty-directory">

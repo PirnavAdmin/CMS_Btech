@@ -1,0 +1,151 @@
+.faculty-payroll {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.faculty-payroll .erp-page-header { margin-bottom: 0; }
+
+.payroll-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.payroll-navigation button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 6px 12px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: 600 .875rem var(--font-family);
+}
+
+.payroll-navigation button:hover,
+.payroll-navigation button[aria-pressed="true"] {
+  color: var(--text-primary);
+  background: var(--surface-soft);
+}
+
+.payroll-navigation button[aria-pressed="true"] { border-color: var(--brand); }
+
+.payroll-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-soft);
+  color: var(--text-secondary);
+  font-size: .875rem;
+}
+
+.payroll-notice svg, .payroll-period svg { flex-shrink: 0; }
+
+.payroll-directory {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.payroll-directory-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.payroll-directory-heading h2 { margin: 0; font-size: 1rem; }
+
+.payroll-filters .filter-disclosure__search .payroll-search {
+  min-height: 38px;
+  padding-inline: 10px;
+}
+
+.payroll-period {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  max-width: 100%;
+  padding-inline: 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  color: var(--text-secondary);
+}
+
+.payroll-period input {
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font: .875rem var(--font-family);
+}
+
+.payroll-filters .filter-disclosure__content-inner label,
+.payroll-hold-form label {
+  display: grid;
+  gap: 5px;
+  color: var(--text-secondary);
+  font-size: .875rem;
+}
+
+.payroll-table { overflow-x: auto; }
+
+.payroll-table table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+}
+
+.payroll-table :is(th, td) {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: start;
+  font-size: .8125rem;
+}
+
+:root .faculty-payroll .payroll-table table thead th {
+  background: var(--surface-soft) !important;
+  color: var(--text-primary) !important;
+}
+
+.payroll-table small { display: block; color: var(--text-muted); }
+.payroll-status { padding: 3px 7px; border-radius: 6px; background: var(--surface-soft); }
+.payroll-row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.payroll-feedback { padding: 10px 16px; }
+
+.payroll-empty {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 40px 16px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.payroll-empty svg { width: 25px; height: 25px; color: var(--brand); }
+.payroll-empty h3, .payroll-empty p { margin: 0; }
+.payroll-empty h3 { color: var(--text-primary); font-size: 1rem; }
+.payroll-hold-form { display: grid; gap: 12px; }
+.payroll-hold-form textarea { min-height: 80px; }
+.payroll-hold-form .payroll-row-actions { justify-content: flex-end; }
