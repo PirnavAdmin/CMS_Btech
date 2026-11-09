@@ -113,7 +113,7 @@
     color: var(--text-muted);
     font-size: .625rem;
     font-weight: 750;
-    letter-spacing: .06em;
+    letter-spacing: .025em;
     line-height: 1.25;
     text-transform: uppercase;
   }
@@ -136,4 +136,23 @@
   :root :is(#root, [role="dialog"]) .compact-summary > .compact-summary__item {
     padding-inline: 8px;
   }
+}
+
+/* Keep page-header summary metrics in one aligned horizontal row. */
+:root :is(#root, [role="dialog"]) .compact-summary:not([hidden]) {
+  flex-wrap: nowrap;
+  width: fit-content;
+}
+
+:root :is(#root, [role="dialog"]) .compact-summary:not([hidden]) > :is(article, div, a, button):not([hidden]) {
+  flex: 1 1 0;
+  min-width: 64px;
+}
+
+:root :is(#root, [role="dialog"]) .compact-summary:not([hidden]) .compact-summary__item small {
+  max-width: none;
+  overflow-wrap: normal;
+  white-space: nowrap;
+  letter-spacing: 0;
+  font-size: .6rem;
 }
