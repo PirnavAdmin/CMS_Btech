@@ -612,7 +612,7 @@ function Attendance() {
     return {
       totalSessions,
       totalPresent,
-      avgPercentage: avgPercentage == null ? 'Unavailable' : `${avgPercentage}%`,
+      avgPercentage: avgPercentage == null ? null : `${avgPercentage}%`,
       shortageCount: allProfiles.filter(p => knownAttendanceRate(p.attendanceRate) != null && Number(p.attendanceRate) < 75).length,
     }
   }, [sessions, allProfiles])
@@ -698,17 +698,14 @@ function Attendance() {
     <DashboardLayout>
       <div className="attendance-page">
         <PageHeader
+          className="attendance-page-header"
           title="Student Attendance"
           subtitle="Manage student attendance registers, daily marking, and shortage monitoring."
-          breadcrumb={[
-            { label: 'Student Management', link: '/student-management/profiles' },
-            { label: 'Student Attendance' },
-          ]}
           compactSummary={[
             { label: 'Recorded Sessions', value: summaryMetrics.totalSessions },
-            { label: 'Avg Attendance Rate', value: summaryMetrics.avgPercentage, tone: 'active' },
-            { label: 'Total Student Entries', value: summaryMetrics.totalPresent },
-            { label: 'Shortage Risk Students', value: summaryMetrics.shortageCount, tone: summaryMetrics.shortageCount > 0 ? 'inactive' : 'default' },
+            { label: 'Avg Attendance', value: summaryMetrics.avgPercentage ?? '—', tone: summaryMetrics.avgPercentage == null ? 'archived' : 'active' },
+            { label: 'Present Entries', value: summaryMetrics.totalPresent },
+            { label: 'Students at Risk', value: summaryMetrics.shortageCount, tone: summaryMetrics.shortageCount > 0 ? 'inactive' : 'default' },
           ]}
         />
 
@@ -718,10 +715,10 @@ function Attendance() {
             <div className="erp-card erp-filter-card">
               <div className="attendance-filter-toolbar">
                 <label className="attendance-search-control">
-                  <FiSearch />
+                  <FiSearch aria-hidden="true" />
                   <input
-                    type="text"
-                    placeholder="Search by subject, faculty or student..."
+                    type="search"
+                    placeholder="Search subject, faculty or student"
                     value={filterQuery}
                     onChange={(e) => {
                       setFilterQuery(e.target.value)
@@ -731,6 +728,17 @@ function Attendance() {
                   />
                 </label>
                 <div className="attendance-register-actions">
+                  <button
+                    type="button"
+                    className={`attendance-filter-toggle${hasRegisterFilters ? ' attendance-filter-toggle--active' : ''}`}
+                    aria-expanded={showRegisterFilters}
+                    aria-controls="attendance-register-filters"
+                    onClick={() => setShowRegisterFilters(value => !value)}
+                  >
+                    <FiFilter aria-hidden="true" /> Filters
+                    {hasRegisterFilters && <span className="attendance-filter-count" aria-label="Filters applied">{[filterCourseId, filterBranchId, filterDate, fromDate, toDate, sessionStatus].filter(Boolean).length}</span>}
+                    {showRegisterFilters ? <FiChevronUp aria-hidden="true" /> : <FiChevronDown aria-hidden="true" />}
+                  </button>
                   <ExportMenu
                     rows={filteredSessions.map(s => ({
                       ...s,
@@ -742,17 +750,6 @@ function Attendance() {
                   />
                   <button
                     type="button"
-                    className={`attendance-filter-toggle${hasRegisterFilters ? ' attendance-filter-toggle--active' : ''}`}
-                    aria-expanded={showRegisterFilters}
-                    aria-controls="attendance-register-filters"
-                    onClick={() => setShowRegisterFilters(value => !value)}
-                  >
-                    <FiFilter aria-hidden="true" /> Filters
-                    {hasRegisterFilters && <span className="attendance-filter-count" aria-label="Filters applied">{[filterCourseId, filterBranchId, filterDate].filter(Boolean).length}</span>}
-                    {showRegisterFilters ? <FiChevronUp aria-hidden="true" /> : <FiChevronDown aria-hidden="true" />}
-                  </button>
-                  <button
-                    type="button"
                     className="erp-btn erp-btn--primary"
                     hidden={!canRecord} onClick={() => setTakeModalOpen(true)}
                   >
@@ -761,35 +758,52 @@ function Attendance() {
                 </div>
               </div>
               {showRegisterFilters && <div id="attendance-register-filters" className="attendance-register-filters">
-                <div className="erp-form-group">
-                  <label>Course</label>
-                  <ProjectSelect className="erp-select" value={filterCourseId} onChange={(e) => {
-                    setFilterCourseId(e.target.value)
-                    setFilterBranchId('')
-                    setCurrentPage(1)
-                  }}>
-                    <option value="">All Courses</option>
-                    {activeCourses.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </ProjectSelect>
+                <div className="attendance-register-filter-fields">
+                  <div className="attendance-register-field">
+                    <label htmlFor="attendance-filter-course">Course</label>
+                    <ProjectSelect id="attendance-filter-course" aria-label="Course" value={filterCourseId} onChange={(e) => {
+                      setFilterCourseId(e.target.value)
+                      setFilterBranchId('')
+                      setCurrentPage(1)
+                    }}>
+                      <option value="">All Courses</option>
+                      {activeCourses.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </ProjectSelect>
+                  </div>
+                  <div className="attendance-register-field">
+                    <label htmlFor="attendance-filter-branch">Branch</label>
+                    <ProjectSelect id="attendance-filter-branch" aria-label="Branch" value={filterBranchId} disabled={!filterCourseId} onChange={(e) => {
+                      setFilterBranchId(e.target.value)
+                      setCurrentPage(1)
+                    }}>
+                      <option value="">All Branches</option>
+                      {filterBranches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}
+                    </ProjectSelect>
+                  </div>
+                  {[
+                    ['Date', 'Attendance date', filterDate, setFilterDate],
+                    ['From date', 'Attendance from date', fromDate, setFromDate],
+                    ['To date', 'Attendance to date', toDate, setToDate],
+                  ].map(([label, accessibleLabel, value, setDate]) => (
+                    <label className="attendance-register-field" key={label}>
+                      <span>{label}</span>
+                      <input aria-label={accessibleLabel} type="date" className="erp-input" value={value} onChange={event => {
+                        setDate(event.target.value)
+                        setCurrentPage(1)
+                      }} />
+                    </label>
+                  ))}
+                  <div className="attendance-register-field">
+                    <label htmlFor="attendance-filter-status">Session status</label>
+                    <select id="attendance-filter-status" className="erp-select" value={sessionStatus} onChange={event => {
+                      setSessionStatus(event.target.value)
+                      setCurrentPage(1)
+                    }}>
+                      <option value="">All statuses</option>
+                      {['OPEN', 'COMPLETED', 'CANCELLED'].map(value => <option key={value}>{value}</option>)}
+                    </select>
+                  </div>
                 </div>
-                <div className="erp-form-group">
-                  <label>Branch</label>
-                  <ProjectSelect className="erp-select" value={filterBranchId} disabled={!filterCourseId} onChange={(e) => {
-                    setFilterBranchId(e.target.value)
-                    setCurrentPage(1)
-                  }}>
-                    <option value="">All Branches</option>
-                    {filterBranches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}
-                  </ProjectSelect>
-                </div>
-                <div className="erp-form-group">
-                  <label>Date</label>
-                  <input type="date" className="erp-input" value={filterDate} onChange={(e) => {
-                    setFilterDate(e.target.value)
-                    setCurrentPage(1)
-                  }} />
-                </div>
-                <label>From date<input aria-label="Attendance from date" type="date" value={fromDate} onChange={e=>{setFromDate(e.target.value);setCurrentPage(1)}}/></label><label>To date<input aria-label="Attendance to date" type="date" value={toDate} onChange={e=>{setToDate(e.target.value);setCurrentPage(1)}}/></label><label>Session status<select aria-label="Session status" value={sessionStatus} onChange={e=>{setSessionStatus(e.target.value);setCurrentPage(1)}}><option value="">All statuses</option>{['OPEN','COMPLETED','CANCELLED'].map(value=><option key={value}>{value}</option>)}</select></label>
                 {hasRegisterFilters && <button type="button" className="attendance-clear-filters" onClick={clearRegisterFilters}>Clear Filters</button>}
               </div>}
             </div>

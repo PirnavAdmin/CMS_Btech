@@ -172,7 +172,7 @@
   .fm-count-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 6px; background: var(--fm-primary-light); color: var(--fm-primary); font-size: 11px; font-weight: 700; }
   /* ERP Design System: Standard FilterPanel styling matching College screen exactly */
 
-  :is(.cm-toolbar, .course-toolbar) {
+  .fm-page :is(.cm-toolbar, .course-toolbar) {
     display: flex !important;
     flex-wrap: wrap !important;
     align-items: center !important;
@@ -181,13 +181,13 @@
     background: transparent !important;
   }
 
-  :is(.cm-toolbar, .course-toolbar) :is(.cm-search, .course-search) {
+  .fm-page :is(.cm-toolbar, .course-toolbar) :is(.cm-search, .course-search) {
     width: 420px !important;
     max-width: 420px !important;
     flex: 0 1 420px !important;
   }
 
-  :is(.cm-toolbar, .course-toolbar) select, :is(.cm-toolbar, .course-toolbar) input[type="date"], :is(.cm-toolbar, .course-toolbar) input[type="text"] {
+  .fm-page :is(.cm-toolbar, .course-toolbar) > :is(select, input[type="date"], input[type="text"]) {
     width: 220px !important;
     min-width: 180px !important;
     max-width: 260px !important;
@@ -203,17 +203,18 @@
     box-sizing: border-box !important;
   }
 
-  :is(.cm-toolbar, .course-toolbar) select option {
+  .fm-page :is(.cm-toolbar, .course-toolbar) select option {
     color: #173b5c !important;
     background: #fff !important;
   }
 
   @media (max-width: 760px) {
-    :is(.cm-toolbar, .course-toolbar) {
+    .fm-page :is(.cm-toolbar, .course-toolbar) {
       flex-direction: column !important;
       align-items: stretch !important;
     }
-    :is(.cm-toolbar, .course-toolbar) :is(.cm-search, .course-search), :is(.cm-toolbar, .course-toolbar) select, :is(.cm-toolbar, .course-toolbar) input[type="date"], :is(.cm-toolbar, .course-toolbar) input[type="text"] {
+    .fm-page :is(.cm-toolbar, .course-toolbar) :is(.cm-search, .course-search),
+    .fm-page :is(.cm-toolbar, .course-toolbar) > :is(select, input[type="date"], input[type="text"]) {
       width: 100% !important;
       max-width: none !important;
       flex: auto !important;
@@ -1177,7 +1178,8 @@
   #root .fm-page .fm-progress-card__fill { transition: none; }
 }
 
-:root[data-theme="dark"] #root .fm-page :is(.cm-toolbar, .course-toolbar) select, :root[data-theme="dark"] #root .fm-page :is(.cm-toolbar, .course-toolbar) select option, :root[data-theme="dark"] #root .fm-page :is(.cm-toolbar, .course-toolbar) input[type="date"], :root[data-theme="dark"] #root .fm-page :is(.cm-toolbar, .course-toolbar) input[type="text"] {
+:root[data-theme="dark"] #root .fm-page :is(.cm-toolbar, .course-toolbar) > :is(select, input[type="date"], input[type="text"]),
+:root[data-theme="dark"] #root .fm-page :is(.cm-toolbar, .course-toolbar) select option {
   color: var(--text-primary, #F8FAFC) !important;
   background: var(--surface-soft, #1E293B) !important;
   border-color: var(--border-strong, #334155) !important;

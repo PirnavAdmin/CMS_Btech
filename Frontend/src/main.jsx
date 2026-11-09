@@ -12,6 +12,7 @@ import './styles/dark-mode.css'
 import './styles/dark-mode-contrast.css'
 import './styles/view-status-colors.css'
 import './styles/laptop-layout.css'
+import './components/CompactSummary.css'
 
 
 createRoot(document.getElementById('root')).render(

@@ -187,6 +187,9 @@ function Workspace({ screen, academic }) {
   const linkedStudentId = searchParams.get('studentId') || ''
   const [bands, setBands] = useState(defaultBands)
   const [gpaStudentId, setGpaStudentId] = useState('')
+  const [gpaSearch, setGpaSearch] = useState('')
+  const [gpaDepartment, setGpaDepartment] = useState('')
+  const [gpaSemester, setGpaSemester] = useState('')
   const [backendPolicy, setBackendPolicy] = useState(null)
   const [policyLoading, setPolicyLoading] = useState(true)
   const [policyLoaded, setPolicyLoaded] = useState(false)
@@ -328,8 +331,8 @@ function Workspace({ screen, academic }) {
         totalMarks,
         maxMarks,
         percentage: maxMarks > 0 ? (totalMarks / maxMarks) * 100 : 0,
-        gpa: gpa !== null ? gpa.toFixed(2) : '—',
-        gpaNum: gpa,
+        gpa: gpa !== null && gpa !== undefined && Number.isFinite(Number(gpa)) ? Number(gpa).toFixed(2) : '—',
+        gpaNum: gpa !== null && gpa !== undefined && Number.isFinite(Number(gpa)) ? Number(gpa) : null,
         arrearsCount: latest.officialBacklogCount,
         status,
         isPassed,
@@ -337,6 +340,24 @@ function Workspace({ screen, academic }) {
       }
     })
   }, [rows, departments, branches, semesters, semester])
+
+  const gpaStudentOptions = useMemo(() => {
+    const query = gpaSearch.trim().toLowerCase()
+    return studentSummaries.filter(student => {
+      const matchesQuery = !query || [student.studentName, student.rollNumber, student.department]
+        .some(value => String(value || '').toLowerCase().includes(query))
+      const matchesDepartment = !gpaDepartment || student.department === gpaDepartment
+      const matchesSemester = !gpaSemester || student.semester === gpaSemester
+      return matchesQuery && matchesDepartment && matchesSemester
+    })
+  }, [studentSummaries, gpaSearch, gpaDepartment, gpaSemester])
+  const selectedGpaStudent = gpaStudentOptions.find(student => String(student.studentId) === String(gpaStudentId)) || null
+  const selectedGpaSheets = useMemo(() => {
+    if (!gpaStudentId) return []
+    return sheets
+      .filter(sheet => sheet.records?.some(record => String(record.studentId) === String(gpaStudentId)))
+      .sort((left, right) => String(right.examDate || '').localeCompare(String(left.examDate || '')))
+  }, [sheets, gpaStudentId])
 
   // Semester summaries
   const semesterSummaries = useMemo(() => {
@@ -1441,24 +1462,51 @@ function Workspace({ screen, academic }) {
       )}
       {gpaHistory && ready && loading && <p role="status">Loading student results…</p>}
       {gpaHistory && ready && !loading && !error && (
-        <section className="erp-card res-card grade-workspace-panel" aria-labelledby="student-gpa-title">
-          <h2 id="student-gpa-title">Student GPA</h2>
-          <p>SGPA and CGPA recorded by the result engine for this academic year.</p>
-          {studentSummaries.length ? <label className="grade-workspace-field">Student
-            <ProjectSelect value={gpaStudentId} onChange={event => setGpaStudentId(event.target.value)}>
-              <option value="">Select a student</option>
-              {studentSummaries.map(student => <option key={student.studentId} value={student.studentId}>
-                {student.studentName}{student.rollNumber ? ` (${student.rollNumber})` : ''}
-              </option>)}
-            </ProjectSelect>
-          </label> : <p role="status">No calculated results are available for this academic year.</p>}
-          {gpaStudentId && <div className="res-table-wrapper"><table className="erp-table">
-            <thead><tr><th>Examination</th><th>Semester</th><th>SGPA</th><th>CGPA</th><th>Result</th></tr></thead>
-            <tbody>{sheets.filter(sheet => String(sheet.records[0]?.studentId) === gpaStudentId).map(sheet => <tr key={sheet.id}>
-              <td>{sheet.examType}</td><td>{resultSemesterName(sheet, semesters)}</td>
-              <td>{sheet.officialSgpa ?? '—'}</td><td>{sheet.officialCgpa ?? '—'}</td><td>{sheet.examResultStatus || '—'}</td>
-            </tr>)}</tbody>
-          </table></div>}
+        <section className="erp-card res-card grm-gpa" aria-labelledby="student-gpa-title">
+          <header className="grm-gpa__header">
+            <div>
+              <span className="grm-gpa__eyebrow">ACADEMIC PERFORMANCE</span>
+              <h2 id="student-gpa-title">Student GPA &amp; CGPA</h2>
+              <p>Review official SGPA and CGPA returned by the examination results service for this academic year.</p>
+            </div>
+            <span className="grm-gpa__source"><FiCheckCircle aria-hidden="true" /> Official result data</span>
+          </header>
+
+          {studentSummaries.length > 0 && <div className="grm-gpa__metrics" aria-label="GPA overview">
+            <article className="grm-gpa__metric"><span>Students with results</span><strong>{studentSummaries.length}</strong><small>Current college and year</small></article>
+            <article className="grm-gpa__metric grm-gpa__metric--green"><span>Average CGPA</span><strong>{stats.overallGpa}</strong><small>Backend reported values</small></article>
+            <article className="grm-gpa__metric grm-gpa__metric--blue"><span>Result records</span><strong>{rows.length}</strong><small>Examination subject entries</small></article>
+            <article className="grm-gpa__metric grm-gpa__metric--amber"><span>Pass rate</span><strong>{stats.passRate}</strong><small>From published result status</small></article>
+          </div>}
+
+          {studentSummaries.length ? <>
+            <div className="grm-gpa__directory">
+              <div className="grm-gpa__directory-title"><div><h3>Student result history</h3><p>Search and filter the result roster, then select a student to inspect their semester scores.</p></div><span>{gpaStudentOptions.length} students</span></div>
+              <div className="grm-gpa__filters">
+                <label className="grm-gpa__search"><span className="sr-only">Search students</span><FiSearch aria-hidden="true" /><input value={gpaSearch} onChange={event => setGpaSearch(event.target.value)} placeholder="Search name, roll number or department" /></label>
+                <label className="grm-gpa__filter-field"><span>Department</span><ProjectSelect value={gpaDepartment} onChange={event => setGpaDepartment(event.target.value)}><option value="">All departments</option>{departmentOptions.map(option => <option key={option} value={option}>{option}</option>)}</ProjectSelect></label>
+                <label className="grm-gpa__filter-field"><span>Semester</span><ProjectSelect value={gpaSemester} onChange={event => setGpaSemester(event.target.value)}><option value="">All semesters</option>{semesterOptions.map(option => <option key={option} value={option}>{option}</option>)}</ProjectSelect></label>
+                <label className="grm-gpa__filter-field grm-gpa__student-select"><span>Student</span><ProjectSelect value={selectedGpaStudent ? gpaStudentId : ''} onChange={event => setGpaStudentId(event.target.value)}><option value="">Select student</option>{gpaStudentOptions.map(student => <option key={student.studentId} value={student.studentId}>{student.studentName}{student.rollNumber ? ` (${student.rollNumber})` : ''}</option>)}</ProjectSelect></label>
+              </div>
+            </div>
+
+            {gpaStudentOptions.length === 0 && <div className="grm-gpa__empty"><FiUsers aria-hidden="true" /><h3>No students match these filters</h3><p>Clear the search or choose a different department or semester.</p><button className="res-btn res-btn--outline" type="button" onClick={() => { setGpaSearch(''); setGpaDepartment(''); setGpaSemester(''); setGpaStudentId('') }}>Clear filters</button></div>}
+            {selectedGpaStudent && <>
+              <div className="grm-gpa__student-card">
+                <div className="grm-gpa__student-identity"><span className="grm-gpa__avatar">{String(selectedGpaStudent.studentName || 'S').trim().charAt(0).toUpperCase()}</span><div><span>SELECTED STUDENT</span><h3>{selectedGpaStudent.studentName}</h3><p>{[selectedGpaStudent.rollNumber, selectedGpaStudent.department, selectedGpaStudent.semester].filter(Boolean).join(' · ') || 'Academic record'}</p></div></div>
+                <div className="grm-gpa__student-kpis"><div><span>Latest CGPA</span><strong>{selectedGpaSheets[0]?.officialCgpa ?? '—'}</strong></div><div><span>Latest SGPA</span><strong>{selectedGpaSheets[0]?.officialSgpa ?? '—'}</strong></div><div><span>Exams on record</span><strong>{selectedGpaSheets.length}</strong></div></div>
+              </div>
+              <div className="grm-gpa__table-heading"><div><h3>Examination history</h3><p>Scores and result status are shown as received from the results API.</p></div><span>{selectedGpaSheets.length} records</span></div>
+              {selectedGpaSheets.length ? <div className="res-table-wrapper grm-gpa__table"><table className="erp-table">
+                <thead><tr><th>Examination</th><th>Semester</th><th>Exam date</th><th>SGPA</th><th>CGPA</th><th>Result</th></tr></thead>
+                <tbody>{selectedGpaSheets.map(sheet => <tr key={sheet.id}>
+                  <td><strong>{sheet.examType || 'Examination'}</strong></td><td>{resultSemesterName(sheet, semesters) || '—'}</td><td>{sheet.examDate || '—'}</td>
+                  <td><span className="grm-gpa__score">{sheet.officialSgpa ?? '—'}</span></td><td><span className="grm-gpa__score grm-gpa__score--cgpa">{sheet.officialCgpa ?? '—'}</span></td><td><span className={`res-status-badge ${sheet.examResultStatus === 'Passed' ? 'res-status-badge--pass' : sheet.examResultStatus === 'Failed' ? 'res-status-badge--fail' : ''}`}>{sheet.examResultStatus || 'Pending'}</span></td>
+                </tr>)}</tbody>
+              </table></div> : <div className="grm-gpa__empty"><FiBarChart2 aria-hidden="true" /><h3>No GPA history for this student</h3><p>The selected student has no calculated examination results in this academic year.</p></div>}
+            </>}
+            {!selectedGpaStudent && gpaStudentOptions.length > 0 && <div className="grm-gpa__prompt"><FiUser aria-hidden="true" /><div><strong>Select a student to view their GPA history</strong><span>Use the student list above to load official examination scores.</span></div></div>}
+          </> : <div className="grm-gpa__empty grm-gpa__empty--setup" role="status"><FiBarChart2 aria-hidden="true" /><h3>No calculated results for this academic year</h3><p>GPA records appear here after examination marks are approved and the result engine publishes SGPA and CGPA.</p><div><NavLink className="res-btn res-btn--primary" to="/examination-setup">Open Examination Setup</NavLink><NavLink className="res-btn res-btn--outline" to="/results">View Official Results</NavLink></div></div>}
         </section>
       )}
 

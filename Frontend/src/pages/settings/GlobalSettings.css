@@ -10,6 +10,12 @@
 .configuration-card footer { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-top:12px; }
 .configuration-card small { margin-top:6px; color:var(--text-muted); font-size:11px; }
 .configuration-card footer svg { width:14px; height:14px; }
+.configuration-card footer .erp-btn--primary:is(:hover, :focus-visible, :active) {
+  color:#fff;
+}
+.configuration-card footer .erp-btn--secondary:is(:hover, :focus-visible, :active) {
+  color:var(--text-primary);
+}
 .configuration-context-card { padding:12px; margin-bottom:10px; border:1px solid var(--border); border-radius:12px; background:var(--surface); }
 .configuration-context-card h2 { font-size:14px; margin:0; }
 .configuration-context-card header svg { width:20px; height:20px; color:var(--brand); }
