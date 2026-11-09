@@ -12,11 +12,9 @@ import {
   FiCheckCircle,
   FiXCircle,
   FiFilter,
-  FiChevronRight,
   FiChevronDown,
   FiAlertCircle,
   FiX,
-  FiCheck,
   FiInfo,
 } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
@@ -53,15 +51,15 @@ const STEP_BRANCHES = 'branches'
 const STEP_SEMESTERS = 'semesters'
 
 const STEPS = [
-  { id: STEP_DEPARTMENTS, stepNumber: 1, label: 'Departments', icon: FiLayers, description: 'Academic Units' },
-  { id: STEP_COURSES, stepNumber: 2, label: 'Courses', icon: FiBookOpen, description: 'Degree Programs' },
+  { id: STEP_COURSES, stepNumber: 1, label: 'Courses', icon: FiBookOpen, description: 'Degree Programs' },
+  { id: STEP_DEPARTMENTS, stepNumber: 2, label: 'Departments', icon: FiLayers, description: 'Academic Units' },
   { id: STEP_BRANCHES, stepNumber: 3, label: 'Branches', icon: FiGitBranch, description: 'Specializations' },
   { id: STEP_SEMESTERS, stepNumber: 4, label: 'Semesters', icon: FiCalendar, description: 'Curriculum Terms' },
 ]
 
 export default function AcademicStructure() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const currentStep = searchParams.get('step') || STEP_DEPARTMENTS
+  const currentStep = searchParams.get('step') || STEP_COURSES
   const { selectedCollegeId, selectedCollege } = useAcademic()
 
   // Data states
@@ -162,6 +160,14 @@ export default function AcademicStructure() {
       showToast('Error loading academic structure data. Please try again.', 'error')
     } finally {
       setIsLoading(false)
+    }
+  }, [])
+
+  // Scoped class for page-specific layout adjustments (e.g. header college dropdown)
+  useEffect(() => {
+    document.body.classList.add('page-academic-structure')
+    return () => {
+      document.body.classList.remove('page-academic-structure')
     }
   }, [])
 
@@ -374,7 +380,7 @@ export default function AcademicStructure() {
       setCourseForm({
         name: '',
         code: '',
-        departmentId: selectedDeptFilter || (departments[0]?.departmentId ?? departments[0]?.id ?? ''),
+        departmentId: '',
         type: 'Undergraduate',
         durationYears: 4,
         totalSemesters: 8,
@@ -526,7 +532,6 @@ export default function AcademicStructure() {
     const errors = {}
     if (!courseForm.name.trim()) errors.name = 'Course Name is required'
     if (!courseForm.code.trim()) errors.code = 'Course Code is required'
-    if (!courseForm.departmentId) errors.departmentId = 'Please link a Department'
 
     const duplicate = courses.some(
       (c) =>
@@ -545,7 +550,7 @@ export default function AcademicStructure() {
       const payload = {
         courseName: courseForm.name.trim(),
         courseCode: courseForm.code.trim().toUpperCase(),
-        departmentId: Number(courseForm.departmentId),
+        departmentId: courseForm.departmentId ? Number(courseForm.departmentId) : null,
         collegeId: selectedCollegeId ? Number(selectedCollegeId) : 1,
         courseType: courseForm.type,
         durationYears: Number(courseForm.durationYears),
@@ -755,167 +760,173 @@ export default function AcademicStructure() {
     }
   }, [isFilterOpen])
 
-  // Render Search Bar & Button Dropdown Filters for the card
+  // Render Search Bar & Inline Expandable Filter Drawer for the card
   const renderCardFilterBar = () => (
-    <div className="as-card-filter-bar">
-      <div className="as-search-box">
-        <FiSearch className="as-search-box__icon" />
-        <input
-          id="as-search-query"
-          type="text"
-          className="as-search-box__input"
-          placeholder={searchPlaceholder}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          aria-label="Search"
-        />
-        {searchQuery && (
+    <div className="as-filter-container" ref={filterDropdownRef}>
+      <div className="as-card-filter-bar">
+        <div className="as-search-box">
+          <FiSearch size={16} className="as-search-box__icon" aria-hidden="true" />
+          <input
+            id="as-search-query"
+            type="text"
+            className="as-search-box__input"
+            placeholder={searchPlaceholder}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Search"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              className="as-search-box__clear"
+              onClick={() => setSearchQuery('')}
+              title="Clear search"
+              aria-label="Clear search"
+            >
+              <FiX size={14} />
+            </button>
+          )}
+        </div>
+
+        <div className="as-filters-dropdown-wrapper">
           <button
             type="button"
-            className="as-search-box__clear"
-            onClick={() => setSearchQuery('')}
-            title="Clear search"
-            aria-label="Clear search"
+            className={`as-filters-btn ${isFilterOpen ? 'is-active' : ''} ${activeDropdownFilterCount > 0 ? 'has-active' : ''}`}
+            onClick={() => setIsFilterOpen((prev) => !prev)}
+            aria-expanded={isFilterOpen}
+            aria-haspopup="true"
           >
-            <FiX size={13} />
+            <FiFilter size={14} className="as-filters-btn__icon" aria-hidden="true" />
+            <span>Filters</span>
+            {activeDropdownFilterCount > 0 && (
+              <span className="as-filter-count-badge">{activeDropdownFilterCount}</span>
+            )}
+            <FiChevronDown size={14} className={`as-chevron ${isFilterOpen ? 'is-rotated' : ''}`} aria-hidden="true" />
           </button>
-        )}
+        </div>
       </div>
 
-      <div className="as-filters-dropdown-wrapper" ref={filterDropdownRef}>
-        <button
-          type="button"
-          className={`as-filters-btn ${isFilterOpen ? 'is-active' : ''} ${activeDropdownFilterCount > 0 ? 'has-active' : ''}`}
-          onClick={() => setIsFilterOpen((prev) => !prev)}
-          aria-expanded={isFilterOpen}
-          aria-haspopup="true"
-        >
-          <FiFilter size={15} />
-          <span>Filters</span>
-          {activeDropdownFilterCount > 0 && (
-            <span className="as-filter-count-badge">{activeDropdownFilterCount}</span>
-          )}
-          <FiChevronDown size={14} className={`as-chevron ${isFilterOpen ? 'is-rotated' : ''}`} />
-        </button>
-
-        {isFilterOpen && (
-          <div className="as-filters-dropdown-menu" role="dialog" aria-label="Filter Options">
-            <div className="as-filters-dropdown__header">
-              <div className="as-filters-dropdown__title">
-                <FiFilter size={14} />
-                <span className="as-filter-title">Connected Academic Filters</span>
-                {activeDropdownFilterCount > 0 && (
-                  <span className="as-filter-active-pill">{activeDropdownFilterCount} active</span>
-                )}
-              </div>
+      {isFilterOpen && (
+        <div className="as-filters-drawer" role="region" aria-label="Filter Options">
+          <div className="as-filters-drawer__header">
+            <div className="as-filters-drawer__title">
+              <FiFilter size={13} aria-hidden="true" />
+              <span className="as-filter-title">Connected Academic Filters</span>
               {activeDropdownFilterCount > 0 && (
-                <button
-                  type="button"
-                  className="as-filter-reset"
-                  onClick={() => {
-                    setSelectedDeptFilter('')
-                    setSelectedCourseFilter('')
-                    setSelectedBranchFilter('')
-                    setStatusFilter('')
-                  }}
-                  title="Reset all dropdown filters"
-                >
-                  <FiX size={12} />
-                  <span>Reset Filters</span>
-                </button>
+                <span className="as-filter-active-pill">{activeDropdownFilterCount} active</span>
               )}
             </div>
+            {activeDropdownFilterCount > 0 && (
+              <button
+                type="button"
+                className="as-filter-reset"
+                onClick={() => {
+                  setSelectedDeptFilter('')
+                  setSelectedCourseFilter('')
+                  setSelectedBranchFilter('')
+                  setStatusFilter('')
+                }}
+                title="Reset all dropdown filters"
+              >
+                <FiX size={12} />
+                <span>Reset Filters</span>
+              </button>
+            )}
+          </div>
 
-            <div className="as-filters-dropdown__body">
-              {/* Department Filter */}
-              <div className="as-filter-control">
-                <label htmlFor="as-dept-filter" className="as-control-label">
-                  Department
-                </label>
-                <select
-                  id="as-dept-filter"
-                  className="as-control-select"
-                  value={selectedDeptFilter}
-                  onChange={(e) => setSelectedDeptFilter(e.target.value)}
-                >
-                  <option value="">All Departments</option>
-                  {departments.map((d) => {
-                    const id = String(d.departmentId ?? d.id)
-                    return (
-                      <option key={id} value={id}>
-                        {d.departmentName ?? d.name} ({d.departmentCode ?? d.code})
-                      </option>
-                    )
-                  })}
-                </select>
-              </div>
+          <div className="as-filters-drawer__body">
+            {/* Department Filter */}
+            <div className="as-filter-control">
+              <label htmlFor="as-dept-filter" className="as-control-label visually-hidden">
+                Department
+              </label>
+              <select
+                id="as-dept-filter"
+                aria-label="Department"
+                className="as-control-select"
+                value={selectedDeptFilter}
+                onChange={(e) => setSelectedDeptFilter(e.target.value)}
+              >
+                <option value="">All Departments</option>
+                {departments.map((d) => {
+                  const id = String(d.departmentId ?? d.id)
+                  return (
+                    <option key={id} value={id}>
+                      {d.departmentName ?? d.name} ({d.departmentCode ?? d.code})
+                    </option>
+                  )
+                })}
+              </select>
+            </div>
 
-              {/* Course Filter */}
-              <div className="as-filter-control">
-                <label htmlFor="as-course-filter" className="as-control-label">
-                  Course
-                </label>
-                <select
-                  id="as-course-filter"
-                  className="as-control-select"
-                  value={selectedCourseFilter}
-                  onChange={(e) => setSelectedCourseFilter(e.target.value)}
-                >
-                  <option value="">All Courses</option>
-                  {filterCoursesOptions.map((c) => {
-                    const id = String(c.courseId ?? c.id)
-                    return (
-                      <option key={id} value={id}>
-                        {c.courseName ?? c.name} ({c.courseCode ?? c.code})
-                      </option>
-                    )
-                  })}
-                </select>
-              </div>
+            {/* Course Filter */}
+            <div className="as-filter-control">
+              <label htmlFor="as-course-filter" className="as-control-label visually-hidden">
+                Course
+              </label>
+              <select
+                id="as-course-filter"
+                aria-label="Course"
+                className="as-control-select"
+                value={selectedCourseFilter}
+                onChange={(e) => setSelectedCourseFilter(e.target.value)}
+              >
+                <option value="">All Courses</option>
+                {filterCoursesOptions.map((c) => {
+                  const id = String(c.courseId ?? c.id)
+                  return (
+                    <option key={id} value={id}>
+                      {c.courseName ?? c.name} ({c.courseCode ?? c.code})
+                    </option>
+                  )
+                })}
+              </select>
+            </div>
 
-              {/* Branch Filter */}
-              <div className="as-filter-control">
-                <label htmlFor="as-branch-filter" className="as-control-label">
-                  Branch
-                </label>
-                <select
-                  id="as-branch-filter"
-                  className="as-control-select"
-                  value={selectedBranchFilter}
-                  onChange={(e) => setSelectedBranchFilter(e.target.value)}
-                >
-                  <option value="">All Branches</option>
-                  {filterBranchesOptions.map((b) => {
-                    const id = String(b.branchId ?? b.id)
-                    return (
-                      <option key={id} value={id}>
-                        {b.branchName ?? b.name} ({b.branchCode ?? b.code})
-                      </option>
-                    )
-                  })}
-                </select>
-              </div>
+            {/* Branch Filter */}
+            <div className="as-filter-control">
+              <label htmlFor="as-branch-filter" className="as-control-label visually-hidden">
+                Branch
+              </label>
+              <select
+                id="as-branch-filter"
+                aria-label="Branch"
+                className="as-control-select"
+                value={selectedBranchFilter}
+                onChange={(e) => setSelectedBranchFilter(e.target.value)}
+              >
+                <option value="">All Branches</option>
+                {filterBranchesOptions.map((b) => {
+                  const id = String(b.branchId ?? b.id)
+                  return (
+                    <option key={id} value={id}>
+                      {b.branchName ?? b.name} ({b.branchCode ?? b.code})
+                    </option>
+                  )
+                })}
+              </select>
+            </div>
 
-              {/* Status Filter */}
-              <div className="as-filter-control">
-                <label htmlFor="as-status-filter" className="as-control-label">
-                  Status
-                </label>
-                <select
-                  id="as-status-filter"
-                  className="as-control-select"
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                  <option value="">All Statuses</option>
-                  <option value="Active">Active Only</option>
-                  <option value="Inactive">Inactive Only</option>
-                </select>
-              </div>
+            {/* Status Filter */}
+            <div className="as-filter-control">
+              <label htmlFor="as-status-filter" className="as-control-label visually-hidden">
+                Status
+              </label>
+              <select
+                id="as-status-filter"
+                aria-label="Status"
+                className="as-control-select"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="">All Statuses</option>
+                <option value="Active">Active Only</option>
+                <option value="Inactive">Inactive Only</option>
+              </select>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 
@@ -1052,7 +1063,7 @@ export default function AcademicStructure() {
                   className="as-btn as-btn--primary"
                   onClick={() => openAddModal('department')}
                 >
-                  <FiPlus /> Add Department
+                  <FiPlus size={16} /> Add Department
                 </button>
               </div>
             </div>
@@ -1078,7 +1089,7 @@ export default function AcademicStructure() {
                   <thead>
                     <tr>
                       <th>Department Name</th>
-                      <th>Code</th>
+                      <th>Department Code</th>
                       <th>Description</th>
                       <th>Status</th>
                       <th style={{ textAlign: 'right' }}>Actions</th>
@@ -1090,23 +1101,23 @@ export default function AcademicStructure() {
                       const isActive = String(dept.status) === '1' || dept.status === 'Active' || dept.status === true
                       return (
                         <tr key={id}>
-                          <td>
+                          <td data-label="Department Name">
                             <div className="as-cell-hierarchy">
                               <span className="as-cell-hierarchy__main">{dept.departmentName ?? dept.name}</span>
                             </div>
                           </td>
-                          <td>
+                          <td data-label="Department Code">
                             <span className="as-badge-code">{dept.departmentCode ?? dept.code}</span>
                           </td>
-                          <td>
+                          <td data-label="Description">
                             <span style={{ color: '#475569', fontSize: '0.8125rem' }}>
                               {dept.description || '—'}
                             </span>
                           </td>
-                          <td>
+                          <td data-label="Status">
                             <StatusBadge status={isActive ? 'Active' : 'Inactive'} />
                           </td>
-                          <td>
+                          <td data-label="Actions">
                             <div className="as-actions-cell" style={{ justifyContent: 'flex-end' }}>
                               <button
                                 type="button"
@@ -1160,7 +1171,7 @@ export default function AcademicStructure() {
                   className="as-btn as-btn--primary"
                   onClick={() => openAddModal('course')}
                 >
-                  <FiPlus /> Add Course
+                  <FiPlus size={16} /> Add Course
                 </button>
               </div>
             </div>
@@ -1190,9 +1201,9 @@ export default function AcademicStructure() {
                   <thead>
                     <tr>
                       <th>Course Name</th>
-                      <th>Code</th>
-                      <th>Linked Department</th>
-                      <th>Type</th>
+                      <th>Course Code</th>
+                      <th>Department</th>
+                      <th>Course Level</th>
                       <th>Duration</th>
                       <th>Semesters</th>
                       <th>Status</th>
@@ -1206,7 +1217,7 @@ export default function AcademicStructure() {
                       const isActive = String(course.status) === '1' || course.status === 'Active' || course.status === true
                       return (
                         <tr key={id}>
-                          <td>
+                          <td data-label="Course Name">
                             <div className="as-cell-hierarchy">
                               <span className="as-cell-hierarchy__main">{course.courseName ?? course.name}</span>
                               {course.eligibility && (
@@ -1214,23 +1225,23 @@ export default function AcademicStructure() {
                               )}
                             </div>
                           </td>
-                          <td>
+                          <td data-label="Course Code">
                             <span className="as-badge-code">{course.courseCode ?? course.code}</span>
                           </td>
-                          <td>
+                          <td data-label="Department">
                             <span style={{ fontWeight: 500, color: '#334155' }}>{deptName}</span>
                           </td>
-                          <td>
+                          <td data-label="Course Level">
                             <span style={{ fontSize: '0.8125rem', color: '#475569' }}>
                               {course.courseType ?? course.type ?? 'Undergraduate'}
                             </span>
                           </td>
-                          <td>{course.durationYears ?? course.DurationYears ?? 4} Years</td>
-                          <td>{course.totalSemesters ?? course.TotalSemesters ?? 8} Sems</td>
-                          <td>
+                          <td data-label="Duration">{course.durationYears ?? course.DurationYears ?? 4} Years</td>
+                          <td data-label="Semesters">{course.totalSemesters ?? course.TotalSemesters ?? 8} Sems</td>
+                          <td data-label="Status">
                             <StatusBadge status={isActive ? 'Active' : 'Inactive'} />
                           </td>
-                          <td>
+                          <td data-label="Actions">
                             <div className="as-actions-cell" style={{ justifyContent: 'flex-end' }}>
                               <button
                                 type="button"
@@ -1284,7 +1295,7 @@ export default function AcademicStructure() {
                   className="as-btn as-btn--primary"
                   onClick={() => openAddModal('branch')}
                 >
-                  <FiPlus /> Add Branch
+                  <FiPlus size={16} /> Add Branch
                 </button>
               </div>
             </div>
@@ -1314,10 +1325,9 @@ export default function AcademicStructure() {
                   <thead>
                     <tr>
                       <th>Branch Name</th>
-                      <th>Code</th>
-                      <th>Linked Department</th>
-                      <th>Linked Course</th>
-                      <th>Intake Capacity</th>
+                      <th>Branch Code</th>
+                      <th>Department</th>
+                      <th>Course</th>
                       <th>Status</th>
                       <th style={{ textAlign: 'right' }}>Actions</th>
                     </tr>
@@ -1331,7 +1341,7 @@ export default function AcademicStructure() {
                       const isActive = String(branch.status) === '1' || branch.status === 'Active' || branch.status === true
                       return (
                         <tr key={id}>
-                          <td>
+                          <td data-label="Branch Name">
                             <div className="as-cell-hierarchy">
                               <span className="as-cell-hierarchy__main">{branch.branchName ?? branch.name}</span>
                               {branch.specialization && (
@@ -1339,20 +1349,19 @@ export default function AcademicStructure() {
                               )}
                             </div>
                           </td>
-                          <td>
+                          <td data-label="Branch Code">
                             <span className="as-badge-code">{branch.branchCode ?? branch.code}</span>
                           </td>
-                          <td>
+                          <td data-label="Department">
                             <span style={{ fontWeight: 500, color: '#334155' }}>{deptName}</span>
                           </td>
-                          <td>
+                          <td data-label="Course">
                             <span style={{ color: '#475569' }}>{courseName}</span>
                           </td>
-                          <td>{branch.intakeCapacity ? `${branch.intakeCapacity} Seats` : '—'}</td>
-                          <td>
+                          <td data-label="Status">
                             <StatusBadge status={isActive ? 'Active' : 'Inactive'} />
                           </td>
-                          <td>
+                          <td data-label="Actions">
                             <div className="as-actions-cell" style={{ justifyContent: 'flex-end' }}>
                               <button
                                 type="button"
@@ -1406,7 +1415,7 @@ export default function AcademicStructure() {
                   className="as-btn as-btn--primary"
                   onClick={() => openAddModal('semester')}
                 >
-                  <FiPlus /> Add Semester
+                  <FiPlus size={16} /> Add Semester
                 </button>
               </div>
             </div>
@@ -1435,12 +1444,11 @@ export default function AcademicStructure() {
                 <table className="as-table">
                   <thead>
                     <tr>
-                      <th>Semester</th>
-                      <th>Number</th>
-                      <th>Linked Course</th>
-                      <th>Linked Branch</th>
-                      <th>Academic Year</th>
-                      <th>Schedule Dates</th>
+                      <th>Semester Name</th>
+                      <th>Semester No.</th>
+                      <th>Department</th>
+                      <th>Course</th>
+                      <th>Branch</th>
                       <th>Status</th>
                       <th style={{ textAlign: 'right' }}>Actions</th>
                     </tr>
@@ -1450,41 +1458,36 @@ export default function AcademicStructure() {
                       const id = sem.semesterId ?? sem.id
                       const branch = branchMap.get(String(sem.branchId ?? sem.BranchId))
                       const course = courseMap.get(String(sem.courseId ?? sem.CourseId ?? branch?.courseId))
-                      const yearName = yearMap.get(String(sem.academicYearId ?? sem.AcademicYearId)) || 'Current Year'
+                      const deptName = deptMap.get(String(course?.departmentId ?? course?.DepartmentId ?? branch?.departmentId)) || '—'
                       const isActive = sem.status === 1 || sem.status === 'Active'
                       const isCompleted = sem.status === 2 || sem.status === 'Completed'
 
                       return (
                         <tr key={id}>
-                          <td>
+                          <td data-label="Semester Name">
                             <span style={{ fontWeight: 600, color: '#0f172a' }}>
                               {sem.semesterName ?? sem.name ?? `Semester ${sem.semesterNumber}`}
                             </span>
                           </td>
-                          <td>
+                          <td data-label="Semester No.">
                             <span className="as-badge-code">Sem {sem.semesterNumber}</span>
                           </td>
-                          <td>{course?.courseName ?? course?.name ?? '—'}</td>
-                          <td>{branch?.branchName ?? branch?.name ?? '—'}</td>
-                          <td>
-                            <span style={{ fontSize: '0.8125rem', color: '#475569' }}>{yearName}</span>
+                          <td data-label="Department">
+                            <span style={{ fontWeight: 500, color: '#334155' }}>{deptName}</span>
                           </td>
-                          <td>
-                            {sem.startDate && sem.endDate ? (
-                              <span style={{ fontSize: '0.8125rem', color: '#64748b' }}>
-                                {String(sem.startDate).slice(0, 10)} to {String(sem.endDate).slice(0, 10)}
-                              </span>
-                            ) : (
-                              <span style={{ color: '#94a3b8', fontSize: '0.8125rem' }}>Dates not set</span>
-                            )}
+                          <td data-label="Course">
+                            <span style={{ color: '#475569', fontSize: '0.8125rem' }}>{course?.courseName ?? course?.name ?? '—'}</span>
                           </td>
-                          <td>
+                          <td data-label="Branch">
+                            <span style={{ color: '#475569', fontSize: '0.8125rem' }}>{branch?.branchName ?? branch?.name ?? '—'}</span>
+                          </td>
+                          <td data-label="Status">
                             <StatusBadge
                               status={isActive ? 'Active' : isCompleted ? 'Completed' : 'Upcoming'}
                               tone={isActive ? 'active' : isCompleted ? 'processed' : 'warning'}
                             />
                           </td>
-                          <td>
+                          <td data-label="Actions">
                             <div className="as-actions-cell" style={{ justifyContent: 'flex-end' }}>
                               <button
                                 type="button"
@@ -1613,30 +1616,6 @@ export default function AcademicStructure() {
               </div>
               <form onSubmit={handleSubmitCourse}>
                 <div className="as-modal__body">
-                  <div className="as-form-group">
-                    <label htmlFor="course-dept">
-                      Select Department <span className="required">*</span>
-                    </label>
-                    <select
-                      id="course-dept"
-                      className={`as-form-control ${formErrors.departmentId ? 'is-invalid' : ''}`}
-                      value={courseForm.departmentId}
-                      onChange={(e) => setCourseForm({ ...courseForm, departmentId: e.target.value })}
-                      required
-                    >
-                      <option value="">-- Choose Department --</option>
-                      {departments.map((d) => {
-                        const id = String(d.departmentId ?? d.id)
-                        return (
-                          <option key={id} value={id}>
-                            {d.departmentName ?? d.name} ({d.departmentCode ?? d.code})
-                          </option>
-                        )
-                      })}
-                    </select>
-                    {formErrors.departmentId && <span className="as-form-error">{formErrors.departmentId}</span>}
-                  </div>
-
                   <div className="as-form-row">
                     <div className="as-form-group">
                       <label htmlFor="course-name">
@@ -1682,7 +1661,6 @@ export default function AcademicStructure() {
                         <option value="Undergraduate">Undergraduate (UG)</option>
                         <option value="Postgraduate">Postgraduate (PG)</option>
                         <option value="Diploma">Diploma</option>
-                        <option value="Certificate">Certificate</option>
                       </select>
                     </div>
                     <div className="as-form-group">
@@ -1762,38 +1740,6 @@ export default function AcademicStructure() {
                 <div className="as-modal__body">
                   <div className="as-form-row">
                     <div className="as-form-group">
-                      <label htmlFor="branch-dept">
-                        Select Department <span className="required">*</span>
-                      </label>
-                      <select
-                        id="branch-dept"
-                        className={`as-form-control ${formErrors.departmentId ? 'is-invalid' : ''}`}
-                        value={branchForm.departmentId}
-                        onChange={(e) => {
-                          const newDeptId = e.target.value
-                          const deptCourses = courses.filter((c) => String(c.departmentId ?? c.DepartmentId) === String(newDeptId))
-                          setBranchForm({
-                            ...branchForm,
-                            departmentId: newDeptId,
-                            courseId: deptCourses[0]?.courseId ?? deptCourses[0]?.id ?? '',
-                          })
-                        }}
-                        required
-                      >
-                        <option value="">-- Choose Department --</option>
-                        {departments.map((d) => {
-                          const id = String(d.departmentId ?? d.id)
-                          return (
-                            <option key={id} value={id}>
-                              {d.departmentName ?? d.name} ({d.departmentCode ?? d.code})
-                            </option>
-                          )
-                        })}
-                      </select>
-                      {formErrors.departmentId && <span className="as-form-error">{formErrors.departmentId}</span>}
-                    </div>
-
-                    <div className="as-form-group">
                       <label htmlFor="branch-course">
                         Select Course <span className="required">*</span>
                       </label>
@@ -1818,6 +1764,39 @@ export default function AcademicStructure() {
                         })}
                       </select>
                       {formErrors.courseId && <span className="as-form-error">{formErrors.courseId}</span>}
+                    </div>
+
+                    <div className="as-form-group">
+                      <label htmlFor="branch-dept">
+                        Select Department <span className="required">*</span>
+                      </label>
+                      <select
+                        id="branch-dept"
+                        className={`as-form-control ${formErrors.departmentId ? 'is-invalid' : ''}`}
+                        value={branchForm.departmentId}
+                        onChange={(e) => {
+                          const newDeptId = e.target.value
+                          const deptCourses = courses.filter((c) => String(c.departmentId ?? c.DepartmentId) === String(newDeptId))
+                          const selectedCourseInDepartment = deptCourses.some((c) => String(c.courseId ?? c.id) === String(branchForm.courseId))
+                          setBranchForm({
+                            ...branchForm,
+                            departmentId: newDeptId,
+                            courseId: selectedCourseInDepartment ? branchForm.courseId : (deptCourses[0]?.courseId ?? deptCourses[0]?.id ?? ''),
+                          })
+                        }}
+                        required
+                      >
+                        <option value="">-- Choose Department --</option>
+                        {departments.map((d) => {
+                          const id = String(d.departmentId ?? d.id)
+                          return (
+                            <option key={id} value={id}>
+                              {d.departmentName ?? d.name} ({d.departmentCode ?? d.code})
+                            </option>
+                          )
+                        })}
+                      </select>
+                      {formErrors.departmentId && <span className="as-form-error">{formErrors.departmentId}</span>}
                     </div>
                   </div>
 

@@ -1,4 +1,5 @@
 using System.Data;
+using BTech.Services;
 using BTech.DTOs.ResultManagement;
 using BTech.Repositories.Interfaces;
 using Dapper;
@@ -10,8 +11,17 @@ public sealed class ResultRepository : IResultRepository
 {
     private readonly IConfiguration _configuration;
 
-    public ResultRepository(IConfiguration configuration)
-        => _configuration = configuration;
+    private readonly IHttpContextAccessor _accessor;
+    public ResultRepository(IConfiguration configuration,IHttpContextAccessor accessor)
+    { _configuration=configuration;_accessor=accessor; }
+    private bool PublishedOnly => CollegeDataScope.HasRole(_accessor.HttpContext!,"STUDENT");
+    private async Task CheckAccess(MySqlConnection c,long studentId)
+    {
+        var http=_accessor.HttpContext!;var scope=CollegeDataScope.Resolve(http);
+        var own=PublishedOnly?CollegeDataScope.Actor(http):(long?)null;
+        if(await c.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM students WHERE student_id=@studentId AND deleted_at IS NULL AND (@scope IS NULL OR college_id=@scope) AND (@own IS NULL OR user_id=@own)",new{studentId,scope,own})!=1)
+            throw new ContractException(404,"RECORD_NOT_FOUND","Student not found.");
+    }
 
 
     // ============================================================
@@ -92,9 +102,11 @@ WHERE er.student_id =
       @ExamId
 
   AND er.deleted_at IS NULL
+  AND (@PublishedOnly=0 OR er.published_at IS NOT NULL)
 
   AND es.deleted_at IS NULL
 
+AND er.attempt_number=(SELECT MAX(latest.attempt_number) FROM exam_results latest WHERE latest.student_id=er.student_id AND latest.exam_schedule_id=er.exam_schedule_id AND latest.deleted_at IS NULL AND (@PublishedOnly=0 OR latest.published_at IS NOT NULL))
 ORDER BY
     es.exam_schedule_id;";
 
@@ -110,6 +122,7 @@ ORDER BY
     {
         await using var c =
             CreateConnection();
+        await CheckAccess(c,studentId);
 
 
         var subjects =
@@ -118,7 +131,7 @@ ORDER BY
                     SubjectSql,
                     new
                     {
-                        StudentId = studentId,
+                        StudentId = studentId, PublishedOnly = PublishedOnly,
                         ExamId = examId
                     }
                 )
@@ -153,7 +166,7 @@ ORDER BY
         var grade =
             await GetOverallGradeAsync(
                 c,
-                percentage);
+                percentage,examId);
 
 
         var sgpa =
@@ -222,6 +235,7 @@ ORDER BY
     {
         await using var c =
             CreateConnection();
+        await CheckAccess(c,studentId);
 
 
         var examIds =
@@ -240,6 +254,7 @@ WHERE er.student_id =
       @StudentId
 
   AND er.deleted_at IS NULL
+  AND (@PublishedOnly=0 OR er.published_at IS NOT NULL)
 
   AND es.deleted_at IS NULL
 
@@ -247,7 +262,7 @@ ORDER BY
     es.exam_id;",
                 new
                 {
-                    StudentId = studentId
+                    StudentId = studentId, PublishedOnly = PublishedOnly
                 });
 
 
@@ -284,6 +299,7 @@ ORDER BY
     {
         await using var c =
             CreateConnection();
+        await CheckAccess(c,studentId);
 
 
         const string sql = @"
@@ -310,6 +326,7 @@ WHERE b.student_id =
       @StudentId
 
   AND b.deleted_at IS NULL
+  AND (@PublishedOnly=0 OR EXISTS(SELECT 1 FROM exam_results own_result WHERE own_result.result_id=b.source_result_id AND own_result.deleted_at IS NULL AND own_result.published_at IS NOT NULL))
 
 ORDER BY
     b.backlog_id DESC;";
@@ -321,7 +338,7 @@ ORDER BY
                     sql,
                     new
                     {
-                        StudentId = studentId
+                        StudentId = studentId, PublishedOnly = PublishedOnly
                     }
                 )
             ).AsList();
@@ -392,6 +409,7 @@ LIMIT 1;";
     {
         await using var c =
             CreateConnection();
+        await CheckAccess(c,studentId);
 
 
         const string sql = @"
@@ -426,7 +444,7 @@ LIMIT 1;";
                 sql,
                 new
                 {
-                    StudentId = studentId,
+                    StudentId = studentId, PublishedOnly = PublishedOnly,
                     ExamId = examId
                 });
     }
@@ -442,6 +460,7 @@ LIMIT 1;";
     {
         await using var c =
             CreateConnection();
+        await CheckAccess(c,studentId);
 
 
         const string sql = @"
@@ -503,6 +522,7 @@ WHERE er.student_id =
       @StudentId
 
   AND er.deleted_at IS NULL
+  AND (@PublishedOnly=0 OR er.published_at IS NOT NULL)
 
   AND es.deleted_at IS NULL
 
@@ -527,7 +547,7 @@ WHERE er.student_id =
                 sql,
                 new
                 {
-                    StudentId = studentId
+                    StudentId = studentId, PublishedOnly = PublishedOnly
                 });
     }
 
@@ -543,6 +563,7 @@ WHERE er.student_id =
     {
         await using var c =
             CreateConnection();
+        await CheckAccess(c,studentId);
 
 
         const string sql = @"
@@ -566,10 +587,12 @@ WHERE b.student_id =
       @ExamId
 
   AND b.deleted_at IS NULL
+  AND (@PublishedOnly=0 OR EXISTS(SELECT 1 FROM exam_results own_result WHERE own_result.result_id=b.source_result_id AND own_result.deleted_at IS NULL AND own_result.published_at IS NOT NULL))
 
   AND b.status = 1
 
   AND er.deleted_at IS NULL
+  AND (@PublishedOnly=0 OR er.published_at IS NOT NULL)
 
   AND es.deleted_at IS NULL;";
 
@@ -579,7 +602,7 @@ WHERE b.student_id =
                 sql,
                 new
                 {
-                    StudentId = studentId,
+                    StudentId = studentId, PublishedOnly = PublishedOnly,
                     ExamId = examId
                 });
     }
@@ -628,7 +651,7 @@ WHERE b.student_id =
     // EXISTING - CGPA
     // ============================================================
 
-    private static async Task<decimal?>
+    private async Task<decimal?>
         CalculateCgpaAsync(
             MySqlConnection c,
             long studentId)
@@ -692,6 +715,7 @@ WHERE er.student_id =
       @StudentId
 
   AND er.deleted_at IS NULL
+  AND (@PublishedOnly=0 OR er.published_at IS NOT NULL)
 
   AND es.deleted_at IS NULL
 
@@ -716,7 +740,7 @@ WHERE er.student_id =
                 sql,
                 new
                 {
-                    StudentId = studentId
+                    StudentId = studentId, PublishedOnly = PublishedOnly
                 });
     }
 
@@ -728,7 +752,7 @@ WHERE er.student_id =
     private static async Task<string?>
         GetOverallGradeAsync(
             MySqlConnection c,
-            decimal percentage)
+            decimal percentage,long examId)
     {
         return
             await c.ExecuteScalarAsync<string?>(
@@ -738,7 +762,7 @@ SELECT
 
 FROM grades
 
-WHERE @Percentage BETWEEN
+WHERE college_id=(SELECT college_id FROM exams WHERE exam_id=@ExamId) AND @Percentage BETWEEN
       min_percentage
       AND max_percentage
 
@@ -752,7 +776,7 @@ ORDER BY
 LIMIT 1;",
                 new
                 {
-                    Percentage = percentage
+                    Percentage = percentage, ExamId=examId
                 });
     }
 }

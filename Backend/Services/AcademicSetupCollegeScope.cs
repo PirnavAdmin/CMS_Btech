@@ -13,6 +13,7 @@ public static class AcademicSetupCollegeScope
 
     private static readonly Dictionary<string, string> OwnershipSql = new(StringComparer.OrdinalIgnoreCase)
     {
+        ["admissionId"] = "SELECT AcademicCollegeId FROM studentadmissions WHERE AdmissionId=@id AND IsDeleted=0",
         ["collegeId"] = "SELECT college_id FROM colleges WHERE college_id=@id AND deleted_at IS NULL",
         ["courseId"] = "SELECT college_id FROM courses WHERE course_id=@id AND deleted_at IS NULL",
         ["departmentId"] = "SELECT college_id FROM departments WHERE department_id=@id AND deleted_at IS NULL",

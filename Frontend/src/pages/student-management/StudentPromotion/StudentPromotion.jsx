@@ -4,9 +4,10 @@ import { newestFirst } from '../../../utils/newestFirst'
 import { promotionDetailSections } from '../../../utils/recordDetailSections'
 import { showError } from '../../../utils/toast'
 import useToastState from '../../../hooks/useToastState'
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { AnimatePresence, motion, useReducedMotion } from './promotionMotion'
 import InfoCard from '../../../components/InfoCard'
-import { FiClock, FiEye, FiInfo, FiSearch, FiTrendingUp, FiUsers, FiX, FiAward, FiBookOpen, FiUser, FiRefreshCw } from 'react-icons/fi'
+import { FiArrowRight, FiCheck, FiClock, FiEye, FiFilter, FiInfo, FiSearch, FiTrendingUp, FiUsers, FiX, FiAward, FiBookOpen, FiUser, FiRefreshCw } from 'react-icons/fi'
 import DashboardLayout from '../../../layouts/DashboardLayout'
 import PageHeader from '../../../components/PageHeader'
 import StatusBadge from '../../../components/StatusBadge'
@@ -18,7 +19,7 @@ import { promotionColumns, promotionHistoryColumns } from '../../../utils/export
 import { hasRole } from '../../../auth/auth'
 import { ROLES } from '../../../auth/roles'
 import { useAcademic } from '../../../context/AcademicContext'
-import { apiAssetUrl } from '../../../api/apiEndpoints'
+import { apiAssetUrl, studentPromotionApi } from '../../../api/apiEndpoints'
 import promotionService from '../../../services/promotionService'
 import studentService from '../../../services/studentService'
 import attendanceService from '../../../services/attendanceService'
@@ -176,15 +177,15 @@ function ReviewDrawer({ student, onClose, onStatus, canEdit }) {
                 </div>
                 <div className="pr-field">
                   <span className="pr-label">Course</span>
-                  <span className="pr-value">{student?.course || student?.academic?.course || 'B.Tech'}</span>
+                  <span className="pr-value">{student?.course || student?.academic?.course || '—'}</span>
                 </div>
                 <div className="pr-field">
                   <span className="pr-label">Branch</span>
-                  <span className="pr-value">{student?.branch || student?.academic?.branch || 'CSE'}</span>
+                  <span className="pr-value">{student?.branch || student?.academic?.branch || '—'}</span>
                 </div>
                 <div className="pr-field">
                   <span className="pr-label">Current Section</span>
-                  <span className="pr-value">{student?.section || student?.academic?.section || 'A'}</span>
+                  <span className="pr-value">{student?.section || student?.academic?.section || '—'}</span>
                 </div>
                 {(student?.academicYear || student?.academic?.academicYear) && (
                   <div className="pr-field">
@@ -219,15 +220,15 @@ function ReviewDrawer({ student, onClose, onStatus, canEdit }) {
                 </div>
                 <div className="pr-field">
                   <span className="pr-label">SGPA</span>
-                  <span className="pr-value">{student?.sgpa ?? '8.40'}</span>
+                  <span className="pr-value">{student?.sgpa ?? '—'}</span>
                 </div>
                 <div className="pr-field">
                   <span className="pr-label">CGPA</span>
-                  <span className="pr-value">{student?.cgpa ?? '8.25'}</span>
+                  <span className="pr-value">{student?.cgpa ?? '—'}</span>
                 </div>
                 <div className="pr-field">
                   <span className="pr-label">Credits Earned</span>
-                  <span className="pr-value">{student?.creditsEarned ?? '24'}</span>
+                  <span className="pr-value">{student?.creditsEarned ?? '—'}</span>
                 </div>
                 <div className="pr-field">
                   <span className="pr-label">Eligibility Status</span>
@@ -275,6 +276,7 @@ function ReviewDrawer({ student, onClose, onStatus, canEdit }) {
 
 export default function StudentPromotion() {
   const canPromote = hasRole([ROLES.ADMIN])
+  const shouldReduceMotion = useReducedMotion()
   const {
     activeAcademicYears,
     currentAcademicYear,
@@ -289,6 +291,11 @@ export default function StudentPromotion() {
   } = useAcademic()
 
   const [tab, setTab] = useState('promotion') // 'promotion' | 'history'
+  const [wizardStep, setWizardStep] = useState(1)
+  const [eligibilityTab, setEligibilityTab] = useState('eligible')
+  const [sortBy, setSortBy] = useState('name')
+  const [promotionResult, setPromotionResult] = useState(null)
+  const promotionBusyRef = useRef(false)
   const [students, setStudents] = useCollegeState([])
   const [history, setHistory] = useCollegeState([])
   const [dashboard, setDashboard] = useState({})
@@ -349,8 +356,12 @@ export default function StudentPromotion() {
     }, true)
   }, [getSectionsForScope, targetAcademicYearId, selectedAcademicYearId, courseId, selectedBranchId, selectedSemesterNumber])
 
+  const finalSemesterNumber = Math.max(0, ...availableSemesters.map(semester => Number(semester.semesterNumber || semester.id) || 0))
+  const isFinalSemester = Boolean(selectedSemesterNumber && finalSemesterNumber && Number(selectedSemesterNumber) >= finalSemesterNumber)
   const isSemester8 = Number(selectedSemesterNumber) >= 8
-  const isDegreeReview = isSemester8
+  const isDegreeReview = isFinalSemester
+  const canExecutePromotion = !isFinalSemester || Number(selectedSemesterNumber) === 8
+  const promotionType = isFinalSemester ? 'degree' : 'next-semester'
 
   // Load Promotion Scope Students & History
   const loadPromotionData = useCallback(async (forceRefresh = false) => {
@@ -380,6 +391,12 @@ export default function StudentPromotion() {
         semester: selectedSemester?.semesterName,
         forceRefresh,
       })
+      const eligibilityRows = await studentPromotionApi.getEligibleStudents({
+        branchId: selectedBranchId,
+        academicYearId: selectedAcademicYearId,
+        semesterNumber: selectedSemesterNumber,
+      })
+      const eligibilityById = new Map((eligibilityRows || []).map(row => [String(row.studentId || row.id), row]))
 
       const scopeSections = getSectionsForScope({
         academicYearId: selectedAcademicYearId,
@@ -455,7 +472,10 @@ export default function StudentPromotion() {
           ? null
           : Number(p.attendanceRate)
         const attendanceRate = attendance?.attendanceRate ?? (Number.isFinite(profileAttendanceRate) ? profileAttendanceRate : null)
-        const isEligible = p.status !== 'Inactive' && (attendanceRate ?? 85) >= 75
+        const serverRecord = eligibilityById.get(String(p.studentId || p.id))
+        const serverStatus = serverRecord?.eligibilityStatus || serverRecord?.status || ''
+        const override = promotionService.getEligibilityOverride(p.studentId || p.id)
+        const eligibilityStatus = override || serverStatus || 'Pending Review'
 
         const fullName =
           pers.fullName ||
@@ -470,25 +490,28 @@ export default function StudentPromotion() {
         return {
           id: p.studentId || p.id,
           studentId: p.studentId || p.id,
-          studentName: fullName,
-          fullName: fullName,
-          name: fullName,
+          ...(serverRecord || {}),
+          studentName: serverRecord?.studentName || fullName,
+          fullName: serverRecord?.studentName || fullName,
+          name: serverRecord?.studentName || fullName,
           rollNumber: rollNo,
           registrationNumber: regNo,
-          course: acad.course || selectedCourse?.name || 'B.Tech',
-          branch: acad.branch || selectedBranch?.name || 'CSE',
-          section: acad.section || 'A',
-          currentSemester: acad.semester || `Semester ${semNum}`,
-          nextSemester: semNum >= 8 ? 'Graduation (Degree Conferred)' : `Semester ${semNum + 1}`,
+          course: serverRecord?.courseName || acad.course || selectedCourse?.name || '—',
+          branch: serverRecord?.branchName || acad.branch || selectedBranch?.name || '—',
+          section: serverRecord?.sectionName || acad.section || '',
+          currentSemester: serverRecord?.currentSemester ? `Semester ${serverRecord.currentSemester}` : (acad.semester || `Semester ${semNum}`),
+          nextSemester: isFinalSemester ? 'Degree completion review' : (serverRecord?.nextSemester ? `Semester ${serverRecord.nextSemester}` : `Semester ${semNum + 1}`),
           attendanceRate,
           attendanceSessions: attendance?.markedSessions ?? 0,
-          creditsEarned: 24 * semNum,
-          sgpa: '8.40',
-          cgpa: '8.25',
-          eligibilityStatus: promotionService.getEligibilityOverride(p.studentId || p.id) || (isEligible ? 'Eligible' : 'Ineligible'),
-          eligibilityLabel: promotionService.getEligibilityOverride(p.studentId || p.id) || (isEligible ? 'Eligible' : 'Ineligible'),
-          status: promotionService.getEligibilityOverride(p.studentId || p.id) || (isEligible ? 'Eligible' : 'Ineligible'),
-          reason: promotionService.getEligibilityOverride(p.studentId || p.id) === 'INELIGIBLE' ? 'Manually marked ineligible for promotion.' : (isEligible ? 'Passed all semester modules' : 'Attendance or credits deficit'),
+          creditsEarned: serverRecord?.creditsEarned ?? null,
+          sgpa: serverRecord?.sgpa ?? null,
+          cgpa: serverRecord?.cgpa ?? null,
+          eligibilityStatus,
+          eligibilityLabel: override ? `${override} (manual review)` : (serverStatus || 'Pending Review'),
+          status: eligibilityStatus,
+          reason: override === 'INELIGIBLE'
+            ? 'Manually marked ineligible for promotion.'
+            : (serverRecord?.reason || serverRecord?.eligibilityReason || serverRecord?.remarks || (serverRecord ? 'Eligibility returned by promotion service.' : 'Eligibility review is pending; the promotion service did not return this student as eligible.')),
           academic: acad,
           personal: pers,
           photo: pers.photo || pers.photoUrl || p.photo || '',
@@ -595,12 +618,21 @@ export default function StudentPromotion() {
 
   // Directory filter & 5-row pagination
   const filteredCandidates = useMemo(() => {
-    return students.filter((x) =>
+    const candidates = students.filter((x) =>
       `${nameOf(x)} ${idOf(x)} ${x.rollNumber ?? ''} ${x.registrationNumber ?? ''}`
         .toLowerCase()
         .includes(query.trim().toLowerCase())
     )
-  }, [students, query])
+    return candidates.sort((left, right) => {
+      if (sortBy === 'eligibility') return statusOf(left).localeCompare(statusOf(right)) || nameOf(left).localeCompare(nameOf(right))
+      if (sortBy === 'roll') return String(left.rollNumber || left.registrationNumber || '').localeCompare(String(right.rollNumber || right.registrationNumber || ''))
+      return nameOf(left).localeCompare(nameOf(right))
+    })
+  }, [students, query, sortBy])
+
+  const visibleCandidates = useMemo(() => filteredCandidates.filter(row =>
+    eligibilityTab === 'eligible' ? statusOf(row) === 'eligible' : statusOf(row) !== 'eligible'
+  ), [filteredCandidates, eligibilityTab])
 
   const eligibleSelected = useMemo(() => {
     return students.filter((x) => selected.includes(idOf(x)) && statusOf(x) === 'eligible')
@@ -608,8 +640,8 @@ export default function StudentPromotion() {
 
   const paginatedCandidates = useMemo(() => {
     const start = (dirPage - 1) * pageSize
-    return filteredCandidates.slice(start, start + pageSize)
-  }, [filteredCandidates, dirPage])
+    return visibleCandidates.slice(start, start + pageSize)
+  }, [visibleCandidates, dirPage])
 
   const paginatedHistory = useMemo(() => {
     const start = (histPage - 1) * pageSize
@@ -618,7 +650,11 @@ export default function StudentPromotion() {
 
   // Promotion Execution
   const handleExecutePromotion = async () => {
-    if (!confirmRows?.length || loading.promotion) return
+    if (!confirmRows?.length || loading.promotion || promotionBusyRef.current) return
+    if (!canExecutePromotion) {
+      setNotice('The existing promotion API only supports degree completion at Semester 8. This course’s final semester is not supported for completion by the current integration.', 'error')
+      return
+    }
 
     // Re-resolve from current state: a row might have been marked ineligible
     // after the confirmation dialog was opened.
@@ -631,6 +667,7 @@ export default function StudentPromotion() {
     }
 
     try {
+      promotionBusyRef.current = true
       setLoading((x) => ({ ...x, promotion: true }))
 
       const selectedYear = activeAcademicYears.find((y) => String(y.id) === String(selectedAcademicYearId))
@@ -640,7 +677,7 @@ export default function StudentPromotion() {
       const currentSemNum = Number(selectedSemesterNumber)
       const isDegreeCompletion = currentSemNum >= 8
 
-      await promotionService.promoteBulk(currentRows, {
+      const result = await promotionService.promoteBulk(currentRows, {
         branchId: selectedBranchId,
         currentAcademicYearId: selectedAcademicYearId,
         currentAcademicYear: selectedYear?.name || '2026-2027',
@@ -660,13 +697,20 @@ export default function StudentPromotion() {
           ? `${currentRows.length} student(s) successfully graduated with degree conferred!`
           : `${currentRows.length} student(s) successfully promoted to Semester ${currentSemNum + 1}!`
       )
+      const successful = Array.isArray(result) ? result.length : (result?.succeeded ?? currentRows.length)
+      const failed = Number(result?.failed ?? 0)
+      setPromotionResult({ successful, failed, message: failed ? 'Some student promotions need follow-up.' : 'Promotion completed successfully.' })
+      setWizardStep(4)
 
       setSelected([])
       setConfirmRows(null)
       loadPromotionData()
     } catch (err) {
       setNotice(err.message || 'Promotion could not be completed.', 'error')
+      setPromotionResult({ successful: 0, failed: confirmRows.length, message: err.message || 'Promotion could not be completed.' })
+      setWizardStep(4)
     } finally {
+      promotionBusyRef.current = false
       setLoading((x) => ({ ...x, promotion: false }))
     }
   }
@@ -675,19 +719,60 @@ export default function StudentPromotion() {
     <DashboardLayout>
       <main className="student-promotion p-module">
         <PageHeader
-          title="Student Promotion & Degree Completion"
-          subtitle="Academic advancement, term eligibility criteria, Semester 8 graduation, and promotion history."
-          compactSummary={[
-            { label: 'Scope', value: students.length },
-            { label: 'Eligible', value: students.filter((x) => statusOf(x) === 'eligible').length, tone: 'active' },
-            { label: 'History', value: history.length, tone: 'upcoming' },
+          breadcrumb={[
+            { label: 'Home', link: '/' },
+            { label: 'Student Management', link: '/student-management' },
+            'Student Promotions',
           ]}
-        />
+          className="promotion-dashboard-header"
+          title="Student Promotion & Degree Completion"
+          subtitle="Configure academic advancement, verify server eligibility, and track degree completion."
+        >
+          <div className="promotion-kpis grid grid-cols-3 gap-2" aria-label="Promotion summary">
+            {[
+              { label: 'In scope', value: students.length, icon: FiUsers },
+              { label: 'Eligible', value: students.filter(x => statusOf(x) === 'eligible').length, icon: FiCheck },
+              { label: 'History', value: history.length, icon: FiClock },
+            ].map(({ label, value, icon: Icon }, index) => (
+              <motion.div key={label} className={`promotion-kpi kpi-${index}`} initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: shouldReduceMotion ? 0 : 0.2, delay: shouldReduceMotion ? 0 : index * 0.05 }}>
+                <span><Icon aria-hidden="true" />{label}</span><motion.strong key={value} initial={shouldReduceMotion ? false : { y: 5, opacity: 0.4 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: shouldReduceMotion ? 0 : 0.18 }}>{value}</motion.strong>
+              </motion.div>
+            ))}
+          </div>
+        </PageHeader>
 
+        <motion.nav
+          className="promotion-wizard-steps grid grid-cols-4 gap-2"
+          aria-label="Promotion workflow"
+          initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: shouldReduceMotion ? 0 : 0.22, ease: 'easeOut' }}
+        >
+          {['Configure Promotion', 'Preview Eligible Students', 'Review & Confirm', 'Completion'].map((label, index) => {
+            const step = index + 1
+            const complete = wizardStep > step
+            const current = wizardStep === step
+            return (
+              <button type="button" key={label} className={`${current ? 'is-current' : ''} ${complete ? 'is-complete' : ''}`} aria-current={current ? 'step' : undefined} onClick={() => { if (step <= wizardStep) setWizardStep(step) }} disabled={step > wizardStep}>
+                <span className="promotion-step-indicator">{complete ? <FiCheck aria-hidden="true" /> : step}</span>
+                <span>{label}</span>
+              </button>
+            )
+          })}
+        </motion.nav>
 
+        <AnimatePresence mode="wait">
+        {wizardStep === 4 && promotionResult && (
+          <motion.section className={`promotion-result ${promotionResult.failed ? 'has-failures' : ''}`} role="status" initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: shouldReduceMotion ? 0 : 0.2 }}>
+            <div><FiCheckCircle aria-hidden="true" /><div><h2>{promotionResult.message}</h2><p>{promotionResult.successful} completed · {promotionResult.failed} failed or requiring follow-up</p></div></div>
+            <button type="button" className="erp-btn erp-btn--secondary" onClick={() => { setWizardStep(1); setPromotionResult(null); setSelected([]) }}>Start another promotion</button>
+          </motion.section>
+        )}
+        </AnimatePresence>
 
+        <div className="promotion-workspace">
         {/* Promotion Scope Selector Panel */}
-        <section className="p-scope erp-card">
+        <motion.section className={`p-scope erp-card ${wizardStep > 1 ? 'is-compact' : ''}`} initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: shouldReduceMotion ? 0 : 0.24 }}>
           {(academicLoading || academicError || !activeCourses.length || !activeAcademicYears.length) && (
             <div className={`p-scope-status ${academicError ? 'is-error' : ''}`} role={academicError ? 'alert' : 'status'}>
               <span>
@@ -788,11 +873,20 @@ export default function StudentPromotion() {
                 ))}
               </ProjectSelect>
             </div>
+            <div className="erp-form-group">
+              <label htmlFor="promotion-type">Promotion Type <span className="p-required">*</span></label>
+              <select id="promotion-type" className="erp-select" value={promotionType} disabled={!selectedSemesterNumber} onChange={() => {}} aria-describedby="promotion-type-help">
+                <option value="next-semester" disabled={isFinalSemester}>Next Semester</option>
+                <option value="degree" disabled={!isFinalSemester}>Degree Completion{!isFinalSemester ? ' (final semester only)' : ''}</option>
+              </select>
+              <small id="promotion-type-help">{isFinalSemester ? `Final configured term: Semester ${finalSemesterNumber}` : `Target: Semester ${Number(selectedSemesterNumber || 0) + 1}`}</small>
+            </div>
           </div>
-        </section>
+        </motion.section>
 
         {/* Tab Strip */}
-        <nav className="p-tabs">
+        <div className="promotion-directory-column">
+        <nav className="p-tabs" aria-label="Promotion views">
           <button
             type="button"
             className={tab === 'promotion' ? 'active' : ''}
@@ -826,10 +920,10 @@ export default function StudentPromotion() {
                   <header className="erp-card-header">
                     <div>
                       <h2 className="erp-card-title">
-                        {isSemester8 ? 'Semester 8 Degree Completion Review' : 'Student Advancement Roster'}
+                        {isDegreeReview ? `Semester ${finalSemesterNumber} Degree Completion Review` : 'Student Advancement Roster'}
                       </h2>
                       <p className="erp-card-subtitle">
-                        {isSemester8
+                        {isDegreeReview
                           ? 'Review final-year students for official degree conferral and graduation.'
                           : 'Select eligible students to execute semester advancement.'}
                       </p>
@@ -844,18 +938,7 @@ export default function StudentPromotion() {
                         loading={loading.list}
                       />
 
-                      {canPromote && (
-                        <button
-                          type="button"
-                          className="erp-btn erp-btn--primary"
-                          disabled={!eligibleSelected.length || loading.promotion}
-                          onClick={() => setConfirmRows(eligibleSelected)}
-                        >
-                          {isDegreeReview
-                            ? `Confer Degree (${eligibleSelected.length})`
-                            : `Promote Selected (${eligibleSelected.length})`}
-                        </button>
-                      )}
+                      {canPromote && <span className="promotion-selected-count" aria-live="polite">{eligibleSelected.length} eligible selected</span>}
                     </div>
                   </header>
 
@@ -873,6 +956,12 @@ export default function StudentPromotion() {
                         placeholder="Search student name, roll number, or registration..."
                       />
                     </div>
+                    <label className="promotion-sort"><span>Sort by</span><select value={sortBy} onChange={event => { setSortBy(event.target.value); setDirPage(1) }}><option value="name">Student name</option><option value="roll">Roll number</option><option value="eligibility">Eligibility</option></select></label>
+                  </div>
+
+                  <div className="promotion-eligibility-tabs" role="tablist" aria-label="Eligibility status">
+                    <button type="button" role="tab" aria-selected={eligibilityTab === 'eligible'} className={eligibilityTab === 'eligible' ? 'active' : ''} onClick={() => { setEligibilityTab('eligible'); setDirPage(1) }}>Eligible <span>{students.filter(x => statusOf(x) === 'eligible').length}</span></button>
+                    <button type="button" role="tab" aria-selected={eligibilityTab === 'ineligible'} className={eligibilityTab === 'ineligible' ? 'active' : ''} onClick={() => { setEligibilityTab('ineligible'); setDirPage(1) }}>Non-Eligible / Pending <span>{students.filter(x => statusOf(x) !== 'eligible').length}</span></button>
                   </div>
 
                   <div className="erp-table-responsive">
@@ -883,18 +972,18 @@ export default function StudentPromotion() {
                             <input
                               type="checkbox"
                               checked={
-                                paginatedCandidates.length > 0 &&
-                                paginatedCandidates.every((x) => selected.includes(idOf(x)))
+                                paginatedCandidates.some(x => statusOf(x) === 'eligible') &&
+                                paginatedCandidates.filter(x => statusOf(x) === 'eligible').every((x) => selected.includes(idOf(x)))
                               }
                               onChange={(e) => {
                                 if (e.target.checked) {
                                   setSelected([
-                                    ...new Set([...selected, ...paginatedCandidates.map(idOf)]),
+                                    ...new Set([...selected, ...paginatedCandidates.filter(x => statusOf(x) === 'eligible').map(idOf)]),
                                   ])
                                 } else {
                                   setSelected(
                                     selected.filter(
-                                      (id) => !paginatedCandidates.map(idOf).includes(id)
+                                      (id) => !paginatedCandidates.filter(x => statusOf(x) === 'eligible').map(idOf).includes(id)
                                     )
                                   )
                                 }
@@ -913,7 +1002,7 @@ export default function StudentPromotion() {
                         </tr>
                       </thead>
                       <tbody>
-                        {paginatedCandidates.length === 0 ? (
+                        {loading.list ? Array.from({ length: 5 }, (_, index) => <tr key={`loading-${index}`} className="promotion-skeleton-row" aria-hidden="true"><td colSpan={10}><span /></td></tr>) : paginatedCandidates.length === 0 ? (
                           <tr>
                             <td colSpan={10} className="text-center py-6">
                               <p className="text-muted">No students found matching this scope.</p>
@@ -947,18 +1036,18 @@ export default function StudentPromotion() {
                               </td>
                               <td style={{ minWidth: '150px' }}>
                                 <div>{x.course} | {x.branch}</div>
-                                <div className="text-muted" style={{ fontSize: '11px', marginTop: '2px' }}>Section {x.section || 'A'}</div>
+                              {x.section && <div className="text-muted" style={{ fontSize: '11px', marginTop: '2px' }}>Section {x.section}</div>}
                               </td>
                               <td style={{ minWidth: '170px' }}>
                                 <span style={{ fontWeight: 600 }}>{x.currentSemester}</span>{' '}
                                 <span style={{ color: 'var(--text-muted)' }}>→</span>{' '}
-                                <span className={isSemester8 ? 'text-primary font-semibold' : 'text-success font-semibold'}>
+                                <span className={isDegreeReview ? 'text-primary font-semibold' : 'text-success font-semibold'}>
                                   {x.nextSemester}
                                 </span>
                               </td>
-                              <td className="table-center" style={{ width: '90px' }}>{x.creditsEarned}</td>
+                              <td className="table-center" style={{ width: '90px' }}>{x.creditsEarned ?? '—'}</td>
                               <td className="table-center" style={{ width: '120px', whiteSpace: 'nowrap' }}>
-                                {x.sgpa} / {x.cgpa}
+                                {x.sgpa ?? '—'} / {x.cgpa ?? '—'}
                               </td>
                               <td className="table-center" style={{ width: '110px' }}>
                                 {x.attendanceRate == null
@@ -967,8 +1056,9 @@ export default function StudentPromotion() {
                               </td>
                               <td className="table-center" style={{ width: '120px' }}>
                                 <StatusBadge
-                                  value={statusOf(x) === 'eligible' ? 'Eligible' : 'Ineligible'}
+                                  value={x.eligibilityLabel || (statusOf(x) === 'eligible' ? 'Eligible' : 'Pending Review')}
                                 />
+                                {x.reason && <small className="promotion-eligibility-reason">{x.reason}</small>}
                               </td>
                               <td className="table-center" style={{ width: '80px' }}>
                                 <div className="table-actions-group">
@@ -992,7 +1082,7 @@ export default function StudentPromotion() {
 
                   <TablePagination
                     currentPage={dirPage}
-                    totalPages={Math.max(1, Math.ceil(filteredCandidates.length / pageSize))}
+                    totalPages={Math.max(1, Math.ceil(visibleCandidates.length / pageSize))}
                     pageSize={pageSize}
                     onPageChange={setDirPage}
                   />
@@ -1027,14 +1117,15 @@ export default function StudentPromotion() {
                     <th style={{ minWidth: '170px' }}>Transition (From → To)</th>
                     <th className="table-center" style={{ width: '120px' }}>Date</th>
                     <th className="table-center" style={{ width: '120px' }}>Status</th>
-                    <th>Remarks</th>
+                        <th>Administrator</th>
+                        <th>Remarks</th>
                     <th className="table-center" style={{ width: '80px' }}>Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {paginatedHistory.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="text-center py-6 text-muted">
+                      <td colSpan={8} className="text-center py-6 text-muted">
                         No promotion history records logged yet.
                       </td>
                     </tr>
@@ -1051,13 +1142,14 @@ export default function StudentPromotion() {
                           <span className="text-success font-semibold">{formatSemesterLabel(h.toSemester)}</span>
                         </td>
                         <td className="table-center" style={{ width: '120px' }}>
-                          {h.promotionDate ? new Date(h.promotionDate).toLocaleDateString('en-IN') : '-'}
+                          {h.createdAt || h.updatedAt || h.promotionDate ? new Date(h.createdAt || h.updatedAt || h.promotionDate).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : '-'}
                         </td>
                         <td className="table-center" style={{ width: '120px' }}>
                           <StatusBadge
                             value={h.status || 'Promoted'}
                           />
                         </td>
+                        <td>{h.administratorName || h.createdByName || h.adminName || h.createdBy || '—'}</td>
                         <td>{h.remarks || 'Standard promotion'}</td>
                         <td className="table-center" style={{ width: '80px' }}>
                           <div className="table-actions-group">
@@ -1087,6 +1179,29 @@ export default function StudentPromotion() {
             />
           </section>
         )}
+        </div>
+        </div>
+
+        <AnimatePresence mode="wait">
+        {wizardStep === 3 && tab === 'promotion' && (
+          <motion.section className="promotion-review-summary" aria-labelledby="promotion-review-title" initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: shouldReduceMotion ? 0 : 0.2 }}>
+            <div className="promotion-review-summary-head"><div><span className="promotion-eyebrow">Final review</span><h2 id="promotion-review-title">Ready to {isDegreeReview ? 'complete degrees' : 'promote students'}?</h2><p>Review the selected students and destination before confirming.</p></div><strong>{eligibleSelected.length} selected</strong></div>
+            {eligibleSelected.length ? <ul>{eligibleSelected.map(student => <li key={idOf(student)}><span>{nameOf(student)}</span><small>{student.registrationNumber || student.rollNumber || 'No registration number'} · {student.currentSemester} → {student.nextSemester}</small></li>)}</ul> : <p className="promotion-inline-error" role="alert">Select at least one student returned as eligible by the promotion service.</p>}
+            {!canExecutePromotion && <p className="promotion-inline-error" role="alert">The configured final semester is {finalSemesterNumber}, but the existing promotion API only supports degree completion at Semester 8. Promotion is disabled here to prevent advancing beyond the course limit.</p>}
+          </motion.section>
+        )}
+        </AnimatePresence>
+
+        <footer className="promotion-sticky-actions" aria-label="Promotion wizard actions">
+          <div className="promotion-action-context"><strong>{wizardStep < 4 ? ['Configure promotion', 'Preview eligible students', 'Review & confirm'][wizardStep - 1] : 'Promotion completed'}</strong><span>{selected.length} selected · {eligibleSelected.length} eligible to promote</span></div>
+          <div className="promotion-action-buttons flex items-center gap-2">
+            {wizardStep > 1 && wizardStep < 4 && <button type="button" className="erp-btn erp-btn--secondary" onClick={() => setWizardStep(current => Math.max(1, current - 1))}>Previous</button>}
+            {wizardStep === 1 && <button type="button" className="erp-btn erp-btn--primary" disabled={!selectedBranchId || !selectedAcademicYearId || !selectedSemesterNumber || loading.list} onClick={() => setWizardStep(2)}>Preview students <FiArrowRight /></button>}
+            {wizardStep === 2 && <button type="button" className="erp-btn erp-btn--primary" disabled={!eligibleSelected.length} onClick={() => setWizardStep(3)}>Review selection <FiArrowRight /></button>}
+            {wizardStep === 3 && canPromote && <button type="button" className="erp-btn erp-btn--primary" disabled={!eligibleSelected.length || loading.promotion || !canExecutePromotion} onClick={() => setConfirmRows(eligibleSelected)}>{isDegreeReview ? 'Confirm degree completion' : 'Confirm promotion'} <FiArrowRight /></button>}
+            {wizardStep === 4 && <button type="button" className="erp-btn erp-btn--primary" onClick={() => { setWizardStep(1); setPromotionResult(null); setSelected([]) }}>Done</button>}
+          </div>
+        </footer>
       </main>
 
       {/* Review Drawer */}
@@ -1121,7 +1236,7 @@ export default function StudentPromotion() {
         <ConfirmModal
           rows={confirmRows}
           busy={loading.promotion}
-          isDegreeReview={isSemester8}
+          isDegreeReview={isDegreeReview}
           onCancel={() => setConfirmRows(null)}
           onConfirm={handleExecutePromotion}
         />

@@ -26,6 +26,14 @@ namespace BTech.Middleware
             {
                 await _next(context);
             }
+            catch (BTech.Services.ContractException ex)
+            {
+                _logger.LogWarning("API contract rejected. Code={Code}, Status={Status}, Path={Path}, CorrelationId={CorrelationId}",
+                    ex.Code, ex.StatusCode, context.Request.Path, context.TraceIdentifier);
+                context.Response.StatusCode = ex.StatusCode;
+                await context.Response.WriteAsJsonAsync(new { success = false, code = ex.Code,
+                    message = ex.Message, statusCode = ex.StatusCode, correlationId = context.TraceIdentifier });
+            }
             catch (BTech.Services.Fees.FeePlanException ex)
             {
                 _logger.LogWarning("Fee plan request rejected. Status={Status}, Path={Path}, Message={Message}", ex.StatusCode, context.Request.Path, ex.Message);

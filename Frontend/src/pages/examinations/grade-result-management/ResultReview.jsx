@@ -3,9 +3,9 @@ import { ProjectSelect } from '../../../components/SearchableSelect'
 import ViewDialog from '../../../components/ViewDialog'
 import { loadResultCandidates, loadResultExaminations, loadStudentResultHistory, reviewExamResult } from '../../../services/scopedModulesService'
 
-export default function ResultReview({ collegeId, academicYearId }) {
-  const [examId, setExamId] = useState('')
-  const [studentId, setStudentId] = useState('')
+export default function ResultReview({ collegeId, academicYearId, onReviewed, initialExamId = '', initialStudentId = '' }) {
+  const [examId, setExamId] = useState(String(initialExamId))
+  const [studentId, setStudentId] = useState(initialExamId ? String(initialStudentId) : '')
   const [exams, setExams] = useState(null)
   const [roster, setRoster] = useState(null)
   const [examError, setExamError] = useState('')
@@ -58,8 +58,9 @@ export default function ResultReview({ collegeId, academicYearId }) {
     setReviewError('')
     try {
       setReview(await reviewExamResult({ collegeId, academicYearId }, exam, candidate))
+      onReviewed?.()
     } catch (error) {
-      setReviewError(error.message)
+      setReviewError(error.status === 404 ? 'Approved marks were found, but the server has no calculated result for this student and exam. Ask the examination team to check result generation.' : error.message)
     } finally {
       setBusy(false)
     }
@@ -72,7 +73,7 @@ export default function ResultReview({ collegeId, academicYearId }) {
     </div></div>
     <form className="res-card-header" onSubmit={openReview}>
       <label>Examination
-        <ProjectSelect value={examId} disabled={busy || !exams?.length} onChange={event => {
+        <ProjectSelect value={exam ? examId : ''} disabled={busy || !exams?.length} onChange={event => {
           setExamId(event.target.value); setStudentId(''); setRoster(null); setRosterError(''); setReviewError('')
         }}>
           <option value="">Select examination</option>
@@ -80,7 +81,7 @@ export default function ResultReview({ collegeId, academicYearId }) {
         </ProjectSelect>
       </label>
       <label>Student
-        <ProjectSelect value={studentId} disabled={busy || !roster?.length} onChange={event => { setStudentId(event.target.value); setReviewError('') }}>
+        <ProjectSelect value={candidate ? studentId : ''} disabled={busy || !roster?.length} onChange={event => { setStudentId(event.target.value); setReviewError('') }}>
           <option value="">Select student</option>
           {roster?.map(row => <option key={row.studentId} value={row.studentId}>{row.studentName || row.studentCode || row.studentId}</option>)}
         </ProjectSelect>
@@ -89,6 +90,8 @@ export default function ResultReview({ collegeId, academicYearId }) {
     </form>
     {examError && <p role="alert">{examError} <button type="button" onClick={() => { setExamError(''); setExamAttempt(value => value + 1) }}>Retry examinations</button></p>}
     {rosterError && <p role="alert">{rosterError} <button type="button" onClick={() => { setRosterError(''); setRosterAttempt(value => value + 1) }}>Retry students</button></p>}
+    {exams?.length > 0 && examId && !exam && <p role="status">The linked examination is outside the selected college or academic year. Select an available examination to continue.</p>}
+    {roster?.length > 0 && studentId && !candidate && <p role="status">The linked student has no approved marks for this examination. Select a student with approved marks.</p>}
     {reviewError && <p role="alert">{reviewError}</p>}
     {!exams && !examError && <p role="status">Loading examinations…</p>}
     {exams?.length === 0 && <p role="status">No examinations in this college and academic year.</p>}

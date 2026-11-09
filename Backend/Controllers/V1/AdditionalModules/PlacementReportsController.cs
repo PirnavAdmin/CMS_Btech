@@ -1,15 +1,18 @@
-using BTech.Data;
+using BTech.Services;
+using Dapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using MySqlConnector;
 namespace BTech.Controllers.V1.AdditionalModules;
-[ApiController]
-[Tags("PlacementCompanies")]
-[Authorize]
-[Route("api/v1/placements/reports")]
-public sealed class PlacementReportsController : ControllerBase {
- private readonly ApplicationDbContext _db;
- public PlacementReportsController(ApplicationDbContext db)=>_db=db;
+[ApiController,Authorize,Route("api/v1/placements/reports")]
+public sealed class PlacementReportsController(IConfiguration configuration) : ControllerBase
+{
  [HttpGet]
- public async Task<IActionResult> Get(CancellationToken ct){var c=_db.Database.GetDbConnection();var close=c.State!=System.Data.ConnectionState.Open;if(close)await c.OpenAsync(ct);try{await using var q=c.CreateCommand();q.CommandText="SELECT COUNT(*) FROM companies";var count=0L;try{count=Convert.ToInt64(await q.ExecuteScalarAsync(ct));}catch{count=0;}return Ok(new{success=true,data=new{registeredCompanies=count,generatedAt=DateTimeOffset.UtcNow, note="Company summary only; drive/application outcome metrics depend on the existing placement reporting schema."}});}finally{if(close)await c.CloseAsync();}}
+ public async Task<IActionResult> Get(CancellationToken ct)
+ {
+  var scope=CollegeDataScope.Resolve(HttpContext);
+  await using var c=new MySqlConnection(configuration.GetConnectionString("DefaultConnection"));
+  var count=await c.ExecuteScalarAsync<long>(new CommandDefinition("SELECT COUNT(*) FROM companies WHERE deleted_at IS NULL AND (@scope IS NULL OR college_id=@scope)",new{scope},cancellationToken:ct));
+  return Ok(new{success=true,data=new{registeredCompanies=count,collegeId=scope,generatedAt=DateTimeOffset.UtcNow}});
+ }
 }

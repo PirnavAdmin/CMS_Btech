@@ -16,7 +16,7 @@ vi.mock('../auth/collegeApi', () => ({ collegeLogoValue: () => '', cacheCollegeL
 afterEach(() => { cleanup(); document.documentElement.removeAttribute('data-theme') })
 let generation = 0
 beforeEach(() => { vi.clearAllMocks(); session.role = 'admin'; session.token = 'test-token-' + (++generation); session.academic = { selectedCollege: { id: '7', name: 'Test College' }, selectedCollegeId: '7', colleges: [], loading: false }; authAccessApi.get.mockReset().mockResolvedValue({ isSuperAdmin: true, collegeId: 7, permissions: {} }); sessionStorage.clear() })
-async function settings() { const button = await screen.findByRole('button', { name: 'Global Settings' }); if (button.getAttribute('aria-expanded') !== 'true') fireEvent.click(button); return screen.findByRole('link', { name: 'Colleges' }) }
+async function settings() { return screen.findByRole('link', { name: 'Global Settings' }) }
 function mount(props = {}, path = '/fees/structures/create') {
  return render(<MemoryRouter initialEntries={[path]}><Sidebar {...props} /></MemoryRouter>)
 }
@@ -42,8 +42,8 @@ test.each(['light', 'dark'])('sidebar keeps links, fee active states and consist
  const { container } = mount()
  await waitFor(() => expect(authAccessApi.get).toHaveBeenCalled())
  const colleges = await settings()
- expect(colleges.getAttribute('href')).toBe('/college-institution-management')
- expect(colleges.querySelector('svg').classList.contains('lucide-landmark')).toBe(true)
+ expect(colleges.getAttribute('href')).toBe('/settings'); expect(screen.queryByRole('button', { name: 'Global Settings' })).toBeNull(); for (const name of ['Working Context', 'Colleges', 'Academic Years']) expect(screen.queryByRole('link', { name })).toBeNull()
+ expect(colleges.querySelector('svg').classList.contains('lucide-settings')).toBe(true)
  expect(screen.getByRole('link', { name: 'Fee Structure' }).classList.contains('active')).toBe(true)
  expect(screen.getByRole('link', { name: 'Fee Management' }).classList.contains('active')).toBe(false)
  for (const link of container.querySelectorAll('.sidebar-link')) {
@@ -67,12 +67,12 @@ test('existing disclosure, collapse and mobile close callbacks survive icon chan
  expect(container.querySelector('aside').classList.contains('is-open')).toBe(true)
  fireEvent.click(screen.getByRole('button', { name: 'Exams & Results' }))
  expect(screen.getByRole('button', { name: 'Exams & Results' }).getAttribute('aria-expanded')).toBe('true')
- expect(screen.getByRole('link', { name: 'Examination Setup' }).getAttribute('href')).toBe('/examination-setup')
- fireEvent.click(screen.getByRole('link', { name: 'Colleges' })); expect(onClose).toHaveBeenCalled()
+ expect(screen.getByRole('link', { name: 'Exam Management' }).getAttribute('href')).toBe('/examination-setup')
+ fireEvent.click(screen.getByRole('link', { name: 'Global Settings' })); expect(onClose).toHaveBeenCalled()
  rerender(<MemoryRouter><Sidebar collapsed onClose={onClose} onToggleCollapse={onToggleCollapse} /></MemoryRouter>)
  expect(container.querySelector('aside').classList.contains('is-collapsed')).toBe(true)
  fireEvent.click(screen.getByRole('button', { name: 'Expand navigation' })); expect(onToggleCollapse).toHaveBeenCalled()
- expect(screen.getByRole('button', { name: 'Global Settings' }).getAttribute('title')).toBe('Global Settings')
+ expect(screen.getByRole('link', { name: 'Global Settings' }).getAttribute('title')).toBe('Global Settings')
 })
 
 function deferred() { let resolve; const promise = new Promise(done => { resolve = done }); return { promise, resolve } }
@@ -80,7 +80,7 @@ const sidebarTree = props => <MemoryRouter initialEntries={['/fees/collection']}
 
 test('pending permissions keep the role navigation visible until scoped links are ready', async () => {
  const request = deferred(); authAccessApi.get.mockReturnValueOnce(request.promise);
- mount(); expect(screen.getByText('Loading navigation…')).toBeTruthy(); expect(screen.getByRole('button', { name: 'Global Settings' })).toBeTruthy();
+ mount(); expect(screen.getByText('Loading navigation…')).toBeTruthy(); expect(screen.getByRole('link', { name: 'Global Settings' })).toBeTruthy();
  expect(document.querySelectorAll('.sidebar-section-label').length).toBeGreaterThan(0);
  await act(async () => request.resolve({ collegeId: 7, permissions: { fees: { view: true } } }));
  expect(screen.getByRole('link', { name: 'Fee Management' })).toBeTruthy();
@@ -89,7 +89,7 @@ test('pending permissions keep the role navigation visible until scoped links ar
 test('failed access preserves navigation without a sidebar error or retry button', async () => {
  authAccessApi.get.mockRejectedValueOnce(new Error('Unavailable'));
  mount(); await waitFor(() => expect(screen.queryByText('Loading navigation…')).toBeNull());
- expect(screen.getByRole('button', { name: 'Global Settings' })).toBeTruthy();
+ expect(screen.getByRole('link', { name: 'Global Settings' })).toBeTruthy();
  expect(screen.queryByText(/Service unavailable/)).toBeNull();
  expect(screen.queryByRole('button', { name: 'Retry connection' })).toBeNull();
 })
@@ -140,12 +140,12 @@ test('history navigation and new deep links expand the active parent after manua
  render(<MemoryRouter initialEntries={['/courses']}><Sidebar /><HistoryControls /></MemoryRouter>);
  await settings(); fireEvent.click(screen.getByRole('button', { name: 'Open result' }));
  expect(screen.getByRole('button', { name: 'Exams & Results' }).getAttribute('aria-expanded')).toBe('true');
- expect(screen.getByRole('link', { name: 'Official Results' }).getAttribute('aria-current')).toBe('page');
+ expect(screen.getByRole('link', { name: 'Grades & Results' }).getAttribute('aria-current')).toBe('page');
  fireEvent.click(screen.getByRole('button', { name: 'Exams & Results' }));
- expect(screen.queryByRole('link', { name: 'Official Results' })).toBeNull();
+ expect(screen.queryByRole('link', { name: 'Grades & Results' })).toBeNull();
  fireEvent.click(screen.getByRole('button', { name: 'Open backlog' }));
- expect(screen.getByRole('link', { name: 'Official Results' })).toBeTruthy();
- fireEvent.click(screen.getByRole('button', { name: 'Go back' })); expect(screen.getByRole('link', { name: 'Official Results' })).toBeTruthy();
+ expect(screen.getByRole('link', { name: 'Grades & Results' })).toBeTruthy();
+ fireEvent.click(screen.getByRole('button', { name: 'Go back' })); expect(screen.getByRole('link', { name: 'Grades & Results' })).toBeTruthy();
 })
 function CollapsibleSidebar() { const [collapsed, setCollapsed] = useState(true); return <Sidebar collapsed={collapsed} onToggleCollapse={() => setCollapsed(value => !value)} /> }
 test('clicking a collapsed parent expands the sidebar and its submenu together', async () => {
@@ -153,10 +153,12 @@ test('clicking a collapsed parent expands the sidebar and its submenu together',
  await screen.findByRole('button', { name: 'Exams & Results' }); expect(container.querySelector('aside').classList.contains('is-collapsed')).toBe(true);
  fireEvent.click(screen.getByRole('button', { name: 'Exams & Results' }));
  expect(container.querySelector('aside').classList.contains('is-collapsed')).toBe(false);
- expect(screen.getByRole('link', { name: 'Exam Timetable' }).getAttribute('aria-current')).toBe('page');
+ expect(screen.getByRole('link', { name: 'Exam Management' }).getAttribute('aria-current')).toBe('page');
 })
 test('sidebar scroll position is restored and saved through registry rendering', async () => {
  sessionStorage.setItem('pirnav-sidebar-scroll', '65'); const { container } = mount();
  await settings(); const nav = container.querySelector('nav'); expect(nav.scrollTop).toBe(65);
  fireEvent.scroll(nav, { target: { scrollTop: 105 } }); expect(sessionStorage.getItem('pirnav-sidebar-scroll')).toBe('105');
 })
+
+ test.each(['/settings', '/global-settings', '/settings/academic-context', '/college-institution-management/add', '/academic-year-management'])('settings stays directly active on %s', async path => { mount({}, path); const link = await settings(); expect(link.getAttribute('href')).toBe('/settings'); expect(link.getAttribute('aria-current')).toBe('page'); expect(link.hasAttribute('aria-expanded')).toBe(false) })

@@ -22,6 +22,7 @@ public sealed class UserAccessController(UserAccessService service) : Controller
     public async Task<IActionResult> Onboard(OnboardCollegeRequest request)
     {if(!Allowed)return Forbid();return StatusCode(201,new{success=true,message="Account saved and setup email accepted for delivery.",data=await service.Onboard(request,Actor,Trace),correlationId=Trace});}
     [HttpPost("invite")]
+    [HttpPost("")]
     public async Task<IActionResult> Invite(InviteUserRequest request)
     {if(!Allowed)return Forbid();return StatusCode(201,new{success=true,message="Account saved and setup email accepted for delivery.",data=await service.Invite(request,Actor,Trace),correlationId=Trace});}
     [HttpPut("{userId:long}")]

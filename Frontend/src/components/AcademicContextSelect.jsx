@@ -56,6 +56,7 @@ export default function AcademicContextSelect({ kind, compact = false }) {
       disabled={disabled}
       searchPlaceholder={isCollege ? 'Search colleges...' : 'Search academic years...'}
       menuClassName={`workspace-context-menu workspace-context-menu--${kind}`}
+      triggerProps={{ title: selectedLabel }}
     /> : <label>
       <span>{label}</span>
       <ProjectSelect title={selectedLabel} aria-label={`Change ${label.toLowerCase()}`} value={value || ''} onChange={change} disabled={disabled}>

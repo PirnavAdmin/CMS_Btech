@@ -1,3 +1,20 @@
+@import "../../../../node_modules/tailwindcss/theme.css" layer(theme);
+@import "../../../../node_modules/tailwindcss/utilities.css" layer(utilities);
+@source "./StudentPromotion.jsx";
+
+.promotion-motion-enter {
+  animation: promotion-motion-enter 220ms ease-out both;
+}
+
+@keyframes promotion-motion-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .promotion-motion-enter { animation: none; }
+}
+
 .student-promotion.p-module {
   width: 100%;
   min-width: 0;
@@ -500,6 +517,235 @@
 
 .promotion-review-drawer .pr-btn-eligible:hover {
   background: var(--success) !important;
+}
+
+/* Promotion dashboard workspace */
+.student-promotion.p-module {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  padding: 18px 20px 116px;
+}
+
+.student-promotion .promotion-dashboard-header {
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.student-promotion .promotion-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(92px, 1fr));
+  gap: 9px;
+}
+
+.student-promotion .promotion-kpi {
+  display: grid;
+  min-width: 94px;
+  gap: 8px;
+  padding: 11px 13px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 86%, var(--brand-soft));
+  box-shadow: var(--shadow-sm);
+}
+
+.student-promotion .promotion-kpi > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.student-promotion .promotion-kpi > span svg { color: var(--brand); }
+.student-promotion .promotion-kpi strong { color: var(--text-primary); font-size: 22px; line-height: 1; }
+.student-promotion .promotion-kpi.kpi-1 strong { color: var(--success); }
+
+.student-promotion .promotion-wizard-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 9px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface) 90%, var(--brand-soft));
+  box-shadow: var(--shadow-sm);
+}
+
+.student-promotion .promotion-wizard-steps button {
+  display: flex;
+  min-width: 0;
+  min-height: 48px;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--text-muted);
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+  transition: background-color .2s ease, border-color .2s ease, color .2s ease, transform .2s ease;
+}
+
+.student-promotion .promotion-wizard-steps button:disabled { cursor: default; }
+.student-promotion .promotion-wizard-steps button.is-current { border-color: color-mix(in srgb, var(--brand) 22%, var(--border)); color: var(--brand); background: var(--surface); box-shadow: var(--shadow-sm); }
+.student-promotion .promotion-wizard-steps button.is-complete { color: var(--success); }
+.student-promotion .promotion-wizard-steps button:not(:disabled):hover { transform: translateY(-1px); }
+
+.student-promotion .promotion-step-indicator {
+  display: inline-grid;
+  width: 27px;
+  height: 27px;
+  flex: 0 0 27px;
+  place-items: center;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  color: var(--text-muted);
+  background: var(--surface);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.student-promotion .is-current .promotion-step-indicator,
+.student-promotion .is-complete .promotion-step-indicator { border-color: var(--brand); color: #fff; background: var(--brand); }
+
+.student-promotion .promotion-workspace {
+  display: grid;
+  grid-template-columns: minmax(265px, 310px) minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+  min-width: 0;
+}
+
+.student-promotion .p-scope {
+  position: sticky;
+  top: 14px;
+  min-width: 0;
+  margin: 0;
+  padding: 16px;
+  border-color: var(--border);
+  border-radius: 14px;
+  background: linear-gradient(150deg, var(--surface), color-mix(in srgb, var(--surface) 92%, var(--brand-soft)));
+  box-shadow: var(--shadow-sm);
+}
+
+.student-promotion .p-scope .erp-form-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 13px;
+}
+
+.student-promotion .p-scope .erp-form-group { min-width: 0; margin: 0; }
+.student-promotion .p-scope .erp-form-group > label { margin-bottom: 5px; font-size: 11px; font-weight: 750; }
+.student-promotion .p-scope .erp-select { width: 100%; min-width: 0; min-height: 40px; font-size: 12px; }
+.student-promotion .p-scope .erp-form-group > small { color: var(--text-muted); font-size: 10px; }
+.student-promotion .p-scope-status { align-items: flex-start; font-size: 11px; }
+
+.student-promotion .promotion-directory-column { display: grid; gap: 12px; min-width: 0; }
+.student-promotion .p-tabs { gap: 5px; margin: 0; padding: 5px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.student-promotion .p-tabs button { border-radius: 8px; font-size: 12px; transition: background-color .2s ease, transform .2s ease; }
+.student-promotion .p-tabs button.active { background: var(--brand); box-shadow: none; }
+.student-promotion .p-panel { min-width: 0; border-radius: 14px; box-shadow: var(--shadow-sm); }
+.student-promotion .p-panel > header { align-items: center; padding: 15px 18px; background: linear-gradient(110deg, var(--surface), color-mix(in srgb, var(--surface) 94%, var(--brand-soft))); }
+.student-promotion .p-header-actions { flex-wrap: wrap; justify-content: flex-end; }
+.student-promotion .promotion-selected-count { color: var(--text-muted); font-size: 11px; font-weight: 700; }
+
+.student-promotion .p-filters { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; }
+.student-promotion .p-filters .erp-input-icon-wrap { flex: 1 1 320px; width: auto; }
+.student-promotion .promotion-sort { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; color: var(--text-muted); font-size: 11px; font-weight: 700; }
+.student-promotion .promotion-sort select { min-height: 36px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); background: var(--surface); font: inherit; }
+
+.student-promotion .promotion-eligibility-tabs { display: flex; gap: 7px; padding: 10px 16px 0; border-bottom: 1px solid var(--border); }
+.student-promotion .promotion-eligibility-tabs button { display: inline-flex; align-items: center; gap: 8px; padding: 8px 10px 10px; border: 0; border-bottom: 2px solid transparent; color: var(--text-muted); background: transparent; font: inherit; font-size: 11px; font-weight: 750; cursor: pointer; }
+.student-promotion .promotion-eligibility-tabs button.active { border-bottom-color: var(--brand); color: var(--brand); }
+.student-promotion .promotion-eligibility-tabs button span { display: inline-grid; min-width: 20px; height: 20px; place-items: center; padding: 0 5px; border-radius: 999px; background: var(--surface-soft); font-size: 10px; }
+
+.student-promotion .erp-table-responsive { min-width: 0; max-width: 100%; overflow-x: auto; }
+.student-promotion .erp-table { min-width: 990px; }
+.student-promotion .erp-table tbody tr { transition: background-color .18s ease, box-shadow .18s ease; }
+.student-promotion .erp-table tbody tr:hover { box-shadow: inset 3px 0 var(--brand); }
+.student-promotion .erp-table td { overflow-wrap: anywhere; }
+.student-promotion .promotion-eligibility-reason { display: block; max-width: 220px; margin: 5px auto 0; color: var(--text-muted); font-size: 10px; line-height: 1.35; }
+.student-promotion .promotion-skeleton-row td { padding: 12px 14px !important; }
+.student-promotion .promotion-skeleton-row td span { display: block; height: 16px; border-radius: 5px; background: linear-gradient(90deg, var(--surface-soft), color-mix(in srgb, var(--brand-soft) 55%, var(--surface)), var(--surface-soft)); background-size: 200% 100%; animation: promotion-shimmer 1.25s ease-in-out infinite; }
+@keyframes promotion-shimmer { to { background-position: -200% 0; } }
+
+.student-promotion .promotion-review-summary,
+.student-promotion .promotion-result { margin-top: 16px; padding: 20px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-sm); }
+.student-promotion .promotion-review-summary-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.student-promotion .promotion-review-summary h2,
+.student-promotion .promotion-result h2 { margin: 4px 0; font-size: 17px; }
+.student-promotion .promotion-review-summary p,
+.student-promotion .promotion-result p { margin: 0; color: var(--text-muted); font-size: 12px; }
+.student-promotion .promotion-review-summary-head > strong { padding: 8px 12px; border-radius: 999px; color: var(--brand); background: var(--brand-soft); white-space: nowrap; }
+.student-promotion .promotion-eyebrow { color: var(--brand); font-size: 10px; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+.student-promotion .promotion-review-summary ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 16px 0 0; padding: 0; list-style: none; }
+.student-promotion .promotion-review-summary li { display: grid; gap: 4px; min-width: 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: 9px; }
+.student-promotion .promotion-review-summary li span { font-size: 12px; font-weight: 750; }
+.student-promotion .promotion-review-summary li small { color: var(--text-muted); font-size: 10px; }
+.student-promotion .promotion-inline-error { margin-top: 12px !important; color: var(--danger) !important; }
+.student-promotion .promotion-result { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-color: color-mix(in srgb, var(--success) 25%, var(--border)); background: color-mix(in srgb, var(--success) 6%, var(--surface)); }
+.student-promotion .promotion-result > div { display: flex; align-items: center; gap: 12px; }
+.student-promotion .promotion-result > div > svg { width: 27px; height: 27px; flex: 0 0 auto; color: var(--success); }
+.student-promotion .promotion-result.has-failures { border-color: color-mix(in srgb, var(--warning) 35%, var(--border)); background: color-mix(in srgb, var(--warning) 7%, var(--surface)); }
+.student-promotion .promotion-result.has-failures > div > svg { color: var(--warning); }
+
+.student-promotion .promotion-sticky-actions { position: sticky; z-index: 20; bottom: 0; display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 18px -20px -116px; padding: 13px 20px; border-top: 1px solid var(--border); background: color-mix(in srgb, var(--surface) 90%, transparent); box-shadow: 0 -8px 26px rgba(31, 49, 18, .08); backdrop-filter: blur(14px); }
+.student-promotion .promotion-action-context { display: grid; gap: 3px; min-width: 0; }
+.student-promotion .promotion-action-context strong { color: var(--text-primary); font-size: 12px; }
+.student-promotion .promotion-action-context span { color: var(--text-muted); font-size: 10px; }
+.student-promotion .promotion-action-buttons { display: flex; flex: 0 0 auto; gap: 8px; }
+.student-promotion .promotion-action-buttons .erp-btn { min-height: 40px; transition: transform .18s ease, box-shadow .18s ease, background-color .18s ease; }
+.student-promotion .promotion-action-buttons .erp-btn:not(:disabled):hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.student-promotion :is(button, select, input):focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+@media (max-width: 1100px) {
+  .student-promotion .promotion-workspace { grid-template-columns: minmax(230px, 270px) minmax(0, 1fr); gap: 12px; }
+  .student-promotion .promotion-wizard-steps button { padding-inline: 8px; font-size: 10px; }
+  .student-promotion .promotion-kpis { grid-template-columns: repeat(3, minmax(74px, 1fr)); }
+}
+
+@media (max-width: 820px) {
+  .student-promotion.p-module { padding: 14px 14px 108px; }
+  .student-promotion .promotion-dashboard-header { align-items: flex-start; }
+  .student-promotion .promotion-workspace { grid-template-columns: minmax(0, 1fr); }
+  .student-promotion .p-scope { position: static; }
+  .student-promotion .p-scope .erp-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .student-promotion .promotion-sticky-actions { margin-right: -14px; margin-left: -14px; margin-bottom: -108px; padding-inline: 14px; }
+}
+
+@media (max-width: 600px) {
+  .student-promotion .promotion-dashboard-header { flex-direction: column; gap: 12px; }
+  .student-promotion .promotion-kpis { width: 100%; }
+  .student-promotion .promotion-kpi { min-width: 0; padding: 9px; }
+  .student-promotion .promotion-kpi > span { font-size: 9px; }
+  .student-promotion .promotion-kpi strong { font-size: 19px; }
+  .student-promotion .promotion-wizard-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .student-promotion .promotion-wizard-steps button { min-height: 44px; font-size: 10px; }
+  .student-promotion .p-scope .erp-form-grid { grid-template-columns: minmax(0, 1fr); }
+  .student-promotion .p-filters { align-items: stretch; flex-direction: column; }
+  .student-promotion .p-filters .erp-input-icon-wrap { width: 100%; flex-basis: auto; }
+  .student-promotion .promotion-sort { justify-content: space-between; }
+  .student-promotion .promotion-review-summary ul { grid-template-columns: 1fr; }
+  .student-promotion .promotion-result { align-items: stretch; flex-direction: column; }
+  .student-promotion .promotion-sticky-actions { align-items: stretch; flex-direction: column; gap: 9px; }
+  .student-promotion .promotion-action-context { display: none; }
+  .student-promotion .promotion-action-buttons { width: 100%; }
+  .student-promotion .promotion-action-buttons .erp-btn { flex: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .student-promotion *,
+  .student-promotion *::before,
+  .student-promotion *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
 
 /* Review view: use the same charcoal-and-lavender contract as new screens. */

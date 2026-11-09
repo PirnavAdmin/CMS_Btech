@@ -26,6 +26,7 @@ public sealed class AccountReadinessMiddleware(RequestDelegate next, IConfigurat
         if(user.MustChange && !path.Equals("/api/v1/auth/change-password",StringComparison.OrdinalIgnoreCase))
         {await Reject(context,403,"PASSWORD_CHANGE_REQUIRED","Complete password setup before accessing modules.");return;}
         if(!user.Completed && !path.Equals("/api/v1/account/profile",StringComparison.OrdinalIgnoreCase) &&
+            !path.Equals("/api/v1/profile/photo",StringComparison.OrdinalIgnoreCase) &&
             !(path.Equals("/api/v1/profile",StringComparison.OrdinalIgnoreCase) && (HttpMethods.IsGet(context.Request.Method)||HttpMethods.IsPatch(context.Request.Method))) &&
             !path.Equals("/api/auth/me/access",StringComparison.OrdinalIgnoreCase) &&
             !path.StartsWith("/api/v1/auth/",StringComparison.OrdinalIgnoreCase))

@@ -17,7 +17,7 @@ public sealed class HostelFeesController : AdditionalApiControllerBase {
  [HttpGet("dues")] public Task<IActionResult> Dues()=>List("hostel-fee-dues");
  [HttpPost("collect")] public Task<IActionResult> Collect([FromBody] JsonElement body)=>Create("hostel-fee-payments",body,status:"Paid");
  [HttpGet("payments")] public Task<IActionResult> Payments()=>List("hostel-fee-payments");
- [HttpGet("reports")] public async Task<IActionResult> Reports() { var p=await Store.ListAsync("hostel-fee-payments",null,HttpContext.RequestAborted); var d=await Store.ListAsync("hostel-fee-dues",null,HttpContext.RequestAborted); return Ok(new{success=true,data=new{paymentCount=p.Count,dueCount=d.Count,payments=p,dues=d}}); }
+ [HttpGet("reports")] public Task<IActionResult> Reports() => throw BTech.Services.CollegeDataScope.NotImplemented("Hostel fee reporting");
  [HttpGet("{id:long}/payments")] public Task<IActionResult> FeePayments(long id)=>List("hostel-fee-payments",id.ToString());
  [HttpGet("{id:long}/receipts")] public Task<IActionResult> Receipts(long id)=>List("hostel-fee-receipts",id.ToString());
  [HttpGet("{id:long}/history")] public Task<IActionResult> History(long id)=>List("hostel-fee-history",id.ToString());

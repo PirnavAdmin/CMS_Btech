@@ -1953,6 +1953,330 @@
 .sa-wizard-actions>span {flex:1}.sa-sort {display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:8px 16px;color:var(--text-muted);font-size:12px}.sa-sort select {padding:7px;background:var(--surface);color:var(--text-primary);border:1px solid var(--border);border-radius:6px}
 .sa-document-picker {display:grid;gap:4px;color:var(--brand);font-size:12px}.sa-document-picker input {max-width:220px}.sa-document-copy small {overflow-wrap:anywhere;color:var(--text-muted)}
 .student-admission .shared-view-dialog .cm-profile-view {padding:0}.student-admission .shared-view-dialog .cm-profile-card {border:0;box-shadow:none}.student-admission .shared-view-dialog .sa-breadcrumb {display:none}
+
+/* Keep the admission review content taller than the viewport scrollable inside
+   the dialog instead of letting its flex child collapse and clip the decision panel. */
+.student-admission .shared-view-dialog__body {
+  display: block;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.student-admission .shared-view-dialog__body > .cm-profile-view {
+  flex: 0 0 auto;
+  min-height: max-content;
+}
 .student-admission :is(input,button,select,textarea):focus-visible {outline:2px solid var(--brand);outline-offset:2px}
 @media(max-width:1000px){.student-admission .sa-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:640px){.sa-reference-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.student-admission .sa-form-grid{grid-template-columns:1fr}.student-admission .sa-form-section{padding:14px}.student-admission .sa-wizard-actions button{flex:1}.sa-reference-stepper button{padding:8px}.sa-document-item{flex-wrap:wrap}}
+
+/* Keep the admission wizard sized to the dashboard content column. */
+.student-admission,
+.student-admission > .sa-admission-wizard,
+.student-admission .sa-admission-layout,
+.student-admission .sa-wizard-card,
+.student-admission .sa-wizard-content,
+.student-admission .sa-step-panel {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+}
+
+.student-admission .sa-admission-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+}
+
+.student-admission .sa-reference-stepper {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  width: 100%;
+  min-width: 0;
+  gap: 6px;
+  overflow: visible;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.student-admission .sa-reference-stepper button {
+  justify-content: center;
+  min-width: 0;
+  white-space: normal;
+}
+
+.student-admission .sa-wizard-card {
+  justify-self: stretch;
+}
+
+@media (max-width: 760px) {
+  .student-admission .sa-reference-stepper {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .student-admission .sa-reference-stepper {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.student-admission .sa-admission-filters {
+  display: grid;
+  gap: 14px;
+  width: 100%;
+  min-width: 0;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-soft);
+}
+
+.student-admission .sa-admission-filterbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.student-admission .sa-admission-filterbar .sa-search {
+  width: min(100%, 560px);
+  min-width: min(260px, 100%);
+  max-width: 560px;
+  flex: 1 1 400px;
+  background: var(--surface);
+}
+
+.student-admission .sa-clear-filters {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  background: var(--surface);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.student-admission .sa-clear-filters:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+.student-admission .sa-admission-filters .sa-filter-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.student-admission .sa-admission-filters .sa-filter-grid label {
+  min-width: 0;
+}
+
+.student-admission .sa-admission-filters .sa-filter-grid select,
+.student-admission .sa-admission-filters .sa-filter-grid .project-select {
+  width: 100%;
+  min-width: 0;
+}
+
+.student-admission .sa-admission-filters .sa-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.student-admission .sa-table-wrap {
+  overflow-x: auto;
+}
+
+.student-admission .sa-admission-table {
+  width: 100%;
+  min-width: 1120px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.student-admission .sa-admission-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 12px 14px;
+  border-bottom: 1px solid #6f8717;
+  color: #fff !important;
+  background: var(--brand, #718b00) !important;
+  font-size: 11px !important;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.35;
+  white-space: normal;
+}
+
+:root:not([data-theme="dark"]) .student-admission .sa-admission-table thead th {
+  color: #fff !important;
+  background: #6f8400 !important;
+}
+
+:root[data-theme="dark"] .student-admission .sa-admission-table thead th {
+  color: #f4f8ec !important;
+  background: #34451f !important;
+}
+
+.student-admission .sa-admission-table tbody td {
+  padding: 12px 14px;
+}
+
+@media (max-width: 1100px) {
+  .student-admission .sa-admission-filters .sa-filter-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .student-admission .sa-admission-filters {
+    padding: 14px;
+  }
+
+  .student-admission .sa-admission-filters .sa-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .student-admission .sa-admission-filterbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .student-admission .sa-admission-filterbar .sa-search {
+    width: 100%;
+    max-width: none;
+  }
+
+  .student-admission .sa-admission-filters .sa-filter-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Keep admission rows visually balanced and action controls centered. */
+:root:not([data-theme="dark"]) .student-admission .sa-admission-table thead th,
+:root:not([data-theme="dark"]) .student-admission .sa-admission-table tbody td,
+:root[data-theme="dark"] .student-admission .sa-admission-table thead th,
+:root[data-theme="dark"] .student-admission .sa-admission-table tbody td {
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+.student-admission .sa-admission-table .sa-student {
+  justify-content: center;
+  text-align: center;
+}
+
+.student-admission .sa-admission-table .sa-student > span {
+  justify-items: center;
+  text-align: center;
+}
+
+.student-admission .sa-admission-table .table-primary-cell {
+  justify-items: center;
+  text-align: center;
+}
+
+.student-admission .sa-admission-table .sa-icon-actions {
+  width: 100%;
+  justify-content: center;
+  gap: 5px;
+}
+
+.student-admission .sa-admission-table .sa-icon-actions > button {
+  flex: 0 0 34px;
+}
+
+.student-admission .sa-overview-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(370px, 490px);
+  align-items: center;
+  gap: 20px;
+  margin: 18px 0 16px;
+}
+
+.student-admission .sa-overview-header > .erp-page-header { min-width: 0; margin: 0; }
+.student-admission .sa-overview-header .sa-reference-summary { width: 100%; margin: 0; gap: 8px; }
+.student-admission .sa-overview-header .sa-reference-summary article { min-width: 0; gap: 6px; padding: 12px; }
+.student-admission .sa-overview-header .sa-reference-summary span { font-size: 10px; }
+.student-admission .sa-overview-header .sa-reference-summary strong { font-size: 20px; }
+
+@media (max-width: 1000px) {
+  .student-admission .sa-overview-header { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .student-admission .sa-overview-header .sa-reference-summary { justify-self: end; max-width: 520px; }
+}
+
+@media (max-width: 560px) {
+  .student-admission .sa-overview-header .sa-reference-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: none; }
+}
+
+/* Premium admissions directory finish */
+.student-admission .sa-reference-summary article {
+  position: relative;
+  min-height: 86px;
+  padding: 13px 14px 13px 16px;
+  border-color: color-mix(in srgb, var(--brand) 15%, var(--border));
+  border-radius: 13px;
+  background: linear-gradient(145deg, var(--surface-raised), color-mix(in srgb, var(--brand-soft) 34%, var(--surface)));
+  box-shadow: 0 5px 16px rgba(39, 54, 18, .045);
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.student-admission .sa-reference-summary article::before { position: absolute; inset: 12px auto 12px 0; width: 3px; border-radius: 0 4px 4px 0; background: var(--brand); content: ""; }
+.student-admission .sa-reference-summary article:nth-child(2)::before { background: var(--success); }
+.student-admission .sa-reference-summary article:nth-child(3)::before { background: var(--warning); }
+.student-admission .sa-reference-summary article:nth-child(4)::before { background: #81906f; }
+.student-admission .sa-reference-summary article:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--brand) 34%, var(--border)); box-shadow: 0 10px 22px rgba(39, 54, 18, .09); }
+.student-admission .sa-reference-summary span { font-size: 10px; font-weight: 700; letter-spacing: .025em; }
+.student-admission .sa-reference-summary strong { margin: 0; font-size: 25px; line-height: 1; letter-spacing: -.035em; }
+.student-admission .sa-directory { border-radius: 16px; box-shadow: 0 12px 32px rgba(39, 54, 18, .06); }
+.student-admission .sa-directory > .course-directory-heading { min-height: 72px; padding: 16px 20px; }
+.student-admission .sa-directory > .course-directory-heading p { display: inline-flex; margin-top: 6px; padding: 4px 9px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-soft); font-size: 11px; font-weight: 650; }
+.student-admission .sa-table-wrap { scrollbar-color: var(--brand) var(--surface-soft); scrollbar-width: thin; }
+.student-admission .sa-admission-table tbody tr { transition: background-color .16s ease, box-shadow .16s ease; }
+.student-admission .sa-admission-table tbody tr:hover td { background: color-mix(in srgb, var(--brand-soft) 44%, var(--surface)); }
+.student-admission .sa-admission-table tbody td { line-height: 1.45; }
+.student-admission .sa-admission-table .sa-student > i { border: 1px solid color-mix(in srgb, var(--brand) 16%, var(--border)); box-shadow: 0 2px 7px rgba(39, 54, 18, .07); }
+.student-admission .sa-icon-actions > button { transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease; }
+.student-admission .sa-icon-actions > button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(39, 54, 18, .1); }
+.student-admission :is(.sa-search, select, .sa-icon-actions button):focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .student-admission .sa-reference-summary article, .student-admission .sa-admission-table tbody tr, .student-admission .sa-icon-actions > button { transition: none; }
+  .student-admission .sa-reference-summary article:hover, .student-admission .sa-icon-actions > button:hover:not(:disabled) { transform: none; }
+}
+
+/* Keep admission values centered and render the student name as a text link. */
+.student-admission .sa-admission-table thead th,
+.student-admission .sa-admission-table tbody td { text-align: center !important; vertical-align: middle !important; }
+.student-admission .sa-admission-table .sa-student { justify-content: center; }
+.student-admission .sa-admission-table .sa-student > span { align-items: center; text-align: center; }
+.student-admission .sa-admission-table .student-name-link {
+  appearance: none;
+  display: inline-block;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0;
+  border: 0 !important;
+  border-radius: 0;
+  color: var(--text-primary);
+  background: transparent !important;
+  box-shadow: none !important;
+  font: inherit;
+  font-weight: 750;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+.student-admission .sa-admission-table .student-name-link:hover { color: var(--brand); text-decoration: underline; }
+.student-admission .sa-admission-table .student-name-link:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; border-radius: 2px; }
