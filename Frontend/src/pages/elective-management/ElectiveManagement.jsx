@@ -221,6 +221,7 @@ export default function ElectiveManagement() {
   const groupsForStudent=groups.filter(group=>profile && ['courseId','branchId','semesterId','academicYearId'].every(key=>Number(profile[key])>0 && String(profile[key])===String(group[key]))); const selectedGroup = groupsForStudent.find(row => String(row.id || row.groupId) === String(selectedGroupId)); const eligibleSubjects = workflowRows.filter(subject => eligibleForGroup(subject, selectedGroup) && (selectedGroup?.subjects || []).some(linked => String(linked.subjectId ?? linked.id) === String(subject.id)))
   const pending = report.filter(row => String(approvalStatus(row)).toLowerCase() === 'pending'); const approved = report.filter(row => String(approvalStatus(row)).toLowerCase() === 'approved'); const pageRows = rows => rows.slice((page - 1) * size, page * size)
   const filteredGroups = useMemo(() => displayGroups.filter(row => !search.trim() || [row.groupCode, row.groupName].some(value => String(value || '').toLowerCase().includes(search.trim().toLowerCase()))), [displayGroups, search])
+  const electiveFiltersActive = hasAcademicFilter(filters) || filters.status !== 'All'
   const hasSubjectFilter = hasAcademicFilter(filters) || filters.status !== 'All' || Boolean(search.trim())
   const electiveTableRows = useMemo(() => hasSubjectFilter ? workflowRows.filter(subject => isElectiveSubject(subject) && matchesSubject(subject, filters, search)) : [], [workflowRows, filters, search, hasSubjectFilter])
   const electiveTablePageSize = 5
@@ -575,12 +576,15 @@ export default function ElectiveManagement() {
           <section className="sm-card em-subject-directory-card" aria-labelledby="elective-directory-title">
             <div className="sm-card-header">
               <h2 id="elective-directory-title">Elective Subject Directory</h2>
-              <ExportMenu rows={electiveTableRows} columns={electiveTableExportColumns} title="Elective Subject Directory" filename="elective-subject-directory" scope="All matching subject records" loading={directoryLoading || Boolean(directoryError) || mastersLoading || Boolean(mastersError)} />
             </div>
             <FilterPanel
               className="em-subject-filter-panel"
-              active={hasAcademicFilter(filters) || filters.status !== 'All'}
+              active={electiveFiltersActive}
               onClear={() => setFilters(old => ({ ...old, course: 'All', branch: 'All', semester: 'All', academicYear: 'All', level: 'All', status: 'All' }))}
+              hideClear
+              leadingActions={(
+                <ExportMenu rows={electiveTableRows} columns={electiveTableExportColumns} title="Elective Subject Directory" filename="elective-subject-directory" scope="All matching subject records" loading={directoryLoading || Boolean(directoryError) || mastersLoading || Boolean(mastersError)} />
+              )}
               search={(
                 <label className="em-subject-search">
                   <FiSearch aria-hidden="true" />
@@ -588,25 +592,28 @@ export default function ElectiveManagement() {
                 </label>
               )}
               filters={(
-                <div className="em-filters">
-                  {['course', 'branch', 'semester', 'academicYear', 'level', 'status'].map(key => {
-                    const labels = { course: 'Course', branch: 'Branch', semester: 'Semester', academicYear: 'Academic Year', level: 'Level', status: 'Status' }
-                    const label = labels[key]
-                    return (
-                      <label key={key}>
-                        <span className="em-filter-label">{label}</span>
-                        <SearchableSelect
-                          label={`Select ${label}`}
-                          value={filters[key]}
-                          options={[{ value: 'All', label: 'All' }, ...directoryFilterOptions(key)]}
-                          onChange={value => setFilters(old => changeAcademicFilter(old, key, value))}
-                          placeholder="All"
-                          searchPlaceholder={`Search ${label.toLowerCase()}...`}
-                          noOptionsMessage={`No ${label.toLowerCase()} options found.`}
-                        />
-                      </label>
-                    )
-                  })}
+                <div className="em-subject-filter-content">
+                  <div className="em-filters">
+                    {['academicYear', 'course', 'branch', 'semester', 'level', 'status'].map(key => {
+                      const labels = { course: 'Course', branch: 'Branch', semester: 'Semester', academicYear: 'Academic Year', level: 'Level', status: 'Status' }
+                      const label = labels[key]
+                      return (
+                        <label key={key}>
+                          <span className="em-filter-label">{label}</span>
+                          <SearchableSelect
+                            label={`Select ${label}`}
+                            value={filters[key]}
+                            options={[{ value: 'All', label: 'All' }, ...directoryFilterOptions(key)]}
+                            onChange={value => setFilters(old => changeAcademicFilter(old, key, value))}
+                            placeholder="All"
+                            searchPlaceholder={`Search ${label.toLowerCase()}...`}
+                            noOptionsMessage={`No ${label.toLowerCase()} options found.`}
+                          />
+                        </label>
+                      )
+                    })}
+                  </div>
+                  {electiveFiltersActive && <button type="button" className="em-subject-filter-clear" onClick={() => setFilters(old => ({ ...old, course: 'All', branch: 'All', semester: 'All', academicYear: 'All', level: 'All', status: 'All' }))}>Clear filters</button>}
                 </div>
               )}
             />

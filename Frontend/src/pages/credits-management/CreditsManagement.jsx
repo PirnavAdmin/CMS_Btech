@@ -18,7 +18,7 @@ import subjectService from '../../services/subjectService'
 import academicService from '../../services/academicService'
 import { enrichSubject } from '../../utils/subjectDirectory'
 import './CreditsManagement.css'
-import { FiAlertCircle, FiAlertTriangle, FiCheck, FiCheckCircle } from 'react-icons/fi'
+import { FiAlertCircle, FiAlertTriangle, FiCheck, FiCheckCircle, FiSearch } from 'react-icons/fi'
 
 const SUBJECT_TYPES = [
   'Core',
@@ -526,6 +526,7 @@ function CreditsManagement() {
     }
     setSubjectFilters(previous => ({ ...previous, ...Object.fromEntries((childFields[field] || []).map(child => [child, ''])), [field]: value }))
   }
+  const subjectFilterCount = Object.values(subjectFilters).filter(Boolean).length
 
   const duplicateRecords = useMemo(() => {
     const map = new Map()
@@ -1220,11 +1221,11 @@ function CreditsManagement() {
 
             <FilterPanel
               className="cm-subject-filter-panel"
-              active={Object.values(subjectFilters).some(Boolean)}
+              active={subjectFilterCount > 0}
+              activeCount={subjectFilterCount}
               onClear={() => setSubjectFilters({ academicYearId: '', courseId: '', branchId: '', level: '', semesterId: '' })}
               hideClear
-              actions={(
-                <>
+              leadingActions={(
                 <ExportMenu
                   rows={filteredSubjects}
                   columns={subjectCreditExportColumns}
@@ -1233,38 +1234,42 @@ function CreditsManagement() {
                   scope="Matching subject credits"
                   loading={creditLoading || Boolean(subjectApiError) || !subjectFiltersReady}
                 />
-                {Object.values(subjectFilters).some(Boolean) && <button type="button" className="filter-disclosure__clear-btn cm-subject-clear-btn" onClick={() => setSubjectFilters({ academicYearId: '', courseId: '', branchId: '', level: '', semesterId: '' })}>Clear Filters</button>}
-                </>
               )}
-            >
-              <div className="cm-subject-search">
-                <input aria-label="Search subject code or name" placeholder="Search subject code or name..." value={subjectSearch} onChange={event => setSubjectSearch(event.target.value)} />
-              </div>
-              <div className="cm-subject-filter-grid">
-                  {[
-                    ['academicYearId', 'Academic Year'],
-                    ['courseId', 'Course'],
-                    ['branchId', 'Branch'],
-                    ['level', 'Academic Level'],
-                    ['semesterId', 'Semester'],
-                  ].map(([field, label]) => (
-                    <label className="cm-academic-filter" key={field}>
-                      <span>{label}</span>
-                      <SearchableSelect
-                        label={`Select ${label}`}
-                        disabled={field === 'semesterId' && !subjectFilters.level}
-                        value={subjectFilters[field]}
-                        options={[{ value: '', label: `Select ${label}` }, ...subjectFilterOptions(field)]}
-                        onChange={value => updateSubjectFilter(field, value)}
-                        placeholder={`Select ${label}`}
-                        searchPlaceholder={`Search ${label.toLowerCase()}...`}
-                        noOptionsMessage={`No ${label.toLowerCase()} options found.`}
-                      />
-                    </label>
-                  ))}
-
-              </div>
-            </FilterPanel>
+              search={(
+                <label className="cm-subject-search">
+                  <FiSearch aria-hidden="true" />
+                  <input aria-label="Search subject code or name" placeholder="Search subject code or name..." value={subjectSearch} onChange={event => setSubjectSearch(event.target.value)} />
+                </label>
+              )}
+              filters={(
+                <div className="cm-subject-filter-content">
+                  <div className="cm-subject-filter-grid">
+                    {[
+                      ['academicYearId', 'Academic Year'],
+                      ['courseId', 'Course'],
+                      ['branchId', 'Branch'],
+                      ['level', 'Academic Level'],
+                      ['semesterId', 'Semester'],
+                    ].map(([field, label]) => (
+                      <label className="cm-academic-filter" key={field}>
+                        <span>{label}</span>
+                        <SearchableSelect
+                          label={`Select ${label}`}
+                          disabled={field === 'semesterId' && !subjectFilters.level}
+                          value={subjectFilters[field]}
+                          options={[{ value: '', label: `Select ${label}` }, ...subjectFilterOptions(field)]}
+                          onChange={value => updateSubjectFilter(field, value)}
+                          placeholder={`Select ${label}`}
+                          searchPlaceholder={`Search ${label.toLowerCase()}...`}
+                          noOptionsMessage={`No ${label.toLowerCase()} options found.`}
+                        />
+                      </label>
+                    ))}
+                  </div>
+                  {subjectFilterCount > 0 && <button type="button" className="cm-subject-filter-clear" onClick={() => setSubjectFilters({ academicYearId: '', courseId: '', branchId: '', level: '', semesterId: '' })}>Clear filters</button>}
+                </div>
+              )}
+            />
 
             <div className="cm-card">
               <div className="cm-table-wrap cm-subject-table-wrap">

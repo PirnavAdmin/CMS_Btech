@@ -8,6 +8,7 @@ export default function FilterPanel({
   filters,
   appliedFilters = [],
   active = false,
+  activeCount,
   onClear,
   showClearWhenOpen = false,
   className = '',
@@ -49,7 +50,7 @@ export default function FilterPanel({
             aria-expanded={open}
             aria-controls={contentId}
           >
-            <FiFilter /> Filters{active && <i aria-label="Filters applied" />}
+            <FiFilter /> Filters{Number.isFinite(activeCount) ? activeCount > 0 && <span className="filter-disclosure__count" aria-label={`${activeCount} filters applied`}>{activeCount}</span> : active && <i aria-label="Filters applied" />}
             <FiChevronDown className="filter-disclosure__chevron" />
           </button>
         )}
