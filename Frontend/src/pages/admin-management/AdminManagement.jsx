@@ -7279,198 +7279,105 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
           <button type="button" className="rooms-cancel-btn rooms-form-back-btn" onClick={closeForm}><FiArrowLeft aria-hidden="true" />Back</button>
         </PageHeader>
         {!editingRoom ? <EmptyState title={roomsLoaded ? 'Room not found' : 'Loading room...'} /> : (
-          <div className="rooms-form-layout" data-without-live-preview="true">
+          <div className="rooms-form-layout">
             <section className="rooms-editor-panel" aria-label="Room details">
               <form onSubmit={handleSaveRoom}>
                 <div className="rooms-modal-body">
-                  <div className="rooms-form-grid">
-                    {/* Room Number */}
-                    <div className="rooms-form-group">
-                      <label>
-                        Room Code / Number <span className="req-mark">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        className="rooms-input"
-                        placeholder="e.g. LH-101, CSE-LAB-1"
-                        value={editingRoom.roomNumber}
-                        onChange={(e) => setEditingRoom({ ...editingRoom, roomNumber: e.target.value })}
-                        required
-                      />
+                  <header className="rooms-form-intro">
+                    <div>
+                      <span className="rooms-form-eyebrow"><FiGrid /> ROOM PROFILE</span>
+                      <h2>{editingRoom.id ? 'Update room specifications' : 'Create a room profile'}</h2>
+                      <p>Capture the room identity, location, capacity, and the equipment available to students and staff.</p>
                     </div>
+                    <span className="rooms-form-step-badge"><FiCheckCircle /> {editingRoom.id ? 'Editing room' : 'New room'}</span>
+                  </header>
 
-                    {/* Room Name */}
-                    <div className="rooms-form-group">
-                      <label>
-                        Room Display Name <span className="req-mark">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        className="rooms-input"
-                        placeholder="e.g. Lecture Hall 101"
-                        value={editingRoom.roomName}
-                        onChange={(e) => setEditingRoom({ ...editingRoom, roomName: e.target.value })}
-                        required
-                      />
-                    </div>
-
-                    {/* Building Block */}
-                    <div className="rooms-form-group">
-                      <label>
-                        Building Block <span className="req-mark">*</span>
-                      </label>
-                      <SearchableSelect
-                        label="Building Block"
-                        value={customBuildingBlock ? '__other__' : editingRoom.buildingBlock}
-                        options={[...BUILDING_BLOCKS, { value: '__other__', label: 'Others' }]}
-                        placeholder="Select Building Block"
-                        searchPlaceholder="Search building blocks..."
-                        noOptionsMessage="No matching building blocks. Clear the search and select Others to enter a custom block."
-                        onChange={(value) => {
-                          const other = value === '__other__'
-                          setCustomBuildingBlock(other)
-                          setEditingRoom({ ...editingRoom, buildingBlock: other ? '' : value })
-                        }}
-                        required
-                      />
-                    </div>
-
-                    {customBuildingBlock && <div className="rooms-form-group">
-                      <label htmlFor="other-building-block">Other Building Block <span className="req-mark">*</span></label>
-                      <input
-                        id="other-building-block"
-                        className="rooms-input"
-                        type="text"
-                        value={editingRoom.buildingBlock}
-                        onChange={(e) => setEditingRoom({ ...editingRoom, buildingBlock: e.target.value })}
-                        onBlur={() => setEditingRoom((room) => ({ ...room, buildingBlock: room.buildingBlock.trim() }))}
-                        placeholder="Enter building block"
-                        required
-                      />
-                    </div>}
-
-                    {/* Floor */}
-                    <div className="rooms-form-group">
-                      <label>
-                        Floor <span className="req-mark">*</span>
-                      </label>
-                      <ProjectSelect
-                        className="rooms-select"
-                        value={editingRoom.floor}
-                        onChange={(e) => setEditingRoom({ ...editingRoom, floor: e.target.value })}
-                        required
-                      >
-                        <option value="" disabled>Select Floor</option>
-                        {FLOORS.map((f) => (
-                          <option key={f} value={f}>{f}</option>
-                        ))}
-                      </ProjectSelect>
-                    </div>
-
-                    {/* Room Type */}
-                    <div className="rooms-form-group">
-                      <label>
-                        Room Type <span className="req-mark">*</span>
-                      </label>
-                      <SearchableSelect
-                        label="Room Type"
-                        value={customRoomType ? '__other__' : editingRoom.roomType}
-                        options={[...ROOM_TYPES, { value: '__other__', label: 'Others' }]}
-                        placeholder="Select Room Type"
-                        searchPlaceholder="Search room types..."
-                        noOptionsMessage="No matching room types. Select Others to enter a custom type."
-                        onChange={(value) => {
+                  <section className="rooms-form-section" aria-labelledby="room-identity-heading">
+                    <div className="rooms-form-section-heading"><span>01</span><div><h3 id="room-identity-heading">Room identity</h3><p>Set the room code and the name displayed across campus.</p></div></div>
+                    <div className="rooms-form-grid">
+                      <div className="rooms-form-group">
+                        <label>Room Code / Number <span className="req-mark">*</span></label>
+                        <input type="text" className="rooms-input" placeholder="e.g. LH-101, CSE-LAB-1" value={editingRoom.roomNumber} onChange={(e) => setEditingRoom({ ...editingRoom, roomNumber: e.target.value })} required />
+                        <small className="rooms-form-hint">Use the code shown on room signage.</small>
+                      </div>
+                      <div className="rooms-form-group">
+                        <label>Room Display Name <span className="req-mark">*</span></label>
+                        <input type="text" className="rooms-input" placeholder="e.g. Lecture Hall 101" value={editingRoom.roomName} onChange={(e) => setEditingRoom({ ...editingRoom, roomName: e.target.value })} required />
+                      </div>
+                      <div className="rooms-form-group">
+                        <label>Room Type <span className="req-mark">*</span></label>
+                        <SearchableSelect label="Room Type" value={customRoomType ? '__other__' : editingRoom.roomType} options={[...ROOM_TYPES, { value: '__other__', label: 'Others' }]} placeholder="Select Room Type" searchPlaceholder="Search room types..." noOptionsMessage="No matching room types. Select Others to enter a custom type." onChange={(value) => {
                           const other = value === '__other__'
                           setCustomRoomType(other)
                           setEditingRoom({ ...editingRoom, roomType: other ? '' : value })
-                        }}
-                        required
-                      />
+                        }} required />
+                      </div>
+                      {customRoomType && <div className="rooms-form-group">
+                        <label htmlFor="other-room-type">Other Room Type <span className="req-mark">*</span></label>
+                        <input id="other-room-type" className="rooms-input" type="text" value={editingRoom.roomType} onChange={(e) => setEditingRoom({ ...editingRoom, roomType: e.target.value })} onBlur={() => setEditingRoom((room) => ({ ...room, roomType: room.roomType.trim() }))} placeholder="Enter room type" required />
+                      </div>}
                     </div>
+                  </section>
 
-                    {customRoomType && <div className="rooms-form-group">
-                      <label htmlFor="other-room-type">Other Room Type <span className="req-mark">*</span></label>
-                      <input
-                        id="other-room-type"
-                        className="rooms-input"
-                        type="text"
-                        value={editingRoom.roomType}
-                        onChange={(e) => setEditingRoom({ ...editingRoom, roomType: e.target.value })}
-                        onBlur={() => setEditingRoom((room) => ({ ...room, roomType: room.roomType.trim() }))}
-                        placeholder="Enter room type"
-                        required
-                      />
-                    </div>}
-
-                    {/* Seating Capacity */}
-                    <div className="rooms-form-group">
-                      <label>
-                        Seating Capacity <span className="req-mark">*</span>
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="500"
-                        className="rooms-input"
-                        placeholder="e.g. 60"
-                        value={editingRoom.capacity}
-                        onChange={(e) => setEditingRoom({ ...editingRoom, capacity: Number(e.target.value) || '' })}
-                        required
-                      />
+                  <section className="rooms-form-section" aria-labelledby="room-location-heading">
+                    <div className="rooms-form-section-heading"><span>02</span><div><h3 id="room-location-heading">Location & capacity</h3><p>Pinpoint the room and record its seating and availability.</p></div></div>
+                    <div className="rooms-form-grid">
+                      <div className="rooms-form-group">
+                        <label>Building Block <span className="req-mark">*</span></label>
+                        <SearchableSelect label="Building Block" value={customBuildingBlock ? '__other__' : editingRoom.buildingBlock} options={[...BUILDING_BLOCKS, { value: '__other__', label: 'Others' }]} placeholder="Select Building Block" searchPlaceholder="Search building blocks..." noOptionsMessage="No matching building blocks. Clear the search and select Others to enter a custom block." onChange={(value) => {
+                          const other = value === '__other__'
+                          setCustomBuildingBlock(other)
+                          setEditingRoom({ ...editingRoom, buildingBlock: other ? '' : value })
+                        }} required />
+                      </div>
+                      {customBuildingBlock && <div className="rooms-form-group">
+                        <label htmlFor="other-building-block">Other Building Block <span className="req-mark">*</span></label>
+                        <input id="other-building-block" className="rooms-input" type="text" value={editingRoom.buildingBlock} onChange={(e) => setEditingRoom({ ...editingRoom, buildingBlock: e.target.value })} onBlur={() => setEditingRoom((room) => ({ ...room, buildingBlock: room.buildingBlock.trim() }))} placeholder="Enter building block" required />
+                      </div>}
+                      <div className="rooms-form-group">
+                        <label>Floor <span className="req-mark">*</span></label>
+                        <ProjectSelect className="rooms-select" value={editingRoom.floor} onChange={(e) => setEditingRoom({ ...editingRoom, floor: e.target.value })} required>
+                          <option value="" disabled>Select Floor</option>
+                          {FLOORS.map((f) => <option key={f} value={f}>{f}</option>)}
+                        </ProjectSelect>
+                      </div>
+                      <div className="rooms-form-group">
+                        <label>Seating Capacity <span className="req-mark">*</span></label>
+                        <div className="rooms-capacity-input"><input type="number" min="1" max="500" className="rooms-input" placeholder="e.g. 60" value={editingRoom.capacity} onChange={(e) => setEditingRoom({ ...editingRoom, capacity: Number(e.target.value) || '' })} required /><span>seats</span></div>
+                      </div>
+                      <div className="rooms-form-group">
+                        <label>Availability Status <span className="req-mark">*</span></label>
+                        <ProjectSelect className="rooms-select" value={editingRoom.status} onChange={(e) => setEditingRoom({ ...editingRoom, status: e.target.value })} required>
+                          <option value="" disabled>Select Availability Status</option>
+                          <option value="Available">Available</option>
+                          <option value="Allocated">Allocated</option>
+                          <option value="Maintenance">Maintenance</option>
+                          <option value="Inactive">Inactive</option>
+                        </ProjectSelect>
+                      </div>
                     </div>
+                  </section>
 
-                    {/* Availability Status */}
-                    <div className="rooms-form-group">
-                      <label>
-                        Availability Status <span className="req-mark">*</span>
-                      </label>
-                      <ProjectSelect
-                        className="rooms-select"
-                        value={editingRoom.status}
-                        onChange={(e) => setEditingRoom({ ...editingRoom, status: e.target.value })}
-                        required
-                      >
-                        <option value="" disabled>Select Availability Status</option>
-                        <option value="Available">Available</option>
-                        <option value="Allocated">Allocated</option>
-                        <option value="Maintenance">Maintenance</option>
-                        <option value="Inactive">Inactive</option>
-                      </ProjectSelect>
-                    </div>
-                  </div>
-
-                  {/* Facilities & Amenities */}
-                  <div className="rooms-form-group" style={{ marginTop: '14px' }}>
-                    <label>Available Facilities & Equipment</label>
+                  <section className="rooms-form-section" aria-labelledby="room-facilities-heading">
+                    <div className="rooms-form-section-heading"><span>03</span><div><h3 id="room-facilities-heading">Facilities & equipment</h3><p>Select all equipment and services available in this room.</p></div><span className="rooms-facility-count">{editingRoom.facilities?.length || 0} selected</span></div>
                     <div className="rooms-facilities-picker">
                       {ROOM_FACILITIES.map((facility) => {
                         const isSelected = editingRoom.facilities?.includes(facility)
-                        return (
-                          <button
-                            type="button"
-                            key={facility}
-                            className={`facility-chip-btn ${isSelected ? 'is-selected' : ''}`}
-                            onClick={() => handleToggleFacility(facility)}
-                          >
-                            {isSelected ? <FiCheck /> : <FiPlus />} {facility}
-                          </button>
-                        )
+                        return <button type="button" key={facility} className={`facility-chip-btn ${isSelected ? 'is-selected' : ''}`} aria-pressed={isSelected} onClick={() => handleToggleFacility(facility)}>
+                          {isSelected ? <FiCheck /> : <FiPlus />} {facility}
+                        </button>
                       })}
                     </div>
-                  </div>
+                  </section>
 
-                  {/* Description / Notes */}
-                  <div className="rooms-form-group" style={{ marginTop: '12px' }}>
-                    <label>Room Notes / Remarks</label>
-                    <textarea
-                      className="rooms-textarea"
-                      rows={2}
-                      placeholder="Special audio-visual equipment, teaching amenities, or layout notes..."
-                      value={editingRoom.description || ''}
-                      onChange={(e) => setEditingRoom({ ...editingRoom, description: e.target.value })}
-                    />
+                  <section className="rooms-form-section" aria-labelledby="room-notes-heading">
+                    <div className="rooms-form-section-heading"><span>04</span><div><h3 id="room-notes-heading">Additional notes</h3><p>Share details that help staff prepare the space.</p></div></div>
+                    <div className="rooms-form-group">
+                      <label>Room Notes / Remarks</label>
+                      <textarea className="rooms-textarea" rows={3} placeholder="Special audio-visual equipment, teaching amenities, or layout notes..." value={editingRoom.description || ''} onChange={(e) => setEditingRoom({ ...editingRoom, description: e.target.value })} />
+                    </div>
+                  </section>
                   </div>
-                </div>
 
                 <div className="rooms-modal-footer">
                   <button
@@ -7486,7 +7393,6 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
                 </div>
               </form>
             </section>
-            <></>
           </div>
         )}
       </div>
