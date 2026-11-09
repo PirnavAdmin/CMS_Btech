@@ -773,6 +773,20 @@ export default function StudentPromotion() {
         <div className="promotion-workspace">
         {/* Promotion Scope Selector Panel */}
         <motion.section className={`p-scope erp-card ${wizardStep > 1 ? 'is-compact' : ''}`} initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: shouldReduceMotion ? 0 : 0.24 }}>
+          <div className="promotion-scope-heading">
+            <div className="promotion-scope-mark"><FiTrendingUp aria-hidden="true" /></div>
+            <div>
+              <h2>Promotion scope</h2>
+              <p>Choose the cohort and term to load the student roster.</p>
+            </div>
+            <span className="promotion-scope-target">
+              {isDegreeReview
+                ? `Semester ${finalSemesterNumber} · Degree review`
+                : selectedSemesterNumber
+                  ? `Target: Semester ${Number(selectedSemesterNumber) + 1}`
+                  : 'Choose a semester'}
+            </span>
+          </div>
           {(academicLoading || academicError || !activeCourses.length || !activeAcademicYears.length) && (
             <div className={`p-scope-status ${academicError ? 'is-error' : ''}`} role={academicError ? 'alert' : 'status'}>
               <span>
@@ -1004,8 +1018,18 @@ export default function StudentPromotion() {
                       <tbody>
                         {loading.list ? Array.from({ length: 5 }, (_, index) => <tr key={`loading-${index}`} className="promotion-skeleton-row" aria-hidden="true"><td colSpan={10}><span /></td></tr>) : paginatedCandidates.length === 0 ? (
                           <tr>
-                            <td colSpan={10} className="text-center py-6">
-                              <p className="text-muted">No students found matching this scope.</p>
+                            <td colSpan={10} className="promotion-empty-cell">
+                              <div className="promotion-empty-state" role="status">
+                                <span className="promotion-empty-icon"><FiUsers aria-hidden="true" /></span>
+                                <strong>{query ? 'No students match your search' : eligibilityTab === 'eligible' ? 'No eligible students in this scope' : 'No students awaiting review'}</strong>
+                                <p>{query ? 'Try another name, roll number, or registration number.' : 'Try another academic scope or check the other eligibility tab.'}</p>
+                                {query && <button type="button" onClick={() => { setQuery(''); setDirPage(1) }}>Clear search</button>}
+                                {!query && students.length > 0 && (
+                                  <button type="button" onClick={() => { setEligibilityTab(eligibilityTab === 'eligible' ? 'ineligible' : 'eligible'); setDirPage(1) }}>
+                                    View {eligibilityTab === 'eligible' ? 'pending students' : 'eligible students'}
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ) : (

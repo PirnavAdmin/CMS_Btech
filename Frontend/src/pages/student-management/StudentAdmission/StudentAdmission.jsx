@@ -17,7 +17,7 @@ import { isApiResult } from '../../../utils/exportProvenance'
 import ExportMenu, { PrintDetailsButton } from '../../../components/ExportMenu'
 import { admissionColumns } from '../../../utils/exportColumns'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { FiAlertCircle, FiArrowLeft, FiArrowRight, FiBookOpen, FiCamera, FiCheck, FiCheckCircle, FiChevronRight, FiClock, FiCreditCard, FiEdit2, FiEye, FiFileText, FiGrid, FiHome, FiInbox, FiPhone, FiPlus, FiSave, FiSearch, FiShield, FiTrash2, FiUploadCloud, FiUser, FiUsers, FiX } from 'react-icons/fi'
+import { FiAlertCircle, FiArrowLeft, FiArrowRight, FiBookOpen, FiCamera, FiCheck, FiCheckCircle, FiChevronRight, FiClock, FiCreditCard, FiEdit2, FiEye, FiFileText, FiFilter, FiGrid, FiHome, FiInbox, FiPhone, FiPlus, FiSave, FiSearch, FiShield, FiTrash2, FiUploadCloud, FiUser, FiUsers, FiX } from 'react-icons/fi'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import DashboardLayout from '../../../layouts/DashboardLayout'
 import TablePagination, { PAGE_SIZE } from '../../../components/TablePagination'
@@ -477,12 +477,12 @@ function Field({ data, path, label, update, options, type = 'text', readOnly = f
     <label className={`sa-field ${error ? 'invalid' : ''}`} htmlFor={id}>
       <span>{shownLabel}{isRequired && <b> *</b>}</span>
       {options ? (
-        <ProjectSelect id={id} value={value} disabled={disabled || readOnly} onChange={change} onBlur={blur} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined}>
+        <ProjectSelect id={id} value={value} disabled={disabled || readOnly} required={isRequired} onChange={change} onBlur={blur} aria-required={isRequired} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined}>
           <option value="">{placeholder || `Select ${shownLabel}`}</option>
           {options.map(option => <option key={option}>{option}</option>)}
         </ProjectSelect>
       ) : (
-        <input id={id} type={type} value={value} readOnly={readOnly || path === 'admission.batch'} disabled={disabled} inputMode={numeric ? 'numeric' : type === 'number' ? 'decimal' : undefined} min={type === 'number' ? 0 : undefined} maxLength={maxLength} placeholder={placeholder} onChange={change} onBlur={blur} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined} />
+        <input id={id} type={type} value={value} readOnly={readOnly || path === 'admission.batch'} disabled={disabled} inputMode={numeric ? 'numeric' : type === 'number' ? 'decimal' : undefined} min={type === 'number' ? 0 : undefined} maxLength={maxLength} placeholder={placeholder} onChange={change} onBlur={blur} aria-required={isRequired} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined} />
       )}
       {error && <small id={`${id}-error`} role="alert">{error}</small>}
     </label>
@@ -491,12 +491,12 @@ function Field({ data, path, label, update, options, type = 'text', readOnly = f
 function AddressFields({ data, prefix, update, errors, markTouched }) { return [['line1','Address Line 1'],['line2','Landmark (Optional)'],['town','Village / Town'],['city','City'],['district','District'],['state','State'],['country','Country'],['pincode','PIN Code']].map(([key,label]) => <Field key={key} data={data} path={`${prefix}.${key}`} label={label} update={update} error={errors[`${prefix}.${key}`]} markTouched={markTouched} />) }
 function Breadcrumb({ tail }) { return <div className="sa-breadcrumb"><span>Student Management</span><FiChevronRight /><span>Admissions</span>{tail && <><FiChevronRight /><strong>{tail}</strong></>}</div> }
 
-function AdmissionFilters({ rows, query, setQuery, filters, setFilters }) {
+function AdmissionFilters({ rows, query, setQuery, filters, setFilters, hidden = false }) {
   const options = key => [...new Set(rows.map(item => key === 'status' ? item.status : key === 'feeStatus' ? (item.fees?.paymentStatus || 'Pending') : key === 'quota' ? quota(item) : item.academic?.[key]).filter(Boolean))].sort()
   const active = Object.entries(filters).filter(([,value]) => value)
   const clear = () => { setQuery(''); setFilters(Object.fromEntries(FILTERS.map(([key]) => [key, '']))) }
   return (
-    <section className="sa-admission-filters" aria-label="Search and filter admissions">
+    <section id="admission-filters" className="sa-admission-filters" aria-label="Search and filter admissions" hidden={hidden}>
       <div className="sa-admission-filterbar">
         <label className="sa-search">
           <FiSearch aria-hidden="true" />
@@ -534,9 +534,11 @@ function AdmissionList() {
   const [, setLoadError] = useToastState('', 'error')
   const [exportReady, setExportReady] = useState(false)
   const [query, setQuery] = useState('')
+  const [showFilters, setShowFilters] = useState(false)
   const [page, setPage] = useState(1)
   const initialFilters = Object.fromEntries(FILTERS.map(([key]) => [key, '']))
   const [filters, setFilters] = useState(initialFilters)
+  const activeFilterCount = Object.values(filters).filter(Boolean).length + Number(Boolean(query.trim()))
   const loadAdmissions = useCallback(() => {
     const requestId = ++requestSequence.current
     let active = true
@@ -625,12 +627,23 @@ function AdmissionList() {
           </div>
           <div className="directory-export-actions">
             <ExportMenu rows={shown} columns={admissionColumns} recordSections={admissionDetailSections} title="Student Admissions" filename="student-admissions" loading={!exportReady} scope="Current filtered API results" />
+            <button
+              type="button"
+              className={`sa-secondary sa-filter-toggle ${showFilters ? 'is-open' : ''} ${activeFilterCount ? 'has-filters' : ''}`}
+              aria-expanded={showFilters}
+              aria-controls="admission-filters"
+              onClick={() => setShowFilters(value => !value)}
+            >
+              <FiFilter aria-hidden="true" />
+              {showFilters ? 'Hide filters' : 'Filters'}
+              {activeFilterCount > 0 && <span className="sa-filter-count" aria-label={`${activeFilterCount} active filter${activeFilterCount === 1 ? '' : 's'}`}>{activeFilterCount}</span>}
+            </button>
             <button hidden={!canCreate} className="cm-button" type="button" onClick={() => navigate('/student-management/admissions/new')}>
               <FiPlus /> New Admission
             </button>
           </div>
         </header>
-        <AdmissionFilters rows={scopedRows} query={query} setQuery={setQuery} filters={filters} setFilters={setFilters} />
+        <AdmissionFilters rows={scopedRows} query={query} setQuery={setQuery} filters={filters} setFilters={setFilters} hidden={!showFilters} />
         <label className="sa-sort">Sort by <select aria-label="Sort admissions" value={sort} onChange={event => { setSort(event.target.value); setPage(1) }}><option value="recent">Recently added</option><option value="name">Student name</option><option value="registration">Registration number</option></select></label>
         {loading ? <p role="status" className="sa-empty">Loading admissions...</p> : loadError ? <div className="sa-empty" role="alert"><p>{loadError}</p><Button onClick={loadAdmissions}>Retry</Button></div> : !scopedRows.length || !shown.length ? (
           <EmptyState hasRows={Boolean(scopedRows.length)} filtered={Boolean(query || Object.values(filters).some(Boolean))} onCreate={() => navigate('/student-management/admissions/new')} onClear={clear} />
@@ -777,7 +790,7 @@ function PhotoUpload({ data, update, notify }) {
           <label className="sa-photo-button">
             <FiCamera />
             {photoSrc ? 'Change Photo' : 'Upload Photo'}
-            <input type="file" accept="image/jpeg,image/png,image/webp" onChange={upload} />
+            <input type="file" accept="image/jpeg,image/png,image/webp" aria-label="Upload student photo" onChange={upload} />
           </label>
           {photoSrc && (
             <button
@@ -846,6 +859,8 @@ function WizardStepper({ step, setStep, furthestStep, busy }) {
             onClick={() => setStep(index)}
             disabled={busy || index > Math.max(step, furthestStep)}
             aria-current={isActive ? 'step' : undefined}
+            aria-controls="admission-step-content"
+            aria-label={`Step ${index + 1} of ${STEPS.length}: ${label}${isActive ? ', current' : isCompleted ? ', completed' : ''}`}
           >
             <span>{isCompleted ? <FiCheck /> : index + 1}</span>
             {label}
@@ -1534,6 +1549,8 @@ function AdmissionForm() {
   const resume = location.state?.admissionWizard
   const initialStep = same(resume?.admissionId, validId) && Number.isInteger(resume?.step)
     ? Math.max(0, Math.min(resume.step, STEPS.length - 1)) : 0
+  const wizardContentRef = useRef(null)
+  const previousStepRef = useRef(initialStep)
   const locallySavedAdmission = useRef(null)
   const [saveError, setSaveError] = useState('')
   const { selectedCollegeId: globalCollegeId, selectedCollege: globalCollege, selectedAcademicYearId: globalAcademicYearId, selectedAcademicYear: globalAcademicYear } = useAcademic();
@@ -1554,6 +1571,11 @@ function AdmissionForm() {
   });
   const [recordIds, setRecordIds] = useState({ admissionId: validId, studentId: null, academicId: null })
   const [step, setStep] = useState(initialStep); const [errors, setErrors] = useToastState({}, 'error'); const [touched, setTouched] = useState({}); const [declared, setDeclared] = useState(false); const [, setToast] = useToastState(null, 'success'); const [pinStatus, setPinStatus] = useState({}); const [confirmSubmit, setConfirmSubmit] = useState(false); const [confirmCancel, setConfirmCancel] = useState(false); const [submitting, setSubmitting] = useState(false); const [savingDraft, setSavingDraft] = useState(false); const [savingStep, setSavingStep] = useState(false); const [feeState, setFeeState] = useState({ loading: false, loaded: false, error: '' })
+  useEffect(() => {
+    if (previousStepRef.current === step) return
+    previousStepRef.current = step
+    wizardContentRef.current?.focus({ preventScroll: true })
+  }, [step])
   const markTouched = (path) => setTouched(current => ({ ...current, [path]: true }))
   const [masters,setMasters]=useState({years:[],courses:[],branches:[],colleges:[],semesters:[]})
   const [courseBranches, setCourseBranches] = useState([])
@@ -2268,8 +2290,8 @@ function AdmissionForm() {
 
       <div className="sa-admission-layout">
         <WizardStepper step={step} setStep={setStep} furthestStep={Math.max(furthestStep, initialStep)} busy={savingStep || submitting || savingDraft} />
-        <form className="sa-wizard-card" noValidate onSubmit={event => { event.preventDefault(); step < STEPS.length - 1 ? nextStep() : requestSubmit() }}>
-          <div className="sa-wizard-content">
+        <form className="sa-wizard-card" noValidate aria-busy={savingStep || submitting || savingDraft} onSubmit={event => { event.preventDefault(); step < STEPS.length - 1 ? nextStep() : requestSubmit() }}>
+          <div ref={wizardContentRef} id="admission-step-content" className="sa-wizard-content" role="region" aria-label={`${STEPS[step]} form section`} tabIndex={-1}>
             {wizardScreens[step]}
             {step === STEPS.length - 1 && (
               <label className="sa-declaration">
@@ -2281,17 +2303,20 @@ function AdmissionForm() {
           <footer className="sa-wizard-actions erp-actions-bar">
             {saveError && <p role="alert" className="error">{saveError}</p>}
             {saveError && /semester|course not found|branch.*invalid/i.test(saveError) && step !== 1 && <Button onClick={() => { setStep(1); setSaveError('') }}>Review academic details</Button>}
-            <Button disabled={!step || submitting || savingStep} onClick={() => setStep(current => current - 1)}>
-              <FiArrowLeft /> Previous
+            <Button disabled={!step || submitting || savingStep || savingDraft} onClick={() => setStep(current => current - 1)} aria-label="Go to previous admission step">
+              <FiArrowLeft /> Back
             </Button>
             <span />
+            <Button onClick={() => saveAllDraftData(false)} disabled={savingDraft || savingStep || submitting} aria-label="Save admission as draft">
+              <FiSave /> {savingDraft ? 'Saving Draft...' : 'Save as Draft'}
+            </Button>
             {step === 2 && <Button disabled={submitting} onClick={skipCurrentStep}>Skip</Button>}
             {step < STEPS.length - 1 ? (
-              <Button primary onClick={nextStep} disabled={savingStep}>
+              <Button primary onClick={nextStep} disabled={savingStep || savingDraft || submitting}>
                 {savingStep ? 'Saving...' : 'Save & Continue'} <FiArrowRight />
               </Button>
             ) : (
-              <Button primary disabled={!declared || submitting} onClick={requestSubmit}>
+              <Button primary disabled={!declared || submitting || savingDraft} onClick={requestSubmit}>
                 {submitting ? 'Submitting...' : 'Submit Application'}
               </Button>
             )}

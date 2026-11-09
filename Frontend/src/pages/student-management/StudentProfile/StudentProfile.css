@@ -839,3 +839,35 @@ main.student-profile .sp-directory-table .student-name-link.table-cell-truncate{
 }
 main.student-profile .sp-directory-table .student-name-link:hover{color:var(--brand)!important;text-decoration:underline}
 main.student-profile .sp-directory-table .student-name-link:focus-visible{outline:2px solid var(--brand)!important;outline-offset:3px;border-radius:2px}
+
+/* Keep directory search at the left and move its actions to the table's right edge. */
+.student-profile .filter-disclosure__bar {
+  gap: 8px;
+}
+
+.student-profile .filter-disclosure__search {
+  flex: 1 1 300px;
+  max-width: min(520px, 100%);
+}
+
+.student-profile .filter-disclosure__bar > .directory-export-actions {
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.student-profile .filter-disclosure__bar > .filter-disclosure__toggle {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 720px) {
+  .student-profile .filter-disclosure__search {
+    flex-basis: 100%;
+    max-width: none;
+  }
+
+  .student-profile .filter-disclosure__bar > .directory-export-actions {
+    margin-left: auto;
+  }
+}
