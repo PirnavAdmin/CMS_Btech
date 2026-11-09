@@ -61,13 +61,9 @@ const STEPS = [
   { id: STEP_SEMESTERS, stepNumber: 4, label: 'Semesters', icon: FiCalendar, description: 'Curriculum Terms' },
 ]
 
-const courseIdOf = (course) => course?.courseId ?? course?.CourseId ?? course?.id ?? course?.Id
-const courseDepartmentIdOf = (course) => course?.departmentId ?? course?.DepartmentId
 const courseNameOf = (course) => course?.courseName ?? course?.CourseName ?? course?.name ?? course?.Name
 const courseCodeOf = (course) => course?.courseCode ?? course?.CourseCode ?? course?.code ?? course?.Code
 const departmentIdOf = (department) => department?.departmentId ?? department?.DepartmentId ?? department?.id ?? department?.Id
-const branchIdOf = (branch) => branch?.branchId ?? branch?.BranchId ?? branch?.id ?? branch?.Id
-const branchCourseIdOf = (branch) => branch?.courseId ?? branch?.CourseId
 
 export default function AcademicStructure() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -1692,6 +1688,7 @@ export default function AcademicStructure() {
                       />
                       {formErrors.code && <span className="as-form-error">{formErrors.code}</span>}
                     </div>
+                  </div>
                   </section>
 
                   <section className="as-modal-section" aria-labelledby="course-structure-heading">
@@ -2162,7 +2159,6 @@ export default function AcademicStructure() {
                         </select>
                       </div>
                     </div>
-                  </div>
                   </section>
                 </div>
                 <div className="as-modal__footer">
