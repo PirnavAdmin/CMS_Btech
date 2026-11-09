@@ -5,7 +5,8 @@ import tailwindcss from '@tailwindcss/vite'
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const baseUrl = (env.VITE_API_BASE_URL || 'https://movable-swampland-tinderbox.ngrok-free.dev').trim().replace(/\/+$/, '')
+  const baseUrl = (env.VITE_API_BASE_URL || 'https://clarity-math-delouse.ngrok-free.dev').trim().replace(/\/+$/, '')
+  const secureApiProxy = !/^https:\/\/localhost(?::|\/|$)/i.test(baseUrl)
   return {
   plugins: [tailwindcss(), react()],
   test: {
@@ -44,7 +45,7 @@ export default defineConfig(({ mode }) => {
       '/api/v1/access-requests': {
         target: baseUrl,
         changeOrigin: true,
-        secure: true,
+        secure: secureApiProxy,
         headers: {
           'ngrok-skip-browser-warning': 'true',
         },
@@ -52,6 +53,7 @@ export default defineConfig(({ mode }) => {
       '/api/college-settings': {
         target: baseUrl,
         changeOrigin: true,
+        secure: secureApiProxy,
         headers: {
           'ngrok-skip-browser-warning': 'true',
         },
@@ -59,6 +61,7 @@ export default defineConfig(({ mode }) => {
       '/api/v1/academic-years': {
         target: baseUrl,
         changeOrigin: true,
+        secure: secureApiProxy,
         headers: {
           'ngrok-skip-browser-warning': 'true',
         },
@@ -66,6 +69,7 @@ export default defineConfig(({ mode }) => {
       '/api': {
         target: baseUrl,
         changeOrigin: true,
+        secure: secureApiProxy,
         headers: {
           'ngrok-skip-browser-warning': 'true',
         },
@@ -73,6 +77,7 @@ export default defineConfig(({ mode }) => {
       '/uploads': {
         target: baseUrl,
         changeOrigin: true,
+        secure: secureApiProxy,
         headers: {
           'ngrok-skip-browser-warning': 'true',
         },
@@ -80,6 +85,7 @@ export default defineConfig(({ mode }) => {
       '/images': {
         target: baseUrl,
         changeOrigin: true,
+        secure: secureApiProxy,
         headers: { 'ngrok-skip-browser-warning': 'true' },
       },
     },
