@@ -2288,3 +2288,373 @@
 }
 .student-admission .sa-admission-table .student-name-link:hover { color: var(--brand); text-decoration: underline; }
 .student-admission .sa-admission-table .student-name-link:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; border-radius: 2px; }
+
+/* Compact, toggleable admission filters. */
+.student-admission .sa-directory > .course-directory-heading {
+  min-height: 60px;
+  padding: 10px 14px;
+}
+
+.student-admission .sa-directory > .course-directory-heading p {
+  margin-top: 4px;
+  padding: 3px 8px;
+}
+
+.student-admission .sa-directory .directory-export-actions {
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.student-admission .sa-directory .directory-export-actions > .sa-filter-toggle {
+  min-height: 36px;
+  gap: 7px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  transition: border-color .16s ease, background-color .16s ease, color .16s ease;
+}
+
+.student-admission .sa-filter-toggle svg { width: 14px; height: 14px; }
+.student-admission .sa-filter-toggle:is(.is-open, .has-filters) { border-color: color-mix(in srgb, var(--brand) 35%, var(--border)); color: var(--brand-dark); background: var(--brand-soft); }
+.student-admission .sa-filter-toggle:hover { border-color: var(--brand); color: var(--brand-dark); background: var(--brand-soft); }
+
+.student-admission .sa-filter-count {
+  display: inline-grid;
+  min-width: 18px;
+  height: 18px;
+  place-items: center;
+  padding: 0 5px;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--brand);
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.student-admission .sa-admission-filters {
+  gap: 8px;
+  padding: 10px 14px 11px;
+  background: color-mix(in srgb, var(--surface-soft) 82%, var(--surface));
+}
+
+.student-admission .sa-admission-filters[hidden] { display: none; }
+
+.student-admission .sa-admission-filterbar { gap: 8px; }
+.student-admission .sa-admission-filterbar .sa-search {
+  width: 100%;
+  max-width: none;
+  min-width: min(220px, 100%);
+  height: 36px;
+  flex-basis: 420px;
+  padding-inline: 9px;
+  border-radius: 7px;
+  font-size: 11px;
+}
+
+.student-admission .sa-admission-filterbar .sa-search input { font-size: 11px; }
+.student-admission .sa-clear-filters { min-height: 32px; padding: 0 9px; border-radius: 7px; font-size: 10px; }
+.student-admission .sa-admission-filters .sa-filter-grid { gap: 8px; }
+.student-admission .sa-admission-filters .sa-filter-grid label { gap: 4px; }
+.student-admission .sa-admission-filters .sa-filter-grid label > span { font-size: 10px; line-height: 1.2; }
+.student-admission .sa-admission-filters .sa-filter-grid select { height: 34px; padding: 0 9px; border-radius: 7px; font-size: 11px; }
+.student-admission .sa-admission-filters .sa-filter-grid .project-select { height: 34px; }
+.student-admission .sa-admission-filters .sa-filter-grid .searchable-select__trigger { min-height: 34px; height: 34px; padding: 5px 9px; border-radius: 7px; font-size: 11px; }
+.student-admission .sa-admission-filters .sa-filter-chips { gap: 5px; }
+.student-admission .sa-admission-filters .sa-filter-chips button {
+  display: inline-flex;
+  min-height: 26px;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border: 1px solid color-mix(in srgb, var(--brand) 20%, var(--border));
+  border-radius: 999px;
+  color: var(--brand-dark);
+  background: color-mix(in srgb, var(--brand-soft) 70%, var(--surface));
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.student-admission .sa-admission-filters .sa-filter-chips button:hover { border-color: var(--brand); }
+.student-admission .sa-admission-filters :is(input, select, .searchable-select__trigger):focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+
+@media (max-width: 760px) {
+  .student-admission .sa-directory > .course-directory-heading { align-items: flex-start; flex-direction: column; }
+  .student-admission .sa-directory .directory-export-actions { width: 100%; justify-content: flex-end; }
+  .student-admission .sa-admission-filters { padding: 9px 11px; }
+  .student-admission .sa-admission-filterbar .sa-search { flex-basis: 100%; }
+}
+
+@media (max-width: 520px) {
+  .student-admission .sa-directory .directory-export-actions { justify-content: flex-start; }
+  .student-admission .sa-directory .directory-export-actions > :is(.export-control, .cm-button, .sa-filter-toggle) { flex: 1 1 auto; }
+  .student-admission .sa-directory .directory-export-actions > .export-control { min-width: 106px; }
+  .student-admission .sa-directory .directory-export-actions > .cm-button { min-width: 145px; }
+}
+
+/* Compact, responsive admission wizard layout. */
+.student-admission .sa-admission-layout {
+  gap: 10px;
+  align-items: start;
+}
+
+.student-admission .sa-reference-stepper {
+  gap: 4px;
+  padding: 5px;
+  border-color: var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.student-admission .sa-reference-stepper button {
+  min-height: 40px;
+  gap: 7px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.student-admission .sa-reference-stepper button span {
+  width: 23px;
+  height: 23px;
+  flex: 0 0 23px;
+  border-color: var(--border-strong);
+  color: var(--text-muted);
+  background: var(--surface);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.student-admission .sa-reference-stepper button.active {
+  border-color: color-mix(in srgb, var(--brand) 28%, var(--border));
+  color: var(--brand-dark, var(--brand));
+  background: color-mix(in srgb, var(--brand-soft) 78%, var(--surface));
+}
+
+.student-admission .sa-reference-stepper button.active span,
+.student-admission .sa-reference-stepper button.completed span {
+  border-color: var(--brand);
+  color: #fff;
+  background: var(--brand);
+}
+
+.student-admission .sa-reference-stepper button.completed { color: var(--success); }
+.student-admission .sa-reference-stepper button:disabled { opacity: .58; }
+.student-admission .sa-reference-stepper button:not(:disabled):hover { border-color: var(--border-strong); background: var(--surface-soft); }
+
+.student-admission .sa-wizard-card {
+  flex: 0 1 auto !important;
+  min-height: auto !important;
+  overflow: visible !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 12px;
+  background: var(--surface) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+.student-admission .sa-wizard-content {
+  min-width: 0;
+  padding-bottom: 8px;
+}
+
+.student-admission .sa-wizard-content > .sa-form-section,
+.student-admission .sa-wizard-content > .sa-documents,
+.student-admission .sa-wizard-content > .sa-review {
+  animation: sa-step-content-in 180ms ease-out both;
+}
+
+.student-admission .sa-form-section {
+  padding: 14px 18px;
+  border-bottom-color: var(--border);
+  background: var(--surface);
+}
+
+.student-admission .sa-form-section > header {
+  margin-bottom: 12px;
+}
+
+.student-admission .sa-form-section > header > div:first-child > span {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--brand) 20%, var(--border));
+  border-radius: 8px;
+  color: var(--brand);
+  background: var(--brand-soft);
+}
+
+.student-admission .sa-form-section h2 {
+  font-size: 14px;
+  font-weight: 750;
+  letter-spacing: -.01em;
+}
+
+.student-admission .sa-form-section p { font-size: 11px; line-height: 1.45; }
+
+.student-admission .sa-form-grid {
+  gap: 12px 14px;
+}
+
+.student-admission .sa-field {
+  gap: 5px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.student-admission .sa-field input,
+.student-admission .sa-field select,
+.student-admission .sa-field .searchable-select__trigger {
+  box-sizing: border-box;
+  width: 100%;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  color: var(--text-primary);
+  background: var(--surface);
+  font: inherit;
+  transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+}
+
+.student-admission .sa-field textarea {
+  box-sizing: border-box;
+  min-height: 88px;
+  padding: 10px 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  color: var(--text-primary);
+  background: var(--surface);
+  font: inherit;
+  resize: vertical;
+}
+
+.student-admission .sa-field > span {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.student-admission .sa-field small {
+  line-height: 1.4;
+}
+
+.student-admission .sa-field.invalid :is(input, select, textarea, .searchable-select__trigger) {
+  border-color: var(--danger);
+}
+
+.student-admission .sa-field :is(input, select, textarea, .searchable-select__trigger):focus-visible {
+  border-color: var(--brand);
+  outline: 2px solid color-mix(in srgb, var(--brand) 28%, transparent);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 11%, transparent);
+}
+
+.student-admission .sa-photo-upload {
+  align-self: start;
+  min-height: 0;
+  margin: 0;
+  padding: 8px 10px;
+  gap: 12px;
+  border: 1px dashed color-mix(in srgb, var(--brand) 32%, var(--border));
+  border-radius: 9px;
+  background: var(--surface-soft);
+}
+
+.student-admission .sa-photo-preview {
+  width: 48px;
+  height: 48px;
+  flex-basis: 48px;
+  border-radius: 8px;
+}
+
+.student-admission .sa-photo-meta { gap: 2px; }
+.student-admission .sa-photo-meta strong { font-size: 12px; }
+.student-admission .sa-photo-meta span { font-size: 11px; }
+.student-admission .sa-photo-actions { margin-top: 3px; }
+.student-admission .sa-photo-button { min-height: 32px; padding: 4px 9px; }
+.student-admission .sa-photo-button:focus-within { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+.student-admission .sa-review { gap: 10px; padding: 14px 18px; }
+.student-admission .sa-review > section { border-color: var(--border); border-radius: 8px; }
+
+.student-admission .sa-wizard-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  min-height: 60px;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 9px 14px;
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 12px 12px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  box-shadow: 0 -5px 16px rgba(20, 32, 14, .06);
+  backdrop-filter: blur(10px);
+}
+
+.student-admission .sa-wizard-actions button {
+  min-height: 40px;
+  white-space: nowrap;
+}
+
+.student-admission .sa-wizard-actions > .error {
+  flex: 1 1 100%;
+  margin: 0;
+  color: var(--danger);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.student-admission .sa-wizard-actions > span { min-width: 8px; }
+.student-admission .sa-wizard-actions button:disabled { cursor: not-allowed; opacity: .58; }
+
+@keyframes sa-step-content-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 1100px) {
+  .student-admission .sa-reference-stepper { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 760px) {
+  .student-admission .sa-page-header.sa-wizard-header { align-items: flex-start; flex-direction: row; gap: 12px; margin: 10px 0 12px; }
+  .student-admission .sa-wizard-header h1 { font-size: 22px; }
+  .student-admission .sa-wizard-header > div:last-child { flex-wrap: wrap; justify-content: flex-end; }
+  .student-admission .sa-reference-stepper { gap: 3px; padding: 4px; }
+  .student-admission .sa-reference-stepper button { justify-content: flex-start; min-height: 38px; padding: 5px 6px; font-size: 11px; }
+  .student-admission .sa-form-section { padding: 12px 14px; }
+  .student-admission .sa-form-grid { gap: 10px 12px; }
+  .student-admission .sa-wizard-actions { justify-content: flex-end; padding: 8px 10px; }
+}
+
+@media (max-width: 560px) {
+  .student-admission .sa-page-header.sa-wizard-header { align-items: stretch; flex-direction: column; }
+  .student-admission .sa-wizard-header > div:last-child { justify-content: flex-start; }
+  .student-admission .sa-reference-stepper { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .student-admission .sa-reference-stepper button { white-space: nowrap; }
+  .student-admission .sa-photo-upload { gap: 9px; padding: 8px; }
+  .student-admission .sa-photo-preview { width: 42px; height: 42px; flex-basis: 42px; }
+  .student-admission .sa-wizard-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+  .student-admission .sa-wizard-actions > span { display: none; }
+  .student-admission .sa-wizard-actions > .sa-primary { grid-column: 1 / -1; }
+  .student-admission .sa-wizard-actions > button { width: 100%; min-width: 0; padding-inline: 8px; }
+  .student-admission .sa-wizard-actions > .error { grid-column: 1 / -1; }
+  .student-admission .sa-review { grid-template-columns: 1fr; padding: 12px 14px; }
+  .student-admission .sa-document-grid { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .student-admission .sa-wizard-content > :is(.sa-form-section, .sa-documents, .sa-review) { animation: none; }
+  .student-admission .sa-reference-stepper button,
+  .student-admission .sa-field :is(input, select, textarea, .searchable-select__trigger) { transition: none; }
+}

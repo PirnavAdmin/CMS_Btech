@@ -127,31 +127,30 @@ test('renders header, breadcrumbs, and 4-step workflow tabs with refresh button 
   expect(screen.queryByRole('button', { name: /Refresh/i })).toBeNull()
 
   // Verify Stepper buttons
-  expect(screen.getByRole('button', { name: /1.*Departments/i })).toBeTruthy()
-  expect(screen.getByRole('button', { name: /2.*Courses/i })).toBeTruthy()
+  expect(screen.getByRole('button', { name: /1.*Courses/i })).toBeTruthy()
+  expect(screen.getByRole('button', { name: /2.*Departments/i })).toBeTruthy()
   expect(screen.getByRole('button', { name: /3.*Branches/i })).toBeTruthy()
   expect(screen.getByRole('button', { name: /4.*Semesters/i })).toBeTruthy()
 })
 
-test('loads Departments view by default with data rows', async () => {
+test('loads Courses view by default with data rows', async () => {
   renderPage()
 
-  // Check default step shows department table
-  expect(await screen.findByText('Computer Science')).toBeTruthy()
-  expect(screen.getByText('CSE')).toBeTruthy()
-  expect(screen.getByText('Mechanical Engineering')).toBeTruthy()
-  expect(screen.getByText('ME')).toBeTruthy()
+  // Check default step shows the course table
+  expect(await screen.findByText('B.Tech Computer Science')).toBeTruthy()
+  expect(screen.getByText('BTECH-CSE')).toBeTruthy()
+  expect(screen.getByText('B.Tech Mechanical')).toBeTruthy()
 })
 
 test('switching steps renders Courses, Branches, and Semesters sections', async () => {
   renderPage()
   await screen.findByText('Computer Science')
 
-  // Switch to Courses step
-  fireEvent.click(screen.getByRole('button', { name: /2.*Courses/i }))
-  expect(await screen.findByText('B.Tech Computer Science')).toBeTruthy()
-  expect(screen.getByText('BTECH-CSE')).toBeTruthy()
-  expect(screen.getByText('B.Tech Mechanical')).toBeTruthy()
+  // Switch to Departments step
+  fireEvent.click(screen.getByRole('button', { name: /2.*Departments/i }))
+  expect(await screen.findByText('Computer Science')).toBeTruthy()
+  expect(screen.getByText('CSE')).toBeTruthy()
+  expect(screen.getByText('Mechanical Engineering')).toBeTruthy()
 
   // Switch to Branches step
   fireEvent.click(screen.getByRole('button', { name: /3.*Branches/i }))
@@ -167,6 +166,8 @@ test('switching steps renders Courses, Branches, and Semesters sections', async 
 
 test('opens Add Department modal and submits new department', async () => {
   renderPage()
+  await screen.findByText('B.Tech Computer Science')
+  fireEvent.click(screen.getByRole('button', { name: /2.*Departments/i }))
   await screen.findByText('Computer Science')
 
   // Click Add Department
@@ -195,13 +196,14 @@ test('opens Add Department modal and submits new department', async () => {
   })
 })
 
-test('opens Add Course modal with department preselected and submits new course', async () => {
+test('opens Add Course modal without a department selector and submits an unassigned course', async () => {
   renderPage('/academic-structure?step=courses')
   expect(await screen.findByText('B.Tech Computer Science')).toBeTruthy()
 
   // Click Add Course
   fireEvent.click(screen.getByRole('button', { name: /Add Course/i }))
   expect(await screen.findByRole('heading', { level: 3, name: 'Add Course' })).toBeTruthy()
+  expect(screen.queryByLabelText(/Select Department/i)).toBeNull()
 
   // Fill in form
   fireEvent.change(screen.getByLabelText(/Course Name/i), { target: { value: 'M.Tech Data Science' } })
@@ -215,7 +217,7 @@ test('opens Add Course modal with department preselected and submits new course'
       expect.objectContaining({
         courseName: 'M.Tech Data Science',
         courseCode: 'MTECH-DS',
-        departmentId: 1,
+        departmentId: null,
       })
     )
   })
@@ -273,6 +275,8 @@ test('opens Add Semester modal with course/branch selectors and submits', async 
 
 test('triggers delete confirmation modal and calls delete api on confirm', async () => {
   renderPage()
+  await screen.findByText('B.Tech Computer Science')
+  fireEvent.click(screen.getByRole('button', { name: /2.*Departments/i }))
   await screen.findByText('Computer Science')
 
   // Find delete button for first department row
@@ -321,25 +325,25 @@ test('Filters button dropdown renders and search works dynamically across all fo
   expect(branchSelect).toBeTruthy()
   expect(statusSelect).toBeTruthy()
 
-  // 4. Search in Step 1 (Departments)
+  // 4. Search in Step 1 (Courses)
   fireEvent.change(searchInput, { target: { value: 'Mech' } })
-  expect(screen.getByText('Mechanical Engineering')).toBeTruthy()
-  expect(screen.queryByText('Computer Science')).toBeNull()
+  expect(screen.getByText('B.Tech Mechanical')).toBeTruthy()
+  expect(screen.queryByText('B.Tech Computer Science')).toBeNull()
 
   // Clear search input via clear button
   const clearBtn = screen.getByTitle('Clear search')
   fireEvent.click(clearBtn)
-  expect(await screen.findByText('Computer Science')).toBeTruthy()
-  expect(screen.getByText('Mechanical Engineering')).toBeTruthy()
-
-  // 5. Search in Step 2 (Courses)
-  fireEvent.click(screen.getByRole('button', { name: /2.*Courses/i }))
   expect(await screen.findByText('B.Tech Computer Science')).toBeTruthy()
   expect(screen.getByText('B.Tech Mechanical')).toBeTruthy()
 
-  fireEvent.change(screen.getByLabelText(/^Search$/i), { target: { value: 'BTECH-ME' } })
-  expect(screen.getByText('B.Tech Mechanical')).toBeTruthy()
-  expect(screen.queryByText('B.Tech Computer Science')).toBeNull()
+  // 5. Search in Step 2 (Departments)
+  fireEvent.click(screen.getByRole('button', { name: /2.*Departments/i }))
+  expect(await screen.findByText('Computer Science')).toBeTruthy()
+  expect(screen.getByText('Mechanical Engineering')).toBeTruthy()
+
+  fireEvent.change(screen.getByLabelText(/^Search$/i), { target: { value: 'Mech' } })
+  expect(screen.getByText('Mechanical Engineering')).toBeTruthy()
+  expect(screen.queryByText('Computer Science')).toBeNull()
 
   // 6. Search in Step 3 (Branches)
   fireEvent.click(screen.getByRole('button', { name: /3.*Branches/i }))
@@ -369,7 +373,7 @@ test('Filters button dropdown renders and search works dynamically across all fo
   // Apply Status filter and verify Reset Filters clears active filter
   fireEvent.change(screen.getByLabelText(/^Status$/i), { target: { value: 'Inactive' } })
   // Scope to the dropdown menu to avoid matching the EmptyState "Reset Filters" button
-  const dropdownMenu = document.querySelector('.as-filters-dropdown-menu')
+  const dropdownMenu = document.querySelector('.as-filters-drawer')
   const resetBtn = within(dropdownMenu).getByRole('button', { name: /Reset Filters/i })
   fireEvent.click(resetBtn)
   expect(await screen.findByText('3rd Semester')).toBeTruthy()

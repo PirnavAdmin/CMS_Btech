@@ -274,8 +274,8 @@
 .attendance-page .attendance-required-mark { color: #d92d20; }
 .attendance-page .attendance-academic-year { color: var(--attendance-ink); background: var(--surface, #fff); cursor: default; }
 .attendance-page .attendance-field-help { color: var(--attendance-muted); font-size: .72rem; line-height: 1.35; }
-.attendance-page .erp-input, .attendance-page .erp-select { width: 100%; height: 36px; min-width: 0; padding: 0 11px; border: 1px solid var(--attendance-line); border-radius: 7px; outline: none; color: var(--attendance-ink); background: var(--surface, #fff); font: inherit; font-size: 13px; }
-.attendance-page .erp-input:focus, .attendance-page .erp-select:focus { border-color: var(--attendance-brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--attendance-brand) 16%, transparent); }
+.attendance-page .erp-input, .attendance-page :is(select.erp-select, .erp-select .searchable-select__trigger) { width: 100%; height: 36px; min-width: 0; padding: 0 11px; border: 1px solid var(--attendance-line); border-radius: 7px; outline: none; color: var(--attendance-ink); background: var(--surface, #fff); font: inherit; font-size: 13px; }
+.attendance-page .erp-input:focus, .attendance-page :is(select.erp-select, .erp-select .searchable-select__trigger):focus { border-color: var(--attendance-brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--attendance-brand) 16%, transparent); }
 .attendance-page .attendance-auto-code { color: var(--attendance-brand); background: var(--attendance-soft); font-weight: 750; cursor: default; }
 .attendance-page .attendance-auto-code::placeholder { color: var(--attendance-muted); font-weight: 500; }
 .attendance-page .erp-input-icon-wrap { position: relative; }
@@ -302,8 +302,14 @@
 .attendance-modal-backdrop { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 24px; background: rgba(48, 38, 79, .48); backdrop-filter: blur(4px); }
 .attendance-modal { width: min(980px, 100%); max-height: min(760px, calc(100dvh - 48px)); overflow: auto; border-radius: 14px; animation: attendance-modal-enter .18s ease-out; }
 .attendance-modal .erp-card { min-height: 100%; }
+.shared-view-dialog:has(.attendance-record-body) { overflow: visible; }
+.shared-view-dialog:has(.attendance-record-body) .searchable-select__menu { z-index: 2100 !important; background: var(--surface, #fff); opacity: 1; }
+.shared-view-dialog:has(.attendance-record-body) .searchable-select__option { background-color: var(--surface, #fff); }
+.shared-view-dialog:has(.attendance-record-body) .searchable-select__option:hover,
+.shared-view-dialog:has(.attendance-record-body) .searchable-select__option:focus-visible,
+.shared-view-dialog:has(.attendance-record-body) .searchable-select__option.is-active { background-color: var(--brand-soft, #eef5e5); }
 .attendance-page .attendance-modal .erp-card-header { gap: 12px; padding: 15px 18px 12px; }
-.attendance-page .attendance-modal .erp-input, .attendance-page .attendance-modal .erp-select { height: 37px; }
+.attendance-page .attendance-modal .erp-input, .attendance-page .attendance-modal :is(select.erp-select, .erp-select .searchable-select__trigger) { height: 37px; }
 .attendance-page .attendance-modal .attendance-field-help { margin-top: 3px; }
 .attendance-page .attendance-modal .attendance-fetch-action { margin-inline: 18px; padding: 12px 0; }
 .attendance-page .attendance-modal .attendance-marking-section { margin-inline: 18px; padding: 14px 0 16px; }

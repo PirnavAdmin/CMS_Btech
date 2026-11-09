@@ -2,23 +2,24 @@
 .dashboard-layout { display:flex; width:100%; min-height:100dvh; background:var(--page-gradient); color:var(--text-primary); font-family:var(--font-family); }
 .dashboard-layout>main { display:flex; flex-direction:column; min-width:0; width:calc(100% - var(--sidebar-width)); margin-left:var(--sidebar-width); }
 .dashboard-layout.sidebar-collapsed>main { width:calc(100% - var(--sidebar-collapsed-width)); margin-left:var(--sidebar-collapsed-width); }
-.dashboard-header { position:sticky; top:0; z-index:40; box-sizing:border-box; min-height:var(--header-height); display:flex; align-items:center; gap:14px; padding:10px 22px; background:var(--cms-header); backdrop-filter:blur(8px); border-bottom:1px solid var(--border); }
+.dashboard-header { position:sticky; top:0; z-index:40; box-sizing:border-box; height:var(--header-height); min-height:var(--header-height); display:flex; align-items:center; gap:14px; padding:8px 22px; background:var(--cms-header); backdrop-filter:blur(8px); border-bottom:1px solid var(--border); }
 .dashboard-header__actions { display:flex; align-items:center; gap:10px; margin-left:auto; min-width:0; }
-.dashboard-header__college { display:grid; min-width:110px; }
-.dashboard-header__college-label { font-size:10px; color:var(--text-muted); }
-.dashboard-header__college .workspace-context-select { max-width:160px; }
-.global-search { position:relative; display:flex; align-items:center; gap:8px; flex:1; max-width:380px; min-width:100px; padding:8px 12px; background:var(--cms-secondary); border:1px solid var(--border); border-radius:10px; color:var(--text-muted); }
+.dashboard-header__college { display:flex; align-items:center; flex:0 1 260px; min-width:180px; height:48px; }
+.dashboard-header__college-label { display:none; }
+.dashboard-header__college .workspace-context-select { width:100%; max-width:260px; }
+.dashboard-header__college .searchable-select__trigger { height:48px; min-height:48px; padding:0 12px; border-radius:9px; }
+.global-search { position:relative; box-sizing:border-box; display:flex; align-items:center; gap:8px; flex:1; height:48px; max-width:380px; min-width:100px; padding:7px 12px; background:var(--cms-secondary); border:1px solid var(--border); border-radius:9px; color:var(--text-muted); }
 .global-search input { border:0; outline:none; width:100%; min-width:0; background:transparent; color:var(--text-primary); font:13.5px var(--font-family); }
 .global-search-results { position:absolute; top:calc(100% + 6px); left:0; right:0; padding:6px; display:grid; background:var(--surface-raised); border:1px solid var(--border); border-radius:10px; box-shadow:var(--shadow-md); }
 .global-search-results a { padding:8px 10px; font-size:13px; color:var(--text-primary); text-decoration:none; }
 .global-search-results a:hover { background:var(--cms-hover); }
-.theme-toggle,.mobile-navigation-toggle { display:grid; place-items:center; width:36px; height:36px; flex:0 0 36px; padding:0; border:1px solid var(--border); border-radius:10px; background:var(--surface); color:var(--text-secondary); cursor:pointer; }
+.theme-toggle,.mobile-navigation-toggle { display:grid; place-items:center; width:48px; height:48px; flex:0 0 48px; padding:0; border:1px solid var(--border); border-radius:9px; background:var(--surface); color:var(--text-secondary); cursor:pointer; }
 .mobile-navigation-toggle { display:none; }
 .account-menu { position:relative; }
-.account-menu summary { display:flex; gap:8px; align-items:center; list-style:none; padding:4px 6px; cursor:pointer; border:1px solid var(--border); border-radius:10px; background:var(--surface); }
+.account-menu summary { box-sizing:border-box; display:flex; min-height:48px; gap:8px; align-items:center; list-style:none; padding:4px 10px; cursor:pointer; border:1px solid var(--border); border-radius:9px; background:var(--surface); }
 .account-menu summary::-webkit-details-marker { display:none; }
 .account-menu summary>span:nth-child(2) { display:grid; gap:2px; }
-.account-menu strong { font-size:12px; color:var(--text-primary); }
+.account-menu strong { font-size:12px; color:var(--text-primary); white-space:nowrap; }
 .account-menu small { font-size:10px; color:var(--text-muted); }
 .account-avatar { display:grid; place-items:center; width:28px; height:28px; border-radius:50%; background:var(--brand-soft); color:var(--brand); }
 .account-menu__panel { position:absolute; right:0; top:calc(100% + 8px); min-width:190px; display:grid; padding:6px; border:1px solid var(--border); border-radius:10px; background:var(--surface-raised); box-shadow:var(--shadow-md); }
@@ -30,7 +31,7 @@
 .app-breadcrumb a { color:var(--brand); text-decoration:none; }
 .app-breadcrumb__item { display:inline-flex; gap:8px; }
 @media(max-width:992px) { .dashboard-layout>main,.dashboard-layout.sidebar-collapsed>main { width:100%; margin-left:0; } .mobile-navigation-toggle { display:grid; } .dashboard-header { padding:8px 12px; gap:8px; flex-wrap:wrap; } .dashboard-header__actions { gap:6px; } .page-content { padding:14px 12px; } }
-@media(max-width:600px) { .global-search { max-width:none; } .dashboard-header__actions { width:100%; justify-content:space-between; } .account-menu summary>span:nth-child(2) { display:none; } }
+@media(max-width:600px) { .global-search { max-width:none; } .dashboard-header__actions { width:100%; justify-content:space-between; } .dashboard-header__college { flex:1 1 200px; min-width:0; } .dashboard-header__college .workspace-context-select { max-width:none; } .account-menu summary>span:nth-child(2) { display:none; } }
 /* ==========================================================================
    Account Menu Dropdown & Header
    ========================================================================== */
