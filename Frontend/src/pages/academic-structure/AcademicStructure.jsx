@@ -49,6 +49,10 @@ const STEP_DEPARTMENTS = 'departments'
 const STEP_COURSES = 'courses'
 const STEP_BRANCHES = 'branches'
 const STEP_SEMESTERS = 'semesters'
+const courseIdOf = (course = {}) => String(course.courseId ?? course.CourseId ?? course.CourseID ?? course.courseID ?? course.course_id ?? course.id ?? course.Id ?? course.ID ?? '')
+const courseDepartmentIdOf = (course = {}) => String(course.departmentId ?? course.DepartmentId ?? course.DepartmentID ?? course.department_id ?? course.department?.departmentId ?? course.department?.DepartmentId ?? course.department?.id ?? '')
+const branchIdOf = (branch = {}) => String(branch.branchId ?? branch.BranchId ?? branch.BranchID ?? branch.branch_id ?? branch.id ?? branch.Id ?? '')
+const branchCourseIdOf = (branch = {}) => String(branch.courseId ?? branch.CourseId ?? branch.CourseID ?? branch.course_id ?? '')
 
 const STEPS = [
   { id: STEP_COURSES, stepNumber: 1, label: 'Courses', icon: FiBookOpen, description: 'Degree Programs' },
@@ -389,22 +393,30 @@ export default function AcademicStructure() {
         status: 'Active',
       })
     } else if (type === 'branch') {
-      const defaultDept = selectedDeptFilter || (departments[0]?.departmentId ?? departments[0]?.id ?? '')
-      const deptCourses = courses.filter((c) => String(c.departmentId ?? c.DepartmentId) === String(defaultDept))
+      const preferredCourse = courses.find((course) => courseIdOf(course) === String(selectedCourseFilter))
+      const defaultDept = courseDepartmentIdOf(preferredCourse)
+        || selectedDeptFilter
+        || String(departments[0]?.departmentId ?? departments[0]?.id ?? '')
+      const deptCourses = courses.filter((course) => courseDepartmentIdOf(course) === String(defaultDept))
       setBranchForm({
         name: '',
         code: '',
         departmentId: defaultDept,
-        courseId: selectedCourseFilter || (deptCourses[0]?.courseId ?? deptCourses[0]?.id ?? courses[0]?.courseId ?? ''),
+        courseId: preferredCourse ? courseIdOf(preferredCourse) : (courseIdOf(deptCourses[0]) || courseIdOf(courses[0])),
         specialization: '',
         intakeCapacity: 60,
         status: 'Active',
       })
     } else if (type === 'semester') {
-      const defaultDept = selectedDeptFilter || (departments[0]?.departmentId ?? departments[0]?.id ?? '')
-      const defaultCourse = selectedCourseFilter || (courses[0]?.courseId ?? courses[0]?.id ?? '')
-      const courseBranches = branches.filter((b) => String(b.courseId ?? b.CourseId) === String(defaultCourse))
-      const defaultBranch = selectedBranchFilter || (courseBranches[0]?.branchId ?? courseBranches[0]?.id ?? branches[0]?.branchId ?? '')
+      const preferredCourse = courses.find((course) => courseIdOf(course) === String(selectedCourseFilter))
+      const defaultCourse = preferredCourse ? courseIdOf(preferredCourse) : courseIdOf(courses[0])
+      const course = preferredCourse || courses.find((item) => courseIdOf(item) === defaultCourse)
+      const defaultDept = courseDepartmentIdOf(course)
+        || selectedDeptFilter
+        || String(departments[0]?.departmentId ?? departments[0]?.id ?? '')
+      const courseBranches = branches.filter((branch) => branchCourseIdOf(branch) === String(defaultCourse))
+      const filteredBranch = courseBranches.find((branch) => branchIdOf(branch) === String(selectedBranchFilter))
+      const defaultBranch = filteredBranch ? branchIdOf(filteredBranch) : branchIdOf(courseBranches[0])
 
       setSemesterForm({
         departmentId: defaultDept,
@@ -1747,15 +1759,19 @@ export default function AcademicStructure() {
                         id="branch-course"
                         className={`as-form-control ${formErrors.courseId ? 'is-invalid' : ''}`}
                         value={branchForm.courseId}
-                        onChange={(e) => setBranchForm({ ...branchForm, courseId: e.target.value })}
+                        onChange={(e) => {
+                          const selectedCourse = courses.find((course) => courseIdOf(course) === e.target.value)
+                          setBranchForm({
+                            ...branchForm,
+                            courseId: e.target.value,
+                            departmentId: courseDepartmentIdOf(selectedCourse) || branchForm.departmentId,
+                          })
+                        }}
                         required
                       >
                         <option value="">-- Choose Course --</option>
-                        {(branchForm.departmentId
-                          ? courses.filter((c) => String(c.departmentId ?? c.DepartmentId) === String(branchForm.departmentId))
-                          : courses
-                        ).map((c) => {
-                          const id = String(c.courseId ?? c.id)
+                        {courses.map((c) => {
+                          const id = courseIdOf(c)
                           return (
                             <option key={id} value={id}>
                               {c.courseName ?? c.name} ({c.courseCode ?? c.code})
@@ -1776,12 +1792,12 @@ export default function AcademicStructure() {
                         value={branchForm.departmentId}
                         onChange={(e) => {
                           const newDeptId = e.target.value
-                          const deptCourses = courses.filter((c) => String(c.departmentId ?? c.DepartmentId) === String(newDeptId))
-                          const selectedCourseInDepartment = deptCourses.some((c) => String(c.courseId ?? c.id) === String(branchForm.courseId))
+                          const deptCourses = courses.filter((course) => courseDepartmentIdOf(course) === String(newDeptId))
+                          const selectedCourseInDepartment = deptCourses.some((course) => courseIdOf(course) === String(branchForm.courseId))
                           setBranchForm({
                             ...branchForm,
                             departmentId: newDeptId,
-                            courseId: selectedCourseInDepartment ? branchForm.courseId : (deptCourses[0]?.courseId ?? deptCourses[0]?.id ?? ''),
+                            courseId: selectedCourseInDepartment ? branchForm.courseId : courseIdOf(deptCourses[0]),
                           })
                         }}
                         required
@@ -1879,7 +1895,7 @@ export default function AcademicStructure() {
             ======================================================== */}
         {modalType === 'semester' && (
           <div className="as-modal-backdrop" onClick={closeModal}>
-            <div className="as-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="as-modal as-modal--semester" onClick={(e) => e.stopPropagation()}>
               <div className="as-modal__header">
                 <h3>{editingItem ? 'Edit Semester' : 'Add Semester'}</h3>
                 <button type="button" className="as-modal__close" onClick={closeModal}>
@@ -1897,9 +1913,10 @@ export default function AcademicStructure() {
                         value={semesterForm.departmentId}
                         onChange={(e) => {
                           const newDept = e.target.value
-                          const deptCourses = courses.filter((c) => String(c.departmentId ?? c.DepartmentId) === String(newDept))
-                          const newCourse = deptCourses[0]?.courseId ?? deptCourses[0]?.id ?? ''
-                          const courseBranches = branches.filter((b) => String(b.courseId ?? b.CourseId) === String(newCourse))
+                          const deptCourses = courses.filter((course) => courseDepartmentIdOf(course) === String(newDept))
+                          const currentCourse = deptCourses.find((course) => courseIdOf(course) === String(semesterForm.courseId))
+                          const newCourse = currentCourse ? courseIdOf(currentCourse) : courseIdOf(deptCourses[0])
+                          const courseBranches = branches.filter((branch) => branchCourseIdOf(branch) === String(newCourse))
                           setSemesterForm({
                             ...semesterForm,
                             departmentId: newDept,
@@ -1930,21 +1947,20 @@ export default function AcademicStructure() {
                         value={semesterForm.courseId}
                         onChange={(e) => {
                           const newCourse = e.target.value
-                          const courseBranches = branches.filter((b) => String(b.courseId ?? b.CourseId) === String(newCourse))
+                          const selectedCourse = courses.find((course) => courseIdOf(course) === newCourse)
+                          const courseBranches = branches.filter((branch) => branchCourseIdOf(branch) === String(newCourse))
                           setSemesterForm({
                             ...semesterForm,
                             courseId: newCourse,
-                            branchId: courseBranches[0]?.branchId ?? courseBranches[0]?.id ?? '',
+                            departmentId: courseDepartmentIdOf(selectedCourse) || semesterForm.departmentId,
+                            branchId: branchIdOf(courseBranches[0]),
                           })
                         }}
                         required
                       >
                         <option value="">-- Choose Course --</option>
-                        {(semesterForm.departmentId
-                          ? courses.filter((c) => String(c.departmentId ?? c.DepartmentId) === String(semesterForm.departmentId))
-                          : courses
-                        ).map((c) => {
-                          const id = String(c.courseId ?? c.id)
+                        {courses.map((c) => {
+                          const id = courseIdOf(c)
                           return (
                             <option key={id} value={id}>
                               {c.courseName ?? c.name} ({c.courseCode ?? c.code})
@@ -1970,12 +1986,13 @@ export default function AcademicStructure() {
                       >
                         <option value="">-- Choose Branch --</option>
                         {(semesterForm.courseId
-                          ? branches.filter((b) => String(b.courseId ?? b.CourseId) === String(semesterForm.courseId))
+                          ? branches.filter((branch) => branchCourseIdOf(branch) === String(semesterForm.courseId))
                           : branches
                         ).map((b) => {
                           const id = String(b.branchId ?? b.id)
+                          const branchId = branchIdOf(b)
                           return (
-                            <option key={id} value={id}>
+                            <option key={branchId || id} value={branchId}>
                               {b.branchName ?? b.name} ({b.branchCode ?? b.code})
                             </option>
                           )

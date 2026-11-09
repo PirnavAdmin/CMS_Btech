@@ -1229,3 +1229,8 @@ select.as-form-control::-ms-expand {
 :root[data-theme="dark"] .academic-structure .as-form-group label { color:#dce3d2; }
 :root[data-theme="dark"] .academic-structure .as-form-control { border-color:var(--as-line); background-color:var(--as-surface-raised); color:var(--as-text); }
 :root[data-theme="dark"] .academic-structure .as-form-control::placeholder { color:var(--as-muted); }
+:root .academic-structure .as-modal--semester { max-height:min(80vh,700px); }
+.academic-structure .as-modal--semester .as-modal__header,
+.academic-structure .as-modal--semester .as-modal__footer { padding:1rem 1.25rem; }
+.academic-structure .as-modal--semester .as-modal__body { gap:.8rem; padding:1rem 1.25rem; }
+.academic-structure .as-modal--semester .as-form-row { gap:.8rem; }

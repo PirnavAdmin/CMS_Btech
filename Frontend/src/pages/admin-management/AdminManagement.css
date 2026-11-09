@@ -5147,7 +5147,20 @@
 .rooms-editor-panel, .rooms-live-preview { min-width: 0; border: 1px solid var(--border, var(--border)); border-radius: 14px; background: var(--surface, #fff); overflow: hidden; }
 .rooms-editor-panel { display: flex; min-height: 0; flex-direction: column; }
 .rooms-editor-panel form { display: flex; min-height: 0; flex: 1; flex-direction: column; }
-.rooms-editor-panel .rooms-modal-body { min-height: 0; max-height: none; flex: 1; overflow-y: auto; padding: 24px; }
+.rooms-editor-panel .rooms-modal-body { min-height: 0; max-height: none; flex: 1; overflow-y: auto; padding: 20px; }
+.rooms-editor-panel .rooms-form-grid { align-items: start; }
+.rooms-editor-panel .rooms-form-group { min-width: 0; gap: 5px; }
+.rooms-editor-panel .rooms-form-group > :is(.rooms-input,.rooms-select),
+.rooms-editor-panel .rooms-form-group > .searchable-select > .searchable-select__trigger {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  height: 46px;
+  padding: 0 12px;
+  border-radius: 9px;
+  font: 500 14px var(--font-family);
+}
 .rooms-editor-panel .rooms-modal-footer { position: static; background: var(--surface-soft, var(--surface-soft)); }
 .rooms-live-preview { position: sticky; top: 20px; display: flex; min-height: 0; flex-direction: column; }
 .rooms-live-preview > header { display: flex; align-items: center; gap: 8px; padding: 16px 20px; border-bottom: 1px solid var(--border, var(--border)); color: var(--brand, var(--brand-hover)); font-size: 11px; font-weight: 800; letter-spacing: .08em; }

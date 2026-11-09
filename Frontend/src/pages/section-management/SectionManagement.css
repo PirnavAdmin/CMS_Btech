@@ -28,6 +28,36 @@
 .section-assignment-panel>footer { display:flex; justify-content:flex-end; margin-top:12px; border-top:1px solid var(--border); padding-top:12px; }
 @media(max-width:640px){.section-reference-detail-grid{grid-template-columns:1fr}.section-reference-heading{padding:12px}.section-reference-heading .directory-export-actions{flex-wrap:wrap}}
 
+/* Keep the academic-mapping wizard content inset within its form card. */
+.section-reference-form { box-sizing:border-box; min-width:0; }
+.section-reference-form > .erp-form-scroll-body { min-width:0; }
+.section-reference-form .section-step-content {
+  box-sizing:border-box;
+  width:100%;
+  min-width:0;
+  padding:20px;
+}
+.section-reference-form .step-content-heading { margin:0 0 16px; }
+.section-reference-form .step-content-heading h3 { margin:0; font-size:1.05rem; }
+.section-reference-form .step-content-heading p { margin:5px 0 0; color:var(--text-muted); font-size:.82rem; line-height:1.45; }
+.section-reference-form .semester-form-grid {
+  width:100%;
+  min-width:0;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:14px 18px;
+}
+.section-reference-form .section-field { min-width:0; }
+.section-reference-form .section-field :is(input,select,textarea,.searchable-select,.searchable-select__trigger) {
+  box-sizing:border-box;
+  max-width:100%;
+  min-width:0;
+}
+.section-reference-form > :is(.section-form-warning,.section-form-error) { margin:12px 16px 0; }
+@media(max-width:640px) {
+  .section-reference-form .section-step-content { padding:16px; }
+  .section-reference-form .semester-form-grid { grid-template-columns:minmax(0,1fr); gap:10px; }
+}
+
 .section-pagination{justify-content:flex-end!important}
 .section-assignment-chooser{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:22px}.section-assignment-chooser button{display:flex;min-height:112px;padding:18px;align-items:center;gap:14px;border:1px solid #c7dbe9;border-radius:12px;color:var(--text-primary);background:var(--surface, #fff);text-align:left}.section-assignment-chooser button:hover{border-color:var(--brand);background:#f2f8fd}.section-assignment-chooser svg{width:24px;height:24px;flex:0 0 24px;color:var(--brand)}.section-assignment-chooser strong,.section-assignment-chooser small{display:block}.section-assignment-chooser strong{margin-bottom:4px;color:var(--text-primary);font-size:.92rem}.section-assignment-chooser small{color:var(--text-muted);font-size:.76rem}.section-assignment-form-head{display:flex;margin-bottom:12px;align-items:center;justify-content:space-between;gap:12px}.section-assignment-form-head h3{margin:0!important}.section-assignment-form-head button{min-height:32px;padding:0 10px;border:1px solid #c7dbe9;border-radius:7px;color:var(--brand);background:var(--surface, #fff);font-size:.76rem;font-weight:700}
 .section-teacher-form>div{grid-template-columns:minmax(0,1fr) auto}.section-teacher-current{margin:10px 0 0;color:var(--text-muted);font-size:.76rem}.section-teacher-current strong{color:var(--text-primary)}
