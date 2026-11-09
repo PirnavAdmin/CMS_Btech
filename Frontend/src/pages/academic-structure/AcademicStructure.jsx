@@ -1686,7 +1686,6 @@ export default function AcademicStructure() {
                         <option value="Undergraduate">Undergraduate (UG)</option>
                         <option value="Postgraduate">Postgraduate (PG)</option>
                         <option value="Diploma">Diploma</option>
-                        <option value="Certificate">Certificate</option>
                       </select>
                     </div>
                     <div className="as-form-group">
