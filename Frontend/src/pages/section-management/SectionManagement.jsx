@@ -1,4 +1,4 @@
-import SectionsRoomsHeader from '../../components/SectionsRoomsHeader'
+﻿import SectionsRoomsHeader from '../../components/SectionsRoomsHeader'
 import PageHeader from '../../components/PageHeader'
 import ViewDialog from '../../components/ViewDialog'
 import SharedInfoCard from '../../components/InfoCard'
@@ -12,7 +12,7 @@ import ExportMenu, { PrintDetailsButton } from '../../components/ExportMenu'
 import { sectionColumns } from '../../utils/exportColumns'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { FiArrowLeft, FiBookOpen, FiCheckCircle, FiClock, FiEdit2, FiEye, FiFilter, FiGrid, FiLayers, FiPlus, FiSearch, FiToggleLeft, FiToggleRight, FiTrash2, FiUser, FiUserPlus, FiUsers, FiX } from 'react-icons/fi'
+import { FiArrowLeft, FiArrowRight, FiBookOpen, FiCheckCircle, FiClock, FiEdit2, FiEye, FiFilter, FiGrid, FiLayers, FiPlus, FiSearch, FiToggleLeft, FiToggleRight, FiTrash2, FiUser, FiUserPlus, FiUsers, FiX } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import FilterPanel from '../../components/FilterPanel'
 import SearchableSelect from '../../components/SearchableSelect'
@@ -521,6 +521,9 @@ function SectionForm({ editMode = false }) {
   const selectedCourseObj = scopedCourses.find((item) => String(item.id) === String(form.courseId))
   const selectedBranchObj = branches.find((item) => String(item.id) === String(form.branchId))
   const selectedSemesterObj = semesters.find((item) => String(item.id) === String(form.semesterId))
+  const selectedYearObj = academicYearOptions.find((item) => String(item.id) === String(form.academicYearId)) || activeYear
+  const mappingProgress = [form.courseId, form.branchId, form.semesterId, form.academicYearId].filter(Boolean).length
+  const mappingReady = canOpenDetailsTab
 
   return (
     <Page>
@@ -528,74 +531,130 @@ function SectionForm({ editMode = false }) {
         <Link className="section-primary secondary" to="/section-management"><FiArrowLeft /> Back</Link>
       </Header>
 
-      <div className="section-reference-editor" data-without-live-preview="true">
-        <form className="section-reference-form" onSubmit={submit} noValidate>
+      <div className="section-reference-editor">
+        <form className={`section-reference-form section-reference-form--${formTab}`} onSubmit={submit} noValidate>
           {errors.form && <div className="section-form-error" role="alert">{errors.form}</div>}
           {yearWarning && <div className="section-form-warning" role="alert">{yearWarning}</div>}
+
+          <div className="section-form-progressline">
+            <span>{formTab === 'mapping' ? 'STEP 01 OF 02' : 'STEP 02 OF 02'}</span>
+            <div className="section-form-progressline__track" role="progressbar" aria-label="Section form progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow={formTab === 'mapping' ? 50 : 100}>
+              <i style={{ width: formTab === 'mapping' ? '50%' : '100%' }} />
+            </div>
+            <strong>{formTab === 'mapping' ? 'Academic mapping' : 'Section details'}</strong>
+          </div>
 
           <div className="erp-tabs-bar" role="tablist" aria-label="Section form tabs" onKeyDown={event => { if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return; const tabs = [...event.currentTarget.querySelectorAll('[role="tab"]')]; const index = tabs.indexOf(document.activeElement); if (index < 0) return; event.preventDefault(); const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length; tabs[next].click(); tabs[next].focus() }}>
             <button
               type="button"
               role="tab"
               aria-selected={formTab === 'mapping'}
-              className={`erp-tab-btn ${formTab === 'mapping' ? 'active' : ''}`}
+              className={`erp-tab-btn section-form-step-tab ${formTab === 'mapping' ? 'active' : ''} ${formTab === 'details' ? 'completed' : ''}`}
               onClick={() => setFormTab('mapping')}
             >
-              1. Academic Mapping
+              <span className="section-form-step-tab__number">{formTab === 'details' ? <FiCheckCircle /> : '01'}</span>
+              <span className="section-form-step-tab__copy"><strong>Academic Mapping</strong><small>Course, branch and term</small></span>
             </button>
             <button
               type="button"
               role="tab"
               aria-selected={formTab === 'details'}
-              className={`erp-tab-btn ${formTab === 'details' ? 'active' : ''}`}
+              className={`erp-tab-btn section-form-step-tab ${formTab === 'details' ? 'active' : ''}`}
               disabled={!canOpenDetailsTab}
               onClick={() => setFormTab('details')}
             >
-              2. Section Details
+              <span className="section-form-step-tab__number">02</span>
+              <span className="section-form-step-tab__copy"><strong>Section Details</strong><small>Name, capacity and advisor</small></span>
             </button>
           </div>
 
           <div className="erp-form-scroll-body">
             {formTab === 'mapping' ? (
-              <section className="section-step-content">
+              <section className="section-step-content section-step-content--mapping">
                 <header className="step-content-heading">
+                  <span className="section-form-eyebrow"><FiBookOpen /> Academic structure</span>
                   <h3>Academic Mapping</h3>
-                  <p>Select Course, Branch, and Semester for this section.</p>
+                  <p>Choose a course, then its branch and configured semester. Your selection is summarized as you go.</p>
                 </header>
-                <div className="section-form-grid">
-                  <Field label="Course *" error={errors.courseId}>
-                    <SearchableSelect label="Course" value={form.courseId} options={scopedCourses.map((item) => ({ id: item.id, value: item.id, name: item.name, code: item.code }))} onChange={setCourse} disabled={editMode} placeholder="Select Course" searchPlaceholder="Search course name or code..." />
-                  </Field>
-                  <Field label="Course Code">
-                    <ReadOnly value={course?.code || form.courseCode} placeholder="Resolved from selected course" />
-                  </Field>
-                  <Field label="Branch *" error={errors.branchId}>
-                    <SearchableSelect label="Branch" value={form.branchId} options={branches.map((item) => ({ id: item.id, value: item.id, name: item.name, code: item.code }))} onChange={setBranch} disabled={editMode} placeholder="Select Branch" searchPlaceholder="Search branch name or code..." />
-                  </Field>
-                  <Field label="Branch Code">
-                    <ReadOnly value={branch?.code || form.branchCode} placeholder="Resolved from selected branch" />
-                  </Field>
-                  <Field label="Semester *" error={errors.semesterId}>
-                    <ProjectSelect aria-label="Semester" value={form.semesterId} onChange={(event) => setSemester(event.target.value)} disabled={editMode || !form.branchId}>
-                      <option value="">{form.branchId ? 'Select Semester' : 'Select Branch first'}</option>
-                      {semesterOptions.map((item) => <option key={item.number} value={item.id || `unconfigured-${item.number}`} disabled={!item.configured}>{item.name}</option>)}
-                      {editMode && form.semesterId && !semesterOptions.some((item) => String(item.id) === String(form.semesterId)) && <option value={form.semesterId}>{form.semester}</option>}
-                    </ProjectSelect>
-                    {form.branchId && semesterOptions.some((item) => !item.configured) && <small>Configure missing semesters in Semester Management to enable them here.</small>}
-                  </Field>
-                  <Field label="Academic Year *" error={errors.academicYearId}>
-                    {editMode ? <ReadOnly value={form.academicYear || activeYear?.name} /> : <SearchableSelect label="Academic Year" value={form.academicYearId || ''} options={academicYearOptions.map(item => ({ id: item.id, name: item.name }))} onChange={(academicYearId) => {
-                      const selectedYear = academicYearOptions.find(item => String(item.id) === String(academicYearId))
-                      setForm(current => ({ ...current, academicYearId, academicYear: selectedYear?.name || '' }))
-                      setErrors(current => ({ ...current, academicYearId: '', form: '' }))
-                    }} placeholder="Select Academic Year" noOptionsMessage="No academic years found." />}
-                    {noActiveYear && <Link to="/academic-year-management">Manage Academic Years</Link>}
-                  </Field>
+                <div className="section-mapping-layout">
+                  <div className="section-mapping-sequence">
+                    <div className={`section-mapping-item ${form.courseId ? 'is-complete' : 'is-current'}`}>
+                      <span className="section-mapping-item__step">01</span>
+                      <div className="section-mapping-item__control">
+                        <Field label="Course *" error={errors.courseId}>
+                          <SearchableSelect label="Course" value={form.courseId} options={scopedCourses.map((item) => ({ id: item.id, value: item.id, name: item.name, code: item.code }))} onChange={setCourse} disabled={editMode} placeholder="Select Course" searchPlaceholder="Search course name or code..." />
+                        </Field>
+                        <small className="section-mapping-item__hint">Select the degree program that owns this section.</small>
+                      </div>
+                    </div>
+                    <div className={`section-mapping-item ${form.branchId ? 'is-complete' : form.courseId ? 'is-current' : 'is-waiting'}`}>
+                      <span className="section-mapping-item__step">02</span>
+                      <div className="section-mapping-item__control">
+                        <Field label="Branch *" error={errors.branchId}>
+                          <SearchableSelect label="Branch" value={form.branchId} options={branches.map((item) => ({ id: item.id, value: item.id, name: item.name, code: item.code }))} onChange={setBranch} disabled={editMode} placeholder="Select Branch" searchPlaceholder="Search branch name or code..." />
+                        </Field>
+                        <small className="section-mapping-item__hint">Choose a branch under the selected course.</small>
+                      </div>
+                    </div>
+                    <div className={`section-mapping-item ${form.semesterId ? 'is-complete' : form.branchId ? 'is-current' : 'is-waiting'}`}>
+                      <span className="section-mapping-item__step">03</span>
+                      <div className="section-mapping-item__control">
+                        <Field label="Semester *" error={errors.semesterId}>
+                          <ProjectSelect aria-label="Semester" value={form.semesterId} onChange={(event) => setSemester(event.target.value)} disabled={editMode || !form.branchId}>
+                            <option value="">{form.branchId ? 'Select Semester' : 'Select Branch first'}</option>
+                            {semesterOptions.map((item) => <option key={item.number} value={item.id || `unconfigured-${item.number}`} disabled={!item.configured}>{item.name}</option>)}
+                            {editMode && form.semesterId && !semesterOptions.some((item) => String(item.id) === String(form.semesterId)) && <option value={form.semesterId}>{form.semester}</option>}
+                          </ProjectSelect>
+                          {form.branchId && semesterOptions.some((item) => !item.configured) && <small>Configure missing semesters in Semester Management to enable them here.</small>}
+                        </Field>
+                        <small className="section-mapping-item__hint">Only semesters configured for this branch can be selected.</small>
+                      </div>
+                    </div>
+                    <div className={`section-mapping-item ${form.academicYearId ? 'is-complete' : 'is-current'}`}>
+                      <span className="section-mapping-item__step">04</span>
+                      <div className="section-mapping-item__control">
+                        <Field label="Academic Year *" error={errors.academicYearId}>
+                          {editMode ? <ReadOnly value={form.academicYear || activeYear?.name} /> : <SearchableSelect label="Academic Year" value={form.academicYearId || ''} options={academicYearOptions.map(item => ({ id: item.id, name: item.name }))} onChange={(academicYearId) => {
+                            const selectedYear = academicYearOptions.find(item => String(item.id) === String(academicYearId))
+                            setForm(current => ({ ...current, academicYearId, academicYear: selectedYear?.name || '' }))
+                            setErrors(current => ({ ...current, academicYearId: '', form: '' }))
+                          }} placeholder="Select Academic Year" noOptionsMessage="No academic years found." />}
+                          {noActiveYear && <Link to="/academic-year-management">Manage Academic Years</Link>}
+                        </Field>
+                        <small className="section-mapping-item__hint">The section will be created for this academic year.</small>
+                      </div>
+                    </div>
+                  </div>
+
+                  <aside className="section-mapping-preview" aria-label="Academic mapping preview">
+                    <div className="section-mapping-preview__head">
+                      <span className="section-mapping-preview__icon"><FiLayers /></span>
+                      <div><small>LIVE PREVIEW</small><h4>Academic mapping</h4></div>
+                      <span className={`section-mapping-preview__status ${mappingReady ? 'is-ready' : ''}`}>{mappingReady ? 'Ready' : 'In progress'}</span>
+                    </div>
+                    <div className="section-mapping-preview__meter" role="progressbar" aria-label="Mapping completion" aria-valuemin="0" aria-valuemax="4" aria-valuenow={mappingProgress}><span style={{ width: `${mappingProgress * 25}%` }} /></div>
+                    <div className="section-mapping-preview__entries">
+                      <div className={`section-mapping-preview__entry ${selectedCourseObj ? 'is-selected' : ''}`}>
+                        <span>01</span><div><small>Course</small><strong>{selectedCourseObj?.name || 'Select a course'}</strong></div><em>{selectedCourseObj?.code || '—'}</em>
+                      </div>
+                      <div className={`section-mapping-preview__entry ${selectedBranchObj ? 'is-selected' : ''}`}>
+                        <span>02</span><div><small>Branch</small><strong>{selectedBranchObj?.name || 'Select a branch'}</strong></div><em>{selectedBranchObj?.code || '—'}</em>
+                      </div>
+                      <div className={`section-mapping-preview__entry ${selectedSemesterObj ? 'is-selected' : ''}`}>
+                        <span>03</span><div><small>Semester</small><strong>{selectedSemesterObj?.name || 'Select a semester'}</strong></div><em>{selectedSemesterObj?.number ? `SEM ${selectedSemesterObj.number}` : '—'}</em>
+                      </div>
+                      <div className={`section-mapping-preview__entry ${selectedYearObj ? 'is-selected' : ''}`}>
+                        <span>04</span><div><small>Academic year</small><strong>{selectedYearObj?.name || 'Select an academic year'}</strong></div><em>{selectedYearObj ? 'YEAR' : '—'}</em>
+                      </div>
+                    </div>
+                    <p className="section-mapping-preview__note">{mappingReady ? 'Your mapping is complete. Continue to enter section details.' : 'Complete each selection to unlock the next step.'}</p>
+                  </aside>
                 </div>
               </section>
             ) : (
-              <section className="section-step-content">
+              <section className="section-step-content section-step-content--details">
                 <header className="step-content-heading">
+                  <span className="section-form-eyebrow"><FiLayers /> SECTION SETUP</span>
                   <h3>Section Information</h3>
                   <p>Specify section name, code, capacity, and classroom details.</p>
                 </header>
@@ -629,13 +688,13 @@ function SectionForm({ editMode = false }) {
               <>
                 <Link className="cm-button secondary" to="/section-management">Cancel</Link>
                 <button type="button" className="cm-button" disabled={!canOpenDetailsTab} onClick={() => setFormTab('details')}>
-                  Next →
+                  Next <FiArrowRight />
                 </button>
               </>
             ) : (
               <>
                 <button type="button" className="cm-button secondary" onClick={() => setFormTab('mapping')}>
-                  ← Previous
+                  <FiArrowLeft /> Previous
                 </button>
                 <button type="submit" className="cm-button" disabled={saving}>
                   {saving ? 'Saving...' : editMode ? 'Save Changes' : 'Create Section'}

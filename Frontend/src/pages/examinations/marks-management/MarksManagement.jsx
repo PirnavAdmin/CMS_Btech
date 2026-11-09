@@ -193,7 +193,6 @@ function BulkMarksWorkspace({ academic, pendingImports }) {
   const [examLoading, setExamLoading] = useState(true)
   const [examLoadError, setExamLoadError] = useState('')
   const [exams, setExams] = useState([])
-  const [selectedExamId, setSelectedExamId] = useState('')
   const [isDragging, setIsDragging] = useState(false)
   const [previewMode, setPreviewMode] = useState('')
   const [uploadComplete, setUploadComplete] = useState(false)
@@ -218,8 +217,6 @@ function BulkMarksWorkspace({ academic, pendingImports }) {
       })
     return () => { active = false }
   }, [academic.selectedCollegeId, academic.selectedAcademicYearId])
-
-  const selectedExam = exams.find(exam => String(exam.examId) === String(selectedExamId))
 
   const columnOptions = useMemo(() => Object.fromEntries(
     columns.map(column => {
@@ -265,7 +262,9 @@ function BulkMarksWorkspace({ academic, pendingImports }) {
     setReading(true)
     try {
       if (!file.size) throw new Error('The selected file is empty.')
-      if (!selectedExam) throw new Error('Select an examination in the working college and academic year before previewing marks.')
+      if (examLoading) throw new Error('Examinations are still loading. Try uploading the file again in a moment.')
+      if (examLoadError) throw new Error(examLoadError)
+      if (!exams.length) throw new Error('No examinations are available in the working college and academic year.')
       if (file.size > 10 * 1024 * 1024) throw new Error('Choose a file smaller than 10 MB.')
       const isWorkbook = /\.xlsx$/i.test(file.name)
       if (!isWorkbook && !/\.(csv|tsv|txt)$/i.test(file.name)) {
@@ -276,11 +275,26 @@ function BulkMarksWorkspace({ academic, pendingImports }) {
       let previewColumns
       let previewRows
       if (isWorkbook) {
-        const examId = Number(selectedExamId)
-        if (!Number.isSafeInteger(examId) || examId <= 0) {
-          throw new Error('Select an examination before previewing an XLSX workbook.')
-        }
-        const scope = { examId }
+        const { default: readXlsxFile } = await import('read-excel-file/browser')
+        const workbookRows = await readXlsxFile(file)
+        const headerKeys = (workbookRows[0] || []).map(value => String(value ?? '').trim().toLowerCase().replace(/[^a-z0-9]/g, ''))
+        const examIndex = headerKeys.findIndex(value => ['examid', 'examinationid'].includes(value))
+        const sectionIndex = headerKeys.findIndex(value => value === 'sectionid')
+        if (examIndex < 0) throw new Error('Add an ExamId column to the XLSX workbook. Each row must use an examination from the working college and academic year.')
+        const workbookData = workbookRows.slice(1).filter(row => row.some(value => String(value ?? '').trim()))
+        const workbookScopes = workbookData.map((row, index) => {
+          const examId = Number(String(row[examIndex] ?? '').trim())
+          const sectionText = sectionIndex < 0 ? '' : String(row[sectionIndex] ?? '').trim()
+          const sectionId = sectionText ? Number(sectionText) : undefined
+          if (!Number.isSafeInteger(examId) || examId <= 0) throw new Error(`Data row ${index + 1}: ExamId must be a positive number.`)
+          if (sectionText && (!Number.isSafeInteger(sectionId) || sectionId <= 0)) throw new Error(`Data row ${index + 1}: SectionId must be a positive number.`)
+          return { examId, sectionId }
+        })
+        const examIds = [...new Set(workbookScopes.map(scopeRow => scopeRow.examId))]
+        const sectionIds = [...new Set(workbookScopes.map(scopeRow => scopeRow.sectionId).filter(Boolean))]
+        if (examIds.length !== 1 || sectionIds.length > 1) throw new Error('Each file must contain rows for one examination and one section.')
+        const scope = { examId: examIds[0], sectionId: sectionIds[0] }
+        if (!exams.some(exam => String(exam.examId) === String(scope.examId))) throw new Error('The ExamId in this file must match an examination in the working college and academic year.')
         preview = await marksApi.upload(file, scope, true)
         setUploadScope(scope)
         setSelectedFile(file)
@@ -315,19 +329,16 @@ function BulkMarksWorkspace({ academic, pendingImports }) {
         const gradeColumn = columnFor('grade')
         const remarksColumn = columnFor('remarks')
         if (!studentColumn || !subjectColumn || !marksColumn) {
-          throw new Error('Required columns: StudentCode, SubjectCode, and MarksObtained. ExamId is optional when an examination is selected above.')
+          throw new Error('Required columns: StudentCode, SubjectCode, MarksObtained, and ExamId.')
         }
-        if (!examColumn && !selectedExamId) {
-          throw new Error('Select an examination above or include an ExamId column in this file.')
-        }
+        if (!examColumn) throw new Error('Add an ExamId column to this file. Each file must contain rows for one examination.')
         const scopeByRow = parsed.rows.map((row, index) => {
           const fileExamId = examColumn ? String(row[examColumn.key] || '').trim() : ''
-          const examId = Number(fileExamId || selectedExamId)
+          const examId = Number(fileExamId)
           const sectionValue = sectionColumn ? String(row[sectionColumn.key] || '').trim() : ''
           const sectionId = sectionValue ? Number(sectionValue) : undefined
           if (!Number.isSafeInteger(examId) || examId <= 0) throw new Error(`Data row ${index + 1}: ExamId must be a positive number.`)
           if (sectionValue && (!Number.isSafeInteger(sectionId) || sectionId <= 0)) throw new Error(`Data row ${index + 1}: SectionId must be a positive number.`)
-          if (selectedExamId && examId !== Number(selectedExamId)) throw new Error(`Data row ${index + 1}: ExamId does not match the selected examination.`)
           return { examId, sectionId }
         })
         const examIds = [...new Set(scopeByRow.map(scopeRow => scopeRow.examId))]
@@ -336,6 +347,7 @@ function BulkMarksWorkspace({ academic, pendingImports }) {
           throw new Error('Each file must contain rows for one examination and one section.')
         }
         const scope = { examId: examIds[0], sectionId: sectionIds[0] }
+        if (!exams.some(exam => String(exam.examId) === String(scope.examId))) throw new Error('The ExamId in this file must match an examination in the working college and academic year.')
         setUploadScope(scope)
         const requestRows = parsed.rows.map((row, index) => {
           const marksValue = row[marksColumn.key]
@@ -397,7 +409,7 @@ function BulkMarksWorkspace({ academic, pendingImports }) {
 
   const confirmUpload = async () => {
     if (!canImport || uploadLock.current || !selectedFile || !uploadPreview || Number(uploadPreview.validRows) < 1) return
-    if (!selectedExam || Number(uploadScope?.examId) !== Number(selectedExam.examId)) return setFileError('Reload the examination preview before importing.')
+    if (!uploadScope?.examId || !exams.some(exam => String(exam.examId) === String(uploadScope.examId))) return setFileError('Reload the examination preview before importing.')
     uploadLock.current = true
     setUploading(true)
     setFileError('')
@@ -467,7 +479,7 @@ function BulkMarksWorkspace({ academic, pendingImports }) {
         <PageHeader
           className="marks-module-page-header"
           title="Bulk Marks Upload"
-          subtitle="Validate a marks workbook, review row-level issues, and import clean results into the selected examination."
+          subtitle="Validate a marks workbook, review row-level issues, and import clean results using the ExamId in your file."
           breadcrumb={[{ label: 'Marks Management', link: '/marks-management' }, 'Bulk Marks Upload']}
           compactSummary={[
             { label: 'Uploaded Rows', value: uploadPreview?.totalRows ?? rows.length, tone: 'warning' },
@@ -481,8 +493,9 @@ function BulkMarksWorkspace({ academic, pendingImports }) {
         <article className="erp-card bulk-marks-upload-card">
           <header className="erp-card-header bulk-marks-upload-card__header">
             <div>
+              <span className="bulk-marks-step-label"><i>01</i> Configure and upload</span>
               <h2 className="erp-card-title">Upload Marks File</h2>
-              <p className="erp-card-subtitle">Choose an examination, validate an XLSX workbook, and review every row before import.</p>
+              <p className="erp-card-subtitle">Include an ExamId in your file, validate the workbook, and review every row before import.</p>
             </div>
             <div className="bulk-marks-upload-card__actions">
               <button type="button" className="erp-btn erp-btn--secondary" onClick={downloadTemplate}><FiFileText /> Download CSV template</button>
@@ -490,31 +503,7 @@ function BulkMarksWorkspace({ academic, pendingImports }) {
             </div>
           </header>
 
-          <div className="bulk-marks-upload-context">
-            <label>
-              <span>Target examination <b>*</b></span>
-              <ProjectSelect
-                aria-label="Target examination"
-                value={selectedExamId}
-                disabled={examLoading}
-                onChange={event => {
-                  setSelectedExamId(event.target.value)
-                  clearPreview()
-                }}
-              >
-                <option value="">{examLoading ? 'Loading examinations…' : 'Select an examination'}</option>
-                {exams.map(exam => {
-                  const examId = String(exam.examId)
-                  const name = exam.examName || exam.examTypeName || `Exam ${examId}`
-                  const detail = [exam.examTypeName, exam.examCode, exam.academicYear].filter(Boolean).join(' · ')
-                  return <option key={examId} value={examId}>{detail ? `${name} — ${detail}` : name}</option>
-                })}
-              </ProjectSelect>
-            </label>
-            <p>{selectedExam
-              ? `Uploaded marks will be checked against ${selectedExam.examName || selectedExam.examTypeName}${selectedExam.examCode ? ` (${selectedExam.examCode})` : ''}.`
-              : examLoadError || (examLoading ? 'Loading active examinations from your college.' : exams.length ? 'Select the examination that these marks belong to.' : 'No active examination is available. Create an examination before importing marks.')}</p>
-          </div>
+          <div className="bulk-marks-upload-context bulk-marks-upload-guidance"><p>{examLoading ? "Loading examinations..." : examLoadError || (exams.length ? "Include an ExamId column in your file. Use one examination from the working college and academic year." : "No examinations are available in the working college and academic year. Create an examination before importing marks.")}</p></div>
 
           <label
             className={`bulk-marks-upload-dropzone${reading ? ' is-reading' : ''}${isDragging ? ' is-dragging' : ''}`}
@@ -524,7 +513,7 @@ function BulkMarksWorkspace({ academic, pendingImports }) {
           >
             <input type="file" accept=".xlsx,.csv,.tsv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/tab-separated-values,text/plain" onChange={uploadFile} disabled={reading || uploading} />
             <span className="bulk-marks-upload-dropzone__icon"><FiUploadCloud /></span>
-            <span className="bulk-marks-upload-dropzone__text"><strong>{reading ? 'Validating your file…' : isDragging ? 'Drop the file to begin validation' : fileName || 'Drop a marks file here'}</strong><small>{reading ? 'Checking the file and its rows against the selected examination.' : 'XLSX files can be imported. CSV, TSV, and TXT files are available for validation preview.'}</small></span>
+            <span className="bulk-marks-upload-dropzone__text"><strong>{reading ? 'Validating your file…' : isDragging ? 'Drop the file to begin validation' : fileName || 'Drop a marks file here'}</strong><small>{reading ? 'Checking each row against the examination ID in your file.' : 'XLSX files can be imported. CSV, TSV, and TXT files are available for validation preview.'}</small></span>
             <span className="erp-btn erp-btn--primary bulk-marks-upload-browse">{reading ? 'Validating…' : 'Browse files'}</span>
           </label>
           {uploadPreview && <div className="bulk-marks-upload-status" role="status">
@@ -576,7 +565,7 @@ function BulkMarksWorkspace({ academic, pendingImports }) {
                 <thead><tr>{columns.map(column => <th key={column.key}>{column.label}</th>)}</tr></thead>
                 <tbody>{visibleRows.map(row => <tr key={row.__bulkRowId} className={row.validationStatus === 'Rejected' ? 'bulk-marks-row--rejected' : ''}>{columns.map(column => <td key={column.key}>{column.key === 'validationStatus' ? <span className={`bulk-marks-validation-pill${row.validationStatus === 'Rejected' ? ' is-rejected' : ' is-ready'}`}>{row.validationStatus}</span> : row[column.key] || '—'}</td>)}</tr>)}</tbody>
               </table>
-              {filteredRows.length === 0 && <EmptyState title={hasFilters ? 'No matching rows' : uploadPreview ? 'No rows need attention' : 'No matching rows'} description={hasFilters ? 'Adjust or clear the filters to see more uploaded data.' : uploadPreview ? 'Every row passed server validation for the selected examination.' : 'Upload a file to review its validation results.'} />}
+              {filteredRows.length === 0 && <EmptyState title={hasFilters ? 'No matching rows' : uploadPreview ? 'No rows need attention' : 'No matching rows'} description={hasFilters ? 'Adjust or clear the filters to see more uploaded data.' : uploadPreview ? 'Every row passed server validation for the examination in this file.' : 'Upload a file to review its validation results.'} />}
             </div>
           )}
           {columns.length === 0 && <EmptyState title="No file uploaded" description="Choose an XLSX workbook or a CSV, TSV, or TXT file above to review validation results." />}
@@ -1685,11 +1674,15 @@ const columns = [
   { key: 'maximumMarks', label: 'Maximum Marks' },
   { key: 'passingMarks', label: 'Passing Marks' },
   { key: 'studentMarks', label: 'Student Marks' },
-  { key: 'examStatus', label: 'Exam Status' },
+  { key: 'marksState', label: 'Marks Entry Status' },
+  { key: 'examStatus', label: 'Approval Status' },
   { key: 'percentage', label: 'Percentage' },
-]
-
-const PAGE_SIZE = 10
+].map(column => ({
+  ...column,
+  value: column.key === 'marksState'
+    ? row => hasEnteredMarks(row) ? 'Marks entered' : 'Awaiting marks'
+    : column.key,
+}))
 
 const initialAssessment = {
   examId: '',
@@ -1806,6 +1799,9 @@ const entityLabel = (item, keys) =>
 const normalized = value =>
   String(value ?? '').trim().toLowerCase()
 
+const hasEnteredMarks = row =>
+  row?.studentMarks !== undefined && row?.studentMarks !== null && String(row.studentMarks).trim() !== ''
+
 const normalizeExamType = value =>
   normalized(value).replace(/\b(exam|examination)\b/g, '').replace(/\s+/g, ' ').trim()
 
@@ -1921,6 +1917,7 @@ function MarksEntryWorkspace({ pendingMarks }) {
   const [facultyMembers, setFacultyMembers] = useState([])
   const [activeSuggestion, setActiveSuggestion] = useState('')
   const [query, setQuery] = useState('')
+  const [rowsPerPage, setRowsPerPage] = useState(10)
 
   const [filters, setFilters] = useState({
     academicYear: '',
@@ -1931,6 +1928,8 @@ function MarksEntryWorkspace({ pendingMarks }) {
     subject: '',
     examType: '',
     assessmentType: '',
+    workflowStatus: '',
+    marksState: '',
   })
 
   const [page, setPage] = useState(1)
@@ -2345,6 +2344,8 @@ function MarksEntryWorkspace({ pendingMarks }) {
           row => row.assessmentType
         ),
       ]),
+      workflowStatus: uniqueValues(allRows.map(row => row.workflowStatus || row.status || row.examStatus)),
+      marksState: ['Marks entered', 'Awaiting marks'],
     }),
     [
       academicOptions,
@@ -2368,6 +2369,8 @@ function MarksEntryWorkspace({ pendingMarks }) {
           row.semester,
           row.section,
           row.academicYear,
+          row.workflowStatus,
+          row.status,
         ]
           .filter(Boolean)
           .join(' ')
@@ -2393,6 +2396,10 @@ function MarksEntryWorkspace({ pendingMarks }) {
 
           assessmentType:
             row.assessmentType,
+
+          workflowStatus: row.workflowStatus || row.status || row.examStatus,
+
+          marksState: hasEnteredMarks(row) ? 'Marks entered' : 'Awaiting marks',
         }
 
         return (
@@ -2417,8 +2424,8 @@ function MarksEntryWorkspace({ pendingMarks }) {
   )
 
   const visible = filtered.slice(
-    (page - 1) * PAGE_SIZE,
-    page * PAGE_SIZE
+    (page - 1) * rowsPerPage,
+    page * rowsPerPage
   )
 
   const setFilter = (
@@ -2445,6 +2452,8 @@ function MarksEntryWorkspace({ pendingMarks }) {
       subject: '',
       examType: '',
       assessmentType: '',
+      workflowStatus: '',
+      marksState: '',
     })
 
     setPage(1)
@@ -2454,6 +2463,26 @@ function MarksEntryWorkspace({ pendingMarks }) {
     query ||
     Object.values(filters).some(Boolean)
   )
+
+  const appliedFilterLabels = [
+    ...(query ? [`Search: ${query.trim().slice(0, 24)}${query.trim().length > 24 ? '…' : ''}`] : []),
+    ...Object.entries(filters)
+      .filter(([, value]) => value)
+      .map(([key, value]) => `${({
+        academicYear: 'Year', course: 'Course', branch: 'Branch', semester: 'Semester',
+        section: 'Section', subject: 'Subject', examType: 'Exam', assessmentType: 'Assessment',
+        workflowStatus: 'Approval', marksState: 'Marks',
+      })[key]}: ${value}`),
+  ]
+
+  const enteredMarksCount = filtered.filter(hasEnteredMarks).length
+  const firstVisibleRow = filtered.length ? (page - 1) * rowsPerPage + 1 : 0
+  const lastVisibleRow = Math.min(page * rowsPerPage, filtered.length)
+
+  useEffect(() => {
+    const pageCount = Math.max(1, Math.ceil(filtered.length / rowsPerPage))
+    if (page > pageCount) setPage(pageCount)
+  }, [filtered.length, page, rowsPerPage])
 
   const eligibleSubjects = useMemo(
     () =>
@@ -3389,7 +3418,7 @@ function MarksEntryWorkspace({ pendingMarks }) {
               </h2>
 
               <p className="erp-card-subtitle">
-                Review and manage submitted marks with compact, high-density records.
+                Search student assessments, track marks entry, and follow each submission through approval.
               </p>
             </div>
           </header>
@@ -3400,6 +3429,7 @@ function MarksEntryWorkspace({ pendingMarks }) {
             active={hasFilters}
             onClear={clearFilters}
             className="marks-entry-filters"
+            appliedFilters={appliedFilterLabels}
             actions={
               <div className="marks-entry-card__actions">
                 <ExportMenu
@@ -3487,6 +3517,16 @@ function MarksEntryWorkspace({ pendingMarks }) {
                 'assessmentType',
                 'Assessment Type',
                 'All assessment types',
+              ],
+              [
+                'workflowStatus',
+                'Approval Status',
+                'All approval statuses',
+              ],
+              [
+                'marksState',
+                'Marks Entry',
+                'All marks states',
               ],
             ].map(
               ([
@@ -3958,6 +3998,23 @@ function MarksEntryWorkspace({ pendingMarks }) {
                   </div>
                 </form></NativeMarksDialog>}
 
+          <div className="marks-entry-table-toolbar" aria-label="Marks record view options">
+            <div className="marks-entry-table-toolbar__summary" role="status" aria-live="polite">
+              <strong>{filtered.length.toLocaleString()}</strong>
+              <span>{filtered.length === 1 ? 'matching record' : 'matching records'}</span>
+              <i aria-hidden="true" />
+              <span><strong>{enteredMarksCount.toLocaleString()}</strong> marks entered</span>
+              <span><strong>{(filtered.length - enteredMarksCount).toLocaleString()}</strong> awaiting</span>
+            </div>
+            <label className="marks-entry-page-size">
+              <span>Rows</span>
+              <select aria-label="Rows per page" value={rowsPerPage} onChange={event => { setRowsPerPage(Number(event.target.value)); setPage(1) }}>
+                {[10, 25, 50].map(size => <option key={size} value={size}>{size}</option>)}
+              </select>
+              <span>per page</span>
+            </label>
+          </div>
+
           <div className="marks-entry-table-wrap">
             <table className="erp-table marks-entry-records-table">
               <colgroup>
@@ -3979,7 +4036,7 @@ function MarksEntryWorkspace({ pendingMarks }) {
                     'Faculty Name',
                     'Exam & Assessment',
                     'Marks Scored',
-                    'Result & %',
+                    'Approval & %',
                     'Actions',
                   ].map(label => (
                     <th key={label}>
@@ -3993,13 +4050,17 @@ function MarksEntryWorkspace({ pendingMarks }) {
               <tbody>
                 {visible.map((row, index) => {
                   const summary = getMarksSummary(row)
-                  const result = row.examStatus || summary.examStatus
-                  const resultClass = result === 'Pass'
+                  const workflowStatus = row.workflowStatus || row.status || row.examStatus || ''
+                  const result = row.resultStatus || row.result || workflowStatus
+                  const resultKey = normalized(result)
+                  const resultClass = ['pass', 'approved'].includes(resultKey)
                     ? 'is-pass'
-                    : result === 'Fail'
+                    : ['fail', 'rejected'].includes(resultKey)
                       ? 'is-fail'
                       : 'is-pending'
                   const percentage = row.percentage || summary.percentage
+                  const scorePercentage = Number.parseFloat(String(percentage).replace('%', ''))
+                  const progressPercentage = Number.isFinite(scorePercentage) ? Math.max(0, Math.min(100, scorePercentage)) : null
                   const studentName = row.studentName || row.registrationNumber || 'Student'
                   const score = row.studentMarks !== '' && row.studentMarks != null
                     ? row.studentMarks
@@ -4090,6 +4151,7 @@ function MarksEntryWorkspace({ pendingMarks }) {
                           {row.passingMarks != null && row.passingMarks !== '' && (
                             <small>Min: {row.passingMarks}</small>
                           )}
+                          {progressPercentage !== null && <span className="marks-entry-score-track" role="progressbar" aria-label={`Score percentage for ${studentName}`} aria-valuemin="0" aria-valuemax="100" aria-valuenow={progressPercentage}><i style={{ width: `${progressPercentage}%` }} /></span>}
                         </div>
                       </td>
 
@@ -4097,7 +4159,7 @@ function MarksEntryWorkspace({ pendingMarks }) {
                         <div className="marks-entry-result-copy">
                           <span className={'marks-entry-result-pill ' + resultClass}>
                             <i aria-hidden="true" />
-                            {result || 'Pending'}
+                            {result || 'Awaiting review'}
                           </span>
                           {percentage && <strong>{percentage}</strong>}
                         </div>
@@ -4149,7 +4211,7 @@ function MarksEntryWorkspace({ pendingMarks }) {
               </tbody>
             </table>
 
-            {filtered.length === 0 && (
+            {filtered.length === 0 && !loading && (
               <EmptyState
                 title={
                   hasFilters
@@ -4165,15 +4227,16 @@ function MarksEntryWorkspace({ pendingMarks }) {
             )}
           </div>
 
-          {filtered.length > PAGE_SIZE && (
+          {filtered.length > rowsPerPage && (
             <TablePagination
               currentPage={page}
               totalPages={Math.ceil(
-                filtered.length / PAGE_SIZE
+                filtered.length / rowsPerPage
               )}
               onPageChange={setPage}
             />
           )}
+          {filtered.length > 0 && <p className="marks-entry-range" aria-live="polite">Showing {firstVisibleRow.toLocaleString()}–{lastVisibleRow.toLocaleString()} of {filtered.length.toLocaleString()} matching records</p>}
         </article>
       </section>
     </DashboardLayout>

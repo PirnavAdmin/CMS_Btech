@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+﻿import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   FiLayers,
@@ -60,6 +60,14 @@ const STEPS = [
   { id: STEP_BRANCHES, stepNumber: 3, label: 'Branches', icon: FiGitBranch, description: 'Specializations' },
   { id: STEP_SEMESTERS, stepNumber: 4, label: 'Semesters', icon: FiCalendar, description: 'Curriculum Terms' },
 ]
+
+const courseIdOf = (course) => course?.courseId ?? course?.CourseId ?? course?.id ?? course?.Id
+const courseDepartmentIdOf = (course) => course?.departmentId ?? course?.DepartmentId
+const courseNameOf = (course) => course?.courseName ?? course?.CourseName ?? course?.name ?? course?.Name
+const courseCodeOf = (course) => course?.courseCode ?? course?.CourseCode ?? course?.code ?? course?.Code
+const departmentIdOf = (department) => department?.departmentId ?? department?.DepartmentId ?? department?.id ?? department?.Id
+const branchIdOf = (branch) => branch?.branchId ?? branch?.BranchId ?? branch?.id ?? branch?.Id
+const branchCourseIdOf = (branch) => branch?.courseId ?? branch?.CourseId
 
 export default function AcademicStructure() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -125,6 +133,10 @@ export default function AcademicStructure() {
 
   const [formErrors, setFormErrors] = useState({})
 
+  const selectedSemesterCourse = courses.find((course) => String(courseIdOf(course)) === String(semesterForm.courseId))
+  const selectedSemesterCourseDepartmentId = courseDepartmentIdOf(selectedSemesterCourse)
+  const semesterCourseHasDepartment = selectedSemesterCourseDepartmentId != null && String(selectedSemesterCourseDepartmentId) !== ''
+
   const showToast = (message, type = 'success') => {
     setToast({ message, type })
     setTimeout(() => {
@@ -151,6 +163,7 @@ export default function AcademicStructure() {
         if (Array.isArray(raw?.data)) return raw.data
         if (Array.isArray(raw?.items)) return raw.items
         if (Array.isArray(raw?.semesters)) return raw.semesters
+        if (Array.isArray(raw?.courses)) return raw.courses
         return []
       }
 
@@ -228,8 +241,8 @@ export default function AcademicStructure() {
   const deptMap = useMemo(() => {
     const map = new Map()
     departments.forEach((d) => {
-      const id = String(d.departmentId ?? d.id)
-      map.set(id, d.departmentName ?? d.name)
+      const id = String(departmentIdOf(d))
+      map.set(id, d.departmentName ?? d.DepartmentName ?? d.name ?? d.Name)
     })
     return map
   }, [departments])
@@ -237,7 +250,7 @@ export default function AcademicStructure() {
   const courseMap = useMemo(() => {
     const map = new Map()
     courses.forEach((c) => {
-      const id = String(c.courseId ?? c.id)
+      const id = String(courseIdOf(c))
       map.set(id, c)
     })
     return map
@@ -246,7 +259,7 @@ export default function AcademicStructure() {
   const branchMap = useMemo(() => {
     const map = new Map()
     branches.forEach((b) => {
-      const id = String(b.branchId ?? b.id)
+      const id = String(branchIdOf(b))
       map.set(id, b)
     })
     return map
@@ -393,30 +406,33 @@ export default function AcademicStructure() {
         status: 'Active',
       })
     } else if (type === 'branch') {
-      const preferredCourse = courses.find((course) => courseIdOf(course) === String(selectedCourseFilter))
+      const preferredCourse = courses.find((course) => String(courseIdOf(course)) === String(selectedCourseFilter))
+        || courses.find((course) => selectedDeptFilter && String(courseDepartmentIdOf(course)) === String(selectedDeptFilter))
+        || courses[0]
       const defaultDept = courseDepartmentIdOf(preferredCourse)
-        || selectedDeptFilter
-        || String(departments[0]?.departmentId ?? departments[0]?.id ?? '')
-      const deptCourses = courses.filter((course) => courseDepartmentIdOf(course) === String(defaultDept))
+        ?? selectedDeptFilter
+        ?? departments[0]?.departmentId
+        ?? departments[0]?.id
+        ?? ''
       setBranchForm({
         name: '',
         code: '',
-        departmentId: defaultDept,
-        courseId: preferredCourse ? courseIdOf(preferredCourse) : (courseIdOf(deptCourses[0]) || courseIdOf(courses[0])),
+        departmentId: String(defaultDept || ''),
+        courseId: String(courseIdOf(preferredCourse) ?? ''),
         specialization: '',
         intakeCapacity: 60,
         status: 'Active',
       })
     } else if (type === 'semester') {
-      const preferredCourse = courses.find((course) => courseIdOf(course) === String(selectedCourseFilter))
-      const defaultCourse = preferredCourse ? courseIdOf(preferredCourse) : courseIdOf(courses[0])
-      const course = preferredCourse || courses.find((item) => courseIdOf(item) === defaultCourse)
-      const defaultDept = courseDepartmentIdOf(course)
-        || selectedDeptFilter
-        || String(departments[0]?.departmentId ?? departments[0]?.id ?? '')
-      const courseBranches = branches.filter((branch) => branchCourseIdOf(branch) === String(defaultCourse))
-      const filteredBranch = courseBranches.find((branch) => branchIdOf(branch) === String(selectedBranchFilter))
-      const defaultBranch = filteredBranch ? branchIdOf(filteredBranch) : branchIdOf(courseBranches[0])
+      const filteredCourse = courses.find((course) => String(courseIdOf(course)) === String(selectedCourseFilter))
+      const filteredDepartmentCourse = courses.find((course) => selectedDeptFilter && String(courseDepartmentIdOf(course)) === String(selectedDeptFilter))
+      const defaultCourseRecord = filteredCourse || filteredDepartmentCourse || courses[0]
+      const defaultCourse = String(courseIdOf(defaultCourseRecord) ?? '')
+      const courseDepartmentId = courseDepartmentIdOf(defaultCourseRecord)
+      const defaultDept = String(courseDepartmentId ?? (selectedDeptFilter || ''))
+      const courseBranches = branches.filter((branch) => String(branchCourseIdOf(branch)) === defaultCourse)
+      const selectedBranch = courseBranches.find((branch) => String(branchIdOf(branch)) === String(selectedBranchFilter))
+      const defaultBranch = String(branchIdOf(selectedBranch || courseBranches[0]) ?? '')
 
       setSemesterForm({
         departmentId: defaultDept,
@@ -468,11 +484,11 @@ export default function AcademicStructure() {
         status: String(item.status) === '1' || item.status === 'Active' || item.status === true ? 'Active' : 'Inactive',
       })
     } else if (type === 'semester') {
-      const course = courseMap.get(String(item.courseId ?? item.CourseId))
+      const course = courseMap.get(String(courseIdOf(item)))
       setSemesterForm({
-        departmentId: course?.departmentId ? String(course.departmentId) : '',
-        courseId: String(item.courseId ?? item.CourseId ?? ''),
-        branchId: String(item.branchId ?? item.BranchId ?? ''),
+        departmentId: String(courseDepartmentIdOf(course) ?? item.departmentId ?? item.DepartmentId ?? ''),
+        courseId: String(courseIdOf(item) ?? ''),
+        branchId: String(branchIdOf(item) ?? ''),
         academicYearId: String(item.academicYearId ?? item.AcademicYearId ?? ''),
         semesterNumber: item.semesterNumber ?? 1,
         semesterName: item.semesterName ?? item.name ?? '1st Semester',
@@ -645,6 +661,7 @@ export default function AcademicStructure() {
   const handleSubmitSemester = async (e) => {
     e.preventDefault()
     const errors = {}
+    if (!semesterForm.departmentId) errors.departmentId = 'Please select a Department'
     if (!semesterForm.courseId) errors.courseId = 'Please select a Course'
     if (!semesterForm.branchId) errors.branchId = 'Please select a Branch'
     if (!semesterForm.semesterNumber) errors.semesterNumber = 'Semester Number is required'
@@ -1534,15 +1551,21 @@ export default function AcademicStructure() {
             ======================================================== */}
         {modalType === 'department' && (
           <div className="as-modal-backdrop" onClick={closeModal}>
-            <div className="as-modal" onClick={(e) => e.stopPropagation()}>
-              <div className="as-modal__header">
-                <h3>{editingItem ? 'Edit Department' : 'Add Department'}</h3>
-                <button type="button" className="as-modal__close" onClick={closeModal}>
+            <div className="as-modal as-modal--enhanced" role="dialog" aria-modal="true" aria-labelledby="department-modal-title" onClick={(e) => e.stopPropagation()}>
+              <div className="as-modal__header as-modal__header--enhanced">
+                <div className="as-modal-heading">
+                  <span className="as-modal-eyebrow"><FiLayers aria-hidden="true" /> Academic structure</span>
+                  <h3 id="department-modal-title">{editingItem ? 'Edit Department' : 'Add Department'}</h3>
+                  <p>Create an academic unit and set its directory status.</p>
+                </div>
+                <button type="button" className="as-modal__close" onClick={closeModal} aria-label="Close department dialog">
                   <FiX />
                 </button>
               </div>
               <form onSubmit={handleSubmitDepartment}>
-                <div className="as-modal__body">
+                <div className="as-modal__body as-modal__body--enhanced">
+                  <section className="as-modal-section" aria-labelledby="department-profile-heading">
+                    <div className="as-modal-section__heading"><span>01</span><div><h4 id="department-profile-heading">Department profile</h4><p>Use a clear name and short code for campus records.</p></div></div>
                   <div className="as-form-row">
                     <div className="as-form-group">
                       <label htmlFor="dept-name">
@@ -1587,8 +1610,11 @@ export default function AcademicStructure() {
                       onChange={(e) => setDeptForm({ ...deptForm, description: e.target.value })}
                     />
                   </div>
+                  </section>
 
-                  <div className="as-form-group">
+                  <section className="as-modal-section" aria-labelledby="department-status-heading">
+                    <div className="as-modal-section__heading"><span>02</span><div><h4 id="department-status-heading">Availability</h4><p>Set whether this department is currently active.</p></div></div>
+                    <div className="as-form-group">
                     <label htmlFor="dept-status">Status</label>
                     <select
                       id="dept-status"
@@ -1599,7 +1625,8 @@ export default function AcademicStructure() {
                       <option value="Active">Active</option>
                       <option value="Inactive">Inactive</option>
                     </select>
-                  </div>
+                    </div>
+                  </section>
                 </div>
                 <div className="as-modal__footer">
                   <button type="button" className="as-btn as-btn--outline" onClick={closeModal}>
@@ -1619,15 +1646,21 @@ export default function AcademicStructure() {
             ======================================================== */}
         {modalType === 'course' && (
           <div className="as-modal-backdrop" onClick={closeModal}>
-            <div className="as-modal" onClick={(e) => e.stopPropagation()}>
-              <div className="as-modal__header">
-                <h3>{editingItem ? 'Edit Course' : 'Add Course'}</h3>
-                <button type="button" className="as-modal__close" onClick={closeModal}>
+            <div className="as-modal as-modal--enhanced" role="dialog" aria-modal="true" aria-labelledby="course-modal-title" onClick={(e) => e.stopPropagation()}>
+              <div className="as-modal__header as-modal__header--enhanced">
+                <div className="as-modal-heading">
+                  <span className="as-modal-eyebrow"><FiBookOpen aria-hidden="true" /> Academic structure</span>
+                  <h3 id="course-modal-title">{editingItem ? 'Edit Course' : 'Add Course'}</h3>
+                  <p>Define the program identity, duration, and semester structure.</p>
+                </div>
+                <button type="button" className="as-modal__close" onClick={closeModal} aria-label="Close course dialog">
                   <FiX />
                 </button>
               </div>
               <form onSubmit={handleSubmitCourse}>
-                <div className="as-modal__body">
+                <div className="as-modal__body as-modal__body--enhanced">
+                  <section className="as-modal-section" aria-labelledby="course-profile-heading">
+                    <div className="as-modal-section__heading"><span>01</span><div><h4 id="course-profile-heading">Program identity</h4><p>Enter the course name and its official code.</p></div></div>
                   <div className="as-form-row">
                     <div className="as-form-group">
                       <label htmlFor="course-name">
@@ -1659,8 +1692,10 @@ export default function AcademicStructure() {
                       />
                       {formErrors.code && <span className="as-form-error">{formErrors.code}</span>}
                     </div>
-                  </div>
+                  </section>
 
+                  <section className="as-modal-section" aria-labelledby="course-structure-heading">
+                    <div className="as-modal-section__heading"><span>02</span><div><h4 id="course-structure-heading">Program structure</h4><p>Set the course level, duration, and availability.</p></div></div>
                   <div className="as-form-row">
                     <div className="as-form-group">
                       <label htmlFor="course-type">Course Type</label>
@@ -1722,6 +1757,7 @@ export default function AcademicStructure() {
                       </select>
                     </div>
                   </div>
+                  </section>
                 </div>
                 <div className="as-modal__footer">
                   <button type="button" className="as-btn as-btn--outline" onClick={closeModal}>
@@ -1741,16 +1777,25 @@ export default function AcademicStructure() {
             ======================================================== */}
         {modalType === 'branch' && (
           <div className="as-modal-backdrop" onClick={closeModal}>
-            <div className="as-modal" onClick={(e) => e.stopPropagation()}>
-              <div className="as-modal__header">
-                <h3>{editingItem ? 'Edit Branch' : 'Add Branch'}</h3>
-                <button type="button" className="as-modal__close" onClick={closeModal}>
+            <div className="as-modal as-modal--branch" role="dialog" aria-modal="true" aria-labelledby="branch-modal-title" onClick={(e) => e.stopPropagation()}>
+              <div className="as-modal__header as-modal__header--branch">
+                <div className="as-branch-modal-heading">
+                  <span className="as-branch-modal-eyebrow"><FiGitBranch aria-hidden="true" /> Academic structure</span>
+                  <h3 id="branch-modal-title">{editingItem ? 'Edit Branch' : 'Add Branch'}</h3>
+                  <p>Connect this branch to an existing course, then add its name and capacity.</p>
+                </div>
+                <button type="button" className="as-modal__close" onClick={closeModal} aria-label="Close branch dialog">
                   <FiX />
                 </button>
               </div>
               <form onSubmit={handleSubmitBranch}>
-                <div className="as-modal__body">
-                  <div className="as-form-row">
+                <div className="as-modal__body as-modal__body--branch">
+                  <section className="as-branch-form-section" aria-labelledby="branch-academic-heading">
+                    <div className="as-branch-section-heading">
+                      <span>01</span>
+                      <div><h4 id="branch-academic-heading">Academic mapping</h4><p>Select the course this branch belongs to.</p></div>
+                    </div>
+                    <div className="as-form-row">
                     <div className="as-form-group">
                       <label htmlFor="branch-course">
                         Select Course <span className="required">*</span>
@@ -1760,26 +1805,30 @@ export default function AcademicStructure() {
                         className={`as-form-control ${formErrors.courseId ? 'is-invalid' : ''}`}
                         value={branchForm.courseId}
                         onChange={(e) => {
-                          const selectedCourse = courses.find((course) => courseIdOf(course) === e.target.value)
-                          setBranchForm({
-                            ...branchForm,
+                          const selectedCourse = courses.find((course) => String(courseIdOf(course)) === e.target.value)
+                          setBranchForm((current) => ({
+                            ...current,
                             courseId: e.target.value,
-                            departmentId: courseDepartmentIdOf(selectedCourse) || branchForm.departmentId,
-                          })
+                            departmentId: String(courseDepartmentIdOf(selectedCourse) ?? current.departmentId ?? ''),
+                          }))
                         }}
+                        disabled={isLoading || !courses.some((course) => courseIdOf(course) != null)}
                         required
                       >
-                        <option value="">-- Choose Course --</option>
-                        {courses.map((c) => {
-                          const id = courseIdOf(c)
+                        <option value="">{isLoading ? 'Loading existing courses...' : courses.some((course) => courseIdOf(course) != null) ? '-- Choose an existing course --' : 'No courses available'}</option>
+                        {courses.filter((course) => courseIdOf(course) != null).slice().sort((a, b) => String(courseNameOf(a) || '').localeCompare(String(courseNameOf(b) || ''))).map((c) => {
+                          const id = String(courseIdOf(c))
+                          const courseName = courseNameOf(c) || `Course ${id}`
+                          const courseCode = courseCodeOf(c)
                           return (
                             <option key={id} value={id}>
-                              {c.courseName ?? c.name} ({c.courseCode ?? c.code})
+                              {courseName}{courseCode ? ` (${courseCode})` : ''}
                             </option>
                           )
                         })}
                       </select>
                       {formErrors.courseId && <span className="as-form-error">{formErrors.courseId}</span>}
+                      {!isLoading && !courses.some((course) => courseIdOf(course) != null) && <span className="as-form-hint">Create a course in the Courses section before adding a branch.</span>}
                     </div>
 
                     <div className="as-form-group">
@@ -1792,12 +1841,12 @@ export default function AcademicStructure() {
                         value={branchForm.departmentId}
                         onChange={(e) => {
                           const newDeptId = e.target.value
-                          const deptCourses = courses.filter((course) => courseDepartmentIdOf(course) === String(newDeptId))
-                          const selectedCourseInDepartment = deptCourses.some((course) => courseIdOf(course) === String(branchForm.courseId))
+                          const deptCourses = courses.filter((c) => String(courseDepartmentIdOf(c)) === String(newDeptId))
+                          const selectedCourseInDepartment = deptCourses.some((c) => String(courseIdOf(c)) === String(branchForm.courseId))
                           setBranchForm({
                             ...branchForm,
                             departmentId: newDeptId,
-                            courseId: selectedCourseInDepartment ? branchForm.courseId : courseIdOf(deptCourses[0]),
+                            courseId: selectedCourseInDepartment ? branchForm.courseId : String(courseIdOf(deptCourses[0]) ?? ''),
                           })
                         }}
                         required
@@ -1814,9 +1863,15 @@ export default function AcademicStructure() {
                       </select>
                       {formErrors.departmentId && <span className="as-form-error">{formErrors.departmentId}</span>}
                     </div>
-                  </div>
+                    </div>
+                  </section>
 
-                  <div className="as-form-row">
+                  <section className="as-branch-form-section" aria-labelledby="branch-details-heading">
+                    <div className="as-branch-section-heading">
+                      <span>02</span>
+                      <div><h4 id="branch-details-heading">Branch details</h4><p>Set the branch identity and admission capacity.</p></div>
+                    </div>
+                    <div className="as-form-row">
                     <div className="as-form-group">
                       <label htmlFor="branch-name">
                         Branch Name <span className="required">*</span>
@@ -1847,9 +1902,9 @@ export default function AcademicStructure() {
                       />
                       {formErrors.code && <span className="as-form-error">{formErrors.code}</span>}
                     </div>
-                  </div>
+                    </div>
 
-                  <div className="as-form-row">
+                    <div className="as-form-row">
                     <div className="as-form-group">
                       <label htmlFor="branch-intake">Intake Capacity</label>
                       <input
@@ -1875,7 +1930,8 @@ export default function AcademicStructure() {
                         <option value="Inactive">Inactive</option>
                       </select>
                     </div>
-                  </div>
+                    </div>
+                  </section>
                 </div>
                 <div className="as-modal__footer">
                   <button type="button" className="as-btn as-btn--outline" onClick={closeModal}>
@@ -1895,112 +1951,116 @@ export default function AcademicStructure() {
             ======================================================== */}
         {modalType === 'semester' && (
           <div className="as-modal-backdrop" onClick={closeModal}>
-            <div className="as-modal as-modal--semester" onClick={(e) => e.stopPropagation()}>
-              <div className="as-modal__header">
-                <h3>{editingItem ? 'Edit Semester' : 'Add Semester'}</h3>
-                <button type="button" className="as-modal__close" onClick={closeModal}>
+            <div className="as-modal as-modal--enhanced as-modal--semester" role="dialog" aria-modal="true" aria-labelledby="semester-modal-title" onClick={(e) => e.stopPropagation()}>
+              <div className="as-modal__header as-modal__header--enhanced">
+                <div className="as-modal-heading">
+                  <span className="as-modal-eyebrow"><FiCalendar aria-hidden="true" /> Academic structure</span>
+                  <h3 id="semester-modal-title">{editingItem ? 'Edit Semester' : 'Add Semester'}</h3>
+                  <p>Choose a course, confirm its department, then select a branch.</p>
+                </div>
+                <button type="button" className="as-modal__close" onClick={closeModal} aria-label="Close semester dialog">
                   <FiX />
                 </button>
               </div>
               <form onSubmit={handleSubmitSemester}>
-                <div className="as-modal__body">
-                  <div className="as-form-row">
-                    <div className="as-form-group">
-                      <label htmlFor="sem-dept">Select Department</label>
-                      <select
-                        id="sem-dept"
-                        className="as-form-control"
-                        value={semesterForm.departmentId}
-                        onChange={(e) => {
-                          const newDept = e.target.value
-                          const deptCourses = courses.filter((course) => courseDepartmentIdOf(course) === String(newDept))
-                          const currentCourse = deptCourses.find((course) => courseIdOf(course) === String(semesterForm.courseId))
-                          const newCourse = currentCourse ? courseIdOf(currentCourse) : courseIdOf(deptCourses[0])
-                          const courseBranches = branches.filter((branch) => branchCourseIdOf(branch) === String(newCourse))
-                          setSemesterForm({
-                            ...semesterForm,
-                            departmentId: newDept,
-                            courseId: newCourse,
-                            branchId: courseBranches[0]?.branchId ?? courseBranches[0]?.id ?? '',
-                          })
-                        }}
-                      >
-                        <option value="">-- All Departments --</option>
-                        {departments.map((d) => {
-                          const id = String(d.departmentId ?? d.id)
-                          return (
-                            <option key={id} value={id}>
-                              {d.departmentName ?? d.name}
-                            </option>
-                          )
-                        })}
-                      </select>
-                    </div>
+                <div className="as-modal__body as-modal__body--enhanced">
+                  <section className="as-modal-section" aria-labelledby="semester-mapping-heading">
+                    <div className="as-modal-section__heading"><span>01</span><div><h4 id="semester-mapping-heading">Academic mapping</h4><p>Follow the course → department → branch sequence.</p></div></div>
+                    <div className="as-semester-flow">
+                      <div className="as-form-group">
+                        <label htmlFor="sem-course">Select Course <span className="required">*</span></label>
+                        <select
+                          id="sem-course"
+                          className={`as-form-control ${formErrors.courseId ? 'is-invalid' : ''}`}
+                          value={semesterForm.courseId}
+                          onChange={(e) => {
+                            const course = courses.find((item) => String(courseIdOf(item)) === e.target.value)
+                            const mappedDepartmentId = courseDepartmentIdOf(course)
+                            setSemesterForm((current) => ({
+                              ...current,
+                              courseId: e.target.value,
+                              departmentId: mappedDepartmentId == null ? '' : String(mappedDepartmentId),
+                              branchId: '',
+                            }))
+                            setFormErrors((current) => ({ ...current, courseId: '', departmentId: '', branchId: '' }))
+                          }}
+                          required
+                        >
+                          <option value="">-- Choose Course --</option>
+                          {courses.filter((course) => courseIdOf(course) != null).map((course) => {
+                            const id = String(courseIdOf(course))
+                            const name = courseNameOf(course) || `Course ${id}`
+                            const code = courseCodeOf(course)
+                            return <option key={id} value={id}>{name}{code ? ` (${code})` : ''}</option>
+                          })}
+                        </select>
+                        {formErrors.courseId && <span className="as-form-error">{formErrors.courseId}</span>}
+                        <span className="as-form-hint">Choose the course first. Its department will be filled in when it is configured.</span>
+                      </div>
 
-                    <div className="as-form-group">
-                      <label htmlFor="sem-course">
-                        Select Course <span className="required">*</span>
-                      </label>
-                      <select
-                        id="sem-course"
-                        className={`as-form-control ${formErrors.courseId ? 'is-invalid' : ''}`}
-                        value={semesterForm.courseId}
-                        onChange={(e) => {
-                          const newCourse = e.target.value
-                          const selectedCourse = courses.find((course) => courseIdOf(course) === newCourse)
-                          const courseBranches = branches.filter((branch) => branchCourseIdOf(branch) === String(newCourse))
-                          setSemesterForm({
-                            ...semesterForm,
-                            courseId: newCourse,
-                            departmentId: courseDepartmentIdOf(selectedCourse) || semesterForm.departmentId,
-                            branchId: branchIdOf(courseBranches[0]),
-                          })
-                        }}
-                        required
-                      >
-                        <option value="">-- Choose Course --</option>
-                        {courses.map((c) => {
-                          const id = courseIdOf(c)
-                          return (
-                            <option key={id} value={id}>
-                              {c.courseName ?? c.name} ({c.courseCode ?? c.code})
-                            </option>
-                          )
-                        })}
-                      </select>
-                      {formErrors.courseId && <span className="as-form-error">{formErrors.courseId}</span>}
-                    </div>
-                  </div>
+                      <div className="as-form-group">
+                        <label htmlFor="sem-dept">Select Department <span className="required">*</span></label>
+                        <select
+                          id="sem-dept"
+                          className={`as-form-control ${formErrors.departmentId ? 'is-invalid' : ''}`}
+                          value={semesterForm.departmentId}
+                          onChange={(e) => {
+                            setSemesterForm((current) => ({ ...current, departmentId: e.target.value, branchId: '' }))
+                            setFormErrors((current) => ({ ...current, departmentId: '', branchId: '' }))
+                          }}
+                          disabled={!semesterForm.courseId || semesterCourseHasDepartment}
+                          required
+                        >
+                          <option value="">{semesterForm.courseId ? '-- Choose Department --' : 'Choose a course first'}</option>
+                          {semesterCourseHasDepartment && !departments.some((department) => String(departmentIdOf(department)) === String(selectedSemesterCourseDepartmentId)) && (
+                            <option value={String(selectedSemesterCourseDepartmentId)}>Department {selectedSemesterCourseDepartmentId}</option>
+                          )}
+                          {departments.map((department) => {
+                            const id = String(departmentIdOf(department))
+                            const name = department.departmentName ?? department.DepartmentName ?? department.name ?? department.Name ?? `Department ${id}`
+                            return <option key={id} value={id}>{name}</option>
+                          })}
+                        </select>
+                        {formErrors.departmentId && <span className="as-form-error">{formErrors.departmentId}</span>}
+                        <span className="as-form-hint">
+                          {!semesterForm.courseId
+                            ? 'Select a course to continue.'
+                            : semesterCourseHasDepartment
+                              ? 'Department linked to the selected course.'
+                              : 'Choose the department associated with this course.'}
+                        </span>
+                      </div>
 
-                  <div className="as-form-row">
-                    <div className="as-form-group">
-                      <label htmlFor="sem-branch">
-                        Select Branch <span className="required">*</span>
-                      </label>
-                      <select
-                        id="sem-branch"
-                        className={`as-form-control ${formErrors.branchId ? 'is-invalid' : ''}`}
-                        value={semesterForm.branchId}
-                        onChange={(e) => setSemesterForm({ ...semesterForm, branchId: e.target.value })}
-                        required
-                      >
-                        <option value="">-- Choose Branch --</option>
-                        {(semesterForm.courseId
-                          ? branches.filter((branch) => branchCourseIdOf(branch) === String(semesterForm.courseId))
-                          : branches
-                        ).map((b) => {
-                          const id = String(b.branchId ?? b.id)
-                          const branchId = branchIdOf(b)
-                          return (
-                            <option key={branchId || id} value={branchId}>
-                              {b.branchName ?? b.name} ({b.branchCode ?? b.code})
-                            </option>
-                          )
-                        })}
-                      </select>
-                      {formErrors.branchId && <span className="as-form-error">{formErrors.branchId}</span>}
+                      <div className="as-form-group">
+                        <label htmlFor="sem-branch">Select Branch <span className="required">*</span></label>
+                        <select
+                          id="sem-branch"
+                          className={`as-form-control ${formErrors.branchId ? 'is-invalid' : ''}`}
+                          value={semesterForm.branchId}
+                          onChange={(e) => {
+                            setSemesterForm((current) => ({ ...current, branchId: e.target.value }))
+                            setFormErrors((current) => ({ ...current, branchId: '' }))
+                          }}
+                          disabled={!semesterForm.courseId || !semesterForm.departmentId}
+                          required
+                        >
+                          <option value="">{!semesterForm.courseId ? 'Choose a course first' : !semesterForm.departmentId ? 'Choose a department first' : '-- Choose Branch --'}</option>
+                          {branches.filter((branch) => String(branchCourseIdOf(branch)) === String(semesterForm.courseId) && branchIdOf(branch) != null).map((branch) => {
+                            const id = String(branchIdOf(branch))
+                            const name = branch.branchName ?? branch.BranchName ?? branch.name ?? branch.Name ?? `Branch ${id}`
+                            const code = branch.branchCode ?? branch.BranchCode ?? branch.code ?? branch.Code
+                            return <option key={id} value={id}>{name}{code ? ` (${code})` : ''}</option>
+                          })}
+                        </select>
+                        {formErrors.branchId && <span className="as-form-error">{formErrors.branchId}</span>}
+                        {semesterForm.courseId && semesterForm.departmentId && !branches.some((branch) => String(branchCourseIdOf(branch)) === String(semesterForm.courseId)) && <span className="as-form-hint">No branches are configured for this course yet.</span>}
+                      </div>
                     </div>
+                  </section>
 
+                  <section className="as-modal-section" aria-labelledby="semester-term-heading">
+                    <div className="as-modal-section__heading"><span>02</span><div><h4 id="semester-term-heading">Term details</h4><p>Name the term and select its academic year.</p></div></div>
+                    <div className="as-semester-term-grid">
                     <div className="as-form-group">
                       <label htmlFor="sem-num">
                         Semester Number (1 to 8) <span className="required">*</span>
@@ -2020,17 +2080,10 @@ export default function AcademicStructure() {
                         }}
                         required
                       >
-                        {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
-                          <option key={n} value={n}>
-                            Semester {n}
-                          </option>
-                        ))}
+                        {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => <option key={n} value={n}>Semester {n}</option>)}
                       </select>
                       {formErrors.semesterNumber && <span className="as-form-error">{formErrors.semesterNumber}</span>}
                     </div>
-                  </div>
-
-                  <div className="as-form-row">
                     <div className="as-form-group">
                       <label htmlFor="sem-name">Semester Name</label>
                       <input
@@ -2062,8 +2115,11 @@ export default function AcademicStructure() {
                         })}
                       </select>
                     </div>
-                  </div>
+                    </div>
+                  </section>
 
+                  <section className="as-modal-section" aria-labelledby="semester-dates-heading">
+                    <div className="as-modal-section__heading"><span>03</span><div><h4 id="semester-dates-heading">Schedule</h4><p>Set the planned start and end dates.</p></div></div>
                   <div className="as-form-row">
                     <div className="as-form-group">
                       <label htmlFor="sem-start">Start Date</label>
@@ -2087,22 +2143,27 @@ export default function AcademicStructure() {
                       {formErrors.endDate && <span className="as-form-error">{formErrors.endDate}</span>}
                     </div>
                   </div>
+                  </section>
 
-                  <div className="as-form-row">
-                    <div className="as-form-group">
-                      <label htmlFor="sem-status">Semester Status</label>
-                      <select
-                        id="sem-status"
-                        className="as-form-control"
-                        value={semesterForm.status}
-                        onChange={(e) => setSemesterForm({ ...semesterForm, status: e.target.value })}
-                      >
-                        <option value="Upcoming">Upcoming</option>
-                        <option value="Active">Active</option>
-                        <option value="Completed">Completed</option>
-                      </select>
+                  <section className="as-modal-section" aria-labelledby="semester-status-heading">
+                    <div className="as-modal-section__heading"><span>04</span><div><h4 id="semester-status-heading">Availability</h4><p>Control the current semester workflow status.</p></div></div>
+                    <div className="as-form-row">
+                      <div className="as-form-group">
+                        <label htmlFor="sem-status">Semester Status</label>
+                        <select
+                          id="sem-status"
+                          className="as-form-control"
+                          value={semesterForm.status}
+                          onChange={(e) => setSemesterForm({ ...semesterForm, status: e.target.value })}
+                        >
+                          <option value="Upcoming">Upcoming</option>
+                          <option value="Active">Active</option>
+                          <option value="Completed">Completed</option>
+                        </select>
+                      </div>
                     </div>
                   </div>
+                  </section>
                 </div>
                 <div className="as-modal__footer">
                   <button type="button" className="as-btn as-btn--outline" onClick={closeModal}>
