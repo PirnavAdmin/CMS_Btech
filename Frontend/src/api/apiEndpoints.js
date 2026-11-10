@@ -16,7 +16,7 @@ if (typeof window !== 'undefined' && window.localStorage) {
 }
 
 const normalizeBaseUrl = (value = '') => value.trim().replace(/\/+$/, '')
-const DEFAULT_API_BASE_URL = 'https://drivable-shaky-ferocious.ngrok-free.dev'
+const DEFAULT_API_BASE_URL = 'https://movable-swampland-tinderbox.ngrok-free.dev'
 // Results endpoints are optional until the institution's result service is integrated.
 export const RESULTS_API_ENABLED = String(import.meta.env.VITE_RESULTS_API_ENABLED || '').toLowerCase() === 'true'
 
@@ -312,7 +312,7 @@ const extractListResponse = (response) => {
   let current = response
   for (let depth = 0; depth < 5 && current && typeof current === 'object'; depth += 1) {
     if (Array.isArray(current)) return current
-    const list = current.items ?? current.content ?? current.results ?? current.records ?? current.academicYears ?? current.years ?? current.rows ?? current.roles ?? current.users ?? current.userList ?? (Array.isArray(current.data) ? current.data : undefined)
+    const list = current.items ?? current.content ?? current.results ?? current.records ?? current.academicYears ?? current.years ?? current.branches ?? current.courses ?? current.departments ?? current.semesters ?? current.sections ?? current.rows ?? current.roles ?? current.users ?? current.userList ?? (Array.isArray(current.data) ? current.data : undefined)
     if (Array.isArray(list)) return list
     current = current.data ?? current.result ?? current.payload
   }
@@ -841,7 +841,7 @@ export const branchApi = {
   },
   getByCourse: async (courseId) => {
     const response = await request(API_ENDPOINTS.branches.byCourse(courseId))
-    return Array.isArray(response?.data) ? response.data : []
+    return listResponse(response)
   },
   getById: async (id) => {
     const response = await request(API_ENDPOINTS.branches.detail(id))

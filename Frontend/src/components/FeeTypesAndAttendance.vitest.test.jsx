@@ -8,9 +8,9 @@ vi.mock('../components/ExportMenu', () => ({ default: () => <button>Export</butt
 vi.mock('../api/apiEndpoints', async original => ({ ...await original(), feeConfigurationApi: { categories:vi.fn() } }))
 beforeEach(() => { vi.clearAllMocks(); feeConfigurationApi.categories.mockResolvedValue([{id:1,code:'ACA',name:'Academic'},{id:2,code:'HOST',name:'Hostel'}]) })
 afterEach(cleanup)
-test('fee types use actual backend records and disclose missing mutation support', async () => {
+test('fee types use actual backend records without the unavailable mutation banner', async () => {
   render(<FeeTypesConfiguration />); await screen.findByRole('table',{name:'Fee types'})
-  expect(screen.getByText(/read-only fee category API/)).toBeTruthy()
+  expect(screen.queryByText(/read-only fee category API/)).toBeNull()
   fireEvent.change(screen.getByLabelText('Search fee types'), {target:{value:'Hostel'}})
   expect(screen.queryByText('Academic')).toBeNull(); expect(screen.getByText('Hostel')).toBeTruthy()
 })
