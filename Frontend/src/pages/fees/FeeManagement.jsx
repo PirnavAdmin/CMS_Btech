@@ -7,6 +7,7 @@ import { assignPublishedStudentFees, matchesPublishedFeeScope } from '../../serv
 import SharedFeeDialog from '../../components/ViewDialog'
 import SharedFeeHeader from '../../components/PageHeader'
 import FeeTypesConfiguration from './FeeTypesConfiguration'
+import FeeWorkspaceTabs from './FeeWorkspaceTabs'
 import { ADMISSION_QUOTAS } from '../../utils/admissionQuotaOptions'
 import { approveForAdmission } from '../../services/academicFeePlanApproval.js'
 import '../admin-management/AdminManagement.css'
@@ -738,6 +739,8 @@ export const FeeStructureWizardModule = (() => {
     const [previewFields, setPreviewFields] = useState({});
     const [advancedOpen, setAdvancedOpen] = useState(true);
     const [formTab, setFormTab] = useState("applicability");
+    const [courseBranchLookup, setCourseBranchLookup] = useState({ courseId: "", rows: [], loading: false });
+    const [semesterLookup, setSemesterLookup] = useState({ scope: "", rows: [], loading: false });
     const formTabId = useId();
     const formTabs = [["applicability", "Academic Details"], ["breakdown", "Fee Breakdown"], ["schedule", "Payment Schedule & Final Review"]];
 
@@ -763,6 +766,106 @@ export const FeeStructureWizardModule = (() => {
       if (configurations.length && !configurations.some(row => row.id === previewConfigId)) setPreviewConfigId(configurations[0].id);
       if (scheduleTarget !== "common" && !configurations.some(row => row.id === scheduleTarget)) setScheduleTarget("common");
     }, [configurations, previewConfigId, scheduleTarget]);
+
+    // Load branches from the course-scoped endpoint as soon as a course is
+    // chosen. The all-branches list can be stale or lack a resolvable college
+    // relationship, even though the selected course has valid branches.
+    useEffect(() => {
+      const courseId = String(s.courseId || "");
+      if (!courseId) {
+        setCourseBranchLookup({ courseId: "", rows: [], loading: false });
+        return undefined;
+      }
+      let active = true;
+      setCourseBranchLookup({ courseId, rows: [], loading: true });
+      const unwrapRows = response => {
+        let current = response;
+        for (let depth = 0; depth < 6; depth += 1) {
+          if (Array.isArray(current)) return current;
+          if (!current || typeof current !== "object") break;
+          const rows = [current.items, current.content, current.records, current.results, current.branches, current.rows]
+            .find(Array.isArray);
+          if (rows) return rows;
+          current = current.data ?? current.result ?? current.payload;
+        }
+        return [];
+      };
+      apiEndpointsModule.branchApi.getByCourse(courseId)
+        .then(async rows => {
+          // Some deployments expose the academic lookup through the college
+          // API client instead of the shared v1 client. Retry that same
+          // course-scoped contract when the first client returns no rows.
+          if (!rows?.length && collegeApiModule.getBranchesByCourse) {
+            try { rows = unwrapRows(await collegeApiModule.getBranchesByCourse(courseId)); } catch { /* use the loaded branch master below */ }
+          }
+          if (!active) return;
+          const normalized = (Array.isArray(rows) ? rows : []).map(row => {
+            const read = (...keys) => Object.entries(row || {}).find(([field, fieldValue]) =>
+              keys.some(key => field.replaceAll("_", "").toLowerCase() === key.replaceAll("_", "").toLowerCase()) && fieldValue != null
+            )?.[1];
+            const id = collegeScopeModule.collegeField(row, "branch") ?? read("id", "branchId");
+            const name = read("branchName", "name", "shortName", "branchCode");
+            const relatedCourseId = collegeScopeModule.collegeField(row, "course") ?? read("courseId", "courseID");
+            return id != null && name ? { ...row, id, name: String(name).trim(), courseId: relatedCourseId ?? courseId } : null;
+          }).filter(Boolean);
+          setCourseBranchLookup({ courseId, rows: normalized, loading: false });
+        })
+        .catch(() => {
+          if (active) setCourseBranchLookup({ courseId, rows: [], loading: false });
+        });
+      return () => { active = false; };
+    }, [s.courseId]);
+
+    // Semester lookup is dependent on the selected branch and year. The global
+    // semester list can be stale or unscoped, so ask the existing semester API
+    // for this exact academic mapping and retain the page's lookup list as a
+    // fallback when the endpoint omits optional filters.
+    useEffect(() => {
+      const courseId = String(s.courseId || "");
+      const branchId = String(s.branchId || "");
+      const academicYearId = String(s.academicYearId || "");
+      const scope = [courseId, branchId, academicYearId].join(":");
+      if (!courseId || !branchId || !academicYearId) {
+        setSemesterLookup({ scope: "", rows: [], loading: false });
+        return undefined;
+      }
+      let active = true;
+      setSemesterLookup({ scope, rows: [], loading: true });
+      const read = (row, ...keys) => Object.entries(row || {}).find(([field, fieldValue]) =>
+        keys.some(key => field.replaceAll("_", "").toLowerCase() === key.replaceAll("_", "").toLowerCase()) && fieldValue != null
+      )?.[1];
+      collegeApiModule.getSemesters({ courseId, branchId, academicYearId })
+        .then(response => {
+          if (!active) return;
+          let current = response;
+          let list = null;
+          for (let depth = 0; depth < 6; depth += 1) {
+            if (Array.isArray(current)) { list = current; break; }
+            if (!current || typeof current !== "object") break;
+            list = [current.items, current.content, current.records, current.results, current.semesters, current.rows]
+              .find(Array.isArray) || null;
+            if (list) break;
+            current = current.data ?? current.result ?? current.payload;
+          }
+          const rows = (list || []).map(row => {
+            const id = collegeScopeModule.collegeField(row, "semester") ?? read(row, "semesterId", "id");
+            const name = read(row, "semesterName", "name") || `Semester ${read(row, "semesterNumber") || ""}`;
+            const rowCourseId = collegeScopeModule.collegeField(row, "course") ?? read(row, "courseId");
+            const rowBranchId = collegeScopeModule.collegeField(row, "branch") ?? read(row, "branchId");
+            const rowYearId = collegeScopeModule.collegeField(row, "academicYear") ?? read(row, "academicYearId");
+            if (id == null || (rowCourseId != null && String(rowCourseId) !== courseId)
+              || (rowBranchId != null && String(rowBranchId) !== branchId)
+              || (rowYearId != null && String(rowYearId) !== academicYearId)) return null;
+            return { ...row, id, name: String(name).trim(), courseId: rowCourseId ?? courseId,
+              branchId: rowBranchId ?? branchId, academicYearId: rowYearId ?? academicYearId };
+          }).filter(Boolean);
+          setSemesterLookup({ scope, rows, loading: false });
+        })
+        .catch(() => {
+          if (active) setSemesterLookup({ scope, rows: [], loading: false });
+        });
+      return () => { active = false; };
+    }, [s.courseId, s.branchId, s.academicYearId]);
 
     const previewConfig = configurations.find(row => row.id === previewConfigId) || configurations[0];
     const configPatch = (id, change) => {
@@ -793,19 +896,67 @@ export const FeeStructureWizardModule = (() => {
       setError("");
     };
 
-    const branches = masters.branches.filter(
-      (b) => !s.courseId || String(b.courseId) === String(s.courseId)
+    const course = masters.courses.find(row => String(row.id) === String(s.courseId));
+    const localBranches = (masters.allBranches || masters.branches).filter((branch) => {
+      const branchCourseId = collegeScopeModule.collegeField(branch, "course") ?? branch.courseId ?? branch.CourseId;
+      const branchCourseName = String(branch.courseName || branch.CourseName || branch.course?.courseName || "").trim().toLowerCase();
+      const selectedCourseName = String(course?.name || course?.courseName || "").trim().toLowerCase();
+      // Some legacy branch-list responses omit CourseId but include CourseName.
+      // Match that name when possible; if neither relation is supplied, leave
+      // the row usable as a fallback from this already college-scoped list.
+      return !s.courseId || (branchCourseId != null
+        ? String(branchCourseId) === String(s.courseId)
+        : branchCourseName && selectedCourseName ? branchCourseName === selectedCourseName : true);
+    });
+    const fetchedBranches = courseBranchLookup.courseId === String(s.courseId || "")
+      ? courseBranchLookup.rows
+      : [];
+    const branches = [...new Map([...fetchedBranches, ...localBranches].map(branch => [String(branch.id ?? branch.branchId), branch])).values()];
+    const semesterScope = [String(s.courseId || ""), String(s.branchId || ""), String(s.academicYearId || "")].join(":");
+    const fetchedSemesters = semesterLookup.scope === semesterScope ? semesterLookup.rows : [];
+    const semesterSource = fetchedSemesters.length ? fetchedSemesters : masters.semesters;
+    const semesters = semesterSource.filter(
+      (semester) => {
+        const semesterCourseId = collegeScopeModule.collegeField(semester, "course") ?? semester.courseId;
+        const semesterBranchId = collegeScopeModule.collegeField(semester, "branch") ?? semester.branchId;
+        const semesterYearId = collegeScopeModule.collegeField(semester, "academicYear") ?? semester.academicYearId;
+        return (!semesterCourseId || String(semesterCourseId) === String(s.courseId)) &&
+          (!semesterBranchId || String(semesterBranchId) === String(s.branchId)) &&
+          (!semesterYearId || String(semesterYearId) === String(s.academicYearId));
+      }
     );
-    const semesters = masters.semesters.filter(
-      (r) =>
-        (!r.courseId || String(r.courseId) === String(s.courseId)) &&
-        (!r.branchId || String(r.branchId) === String(s.branchId)) &&
-        (!r.academicYearId || String(r.academicYearId) === String(s.academicYearId))
-    );
-    // Only cohorts already stored by the server are selectable.
-    const batches = [...new Set([...(masters.batchScopes || []), ...serverPlans]
-      .filter(row => s.courseId && s.branchId && String(row.courseId) === String(s.courseId) && String(row.branchId) === String(s.branchId))
-      .map(row => row.batch).filter(Boolean))];
+    // Admissions creates a batch from the selected academic year and course,
+    // so a new cohort must be selectable before students or fee plans exist.
+    // Keep persisted batches for legacy cohorts, but scope them to this year.
+    const selectedYear = masters.years.find(row => String(row.id) === String(s.academicYearId));
+    const selectedCourse = course;
+    const selectedBranch = branches.find(row => String(row.id ?? row.branchId) === String(s.branchId));
+    const derivedBatch = calculatedFeeBatch(selectedYear, {
+      ...(selectedCourse || {}),
+      durationYears: selectedCourse?.durationYears ?? selectedCourse?.duration_years ?? selectedBranch?.durationYears ?? selectedBranch?.duration_years,
+      durationValue: selectedCourse?.durationValue ?? selectedBranch?.durationValue,
+      duration: selectedCourse?.duration ?? selectedCourse?.courseDuration ?? selectedBranch?.duration,
+      totalSemesters: selectedCourse?.totalSemesters ?? selectedCourse?.total_semesters ?? selectedBranch?.totalSemesters ?? selectedBranch?.total_semesters,
+      semesters: selectedCourse?.semesters ?? selectedBranch?.semesters,
+    });
+    const admittedBatches = (students || []).filter(student => {
+      const studentCourseId = collegeScopeModule.collegeField(student, "course");
+      const studentBranchId = collegeScopeModule.collegeField(student, "branch");
+      const studentYearId = collegeScopeModule.collegeField(student, "academicYear");
+      return studentCourseId != null && studentBranchId != null && studentYearId != null
+        && String(studentCourseId) === String(s.courseId)
+        && String(studentBranchId) === String(s.branchId)
+        && String(studentYearId) === String(s.academicYearId);
+    }).map(student => student.batch ?? student.admissionBatch ?? student.batchName ?? student.admission?.batch).filter(Boolean);
+    const batches = [...new Set([
+      ...(masters.batchScopes || []),
+      ...serverPlans,
+      ...admittedBatches.map(batch => ({ academicYearId: s.academicYearId, courseId: s.courseId, branchId: s.branchId, batch })),
+      ...(derivedBatch ? [{ academicYearId: s.academicYearId, courseId: s.courseId, branchId: s.branchId, batch: derivedBatch }] : []),
+    ]
+      .filter(row => s.courseId && s.branchId && String(row.courseId) === String(s.courseId) && String(row.branchId) === String(s.branchId)
+        && (!row.academicYearId || String(row.academicYearId) === String(s.academicYearId)))
+      .map(row => String(row.batch || "").trim()).filter(Boolean))];
     const suggestedName = [masters.courses.find(row => String(row.id) === String(s.courseId))?.name,
       branches.find(row => String(row.id) === String(s.branchId))?.name, s.batch,
       semesters.find(row => String(row.id) === String(s.semesterId))?.name,
@@ -1092,21 +1243,21 @@ export const FeeStructureWizardModule = (() => {
               />
 
               <FeeSelect
-                label="Branch *" disabled={!s.courseId || academicContext.loading || !branches.length}
+                label="Branch *" disabled={!s.courseId || courseBranchLookup.loading || !branches.length}
                 value={s.branchId || ""}
                 options={[{ id: "", name: "Select Branch" }, ...branches]}
                 onChange={(branchId) => patch({ branchId, semesterId: "" })}
               />
 
               <FeeSelect
-                label="Admission Batch *" disabled={!s.branchId || !plansLoaded || !batches.length}
+                label="Admission Batch *" disabled={!s.branchId || !batches.length}
                 value={s.batch || ""}
                 options={[{ id: "", name: "Select Batch" }, ...batches.map((b) => ({ id: b, name: b }))]}
                 onChange={(batch) => patch({ batch })}
               />
 
               {(!legacyLocalEdit || s.cycle === "Semester-wise") && <FeeSelect
-                label="Applicable Semester *" disabled={!s.batch || !semesters.length}
+                label="Applicable Semester *" disabled={!s.branchId || semesterLookup.loading || !semesters.length}
                 value={s.semesterId || ""}
                 options={[{ id: "", name: "Select Semester" }, ...semesters]}
                 onChange={(semesterId) => patch({ semesterId })}
@@ -1119,7 +1270,7 @@ export const FeeStructureWizardModule = (() => {
             <p className="fm-contract-note" role="note">Annual applicability and year-of-study scope are unavailable: the fee-plan API matches a single semester. Configure payment installments in Step 3.</p>
             {academicContext.loading && <p role="status">Loading academic options…</p>}
             {academicContext.error && <p role="alert" className="fm-error-banner">{academicContext.error}</p>}
-            {!academicContext.loading && <p className="fm-scope-status" role="status">{!masters.years.length ? "No active academic years for this college." : s.academicYearId && !masters.courses.length ? "No courses available." : s.courseId && !branches.length ? "No branches for this course." : s.branchId && plansLoaded && !batches.length ? "No admission batches found in existing admissions or fee plans for this course and branch." : s.batch && !semesters.length ? "No semesters available for this academic scope." : ""}</p>}
+            {!academicContext.loading && <p className="fm-scope-status" role="status">{!masters.years.length ? "No active academic years for this college." : s.academicYearId && !masters.courses.length ? "No courses available." : s.courseId && !courseBranchLookup.loading && !branches.length ? "No branches found for this course in the selected college." : s.branchId && plansLoaded && !batches.length ? "No admission batch is available for this course and branch yet." : s.branchId && !semesterLookup.loading && !semesters.length ? "No semester is configured for this course, branch, and academic year." : ""}</p>}
             {legacyLocalEdit && <div className="fm-form-grid"><FeeInput label="Student Category / Quota" value={s.category || ""} placeholder="Leave blank for all students" onChange={category => patch({ category, applicableTo: category ? "Selected Category" : "All Students" })} /></div>}
           </section>
 
@@ -1370,10 +1521,19 @@ export const FeeStructureModule = (() => {
   const STATUSES = ["All", "Active", "Draft", "Inactive"];
 
   const norm = (rows, ids, names) => {
+    const read = (row, keys) => {
+      for (const key of keys) {
+        const match = Object.entries(row || {}).find(([field, value]) =>
+          field.replaceAll("_", "").toLowerCase() === key.replaceAll("_", "").toLowerCase() && value != null
+        );
+        if (match) return match[1];
+      }
+      return undefined;
+    };
     const map = new Map();
     for (const x of rows || []) {
-      const id = ids.map((k) => x[k]).find((v) => v != null);
-      const nameStr = names.map((k) => x[k]).find(Boolean);
+      const id = read(x, ids);
+      const nameStr = read(x, names);
       const cleanName = String(nameStr || "").trim();
       if (!id || !cleanName) continue;
       const key = String(id);
@@ -1403,11 +1563,11 @@ export const FeeStructureModule = (() => {
       .filter((x) => x && typeof x === "object")
       .map((x) => ({
         ...x,
-        id: x.semesterId || x.id,
+        id: collegeScopeModule.collegeField(x, "semester") || x.id,
         name: x.semesterName || x.name || `Semester ${x.semesterNumber || ""}`,
-        courseId: x.courseId || "",
-        branchId: x.branchId || "",
-        academicYearId: x.academicYearId || "",
+        courseId: collegeScopeModule.collegeField(x, "course") || x.courseId || "",
+        branchId: collegeScopeModule.collegeField(x, "branch") || x.branchId || "",
+        academicYearId: collegeScopeModule.collegeField(x, "academicYear") || x.academicYearId || "",
       }))
       .filter((x) => x.id && x.name);
   };
@@ -1771,13 +1931,14 @@ export const FeeStructureModule = (() => {
     workflow,
     facilityType,
     viewPlan = false,
+    feeManagementTabs = [],
   }) {
     const navigate = useNavigate();
     const {canAction}=useScreenAccess();
     const canCreatePlan=canAction('/fees','create'),canEditPlan=canAction('/fees','edit');
     const location = useLocation();
     const { facilityId, structureId } = useParams();
-    const { scopeRecords, academicYears, selectedCollegeId, selectedAcademicYearId, selectedAcademicYear } =
+    const { academicYears, selectedCollegeId, selectedAcademicYearId, selectedAcademicYear } =
       useAcademic();
 
     const categoryFromUrl = () => {
@@ -1830,13 +1991,26 @@ export const FeeStructureModule = (() => {
       status: "All",
     });
 
+    // Scope the API results against this form's freshly loaded hierarchy. The
+    // AcademicContext hierarchy may still be stale while this page's lookups
+    // are loading, which previously filtered valid branches out of the select.
+    const feeLookupScope = useMemo(
+      () => collegeScopeModule.createCollegeScope(selectedCollegeId, {
+        departments: allMasters.departments,
+        courses: allMasters.courses,
+        branches: allMasters.branches,
+        semesters: allMasters.semesters,
+      }),
+      [selectedCollegeId, allMasters.departments, allMasters.courses, allMasters.branches, allMasters.semesters]
+    );
     const masters = {
       ...allMasters,
+      allBranches: allMasters.branches,
       years: activeFeeYearOptions(academicYears || []),
       ...Object.fromEntries(
         ["departments", "courses", "branches", "semesters"].map((type) => [
           type,
-          scopeRecords(allMasters[type]),
+          feeLookupScope(allMasters[type]),
         ])
       ),
     };
@@ -2080,7 +2254,8 @@ export const FeeStructureModule = (() => {
     return (
       <div className="fm-page-container">
         {/* Page Header */}
-        <FeePageHeading title="Fee Structures" description="Configure fee applicability, components and payment schedules.">{tab === "academic" && <ExportMenu rows={filteredAcademicRows} columns={feeStructureColumns} title="Academic fee structures" filename="academic-fee-structures" loading={workflow?.loading} unavailable={workflow?.error}/>}</FeePageHeading>
+        <FeePageHeading title="Fee Structures" description="Configure fee applicability, components and payment schedules." />
+        <FeeWorkspaceTabs tabs={feeManagementTabs} />
 
         {tab==="academic" && workflow?.error && <p role="alert" className="fm-error-banner">{workflow.error} <button type="button" onClick={workflow.retry}>Retry fee structures</button></p>}
         {tab==="academic" && workflow?.loading && <p role="status">Loading academic fee plans…</p>}
@@ -2141,28 +2316,12 @@ export const FeeStructureModule = (() => {
                   : "Set route and boarding stop fees."}
               </p>
             </div>
-            <div className="fm-workspace-actions">
-            <button
-              type="button"
-              className="fm-btn-context-primary"
-              disabled={!canCreatePlan || tab!=="academic" || (tab==="academic" && (workflow?.loading || Boolean(workflow?.error)))} onClick={handleCreate}
-            >
-              <FiPlus />
-              <span>
-                {tab === "academic"
-                  ? "Create Academic Plan"
-                  : tab === "hostel"
-                  ? "Create Hostel Plan"
-                  : "Create Transport Plan"}
-              </span>
-            </button>
-            </div>
           </div>
 
 
           {/* Contextual Filter Toolbar */}
           {tab === "academic" && (
-            <FilterPanel active={isAcademicFiltered} onClear={clearAcademicFilters}>
+            <FilterPanel active={isAcademicFiltered} onClear={clearAcademicFilters} actions={<div className="fm-list-toolbar-actions"><ExportMenu rows={filteredAcademicRows} columns={feeStructureColumns} title="Academic fee structures" filename="academic-fee-structures" loading={workflow?.loading} unavailable={workflow?.error}/><button type="button" className="fm-btn-context-primary" disabled={!canCreatePlan || workflow?.loading || Boolean(workflow?.error)} onClick={handleCreate}><FiPlus /><span>Create Academic Plan</span></button></div>}>
               <div className="course-toolbar">
                 <label className="course-search">
                   <FiSearch />
@@ -2239,7 +2398,7 @@ export const FeeStructureModule = (() => {
           )}
 
           {tab === "hostel" && (
-            <FilterPanel active={isHostelFiltered} onClear={clearHostelFilters}>
+            <FilterPanel active={isHostelFiltered} onClear={clearHostelFilters} actions={<button type="button" className="fm-btn-context-primary" disabled onClick={handleCreate}><FiPlus /><span>Create Hostel Plan</span></button>}>
               <div className="course-toolbar">
                 <label className="course-search">
                   <FiSearch />
@@ -2300,7 +2459,7 @@ export const FeeStructureModule = (() => {
           )}
 
           {tab === "transport" && (
-            <FilterPanel active={isTransportFiltered} onClear={clearTransportFilters}>
+            <FilterPanel active={isTransportFiltered} onClear={clearTransportFilters} actions={<button type="button" className="fm-btn-context-primary" disabled onClick={handleCreate}><FiPlus /><span>Create Transport Plan</span></button>}>
               <div className="course-toolbar">
                 <label className="course-search">
                   <FiSearch />
@@ -2832,7 +2991,7 @@ export const ServerFeeCollectionModule = (() => {
     return str;
   }
 
-  function FinanceOverview({ academic, configuration }) {
+  function FinanceOverview({ academic, configuration, feeManagementTabs = [] }) {
     const navigate = useNavigate();
     const [trendPeriod, setTrendPeriod] = useState("30");
     const [dashData, setDashData] = useState(null);
@@ -3145,17 +3304,21 @@ export const ServerFeeCollectionModule = (() => {
     reportColumns = reportColumns.map(column => ({...column, key: reportFieldKeys[column.label], value: reportFieldKeys[column.label]}));
 
     return (
-      <div className="fm-page-container">
+      <div className="fm-page-container fm-overview-page">
         {/* Page Header */}
-        <FeePageHeading title="Finance Overview" description="Track fee demand, collections, outstanding balances and receipts." icon={FiPieChart}>
-          <label className="fm-header-year-select">
-            <span>Academic year</span>
-            <select aria-label="Overview academic year" value={selectedYear} onChange={event => setSelectedYear(event.target.value)}>
-              <option value="">All academic years</option>
-              {yearOptions.map(year => <option key={year.id} value={year.id}>{year.name}</option>)}
-            </select>
-          </label>
-        </FeePageHeading>
+        <FeePageHeading
+          title="Finance Overview"
+          description="Track fee demand, collections, outstanding balances and receipts."
+          icon={FiPieChart}
+          compactSummary={[
+            { label: "Total Fee Demand", value: feeMoney(totalFees) },
+            { label: "Total Collected", value: feeMoney(collected), tone: "active" },
+            { label: "Outstanding Balance", value: feeMoney(balance), tone: "warning" },
+            { label: "Overdue Amount", value: feeMoney(overdue), tone: "danger" },
+          ]}
+        />
+
+        <FeeWorkspaceTabs tabs={feeManagementTabs} />
 
         {yearOptions.length === 0 && <div className="fm-context-notice" role="status">
           <FiAlertCircle />
@@ -3164,65 +3327,6 @@ export const ServerFeeCollectionModule = (() => {
         </div>}
 
         <FeeRequestState loading={loading} error={error}>
-          {/* Four Colorful KPI Cards */}
-          <div className="fm-summary-cards-grid">
-            {/* 1. Total Fee Demand - Blue */}
-            <div className="fm-summary-card fm-summary-card--blue">
-              <div className="fm-summary-card__header">
-                <span className="fm-summary-card__label">Total Fee Demand</span>
-                <span className="fm-summary-card__icon-box">
-                  <FiLayers />
-                </span>
-              </div>
-              <strong className="fm-summary-card__value">
-                {feeMoney(totalFees)}
-              </strong>
-              <span className="fm-summary-card__meta">Total assigned student fee demand</span>
-            </div>
-
-            {/* 2. Total Collected - Emerald Green */}
-            <div className="fm-summary-card fm-summary-card--green">
-              <div className="fm-summary-card__header">
-                <span className="fm-summary-card__label">Total Collected</span>
-                <span className="fm-summary-card__icon-box">
-                  <FiCheckCircle />
-                </span>
-              </div>
-              <strong className="fm-summary-card__value">
-                {feeMoney(collected)}
-              </strong>
-              <span className="fm-summary-card__meta">{collectionPct}% of assigned fee demand</span>
-            </div>
-
-            {/* 3. Outstanding Balance - Amber */}
-            <div className="fm-summary-card fm-summary-card--amber">
-              <div className="fm-summary-card__header">
-                <span className="fm-summary-card__label">Outstanding Balance</span>
-                <span className="fm-summary-card__icon-box">
-                  <FiClock />
-                </span>
-              </div>
-              <strong className="fm-summary-card__value">
-                {feeMoney(balance)}
-              </strong>
-              <span className="fm-summary-card__meta">{pendingStudents} students with pending dues</span>
-            </div>
-
-            {/* 4. Overdue Amount - Soft Red */}
-            <div className="fm-summary-card fm-summary-card--red">
-              <div className="fm-summary-card__header">
-                <span className="fm-summary-card__label">Overdue Amount</span>
-                <span className="fm-summary-card__icon-box">
-                  <FiAlertCircle />
-                </span>
-              </div>
-              <strong className="fm-summary-card__value">
-                {feeMoney(overdue)}
-              </strong>
-              <span className="fm-summary-card__meta">{overdueStudents} students with overdue accounts</span>
-            </div>
-          </div>
-
           {/* COLLECTION PROGRESS BAR */}
           <div className="fm-progress-card">
             <div className="fm-progress-card__header">
@@ -5592,7 +5696,7 @@ export const FeeManagementModule = (() => {
   // ==========================================================================
   // STUDENT FEES MAIN DIRECTORY PAGE (`/fees/students`)
   // ==========================================================================
-  function StudentFees({ academic, ledgers, assignments, masters, students = [], structures = [], view = "directory" }) {
+  function StudentFees({ academic, ledgers, assignments, masters, students = [], structures = [], view = "directory", feeManagementTabs = [] }) {
     const navigate = useNavigate();
     const location = useLocation();
     const activeView = view;
@@ -6044,22 +6148,20 @@ export const FeeManagementModule = (() => {
     ];
 
     return (
-      <div className="fm-page-container">
+      <div className={`fm-page-container ${activeView === "directory" ? "fm-student-fees-page" : ""}`}>
         {/* Page Header */}
         <FeePageHeading
           title={activeView === "transactions" ? "Payments" : "Student Fees"}
           description={activeView === "transactions" ? "Review confirmed payments, transaction references, and official receipts." : "Manage student fee balances, collections, and receipts."}
           icon={activeView === "transactions" ? FiCreditCard : FiUsers}
-        >
-          {activeView === "transactions" && <button type="button" className="erp-btn erp-btn--primary" onClick={() => navigate("/fees/collection")}><FiPlus /> Collect Payment</button>}
-        </FeePageHeading>
+        />
 
         {/* DIRECTORY VIEW: SUMMARY CARDS + STUDENT TABLE */}
         {activeView === "directory" && (
           <>
             <p role="status">Totals include only confirmed fee records. Unavailable student liabilities are excluded.</p>
             {/* Financial Summary Cards */}
-            <div className="fm-summary-cards-grid">
+            <div className="fm-summary-cards-grid fm-student-fee-summary-strip">
               {/* 1. Total Payable - Royal Blue */}
               <div className="fm-summary-card fm-summary-card--blue">
                 <div className="fm-summary-card__header">
@@ -6116,6 +6218,7 @@ export const FeeManagementModule = (() => {
                 <span className="fm-summary-card__meta">Total overdue amount</span>
               </div>
             </div>
+            <FeeWorkspaceTabs tabs={feeManagementTabs} />
 
             {/* Main Content Workspace */}
             <div className="fm-workspace">
@@ -6356,6 +6459,7 @@ export const FeeManagementModule = (() => {
             {/* Filter Toolbar for Transactions */}
             <FilterPanel
               active={Boolean(txQuery || txMode || txFromDate || txToDate)}
+              actions={<button type="button" className="erp-btn erp-btn--primary" onClick={() => navigate("/fees/collection")}><FiPlus /> Collect Payment</button>}
               onClear={() => {
                 setTxQuery("");
                 setTxMode("");
@@ -7114,9 +7218,10 @@ export const FeeManagementModule = (() => {
     const ledgers = []; // Financial rows are loaded from backend fee APIs only.
 
     const feeManagementTabs = [
-      ['Overview','overview'],['Fee Types','types'],['Student Fees','students']
+      ['Overview','overview'],['Fee Types','types'],['Fee Structure','structures'],['Student Fees','students']
     ].map(([label,path]) => ({label,to:'/fees/' + path,active:pathname === '/fees/' + path || pathname.startsWith('/fees/' + path + '/')}));
-    const showFeeManagementTabs = !pathname.startsWith('/fees/structures');
+    const tabbedFeeRoutes = ['/fees/overview', '/fees/types', '/fees/structures', '/fees/students'];
+    const showFeeManagementTabs = !tabbedFeeRoutes.some(route => pathname === route);
 
 
     const mutationRoute = /\/(create|edit|assignments|collection)(\/|$)/.test(pathname)
@@ -7126,12 +7231,10 @@ export const FeeManagementModule = (() => {
         <main className="fs-page fm-page">
           <FeeRequestState loading={!workspaceReady} error={storageError}>
           {showFeeManagementTabs && (
-            <nav className="fm-workspace-tabs fm-fee-workspace-nav" role="tablist" aria-label="Fee management sections">
-              {feeManagementTabs.map(tab => <Link key={tab.to} to={tab.to} role="tab" aria-selected={tab.active} className={`fm-workspace-tab ${tab.active ? 'is-active' : ''}`}>{tab.label}</Link>)}
-            </nav>
+            <FeeWorkspaceTabs tabs={feeManagementTabs} />
           )}
           <Routes>
-            <Route path="types" element={<FeeTypesConfiguration />} />
+            <Route path="types" element={<FeeTypesConfiguration feeManagementTabs={feeManagementTabs} />} />
             <Route path="reports" element={<Navigate to="/fees/overview" replace />} />
             <Route path="payments" element={<Navigate to="/fees/students" replace />} />
             <Route path="receipts" element={<Navigate to="/fees/students" replace />} />
@@ -7146,6 +7249,7 @@ export const FeeManagementModule = (() => {
                   overview
                   academic={academic}
                   configuration={state}
+                  feeManagementTabs={feeManagementTabs}
                 />
               }
             />
@@ -7155,6 +7259,7 @@ export const FeeManagementModule = (() => {
               path="structures"
               element={
                 <FeeStructureConfiguration
+                  feeManagementTabs={feeManagementTabs}
                   masters={masters}
                   state={state}
                   workflow={{ rows: livePlans, assignments: state.assignments, loading:planLoading,error:planError,retry:()=>setPlanAttempt(value=>value+1),
@@ -7259,6 +7364,7 @@ export const FeeManagementModule = (() => {
                   masters={masters}
                   students={students}
                   structures={state.structures}
+                  feeManagementTabs={feeManagementTabs}
                 />
               }
             />

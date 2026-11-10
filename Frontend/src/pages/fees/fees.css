@@ -31,9 +31,9 @@
   --fm-border: var(--border, #dce5f2);
   --fm-text: var(--text-primary, #102a4c);
   --fm-muted: var(--text-secondary, #526a86);
-  --fm-navy: #172554;
-  --fm-primary: #6d5df6;
-  --fm-primary-light: #f5f3ff;
+  --fm-navy: var(--brand-solid, var(--brand, #172554));
+  --fm-primary: var(--brand, #6d5df6);
+  --fm-primary-light: var(--brand-soft, #f5f3ff);
   --fm-teal: #0d9488;
   --fm-chart-fill: #0d948819;
   --fm-green: #10b981;
@@ -71,8 +71,8 @@
   .fm-back-btn { display: inline-flex; align-items: center; gap: 6px; padding: 0; margin-bottom: 10px; border: 0; background: transparent; color: var(--fm-primary); font-size: 12px; font-weight: 650; }
 
   .fm-btn-context-primary, .fm-btn-manage-charges, .fm-change-btn, .fm-reset-btn, .fm-filter-clear-btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 36px; padding: 0 13px; border: 1px solid var(--fm-border); border-radius: 7px; background: var(--fm-surface); color: var(--fm-text); font-size: 12px; font-weight: 700; line-height: 1.3; white-space: nowrap; box-shadow: none; }
-  .fm-btn-context-primary { color: var(--text-on-dark); background: var(--fm-navy); border-color: var(--fm-navy); }
-  .fm-btn-context-primary:hover { background: #195a99; border-color: #195a99; }
+  .fm-btn-context-primary { color: var(--text-on-dark); background: var(--brand-solid, var(--fm-primary)); border-color: var(--brand-solid, var(--fm-primary)); }
+  .fm-btn-context-primary:hover { background: var(--brand-solid-hover, var(--brand-hover, var(--fm-primary))); border-color: var(--brand-solid-hover, var(--brand-hover, var(--fm-primary))); }
   .fm-btn-manage-charges:hover, .fm-reset-btn:hover, .fm-filter-clear-btn:hover, .fm-change-btn:hover { border-color: var(--fm-primary); background: var(--fm-primary-light); color: var(--fm-primary); }
   .fm-change-btn { min-height: 30px; padding: 0 9px; font-size: 11px; }
   .fm-icon-btn, .fm-remove-btn, .fm-dialog__close { display: inline-grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 1px solid var(--fm-border); border-radius: 7px; background: var(--fm-surface); color: var(--fm-muted); }
@@ -156,15 +156,11 @@
   .fm-fee-type-nav { display: flex; gap: 8px; align-self: flex-start; flex-wrap: wrap; }
   .fm-fee-type-tab { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; border: 1px solid var(--fm-border); border-radius: 9px; background: var(--fm-surface); color: var(--fm-muted); font-size: 12px; font-weight: 700; }
   .fm-fee-type-tab small { display: grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 5px; background: var(--fm-soft); font-size: 10px; }
-  .fm-fee-type-tab:nth-child(1) { --category-color: #2563eb; }
-  .fm-fee-type-tab:nth-child(2) { --category-color: #8b7ad8; }
-  .fm-fee-type-tab:nth-child(3) { --category-color: #0d9488; }
+  .fm-fee-type-tab:nth-child(1), .fm-fee-type-tab:nth-child(2), .fm-fee-type-tab:nth-child(3) { --category-color: var(--brand); }
   .fm-fee-type-tab.active { border-color: var(--category-color); color: var(--category-color); background: color-mix(in srgb, var(--category-color) 10%, var(--fm-surface)); font-weight: 750; }
   .fm-fee-type-tab.active small { background: var(--category-color); color: var(--text-on-dark); }
   .fm-workspace, .fm-plan-workspace { display: flex; flex-direction: column; gap: 14px; min-width: 0; padding: 16px; border: 1px solid var(--fm-border); border-radius: var(--fm-radius); background: var(--fm-surface); box-shadow: var(--fm-shadow); }
-  .fm-category--academic { --category-color: #2563eb; }
-  .fm-category--hostel { --category-color: #8b7ad8; }
-  .fm-category--transport { --category-color: #0d9488; }
+  .fm-category--academic, .fm-category--hostel, .fm-category--transport { --category-color: var(--brand); }
   .fm-plan-workspace { border-top: 3px solid var(--category-color); }
   .fm-plan-workspace-header, .fm-workspace-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
   .fm-plan-context h2, .fm-workspace-heading h2 { margin: 0; font-size: 15px; }
@@ -473,7 +469,7 @@
   .fm-charge-option-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px; border: 1px solid var(--fm-border); border-radius: 8px; }
   .fm-charge-option-item small { display: block; margin-top: 4px; color: var(--fm-muted); font-size: 11px; }
   .fm-empty-state, .fm-plan-empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; min-height: 190px; padding: 26px 16px; border: 1px dashed var(--fm-border); border-radius: 9px; background: var(--fm-soft); text-align: center; }
-  .fm-plan-empty-icon { display: grid; place-items: center; width: 46px; height: 46px; margin-bottom: 4px; border-radius: 13px; background: color-mix(in srgb, var(--category-color, #2467b2) 10%, var(--fm-surface)); color: var(--category-color, #2467b2); font-size: 21px; }
+  .fm-plan-empty-icon { display: grid; place-items: center; width: 46px; height: 46px; margin-bottom: 4px; border-radius: 13px; background: color-mix(in srgb, var(--category-color, var(--brand)) 10%, var(--fm-surface)); color: var(--category-color, var(--brand)); font-size: 21px; }
   .fm-plan-empty-title { margin: 0; font-size: 14px; }
   .fm-plan-empty-desc { max-width: 430px; }
   .fm-plan-empty-desc, .fm-empty-state p, .fm-empty-text { margin: 0; color: var(--fm-muted); font-size: 12px; line-height: 1.7; }
@@ -4004,8 +4000,8 @@
 #root .fm-page .fm-progress-card__fill { background: linear-gradient(90deg,#6d5df6,#0891b2); }
 #root .fm-page :is(.fm-workspace-tabs,.fm-fee-type-nav) { padding: 5px; gap: 5px; border: 1px solid var(--fm-border); border-radius: 11px; background: var(--fm-surface); }
 #root .fm-page :is(.fm-fee-type-tab,.fm-workspace-tab) { flex: 1; justify-content: center; min-height: 42px; border: 1px solid transparent; border-radius: 7px; font-size: 12px; background: transparent; }
-#root .fm-page .fm-fee-type-tab.active { border-color: color-mix(in srgb,var(--category-color) 25%,white); background: color-mix(in srgb,var(--category-color) 9%,white); }
-#root .fm-page .fm-workspace-tab.is-active { color: #6d5df6; border-color: #ddd6fe; background: var(--cms-violet-soft); }
+#root .fm-page .fm-fee-type-tab.active { border-color: color-mix(in srgb,var(--category-color) 25%,var(--fm-border)); background: color-mix(in srgb,var(--category-color) 9%,var(--fm-surface)); }
+#root .fm-page .fm-workspace-tab.is-active { color: var(--brand); border-color: color-mix(in srgb,var(--brand) 25%,var(--fm-border)); background: var(--brand-soft); }
 #root .fm-page .fm-workspace-header-row { margin: 0; flex-wrap: wrap; gap: 12px; }
 #root .fm-page .fm-plan-workspace { padding: 18px; gap: 16px; }
 #root .fm-page .course-toolbar { display: flex; gap: 8px; flex-wrap: wrap; padding: 0; align-items: center; }
@@ -4085,8 +4081,8 @@
 #root .fm-page .fm-preview-amount h3 { font-size: 11px; opacity: .75; }
 #root .fm-page .fm-sticky-footer { position: sticky; bottom: 0; z-index: 3; padding: 12px 16px; border-top: 1px solid var(--fm-border); background: var(--fm-surface); box-shadow: 0 -4px 14px #17255405; flex-wrap: wrap; gap: 10px; }
 #root .fm-page .fm-footer-right { display: flex; gap: 7px; flex-wrap: wrap; }
-#root .fm-page .fm-btn-context-primary { background: #6d5df6; border-color: #6d5df6; color: var(--text-on-dark); }
-#root .fm-page .fm-btn-context-primary:hover { background: #5848e7; border-color: #5848e7; }
+#root .fm-page .fm-btn-context-primary { background: var(--brand-solid); border-color: var(--brand-solid); color: var(--text-on-dark); }
+#root .fm-page .fm-btn-context-primary:hover { background: var(--brand-solid-hover); border-color: var(--brand-solid-hover); }
 #root .fm-page .fm-dialog { border-radius: 14px; width: min(100%,680px); border: 1px solid var(--fm-border); }
 #root .fm-page .fm-dialog--wide { width: min(100%,960px); }
 #root .fm-page .fs-overlay { padding: 24px; background: #101b3b80; backdrop-filter: blur(4px); z-index: 1100; }
@@ -4302,3 +4298,83 @@
 #root .fm-page .fm-academic-plan-editor .fm-quota-choice > .fs-field { grid-column: 1; }
 #root .fm-page .fm-academic-plan-editor .fm-quota-card-breakdown { grid-column: 1 / -1; min-width: 0; padding-top: 12px; border-top: 1px solid var(--fm-border); }
 #root .fm-page .fm-academic-plan-editor .fm-quota-card-breakdown h4 { margin: 0 0 10px; color: var(--fm-text); font-size: 13px; }
+
+/* Fee management directory layout: compact summary strip and one action toolbar. */
+#root .fm-page .fm-fee-workspace-nav {
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+  min-height: 48px;
+  gap: 5px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scroll-snap-type: x proximity;
+}
+#root .fm-page .fm-fee-workspace-nav .fm-workspace-tab { flex: 1 0 auto; min-height: 38px; padding: 8px 15px; scroll-snap-align: start; }
+#root .fm-page .fm-fee-type-nav { overflow-x: auto; overflow-y: hidden; flex-wrap: nowrap; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+#root .fm-page .fm-fee-type-nav .fm-fee-type-tab { flex: 1 0 180px; }
+#root .fm-page .fm-list-toolbar-actions { display: inline-flex; align-items: center; justify-content: flex-end; gap: 8px; flex: 0 0 auto; }
+#root .fm-page .filter-disclosure__search { flex: 1 1 300px; min-width: min(260px,100%); max-width: none; }
+#root .fm-page .filter-disclosure__bar { gap: 9px; }
+#root .fm-page .filter-disclosure__bar > .course-toolbar { min-width: 0; }
+#root .fm-page .fm-plan-workspace .filter-disclosure__search { flex-basis: 280px; }
+#root .fm-page .fm-plan-workspace .filter-disclosure__content-inner .course-toolbar { width: 100%; }
+#root .fm-page .fm-plan-workspace .filter-disclosure__content-inner .course-toolbar > :is(select,input,.searchable-select,.project-select) { flex: 1 1 150px; max-width: 220px; }
+#root .fm-page .fm-plan-workspace .filter-disclosure__content-inner .course-toolbar .course-search { flex: 1 1 240px; max-width: 360px; }
+#root .fm-page .fm-student-fees-page:has(.fm-student-fee-summary-strip) { display: grid; grid-template-columns: minmax(300px,1fr) minmax(470px,auto); align-items: start; column-gap: 18px; row-gap: 12px; }
+#root .fm-page .fm-student-fees-page > .erp-page-header { grid-column: 1; grid-row: 1; align-self: center; margin: 0; }
+#root .fm-page .fm-student-fees-page > .fm-student-fee-summary-strip { grid-column: 2; grid-row: 1; display: grid; grid-template-columns: repeat(4,minmax(100px,1fr)); gap: 0; width: 100%; overflow: hidden; border: 1px solid var(--fm-border); border-radius: 10px; background: var(--fm-soft); }
+#root .fm-page .fm-student-fee-summary-strip > .fm-summary-card { display: flex; min-width: 0; min-height: 66px; justify-content: center; gap: 3px; padding: 8px 10px; border: 0; border-right: 1px solid var(--fm-border); border-radius: 0; background: transparent; box-shadow: none; text-align: center; }
+#root .fm-page .fm-student-fee-summary-strip > .fm-summary-card:last-child { border-right: 0; }
+#root .fm-page .fm-student-fee-summary-strip .fm-summary-card__header { order: 2; justify-content: center; }
+#root .fm-page .fm-student-fee-summary-strip .fm-summary-card__label { font-size: 9px; line-height: 1.3; }
+#root .fm-page .fm-student-fee-summary-strip .fm-summary-card__icon-box,
+#root .fm-page .fm-student-fee-summary-strip .fm-summary-card__meta { display: none; }
+#root .fm-page .fm-student-fee-summary-strip .fm-summary-card__value { order: 1; margin: 0; font-size: 19px; line-height: 1.2; }
+#root .fm-page .fm-student-fees-page > [role="status"] { grid-column: 1 / -1; grid-row: 2; margin: 0; color: var(--fm-muted); font-size: 11px; }
+#root .fm-page .fm-student-fees-page > .fm-fee-workspace-nav { grid-column: 1 / -1; grid-row: 3; display: flex; width: 100%; }
+#root .fm-page .fm-student-fees-page > .fm-fee-workspace-nav .fm-workspace-tab { flex: 1 1 0; justify-content: center; min-width: 0; }
+#root .fm-page .fm-student-fees-page > .fm-workspace { grid-column: 1 / -1; grid-row: 4; width: 100%; }
+#root .fm-page .fm-student-fees-page .filter-disclosure__bar { display: flex; flex-wrap: nowrap; }
+#root .fm-page .fm-student-fees-page .filter-disclosure__search { flex: 1 1 auto; min-width: 220px; }
+#root .fm-page .fm-fee-types-filters .filter-disclosure__search { flex-basis: 360px; }
+#root .fm-page .fm-fee-types-search { min-width: 0; width: 100%; }
+#root .fm-page .fm-fee-types-search input { border: 0; background: transparent; box-shadow: none; }
+#root .fm-page .fm-fee-types-code-filter { display: grid; gap: 5px; min-width: 180px; color: var(--fm-muted); font-size: 11px; font-weight: 700; }
+#root .fm-page .fm-fee-types-code-filter select { min-width: 180px; }
+@media (max-width: 1050px) {
+  #root .fm-page .fm-student-fees-page:has(.fm-student-fee-summary-strip) { grid-template-columns: minmax(0,1fr); }
+  #root .fm-page .fm-student-fees-page > .erp-page-header { grid-column: 1; grid-row: 1; }
+  #root .fm-page .fm-student-fees-page > .fm-student-fee-summary-strip { grid-column: 1; grid-row: 2; }
+  #root .fm-page .fm-student-fees-page > [role="status"] { grid-row: 3; }
+  #root .fm-page .fm-student-fees-page > .fm-fee-workspace-nav { grid-column: 1; grid-row: 4; width: 100%; }
+  #root .fm-page .fm-student-fees-page > .fm-workspace { grid-row: 5; }
+}
+@media (max-width: 700px) {
+  #root .fm-page .fm-list-toolbar-actions { width: 100%; justify-content: flex-end; }
+  #root .fm-page .fm-student-fees-page .filter-disclosure__bar { flex-wrap: wrap; }
+  #root .fm-page .fm-student-fees-page .filter-disclosure__search { flex-basis: 100%; }
+  #root .fm-page .fm-student-fee-summary-strip { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  #root .fm-page .fm-student-fee-summary-strip > .fm-summary-card:nth-child(2) { border-right: 0; }
+  #root .fm-page .fm-student-fee-summary-strip > .fm-summary-card:nth-child(-n+2) { border-bottom: 1px solid var(--fm-border); }
+}
+
+/* Keep Finance Overview metrics in the page heading, aligned to the upper right. */
+#root .fm-page .fm-overview-page > .erp-page-header { align-items: center; gap: 20px; }
+#root .fm-page .fm-overview-page > .erp-page-header > .erp-page-header__left { flex: 1 1 360px; min-width: 280px; }
+#root .fm-page .fm-overview-page > .erp-page-header > .erp-page-header__right { flex: 0 1 auto; flex-direction: column; align-items: flex-end; gap: 8px; }
+#root .fm-page .fm-overview-page > .erp-page-header .compact-summary { max-width: 100%; }
+#root .fm-page .fm-overview-page > .erp-page-header .erp-page-header__actions { justify-content: flex-end; }
+@media (max-width: 1120px) {
+  #root .fm-page .fm-overview-page > .erp-page-header { align-items: flex-start; }
+  #root .fm-page .fm-overview-page > .erp-page-header > .erp-page-header__right { flex: 1 1 100%; align-items: flex-start; }
+  #root .fm-page .fm-overview-page > .erp-page-header .erp-page-header__actions { justify-content: flex-start; }
+}
+@media (max-width: 700px) {
+  #root .fm-page .fm-overview-page > .erp-page-header .compact-summary { width: 100%; flex-wrap: wrap; }
+  #root .fm-page .fm-overview-page > .erp-page-header .compact-summary > .compact-summary__item { flex: 1 1 calc(50% - 1px); }
+  #root .fm-page .fm-overview-page > .erp-page-header .fm-header-year-select { align-items: flex-start; flex-direction: column; }
+}

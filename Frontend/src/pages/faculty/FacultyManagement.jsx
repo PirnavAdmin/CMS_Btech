@@ -1311,7 +1311,7 @@ const { useAcademic } = pageDependency17
 const useCollegeState = pageDependency7.default
 const { useCallback, useEffect, useMemo, useRef, useState } = pageDependency1
 const { Link, Navigate, useLocation, useNavigate } = pageDependency18
-const { FiAlertCircle, FiArrowLeft, FiBriefcase, FiCheckCircle, FiChevronDown, FiChevronUp, FiEdit2, FiFilter, FiPlus, FiSearch, FiUser, FiUsers, FiClock, FiBookOpen, FiMapPin, FiX, FiTrash2, FiFileText } = pageDependency4
+const { FiAlertCircle, FiArrowLeft, FiBriefcase, FiCheckCircle, FiChevronDown, FiChevronUp, FiEdit2, FiFilter, FiPlus, FiSearch, FiUser, FiUsers, FiClock, FiBookOpen, FiMapPin, FiX, FiTrash2, FiFileText, FiCalendar, FiBarChart2, FiTrendingUp } = pageDependency4
 const DashboardLayout = pageDependency8.default
 const ExportMenu = pageDependency9.default
 const FilterPanel = pageDependency19.default
@@ -2008,6 +2008,10 @@ function RecordAttendanceDialog({ busy = false, faculty = [], collegeOptions = [
   return <ReferenceViewDialog title="Record Attendance" subtitle={title} onClose={onClose} busy={busy} showExport={false} hideFooter>
     <form className="fm-attendance-editor" onSubmit={submit}>
       <fieldset disabled={busy} style={{ border: 0, padding: 0, margin: 0 }}>
+        {!facultyOptions.length && <div className="fm-attendance-no-faculty" role="status">
+          <p>No faculty or staff profiles are available to record attendance. Add a profile first, then return here to record it.</p>
+          <Link className="fm-button secondary" to="/faculty">Open Faculty Directory</Link>
+        </div>}
         <div className="fm-attendance-record-fields">
           <label className="fm-attendance-record-faculty"><span>Faculty</span>
             <SearchableSelect label="Faculty" value={facultyId} options={facultyOptions} onChange={value => { setFacultyId(value); setError('') }} placeholder="Search Faculty & Staff" searchPlaceholder="Search by name, ID, or department" menuPlacement="bottom" required />
@@ -2036,7 +2040,7 @@ function RecordAttendanceDialog({ busy = false, faculty = [], collegeOptions = [
           <div><strong>Confirm attendance status?</strong><p>You are marking {selectedFaculty?.fullName || selectedFaculty?.facultyName || 'this faculty member'} as {attendanceStatusLabel(status)} for {new Date(attendanceDate + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}.</p></div>
           <div><button className="fm-button secondary" type="button" onClick={() => setConfirmLeave(false)}>Cancel</button><button className="fm-button" type="button" onClick={() => { setConfirmLeave(false); setError(''); saveRecord() }}>{status === 'LOP' ? 'Mark Loss of Pay' : 'Mark On Leave'}</button></div>
         </div>}
-        <footer><button className="fm-button secondary" type="button" onClick={onClose}>Cancel</button><button className="fm-button" type="submit">{busy ? 'Saving…' : 'Save Attendance'}</button></footer>
+        <footer><button className="fm-button secondary" type="button" onClick={onClose}>Cancel</button><button className="fm-button" type="submit" disabled={busy || !facultyOptions.length}>{busy ? 'Saving…' : 'Save Attendance'}</button></footer>
       </fieldset>
     </form>
   </ReferenceViewDialog>
@@ -2403,6 +2407,7 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
   )
   const facultyCategoryControl = <div className="fm-attendance-category-toggle flm-category-toggle" role="group" aria-label="Filter attendance by faculty type"><button type="button" className={`flm-cat-btn ${filters.facultyType === 'Teaching' ? 'active' : ''}`} onClick={() => updateFilter('facultyType', 'Teaching')}>Teaching Faculty ({faculty.filter(item => employeeCategoryOf(item) === 'Teaching').length})</button><button type="button" className={`flm-cat-btn ${filters.facultyType === 'Non-Teaching' ? 'active' : ''}`} onClick={() => updateFilter('facultyType', 'Non-Teaching')}>Non-Teaching Staff ({faculty.filter(item => employeeCategoryOf(item) === 'Non-Teaching').length})</button></div>
   const filterControl = <button type="button" className="fm-attendance-filter-toggle" aria-expanded={showFilters} aria-controls="faculty-attendance-filters-panel" onClick={() => setShowFilters(value => !value)}><FiFilter aria-hidden="true" /><span>Filters</span>{showFilters ? <FiChevronUp aria-hidden="true" /> : <FiChevronDown aria-hidden="true" />}</button>
+  const recordAttendanceControl = canRecord && <button type="button" className="fm-button fm-attendance-record-button" onClick={openNewAttendance} disabled={attendanceBusy || refreshPending || attendanceLoading}><FiPlus aria-hidden="true" /> Record Attendance</button>
   const normalizeViewRemark = value => {
     const clean = String(value || '').trim()
     if (!clean || clean === '—') return '—'
@@ -2546,7 +2551,7 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
       <section className="fm-attendance-workspace">
         <div className="fm-attendance-panel">
           <header className="fm-attendance-directory-header">
-            <div className="fm-attendance-header-actions">{searchControl}{facultyCategoryControl}{contextualExport}{filterControl}</div>
+            <div className="fm-attendance-header-actions">{searchControl}{facultyCategoryControl}{contextualExport}{filterControl}{recordAttendanceControl}</div>
           </header>
 
           {showFilters && (
@@ -2573,10 +2578,10 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
           )}
 
           <nav className="fm-attendance-tabs" aria-label="Faculty attendance views">
-            <button type="button" className={tab === 'daily' ? 'active' : ''} aria-current={tab === 'daily' ? 'page' : undefined} onClick={() => setTab('daily')}>Daily Attendance</button>
+            <button type="button" className={tab === 'daily' ? 'active' : ''} aria-current={tab === 'daily' ? 'page' : undefined} onClick={() => setTab('daily')}><FiCalendar aria-hidden="true" /><span>Daily Attendance</span></button>
             {['weekly', 'monthly'].map(type => (
               <button type="button" key={type} className={tab === 'reports' && reportType === type ? 'active' : ''} aria-current={tab === 'reports' && reportType === type ? 'page' : undefined} onClick={() => { setReportType(type); setTab('reports') }}>
-                {type === 'weekly' ? 'Weekly Report' : 'Monthly Report'}
+                {type === 'weekly' ? <FiBarChart2 aria-hidden="true" /> : <FiTrendingUp aria-hidden="true" />}<span>{type === 'weekly' ? 'Weekly Report' : 'Monthly Report'}</span>
               </button>
             ))}
           </nav>
@@ -2589,7 +2594,6 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
                 <h2>{tab === 'daily' ? 'Faculty Attendance' : exportTitle}</h2>
                 <p>{tab === 'reports' ? reportEmployeeRows.length : resultRows.length} employee records</p>
               </div>
-              {canRecord && <button type="button" className="fm-button fm-attendance-record-button" onClick={openNewAttendance} disabled={attendanceBusy || refreshPending || attendanceLoading || faculty.length === 0}><FiPlus aria-hidden="true" /> Record Attendance</button>}
             </header>
 
             {tab === 'daily' && selectedFacultyIds.length > 0 && (

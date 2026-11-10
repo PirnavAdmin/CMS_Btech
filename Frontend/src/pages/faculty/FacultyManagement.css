@@ -5140,3 +5140,147 @@
     padding: 14px;
   }
 }
+
+/* Match the student attendance page's toolbar, tab bar, and results cards. */
+#root .faculty-management .fm-attendance-screen .fm-attendance-workspace,
+#root .faculty-management .fm-attendance-screen .fm-attendance-panel {
+  display: contents;
+}
+
+#root .faculty-management .fm-attendance-screen .fm-attendance-directory-header {
+  display: block;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+#root .faculty-management .fm-attendance-screen .fm-attendance-header-actions {
+  grid-template-columns: minmax(260px, 420px) auto auto auto auto;
+  justify-content: space-between;
+}
+
+#root .faculty-management .fm-attendance-screen .fm-attendance-header-actions > .fm-attendance-record-button {
+  min-height: 42px;
+  width: max-content;
+  max-width: 100%;
+  grid-column: 5;
+  justify-self: end;
+  white-space: nowrap;
+}
+
+#root .faculty-management .fm-attendance-screen .fm-attendance-filters {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+
+#root .faculty-management .fm-attendance-screen .fm-attendance-tabs {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+#root .faculty-management .fm-attendance-screen .fm-attendance-tabs button {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 10px;
+  white-space: normal;
+}
+
+#root .faculty-management .fm-attendance-screen .fm-attendance-tabs button > svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+}
+
+#root .faculty-management .fm-attendance-screen .fm-attendance-register {
+  min-height: 350px;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+#root .faculty-management .fm-attendance-screen .fm-attendance-register > header {
+  padding: 0 0 14px;
+}
+
+@media (max-width: 1100px) {
+  #root .faculty-management .fm-attendance-screen .fm-attendance-header-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #root .faculty-management .fm-attendance-screen .fm-attendance-header-actions > .fm-attendance-search,
+  #root .faculty-management .fm-attendance-screen .fm-attendance-header-actions > .fm-attendance-category-toggle,
+  #root .faculty-management .fm-attendance-screen .fm-attendance-header-actions > .fm-attendance-record-button {
+    grid-column: 1 / -1;
+    justify-self: end;
+  }
+}
+
+@media (max-width: 620px) {
+  #root .faculty-management .fm-attendance-screen .fm-attendance-directory-header {
+    padding: 12px;
+  }
+
+  #root .faculty-management .fm-attendance-screen .fm-attendance-tabs {
+    gap: 3px;
+    padding: 4px;
+  }
+
+  #root .faculty-management .fm-attendance-screen .fm-attendance-tabs button {
+    min-height: 44px;
+    padding-inline: 5px;
+    font-size: 11px;
+  }
+
+  #root .faculty-management .fm-attendance-screen .fm-attendance-register {
+    min-height: 300px;
+    padding: 14px 12px;
+  }
+}
+
+.faculty-management .fm-attendance-no-faculty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--warning-border, var(--border-strong));
+  border-radius: 9px;
+  background: var(--warning-soft, var(--surface-soft));
+}
+
+.faculty-management .fm-attendance-no-faculty p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.faculty-management .fm-attendance-no-faculty a {
+  flex: 0 0 auto;
+  text-decoration: none;
+}
+
+@media (max-width: 560px) {
+  .faculty-management .fm-attendance-no-faculty {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
