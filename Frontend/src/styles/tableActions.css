@@ -5,6 +5,42 @@
    ========================================================================== */
 
 /* 1. Container for grouping table actions */
+.table-inline-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+.table-inline-actions > button { flex: 0 0 auto; white-space: nowrap; }
+.erp-table :is(th, td).table-actions-end { text-align: end !important; }
+.table-action-popover {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--dropdown-bg, var(--surface));
+  color: var(--text-primary);
+  box-shadow: var(--shadow-md);
+  min-inline-size: 10rem;
+  padding: 4px;
+}
+@supports (position-area: block-end span-inline-start) {
+  .table-action-popover {
+    position-area: block-end span-inline-start;
+    position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
+    margin: 4px 0;
+  }
+}
+.table-action-popover:popover-open { display: grid; }
+.table-action-popover > button {
+  padding: 7px 10px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: inherit;
+  text-align: start;
+}
+.table-action-popover > button:is(:hover, :focus-visible) { background: var(--surface-hover); }
+
 .table-actions-group,
 .cm-actions,
 .erp-row-actions,
@@ -104,7 +140,7 @@
 .action-view:hover:not(:disabled), .cm-view-action:hover:not(:disabled), .table-actions-group > :is(a, button).action-view:hover:not(:disabled) {
   background: var(--border) !important;
   border-color: var(--brand-hover) !important;
-  color: #554F75 !important;
+  color: var(--text-secondary) !important;
 }
 
 /* 2. EDIT ACTION (Pencil Icon -> Lavender Theme) */
@@ -122,24 +158,24 @@
 .action-edit:hover:not(:disabled), .cm-edit-action:hover:not(:disabled), .table-actions-group > :is(a, button).action-edit:hover:not(:disabled), :is(.table-actions-group, .erp-row-actions, .cm-actions, .course-actions, .branch-actions, .semester-row-actions, .section-actions, .rooms-row-actions, .sm-row-actions, .sa-icon-actions, .table-actions-cell) > :is(a, button):is(.action-edit, .cm-edit-action, [title*="Edit"], [aria-label*="Edit"]):hover:not(:disabled) {
   background: var(--border) !important;
   border-color: var(--brand-hover) !important;
-  color: #554F75 !important;
+  color: var(--text-secondary) !important;
 }
 
 :is(.table-actions-group, .erp-row-actions, .cm-actions, .course-actions, .branch-actions, .semester-row-actions, .section-actions, .rooms-row-actions, .sm-row-actions, .sa-icon-actions, .table-actions-cell) > :is(a, button):is(.action-edit, .cm-edit-action, [title*="Edit"], [aria-label*="Edit"]):hover:not(:disabled) svg {
-  color: #554F75 !important;
-  stroke: #554F75 !important;
+  color: var(--text-secondary) !important;
+  stroke: var(--text-secondary) !important;
 }
 
 /* 3. ASSIGN ACTION (User Plus Icon -> Subtle Amber / Warm Yellow) */
 .action-assign, .section-assign-action, .table-actions-group > :is(a, button).action-assign, .section-actions > .section-assign-action {
   color: var(--warning) !important;
   background: var(--cms-amber-soft) !important;
-  border-color: #FDE68A !important;
+  border-color: var(--warning-border) !important;
 }
 .action-assign:hover:not(:disabled), .section-assign-action:hover:not(:disabled), .table-actions-group > :is(a, button).action-assign:hover:not(:disabled), .section-actions > .section-assign-action:hover:not(:disabled) {
   background: #FDE68A !important;
   border-color: #F59E0B !important;
-  color: #B45309 !important;
+  color: var(--warning) !important;
 }
 
 /* 4. ACTIVATE / APPROVAL ACTION (Toggle / Check Icon -> Subtle Lavender) */
@@ -151,17 +187,17 @@
 .action-activate:hover:not(:disabled), .table-actions-group > :is(a, button).action-activate:hover:not(:disabled), .table-actions-group > :is(a, button).cm-success:hover:not(:disabled), .table-actions-group > :is(a, button).erp-action-btn--success:hover:not(:disabled), .table-actions-group > :is(a, button).success:hover:not(:disabled) {
   background: var(--border) !important;
   border-color: var(--brand-hover) !important;
-  color: #554F75 !important;
+  color: var(--text-secondary) !important;
 }
 
 /* 5. DEACTIVATE / DISCARD ACTION (Toggle / Discard Icon -> Subtle Red / Coral) */
 .action-deactivate, .cm-discard-action, .table-actions-group > :is(a, button).action-deactivate, .table-actions-group > :is(a, button).cm-danger, .table-actions-group > :is(a, button).cm-discard-action, .table-actions-group > :is(a, button).erp-action-btn--danger, .table-actions-group > :is(a, button).danger, .cm-actions .cm-discard-action {
-  color: #B91C1C !important;
+  color: var(--danger) !important;
   background: var(--cms-red-soft) !important;
-  border-color: #FECACA !important;
+  border-color: var(--danger-border) !important;
 }
 .action-deactivate:hover:not(:disabled), .cm-discard-action:hover:not(:disabled), .table-actions-group > :is(a, button).action-deactivate:hover:not(:disabled), .table-actions-group > :is(a, button).cm-danger:hover:not(:disabled), .table-actions-group > :is(a, button).cm-discard-action:hover:not(:disabled), .table-actions-group > :is(a, button).erp-action-btn--danger:hover:not(:disabled), .table-actions-group > :is(a, button).danger:hover:not(:disabled) {
-  background: #FECACA !important;
+  background: var(--danger-soft) !important;
   border-color: var(--danger) !important;
 }
 
@@ -179,12 +215,12 @@
 :is(.table-actions-group, .erp-row-actions, .cm-actions, .course-actions, .branch-actions, .semester-row-actions, .section-actions, .rooms-row-actions, .sm-row-actions, .sa-icon-actions, .table-actions-cell) > :is(a, button).action-assign {
   color: var(--warning) !important;
   background: var(--cms-amber-soft) !important;
-  border-color: #FDE68A !important;
+  border-color: var(--warning-border) !important;
 }
 :is(.table-actions-group, .erp-row-actions, .cm-actions, .course-actions, .branch-actions, .semester-row-actions, .section-actions, .rooms-row-actions, .sm-row-actions, .sa-icon-actions, .table-actions-cell) > :is(a, button).action-deactivate {
-  color: #B91C1C !important;
+  color: var(--danger) !important;
   background: var(--cms-red-soft) !important;
-  border-color: #FECACA !important;
+  border-color: var(--danger-border) !important;
 }
 :is(.table-actions-group, .erp-row-actions, .cm-actions, .course-actions, .branch-actions, .semester-row-actions, .section-actions, .rooms-row-actions, .sm-row-actions, .sa-icon-actions, .table-actions-cell) > :is(a, button).action-activate {
   color: var(--brand-hover) !important;
@@ -305,8 +341,8 @@
   vertical-align: middle !important;
   text-align: left !important;
   padding: 10px 14px !important;
-  background: var(--brand) !important;
-  color: #FFFFFF !important;
+  background: var(--table-head) !important;
+  color: var(--text-secondary) !important;
   font-size: 11px !important;
   font-weight: 800 !important;
   letter-spacing: 0.055em !important;
@@ -529,9 +565,9 @@ td.col-hod,
 
 /* 11. Dark Theme Table System */
 :root[data-theme="dark"] .cm-table thead th, :root[data-theme="dark"] .course-advanced-table thead th, :root[data-theme="dark"] .sa-table-wrap table thead th, :root[data-theme="dark"] .sp-directory-table thead th, :root[data-theme="dark"] .erp-table thead th, :root[data-theme="dark"] .department-table-wrap table thead th, :root[data-theme="dark"] .p-history-table thead th {
-  background: var(--cms-sidebar-bg) !important;
-  color: #eaf4ff !important;
-  border-bottom: 1px solid #334155 !important;
+  background: var(--table-head) !important;
+  color: var(--text-secondary) !important;
+  border-bottom: 1px solid var(--border) !important;
 }
 
 :root[data-theme="dark"] .cm-table tbody td, :root[data-theme="dark"] .course-advanced-table tbody td, :root[data-theme="dark"] .sa-table-wrap table tbody td, :root[data-theme="dark"] .sp-directory-table tbody td, :root[data-theme="dark"] .erp-table tbody td, :root[data-theme="dark"] .department-table-wrap table tbody td, :root[data-theme="dark"] .p-history-table tbody td {

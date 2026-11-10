@@ -8,7 +8,7 @@
 /* Final semantic theme layer. Always pair foreground and background colours.
    Explicit component names avoid recolouring status panels or badge wrappers. */
 :root[data-theme="dark"] {
-  --table-name-hover: #A9D3F7;
+  --table-name-hover: var(--brand-hover);
   --status-neutral-bg: #253247;
   --status-neutral-text: #d5dfed;
   --status-positive-bg: #173d32;
@@ -22,29 +22,8 @@
 }
 
 /* Let the page underneath stay recognizable when any modal, drawer, or dialog opens. */
-:root[data-theme="dark"] :is(
-  [class*="-backdrop"], [class*="modal-overlay"],
-  [class*="dialog-backdrop"], [class*="dialog-overlay"],
-  [class*="confirm-backdrop"], [class*="confirm-overlay"],
-  [class*="drawer-overlay"], [class*="-overlay"], .backdrop
-):not(.context-guard-overlay):not(.loading-overlay) {
-  background: rgba(3, 8, 16, .4) !important;
-  -webkit-backdrop-filter: blur(3px) saturate(.9) !important;
-  backdrop-filter: blur(3px) saturate(.9) !important;
-}
-
-:root[data-theme="dark"] dialog::backdrop {
-  background: rgba(3, 8, 16, .4) !important;
-  -webkit-backdrop-filter: blur(3px) saturate(.9) !important;
-  backdrop-filter: blur(3px) saturate(.9) !important;
-}
 
 /* White header text needs a deeper lavender than the light-theme accent. */
-:root[data-theme="dark"] #root table th,
-:root[data-theme="dark"] #root table th :is(span, strong, small, button) {
-  background-color: var(--brand) !important;
-  color: #ffffff !important;
-}
 
 /* Nested labels must keep their badge's colour, including profile banners. */
 
@@ -55,10 +34,10 @@
 
 /* Preserve the popup layout while giving its cards and badges dark-theme surfaces. */
 
-/* Semester workflow surfaces and step labels use fixed light-theme colours. */
+/* Semester workflow surfaces and step labels. */
 :root[data-theme="dark"] #root .semester-management :is(.semester-stepper-wrap, .semester-schedule-header) {
-  border-color: #334155 !important;
-  background: #1e293b !important;
+  border-color: var(--border) !important;
+  background: var(--surface-soft) !important;
 }
 
 :root[data-theme="dark"] #root .semester-management .semester-stepper-wrap :is(.stepper-step-lbl, .stepper-title) {
@@ -67,55 +46,55 @@
 
 :root[data-theme="dark"] #root .semester-management .semester-stepper-wrap .stepper-step-lbl { color: var(--text-muted) !important; }
 :root[data-theme="dark"] #root .semester-management .semester-stepper-wrap .stepper-node.is-active .stepper-step-lbl,
-:root[data-theme="dark"] #root .semester-management .semester-stepper-wrap .stepper-node.is-active .stepper-title { color: #bfdbfe !important; }
-:root[data-theme="dark"] #root .semester-management .semester-stepper-wrap .stepper-node:hover:not(:disabled) { background: #26364b !important; }
+:root[data-theme="dark"] #root .semester-management .semester-stepper-wrap .stepper-node.is-active .stepper-title { color: var(--brand-active) !important; }
+:root[data-theme="dark"] #root .semester-management .semester-stepper-wrap .stepper-node:hover:not(:disabled) { background: var(--surface-soft) !important; }
 :root[data-theme="dark"] #root .semester-management .semester-stepper-wrap .stepper-line { background: var(--surface-raised) !important; }
 :root[data-theme="dark"] #root .semester-management .semester-stepper-wrap .stepper-line.is-active { background: var(--brand) !important; }
 
 :root[data-theme="dark"] #root .semester-management .semester-schedule-table-wrap {
-  border-color: #334155 !important;
-  background: #141e2e !important;
+  border-color: var(--border) !important;
+  background: var(--surface) !important;
 }
 
 :root[data-theme="dark"] #root .semester-management .semester-schedule-header {
-  border-bottom-color: #334155 !important;
+  border-bottom-color: var(--border) !important;
   color: var(--border-strong) !important;
 }
 
 :root[data-theme="dark"] #root .semester-management .semester-schedule-row {
-  border-bottom-color: #273549 !important;
+  border-bottom-color: var(--border) !important;
   background: transparent !important;
 }
 
-:root[data-theme="dark"] #root .semester-management .semester-schedule-row:hover { background: #1e293b !important; }
-:root[data-theme="dark"] #root .semester-management .semester-schedule-row .sem-name { color: #f1f5f9 !important; }
+:root[data-theme="dark"] #root .semester-management .semester-schedule-row:hover { background: var(--surface-soft) !important; }
+:root[data-theme="dark"] #root .semester-management .semester-schedule-row .sem-name { color: var(--text-primary) !important; }
 :root[data-theme="dark"] #root .semester-management .semester-schedule-row .sem-year { color: var(--text-muted) !important; }
 
 :root[data-theme="dark"] #root .semester-management .semester-date-input {
-  border-color: #475569 !important;
-  background: #1e293b !important;
-  color: #f1f5f9 !important;
+  border-color: var(--border-strong) !important;
+  background: var(--surface-soft) !important;
+  color: var(--text-primary) !important;
   color-scheme: dark;
 }
 
 :root[data-theme="dark"] #root .semester-management .timeline-table {
-  border-color: #334155 !important;
-  background: #141e2e !important;
+  border-color: var(--border) !important;
+  background: var(--surface) !important;
 }
 
 :root[data-theme="dark"] #root .semester-management .timeline-table-head {
-  border-bottom-color: #334155 !important;
-  background: #1e293b !important;
+  border-bottom-color: var(--border) !important;
+  background: var(--surface-soft) !important;
   color: var(--border-strong) !important;
 }
 
 :root[data-theme="dark"] #root .semester-management .timeline-row {
-  border-bottom-color: #273549 !important;
+  border-bottom-color: var(--border) !important;
   background: transparent !important;
 }
 
 :root[data-theme="dark"] #root .semester-management .timeline-cell-sem .sem-text-col strong,
-:root[data-theme="dark"] #root .semester-management .timeline-cell-dates .date-badge { color: #f1f5f9 !important; }
+:root[data-theme="dark"] #root .semester-management .timeline-cell-dates .date-badge { color: var(--text-primary) !important; }
 :root[data-theme="dark"] #root .semester-management .timeline-cell-sem .sem-text-col small,
 :root[data-theme="dark"] #root .semester-management .timeline-cell-dates .date-pending { color: var(--text-muted) !important; }
 

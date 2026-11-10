@@ -4,6 +4,27 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // Resolve the initial preference before the stylesheet can paint.
+      (() => {
+        const root = document.documentElement;
+        let appearance, color;
+        try {
+          appearance = localStorage.getItem('pirnav-theme');
+          color = localStorage.getItem('pirnav-accent-color');
+        } catch {}
+        const legacyColors = { 'ocean-blue': '#165B91', emerald: '#176446', 'royal-purple': '#6B3A9B' };
+        const legacyColor = Object.hasOwn(legacyColors, appearance) ? legacyColors[appearance] : null;
+        if (!['light', 'dark', 'system'].includes(appearance)) appearance = legacyColor ? 'light' : 'system';
+        root.dataset.appearance = appearance;
+        root.dataset.theme = appearance === 'system'
+          ? (window.matchMedia?.('(prefers-color-scheme: dark)')?.matches ? 'dark' : 'light')
+          : appearance;
+        let hex = (color ?? '').trim().replace(/^#/, '').toUpperCase();
+        if (/^[A-F\d]{3}$/.test(hex)) hex = [...hex].map(digit => digit.repeat(2)).join('');
+        root.style.setProperty('--theme-color', /^[A-F\d]{6}$/.test(hex) ? '#' + hex : legacyColor || '#E3F7A9');
+      })();
+    </script>
     <title>Pirnav Engineering College | College Management System</title>
   </head>
   <body>

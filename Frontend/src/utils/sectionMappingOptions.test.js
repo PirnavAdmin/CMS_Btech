@@ -2,18 +2,17 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { sectionSemesterOptions, isSectionYearActive } from './sectionMappingOptions.js'
 
-test('section dropdown includes semesters 1–8 across academic years with real saved IDs', () => {
+test('section dropdown only includes saved semesters for the selected academic year', () => {
   const saved = Array.from({ length: 8 }, (_, index) => ({ id: 101 + index, courseId: 10, branchId: 7, number: index + 1, academicYearId: Math.floor(index / 2) + 1, status: 0 }))
   const options = sectionSemesterOptions(saved, { courseId: '10', branchId: '7', academicYearId: '1' })
-  assert.deepEqual(options.map(item => item.name), Array.from({ length: 8 }, (_, index) => `Semester ${index + 1}`))
-  assert.deepEqual(options.map(item => item.id), saved.map(item => item.id))
+  assert.deepEqual(options.map(item => item.name), ['Semester 1', 'Semester 2'])
+  assert.deepEqual(options.map(item => item.id), [101, 102])
   assert.ok(options.every(item => item.configured))
 })
 
-test('missing semesters remain visible without inventing database IDs or using another branch', () => {
+test('missing semesters are not shown and another branch is never used', () => {
   const options = sectionSemesterOptions([{ id: 50, courseId: 10, branchId: 8, number: 1 }], { courseId: 10, branchId: 7 })
-  assert.equal(options.length, 8)
-  assert.ok(options.every(item => item.id === '' && !item.configured))
+  assert.equal(options.length, 0)
 })
 
 test('duplicate semester numbers prefer the selected record, then the selected academic year', () => {

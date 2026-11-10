@@ -49,14 +49,14 @@
 }
 
 .marks-clean-nav a.active {
-  background: var(--brand, #1d68bd);
-  color: #fff;
+  background: var(--brand-solid);
+  color: var(--text-on-dark);
   font-weight: 600;
   box-shadow: 0 2px 6px rgb(29 104 189 / 28%);
 }
 
 .marks-clean-nav a.active svg {
-  color: #fff;
+  color: var(--text-on-dark);
   opacity: 1;
 }
 
@@ -154,12 +154,12 @@
 .bulk-marks-upload-status p strong { color: var(--text-primary); }
 .bulk-marks-upload-status p span { color: var(--text-secondary); }
 .bulk-marks-upload-status > button { flex: 0 0 auto; }
-.bulk-marks-upload-error { padding: 11px 13px; border: 1px solid #fecaca; border-radius: 9px; background: #fff5f5; line-height: 1.5; }
+.bulk-marks-upload-error { padding: 11px 13px; border: 1px solid var(--danger-border); border-radius: 9px; background: var(--danger-soft); line-height: 1.5; }
 .bulk-marks-upload-clear { margin: 0; }
 .bulk-marks-row--rejected td { background: #fff8f8; }
 .bulk-marks-validation-pill { display: inline-flex; align-items: center; min-height: 24px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 750; white-space: nowrap; }
 .bulk-marks-validation-pill.is-ready { background: #e8f7ef; color: #147a46; }
-.bulk-marks-validation-pill.is-rejected { background: #feecec; color: #b42318; }
+.bulk-marks-validation-pill.is-rejected { background: #feecec; color: var(--danger); }
 .bulk-marks-preview-card .erp-table td { vertical-align: top; }
 
 @media (max-width: 700px) {
@@ -412,7 +412,7 @@
   place-items: center;
   overflow-y: auto;
   padding: 20px;
-  background: rgba(11, 25, 45, .52);
+  background: var(--overlay);
 }
 .marks-approval-decision {
   position: relative;
@@ -519,17 +519,17 @@
 .marks-entry-records-table .marks-entry-col-score { width: 8%; }
 .marks-entry-records-table .marks-entry-col-result { width: 8%; }
 .marks-entry-records-table .marks-entry-col-actions { width: 12%; }
-.marks-management-marks-entry .marks-entry-records-table thead th { height: 58px; padding: 12px 10px; background: #174c80; color: #fff; font-size: 11px; letter-spacing: .035em; text-align: center; }
+.marks-management-marks-entry .marks-entry-records-table thead th { height: 58px; padding: 12px 10px; background: var(--table-head); color: var(--text-secondary); font-size: 11px; letter-spacing: .035em; text-align: center; }
 .marks-management-marks-entry .marks-entry-records-table tbody td { height: 88px; padding: 12px 10px; color: #102b4d; font-size: 13px; text-align: left; }
-.marks-management-marks-entry .marks-entry-records-table tbody tr:nth-child(even) td { background: #edf5ff; }
-.marks-management-marks-entry .marks-entry-records-table tbody tr:hover td { background: #e5f0fd; }
+.marks-management-marks-entry .marks-entry-records-table tbody tr:nth-child(even) td { background: var(--table-row); }
+.marks-management-marks-entry .marks-entry-records-table tbody tr:hover td { background: var(--table-row-hover); }
 .marks-entry-student-layout { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .marks-entry-student-avatar { display: grid; flex: 0 0 42px; width: 42px; height: 42px; place-items: center; border-radius: 12px; background: #e2eefb; color: var(--brand); font-size: 16px; font-weight: 800; }
 .marks-entry-student-copy, .marks-entry-academic-copy, .marks-entry-subject-copy, .marks-entry-exam-copy, .marks-entry-score-copy, .marks-entry-result-copy { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; }
 .marks-entry-records-table .marks-entry-student-copy > strong, .marks-entry-records-table .marks-entry-academic-copy > strong, .marks-entry-records-table .marks-entry-subject-copy > strong { display: block; max-width: 100%; overflow: hidden; color: #102b4d; font-size: 13px; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
 .marks-entry-records-table .marks-entry-student-copy > small, .marks-entry-records-table .marks-entry-academic-copy > span, .marks-entry-records-table .marks-entry-exam-copy > small, .marks-entry-records-table .marks-entry-score-copy > small { display: block; max-width: 100%; overflow: hidden; color: #71839d; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .marks-entry-records-table .marks-entry-academic-copy > span { white-space: normal; line-height: 1.45; }
-.marks-entry-records-table .marks-entry-subject-copy > span { display: inline-flex; max-width: 100%; padding: 3px 7px; overflow: hidden; border-radius: 5px; background: #e3f5ff; color: #0783bd; font-size: 11px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.marks-entry-records-table .marks-entry-subject-copy > span { display: inline-flex; max-width: 100%; padding: 3px 7px; overflow: hidden; border-radius: 5px; background: var(--surface); color: #0783bd; font-size: 11px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 .marks-entry-records-table .marks-entry-faculty-cell > strong { display: block; max-width: 100%; overflow: hidden; color: #102b4d; font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 .marks-entry-records-table .marks-entry-exam-copy { gap: 5px; }
 .marks-entry-exam-pill, .marks-entry-assessment-pill { display: inline-block; max-width: 100%; padding: 4px 9px; overflow: hidden; border-radius: 14px; color: #143454; font-size: 11px; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
@@ -547,7 +547,7 @@
 .marks-entry-result-pill.is-pass { background: #e4f8ef; color: #008e65; }
 .marks-entry-result-pill.is-fail { background: #fde9e9; color: #d8323d; }
 .marks-entry-result-pill.is-pending { background: #eef2f7; color: #66768b; }
-.marks-entry-records-table .marks-entry-result-copy > strong { display: inline-block; padding: 4px 8px; border-radius: 6px; background: #f4f7fb; color: #536b88; font-size: 11px; }
+.marks-entry-records-table .marks-entry-result-copy > strong { display: inline-block; padding: 4px 8px; border-radius: 6px; background: var(--surface-soft); color: #536b88; font-size: 11px; }
 .marks-management-marks-entry .marks-entry-actions-cell { padding-right: 6px !important; padding-left: 6px !important; }
 .marks-management-marks-entry .marks-entry-row-actions {
   display: inline-flex !important;
@@ -573,7 +573,7 @@
 .marks-entry-academic-lines > span { display: block; width: 100%; max-width: 100%; overflow: hidden; color: #71839d; font-size: 12px; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
 .marks-entry-loading { padding: 18px 22px; color: var(--text-secondary); }
 .marks-entry-delete-backdrop { position: fixed; inset: 0; z-index: 1300; display: grid; place-items: center; padding: 20px; box-sizing: border-box; background: rgb(15 23 42 / 62%); backdrop-filter: blur(4px); animation: marks-entry-delete-fade-in .15s ease-out; }
-.marks-entry-delete-modal { width: min(100%, 480px); overflow: hidden; border: 1px solid var(--border); border-radius: 16px; background: #fff; box-shadow: 0 24px 48px rgb(15 23 42 / 25%); animation: marks-entry-delete-modal-in .2s cubic-bezier(.16, 1, .3, 1); }
+.marks-entry-delete-modal { width: min(100%, 480px); overflow: hidden; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); box-shadow: var(--shadow-md); animation: marks-entry-delete-modal-in .2s cubic-bezier(.16, 1, .3, 1); }
 .marks-entry-delete-modal__header { position: relative; display: flex; align-items: center; gap: 14px; padding: 20px 22px 16px; border-bottom: 1px solid var(--border); }
 .marks-entry-delete-modal__icon { display: grid; flex: 0 0 42px; width: 42px; height: 42px; place-items: center; border: 1px solid var(--border); border-radius: 12px; background: var(--brand-soft); color: var(--brand-hover); font-size: 19px; }
 .marks-entry-delete-modal__header h2 { margin: 0; color: #1e1b4b; font-size: 16px; font-weight: 800; }
@@ -582,7 +582,7 @@
 .marks-entry-delete-modal__close:hover { background: var(--surface-alt); color: var(--text-primary); }
 .marks-entry-delete-modal__body { display: grid; gap: 16px; padding: 20px 22px; }
 .marks-entry-delete-record { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 14px 16px; border: 1px solid #e0eaff; border-radius: 12px; background: #eef4ff; }
-.marks-entry-delete-record__badge { display: grid; flex: 0 0 36px; height: 30px; place-items: center; border: 1px solid var(--border-strong); border-radius: 6px; background: #fff; color: var(--text-secondary); font-size: 9px; font-weight: 800; }
+.marks-entry-delete-record__badge { display: grid; flex: 0 0 36px; height: 30px; place-items: center; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--surface); color: var(--text-secondary); font-size: 9px; font-weight: 800; }
 .marks-entry-delete-record > div { min-width: 0; }
 .marks-entry-delete-record strong { display: block; overflow-wrap: anywhere; color: #1e1b4b; font-size: 13px; }
 .marks-entry-delete-record p { margin: 4px 0 0; overflow-wrap: anywhere; color: #71839d; font-size: 11px; line-height: 1.5; }
@@ -590,9 +590,9 @@
 .marks-entry-delete-modal__message strong { color: var(--text-secondary); }
 .marks-entry-delete-modal__footer { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 20px; border-top: 1px solid var(--border); }
 .marks-entry-delete-modal__footer button { display: inline-flex; min-height: 38px; align-items: center; justify-content: center; gap: 7px; padding: 0 14px; border-radius: 8px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
-.marks-entry-delete-modal__cancel { border: 1px solid var(--border-strong); background: #fff; color: var(--text-secondary); }
+.marks-entry-delete-modal__cancel { border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-secondary); }
 .marks-entry-delete-modal__cancel:hover { background: var(--surface-soft); }
-.marks-entry-delete-modal__confirm { border: 1px solid var(--brand-hover); background: var(--brand); color: #fff; box-shadow: 0 3px 8px rgb(23 105 194 / 22%); }
+.marks-entry-delete-modal__confirm { border: 1px solid var(--brand-hover); background: var(--brand-solid); color: var(--text-on-dark); box-shadow: var(--shadow-md); }
 .marks-entry-delete-modal__confirm:hover { background: var(--brand-hover); }
 .marks-entry-delete-modal__footer button:focus-visible, .marks-entry-delete-modal__close:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 @keyframes marks-entry-delete-fade-in { from { opacity: 0; } to { opacity: 1; } }
@@ -609,7 +609,7 @@
 .marks-entry-form__field input, .marks-entry-form__field select { width: 100%; min-height: 42px; box-sizing: border-box; padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px; outline-color: var(--brand); background: var(--surface); color: var(--text-primary); font: inherit; font-weight: 400; }
 .marks-entry-status-value { display: flex; width: 100%; min-height: 42px; box-sizing: border-box; align-items: center; padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-soft); color: var(--text-secondary); font: inherit; font-weight: 600; }
 .marks-entry-status-value[data-status="pass"] { border-color: #9bd9b5; background: #effaf3; color: #167344; }
-.marks-entry-status-value[data-status="fail"] { border-color: #f0b4b4; background: #fff3f3; color: #b42318; }
+.marks-entry-status-value[data-status="fail"] { border-color: #f0b4b4; background: #fff3f3; color: var(--danger); }
 .marks-entry-status-value[data-status="invalid"] { border-color: #f2d18a; background: #fff9e9; color: #8a5a00; }
 .marks-entry-input-combo { position: relative; min-width: 0; }
 .marks-entry-input-combo input { display: block; }
@@ -638,7 +638,7 @@
   border: 1px solid #f87171;
   border-radius: 8px;
   background: var(--cms-red-soft);
-  color: #991b1b;
+  color: var(--danger);
   font-size: 13px;
   line-height: 1.5;
   font-weight: 500;
@@ -655,17 +655,17 @@
   gap: 10px;
   margin: 0 0 16px;
   padding: 10px 12px;
-  border: 1px solid #bfdbfe;
+  border: 1px solid var(--info-border);
   border-radius: 8px;
   background: var(--brand-soft);
-  color: #1e40af;
+  color: var(--info);
   font-size: 13px;
   line-height: 1.45;
 }
 .marks-section-student-message--error {
-  border-color: #fecaca;
+  border-color: var(--danger-border);
   background: var(--cms-red-soft);
-  color: #991b1b;
+  color: var(--danger);
 }
 .marks-section-student-message button {
   flex: 0 0 auto;
@@ -760,10 +760,10 @@
 .student-marks-student-searchbox input::placeholder { color: var(--text-secondary); opacity: .75; }
 .student-marks-student-searchbox input:focus-visible { outline: 0; box-shadow: none; }
 .student-marks-student-caret { color: var(--text-secondary); font-size: 18px; }
-.student-marks-student-options { position: absolute; z-index: 20; top: calc(100% + 1px); left: 0; right: 0; max-height: 280px; overflow-y: auto; margin: 0; padding: 0; list-style: none; border: 1px solid #8b8b8b; background: #fff; box-shadow: 0 4px 10px rgba(15, 35, 65, .12); }
+.student-marks-student-options { position: absolute; z-index: 20; top: calc(100% + 1px); left: 0; right: 0; max-height: 280px; overflow-y: auto; margin: 0; padding: 0; list-style: none; border: 1px solid #8b8b8b; background: var(--surface); box-shadow: 0 4px 10px rgba(15, 35, 65, .12); }
 .student-marks-student-options li button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 36px; padding: 7px 12px; border: 0; border-radius: 0; background: transparent; color: #12345b; font: inherit; font-size: 14px; font-weight: 400; text-align: left; cursor: pointer; }
 .student-marks-student-options li button strong { color: inherit; font-weight: 400; }
-.student-marks-student-options li button:hover, .student-marks-student-options li button:focus-visible { outline: 0; background: #1b66c9; color: #fff; }
+.student-marks-student-options li button:hover, .student-marks-student-options li button:focus-visible { outline: 0; background: #1b66c9; color: var(--text-on-dark); }
 .student-marks-student-empty { padding: 10px 12px; color: var(--text-secondary); font-size: 13px; font-weight: 400; }
 
 #student-marks-student-search { all: unset !important; display: block !important; box-sizing: border-box !important; width: 100% !important; min-width: 0 !important; height: auto !important; margin: 0 !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; outline: 0 !important; box-shadow: none !important; background: transparent !important; appearance: none !important; -webkit-appearance: none !important; color: var(--text-primary) !important; font: inherit !important; font-size: 14px !important; line-height: 1.35 !important; }
@@ -845,7 +845,7 @@
   padding: 0;
   border: 1px solid #8b8b8b;
   border-radius: 0;
-  background: #fff;
+  background: var(--surface);
   box-shadow: 0 4px 10px rgba(15, 35, 65, .12);
 }
 .subject-marks-report-subject-options li button {
@@ -863,7 +863,7 @@
 .subject-marks-report-subject-options li button:hover,
 .subject-marks-report-subject-options li button:focus-visible {
   background: #1b66c9;
-  color: #fff;
+  color: var(--text-on-dark);
 }
 
 /* Full-width marks workflow workspace */
@@ -1073,7 +1073,7 @@
   overflow: visible;
   border: 1px solid var(--border);
   border-radius: 14px;
-  box-shadow: 0 5px 18px rgb(24 63 106 / 5%);
+  box-shadow: var(--shadow-sm);
 }
 
 .marks-entry-filters .filter-disclosure__bar {
@@ -1227,8 +1227,8 @@
 }
 
 .marks-management-marks-entry .marks-entry-records-table > thead > tr > th {
-  background: #687f00 !important;
-  color: #fff !important;
+  background: var(--table-head) !important;
+  color: var(--text-secondary) !important;
   text-align: left;
   text-transform: uppercase;
   white-space: nowrap;
@@ -1332,13 +1332,13 @@
 
 /* Match the admissions directory header and override the global transparent table heading. */
 :root:not([data-theme="dark"]) #root .marks-management-marks-entry .marks-entry-records-table thead th {
-  background: var(--brand) !important;
-  color: #fff !important;
+  background: var(--table-head) !important;
+  color: var(--text-secondary) !important;
 }
 
 :root[data-theme="dark"] #root .marks-management-marks-entry .marks-entry-records-table thead th {
-  background: var(--brand-dark) !important;
-  color: #f4f8ec !important;
+  background: var(--table-head) !important;
+  color: var(--text-secondary) !important;
 }
 
 /* Bulk import is a top-to-bottom workflow: configure/upload first, review rows second. */
@@ -1362,7 +1362,7 @@
   overflow: hidden;
   border: 1px solid var(--border);
   background: var(--surface, #fff);
-  box-shadow: 0 8px 24px rgb(24 63 106 / 6%);
+  box-shadow: var(--shadow-sm);
 }
 
 .bulk-marks-step-label {
@@ -1474,7 +1474,7 @@
   margin: 8px 20px 16px;
   border: 1px solid var(--border);
   border-radius: 12px;
-  box-shadow: 0 4px 14px rgb(24 63 106 / 4%);
+  box-shadow: var(--shadow-sm);
 }
 
 .marks-management-bulk-marks-upload .bulk-marks-preview-filters .filter-disclosure__search {
@@ -1509,8 +1509,8 @@
   z-index: 3;
   padding: 13px 14px;
   border-bottom: 1px solid var(--brand-dark);
-  background: var(--brand) !important;
-  color: #fff !important;
+  background: var(--table-head) !important;
+  color: var(--text-secondary) !important;
   font-size: 10px !important;
   font-weight: 800 !important;
   letter-spacing: .055em;
@@ -1522,8 +1522,8 @@
   position: sticky;
   top: 0;
   z-index: 3;
-  background: #34451f !important;
-  color: #f4f8ec !important;
+  background: var(--table-head) !important;
+  color: var(--text-secondary) !important;
 }
 
 .marks-management-bulk-marks-upload .bulk-marks-table tbody td {

@@ -37,7 +37,7 @@
   padding: 3px 8px;
   border-radius: 20px;
   background: rgba(59, 130, 246, 0.12);
-  color: #2563eb;
+  color: var(--info);
   margin-right: 10px;
   display: inline-block;
 }
@@ -76,7 +76,7 @@
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 22px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-sm);
   min-width: 0;
 }
 
@@ -102,13 +102,13 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 14px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-sm);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .fa-stat:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-sm);
 }
 
 .fa-stat-icon {
@@ -124,7 +124,7 @@
 
 .fa-stat-neutral .fa-stat-icon {
   background: rgba(59, 130, 246, 0.12);
-  color: #2563eb;
+  color: var(--info);
 }
 
 .fa-stat-present .fa-stat-icon {
@@ -499,7 +499,7 @@
 
 .fa-btn-present:hover:not(:disabled) {
   background: var(--success);
-  color: #ffffff;
+  color: var(--text-on-dark);
   border-color: var(--success);
 }
 
@@ -510,8 +510,8 @@
 }
 
 .fa-btn-absent:hover:not(:disabled) {
-  background: var(--danger);
-  color: #ffffff;
+  background: var(--danger-solid);
+  color: var(--text-on-dark);
   border-color: var(--danger);
 }
 
@@ -522,8 +522,8 @@
 }
 
 .fa-btn-remaining:hover:not(:disabled) {
-  background: var(--brand);
-  color: #ffffff;
+  background: var(--brand-solid);
+  color: var(--text-on-dark);
 }
 
 .fa-btn-clear {
@@ -533,8 +533,8 @@
 }
 
 .fa-btn-clear:hover:not(:disabled) {
-  background: var(--danger);
-  color: #ffffff;
+  background: var(--danger-solid);
+  color: var(--text-on-dark);
   border-color: var(--danger);
 }
 
@@ -632,8 +632,8 @@
 }
 
 .fa-table th {
-  background: var(--brand);
-  color: #ffffff;
+  background: var(--table-head);
+  color: var(--text-secondary);
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
@@ -655,7 +655,7 @@
 }
 
 .fa-table tbody tr:hover {
-  background: rgba(23, 105, 194, 0.03);
+  background: var(--table-row-hover);
 }
 
 .is-marked-row {
@@ -735,25 +735,25 @@
 
 .fa-btn-present.is-active {
   background: var(--success);
-  color: #ffffff;
+  color: var(--text-on-dark);
   box-shadow: 0 1px 4px rgba(16, 185, 129, 0.35);
 }
 
 .fa-btn-absent.is-active {
-  background: var(--danger);
-  color: #ffffff;
+  background: var(--danger-solid);
+  color: var(--text-on-dark);
   box-shadow: 0 1px 4px rgba(239, 68, 68, 0.35);
 }
 
 .fa-btn-late.is-active {
   background: #f59e0b;
-  color: #ffffff;
+  color: var(--text-on-dark);
   box-shadow: 0 1px 4px rgba(245, 158, 11, 0.35);
 }
 
 .fa-btn-leave.is-active {
   background: #6366f1;
-  color: #ffffff;
+  color: var(--text-on-dark);
   box-shadow: 0 1px 4px rgba(99, 102, 241, 0.35);
 }
 
@@ -888,8 +888,8 @@
 }
 
 .fa-button.fa-primary {
-  background: var(--brand);
-  color: #ffffff;
+  background: var(--brand-solid);
+  color: var(--text-on-dark);
   border-color: var(--brand);
   box-shadow: 0 2px 6px rgba(23, 105, 194, 0.3);
   font-weight: 700;
@@ -1107,10 +1107,10 @@
 #root .portal-shell .fa-register td:has(> .fa-segmented-toggle) { overflow: visible; min-width: 200px; }
 #root .portal-shell .fa-register .fa-table { min-width: 730px; }
 #root .portal-shell .fa-register .fa-table-scroll { overflow-x: auto; }
-#root .portal-shell .fa-register .fa-btn-present.is-active { background: #07865b; color: #fff; border-color: #07865b; }
-#root .portal-shell .fa-register .fa-btn-absent.is-active { background: #d32f3f; color: #fff; border-color: #d32f3f; }
-#root .portal-shell .fa-register .fa-btn-late.is-active { background: #996000; color: #fff; border-color: #996000; }
-#root .portal-shell .fa-register .fa-btn-leave.is-active { background: #6251c7; color: #fff; border-color: #6251c7; }
+#root .portal-shell .fa-register .fa-btn-present.is-active { background: #07865b; color: var(--text-on-dark); border-color: #07865b; }
+#root .portal-shell .fa-register .fa-btn-absent.is-active { background: #d32f3f; color: var(--text-on-dark); border-color: #d32f3f; }
+#root .portal-shell .fa-register .fa-btn-late.is-active { background: #996000; color: var(--text-on-dark); border-color: #996000; }
+#root .portal-shell .fa-register .fa-btn-leave.is-active { background: #6251c7; color: var(--text-on-dark); border-color: #6251c7; }
 /* Compact attendance summary beside the page title. */
 #root .portal-shell .fa-attendance-page > .tf-heading { display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap; }
 #root .portal-shell .fa-attendance-page > .tf-heading > div:first-child { flex:1 1 280px; min-width:0; }

@@ -34,7 +34,7 @@
   border: 1px solid var(--border-strong);
   border-radius: 10px;
   background: var(--surface);
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.15);
+  box-shadow: var(--shadow-md);
 }
 
 .workspace-context-menu .searchable-select__search {
@@ -89,14 +89,14 @@
    ========================================================================== */
 
 :root[data-theme="dark"] .workspace-context-menu.searchable-select__menu {
-  background: #151B28 !important;
-  border-color: #334155 !important;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5) !important;
+  background: var(--app-bg) !important;
+  border-color: var(--border) !important;
+  box-shadow: var(--shadow-md) !important;
 }
 
 :root[data-theme="dark"] .workspace-context-menu .searchable-select__search {
-  background: #101622 !important;
-  border-color: #334155 !important;
+  background: var(--app-bg) !important;
+  border-color: var(--border) !important;
 }
 
 :root[data-theme="dark"] .workspace-context-menu .searchable-select__search input {
@@ -111,7 +111,7 @@
 :root[data-theme="dark"] .workspace-context-menu .searchable-select__option:hover,
 :root[data-theme="dark"] .workspace-context-menu .searchable-select__option:focus-visible {
   background: rgba(23, 105, 194, 0.22) !important;
-  color: #FFFFFF !important;
+  color: var(--text-on-dark) !important;
 }
 
 :root[data-theme="dark"] #root .header-academic-year__status {

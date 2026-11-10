@@ -9,7 +9,6 @@ import {
   academicYearApi,
   branchApi,
   courseApi,
-  courseStructureApi,
   departmentApi,
   sectionApi,
 } from '../api/apiEndpoints'
@@ -318,27 +317,19 @@ class AcademicService {
     const cacheKey = `semesters:${courseId || 'all'}`
     const data = await this._fetchCached(cacheKey, async () => {
       try {
-        let list = []
-        if (courseId) {
-          list = await courseStructureApi.getByCourse(courseId)
-        } else {
-          try {
-            const res = await getSemestersAcademic()
-            list = res?.data?.data ?? res?.data ?? []
-          } catch {
-            list = await courseStructureApi.getAll()
-          }
-        }
+        const res = await getSemestersAcademic(courseId ? { courseId } : {})
+        const list = res?.data?.data ?? res?.data
+        if (!Array.isArray(list)) throw new Error('Saved semester records were not returned.')
         return (Array.isArray(list) ? list : []).map(s => ({
-          id: s.semesterId ?? s.id ?? s.semesterNumber,
-          semesterId: s.semesterId ?? s.id ?? s.semesterNumber,
-          semesterNumber: s.semesterNumber ?? s.id,
+          id: s.semesterId ?? s.id,
+          semesterId: s.semesterId ?? s.id,
+          semesterNumber: s.semesterNumber,
           semesterName: s.semesterName ?? s.name ?? '',
           courseId: s.courseId,
           branchId: s.branchId,
           status: s.status,
           ...s
-        }))
+        })).filter(s => Number(s.semesterId) > 0)
       } catch (err) {
         console.warn('Unable to load semesters:', err)
         return Object.assign([], { loadError: true })
@@ -402,7 +393,7 @@ class AcademicService {
     const department = departments.find(d => String(d.id) === String(departmentId))
     const course = courses.find(c => String(c.id) === String(courseId))
     const branch = branches.find(b => String(b.id) === String(branchId))
-    const semester = semesters.find(s => String(s.id) === String(semesterId) || String(s.semesterNumber) === String(semesterId))
+    const semester = semesters.find(s => String(s.id) === String(semesterId))
     const section = sections.find(sec => String(sec.id) === String(sectionId))
 
     return {

@@ -745,7 +745,7 @@ function getAcademicRelation(mark, section, allocation, subject, academic) {
   const semesterRaw = pick(mark, 'semesterName', 'semester') || pick(section, 'semesterName', 'semesterNumber', 'semester') ||
     pick(allocation, 'semesterName', 'semesterNumber', 'semester') || pick(subject, 'semesterName', 'semesterNumber', 'semester')
   const semester = entityLabel(academic.semesters, semesterId, semesterRaw,
-    ['id', 'semesterId', 'semesterNumber'], ['semesterName', 'name', 'label', 'title', 'semesterNumber'],
+    ['semesterId', 'id'], ['semesterName', 'name', 'label', 'title', 'semesterNumber'],
     withSemesterPrefix)
   const academicYear = entityLabel(academic.academicYears, academicYearId,
     pick(mark, 'academicYearName', 'academicYear') || pick(section, 'academicYearName', 'academicYear') ||
@@ -1154,7 +1154,7 @@ function MarksApproval() {
     academicYear: makeOptions(academic.academicYears, batches, ['id', 'academicYearId'], ['academicYearName', 'name', 'label', 'title', 'yearName'], 'academicYearId', 'academicYear'),
     course: makeOptions(academic.courses, batches, ['id', 'courseId'], ['courseName', 'name', 'label', 'title'], 'courseId', 'course'),
     branch: makeOptions(academic.branches, batches, ['id', 'branchId'], ['branchName', 'name', 'label', 'title', 'branchCode'], 'branchId', 'branch', ['branchCode', 'code']),
-    semester: makeOptions(academic.semesters, batches, ['id', 'semesterId', 'semesterNumber'], ['semesterName', 'name', 'label', 'title', 'semesterNumber'], 'semesterId', 'semester'),
+    semester: makeOptions(academic.semesters, batches, ['semesterId', 'id'], ['semesterName', 'name', 'label', 'title', 'semesterNumber'], 'semesterId', 'semester'),
     section: makeOptions(academic.sections, batches, ['id', 'sectionId'], ['sectionName', 'name', 'label', 'title'], 'sectionId', 'section'),
     subject: makeOptions(subjects, batches, ['id', 'subjectId'], ['subjectName', 'name', 'label', 'title'], 'subjectId', 'subject', ['subjectCode', 'code']),
     exam: makeOptions([], batches, ['examId'], ['exam'], 'examId', 'exam', ['examCode']),

@@ -78,7 +78,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -122,7 +122,7 @@
   background: var(--surface);
   border-radius: 14px;
   border: 1px solid var(--border);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
 
@@ -196,10 +196,10 @@
 }
 
 .sm-table th {
-  background: var(--table-head, var(--brand)) !important;
+  background: var(--table-head) !important;
   height: 36px !important;
   padding: 6px 8px !important;
-  color: #FFFFFF !important;
+  color: var(--text-secondary) !important;
   font-size: 10px !important;
   font-weight: 700 !important;
   letter-spacing: 0.035em !important;
@@ -284,8 +284,8 @@
   transition: background 0.15s ease, opacity 0.15s ease;
 }
 
-.sm-btn--primary { background: var(--brand-hover);
-  color: #ffffff;
+.sm-btn--primary { background: var(--brand-solid-hover);
+  color: var(--text-on-dark);
 }
 
 .sm-btn--primary:hover { background: var(--brand-hover);
@@ -303,7 +303,7 @@
 
 .sm-btn--danger {
   background: var(--cms-red-soft);
-  color: #b91c1c;
+  color: var(--danger);
 }
 
 .sm-btn--danger:hover {
@@ -339,7 +339,7 @@
 .sm-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--overlay);
   backdrop-filter: blur(4px);
   z-index: 1000;
   display: grid;
@@ -505,7 +505,7 @@
 .sm-status-action { font-size: .78rem; white-space: nowrap; }
 .sm-table td small { display: block; color: var(--text-muted); margin-top: 1px; }
 .sm-loading, .sm-error { min-height: 220px; display: grid; place-content: center; gap: 14px; text-align: center; color: var(--text-muted); padding: 24px; }
-.sm-error { color: #b91c1c; }
+.sm-error { color: var(--danger); }
 .sm-modal--wide { max-width: 880px; }
 .sm-modal--details { max-width: 700px; }
 .sm-modal--details {
@@ -522,7 +522,7 @@
   align-items: flex-start;
   gap: 16px;
   padding: 18px 20px;
-  background: #fff;
+  background: var(--surface);
 }
 .sm-modal--details .sm-modal-header > div:first-child {
   display: grid;
@@ -546,12 +546,12 @@
   bottom: 0;
   z-index: 2;
   flex: 0 0 auto;
-  background: #fff;
+  background: var(--surface);
 }
 .sm-modal--confirm { max-width: 440px; padding: 26px; gap: 12px; }
 .sm-modal--confirm h2 { margin: 0; color: var(--text-primary); font-size: 1.2rem; }
 .sm-modal--confirm p { margin: 0; color: var(--text-muted); line-height: 1.55; }
-.sm-confirm-icon { display: grid; width: 42px; height: 42px; place-items: center; border-radius: 50%; color: #b91c1c; background: var(--cms-red-soft); font-size: 1.2rem; }
+.sm-confirm-icon { display: grid; width: 42px; height: 42px; place-items: center; border-radius: 50%; color: var(--danger); background: var(--cms-red-soft); font-size: 1.2rem; }
 .sm-modal--confirm .sm-modal-footer { justify-content: flex-end; gap: 10px; margin: 4px -26px -26px; }
 .sm-modal-header p { margin: 4px 0 0; color: var(--text-muted); font-size: .88rem; }
 .sm-modal-body section > h3, .sm-preview strong, .sm-details-section h3 { font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; color: var(--text-secondary); margin: 0 0 12px; }
@@ -629,7 +629,7 @@
   max-height: calc(100dvh - 48px);
   border-color: color-mix(in srgb, var(--brand) 18%, var(--border));
   border-radius: 20px;
-  box-shadow: 0 28px 90px rgba(7, 16, 8, .32);
+  box-shadow: var(--shadow-md);
 }
 
 .sm-screen .shared-view-dialog:has(.sm-editor-layout)::backdrop {
@@ -719,15 +719,15 @@
 
 .sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-reference-tabs .erp-tab-btn.active {
   border-color: var(--brand) !important;
-  background: var(--brand) !important;
+  background: var(--brand-solid) !important;
   color: var(--text-on-accent, #fff) !important;
   box-shadow: 0 5px 14px color-mix(in srgb, var(--brand) 25%, transparent) !important;
 }
 
 .sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-reference-tabs .erp-tab-btn.active span {
   border-color: color-mix(in srgb, #fff 40%, transparent);
-  background: color-mix(in srgb, #fff 18%, transparent);
-  color: #fff;
+  background: color-mix(in srgb, var(--surface) 18%, transparent);
+  color: var(--text-on-dark);
 }
 
 .sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-editor-form {
@@ -755,7 +755,7 @@
   border-bottom: 1px solid var(--border);
   border-radius: 14px;
   background: var(--surface);
-  box-shadow: 0 2px 8px rgba(26, 42, 18, .035);
+  box-shadow: var(--shadow-md);
 }
 
 .sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-editor-section-title {

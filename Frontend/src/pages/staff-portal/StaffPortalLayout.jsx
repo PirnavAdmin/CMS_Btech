@@ -1,6 +1,7 @@
+import ThemeColorPicker from '../../components/ThemeColorPicker'
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { FiBell, FiBookOpen, FiCalendar, FiCheckCircle, FiCheckSquare, FiChevronDown, FiChevronLeft, FiChevronRight, FiClock, FiFileText, FiGrid, FiLock, FiLogOut, FiMenu, FiMoon, FiSearch, FiSun, FiUser, FiUsers, FiX } from 'react-icons/fi'
+import { FiBell, FiBookOpen, FiCalendar, FiCheckCircle, FiCheckSquare, FiChevronDown, FiChevronLeft, FiChevronRight, FiClock, FiFileText, FiGrid, FiLock, FiLogOut, FiMenu, FiSearch, FiUser, FiUsers, FiX } from 'react-icons/fi'
 import '../../layouts/DashboardLayout.css'
 import '../../layouts/AccountMenu.css'
 import '../../components/Sidebar.css'
@@ -26,15 +27,9 @@ export default function StaffPortalLayout({ children, currentScreen = 'dashboard
   const [open, setOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('pirnav-sidebar-collapsed') === 'true')
   const [query, setQuery] = useState('')
-  const [theme, setTheme] = useState(() => localStorage.getItem('pirnav-theme') || 'light')
   const [passwordOpen, setPasswordOpen] = useState(false)
   const [logoutOpen, setLogoutOpen] = useState(false)
   const menuRef = useRef(null)
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme
-    localStorage.setItem('pirnav-theme', theme)
-  }, [theme])
 
   const toggleCollapse = () => {
     setCollapsed(prev => {
@@ -42,10 +37,6 @@ export default function StaffPortalLayout({ children, currentScreen = 'dashboard
       localStorage.setItem('pirnav-sidebar-collapsed', String(next))
       return next
     })
-  }
-
-  const toggleTheme = () => {
-    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'))
   }
 
   // Filter modules for global search
@@ -185,15 +176,7 @@ export default function StaffPortalLayout({ children, currentScreen = 'dashboard
               </Link>
 
               {/* Dark-mode toggle */}
-              <button
-                type="button"
-                className="faculty-navbar-icon"
-                onClick={toggleTheme}
-                aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-                title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-              >
-                {theme === 'dark' ? <FiSun /> : <FiMoon />}
-              </button>
+              <ThemeColorPicker />
 
               {/* User Chip: sirisha / Non-Teaching Staff */}
               <details className="account-menu faculty-account-menu" ref={menuRef}>

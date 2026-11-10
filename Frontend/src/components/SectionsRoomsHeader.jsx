@@ -5,8 +5,8 @@ import PageHeader from './PageHeader'
 import './SectionsRoomsHeader.css'
 
 const tabs = [
-  { id: 'sections', label: 'Sections', path: '/section-management', icon: FiUsers },
   { id: 'rooms', label: 'Rooms & Classrooms', path: '/rooms-management', icon: FiGrid },
+  { id: 'sections', label: 'Sections', path: '/section-management', icon: FiUsers },
 ]
 
 export default function SectionsRoomsHeader({ view, compactSummary }) {

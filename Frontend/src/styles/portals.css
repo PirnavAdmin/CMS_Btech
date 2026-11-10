@@ -33,7 +33,7 @@
 .portal-quick-links>a:hover{background:var(--brand-soft)}
 .portal-page button,.portal-dialog button{border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--brand);padding:9px 14px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
 .portal-page button:hover,.portal-dialog button:hover{background:var(--brand-soft)}
-.portal-page button.primary,.portal-dialog button.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+.portal-page button.primary,.portal-dialog button.primary{background:var(--brand-solid);color:var(--text-on-dark);border-color:var(--brand)}
 .portal-page button.primary:hover,.portal-dialog button.primary:hover{background:var(--brand-hover)}
 .portal-page button:disabled,.portal-dialog button:disabled{opacity:.5;cursor:not-allowed}
 .portal-page :focus-visible,.portal-dialog :focus-visible,.portal-shell :focus-visible{outline:3px solid #65b5ff;outline-offset:3px}
@@ -47,7 +47,7 @@
 .portal-table{border-collapse:collapse;width:100%;text-align:left;font-size:13px;background:var(--surface)}
 .portal-table caption{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
 .portal-table thead{background:var(--table-head)}
-.portal-table th{background:var(--table-head);color:#fff;font-size:11px;letter-spacing:.7px;text-transform:uppercase;padding:17px 15px;white-space:nowrap}
+.portal-table th{background:var(--table-head);color:var(--text-secondary);font-size:11px;letter-spacing:.7px;text-transform:uppercase;padding:17px 15px;white-space:nowrap}
 .portal-table td{padding:16px 15px;border-bottom:1px solid var(--border);vertical-align:middle;max-width:300px;overflow-wrap:anywhere;min-width:100px}
 .portal-table tr:last-child td{border-bottom:0}
 .portal-table tbody tr:nth-child(even){background:var(--surface-soft)}

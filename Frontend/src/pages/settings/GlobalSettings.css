@@ -11,7 +11,7 @@
 .configuration-card small { margin-top:6px; color:var(--text-muted); font-size:11px; }
 .configuration-card footer svg { width:14px; height:14px; }
 .configuration-card footer .erp-btn--primary:is(:hover, :focus-visible, :active) {
-  color:#fff;
+  color:var(--text-on-dark);
 }
 .configuration-card footer .erp-btn--secondary:is(:hover, :focus-visible, :active) {
   color:var(--text-primary);

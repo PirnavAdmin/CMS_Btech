@@ -1,9 +1,10 @@
 /* Adapted from CMS Inter shared DataTable.css and Form.css; B-Tech component contracts retained. */
-.erp-data-table { width:100%; max-width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid var(--border); border-radius:12px; background:var(--surface); }
+.erp-data-table { width:100%; max-width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid var(--border); border-radius:12px; background:var(--table-bg); }
 .erp-data-table>table { width:100%; border-collapse:collapse; table-layout:auto; }
-.erp-data-table th { text-align:left; font-size:clamp(10px,.72vw,11.5px); letter-spacing:.6px; text-transform:uppercase; color:var(--text-muted); background:var(--cms-table-header); padding:clamp(8px,.65vw,11px) clamp(7px,.8vw,13px); border-bottom:1px solid var(--border); white-space:nowrap; }
+.erp-data-table th { text-align:left; font-size:clamp(10px,.72vw,11.5px); letter-spacing:.6px; text-transform:uppercase; color:var(--text-secondary); background:var(--table-head); padding:clamp(8px,.65vw,11px) clamp(7px,.8vw,13px); border-bottom:1px solid var(--border); white-space:nowrap; }
 .erp-data-table td { padding:clamp(8px,.7vw,11px) clamp(7px,.8vw,13px); border-bottom:1px solid var(--border); font-size:clamp(11px,.8vw,13px); vertical-align:middle; overflow-wrap:anywhere; color:var(--text-primary); }
-.erp-data-table tbody tr:hover { background:var(--cms-hover); }
+.erp-data-table tbody tr:hover > td { background:var(--table-row-hover); }
+.erp-data-table tbody tr[aria-selected="true"] > td { background:var(--selected-bg); }
 .erp-data-table :is(th,td).table-center { text-align:center; }
 .erp-data-table__sort { border:0; padding:0; background:transparent; color:inherit; font:inherit; text-transform:inherit; cursor:pointer; }
 .erp-data-table:focus-visible,.erp-data-table__sort:focus-visible { outline:2px solid var(--brand); outline-offset:2px; }

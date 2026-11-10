@@ -325,8 +325,15 @@ export default function StudentPromotion() {
   }, [getBranchesForCourse, courseId])
 
   const availableSemesters = useMemo(() => {
-    return getSemestersForCourse(courseId, true)
-  }, [getSemestersForCourse, courseId])
+    if (!courseId || !selectedBranchId || !selectedAcademicYearId) return []
+    return getSemestersForCourse(courseId, false, { branchId: selectedBranchId, academicYearId: selectedAcademicYearId })
+  }, [getSemestersForCourse, courseId, selectedBranchId, selectedAcademicYearId])
+  const sourceSemester = availableSemesters.find(s => Number(s.semesterNumber) === Number(selectedSemesterNumber))
+  const nextTerms = selectedSemesterNumber && selectedBranchId && selectedAcademicYearId
+    ? getSemestersForCourse(courseId, false, { branchId: selectedBranchId, academicYearId: targetAcademicYearId || selectedAcademicYearId })
+      .filter(s => Number(s.semesterNumber) === Number(selectedSemesterNumber) + 1)
+    : []
+  const nextSemesterId = nextTerms.length === 1 ? nextTerms[0].id : ''
 
   useEffect(() => {
     if (academicLoading) return
@@ -348,19 +355,20 @@ export default function StudentPromotion() {
   }, [academicLoading, activeCourses, availableBranches, availableSemesters, activeAcademicYears, courseId, selectedBranchId, selectedSemesterNumber, selectedAcademicYearId])
 
   const targetSections = useMemo(() => {
+    if (!nextSemesterId) return []
     return getSectionsForScope({
       academicYearId: targetAcademicYearId || selectedAcademicYearId,
       courseId,
       branchId: selectedBranchId,
-      semesterId: Number(selectedSemesterNumber) + 1,
+      semesterId: nextSemesterId,
     }, true)
-  }, [getSectionsForScope, targetAcademicYearId, selectedAcademicYearId, courseId, selectedBranchId, selectedSemesterNumber])
+  }, [getSectionsForScope, targetAcademicYearId, selectedAcademicYearId, courseId, selectedBranchId, nextSemesterId])
 
-  const finalSemesterNumber = Math.max(0, ...availableSemesters.map(semester => Number(semester.semesterNumber || semester.id) || 0))
-  const isFinalSemester = Boolean(selectedSemesterNumber && finalSemesterNumber && Number(selectedSemesterNumber) >= finalSemesterNumber)
+  const finalSemesterNumber = Number(activeCourses.find(course => String(course.id) === String(courseId))?.totalSemesters) || 0
+  const isFinalSemester = Boolean(finalSemesterNumber && Number(selectedSemesterNumber) === finalSemesterNumber)
   const isSemester8 = Number(selectedSemesterNumber) >= 8
   const isDegreeReview = isFinalSemester
-  const canExecutePromotion = !isFinalSemester || Number(selectedSemesterNumber) === 8
+  const canExecutePromotion = Boolean(sourceSemester?.id && (isFinalSemester ? Number(selectedSemesterNumber) === 8 : nextSemesterId && Number(selectedSemesterNumber) < 8))
   const promotionType = isFinalSemester ? 'degree' : 'next-semester'
 
   // Load Promotion Scope Students & History
@@ -375,6 +383,7 @@ export default function StudentPromotion() {
       const selectedCourse = activeCourses.find((c) => String(c.id) === String(courseId))
       const selectedBranch = availableBranches.find((b) => String(b.id) === String(selectedBranchId))
       const selectedSemester = availableSemesters.find((s) => Number(s.semesterNumber || s.id) === Number(selectedSemesterNumber))
+      if (!selectedSemester?.id) { setStudents([]); return }
       const selectedYear = activeAcademicYears.find((y) => String(y.id) === String(selectedAcademicYearId))
 
       // Load matching students from studentService
@@ -383,7 +392,7 @@ export default function StudentPromotion() {
         academicYear: selectedYear?.name,
         courseId,
         branchId: selectedBranchId,
-        semesterId: selectedSemesterNumber,
+        semesterId: selectedSemester.id,
         course: selectedCourse?.name,
         courseCode: selectedCourse?.code,
         branch: selectedBranch?.name,
@@ -652,7 +661,7 @@ export default function StudentPromotion() {
   const handleExecutePromotion = async () => {
     if (!confirmRows?.length || loading.promotion || promotionBusyRef.current) return
     if (!canExecutePromotion) {
-      setNotice('The existing promotion API only supports degree completion at Semester 8. This course’s final semester is not supported for completion by the current integration.', 'error')
+      setNotice(isFinalSemester ? 'The existing promotion API only supports degree completion at Semester 8.' : 'A unique saved target semester is required in the selected branch and academic year.', 'error')
       return
     }
 
@@ -680,12 +689,12 @@ export default function StudentPromotion() {
       const result = await promotionService.promoteBulk(currentRows, {
         branchId: selectedBranchId,
         currentAcademicYearId: selectedAcademicYearId,
-        currentAcademicYear: selectedYear?.name || '2026-2027',
-        currentSemesterId: selectedSemesterNumber,
+        currentAcademicYear: selectedYear?.name,
+        currentSemesterId: sourceSemester.id,
         currentSemester: `Semester ${currentSemNum}`,
         targetAcademicYearId: isDegreeCompletion ? selectedAcademicYearId : (targetAcademicYearId || selectedAcademicYearId),
         targetAcademicYear: isDegreeCompletion ? selectedYear?.name : targetYear?.name,
-        targetSemesterId: isDegreeCompletion ? selectedSemesterNumber : currentSemNum + 1,
+        targetSemesterId: isDegreeCompletion ? sourceSemester.id : nextSemesterId,
         targetSemester: isDegreeCompletion ? 'Graduated (Degree Conferred)' : `Semester ${currentSemNum + 1}`,
         targetSectionId: isDegreeCompletion ? null : targetSectionId,
         targetSection: isDegreeCompletion ? null : (selectedSection?.name || ''),
@@ -1211,7 +1220,7 @@ export default function StudentPromotion() {
           <motion.section className="promotion-review-summary" aria-labelledby="promotion-review-title" initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: shouldReduceMotion ? 0 : 0.2 }}>
             <div className="promotion-review-summary-head"><div><span className="promotion-eyebrow">Final review</span><h2 id="promotion-review-title">Ready to {isDegreeReview ? 'complete degrees' : 'promote students'}?</h2><p>Review the selected students and destination before confirming.</p></div><strong>{eligibleSelected.length} selected</strong></div>
             {eligibleSelected.length ? <ul>{eligibleSelected.map(student => <li key={idOf(student)}><span>{nameOf(student)}</span><small>{student.registrationNumber || student.rollNumber || 'No registration number'} · {student.currentSemester} → {student.nextSemester}</small></li>)}</ul> : <p className="promotion-inline-error" role="alert">Select at least one student returned as eligible by the promotion service.</p>}
-            {!canExecutePromotion && <p className="promotion-inline-error" role="alert">The configured final semester is {finalSemesterNumber}, but the existing promotion API only supports degree completion at Semester 8. Promotion is disabled here to prevent advancing beyond the course limit.</p>}
+            {!canExecutePromotion && <p className="promotion-inline-error" role="alert">{isFinalSemester ? 'The existing promotion API only supports degree completion at Semester 8.' : 'A unique saved target semester is required in the selected branch and academic year.'}</p>}
           </motion.section>
         )}
         </AnimatePresence>

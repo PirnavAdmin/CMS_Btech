@@ -28,7 +28,7 @@ const entries = [
     aliases: [], children: [], prerequisites: ["college"],
   },
   {
-    id: "academic_structure", label: "Academic Structure", icon: "layers-3",
+    id: "academic_structure", label: "Program Configuration", icon: "layers-3",
     path: "/academic-structure", section: "collegeSetup", order: 30,
     permission: {"module":"departments","action":"view","source":"existing access matrix"}, authorization: "existing-guards-and-permissions",
     roles: ["admin"], scope: "college", navigation: true,
@@ -64,7 +64,7 @@ const entries = [
     path: "/semester-management", section: "collegeSetup", order: 34,
     permission: {"module":"semesters","action":"view","source":"existing access matrix"}, authorization: "existing-guards-and-permissions",
     roles: ["admin"], scope: "college", navigation: false,
-    component: "src/pages/academic-structure/AcademicStructure.jsx", exportName: "AcademicStructure",
+    component: "src/pages/semester-management/SemesterManagement.jsx", exportName: "SemesterManagement",
     aliases: [], children: [], prerequisites: ["college","course","branch"],
   },
   {
@@ -87,7 +87,7 @@ const entries = [
     id: "fee_structures", label: "Fee Structure", icon: "wallet-cards",
     path: "/fees/structures", section: "finance", order: 10,
     permission: {"module":"fees","action":"view","source":"existing access matrix"}, authorization: "existing-guards-and-permissions",
-    roles: ["admin"], scope: "college", navigation: true,
+    roles: ["admin"], scope: "college", navigation: false,
     component: "src/pages/fees/FeeManagement.jsx", exportName: "FeeStructure",
     aliases: ["/fees/components","/fees/legacy"], children: [], prerequisites: ["college","academicYear","course","branch","batch","semester"],
   },

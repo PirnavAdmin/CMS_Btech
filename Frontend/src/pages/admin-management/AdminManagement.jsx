@@ -1,8 +1,10 @@
+import { calculateCompletion, completionSchemas, departmentDirectoryCompletion } from '../../utils/recordCompletion'
+import { CompletionSummary, ProgressiveFormFooter, ResumeSetupAction, completionColumn } from '../../components/RecordCompletion'
 import SectionsRoomsHeader from '../../components/SectionsRoomsHeader'
 import { accessGovernance } from '../../services/accessGovernanceService'
-import { generateNextAcademicYear } from '../../auth/collegeApi'
+import { deleteDepartment, generateNextAcademicYear } from '../../auth/collegeApi'
 import ViewDialog from '../../components/ViewDialog'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import DataTable from '../../components/DataTable'
 import AsyncState from '../../components/AsyncState'
 import FormLayout, { FormField, FormGroup } from '../../components/FormLayout'
@@ -721,6 +723,11 @@ function AcademicYear() {
 return { default: AcademicYear }
 })()
 
+const NEW_COLLEGE_DRAFT_KEY = 'pirnav-college-draft-new'
+const readNewCollegeDraft = () => {
+  try { return JSON.parse(localStorage.getItem(NEW_COLLEGE_DRAFT_KEY) || 'null') } catch { return null }
+}
+
 // AddCollege screen and private helpers.
 const AddCollegeScreen = (() => {
 const eventBus = eventBusImports_default
@@ -766,8 +773,10 @@ const FORM_TABS = [
   { id: 'contact', label: 'Contact Information', shortLabel: 'Contact' },
   { id: 'administration', label: 'Administration', shortLabel: 'Admin' },
   { id: 'accreditation', label: 'Accreditation Details', shortLabel: 'Accreditation' },
+  { id: 'review', label: 'Review & Submit', shortLabel: 'Review' },
 ]
 const TAB_FIELDS = {
+  review: [],
   college: ['collegeName', 'collegeCode', 'collegeType', 'collegeTypeOther', 'universityName', 'startDate', 'endDate'],
   address: ['addressLine1', 'addressLine2', 'area', 'district', 'city', 'state', 'pincode', 'country'],
   contact: ['contactNumber', 'alternateContactNumber', 'email', 'website'],
@@ -823,34 +832,24 @@ function validate(values) {
   else if (name.length < 3 || name.length > 120) errors.collegeName = 'Use between 3 and 120 characters.'
   if (!values.collegeCode) errors.collegeCode = 'College code is required.'
   else if (!codePattern.test(values.collegeCode)) errors.collegeCode = 'Use 2-12 uppercase letters and numbers only.'
-  if (!values.collegeType) errors.collegeType = 'Select a college type.'
-  else if (values.collegeType === 'Other' && !values.collegeTypeOther.trim()) errors.collegeTypeOther = 'Enter the college type.'
+  if (values.collegeType === 'Other' && !values.collegeTypeOther.trim()) errors.collegeTypeOther = 'Enter the college type.'
   const university = values.universityName.trim()
-  if (!university) errors.universityName = 'University name is required.'
-  else if (/\d/.test(university) || !institutionNamePattern.test(university)) errors.universityName = 'University name cannot contain numbers.'
-  else if (university.length < 3 || university.length > 120) errors.universityName = 'Use between 3 and 120 characters.'
-  if (!values.addressLine1.trim()) errors.addressLine1 = 'Address line 1 is required.'
-  if (!values.city.trim()) errors.city = 'City is required.'
-  else if (!personNamePattern.test(values.city.trim())) errors.city = 'City can only contain letters and spaces.'
-  if (!values.state.trim()) errors.state = 'State is required.'
-  else if (!personNamePattern.test(values.state.trim())) errors.state = 'State can only contain letters and spaces.'
-  if (!/^[1-9]\d{5}$/.test(values.pincode.trim())) errors.pincode = 'Enter a valid 6-digit Indian pincode (cannot start with 0).'
+  if (university && (/\d/.test(university) || !institutionNamePattern.test(university))) errors.universityName = 'University name cannot contain numbers.'
+  else if (university && (university.length < 3 || university.length > 120)) errors.universityName = 'Use between 3 and 120 characters.'
+  if (values.city.trim() && !personNamePattern.test(values.city.trim())) errors.city = 'City can only contain letters and spaces.'
+  if (values.state.trim() && !personNamePattern.test(values.state.trim())) errors.state = 'State can only contain letters and spaces.'
+  if (values.pincode.trim() && !/^[1-9]\d{5}$/.test(values.pincode.trim())) errors.pincode = 'Enter a valid 6-digit Indian pincode (cannot start with 0).'
   const cleanContact = String(values.contactNumber || '').replace(/\D/g, '')
-  if (!cleanContact) errors.contactNumber = 'Official contact number is required.'
-  else if (!contactPattern.test(cleanContact)) errors.contactNumber = 'Enter a valid 10-digit mobile number or landline number with STD code.'
+  if (cleanContact && !contactPattern.test(cleanContact)) errors.contactNumber = 'Enter a valid 10-digit mobile number or landline number with STD code.'
   const cleanAltContact = String(values.alternateContactNumber || '').replace(/\D/g, '')
   if (values.alternateContactNumber && !contactPattern.test(cleanAltContact)) errors.alternateContactNumber = 'Enter a valid 10-digit mobile number or landline number with STD code.'
-  if (!values.email.trim()) errors.email = 'Official email is required.'
-  else if (!emailPattern.test(values.email.trim())) errors.email = 'Enter a valid email address.'
-  if (!values.principalName.trim()) errors.principalName = 'Principal name is required.'
-  else if (!personNamePattern.test(values.principalName.trim())) errors.principalName = 'Principal name can only contain letters, spaces, and dots.'
-  else if (values.principalName.trim().length < 2) errors.principalName = 'Principal name must be at least 2 characters.'
+  if (values.email.trim() && !emailPattern.test(values.email.trim())) errors.email = 'Enter a valid email address.'
+  if (values.principalName.trim() && !personNamePattern.test(values.principalName.trim())) errors.principalName = 'Principal name can only contain letters, spaces, and dots.'
+  else if (values.principalName.trim() && values.principalName.trim().length < 2) errors.principalName = 'Principal name must be at least 2 characters.'
   const website = normalizeWebsite(values.website)
   if (values.website.trim() && !isValidWebsite(website)) errors.website = WEBSITE_VALIDATION_MESSAGE
-  if (!values.principalEmail.trim()) errors.principalEmail = 'Principal email is required.'
-  else if (!emailPattern.test(values.principalEmail.trim())) errors.principalEmail = 'Enter a valid email address.'
-  if (!values.principalContact) errors.principalContact = 'Principal contact number is required.'
-  else if (!phonePattern.test(values.principalContact)) errors.principalContact = 'Enter a valid 10-digit Indian mobile number.'
+  if (values.principalEmail.trim() && !emailPattern.test(values.principalEmail.trim())) errors.principalEmail = 'Enter a valid email address.'
+  if (values.principalContact && !phonePattern.test(values.principalContact)) errors.principalContact = 'Enter a valid 10-digit Indian mobile number.'
   if (values.validFrom && values.validUntil && values.validUntil <= values.validFrom) errors.validUntil = 'Valid until must be after valid from.'
   return errors
 }
@@ -873,14 +872,20 @@ function Dialog({ title, children, actions, onClose }) {
 }
 
 function AddCollege() {
+  const [searchParams] = useSearchParams()
+  const editId = searchParams.get('edit')
+  return <DashboardLayout><CollegeForm key={editId || 'new'} editId={editId} /></DashboardLayout>
+}
+
+function CollegeForm({ editId, onDismiss, onSaved, resumeDraft = false }) {
   const navigate = useNavigate()
   const { collegeAccess, loading: contextLoading } = AcademicContextImports_useAcademic()
   const { access: effectiveAccess, loading: accessLoading } = screenAccessImports_useScreenAccess()
-  const [searchParams] = useSearchParams()
-  const editId = searchParams.get('edit')
-  // This route shares the window scroll owner with the directory. Reset it
-  // before paint instead of offsetting content beneath the in-flow sticky header.
-  reactImports_useLayoutEffect(() => { window.scrollTo({ top: 0, left: 0, behavior: 'instant' }) }, [editId])
+  const inModal = Boolean(onDismiss)
+  const bodyRef = useRef(null)
+  reactImports_useLayoutEffect(() => {
+    if (!inModal) window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  }, [editId, inModal])
   const assignedCollegeId = getUserCollegeId()
   const isSuperAdmin = collegeAccess?.isSuperAdmin === true || effectiveAccess?.isSuperAdmin === true
   const isOutsideAssignedCollege = !isSuperAdmin && Boolean(assignedCollegeId && editId && String(editId) !== String(assignedCollegeId))
@@ -907,7 +912,7 @@ function AddCollege() {
   const [dialog, setDialog] = useState(null)
   const [, setNotice] = useToastState('', 'success')
   const [submitting, setSubmitting] = useState(false)
-  const [activeTab, setActiveTab] = useState(editId ? 'college' : 'college')
+  const [activeTab, setActiveTab] = useState('college')
   const [highestUnlockedTab, setHighestUnlockedTab] = useState(editId ? FORM_TABS.length - 1 : 0)
   const [loadingCollege, setLoadingCollege] = useState(Boolean(editId))
   const [postOffices, setPostOffices] = useState([])
@@ -952,7 +957,6 @@ function AddCollege() {
   const isValid = Object.keys(errors).length === 0 && !logoError && !hasDuplicate
   const firstInvalidTab = duplicateTab || FORM_TABS.find((tab) => TAB_FIELDS[tab.id]?.some((field) => errors[field]))?.id || ''
   const invalidMessage = duplicateReason || Object.values(errors)[0] || logoError || 'Please complete the highlighted fields before continuing.'
-  const progress = draftProgress(values)
 
   useEffect(() => {
     if (contextLoading || accessLoading || !accessReady) return undefined
@@ -982,7 +986,23 @@ function AddCollege() {
     if (!editId) {
       loadedFormScope.current = formScope
       originalEditValues.current = null
-      setValues({ ...initialValues })
+      const draft = resumeDraft ? readNewCollegeDraft() : null
+      setValues({ ...initialValues, ...draft?.values })
+      const draftStep = FORM_TABS.findIndex(tab => tab.id === draft?.activeTab)
+      if (draftStep > 0) {
+        setActiveTab(FORM_TABS[draftStep].id)
+        setHighestUnlockedTab(draftStep)
+      }
+      if (draft?.values?.logo?.startsWith('data:image/')) {
+        try {
+          const [metadata, data] = draft.values.logo.split(',')
+          const mime = metadata.slice(5, metadata.indexOf(';'))
+          const bytes = Uint8Array.from(atob(data), character => character.charCodeAt(0))
+          setLogoFile(new File([bytes], draft.values.logoName || 'college-logo', { type: mime }))
+        } catch {
+          setValues(current => ({ ...current, logo: '', logoName: '' }))
+        }
+      }
       return undefined
     }
     let active = true
@@ -992,7 +1012,8 @@ function AddCollege() {
       loadedFormScope.current = formScope
       const recordCreatorId = record.createdBy ?? record.CreatedBy
       if (isOutsideAssignedCollege && String(recordCreatorId ?? '') !== String(effectiveAccess?.userId ?? '')) {
-        navigate('/college-institution-management', { replace: true })
+        if (onDismiss) onDismiss()
+        else navigate('/college-institution-management', { replace: true })
         return
       }
       const addressRecord = record.addressDetails ?? record.addressInfo ?? {}
@@ -1040,7 +1061,7 @@ function AddCollege() {
         logoObjectUrlRef.current = ''
       }
     }
-  }, [editId, isOutsideAssignedCollege, navigate, setNotice, contextLoading, accessLoading, accessReady, formUserId, loadAttempt, logoReadSequence])
+  }, [editId, isOutsideAssignedCollege, navigate, setNotice, contextLoading, accessLoading, accessReady, formUserId, loadAttempt, logoReadSequence, onDismiss, resumeDraft])
 
   useEffect(() => {
     if (!dirty) return
@@ -1127,15 +1148,33 @@ function AddCollege() {
   const touchAll = () => setTouched(Object.keys(initialValues).reduce((all, key) => ({ ...all, [key]: true }), {}))
   const reset = () => { setValues(initialValues); setLogoFile(null); setRemoveExistingLogo(false); setPendingLogoCollegeId(null); setTouched({}); setLogoError(''); setDirty(false); setActiveTab('college'); setHighestUnlockedTab(0); setDialog(null); setNotice('Form reset successfully.') }
   const saveDraft = () => { localStorage.setItem(draftKey(editId), JSON.stringify({ values, activeTab, progress: draftProgress(values), savedAt: new Date().toISOString() })) }
-  const requestLeave = () => { if (dirty) { saveDraft(); setNotice(`Draft saved | ${progress}% complete.`); setDialog('leave'); return } navigate('/college-institution-management') }
+  const closeForm = () => {
+    if (onDismiss) onDismiss()
+    else navigate('/college-institution-management')
+  }
+  const requestLeave = () => {
+    if (submitting || saved) return
+    if (dirty) {
+      saveDraft()
+      setDialog('leave')
+      return
+    }
+    closeForm()
+  }
+  const scrollToTop = () => {
+    if (inModal) {
+      if (bodyRef.current) bodyRef.current.scrollTop = 0
+    } else window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  }
   const showTab = (tabId) => {
     if (FORM_TABS.findIndex(tab => tab.id === tabId) > FORM_TABS.findIndex(tab => tab.id === activeTab)) {
       const fields = TAB_FIELDS[activeTab]
       setTouched(current => fields.reduce((next, field) => ({ ...next, [field]: true }), { ...current }))
       if (fields.some(field => errors[field]) || duplicateReasonForTab || (activeTab === 'college' && (logoError || readingLogo))) return
     }
+    setSubmitError('')
     setActiveTab(tabId)
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+    scrollToTop()
     return true
   }
 
@@ -1167,11 +1206,15 @@ function AddCollege() {
     const fields = TAB_FIELDS[activeTab]
     setTouched((current) => fields.reduce((next, field) => ({ ...next, [field]: true }), { ...current }))
     if (duplicateReasonForTab) {
-      setNotice(duplicateReasonForTab, 'warning')
+      if (inModal) {
+        setSubmitError(duplicateReasonForTab)
+        scrollToTop()
+      }
+      else setNotice(duplicateReasonForTab, 'warning')
       return
     }
     if (fields.some((field) => errors[field])) {
-      setNotice(errors[fields.find((field) => errors[field])] || 'Please correct the highlighted fields before continuing.', 'warning')
+      if (!inModal) setNotice(errors[fields.find((field) => errors[field])] || 'Please correct the highlighted fields before continuing.', 'warning')
       return
     }
     if (activeTab === 'college' && (logoError || readingLogo)) return
@@ -1179,15 +1222,24 @@ function AddCollege() {
     const nextIndex = currentIndex + 1
     if (nextIndex < FORM_TABS.length) {
       setHighestUnlockedTab((current) => Math.max(current, nextIndex))
+      setSubmitError('')
       setActiveTab(FORM_TABS[nextIndex].id)
       setNotice('')
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      scrollToTop()
     }
   }
 
   const submit = async () => {
     touchAll()
-    if (logoError || readingLogo || !isValid || submitting || submitLock.current) { setDialog(null); return }
+    if (readingLogo || submitting || saved || submitLock.current) return
+    if (!isValid) {
+      setSubmitError(invalidMessage)
+      if (firstInvalidTab) {
+        setActiveTab(firstInvalidTab)
+        scrollToTop()
+      }
+      return
+    }
     submitLock.current = true
     setSubmitting(true)
     setSubmitError('')
@@ -1205,8 +1257,8 @@ function AddCollege() {
         if (collegeId && itemId === normalized(collegeId)) return false
         return normalized(item.code ?? item.collegeCode) === normalized(values.collegeCode)
           || normalized(item.name ?? item.collegeName) === normalized(values.collegeName)
-          || normalized(item.email ?? item.collegeEmail) === normalized(values.email)
-          || normalized(item.contact ?? item.contactNumber ?? item.phoneNumber) === normalized(values.contactNumber)
+          || (values.email.trim() && normalized(item.email ?? item.collegeEmail) === normalized(values.email))
+          || (values.contactNumber && normalized(item.contact ?? item.contactNumber ?? item.phoneNumber ?? item.mobile) === normalized(values.contactNumber))
       })
       if (duplicate) throw new Error('A college with the same name, code, email, or contact number already exists.')
       const website = normalizeWebsite(values.website)
@@ -1270,38 +1322,24 @@ function AddCollege() {
         cacheCollegeLogo(collegeId, '', [values.collegeCode, values.collegeName])
       }
 
-      // The list route fetches from the backend when it mounts, so navigating
-      // after the success message ensures the new row uses server data and the
-      // list's established ordering and pagination rules.
-      if (!editId) rememberCreated('colleges', collegeId)
       setDirty(false)
       localStorage.removeItem(draftKey(editId))
       setDialog(null)
       setSaved(true)
-      setNotice(editId ? 'College updated successfully.' : 'College added successfully!')
-      setPendingLogoCollegeId(null)
-      if (!editId) {
-        // Reset the wizard to its first step before clearing values. Otherwise
-        // the Preview-tab validation sees the fresh blank form and incorrectly
-        // raises a "College name is required" toast after a successful save.
-        setActiveTab('college')
-        setHighestUnlockedTab(0)
-        setValues(initialValues)
-        setLogoFile(null)
-        setRemoveExistingLogo(false)
-        setTouched({})
-        setLogoError('')
-        if (fileRef.current) fileRef.current.value = ''
+      if (onSaved) {
+        redirectTimer.current = window.setTimeout(() => onSaved({ created: !editId }), 2000)
+      } else {
+        setNotice(editId ? 'College updated successfully.' : 'College added successfully!')
+        navigate('/college-institution-management')
       }
-      window.clearTimeout(redirectTimer.current)
-      navigate('/college-institution-management')
     } catch (error) {
       const partialSave = !editId && collegeId
       const message = partialSave
         ? `College was created, but the logo upload failed: ${getApiErrorMessage(error)} Submit again to retry the logo upload.`
         : getApiErrorMessage(error)
       setSubmitError(message)
-      setNotice(message, 'error')
+      scrollToTop()
+      if (!inModal) setNotice(message, 'error')
       setDialog(null)
     }
     finally { submitLock.current = false; setSubmitting(false) }
@@ -1309,11 +1347,30 @@ function AddCollege() {
 
   const section = (title, subtitle, content) => <section className="ac-section"><header><h2>{title}</h2><p>{subtitle}</p></header><div className="ac-grid">{content}</div></section>
 
-  if (collegeLoadError) return <DashboardLayout><main className="add-college"><PageHeaderImports_default title="Edit College" /><AsyncState status="error" message={collegeLoadError} onRetry={() => setLoadAttempt(value => value + 1)} /></main></DashboardLayout>
-  return <DashboardLayout><main className="add-college">
-    <nav className="ac-breadcrumb" aria-label="Breadcrumb"><Link to="/settings">Global Settings</Link><span aria-hidden="true">/</span><Link to="/college-institution-management">College Configuration</Link><span aria-hidden="true">/</span><span aria-current="page">{editId ? 'Edit College' : 'Add College'}</span></nav>
-    <header className="ac-page-header"><div><h1>{editId ? 'Edit College' : 'Add College'}</h1><p>{editId ? 'Update the college information below.' : 'Create and configure a new college in the college management system.'}</p><span className="ac-draft-progress">Step {FORM_TABS.findIndex(tab => tab.id === activeTab) + 1} of {FORM_TABS.length} · {FORM_TABS.find(tab => tab.id === activeTab)?.shortLabel}</span></div><button className="ac-back" type="button" onClick={requestLeave}><FiArrowLeft aria-hidden="true" />Back</button></header>
+  const optionalStep = completionSchemas.college.some(group => group.id === activeTab && !group.fields.some(field => field.required))
+  const step = FORM_TABS.findIndex(tab => tab.id === activeTab) + 1
+  const busy = submitting || saved
+  const title = editId ? 'Edit College' : inModal ? 'Add New College' : 'Add College'
+  const footer = <>
+    {saved
+      ? <span className="ac-save-success" role="status">{editId ? 'College updated successfully.' : 'College added successfully!'}</span>
+      : <span className="ac-step-count">Step {step} of {FORM_TABS.length}</span>}
+    <div className="ac-footer-buttons">
+      {inModal && activeTab !== 'review' && <button type="button" className="ac-secondary" disabled={busy} onClick={requestLeave}>Cancel</button>}
+      {step > 1 && <button type="button" className="ac-secondary" disabled={busy || loadingCollege} onClick={goPrevious}>Previous</button>}
+      {activeTab !== 'review' && <ProgressiveFormFooter canSkip={optionalStep} onSkip={saveAndNext} onSaveLater={submit} disabled={busy || readingLogo || loadingCollege || Boolean(collegeLoadError)} />}
+      {activeTab !== 'review'
+        ? <button type="button" className="ac-primary" disabled={busy || readingLogo || loadingCollege || Boolean(collegeLoadError)} onClick={saveAndNext}>Next</button>
+        : <button type="button" className="ac-primary" disabled={busy || readingLogo || loadingCollege} onClick={submit}>
+          {submitting ? 'Saving...' : saved ? 'Saved' : editId ? 'Save Changes' : 'Submit College'}
+        </button>}
+    </div>
+  </>
+  const form = collegeLoadError
+    ? <AsyncState status="error" message={collegeLoadError} onRetry={() => setLoadAttempt(value => value + 1)} />
+    : <>
     {loadingCollege && <div className="ac-notice" role="status">Loading college details...</div>}
+    {submitError && <div className="ac-submit-error" role="alert">{submitError}</div>}
     <div className="college-form-layout" data-without-live-preview="true">
       <form className="college-form-main" aria-busy={submitting || loadingCollege || readingLogo} onSubmit={(event) => event.preventDefault()} noValidate>
         <nav ref={tabsNavRef} className="ac-tabs" aria-label="College form sections" role="tablist">
@@ -1333,8 +1390,8 @@ function AddCollege() {
                 aria-current={isActive ? 'step' : undefined}
                 aria-label={tab.label}
                 title={tab.label}
-                aria-disabled={index > highestUnlockedTab || submitting || loadingCollege}
-                disabled={index > highestUnlockedTab || submitting || loadingCollege}
+                aria-disabled={index > highestUnlockedTab || busy || loadingCollege}
+                disabled={index > highestUnlockedTab || busy || loadingCollege}
                 className={isActive ? 'active' : isCompleted ? 'completed' : ''}
                 onClick={() => showTab(tab.id)}
               >
@@ -1344,14 +1401,14 @@ function AddCollege() {
             )
           })}
         </nav>
-        <fieldset className="ac-panel" disabled={submitting || loadingCollege} role="tabpanel" id={`college-panel-${activeTab}`} aria-labelledby={`college-tab-${activeTab}`} tabIndex={0}>
+        <fieldset className="ac-panel" disabled={busy || loadingCollege} role="tabpanel" id={`college-panel-${activeTab}`} aria-labelledby={`college-tab-${activeTab}`} tabIndex={0}>
         {activeTab === 'college' && <>
         {section('College Information', 'Core identity and affiliation details.', <>
           <Field label="College Name" name="collegeName" values={values} errors={{ ...errors, ...(duplicateName ? { collegeName: 'A college with this name already exists.' } : {}) }} touched={touched} onChange={update} required maxLength={120} placeholder="e.g. Crescent Institute of Technology" />
           <Field label="College Code" name="collegeCode" values={values} errors={{ ...errors, ...(duplicateCode ? { collegeCode: 'This college code already exists.' } : {}) }} touched={touched} onChange={update} required maxLength={12} placeholder="e.g. CIT2026" />
-          <label className="ac-field" htmlFor="ac-collegeType"><span>College Type <b>*</b></span><ProjectSelect id="ac-collegeType" name="collegeType" value={values.collegeType} onChange={update} onBlur={() => setTouched((current) => ({ ...current, collegeType: true }))} aria-invalid={Boolean((touched.collegeType || Boolean(values.collegeType)) && errors.collegeType)}><option value="">Select type</option>{TYPES.map((type) => <option key={type}>{type}</option>)}</ProjectSelect>{(touched.collegeType || Boolean(values.collegeType)) && errors.collegeType && <small className="ac-error" role="alert">{errors.collegeType}</small>}</label>
+          <label className="ac-field" htmlFor="ac-collegeType"><span>College Type</span><ProjectSelect id="ac-collegeType" name="collegeType" value={values.collegeType} onChange={update} onBlur={() => setTouched((current) => ({ ...current, collegeType: true }))} aria-invalid={Boolean((touched.collegeType || Boolean(values.collegeType)) && errors.collegeType)}><option value="">Select type</option>{TYPES.map((type) => <option key={type}>{type}</option>)}</ProjectSelect>{(touched.collegeType || Boolean(values.collegeType)) && errors.collegeType && <small className="ac-error" role="alert">{errors.collegeType}</small>}</label>
           {values.collegeType === 'Other' && <Field label="Specify College Type" name="collegeTypeOther" values={values} errors={errors} touched={touched} onChange={update} required maxLength={60} placeholder="e.g. Community College" />}
-          <Field label="University Name" name="universityName" values={values} errors={errors} touched={touched} onChange={update} required maxLength={120} placeholder="Affiliated university" readOnly={values.collegeType === 'Deemed University'} />
+          <Field label="University Name" name="universityName" values={values} errors={errors} touched={touched} onChange={update} maxLength={120} placeholder="Affiliated university" readOnly={values.collegeType === 'Deemed University'} />
           <Field label="Start Date" name="startDate" type="date" values={values} errors={errors} touched={touched} onChange={update} />
           <Field label="End Date" name="endDate" type="date" values={values} errors={errors} touched={touched} onChange={update} />
           <div className="ac-upload ac-span-2" role="group" aria-label="College logo" aria-busy={readingLogo} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); selectLogo(e.dataTransfer.files[0]) }}>
@@ -1380,11 +1437,11 @@ function AddCollege() {
         </>}
         {activeTab === 'address' && <>
         {section('Address', 'Official postal address of the college.', <>
-          <Field label="Address Line 1" name="addressLine1" values={values} errors={errors} touched={touched} onChange={update} required maxLength={150} placeholder="Building, street, locality" />
+          <Field label="Address Line 1" name="addressLine1" values={values} errors={errors} touched={touched} onChange={update} maxLength={150} placeholder="Building, street, locality" />
           <Field label="Land Mark" name="addressLine2" values={values} errors={errors} touched={touched} onChange={update} maxLength={150} placeholder="Landmark or area (optional)" />
-          <Field label="City" name="city" values={values} errors={errors} touched={touched} onChange={update} required maxLength={60} />
-          <Field label="State" name="state" values={values} errors={errors} touched={touched} onChange={update} required maxLength={60} />
-          <Field label="Pincode" name="pincode" values={values} errors={errors} touched={touched} onChange={update} required maxLength={6} inputMode="numeric" />
+          <Field label="City" name="city" values={values} errors={errors} touched={touched} onChange={update} maxLength={60} />
+          <Field label="State" name="state" values={values} errors={errors} touched={touched} onChange={update} maxLength={60} />
+          <Field label="Pincode" name="pincode" values={values} errors={errors} touched={touched} onChange={update} maxLength={6} inputMode="numeric" />
           <Field label="Country" name="country" values={values} errors={errors} touched={touched} onChange={update} readOnly />
           <label className="ac-field" htmlFor="ac-area"><span>Area / Post Office</span><SearchableSelect label="Area / Post Office" value={values.area} options={postOffices.map((office) => ({ id: office.Name, name: office.Name, code: office.BranchType || '' }))} onChange={(value) => update({ target: { name: 'area', value } })} placeholder={postOffices.length ? 'Select area' : 'Enter pincode first'} searchPlaceholder="Search area..." noOptionsMessage="No area found." disabled={!postOffices.length} /></label>
           <Field label="District" name="district" values={values} errors={errors} touched={touched} onChange={update} maxLength={60} />
@@ -1392,15 +1449,15 @@ function AddCollege() {
         </>)}
         </>}
         {activeTab === 'contact' && section('Contact Information', 'Public college contact channels.', <>
-          <Field label="Official Contact Number" name="contactNumber" values={values} errors={{ ...errors, ...(duplicateContact ? { contactNumber: 'This contact number already exists.' } : {}) }} touched={touched} onChange={update} required maxLength={12} inputMode="tel" placeholder="Mobile or Landline with STD code" />
+          <Field label="Official Contact Number" name="contactNumber" values={values} errors={{ ...errors, ...(duplicateContact ? { contactNumber: 'This contact number already exists.' } : {}) }} touched={touched} onChange={update} maxLength={12} inputMode="tel" placeholder="Mobile or Landline with STD code" />
           <Field label="Alternate Contact Number" name="alternateContactNumber" values={values} errors={errors} touched={touched} onChange={update} maxLength={12} inputMode="tel" placeholder="Optional alternate mobile or landline" />
-          <Field label="Official Email" name="email" type="email" values={values} errors={{ ...errors, ...(duplicateEmail ? { email: 'This college email already exists.' } : {}) }} touched={touched} onChange={update} required maxLength={120} placeholder="office@college.edu" />
+          <Field label="Official Email" name="email" type="email" values={values} errors={{ ...errors, ...(duplicateEmail ? { email: 'This college email already exists.' } : {}) }} touched={touched} onChange={update} maxLength={120} placeholder="office@college.edu" />
           <Field label="Website" name="website" type="url" values={values} errors={errors} touched={touched} onChange={update} onBlur={normalizeWebsiteField} maxLength={160} placeholder="https://college.edu" />
         </>)}
         {activeTab === 'administration' && section('Administration', 'Principal or institutional head details.', <>
-          <Field label="Principal Name" name="principalName" values={values} errors={errors} touched={touched} onChange={update} required maxLength={100} />
-          <Field label="Principal Email" name="principalEmail" type="email" values={values} errors={errors} touched={touched} onChange={update} required maxLength={120} />
-          <Field label="Principal Contact Number" name="principalContact" values={values} errors={errors} touched={touched} onChange={update} required maxLength={10} inputMode="tel" />
+          <Field label="Principal Name" name="principalName" values={values} errors={errors} touched={touched} onChange={update} maxLength={100} />
+          <Field label="Principal Email" name="principalEmail" type="email" values={values} errors={errors} touched={touched} onChange={update} maxLength={120} />
+          <Field label="Principal Contact Number" name="principalContact" values={values} errors={errors} touched={touched} onChange={update} maxLength={10} inputMode="tel" />
         </>)}
         {activeTab === 'accreditation' && section('Accreditation Details', 'Current accreditation standing and validity.', <>
           <label className="ac-field" htmlFor="ac-accreditationStatus"><span>Accreditation Status</span><ProjectSelect id="ac-accreditationStatus" name="accreditationStatus" value={values.accreditationStatus} onChange={update}><option value="">Select Accreditation Status</option>{ACCREDITATION_STATUSES.map((status) => <option key={status}>{status}</option>)}</ProjectSelect></label>
@@ -1411,41 +1468,40 @@ function AddCollege() {
           <Field label="Valid Until" name="validUntil" type="date" values={values} errors={errors} touched={touched} onChange={update} />
           {values.accreditationStatus === 'Accredited' && <p className="ac-hint ac-span-2">Complete the accreditation grade, number, and validity dates for a comprehensive record.</p>}
         </>)}
-        {activeTab === 'accreditation' && <section className="ac-review" aria-labelledby="college-review-title"><h2 id="college-review-title">Review college details</h2><p>Check the information below before submitting. Return to any section to make changes.</p><div className="ac-review-grid">{FORM_TABS.map(tab => <section key={tab.id}><h3>{tab.label}</h3><dl>{TAB_FIELDS[tab.id].map(name => <div key={name}><dt>{name.replace(/([A-Z])/g, ' $1').replace(/^./, letter => letter.toUpperCase())}</dt><dd>{values[name] || 'Not provided'}</dd></div>)}</dl></section>)}</div>{values.logo && <p>Logo: {values.logoName || 'Existing college logo'}</p>}</section>}
+        {activeTab === 'review' && <section className="ac-review" aria-labelledby="college-review-title"><h2 id="college-review-title">Review college details</h2><p>Check the information below before submitting. Return to any section to make changes.</p><div className="ac-review-grid">{FORM_TABS.filter(tab => tab.id !== 'review').map(tab => <section key={tab.id}><h3>{tab.label}</h3><dl>{TAB_FIELDS[tab.id].map(name => <div key={name}><dt>{name.replace(/([A-Z])/g, ' $1').replace(/^./, letter => letter.toUpperCase())}</dt><dd>{values[name] || 'Not provided'}</dd></div>)}</dl></section>)}</div>{values.logo && <p>Logo: {values.logoName || 'Existing college logo'}</p>}</section>}
         </fieldset>
-        {submitError && <div className="ac-submit-error" role="alert">{submitError}</div>}
-        <footer className="ac-actions ac-next-actions">
-          {FORM_TABS.findIndex((tab) => tab.id === activeTab) > 0 && (
-            <button type="button" className="ac-secondary" disabled={submitting || loadingCollege} onClick={goPrevious}>
-              ← Previous
-            </button>
-          )}
-          {activeTab !== 'accreditation' ? (
-            <button type="button" className="ac-primary" disabled={submitting || readingLogo || loadingCollege} onClick={saveAndNext}>
-              Next →
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="ac-primary"
-              onClick={submit}
-              disabled={!isValid || submitting || readingLogo || loadingCollege || saved}
-            >
-              {submitting ? 'Saving...' : saved ? 'Saved. Redirecting...' : editId ? 'Save Changes' : 'Submit College'}
-            </button>
-          )}
-        </footer>
+        {!inModal && <footer className="ac-actions">{footer}</footer>}
       </form>
-
-      <></>
     </div>
+    </>
 
+  const confirmation = <>
     {dialog === 'reset' && <Dialog title="Reset College Form?" onClose={() => setDialog(null)} actions={<><button className="ac-secondary" onClick={() => setDialog(null)}>Cancel</button><button className="ac-danger-btn" onClick={reset}>Reset</button></>}><p>All entered information will be cleared.</p></Dialog>}
-    {dialog === 'leave' && <Dialog title="Unsaved Changes" onClose={() => setDialog(null)} actions={<><button className="ac-secondary" onClick={() => setDialog(null)}>Stay</button><button className="ac-danger-btn" onClick={() => navigate('/college-institution-management')}>Leave</button></>}><p>You have unsaved college information. Leave without saving?</p></Dialog>}
-  </main></DashboardLayout>
+    {dialog === 'leave' && <Dialog title="Unsaved Changes" onClose={() => setDialog(null)} actions={<><button className="ac-secondary" onClick={() => setDialog(null)}>Stay</button><button className="ac-danger-btn" onClick={closeForm}>Leave</button></>}><p>Leave the form? Your draft is saved locally.</p></Dialog>}
+  </>
+
+  const leaveActions = <div className="ac-footer-buttons">
+    <button type="button" className="ac-secondary" onClick={() => setDialog(null)}>Stay</button>
+    <button type="button" className="ac-primary" onClick={closeForm}>Leave</button>
+  </div>
+
+  if (inModal) return <ViewDialog title={title} subtitle={editId ? 'Update college details' : 'Configure college details'} className="college-workspace-dialog college-form-dialog" maxWidth="920px" onClose={dialog === 'leave' ? () => setDialog(null) : requestLeave} busy={busy} showExport={false} bodyRef={bodyRef} footerContent={dialog === 'leave' ? leaveActions : footer}>
+    {dialog === 'leave' && <section className="ac-leave-confirmation" aria-labelledby="ac-leave-title">
+      <h3 id="ac-leave-title">Leave this form?</h3>
+      <p>Your draft is saved locally.</p>
+    </section>}
+    <div className="add-college" hidden={dialog === 'leave'}>{form}</div>
+  </ViewDialog>
+
+  return <main className="add-college">
+    <nav className="ac-breadcrumb" aria-label="Breadcrumb"><Link to="/settings">Global Settings</Link><span aria-hidden="true">/</span><Link to="/college-institution-management">College Configuration</Link><span aria-hidden="true">/</span><span aria-current="page">{title}</span></nav>
+    <header className="ac-page-header"><div><h1>{title}</h1><p>{editId ? 'Update college details' : 'Configure college details'}</p></div><button className="ac-back" type="button" onClick={requestLeave}><FiArrowLeft aria-hidden="true" />Back</button></header>
+    {form}
+    {confirmation}
+  </main>
 }
 
-return { default: AddCollege }
+return { default: AddCollege, CollegeForm }
 })()
 
 // CollegeInstitutionManagement screen and private helpers.
@@ -1506,10 +1562,6 @@ const WEBSITE_VALIDATION_MESSAGE = collegeApiImports_WEBSITE_VALIDATION_MESSAGE
 const showDeactivationBlocked = DeactivationBlockedDialogImports_showDeactivationBlocked
 
 const COLLEGE_TYPES = ['Engineering', 'Arts & Science', 'Medical', 'Management', 'Polytechnic', 'Other']
-const NEW_COLLEGE_DRAFT_KEY = 'pirnav-college-draft-new'
-const readNewCollegeDraft = () => {
-  try { return JSON.parse(localStorage.getItem(NEW_COLLEGE_DRAFT_KEY) || 'null') } catch { return null }
-}
 
 const emptyCollege = {
   id: null,
@@ -1724,6 +1776,7 @@ const mapCollege = (record) => {
   }
   return ({
   id,
+  completion: calculateCompletion(completionSchemas.college, { ...record, logoPath: logoValue }),
   createdBy: record.createdBy ?? record.CreatedBy ?? '',
   name: record.name ?? record.collegeName ?? record.CollegeName ?? '',
   code: record.code ?? record.collegeCode ?? record.CollegeCode ?? '',
@@ -1926,6 +1979,7 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
   const [typeFilter, setTypeFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [collegeDraft, setCollegeDraft] = useState(readNewCollegeDraft)
+  const [collegeForm, setCollegeForm] = useState(null)
 
   // College Settings state - real list from the backend
   const [settingsList, setSettingsList] = useState([])
@@ -2081,8 +2135,18 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
     reader.readAsDataURL(file)
   }
 
-  const openAdd = () => {
-    navigate('/college-institution-management/add')
+  const openAdd = () => setCollegeForm({})
+
+  const closeCollegeForm = reactImports_useCallback(() => {
+    setCollegeForm(null)
+    setCollegeDraft(readNewCollegeDraft())
+  }, [])
+
+  const afterCollegeSave = ({ created }) => {
+    closeCollegeForm()
+    if (created) setCurrentPage(1)
+    loadColleges(searchTerm)
+    if (searchTerm.trim()) refreshCollegeSummary()
   }
 
   const openEdit = async (college) => {
@@ -2090,7 +2154,8 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
       setCollegeError('You can only edit colleges assigned to or created by your account.')
       return
     }
-    navigate(`/college-institution-management/add?edit=${encodeURIComponent(college.id)}`)
+    backToList()
+    setCollegeForm({ editId: String(college.id) })
   }
 
   const openDetails = async (college) => {
@@ -2338,7 +2403,7 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
               <aside className="college-config-draft">
                 <div><small>Unsaved college draft</small><strong>{visibleCollegeDraft.values.collegeName || 'New college draft'}</strong></div>
                 <div className="college-config-actions">
-                  <button type="button" className="erp-btn erp-btn--primary" onClick={() => navigate('/college-institution-management/add')}>Resume draft</button>
+                  <button type="button" className="erp-btn erp-btn--primary" onClick={() => setCollegeForm({ resumeDraft: true })}>Resume draft</button>
                   <button type="button" className="erp-btn erp-btn--secondary" onClick={() => { localStorage.removeItem(NEW_COLLEGE_DRAFT_KEY); setCollegeDraft(null) }}>Discard draft</button>
                 </div>
               </aside>
@@ -2395,7 +2460,8 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
                   { key:'address', label:'Location', className:'college-col-location', render:college => <span className="college-config-truncate" title={[college.addressLine1 || college.address, college.city, college.state].filter(Boolean).join(', ')}>{[college.addressLine1 || college.address, college.city, college.state].filter(Boolean).join(', ') || '—'}</span> },
                   { key:'contact', label:'Contact', className:'college-col-contact', render:college => <div><span className="college-config-truncate" title={college.contact}>{college.contact || '—'}</span><small className="college-config-email college-config-truncate" title={college.email}>{college.email || '—'}</small></div> },
                   { key:'status', label:'Status', className:'college-col-status', render:college => <StatusBadge value={college.status === 'active' ? 'Active' : 'Inactive'} /> },
-                ]} rowActions={college => <div className="college-config-row-actions"><button type="button" className="table-action-btn" title={`View ${college.name}`} aria-label={`View ${college.name}`} onClick={() => openDetails(college)}><FiEye /></button>{canEditCollege && canManageCollege(college) && <><button type="button" className="table-action-btn action-edit" title={`Edit ${college.name}`} aria-label={`Edit ${college.name}`} onClick={() => openEdit(college)}><EditIcon /></button><button type="button" className="table-action-btn" title={`${college.status === 'active' ? 'Deactivate' : 'Activate'} ${college.name}`} aria-label={`${college.status === 'active' ? 'Deactivate' : 'Activate'} ${college.name}`} onClick={() => toggleStatus(college)}>{college.status === 'active' ? <FiToggleRight data-status="active" /> : <FiToggleLeft data-status="inactive" />}</button></>}</div>} />
+                  completionColumn,
+                ]} rowActions={college => <div className="college-config-row-actions"><button type="button" className="table-action-btn" title={`View ${college.name}`} aria-label={`View ${college.name}`} onClick={() => openDetails(college)}><FiEye /></button>{canEditCollege && canManageCollege(college) && <><button type="button" className="table-action-btn action-edit" title={`Edit ${college.name}`} aria-label={`Edit ${college.name}`} onClick={() => openEdit(college)}><EditIcon /></button><ResumeSetupAction completion={college.completion} name={college.name} onClick={() => openEdit(college)} /><button type="button" className="table-action-btn" title={`${college.status === 'active' ? 'Deactivate' : 'Activate'} ${college.name}`} aria-label={`${college.status === 'active' ? 'Deactivate' : 'Activate'} ${college.name}`} onClick={() => toggleStatus(college)}>{college.status === 'active' ? <FiToggleRight data-status="active" /> : <FiToggleLeft data-status="inactive" />}</button></>}</div>} />
               </>
             )}
             </section>
@@ -2524,8 +2590,9 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
           </>
         )}
 
-        {viewMode === 'details' && activeCollege && <ViewDialog title="College Details" subtitle={activeCollege.name} onClose={backToList} maxWidth="920px" exportFilename={`college_${activeCollege.code || activeCollege.id}`} footerActions={canEditCollege && canManageCollege(activeCollege) ? <button className="erp-btn erp-btn--primary" onClick={() => openEdit(activeCollege)}>Edit college</button> : null}>
-          {isCollegeDetailsLoading ? <AsyncState status="loading" title="Loading college details…" /> : collegeError ? <AsyncState status="error" message={collegeError} onRetry={() => openDetails(activeCollege)} /> : <><div className="college-config-detail-identity"><CollegeLogoImage src={activeCollege.logo} fallbackSrc={getCollegeLogoEndpoint(activeCollege.id)} alt="" code={activeCollege.code} className="college-config-logo" /><div><h3>{activeCollege.name}</h3><p>{activeCollege.code} · {activeCollege.university}</p></div><StatusBadge value={activeCollege.status === 'active' ? 'Active' : 'Inactive'} /></div><div className="college-config-detail-grid">
+        {collegeForm && <AddCollegeScreen.CollegeForm editId={collegeForm.editId} resumeDraft={collegeForm.resumeDraft} onDismiss={closeCollegeForm} onSaved={afterCollegeSave} />}
+        {viewMode === 'details' && activeCollege && <ViewDialog className="college-workspace-dialog" title="College Details" subtitle={activeCollege.name} onClose={backToList} maxWidth="920px" exportFilename={`college_${activeCollege.code || activeCollege.id}`} footerActions={canEditCollege && canManageCollege(activeCollege) ? <button className="erp-btn erp-btn--primary" onClick={() => openEdit(activeCollege)}>Edit college</button> : null}>
+          {isCollegeDetailsLoading ? <AsyncState status="loading" title="Loading college details…" /> : collegeError ? <AsyncState status="error" message={collegeError} onRetry={() => openDetails(activeCollege)} /> : <><CompletionSummary completion={activeCollege.completion} name={activeCollege.name} onClick={canEditCollege && canManageCollege(activeCollege) ? () => openEdit(activeCollege) : undefined} /><div className="college-config-detail-identity"><CollegeLogoImage src={activeCollege.logo} fallbackSrc={getCollegeLogoEndpoint(activeCollege.id)} alt="" code={activeCollege.code} className="college-config-logo" /><div><h3>{activeCollege.name}</h3><p>{activeCollege.code} · {activeCollege.university}</p></div><StatusBadge value={activeCollege.status === 'active' ? 'Active' : 'Inactive'} /></div><div className="college-config-detail-grid">
                 <InfoCard
                   title="Basic College Information"
                   icon={AcademicIcon}
@@ -3005,6 +3072,7 @@ const mapDepartment = (record, facultyList = []) => {
 
   return {
     id: departmentId,
+    completion: departmentDirectoryCompletion({ ...record, collegeId }),
     name: record.departmentName ?? record.name ?? '',
     code: record.departmentCode ?? record.code ?? '',
     collegeId,
@@ -3035,10 +3103,13 @@ const payloadFor = (value) => ({
 });
 
 function DepartmentManagement() {
-  const { scopeRecords, selectedCollegeId, selectedCollege } = useAcademic();
+  const { scopeRecords, selectedCollegeId, selectedCollege, branches, loading: hierarchyLoading, error: hierarchyError } = useAcademic();
+  const [departmentParams, setDepartmentParams] = react_router_domImports_useSearchParams();
+  const { state: navigationState } = useLocation();
   const { canAction } = screenAccessImports_useScreenAccess();
   const canCreateDepartment = canAction('/department-management', 'create');
   const canEditDepartment = canAction('/department-management', 'edit');
+  const canDeleteDepartment = canAction('/department-management', 'delete');
   const detailRequest = reactImports_useRef(0);
   const listRequest = reactImports_useRef(0);
   const [items, setItems] = useState([]);
@@ -3058,6 +3129,8 @@ function DepartmentManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pendingStatus, setPendingStatus] = useState(null);
   const [isStatusSaving, setIsStatusSaving] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const itemsPerPage = 5;
 
   const loadDepartments = async (searchTerm = query) => {
@@ -3111,11 +3184,6 @@ function DepartmentManagement() {
       ),
     [scopedItems, query, statusFilter]
   );
-
-  const countSource = scopedAllDepartments.length ? scopedAllDepartments : scopedItems;
-  const activeCount = countSource.filter((item) => item.status === 'Active').length;
-  const inactiveCount = countSource.filter((item) => item.status === 'Inactive').length;
-  const totalCount = countSource.length;
 
   const closeToList = () => {
     detailRequest.current++;
@@ -3174,6 +3242,25 @@ function DepartmentManagement() {
       if (request === detailRequest.current) setIsDetailsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (isLoading) return;
+    const id = departmentParams.get('assignHod') || departmentParams.get('departmentId');
+    const action = departmentParams.get('assignHod') ? 'assign-hod' : departmentParams.get('departmentAction');
+    if (!id) {
+      if (action !== 'add' || !canCreateDepartment) return;
+      setScreen('form');
+    } else {
+      const department = scopedAllDepartments.find(item => String(item.id) === id);
+      if (!department || ((action === 'assign-hod' || action === 'edit') && !canEditDepartment)) return;
+      loadDetail(department, action === 'edit' ? 'form' : action === 'assign-hod' ? 'assign-hod' : 'details');
+    }
+    const next = new URLSearchParams(departmentParams);
+    next.delete('assignHod');
+    next.delete('departmentId');
+    next.delete('departmentAction');
+    setDepartmentParams(next, { replace: true, state: navigationState });
+  }, [departmentParams, navigationState, isLoading, canCreateDepartment, canEditDepartment, scopedAllDepartments]);
 
   const hodCandidates = useMemo(() => {
     if (!faculty || !faculty.length) return [];
@@ -3425,29 +3512,33 @@ function DepartmentManagement() {
     }
   };
 
-  const summaryCards = [
-    { label: 'Total Departments', value: totalCount },
-    { label: 'Active', value: activeCount, tone: 'active' },
-    { label: 'Inactive', value: inactiveCount, tone: 'inactive' },
-  ];
+  const linkedBranches = id => Array.isArray(branches) && !hierarchyLoading && !hierarchyError
+    ? branches.filter(branch => String(branch.departmentId ?? branch.department?.id ?? '') === String(id))
+    : null;
+  const linkedFaculty = id => faculty.filter(member => String(member.departmentId ?? member.department?.id ?? '') === String(id));
+  const confirmDelete = async () => {
+    if (!pendingDelete || !canDeleteDepartment || isDeleting) return;
+    setIsDeleting(true);
+    setError('');
+    try {
+      await deleteDepartment(pendingDelete.id);
+      setPendingDelete(null);
+      eventBusImports_default.emit(eventBusImports_ERP_EVENTS.ACADEMIC_UPDATED);
+      await loadDepartments(query);
+    } catch (requestError) {
+      setError(apiError(requestError, 'Unable to delete this department.'));
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
-    <DashboardLayout>
-      <main className="department-management">
+      <div className="department-management">
         {['list','assign-hod','details','form'].includes(screen) && (
           <>
-            <PageHeader
-              title="Department Management"
-              subtitle="Organize academic departments, faculty leadership, and institutional branches."
-              compactSummary={summaryCards}
-            />
-
-            <section className="department-master-card">
-              <header className="department-master-heading">
-                <div>
-                  <h2>Departments</h2>
-                  <p>{visible.length} records</p>
-                </div>
+            <section className="as-programs" aria-label="Departments">
+              <header className="as-card-header">
+                <h2>Departments</h2>
                 <div className="directory-export-actions">
                   <ExportMenu
                     rows={visible.map((row) => ({
@@ -3511,17 +3602,17 @@ function DepartmentManagement() {
               <DataTable
                 caption="Department directory"
                 columns={[
-                  { key: 'name', label: 'Department', className: 'col-name', width: '32%', sortable: true, render: item => <button type="button" className="dept-name-link table-cell-truncate" title={`Click to view details for ${item.name}`} onClick={() => loadDetail(item, 'details')}>{item.name}</button> },
-                  { key: 'code', label: 'Code', className: 'col-code', width: '120px', sortable: true, render: item => <code>{item.code || '-'}</code> },
-                  { key: 'hod', label: 'Head / In-Charge', className: 'col-hod', width: '26%', sortable: true, render: item => <span className="table-cell-truncate" title={item.hod || 'Unassigned'}>{item.hod || '-'}</span> },
-                  { key: 'status', label: 'Status', className: 'col-status table-center', width: '130px', sortable: true, render: item => <StatusBadge value={item.status} /> },
+                  { key: 'name', label: 'Department', sortable: true, render: item => <div className="as-directory-record"><strong>{item.name}</strong><small>{item.code}</small></div> },
+                  { key: 'hod', label: 'HOD', sortable: true, render: item => <span title={item.hod || 'Unassigned'}>{item.hod || 'Unassigned'}</span> },
+                  { key: 'branches', label: 'Linked Branches', render: item => linkedBranches(item.id)?.length ?? 'Unavailable' },
+                  completionColumn,
+                  { key: 'status', label: 'Status', sortable: true, render: item => <StatusBadge value={item.status} /> },
                 ]}
                 rows={visible}
                 pagination={{ page: currentPage, pageSize: itemsPerPage, onPageChange: setCurrentPage }}
                 loading={isLoading && 'Loading departments...'}
                 error={screen === 'list' ? error : ''}
                 onRetry={() => loadDepartments(query)}
-                className="department-table-wrap"
                 emptyState={<AsyncState status="empty" title={items.length ? 'No departments found.' : 'No departments have been added yet.'} action={!items.length && canCreateDepartment && <button type="button" className="erp-btn erp-btn--primary" onClick={() => { setForm({ ...empty, collegeId: selectedCollegeId || '', collegeNumericId: selectedCollegeId || '' }); setScreen('form'); }}>Add Department</button>} />}
                 rowActions={item => (
                               <div className="erp-row-actions table-actions-group"><button type="button" className="table-action-btn" aria-label={`View ${item.name}`} onClick={() => loadDetail(item, 'details')}><FiEye /></button>{canEditDepartment && <>
@@ -3534,6 +3625,7 @@ function DepartmentManagement() {
                                 >
                                   <FiEdit2 />
                                 </button>
+                                <ResumeSetupAction completion={item.completion} name={item.name} onClick={() => loadDetail(item, 'form')} />
                                 <button
                                   type="button"
                                   className="table-action-btn action-assign erp-action-btn"
@@ -3556,14 +3648,14 @@ function DepartmentManagement() {
                                     <FiToggleLeft data-status="inactive" />
                                   )}
                                 </button>
-                              </>}</div>
+                              </>}{canDeleteDepartment && <button type="button" className="table-action-btn" title={`Delete ${item.name}`} aria-label={`Delete ${item.name}`} onClick={() => { setError(''); setPendingDelete(item); }}><FiTrash2 /></button>}</div>
                 )}
               />
             </section>
           </>
         )}
 
-        {screen === 'form' && <ViewDialog title={form.id ? 'Edit Department' : 'Add Department'} onClose={closeToList} busy={isSaving} showExport={false} hideFooter><div className="erp-form-page" data-without-live-preview="true">                <FormLayout onSubmit={save} busy={isSaving} error={error} actions={<>
+        {screen === 'form' && <ViewDialog title={form.id ? 'Edit Department' : 'Add Department'} onClose={closeToList} busy={isSaving} showExport={false} hideFooter><div className="erp-form-page" data-without-live-preview="true">{selected?.completion && <CompletionSummary completion={selected.completion} name={selected.name} />}<FormLayout onSubmit={save} busy={isSaving} error={error} actions={<>
                     <button type="button" className="erp-btn erp-btn--secondary" onClick={closeToList} disabled={isSaving}>
                       Cancel
                     </button>
@@ -3629,7 +3721,7 @@ function DepartmentManagement() {
                       noOptionsMessage="No active faculty members found."
                     />{(() => { const member = hodCandidates.find(m => String(m.hodId) === String(form.hodUserId)); return member ? <InfoCard title="Selected faculty" items={[{label:'Faculty',value:member.fullName},{label:'Employee ID',value:member.employeeId},{label:'Designation',value:member.designation},{label:'Department',value:member.department},{label:'Qualification',value:member.qualification},{label:'Official email',value:member.email}]} /> : null })()}</>}</FormLayout></ViewDialog>}
 
-        {screen === 'details' && selected && <ViewDialog title="Department Details" onClose={closeToList} exportFilename={`department_${selected.id}`}><h3 className="department-detail-name">{selected.name}</h3>{isDetailsLoading ? <AsyncState status="loading" title="Loading department details…" /> : error ? <AsyncState status="error" message={error} onRetry={() => loadDetail(selected, 'details')} /> : <div className="department-detail-grid">
+        {screen === 'details' && selected && <ViewDialog title="Department Details" onClose={closeToList} exportFilename={`department_${selected.id}`}><h3 className="department-detail-name">{selected.name}</h3>{isDetailsLoading ? <AsyncState status="loading" title="Loading department details…" /> : error ? <AsyncState status="error" message={error} onRetry={() => loadDetail(selected, 'details')} /> : <div className="department-detail-grid"><CompletionSummary completion={selected.completion} name={selected.name} onClick={canEditDepartment ? () => loadDetail(selected, 'form') : undefined} />
                 <InfoCard
                   title="Department Information"
                   icon={FiLayers}
@@ -3651,7 +3743,17 @@ function DepartmentManagement() {
                     { label: 'Head / In-Charge Name', value: selected.hodName || selected.hod },
                     { label: 'Faculty ID', value: selected.hodUserId },
                   ]}
-                /></div>}</ViewDialog>}
+                />
+                <InfoCard title="Linked Branches" items={[{ label: 'Branches', value: linkedBranches(selected.id)?.map(branch => branch.branchName ?? branch.name).join(', ') || (linkedBranches(selected.id) ? 'None' : 'Unavailable') }]} />
+                <InfoCard title="Associated Faculty" items={linkedFaculty(selected.id).map(member => ({ label: member.fullName, value: member.designation || member.employeeId || 'Faculty' }))} />
+                </div>}</ViewDialog>}
+
+        {pendingDelete && <ViewDialog title="Delete Department" subtitle={pendingDelete.name} busy={isDeleting} showExport={false}
+          onClose={() => { setPendingDelete(null); setError(''); }}
+          footerActions={<button type="button" className="erp-btn erp-btn--primary" disabled={isDeleting} onClick={confirmDelete}>Delete Department</button>}>
+          <p>Remove this department from the directory?</p>
+          {error && <p role="alert">{error}</p>}
+        </ViewDialog>}
 
         {pendingStatus && (
           <StatusConfirmDialog
@@ -3669,8 +3771,7 @@ function DepartmentManagement() {
             confirmLabel={pendingStatus.nextStatus === 'Active' ? 'Activate Department' : 'Deactivate Department'}
           />
         )}
-      </main>
-    </DashboardLayout>
+      </div>
   );
 }
 
@@ -7320,13 +7421,19 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
   if (formMode) return (
     <DashboardLayout>
       <div className="rooms-page rooms-form-page">
-        <PageHeader title={roomId ? 'Edit Room / Classroom' : 'Add New Room / Classroom'} subtitle="Configure room identification, location, capacity, facilities, and section allocation.">
-          <button type="button" className="rooms-cancel-btn rooms-form-back-btn" onClick={closeForm}><FiArrowLeft aria-hidden="true" />Back</button>
-        </PageHeader>
+        <ViewDialog
+          title={roomId ? 'Edit Room / Classroom' : 'Add Room / Classroom'}
+          subtitle="Add room identity, location, capacity, and facilities in one compact form."
+          icon={FiGrid}
+          maxWidth="820px"
+          showExport={false}
+          busy={saving}
+          className="rooms-compact-dialog"
+          onClose={closeForm}
+          footerContent={<><button type="button" className="erp-btn erp-btn--secondary" onClick={closeForm} disabled={saving}>Cancel</button><button type="submit" form="room-editor-form" className="erp-btn erp-btn--primary" disabled={saving}>{saving ? 'Saving...' : editingRoom?.id ? 'Save Changes' : 'Create Room'}</button></>}
+        >
         {!editingRoom ? <EmptyState title={roomsLoaded ? 'Room not found' : 'Loading room...'} /> : (
-          <div className="rooms-form-layout">
-            <section className="rooms-editor-panel" aria-label="Room details">
-              <form onSubmit={handleSaveRoom}>
+              <form id="room-editor-form" className="rooms-compact-form" onSubmit={handleSaveRoom}>
                 <div className="rooms-modal-body">
                   <header className="rooms-form-intro">
                     <div>
@@ -7424,22 +7531,9 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
                   </section>
                   </div>
 
-                <div className="rooms-modal-footer">
-                  <button
-                    type="button"
-                    className="rooms-cancel-btn"
-                    onClick={() => closeForm()}
-                  >
-                    Cancel
-                  </button>
-                  <button type="submit" className="rooms-submit-btn" disabled={saving}>
-                    <FiCheck /> {saving ? 'Saving...' : editingRoom.id ? 'Save Changes' : 'Create Room'}
-                  </button>
-                </div>
               </form>
-            </section>
-          </div>
         )}
+        </ViewDialog>
       </div>
     </DashboardLayout>
   )

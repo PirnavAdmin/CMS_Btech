@@ -1,3 +1,5 @@
+import { calculateCompletion, completionSchemas } from '../../utils/recordCompletion'
+import { CompletionIndicator, CompletionSummary, ResumeSetupAction } from '../../components/RecordCompletion'
 import { updateAcademicFeeDraft } from '../../services/academicFeeDraftUpdate'
 import { collectVerifiedPayment, hasOfficialFeeReceipt, feeAmountReported, canPrintFeeReceipt } from '../../services/verifiedFeeCollection'
 import { useScreenAccess } from '../../auth/ScreenAccess'
@@ -5,6 +7,7 @@ import { assignPublishedStudentFees, matchesPublishedFeeScope } from '../../serv
 import SharedFeeDialog from '../../components/ViewDialog'
 import SharedFeeHeader from '../../components/PageHeader'
 import FeeTypesConfiguration from './FeeTypesConfiguration'
+import FeeWorkspaceTabs from './FeeWorkspaceTabs'
 import { ADMISSION_QUOTAS } from '../../utils/admissionQuotaOptions'
 import { approveForAdmission } from '../../services/academicFeePlanApproval.js'
 import '../admin-management/AdminManagement.css'
@@ -50,6 +53,7 @@ async function loadAcademicPlans(collegeId) {
 const liveFeePlanRow=plan=>({
                       ...feeStructureServiceModule.newFeeStructure(String(plan.academicYearId)),
                       id: String(plan.feeStructureId), name: plan.name, code: plan.code,
+                      completion: calculateCompletion(completionSchemas.academicFeePlan, plan),
                       status: ({DRAFT:"Draft",SUBMITTED:"Pending Approval",APPROVED:"Approved",PUBLISHED:"Published",ARCHIVED:"Archived"})[String(plan.status).toUpperCase()] || "Not reported",
                       collegeId: String(plan.collegeId), academicYearId: String(plan.academicYearId), courseId: String(plan.courseId), branchId: String(plan.branchId), semesterId: String(plan.semesterId), batch: plan.batch,
                       quota: plan.quota || "", studentCategory: plan.studentCategory || "", category: plan.quota || "", applicableTo: "Selected Category",
@@ -312,6 +316,7 @@ function FeePlanDetailsPage({ row, category = "Academic", masters, close, edit, 
   const title = row.name || row.hostelName || row.route || category + " Fee Plan";
   return <div className="fm-page-container fm-detail-page cm-profile-view">
     <div className="fm-detail-toolbar cm-profile-top-bar"><button type="button" className="erp-btn erp-btn--secondary cm-secondary-btn" onClick={close}><external3.FiArrowLeft /> Back to Fee Plans</button>{canEdit && <button type="button" className="erp-btn erp-btn--primary cm-primary-btn" onClick={edit}><external3.FiEdit2 /> Edit Fee Plan</button>}</div>
+    <CompletionSummary completion={row.completion} name={title} onClick={canEdit && row.status === "Draft" ? edit : undefined} />
     <article className="fm-detail-profile cm-profile-card">
       <header className="fm-detail-banner cm-profile-banner"><div className="cm-profile-avatar-wrap"><span className="fm-heading-icon cm-profile-logo cm-logo-emblem"><external3.FiLayers /></span></div><div className="fm-detail-identity cm-profile-header-info"><div className="fm-detail-badges cm-profile-badges"><span className="fm-count-chip cm-badge">{category} Fees</span><FeeBadge value={row.status} /></div><h1 className="cm-profile-title">{title}</h1><p className="cm-profile-subtitle">Fee plan details, charges and payment terms</p></div><div className="fm-detail-total"><span>Total {category} Fee</span><strong>{category === "Hostel" ? hostelPriceLabel(row) : feeMoney(total)}</strong></div></header>
       <div className="cm-profile-grid">
@@ -1767,6 +1772,7 @@ export const FeeStructureModule = (() => {
     workflow,
     facilityType,
     viewPlan = false,
+    feeManagementTabs = [],
   }) {
     const navigate = useNavigate();
     const {canAction}=useScreenAccess();
@@ -2076,7 +2082,8 @@ export const FeeStructureModule = (() => {
     return (
       <div className="fm-page-container">
         {/* Page Header */}
-        <FeePageHeading title="Fee Structures" description="Configure fee applicability, components and payment schedules.">{tab === "academic" && <ExportMenu rows={filteredAcademicRows} columns={feeStructureColumns} title="Academic fee structures" filename="academic-fee-structures" loading={workflow?.loading} unavailable={workflow?.error}/>}</FeePageHeading>
+        <FeePageHeading title="Fee Structures" description="Configure fee applicability, components and payment schedules." />
+        <FeeWorkspaceTabs tabs={feeManagementTabs} />
 
         {tab==="academic" && workflow?.error && <p role="alert" className="fm-error-banner">{workflow.error} <button type="button" onClick={workflow.retry}>Retry fee structures</button></p>}
         {tab==="academic" && workflow?.loading && <p role="status">Loading academic fee plans…</p>}
@@ -2137,28 +2144,12 @@ export const FeeStructureModule = (() => {
                   : "Set route and boarding stop fees."}
               </p>
             </div>
-            <div className="fm-workspace-actions">
-            <button
-              type="button"
-              className="fm-btn-context-primary"
-              disabled={!canCreatePlan || tab!=="academic" || (tab==="academic" && (workflow?.loading || Boolean(workflow?.error)))} onClick={handleCreate}
-            >
-              <FiPlus />
-              <span>
-                {tab === "academic"
-                  ? "Create Academic Plan"
-                  : tab === "hostel"
-                  ? "Create Hostel Plan"
-                  : "Create Transport Plan"}
-              </span>
-            </button>
-            </div>
           </div>
 
 
           {/* Contextual Filter Toolbar */}
           {tab === "academic" && (
-            <FilterPanel active={isAcademicFiltered} onClear={clearAcademicFilters}>
+            <FilterPanel active={isAcademicFiltered} onClear={clearAcademicFilters} actions={<div className="fm-list-toolbar-actions"><ExportMenu rows={filteredAcademicRows} columns={feeStructureColumns} title="Academic fee structures" filename="academic-fee-structures" loading={workflow?.loading} unavailable={workflow?.error}/><button type="button" className="fm-btn-context-primary" disabled={!canCreatePlan || workflow?.loading || Boolean(workflow?.error)} onClick={handleCreate}><FiPlus /><span>Create Academic Plan</span></button></div>}>
               <div className="course-toolbar">
                 <label className="course-search">
                   <FiSearch />
@@ -2235,7 +2226,7 @@ export const FeeStructureModule = (() => {
           )}
 
           {tab === "hostel" && (
-            <FilterPanel active={isHostelFiltered} onClear={clearHostelFilters}>
+            <FilterPanel active={isHostelFiltered} onClear={clearHostelFilters} actions={<button type="button" className="fm-btn-context-primary" disabled onClick={handleCreate}><FiPlus /><span>Create Hostel Plan</span></button>}>
               <div className="course-toolbar">
                 <label className="course-search">
                   <FiSearch />
@@ -2296,7 +2287,7 @@ export const FeeStructureModule = (() => {
           )}
 
           {tab === "transport" && (
-            <FilterPanel active={isTransportFiltered} onClear={clearTransportFilters}>
+            <FilterPanel active={isTransportFiltered} onClear={clearTransportFilters} actions={<button type="button" className="fm-btn-context-primary" disabled onClick={handleCreate}><FiPlus /><span>Create Transport Plan</span></button>}>
               <div className="course-toolbar">
                 <label className="course-search">
                   <FiSearch />
@@ -2423,6 +2414,7 @@ export const FeeStructureModule = (() => {
                       label: "Status",
                       render: (r) => <FeeBadge value={r.status} />,
                     },
+                    { label: "Completion", render: row => <CompletionIndicator completion={row.completion} /> },
                     {
                       label: "Actions",
                       align: "right",
@@ -2436,6 +2428,7 @@ export const FeeStructureModule = (() => {
                           >
                             <FiEye />
                           </button>
+                          {canEditPlan && r.status === "Draft" && <ResumeSetupAction completion={r.completion} name={r.name} to={`/fees/structures/${r.id}/edit`} />}
                           {canEditPlan && r.status === "Draft" && (
                             <button
                               type="button"
@@ -2826,7 +2819,7 @@ export const ServerFeeCollectionModule = (() => {
     return str;
   }
 
-  function FinanceOverview({ academic, configuration }) {
+  function FinanceOverview({ academic, configuration, feeManagementTabs = [] }) {
     const navigate = useNavigate();
     const [trendPeriod, setTrendPeriod] = useState("30");
     const [dashData, setDashData] = useState(null);
@@ -3139,17 +3132,21 @@ export const ServerFeeCollectionModule = (() => {
     reportColumns = reportColumns.map(column => ({...column, key: reportFieldKeys[column.label], value: reportFieldKeys[column.label]}));
 
     return (
-      <div className="fm-page-container">
+      <div className="fm-page-container fm-overview-page">
         {/* Page Header */}
-        <FeePageHeading title="Finance Overview" description="Track fee demand, collections, outstanding balances and receipts." icon={FiPieChart}>
-          <label className="fm-header-year-select">
-            <span>Academic year</span>
-            <select aria-label="Overview academic year" value={selectedYear} onChange={event => setSelectedYear(event.target.value)}>
-              <option value="">All academic years</option>
-              {yearOptions.map(year => <option key={year.id} value={year.id}>{year.name}</option>)}
-            </select>
-          </label>
-        </FeePageHeading>
+        <FeePageHeading
+          title="Finance Overview"
+          description="Track fee demand, collections, outstanding balances and receipts."
+          icon={FiPieChart}
+          compactSummary={[
+            { label: "Total Fee Demand", value: feeMoney(totalFees) },
+            { label: "Total Collected", value: feeMoney(collected), tone: "active" },
+            { label: "Outstanding Balance", value: feeMoney(balance), tone: "warning" },
+            { label: "Overdue Amount", value: feeMoney(overdue), tone: "danger" },
+          ]}
+        />
+
+        <FeeWorkspaceTabs tabs={feeManagementTabs} />
 
         {yearOptions.length === 0 && <div className="fm-context-notice" role="status">
           <FiAlertCircle />
@@ -3158,65 +3155,6 @@ export const ServerFeeCollectionModule = (() => {
         </div>}
 
         <FeeRequestState loading={loading} error={error}>
-          {/* Four Colorful KPI Cards */}
-          <div className="fm-summary-cards-grid">
-            {/* 1. Total Fee Demand - Blue */}
-            <div className="fm-summary-card fm-summary-card--blue">
-              <div className="fm-summary-card__header">
-                <span className="fm-summary-card__label">Total Fee Demand</span>
-                <span className="fm-summary-card__icon-box">
-                  <FiLayers />
-                </span>
-              </div>
-              <strong className="fm-summary-card__value">
-                {feeMoney(totalFees)}
-              </strong>
-              <span className="fm-summary-card__meta">Total assigned student fee demand</span>
-            </div>
-
-            {/* 2. Total Collected - Emerald Green */}
-            <div className="fm-summary-card fm-summary-card--green">
-              <div className="fm-summary-card__header">
-                <span className="fm-summary-card__label">Total Collected</span>
-                <span className="fm-summary-card__icon-box">
-                  <FiCheckCircle />
-                </span>
-              </div>
-              <strong className="fm-summary-card__value">
-                {feeMoney(collected)}
-              </strong>
-              <span className="fm-summary-card__meta">{collectionPct}% of assigned fee demand</span>
-            </div>
-
-            {/* 3. Outstanding Balance - Amber */}
-            <div className="fm-summary-card fm-summary-card--amber">
-              <div className="fm-summary-card__header">
-                <span className="fm-summary-card__label">Outstanding Balance</span>
-                <span className="fm-summary-card__icon-box">
-                  <FiClock />
-                </span>
-              </div>
-              <strong className="fm-summary-card__value">
-                {feeMoney(balance)}
-              </strong>
-              <span className="fm-summary-card__meta">{pendingStudents} students with pending dues</span>
-            </div>
-
-            {/* 4. Overdue Amount - Soft Red */}
-            <div className="fm-summary-card fm-summary-card--red">
-              <div className="fm-summary-card__header">
-                <span className="fm-summary-card__label">Overdue Amount</span>
-                <span className="fm-summary-card__icon-box">
-                  <FiAlertCircle />
-                </span>
-              </div>
-              <strong className="fm-summary-card__value">
-                {feeMoney(overdue)}
-              </strong>
-              <span className="fm-summary-card__meta">{overdueStudents} students with overdue accounts</span>
-            </div>
-          </div>
-
           {/* COLLECTION PROGRESS BAR */}
           <div className="fm-progress-card">
             <div className="fm-progress-card__header">
@@ -5586,7 +5524,7 @@ export const FeeManagementModule = (() => {
   // ==========================================================================
   // STUDENT FEES MAIN DIRECTORY PAGE (`/fees/students`)
   // ==========================================================================
-  function StudentFees({ academic, ledgers, assignments, masters, students = [], structures = [], view = "directory" }) {
+  function StudentFees({ academic, ledgers, assignments, masters, students = [], structures = [], view = "directory", feeManagementTabs = [] }) {
     const navigate = useNavigate();
     const location = useLocation();
     const activeView = view;
@@ -6038,22 +5976,20 @@ export const FeeManagementModule = (() => {
     ];
 
     return (
-      <div className="fm-page-container">
+      <div className={`fm-page-container ${activeView === "directory" ? "fm-student-fees-page" : ""}`}>
         {/* Page Header */}
         <FeePageHeading
           title={activeView === "transactions" ? "Payments" : "Student Fees"}
           description={activeView === "transactions" ? "Review confirmed payments, transaction references, and official receipts." : "Manage student fee balances, collections, and receipts."}
           icon={activeView === "transactions" ? FiCreditCard : FiUsers}
-        >
-          {activeView === "transactions" && <button type="button" className="erp-btn erp-btn--primary" onClick={() => navigate("/fees/collection")}><FiPlus /> Collect Payment</button>}
-        </FeePageHeading>
+        />
 
         {/* DIRECTORY VIEW: SUMMARY CARDS + STUDENT TABLE */}
         {activeView === "directory" && (
           <>
             <p role="status">Totals include only confirmed fee records. Unavailable student liabilities are excluded.</p>
             {/* Financial Summary Cards */}
-            <div className="fm-summary-cards-grid">
+            <div className="fm-summary-cards-grid fm-student-fee-summary-strip">
               {/* 1. Total Payable - Royal Blue */}
               <div className="fm-summary-card fm-summary-card--blue">
                 <div className="fm-summary-card__header">
@@ -6110,6 +6046,7 @@ export const FeeManagementModule = (() => {
                 <span className="fm-summary-card__meta">Total overdue amount</span>
               </div>
             </div>
+            <FeeWorkspaceTabs tabs={feeManagementTabs} />
 
             {/* Main Content Workspace */}
             <div className="fm-workspace">
@@ -6350,6 +6287,7 @@ export const FeeManagementModule = (() => {
             {/* Filter Toolbar for Transactions */}
             <FilterPanel
               active={Boolean(txQuery || txMode || txFromDate || txToDate)}
+              actions={<button type="button" className="erp-btn erp-btn--primary" onClick={() => navigate("/fees/collection")}><FiPlus /> Collect Payment</button>}
               onClear={() => {
                 setTxQuery("");
                 setTxMode("");
@@ -7108,9 +7046,10 @@ export const FeeManagementModule = (() => {
     const ledgers = []; // Financial rows are loaded from backend fee APIs only.
 
     const feeManagementTabs = [
-      ['Overview','overview'],['Fee Types','types'],['Student Fees','students']
+      ['Overview','overview'],['Fee Types','types'],['Fee Structure','structures'],['Student Fees','students']
     ].map(([label,path]) => ({label,to:'/fees/' + path,active:pathname === '/fees/' + path || pathname.startsWith('/fees/' + path + '/')}));
-    const showFeeManagementTabs = !pathname.startsWith('/fees/structures');
+    const tabbedFeeRoutes = ['/fees/overview', '/fees/types', '/fees/structures', '/fees/students'];
+    const showFeeManagementTabs = !tabbedFeeRoutes.some(route => pathname === route);
 
 
     const mutationRoute = /\/(create|edit|assignments|collection)(\/|$)/.test(pathname)
@@ -7120,12 +7059,10 @@ export const FeeManagementModule = (() => {
         <main className="fs-page fm-page">
           <FeeRequestState loading={!workspaceReady} error={storageError}>
           {showFeeManagementTabs && (
-            <nav className="fm-workspace-tabs fm-fee-workspace-nav" role="tablist" aria-label="Fee management sections">
-              {feeManagementTabs.map(tab => <Link key={tab.to} to={tab.to} role="tab" aria-selected={tab.active} className={`fm-workspace-tab ${tab.active ? 'is-active' : ''}`}>{tab.label}</Link>)}
-            </nav>
+            <FeeWorkspaceTabs tabs={feeManagementTabs} />
           )}
           <Routes>
-            <Route path="types" element={<FeeTypesConfiguration />} />
+            <Route path="types" element={<FeeTypesConfiguration feeManagementTabs={feeManagementTabs} />} />
             <Route path="reports" element={<Navigate to="/fees/overview" replace />} />
             <Route path="payments" element={<Navigate to="/fees/students" replace />} />
             <Route path="receipts" element={<Navigate to="/fees/students" replace />} />
@@ -7140,6 +7077,7 @@ export const FeeManagementModule = (() => {
                   overview
                   academic={academic}
                   configuration={state}
+                  feeManagementTabs={feeManagementTabs}
                 />
               }
             />
@@ -7149,6 +7087,7 @@ export const FeeManagementModule = (() => {
               path="structures"
               element={
                 <FeeStructureConfiguration
+                  feeManagementTabs={feeManagementTabs}
                   masters={masters}
                   state={state}
                   workflow={{ rows: livePlans, assignments: state.assignments, loading:planLoading,error:planError,retry:()=>setPlanAttempt(value=>value+1),
@@ -7253,6 +7192,7 @@ export const FeeManagementModule = (() => {
                   masters={masters}
                   students={students}
                   structures={state.structures}
+                  feeManagementTabs={feeManagementTabs}
                 />
               }
             />
