@@ -1,5 +1,11 @@
-import ThemeColorPicker from './ThemeColorPicker'
+import { useLayoutEffect } from 'react'
+import { initializeSavedThemePreferences } from './ThemeColorPicker'
 
-export default function ThemeToggle({ className = '' }) {
-  return <ThemeColorPicker className={`public-theme-toggle ${className}`} />
+// Public landing and login screens inherit the saved workspace colors without
+// exposing theme controls before the user signs in.
+export default function ThemeToggle() {
+  useLayoutEffect(() => {
+    initializeSavedThemePreferences()
+  }, [])
+  return null
 }

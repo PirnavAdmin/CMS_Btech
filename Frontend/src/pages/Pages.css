@@ -1912,7 +1912,7 @@
    DARK THEME COMPATIBILITY (PRESERVES EXACT BRAND PALETTE)
    ========================================================================= */
 :root[data-theme="dark"] .ym-welcome-card {
-  background: linear-gradient(135deg, #151B28 0%, #101622 100%);
+  background: linear-gradient(135deg, var(--brand-dark) 0%, color-mix(in srgb, var(--brand) 52%, #101622) 100%);
 }
 
 :root[data-theme="dark"] .ym-card {
@@ -1993,12 +1993,12 @@
 
 /* Refined light dashboard skin. Sidebar styles live in their own component. */
 .ym-dashboard-wrapper {
-  --ym-ink: #102A4C;
-  --ym-muted: #71849A;
-  --ym-line: #D8E4F2;
-  --ym-purple: #1769C2;
-  --ym-blue: #2B78C5;
-  --ym-teal: #13a99b;
+  --ym-ink: var(--text-primary, #102A4C);
+  --ym-muted: var(--text-secondary, #52677a);
+  --ym-line: var(--border, #D8E4F2);
+  --ym-purple: var(--brand, #1769C2);
+  --ym-blue: var(--brand-dark, #2B78C5);
+  --ym-teal: color-mix(in srgb, var(--brand) 78%, #0f766e);
   gap: 22px;
   max-width: 1600px;
   margin-inline: auto;
@@ -2038,7 +2038,7 @@
 .ym-hero-stat-icon svg { width: 17px; height: 17px; }
 /* Keep the welcome panel and its white KPI text visible despite the later
    generic .ym-card surface rule. */
-.ym-card.ym-welcome-card { color: #fff; background: linear-gradient(116deg, var(--brand-dark) 0%, var(--brand) 58%, #2B78C5 100%); }
+.ym-card.ym-welcome-card { color: #fff; background: linear-gradient(116deg, var(--brand-dark) 0%, var(--brand) 58%, color-mix(in srgb, var(--brand) 72%, #2B78C5) 100%); }
 .ym-card.ym-welcome-card .ym-welcome-greeting h2 { color: #fff; }
 .ym-card.ym-welcome-card .ym-welcome-greeting p { color: rgba(255,255,255,.88); }
 .ym-card.ym-welcome-card .ym-hero-stat { color: #fff; background: rgba(255,255,255,.13); }
@@ -3020,3 +3020,42 @@ html body #root .pirnav-login .login-public-actions > a.login-home-link:active {
 .dashboard-curriculum-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; padding:20px; margin:0; }
 .dashboard-curriculum-summary dt { color:var(--text-muted); font-size:12px; }
 .dashboard-curriculum-summary dd { margin:4px 0 0; color:var(--text-primary); font-size:24px; font-weight:700; }
+
+/* Keep public landing text readable over dark, accent-tinted hero surfaces. */
+#root .lp-page .lp-hero .lp-eyebrow,
+#root .lp-page .lp-hero h1 span,
+#root .lp-page .lp-hero .lp-trust,
+#root .lp-page .lp-hero .lp-trust svg,
+#root .lp-page .lp-cta .lp-eyebrow.light {
+  color: var(--brand-on-dark, #dbeafe) !important;
+}
+#root .lp-page .lp-hero .lp-lead {
+  color: #f4f8fc !important;
+}
+#root .lp-page .lp-footer :is(strong, b, a) {
+  color: var(--brand-dark);
+}
+:root[data-theme="dark"] #root .lp-page .lp-footer :is(strong, b, a) {
+  color: #eaf3fb;
+}
+#root .lp-page .lp-nav .lp-actions > a.lp-button {
+  color: #fff !important;
+}
+#root .lp-page .lp-nav .lp-actions > a.lp-button:hover,
+#root .lp-page .lp-nav .lp-actions > a.lp-button:focus-visible {
+  color: #fff !important;
+  background: var(--brand-hover) !important;
+}
+
+/* The Login CTA can also match generic first-link/current-page rules above.
+   Give the CTA and its icon a final, explicit high-contrast color. */
+html body #root .lp-page.lp-public > nav.lp-nav .lp-actions > a.lp-button,
+html body #root .lp-page.lp-public > nav.lp-nav .lp-actions > a.lp-button:link,
+html body #root .lp-page.lp-public > nav.lp-nav .lp-actions > a.lp-button:visited,
+html body #root .lp-page.lp-public > nav.lp-nav .lp-actions > a.lp-button:hover,
+html body #root .lp-page.lp-public > nav.lp-nav .lp-actions > a.lp-button:focus,
+html body #root .lp-page.lp-public > nav.lp-nav .lp-actions > a.lp-button:focus-visible,
+html body #root .lp-page.lp-public > nav.lp-nav .lp-actions > a.lp-button:active,
+html body #root .lp-page.lp-public > nav.lp-nav .lp-actions > a.lp-button * {
+  color: #fff !important;
+}

@@ -3576,3 +3576,88 @@ feels part of the table card rather than a second, dashed card. */
 .mew-calendar__daily .mew-calendar__agenda-content{flex-basis:150px}
 .mew-calendar__daily .mew-calendar__agenda-content p,.mew-calendar__daily .mew-calendar__agenda-content small{display:block;line-height:1.6;overflow-wrap:anywhere}
 .mew-calendar__daily .mew-calendar__agenda-item>button{margin-left:auto}
+
+/* Library directory layout follows the shared workspace pattern. */
+.adv-library-workspace .adv-library-top-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(580px, min(920px, 62%));
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 12px 24px;
+  min-width: 0;
+}
+.adv-library-workspace .adv-library-header { grid-column: 1; grid-row: 1 / span 2; min-width: 0; }
+.adv-library-workspace .adv-library-header__actions { grid-column: 2; grid-row: 1; justify-content: flex-end; }
+.adv-library-workspace .adv-kpi-grid--library-summary {
+  grid-column: 2;
+  grid-row: 2;
+  width: 100%;
+  margin: 0;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.adv-library-workspace .adv-kpi-grid--library-summary .adv-kpi-card {
+  min-width: 0;
+  min-height: 76px;
+  justify-content: center;
+  padding: 12px 14px;
+  border-radius: 10px;
+  box-shadow: none;
+}
+.adv-library-workspace .adv-kpi-grid--library-summary .adv-kpi-card__icon { display: none; }
+.adv-library-workspace .adv-kpi-grid--library-summary .adv-kpi-card__body { align-items: center; gap: 3px; text-align: center; }
+.adv-library-workspace .adv-kpi-grid--library-summary .adv-kpi-card__label { font-size: 10px; line-height: 1.35; }
+.adv-library-workspace .adv-kpi-grid--library-summary .adv-kpi-card__value { display: block; }
+.adv-library-workspace .adv-kpi-grid--library-summary .adv-kpi-card__value strong { font-size: 20px; }
+.adv-library-workspace .adv-kpi-grid--library-summary .adv-kpi-card__sub,
+.adv-library-workspace .adv-kpi-grid--library-summary .adv-kpi-card__badge { display: none; }
+.adv-library-workspace .adv-btn--primary { background: var(--brand); border-color: var(--brand); color: #fff; box-shadow: 0 4px 12px color-mix(in srgb, var(--brand) 24%, transparent); }
+.adv-library-workspace .adv-btn--primary:hover:not(:disabled) { background: var(--brand-hover); border-color: var(--brand-hover); color: #fff; }
+.adv-library-workspace .adv-btn--filter {
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 650;
+}
+.adv-library-workspace .adv-btn--filter:hover,
+.adv-library-workspace .adv-btn--filter.is-active { border-color: var(--brand); background: var(--brand-soft); color: var(--brand-dark); }
+.adv-library-workspace .adv-btn--filter > svg:last-child { transition: transform .16s ease; }
+.adv-library-workspace .adv-btn--filter > svg:last-child.is-open { transform: rotate(180deg); }
+.adv-library-workspace .adv-filter-count { display: inline-grid; min-width: 19px; height: 19px; padding: 0 5px; place-items: center; border-radius: 99px; background: var(--brand); color: #fff; font-size: 10px; }
+.adv-library-workspace .adv-control-bar__filters {
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.adv-library-workspace .adv-control-bar__filters .adv-control-bar__select-group {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(150px, 1fr));
+  gap: 10px;
+  min-width: 0;
+}
+.adv-library-workspace .adv-control-bar__filters .adv-view-switcher { justify-self: end; }
+.adv-library-workspace .adv-control-bar__filters .adv-btn--ghost { min-height: 38px; padding: 0 12px; }
+@media (max-width: 1000px) {
+  .adv-library-workspace .adv-library-top-layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; gap: 14px; }
+  .adv-library-workspace .adv-library-header { grid-column: 1; grid-row: auto; }
+  .adv-library-workspace .adv-library-header__actions { grid-column: 1; grid-row: auto; justify-content: flex-start; }
+  .adv-library-workspace .adv-kpi-grid--library-summary { grid-column: 1; grid-row: auto; width: 100%; }
+  .adv-library-workspace .adv-control-bar__filters { grid-template-columns: minmax(0, 1fr) auto; }
+  .adv-library-workspace .adv-control-bar__filters .adv-control-bar__select-group { grid-column: 1 / -1; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .adv-library-workspace .adv-kpi-grid--library-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .adv-library-workspace .adv-control-bar { display: grid; grid-template-columns: minmax(0, 1fr) auto; padding: 12px; }
+  .adv-library-workspace .adv-control-bar__search { min-width: 0; }
+  .adv-library-workspace .adv-control-bar__filters { grid-template-columns: minmax(0, 1fr); }
+  .adv-library-workspace .adv-control-bar__filters .adv-control-bar__select-group { grid-template-columns: minmax(0, 1fr); }
+  .adv-library-workspace .adv-control-bar__filters .adv-view-switcher { justify-self: start; }
+}

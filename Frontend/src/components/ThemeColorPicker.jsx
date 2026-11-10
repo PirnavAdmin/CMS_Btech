@@ -18,6 +18,17 @@ const palettes = [
 ]
 
 const getStoredColor = () => localStorage.getItem('pirnav-accent-color') || palettes[6][1]
+const getInitialTheme = () => {
+  const root = document.documentElement
+  const savedTheme = localStorage.getItem('pirnav-theme')
+  const theme = savedTheme === 'dark' || savedTheme === 'light'
+    ? savedTheme
+    : root.dataset.theme || (window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+  // Public pages also need an explicit theme state; otherwise OS-only dark CSS
+  // can make light surfaces use pale text before any theme control is clicked.
+  root.dataset.theme = theme
+  return theme
+}
 
 function applyColor(color) {
   const root = document.documentElement
@@ -35,10 +46,12 @@ function applyColor(color) {
   const saturation = Math.round((max === 0 ? 0 : delta / (1 - Math.abs(2 * max - delta))) * 100)
   const accent = `hsl(${hue} ${Math.max(35, Math.min(76, saturation))}% 38%)`
   const hover = `hsl(${hue} ${Math.max(38, Math.min(80, saturation + 4))}% 31%)`
+  const accentOnDark = `hsl(${hue} ${Math.max(40, Math.min(78, saturation))}% 76%)`
   root.style.setProperty('--cms-primary', accent)
   root.style.setProperty('--cms-primary-dark', hover)
   root.style.setProperty('--cms-primary-hover', hover)
   root.style.setProperty('--cms-primary-active', hover)
+  root.style.setProperty('--brand-on-dark', accentOnDark)
   root.style.setProperty('--cms-primary-soft', `color-mix(in srgb, ${color} 55%, var(--surface))`)
   root.style.setProperty('--cms-primary-border', `color-mix(in srgb, ${color} 68%, var(--border))`)
   root.style.setProperty('--page-gradient', darkMode
@@ -55,10 +68,16 @@ function applyColor(color) {
   root.style.setProperty('--scrollbar-thumb-hover', accent)
 }
 
+export function initializeSavedThemePreferences() {
+  const theme = getInitialTheme()
+  applyColor(getStoredColor())
+  return theme
+}
+
 export default function ThemeColorPicker({ className = '' }) {
   const [open, setOpen] = useState(false)
   const [selected, setSelected] = useState(getStoredColor)
-  const [theme, setTheme] = useState(() => document.documentElement.dataset.theme || localStorage.getItem('pirnav-theme') || 'light')
+  const [theme, setTheme] = useState(getInitialTheme)
   const pickerRef = useRef(null)
 
   useEffect(() => {

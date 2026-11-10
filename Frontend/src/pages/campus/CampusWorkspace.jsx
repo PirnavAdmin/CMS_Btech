@@ -5,7 +5,7 @@ import { ProjectSelect as SearchableSelectImports_ProjectSelect } from '../../co
 import { createPortal } from 'react-dom'
 import { useState as reactImports_useState, useMemo as reactImports_useMemo, useEffect as reactImports_useEffect } from 'react'
 import { NavLink as react_router_domImports_NavLink, useSearchParams as react_router_domImports_useSearchParams } from 'react-router-dom'
-import { FiPlus, FiSearch, FiFileText, FiBook, FiBookOpen, FiGrid, FiList, FiRefreshCw, FiCheckCircle, FiAlertTriangle, FiClock, FiUser, FiUsers, FiTag, FiDownload, FiTrash2, FiEdit3, FiEye, FiMapPin, FiX, FiCheck, FiBookmark, FiBarChart2, FiTrendingUp, FiDollarSign, FiCalendar, FiEdit2, FiActivity, FiCheckSquare, FiBriefcase, FiAward, FiExternalLink, FiMail, FiPhone, FiGlobe } from 'react-icons/fi'
+import { FiPlus, FiSearch, FiFileText, FiBook, FiBookOpen, FiGrid, FiList, FiRefreshCw, FiCheckCircle, FiAlertTriangle, FiClock, FiUser, FiUsers, FiTag, FiDownload, FiTrash2, FiEdit3, FiEye, FiMapPin, FiX, FiCheck, FiBookmark, FiBarChart2, FiTrendingUp, FiDollarSign, FiCalendar, FiEdit2, FiActivity, FiCheckSquare, FiBriefcase, FiAward, FiExternalLink, FiMail, FiPhone, FiGlobe, FiFilter, FiChevronDown } from 'react-icons/fi'
 import DashboardLayoutImports_default from '../../layouts/DashboardLayout'
 import PageHeaderImports_default from '../../components/PageHeader'
 import EmptyStateImports_default from '../../components/EmptyState'
@@ -230,6 +230,7 @@ function LibraryWorkspace() {
   const [selectedCategory, setSelectedCategory] = useState('All Categories')
   const [selectedDepartment, setSelectedDepartment] = useState('All Departments')
   const [availabilityFilter, setAvailabilityFilter] = useState('all') // 'all' | 'available' | 'low' | 'out'
+  const [showFilters, setShowFilters] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = viewMode === 'grid' ? 6 : 10
 
@@ -274,6 +275,11 @@ function LibraryWorkspace() {
     [libraryData.fines]
   )
   const activeBorrowersCount = libraryData.borrowers.length
+  const activeLibraryFilterCount = [
+    selectedCategory !== 'All Categories',
+    selectedDepartment !== 'All Departments',
+    availabilityFilter !== 'all',
+  ].filter(Boolean).length
 
   // Filtered Book Catalog
   const filteredBooks = useMemo(() => {
@@ -487,6 +493,7 @@ function LibraryWorkspace() {
         )}
 
         {/* Top Header & Context */}
+        <div className="adv-library-top-layout">
         <div className="adv-library-header">
           <PageHeader
             breadcrumb={[
@@ -496,8 +503,9 @@ function LibraryWorkspace() {
             title="Digital Library & Circulation Workspace"
             subtitle="Centralized catalog, physical copy tracking, circulation desk, borrower records, and analytics."
           />
+        </div>
 
-          <div className="adv-library-header__actions">
+        <div className="adv-library-header__actions">
             <ExportMenu
               rows={currentList}
               columns={libraryExportColumns[activeTab]}
@@ -519,11 +527,10 @@ function LibraryWorkspace() {
                 <span>Add Book to Catalog</span>
               </button>
             )}
-          </div>
         </div>
 
         {/* Executive KPI Stat Cards */}
-        <div className="adv-kpi-grid">
+        <div className="adv-kpi-grid adv-kpi-grid--library-summary">
           <div className="adv-kpi-card adv-kpi-card--blue">
             <div className="adv-kpi-card__icon">
               <FiBook />
@@ -587,6 +594,7 @@ function LibraryWorkspace() {
               </div>
             </div>
           </div>
+        </div>
         </div>
 
         {/* Informative Workspace Mode Banner */}
@@ -738,7 +746,19 @@ function LibraryWorkspace() {
           </div>
 
           {activeTab === 'catalog' && (
-            <>
+            <button
+              type="button"
+              className={`adv-btn adv-btn--filter${showFilters ? ' is-active' : ''}`}
+              aria-expanded={showFilters}
+              aria-controls="library-catalog-filters"
+              onClick={() => setShowFilters(value => !value)}
+            >
+              <FiFilter aria-hidden="true" /> Filters{activeLibraryFilterCount > 0 && <span className="adv-filter-count">{activeLibraryFilterCount}</span>}<FiChevronDown className={showFilters ? 'is-open' : ''} aria-hidden="true" />
+            </button>
+          )}
+
+          {activeTab === 'catalog' && showFilters && (
+            <div className="adv-control-bar__filters" id="library-catalog-filters">
               <div className="adv-control-bar__select-group">
                 <ProjectSelect
                   value={selectedCategory}
@@ -797,16 +817,16 @@ function LibraryWorkspace() {
                   <FiList />
                 </button>
               </div>
-            </>
+              <button
+                type="button"
+                className="adv-btn adv-btn--ghost"
+                onClick={handleResetFilters}
+                disabled={activeLibraryFilterCount === 0 && !searchQuery}
+              >
+                Clear filters
+              </button>
+            </div>
           )}
-
-          <button
-            type="button"
-            className="adv-btn adv-btn--ghost"
-            onClick={handleResetFilters}
-          >
-            Reset Filters
-          </button>
         </div>
 
         {/* MAIN CONTENT AREA BY TAB */}
