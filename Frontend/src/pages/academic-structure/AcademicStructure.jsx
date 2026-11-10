@@ -603,17 +603,6 @@ export default function AcademicStructure() {
     if (!branchForm.departmentId) errors.departmentId = 'Please select a Department'
     if (!branchForm.courseId) errors.courseId = 'Please select a Course'
 
-    const selectedCourse = courses.find((course) => String(courseIdOf(course)) === String(branchForm.courseId))
-    const mappedDepartmentId = courseDepartmentIdOf(selectedCourse)
-    if (
-      branchForm.departmentId &&
-      branchForm.courseId &&
-      mappedDepartmentId != null &&
-      String(mappedDepartmentId) !== String(branchForm.departmentId)
-    ) {
-      errors.departmentId = 'This course belongs to a different department. Select the matching department or course.'
-    }
-
     const duplicate = branches.some(
       (b) =>
         String(b.branchCode ?? b.code).toUpperCase() === branchForm.code.trim().toUpperCase() &&
@@ -1805,13 +1794,8 @@ export default function AcademicStructure() {
                         className={`as-form-control ${formErrors.courseId ? 'is-invalid' : ''}`}
                         value={branchForm.courseId}
                         onChange={(e) => {
-                          const selectedCourse = courses.find((course) => String(courseIdOf(course)) === e.target.value)
-                          setBranchForm((current) => ({
-                            ...current,
-                            courseId: e.target.value,
-                            departmentId: String(courseDepartmentIdOf(selectedCourse) ?? current.departmentId ?? ''),
-                          }))
-                          setFormErrors((current) => ({ ...current, courseId: '', departmentId: '' }))
+                          setBranchForm((current) => ({ ...current, courseId: e.target.value }))
+                          setFormErrors((current) => ({ ...current, courseId: '' }))
                         }}
                         disabled={isLoading || !courses.some((course) => courseIdOf(course) != null)}
                         required
@@ -1857,13 +1841,6 @@ export default function AcademicStructure() {
                         })}
                       </select>
                       {formErrors.departmentId && <span className="as-form-error">{formErrors.departmentId}</span>}
-                      {branchForm.courseId && branchForm.departmentId && (() => {
-                        const selectedCourse = courses.find((course) => String(courseIdOf(course)) === String(branchForm.courseId))
-                        const mappedDepartmentId = courseDepartmentIdOf(selectedCourse)
-                        return mappedDepartmentId != null && String(mappedDepartmentId) !== String(branchForm.departmentId)
-                          ? <span className="as-form-hint">The selected course is linked to a different department. Choose its matching department or select another course.</span>
-                          : null
-                      })()}
                     </div>
                     </div>
                   </section>

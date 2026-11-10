@@ -231,6 +231,9 @@ test('opens Add Branch modal with cascading selectors and submits new branch', a
   fireEvent.click(screen.getByRole('button', { name: /Add Branch/i }))
   expect(await screen.findByRole('heading', { level: 3, name: 'Add Branch' })).toBeTruthy()
 
+  fireEvent.change(screen.getByLabelText(/Select Course/i), { target: { value: '10' } })
+  fireEvent.change(screen.getByLabelText(/Select Department/i), { target: { value: '1' } })
+
   // Fill in form
   fireEvent.change(screen.getByLabelText(/Branch Name/i), { target: { value: 'Cyber Security' } })
   fireEvent.change(screen.getByLabelText(/Branch Code/i), { target: { value: 'CSE-CS' } })
@@ -243,9 +246,70 @@ test('opens Add Branch modal with cascading selectors and submits new branch', a
       expect.objectContaining({
         branchName: 'Cyber Security',
         branchCode: 'CSE-CS',
+        courseId: 10,
+        departmentId: 1,
       })
     )
   })
+})
+
+test('keeps branch course and department independent and refreshes after saving', async () => {
+  renderPage('/academic-structure?step=branches')
+  expect(await screen.findByText('Artificial Intelligence')).toBeTruthy()
+
+  fireEvent.click(screen.getByRole('button', { name: /Add Branch/i }))
+  expect(await screen.findByRole('heading', { level: 3, name: 'Add Branch' })).toBeTruthy()
+
+  const departmentSelect = screen.getByLabelText(/Select Department/i)
+  const courseSelect = screen.getByLabelText(/Select Course/i)
+
+  // Change course after department: the selected department remains intact.
+  fireEvent.change(departmentSelect, { target: { value: '2' } })
+  fireEvent.change(courseSelect, { target: { value: '10' } })
+  expect(departmentSelect.value).toBe('2')
+  expect(screen.queryByText(/different department/i)).toBeNull()
+
+  // Changing department after course is also allowed because branch mappings
+  // store course and department independently in the backend contract.
+  fireEvent.change(departmentSelect, { target: { value: '1' } })
+  fireEvent.change(departmentSelect, { target: { value: '2' } })
+  expect(departmentSelect.value).toBe('2')
+  expect(courseSelect.value).toBe('10')
+  expect(screen.queryByText(/different department/i)).toBeNull()
+
+  fireEvent.change(screen.getByLabelText(/Branch Name/i), { target: { value: 'B.Tech cross-listed branch' } })
+  fireEvent.change(screen.getByLabelText(/Branch Code/i), { target: { value: 'BTECH-X' } })
+  fireEvent.click(screen.getByRole('button', { name: /Create Branch/i }))
+
+  await waitFor(() => {
+    expect(createBranch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        branchName: 'B.Tech cross-listed branch',
+        branchCode: 'BTECH-X',
+        courseId: 10,
+        departmentId: 2,
+      })
+    )
+    expect(getBranches.mock.calls.length).toBeGreaterThanOrEqual(2)
+  })
+})
+
+test('requires course and department selections before creating a branch', async () => {
+  renderPage('/academic-structure?step=branches')
+  expect(await screen.findByText('Artificial Intelligence')).toBeTruthy()
+
+  fireEvent.click(screen.getByRole('button', { name: /Add Branch/i }))
+  expect(await screen.findByRole('heading', { level: 3, name: 'Add Branch' })).toBeTruthy()
+
+  const courseSelect = screen.getByLabelText(/Select Course/i)
+  const departmentSelect = screen.getByLabelText(/Select Department/i)
+  fireEvent.change(screen.getByLabelText(/Branch Name/i), { target: { value: 'Required mapping test' } })
+  fireEvent.change(screen.getByLabelText(/Branch Code/i), { target: { value: 'REQ-MAP' } })
+  fireEvent.click(screen.getByRole('button', { name: /Create Branch/i }))
+
+  expect(courseSelect.validity.valueMissing).toBe(true)
+  expect(departmentSelect.validity.valueMissing).toBe(true)
+  expect(createBranch).not.toHaveBeenCalled()
 })
 
 test('opens Add Semester modal with course/branch selectors and submits', async () => {
