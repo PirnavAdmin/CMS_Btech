@@ -7421,13 +7421,19 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
   if (formMode) return (
     <DashboardLayout>
       <div className="rooms-page rooms-form-page">
-        <PageHeader title={roomId ? 'Edit Room / Classroom' : 'Add New Room / Classroom'} subtitle="Configure room identification, location, capacity, facilities, and section allocation.">
-          <button type="button" className="rooms-cancel-btn rooms-form-back-btn" onClick={closeForm}><FiArrowLeft aria-hidden="true" />Back</button>
-        </PageHeader>
+        <ViewDialog
+          title={roomId ? 'Edit Room / Classroom' : 'Add Room / Classroom'}
+          subtitle="Add room identity, location, capacity, and facilities in one compact form."
+          icon={FiGrid}
+          maxWidth="820px"
+          showExport={false}
+          busy={saving}
+          className="rooms-compact-dialog"
+          onClose={closeForm}
+          footerContent={<><button type="button" className="erp-btn erp-btn--secondary" onClick={closeForm} disabled={saving}>Cancel</button><button type="submit" form="room-editor-form" className="erp-btn erp-btn--primary" disabled={saving}>{saving ? 'Saving...' : editingRoom?.id ? 'Save Changes' : 'Create Room'}</button></>}
+        >
         {!editingRoom ? <EmptyState title={roomsLoaded ? 'Room not found' : 'Loading room...'} /> : (
-          <div className="rooms-form-layout">
-            <section className="rooms-editor-panel" aria-label="Room details">
-              <form onSubmit={handleSaveRoom}>
+              <form id="room-editor-form" className="rooms-compact-form" onSubmit={handleSaveRoom}>
                 <div className="rooms-modal-body">
                   <header className="rooms-form-intro">
                     <div>
@@ -7525,22 +7531,9 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
                   </section>
                   </div>
 
-                <div className="rooms-modal-footer">
-                  <button
-                    type="button"
-                    className="rooms-cancel-btn"
-                    onClick={() => closeForm()}
-                  >
-                    Cancel
-                  </button>
-                  <button type="submit" className="rooms-submit-btn" disabled={saving}>
-                    <FiCheck /> {saving ? 'Saving...' : editingRoom.id ? 'Save Changes' : 'Create Room'}
-                  </button>
-                </div>
               </form>
-            </section>
-          </div>
         )}
+        </ViewDialog>
       </div>
     </DashboardLayout>
   )

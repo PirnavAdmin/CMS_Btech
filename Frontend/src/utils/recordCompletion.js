@@ -118,6 +118,18 @@ export const completionSchemas = {
       field('intakeCapacity', 'Approved intake', { aliases: ['intake'], validate: positive }),
       field('startingAcademicYearId', 'Starting academic year', { validate: positive })),
   ],
+  section: [
+    section('mapping', 'Academic mapping',
+      field('courseId', 'Course', requiredId), field('branchId', 'Branch', requiredId),
+      field('semesterId', 'Semester', requiredId), field('academicYearId', 'Academic year', requiredId)),
+    section('identity', 'Section information',
+      field('name', 'Section name', { ...required, aliases: ['sectionName'] }),
+      field('code', 'Section code', { ...required, aliases: ['sectionCode'] }),
+      field('capacity', 'Capacity', requiredId)),
+    section('assignments', 'Assignments',
+      field('room', 'Room / classroom'),
+      field('advisor', 'Faculty advisor', { aliases: ['facultyAdvisorName'] })),
+  ],
 }
 
 export function calculateCompletion(schema, record) {

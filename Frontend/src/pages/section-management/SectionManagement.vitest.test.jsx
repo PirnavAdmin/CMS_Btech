@@ -9,6 +9,7 @@ const data = vi.hoisted(() => ({
   branches: [{ branchId: 7, courseId: 10, branchName: 'Computer Science', branchCode: 'CSE', status: 1 }, { branchId: 8, courseId: 20, branchName: 'Electronics', branchCode: 'ECE', status: 1 }],
   years: Array.from({ length: 4 }, (_, index) => ({ academicYearId: index + 1, academicYearName: `${2026 + index}-${2027 + index}`, status: index === 0 ? 'ACTIVE' : 'UPCOMING' })),
   semesters: Array.from({ length: 8 }, (_, index) => ({ semesterId: 101 + index, courseId: 10, branchId: 7, semesterNumber: index + 1, academicYearId: Math.floor(index / 2) + 1, academicYearName: `${2026 + Math.floor(index / 2)}-${2027 + Math.floor(index / 2)}`, status: 0 })),
+  rooms: [{ id: 'room-1', roomNumber: 'R101', roomName: 'Main Room', capacity: 60, status: 'Available' }],
 }))
 vi.mock('../../auth/ScreenAccess', () => ({ useScreenAccess: () => ({ canAction: () => true }) }))
 vi.mock('../../layouts/DashboardLayout', () => ({ default: ({ children }) => <>{children}</> }))
@@ -36,87 +37,77 @@ vi.mock('../../api/apiEndpoints', () => ({
 vi.mock('../../auth/collegeApi', () => ({ getSemesters: vi.fn(async () => ({ data: { data: data.semesters } })) }))
 vi.mock('../../services/facultyService', () => ({ default: { list: vi.fn(async () => []) }, normalizeFaculty: item => item }))
 vi.mock('../../services/studentService', () => ({ default: {} }))
-vi.mock('../../services/roomService', () => ({ default: {} }))
+vi.mock('../../services/roomService', () => ({ default: { getRooms: vi.fn(async () => data.rooms), allocateRoom: vi.fn(async () => {}) } }))
 afterEach(cleanup)
 beforeEach(() => { vi.clearAllMocks(); data.sections = [] })
 import { academicYearApi, sectionApi } from '../../api/apiEndpoints'
 
-it('shows all saved branches and semesters 1–8, including upcoming semesters in later years', async () => {
+it('shows only saved semesters for the selected academic year', async () => {
   render(<MemoryRouter><SectionManagement mode="form" /></MemoryRouter>)
   await screen.findByRole('heading', { name: 'Add Section' })
+  fireEvent.change(screen.getByRole('combobox', { name: 'Course' }), { target: { value: '10' } })
   const branchSelect = screen.getByRole('combobox', { name: 'Branch' })
   expect(within(branchSelect).getByRole('option', { name: 'Computer Science' })).toBeTruthy()
-  expect(within(branchSelect).getByRole('option', { name: 'Electronics' })).toBeTruthy()
+  expect(within(branchSelect).queryByRole('option', { name: 'Electronics' })).toBeNull()
   expect(branchSelect.disabled).toBe(false)
   fireEvent.change(branchSelect, { target: { value: '7' } })
   expect(screen.getByRole('combobox', { name: 'Course' }).value).toBe('10')
   const semesterSelect = screen.getByRole('combobox', { name: 'Semester' })
-  await waitFor(() => expect(within(semesterSelect).getByRole('option', { name: 'Semester 8' }).disabled).toBe(false))
-  for (let number = 1; number <= 8; number += 1) {
+  await waitFor(() => expect(within(semesterSelect).getByRole('option', { name: 'Semester 1' }).disabled).toBe(false))
+  for (let number = 1; number <= 2; number += 1) {
     const option = within(semesterSelect).getByRole('option', { name: `Semester ${number}`, exact: true })
     expect(option.value).toBe(String(100 + number))
     expect(option.disabled).toBe(false)
   }
-  fireEvent.change(semesterSelect, { target: { value: '108' } })
-  expect(screen.getByRole('combobox', { name: 'Academic Year' }).value).toBe('4')
-  expect(screen.getByRole('button', { name: /Next/ }).disabled).toBe(true)
-  fireEvent.change(screen.getByRole('combobox', { name: 'Academic Year' }), { target: { value: '1' } })
-  expect(screen.getByRole('button', { name: /Next/ }).disabled).toBe(false)
-  fireEvent.change(branchSelect, { target: { value: '8' } })
-  expect(screen.getByRole('combobox', { name: 'Course' }).value).toBe('20')
-  expect(semesterSelect.value).toBe('')
+  expect(screen.queryByRole('option', { name: 'Semester 8', exact: true })).toBeNull()
 })
 
 it('rechecks the academic year before posting and preserves section details when it becomes inactive', async () => {
   render(<MemoryRouter><SectionManagement mode="form" /></MemoryRouter>)
   await screen.findByRole('heading', { name: 'Add Section' })
+  fireEvent.change(screen.getByRole('combobox', { name: 'Course' }), { target: { value: '10' } })
   fireEvent.change(screen.getByRole('combobox', { name: 'Branch' }), { target: { value: '7' } })
   const semesterSelect = screen.getByRole('combobox', { name: 'Semester' })
   await waitFor(() => expect(within(semesterSelect).getByRole('option', { name: 'Semester 1', exact: true }).disabled).toBe(false))
   fireEvent.change(semesterSelect, { target: { value: '101' } })
-  fireEvent.click(screen.getByRole('button', { name: /Next/ }))
   fireEvent.change(screen.getByLabelText(/Capacity/), { target: { value: '30' } })
   fireEvent.change(screen.getByLabelText(/Status/), { target: { value: 'Active' } })
+  fireEvent.change(screen.getByLabelText(/Room \/ Classroom/), { target: { value: 'R101' } })
   academicYearApi.getAll.mockResolvedValueOnce(data.years.map(year => ({ ...year, backendStatus: 0, status: 'INACTIVE' })))
   fireEvent.click(screen.getByRole('button', { name: 'Create Section' }))
   await screen.findByText(/The selected academic year is missing or inactive/)
   expect(sectionApi.create).not.toHaveBeenCalled()
-  expect(screen.getByRole('combobox', { name: 'Academic Year' })).toBeTruthy()
+  expect(screen.getByRole('combobox', { name: 'Academic year' })).toBeTruthy()
 })
 
 it('submits the confirmed active year ID and name when creating a section', async () => {
   render(<MemoryRouter><SectionManagement mode="form" /></MemoryRouter>)
   await screen.findByRole('heading', { name: 'Add Section' })
+  fireEvent.change(screen.getByRole('combobox', { name: 'Course' }), { target: { value: '10' } })
   fireEvent.change(screen.getByRole('combobox', { name: 'Branch' }), { target: { value: '7' } })
   const semesterSelect = screen.getByRole('combobox', { name: 'Semester' })
   await waitFor(() => expect(within(semesterSelect).getByRole('option', { name: 'Semester 1', exact: true }).disabled).toBe(false))
   fireEvent.change(semesterSelect, { target: { value: '101' } })
-  fireEvent.click(screen.getByRole('button', { name: /Next/ }))
   fireEvent.change(screen.getByLabelText(/Capacity/), { target: { value: '30' } })
   fireEvent.change(screen.getByLabelText(/Status/), { target: { value: 'Active' } })
+  fireEvent.change(screen.getByLabelText(/Room \/ Classroom/), { target: { value: 'R101' } })
   fireEvent.click(screen.getByRole('button', { name: 'Create Section' }))
   await waitFor(() => expect(sectionApi.create).toHaveBeenCalledWith(expect.objectContaining({ academicYearId: '1', academicYear: '2026-2027', semesterId: '101' })))
 })
 
-it('displays the existing selected academic year even when no years are active', async () => {
+it('does not offer an inactive academic year for a new section', async () => {
   academicYearApi.getAll.mockResolvedValueOnce(data.years.map(year => ({ ...year, backendStatus: 0, status: 'INACTIVE' })))
   render(<MemoryRouter><SectionManagement mode="form" /></MemoryRouter>)
   await screen.findByRole('heading', { name: 'Add Section' })
-  const field = screen.getByRole('combobox', { name: 'Academic Year' })
-  expect(field.value).toBe('1')
-  expect(within(field).getByRole('option', { name: '2026-2027' }).selected).toBe(true)
-  expect(screen.getByRole('button', { name: /Next/ }).disabled).toBe(true)
+  const field = screen.getByRole('combobox', { name: 'Academic year' })
+  expect(field.value).toBe('')
+  expect(screen.getByText(/No active academic year is configured/)).toBeTruthy()
 })
 
-it('section details and allocation open in native dialogs while keeping the directory', async () => {
+it('opens the assignment dialog directly from the compact directory action', async () => {
   data.sections = [{ sectionId:5, sectionName:'Section Alpha', sectionCode:'CSE-A', collegeId:1, courseId:10, branchId:7, semesterId:101, academicYearId:1, capacity:30, status:1 }]
   render(<MemoryRouter><SectionManagement /></MemoryRouter>)
-  fireEvent.click(await screen.findByRole('link', { name:'Section Alpha' }))
-  const dialog = await screen.findByRole('dialog', { name:'Section Details' })
-  await within(dialog).findByText('Academic Mapping')
-  expect(screen.getByRole('table')).toBeTruthy()
-  fireEvent(dialog, new Event('cancel', { cancelable:true }))
-  fireEvent.click(screen.getByRole('button', { name:'Assign Students to Section Alpha' }))
+  fireEvent.click(await screen.findByRole('button', { name:'Assign Students to Section Alpha' }))
   const allocation = await screen.findByRole('dialog', { name:'Assign teacher or student' })
   expect(within(allocation).getByRole('button', { name:/Assign Teacher/ })).toBeTruthy()
   fireEvent(allocation, new Event('cancel', { cancelable:true }))

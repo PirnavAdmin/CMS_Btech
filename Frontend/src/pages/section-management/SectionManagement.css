@@ -424,3 +424,25 @@
   border: 0;
   background: transparent;
 }
+
+/* Compact form used by both /add and /:id/edit.  It deliberately shares the
+   application dialog and field primitives instead of introducing another form
+   surface. */
+.section-compact-dialog .shared-view-dialog__body { max-height: min(68vh, 680px); padding: 0; }
+.section-compact-form { display: grid; gap: 0; }
+.section-compact-form__group { padding: 18px 24px; border-bottom: 1px solid var(--border); }
+.section-compact-form__group:last-child { border-bottom: 0; }
+.section-compact-form__group > header { margin-bottom: 12px; }
+.section-compact-form__group h3 { margin: 0; color: var(--text-primary); font-size: 15px; font-weight: 750; }
+.section-compact-form__group p { margin: 3px 0 0; color: var(--text-muted); font-size: 12px; }
+.section-compact-form .section-form-grid { gap: 12px 16px; }
+.section-compact-form .section-field { gap: 5px; font-size: 12px; }
+.section-compact-form .section-field > :is(input, select, .project-select, .searchable-select__trigger) { min-height: 38px; }
+.section-compact-form .section-field > small { margin-top: 2px; font-size: 11px; }
+.section-completion { display: grid; gap: 2px; justify-items: center; }
+.section-completion strong { font-size: 13px; }
+.section-completion small { color: var(--text-muted); font-size: 10px; white-space: nowrap; }
+@media(max-width: 640px) {
+  .section-compact-form__group { padding: 15px 16px; }
+  .section-compact-dialog .shared-view-dialog__body { max-height: 65vh; }
+}
