@@ -122,6 +122,37 @@
   gap: 10px;
 }
 
+/* Shared add/edit/create form standard.  All mutation dialogs use this compact
+   shell, matching the College add form while preserving each screen's fields. */
+.shared-view-dialog--form {
+  max-height: 90dvh;
+  border-radius: var(--radius-dialog, 16px);
+}
+.shared-view-dialog--form > .shared-view-dialog__header {
+  min-height: 62px;
+  padding: 10px 22px;
+  background: var(--surface);
+}
+.shared-view-dialog--form > .shared-view-dialog__body {
+  gap: 12px;
+  padding: 12px 22px;
+  background: var(--surface-soft);
+}
+.shared-view-dialog--form > .shared-view-dialog__footer {
+  min-height: 58px;
+  padding: 10px 22px;
+  background: var(--surface);
+}
+.shared-view-dialog--form .shared-view-dialog__title { font-size: 18px; font-weight: 750; }
+.shared-view-dialog--form .shared-view-dialog__subtitle { margin-top: 3px; }
+.shared-view-dialog--form .shared-view-dialog__close-btn { width: 36px; height: 36px; border-radius: 9px; }
+.shared-view-dialog--form .shared-view-dialog__icon-badge { width: 40px; height: 40px; border-radius: 10px; }
+
+@media (max-width: 640px) {
+  .shared-view-dialog--form { width: calc(100vw - 12px); max-height: calc(100dvh - 12px); }
+  .shared-view-dialog--form > :is(.shared-view-dialog__header, .shared-view-dialog__body, .shared-view-dialog__footer) { padding-inline: 14px; }
+}
+
 /* Reusable Banner Styles for Modals and View Pages */
 .view-modal-banner {
   display: flex;

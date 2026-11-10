@@ -3,9 +3,6 @@ import { FiPlus, FiX, FiSearch, FiPaperclip } from 'react-icons/fi';
 import './staff-leave.css';
 
 // ---------- static sample data (frontend only) ----------
-const TODAY = '2026-10-27';
-const HOLIDAYS = ['2026-11-11'];               // add more ISO dates here
-const WEEKLY_OFF = [0, 6];                      // 0 = Sunday, 6 = Saturday (single source of truth)
 const TOTALS = { Casual: 12, Sick: 10, Earned: 15 };
 
 const INITIAL_REQUESTS = [
@@ -26,19 +23,7 @@ const INITIAL_REQUESTS = [
 // ---------- helpers ----------
 const d = (iso) => new Date(`${iso}T12:00:00`);
 const fmt = (iso) => d(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-const isOff = (date) => WEEKLY_OFF.includes(date.getDay()) || HOLIDAYS.includes(date.toISOString().slice(0, 10));
-
-function countDays(from, to, half) {
-  if (!from || !to || d(to) < d(from)) return 0;
-  let n = 0;
-  for (let c = d(from); c <= d(to); c.setDate(c.getDate() + 1)) {
-    const iso = `${c.getFullYear()}-${String(c.getMonth() + 1).padStart(2, '0')}-${String(c.getDate()).padStart(2, '0')}`;
-    if (!WEEKLY_OFF.includes(c.getDay()) && !HOLIDAYS.includes(iso)) n += 1;
-  }
-  return half && from === to && n === 1 ? 0.5 : n;
-}
-
-const EMPTY_FORM = { type: 'Casual', from: '', to: '', half: false, reason: '', file: '' };
+const EMPTY_FORM = { type: 'Casual', reason: '', file: '' };
 
 export default function StaffLeave() {
   const [requests, setRequests] = useState(INITIAL_REQUESTS);
@@ -61,8 +46,6 @@ export default function StaffLeave() {
     return { type, total: TOTALS[type], used, pending, left: TOTALS[type] - used - pending };
   }), [requests]);
 
-  const days = countDays(form.from, form.to, form.half);
-
   const visible = requests
     .filter((r) => fStatus === 'All' || r.status === fStatus)
     .filter((r) => r.from.startsWith(fYear))
@@ -71,28 +54,9 @@ export default function StaffLeave() {
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
-  function validate() {
-    const e = {};
-    const bal = balances.find((b) => b.type === form.type);
-    if (!form.from) e.from = 'Select a start date';
-    if (!form.to) e.to = 'Select an end date';
-    if (form.from && form.to && d(form.to) < d(form.from)) e.to = 'End date cannot be before start date';
-    if (!e.from && !e.to && days === 0) e.to = 'Selected dates are weekly off or holidays';
-    if (!e.to && days > bal.left) e.to = `Only ${bal.left} day(s) of ${form.type} leave left`;
-    if (!e.from && !e.to && requests.some((r) => ['Pending', 'Approved'].includes(r.status) && form.from <= r.to && form.to >= r.from))
-      e.from = 'Overlaps an existing pending or approved request';
-    if (form.reason.trim().length < 5) e.reason = 'Enter a reason (at least 5 characters)';
-    if (form.type === 'Sick' && days > 2 && !form.file) e.file = 'Medical certificate required for sick leave over 2 days';
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  }
-
   function submit(ev) {
     ev.preventDefault();
-    if (!validate()) return;
-    setRequests((rs) => [{ id: Date.now(), type: form.type, applied: TODAY, from: form.from, to: form.to, days, reason: form.reason.trim(), status: 'Pending', remarks: '' }, ...rs]);
-    setShowForm(false); setForm(EMPTY_FORM); setErrors({});
-    showToast('Leave request submitted (Pending)');
+    setErrors({ form: 'Leave applications require dates to calculate duration and balance. Contact HR or your administrator to submit a request.' });
   }
 
   function confirmCancel() {
@@ -173,15 +137,11 @@ export default function StaffLeave() {
         <div className="sl-overlay" onClick={() => setShowForm(false)}>
           <form className="sl-dialog" role="dialog" aria-modal="true" aria-label="Apply leave" onClick={(e) => e.stopPropagation()} onSubmit={submit} noValidate>
             <div className="sl-dlg-head"><h2>Apply Leave</h2><button type="button" aria-label="Close" onClick={() => setShowForm(false)}><FiX /></button></div>
+            <p className="sl-muted" role="status">Date selection has been removed. Leave requests require a date range; contact HR or your administrator to submit a request.</p>
+            {errors.form && <p role="alert">{errors.form}</p>}
             <label>Leave type
               <select value={form.type} onChange={(e) => set('type', e.target.value)}>{Object.keys(TOTALS).map((t) => <option key={t}>{t}</option>)}</select>
             </label>
-            <div className="sl-two">
-              <label>From<input type="date" value={form.from} onChange={(e) => set('from', e.target.value)} />{errors.from && <em>{errors.from}</em>}</label>
-              <label>To<input type="date" value={form.to} min={form.from} onChange={(e) => set('to', e.target.value)} />{errors.to && <em>{errors.to}</em>}</label>
-            </div>
-            <label className="sl-check"><input type="checkbox" checked={form.half} onChange={(e) => set('half', e.target.checked)} /> Half day (only when From and To are the same day)</label>
-            <p className="sl-days">Number of days: <strong>{days}</strong> <span className="sl-muted">(weekly offs and holidays skipped)</span></p>
             <label>Reason<textarea rows="3" value={form.reason} onChange={(e) => set('reason', e.target.value)} />{errors.reason && <em>{errors.reason}</em>}</label>
             <label>Attachment (optional)
               <span className="sl-file"><FiPaperclip /> {form.file || 'Choose file'}
@@ -191,7 +151,7 @@ export default function StaffLeave() {
             </label>
             <div className="sl-actions">
               <button type="button" onClick={() => setShowForm(false)}>Cancel</button>
-              <button type="submit" className="sl-primary">Submit request</button>
+              <button type="submit" className="sl-primary" disabled>Submit request</button>
             </div>
           </form>
         </div>

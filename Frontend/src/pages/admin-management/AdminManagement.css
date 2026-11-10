@@ -5532,17 +5532,18 @@
 .college-form-dialog {
   --college-control-border: color-mix(in srgb, var(--border-strong) 58%, var(--border));
   width: min(860px, 95vw);
+  background: var(--surface);
 }
 .college-form-dialog :is(.shared-view-dialog__header, .shared-view-dialog__footer) {
   padding-block: 10px;
   background: var(--surface);
 }
-.college-form-dialog .shared-view-dialog__body { padding-block: 12px; }
+.college-form-dialog .shared-view-dialog__body { padding-block: 12px; background: var(--surface); }
 .college-form-dialog .college-form-main {
   overflow: visible;
   border: 0;
   border-radius: 0;
-  background: transparent;
+  background: var(--surface);
   box-shadow: none;
 }
 .college-form-dialog .ac-tabs {
@@ -5559,7 +5560,7 @@
   min-height: 36px;
   border: 1px solid var(--college-control-border);
   border-radius: var(--radius-control);
-  background: var(--input-bg);
+  background: var(--surface);
   box-shadow: none;
 }
 .college-form-dialog .college-form-main .ac-field input[readonly] { background: var(--surface-alt); }
@@ -5577,7 +5578,7 @@
   min-height: 64px;
   padding: 6px 10px;
   border-color: var(--college-control-border);
-  background: var(--surface-alt);
+  background: var(--surface);
 }
 .college-form-dialog .ac-upload-button { min-height: 44px; }
 .college-form-dialog .ac-review { margin: 16px 0 0; }

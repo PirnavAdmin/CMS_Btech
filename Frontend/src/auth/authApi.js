@@ -23,7 +23,7 @@ export class AuthRequestError extends Error {
   }
 }
 
-const DEFAULT_API_BASE_URL = 'https://drivable-shaky-ferocious.ngrok-free.dev'
+const DEFAULT_API_BASE_URL = 'https://movable-swampland-tinderbox.ngrok-free.dev'
 const authEndpoint = import.meta.env.DEV
   ? '/api/v1/auth/login'
   : (import.meta.env.VITE_AUTH_API_URL || `${String(import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '')}/api/v1/auth/login`)

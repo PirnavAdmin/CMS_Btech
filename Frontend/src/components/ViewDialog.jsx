@@ -21,6 +21,9 @@ export default function ViewDialog({
   footerContent,
 }) {
   const dialog = useRef(null)
+  // Mutation dialogs share the compact College-form shell.  Individual screens
+  // can still add a class for their field grids or stepper content.
+  const isFormDialog = typeof title === 'string' && /^(add|create|edit|configure|register|invite)\b/i.test(title)
 
   useEffect(() => {
     const element = dialog.current
@@ -41,7 +44,7 @@ export default function ViewDialog({
   return (
     <dialog
       ref={dialog}
-      className={`shared-view-dialog ${className}`.trim()}
+      className={`shared-view-dialog${isFormDialog ? ' shared-view-dialog--form' : ''} ${className}`.trim()}
       data-export-record
       aria-label={title}
       style={{ maxWidth }}

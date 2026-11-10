@@ -24,7 +24,6 @@ export default function FeeTypesConfiguration({ feeManagementTabs = [] }) {
   return <section className="fm-fee-types">
     <PageHeader title="Fee Types" subtitle="Backend fee categories available for fee structures and student assignments." />
     <FeeWorkspaceTabs tabs={feeManagementTabs} />
-    <p className="fm-request-state" role="status">Fee type creation and editing are unavailable: the current backend exposes a read-only fee category API. Configure categories on the backend before creating dependent fee structures.</p>
     <FilterPanel
       className="fm-fee-types-filters"
       active={Boolean(code)}

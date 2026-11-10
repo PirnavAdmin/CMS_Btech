@@ -739,6 +739,8 @@ export const FeeStructureWizardModule = (() => {
     const [previewFields, setPreviewFields] = useState({});
     const [advancedOpen, setAdvancedOpen] = useState(true);
     const [formTab, setFormTab] = useState("applicability");
+    const [courseBranchLookup, setCourseBranchLookup] = useState({ courseId: "", rows: [], loading: false });
+    const [semesterLookup, setSemesterLookup] = useState({ scope: "", rows: [], loading: false });
     const formTabId = useId();
     const formTabs = [["applicability", "Academic Details"], ["breakdown", "Fee Breakdown"], ["schedule", "Payment Schedule & Final Review"]];
 
@@ -764,6 +766,106 @@ export const FeeStructureWizardModule = (() => {
       if (configurations.length && !configurations.some(row => row.id === previewConfigId)) setPreviewConfigId(configurations[0].id);
       if (scheduleTarget !== "common" && !configurations.some(row => row.id === scheduleTarget)) setScheduleTarget("common");
     }, [configurations, previewConfigId, scheduleTarget]);
+
+    // Load branches from the course-scoped endpoint as soon as a course is
+    // chosen. The all-branches list can be stale or lack a resolvable college
+    // relationship, even though the selected course has valid branches.
+    useEffect(() => {
+      const courseId = String(s.courseId || "");
+      if (!courseId) {
+        setCourseBranchLookup({ courseId: "", rows: [], loading: false });
+        return undefined;
+      }
+      let active = true;
+      setCourseBranchLookup({ courseId, rows: [], loading: true });
+      const unwrapRows = response => {
+        let current = response;
+        for (let depth = 0; depth < 6; depth += 1) {
+          if (Array.isArray(current)) return current;
+          if (!current || typeof current !== "object") break;
+          const rows = [current.items, current.content, current.records, current.results, current.branches, current.rows]
+            .find(Array.isArray);
+          if (rows) return rows;
+          current = current.data ?? current.result ?? current.payload;
+        }
+        return [];
+      };
+      apiEndpointsModule.branchApi.getByCourse(courseId)
+        .then(async rows => {
+          // Some deployments expose the academic lookup through the college
+          // API client instead of the shared v1 client. Retry that same
+          // course-scoped contract when the first client returns no rows.
+          if (!rows?.length && collegeApiModule.getBranchesByCourse) {
+            try { rows = unwrapRows(await collegeApiModule.getBranchesByCourse(courseId)); } catch { /* use the loaded branch master below */ }
+          }
+          if (!active) return;
+          const normalized = (Array.isArray(rows) ? rows : []).map(row => {
+            const read = (...keys) => Object.entries(row || {}).find(([field, fieldValue]) =>
+              keys.some(key => field.replaceAll("_", "").toLowerCase() === key.replaceAll("_", "").toLowerCase()) && fieldValue != null
+            )?.[1];
+            const id = collegeScopeModule.collegeField(row, "branch") ?? read("id", "branchId");
+            const name = read("branchName", "name", "shortName", "branchCode");
+            const relatedCourseId = collegeScopeModule.collegeField(row, "course") ?? read("courseId", "courseID");
+            return id != null && name ? { ...row, id, name: String(name).trim(), courseId: relatedCourseId ?? courseId } : null;
+          }).filter(Boolean);
+          setCourseBranchLookup({ courseId, rows: normalized, loading: false });
+        })
+        .catch(() => {
+          if (active) setCourseBranchLookup({ courseId, rows: [], loading: false });
+        });
+      return () => { active = false; };
+    }, [s.courseId]);
+
+    // Semester lookup is dependent on the selected branch and year. The global
+    // semester list can be stale or unscoped, so ask the existing semester API
+    // for this exact academic mapping and retain the page's lookup list as a
+    // fallback when the endpoint omits optional filters.
+    useEffect(() => {
+      const courseId = String(s.courseId || "");
+      const branchId = String(s.branchId || "");
+      const academicYearId = String(s.academicYearId || "");
+      const scope = [courseId, branchId, academicYearId].join(":");
+      if (!courseId || !branchId || !academicYearId) {
+        setSemesterLookup({ scope: "", rows: [], loading: false });
+        return undefined;
+      }
+      let active = true;
+      setSemesterLookup({ scope, rows: [], loading: true });
+      const read = (row, ...keys) => Object.entries(row || {}).find(([field, fieldValue]) =>
+        keys.some(key => field.replaceAll("_", "").toLowerCase() === key.replaceAll("_", "").toLowerCase()) && fieldValue != null
+      )?.[1];
+      collegeApiModule.getSemesters({ courseId, branchId, academicYearId })
+        .then(response => {
+          if (!active) return;
+          let current = response;
+          let list = null;
+          for (let depth = 0; depth < 6; depth += 1) {
+            if (Array.isArray(current)) { list = current; break; }
+            if (!current || typeof current !== "object") break;
+            list = [current.items, current.content, current.records, current.results, current.semesters, current.rows]
+              .find(Array.isArray) || null;
+            if (list) break;
+            current = current.data ?? current.result ?? current.payload;
+          }
+          const rows = (list || []).map(row => {
+            const id = collegeScopeModule.collegeField(row, "semester") ?? read(row, "semesterId", "id");
+            const name = read(row, "semesterName", "name") || `Semester ${read(row, "semesterNumber") || ""}`;
+            const rowCourseId = collegeScopeModule.collegeField(row, "course") ?? read(row, "courseId");
+            const rowBranchId = collegeScopeModule.collegeField(row, "branch") ?? read(row, "branchId");
+            const rowYearId = collegeScopeModule.collegeField(row, "academicYear") ?? read(row, "academicYearId");
+            if (id == null || (rowCourseId != null && String(rowCourseId) !== courseId)
+              || (rowBranchId != null && String(rowBranchId) !== branchId)
+              || (rowYearId != null && String(rowYearId) !== academicYearId)) return null;
+            return { ...row, id, name: String(name).trim(), courseId: rowCourseId ?? courseId,
+              branchId: rowBranchId ?? branchId, academicYearId: rowYearId ?? academicYearId };
+          }).filter(Boolean);
+          setSemesterLookup({ scope, rows, loading: false });
+        })
+        .catch(() => {
+          if (active) setSemesterLookup({ scope, rows: [], loading: false });
+        });
+      return () => { active = false; };
+    }, [s.courseId, s.branchId, s.academicYearId]);
 
     const previewConfig = configurations.find(row => row.id === previewConfigId) || configurations[0];
     const configPatch = (id, change) => {
@@ -794,19 +896,67 @@ export const FeeStructureWizardModule = (() => {
       setError("");
     };
 
-    const branches = masters.branches.filter(
-      (b) => !s.courseId || String(b.courseId) === String(s.courseId)
+    const course = masters.courses.find(row => String(row.id) === String(s.courseId));
+    const localBranches = (masters.allBranches || masters.branches).filter((branch) => {
+      const branchCourseId = collegeScopeModule.collegeField(branch, "course") ?? branch.courseId ?? branch.CourseId;
+      const branchCourseName = String(branch.courseName || branch.CourseName || branch.course?.courseName || "").trim().toLowerCase();
+      const selectedCourseName = String(course?.name || course?.courseName || "").trim().toLowerCase();
+      // Some legacy branch-list responses omit CourseId but include CourseName.
+      // Match that name when possible; if neither relation is supplied, leave
+      // the row usable as a fallback from this already college-scoped list.
+      return !s.courseId || (branchCourseId != null
+        ? String(branchCourseId) === String(s.courseId)
+        : branchCourseName && selectedCourseName ? branchCourseName === selectedCourseName : true);
+    });
+    const fetchedBranches = courseBranchLookup.courseId === String(s.courseId || "")
+      ? courseBranchLookup.rows
+      : [];
+    const branches = [...new Map([...fetchedBranches, ...localBranches].map(branch => [String(branch.id ?? branch.branchId), branch])).values()];
+    const semesterScope = [String(s.courseId || ""), String(s.branchId || ""), String(s.academicYearId || "")].join(":");
+    const fetchedSemesters = semesterLookup.scope === semesterScope ? semesterLookup.rows : [];
+    const semesterSource = fetchedSemesters.length ? fetchedSemesters : masters.semesters;
+    const semesters = semesterSource.filter(
+      (semester) => {
+        const semesterCourseId = collegeScopeModule.collegeField(semester, "course") ?? semester.courseId;
+        const semesterBranchId = collegeScopeModule.collegeField(semester, "branch") ?? semester.branchId;
+        const semesterYearId = collegeScopeModule.collegeField(semester, "academicYear") ?? semester.academicYearId;
+        return (!semesterCourseId || String(semesterCourseId) === String(s.courseId)) &&
+          (!semesterBranchId || String(semesterBranchId) === String(s.branchId)) &&
+          (!semesterYearId || String(semesterYearId) === String(s.academicYearId));
+      }
     );
-    const semesters = masters.semesters.filter(
-      (r) =>
-        (!r.courseId || String(r.courseId) === String(s.courseId)) &&
-        (!r.branchId || String(r.branchId) === String(s.branchId)) &&
-        (!r.academicYearId || String(r.academicYearId) === String(s.academicYearId))
-    );
-    // Only cohorts already stored by the server are selectable.
-    const batches = [...new Set([...(masters.batchScopes || []), ...serverPlans]
-      .filter(row => s.courseId && s.branchId && String(row.courseId) === String(s.courseId) && String(row.branchId) === String(s.branchId))
-      .map(row => row.batch).filter(Boolean))];
+    // Admissions creates a batch from the selected academic year and course,
+    // so a new cohort must be selectable before students or fee plans exist.
+    // Keep persisted batches for legacy cohorts, but scope them to this year.
+    const selectedYear = masters.years.find(row => String(row.id) === String(s.academicYearId));
+    const selectedCourse = course;
+    const selectedBranch = branches.find(row => String(row.id ?? row.branchId) === String(s.branchId));
+    const derivedBatch = calculatedFeeBatch(selectedYear, {
+      ...(selectedCourse || {}),
+      durationYears: selectedCourse?.durationYears ?? selectedCourse?.duration_years ?? selectedBranch?.durationYears ?? selectedBranch?.duration_years,
+      durationValue: selectedCourse?.durationValue ?? selectedBranch?.durationValue,
+      duration: selectedCourse?.duration ?? selectedCourse?.courseDuration ?? selectedBranch?.duration,
+      totalSemesters: selectedCourse?.totalSemesters ?? selectedCourse?.total_semesters ?? selectedBranch?.totalSemesters ?? selectedBranch?.total_semesters,
+      semesters: selectedCourse?.semesters ?? selectedBranch?.semesters,
+    });
+    const admittedBatches = (students || []).filter(student => {
+      const studentCourseId = collegeScopeModule.collegeField(student, "course");
+      const studentBranchId = collegeScopeModule.collegeField(student, "branch");
+      const studentYearId = collegeScopeModule.collegeField(student, "academicYear");
+      return studentCourseId != null && studentBranchId != null && studentYearId != null
+        && String(studentCourseId) === String(s.courseId)
+        && String(studentBranchId) === String(s.branchId)
+        && String(studentYearId) === String(s.academicYearId);
+    }).map(student => student.batch ?? student.admissionBatch ?? student.batchName ?? student.admission?.batch).filter(Boolean);
+    const batches = [...new Set([
+      ...(masters.batchScopes || []),
+      ...serverPlans,
+      ...admittedBatches.map(batch => ({ academicYearId: s.academicYearId, courseId: s.courseId, branchId: s.branchId, batch })),
+      ...(derivedBatch ? [{ academicYearId: s.academicYearId, courseId: s.courseId, branchId: s.branchId, batch: derivedBatch }] : []),
+    ]
+      .filter(row => s.courseId && s.branchId && String(row.courseId) === String(s.courseId) && String(row.branchId) === String(s.branchId)
+        && (!row.academicYearId || String(row.academicYearId) === String(s.academicYearId)))
+      .map(row => String(row.batch || "").trim()).filter(Boolean))];
     const suggestedName = [masters.courses.find(row => String(row.id) === String(s.courseId))?.name,
       branches.find(row => String(row.id) === String(s.branchId))?.name, s.batch,
       semesters.find(row => String(row.id) === String(s.semesterId))?.name,
@@ -1093,21 +1243,21 @@ export const FeeStructureWizardModule = (() => {
               />
 
               <FeeSelect
-                label="Branch *" disabled={!s.courseId || academicContext.loading || !branches.length}
+                label="Branch *" disabled={!s.courseId || courseBranchLookup.loading || !branches.length}
                 value={s.branchId || ""}
                 options={[{ id: "", name: "Select Branch" }, ...branches]}
                 onChange={(branchId) => patch({ branchId, semesterId: "" })}
               />
 
               <FeeSelect
-                label="Admission Batch *" disabled={!s.branchId || !plansLoaded || !batches.length}
+                label="Admission Batch *" disabled={!s.branchId || !batches.length}
                 value={s.batch || ""}
                 options={[{ id: "", name: "Select Batch" }, ...batches.map((b) => ({ id: b, name: b }))]}
                 onChange={(batch) => patch({ batch })}
               />
 
               {(!legacyLocalEdit || s.cycle === "Semester-wise") && <FeeSelect
-                label="Applicable Semester *" disabled={!s.batch || !semesters.length}
+                label="Applicable Semester *" disabled={!s.branchId || semesterLookup.loading || !semesters.length}
                 value={s.semesterId || ""}
                 options={[{ id: "", name: "Select Semester" }, ...semesters]}
                 onChange={(semesterId) => patch({ semesterId })}
@@ -1120,7 +1270,7 @@ export const FeeStructureWizardModule = (() => {
             <p className="fm-contract-note" role="note">Annual applicability and year-of-study scope are unavailable: the fee-plan API matches a single semester. Configure payment installments in Step 3.</p>
             {academicContext.loading && <p role="status">Loading academic options…</p>}
             {academicContext.error && <p role="alert" className="fm-error-banner">{academicContext.error}</p>}
-            {!academicContext.loading && <p className="fm-scope-status" role="status">{!masters.years.length ? "No active academic years for this college." : s.academicYearId && !masters.courses.length ? "No courses available." : s.courseId && !branches.length ? "No branches for this course." : s.branchId && plansLoaded && !batches.length ? "No admission batches found in existing admissions or fee plans for this course and branch." : s.batch && !semesters.length ? "No semesters available for this academic scope." : ""}</p>}
+            {!academicContext.loading && <p className="fm-scope-status" role="status">{!masters.years.length ? "No active academic years for this college." : s.academicYearId && !masters.courses.length ? "No courses available." : s.courseId && !courseBranchLookup.loading && !branches.length ? "No branches found for this course in the selected college." : s.branchId && plansLoaded && !batches.length ? "No admission batch is available for this course and branch yet." : s.branchId && !semesterLookup.loading && !semesters.length ? "No semester is configured for this course, branch, and academic year." : ""}</p>}
             {legacyLocalEdit && <div className="fm-form-grid"><FeeInput label="Student Category / Quota" value={s.category || ""} placeholder="Leave blank for all students" onChange={category => patch({ category, applicableTo: category ? "Selected Category" : "All Students" })} /></div>}
           </section>
 
@@ -1371,10 +1521,19 @@ export const FeeStructureModule = (() => {
   const STATUSES = ["All", "Active", "Draft", "Inactive"];
 
   const norm = (rows, ids, names) => {
+    const read = (row, keys) => {
+      for (const key of keys) {
+        const match = Object.entries(row || {}).find(([field, value]) =>
+          field.replaceAll("_", "").toLowerCase() === key.replaceAll("_", "").toLowerCase() && value != null
+        );
+        if (match) return match[1];
+      }
+      return undefined;
+    };
     const map = new Map();
     for (const x of rows || []) {
-      const id = ids.map((k) => x[k]).find((v) => v != null);
-      const nameStr = names.map((k) => x[k]).find(Boolean);
+      const id = read(x, ids);
+      const nameStr = read(x, names);
       const cleanName = String(nameStr || "").trim();
       if (!id || !cleanName) continue;
       const key = String(id);
@@ -1404,11 +1563,11 @@ export const FeeStructureModule = (() => {
       .filter((x) => x && typeof x === "object")
       .map((x) => ({
         ...x,
-        id: x.semesterId || x.id,
+        id: collegeScopeModule.collegeField(x, "semester") || x.id,
         name: x.semesterName || x.name || `Semester ${x.semesterNumber || ""}`,
-        courseId: x.courseId || "",
-        branchId: x.branchId || "",
-        academicYearId: x.academicYearId || "",
+        courseId: collegeScopeModule.collegeField(x, "course") || x.courseId || "",
+        branchId: collegeScopeModule.collegeField(x, "branch") || x.branchId || "",
+        academicYearId: collegeScopeModule.collegeField(x, "academicYear") || x.academicYearId || "",
       }))
       .filter((x) => x.id && x.name);
   };
@@ -1779,7 +1938,7 @@ export const FeeStructureModule = (() => {
     const canCreatePlan=canAction('/fees','create'),canEditPlan=canAction('/fees','edit');
     const location = useLocation();
     const { facilityId, structureId } = useParams();
-    const { scopeRecords, academicYears, selectedCollegeId, selectedAcademicYearId, selectedAcademicYear } =
+    const { academicYears, selectedCollegeId, selectedAcademicYearId, selectedAcademicYear } =
       useAcademic();
 
     const categoryFromUrl = () => {
@@ -1832,13 +1991,26 @@ export const FeeStructureModule = (() => {
       status: "All",
     });
 
+    // Scope the API results against this form's freshly loaded hierarchy. The
+    // AcademicContext hierarchy may still be stale while this page's lookups
+    // are loading, which previously filtered valid branches out of the select.
+    const feeLookupScope = useMemo(
+      () => collegeScopeModule.createCollegeScope(selectedCollegeId, {
+        departments: allMasters.departments,
+        courses: allMasters.courses,
+        branches: allMasters.branches,
+        semesters: allMasters.semesters,
+      }),
+      [selectedCollegeId, allMasters.departments, allMasters.courses, allMasters.branches, allMasters.semesters]
+    );
     const masters = {
       ...allMasters,
+      allBranches: allMasters.branches,
       years: activeFeeYearOptions(academicYears || []),
       ...Object.fromEntries(
         ["departments", "courses", "branches", "semesters"].map((type) => [
           type,
-          scopeRecords(allMasters[type]),
+          feeLookupScope(allMasters[type]),
         ])
       ),
     };
