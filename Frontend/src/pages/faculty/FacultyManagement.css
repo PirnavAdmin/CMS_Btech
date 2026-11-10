@@ -4612,8 +4612,10 @@
   grid-auto-rows: 32px;
   align-items: center;
   gap: 4px;
-  padding: 2px calc(20px + var(--faculty-scrollbar-space, 6px)) 8px 20px;
-  overflow: hidden;
+  padding: 2px 14px 8px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable both-edges;
   border: 0;
   border-bottom: 1px solid var(--border);
   border-radius: 0;
@@ -4799,7 +4801,7 @@
 
 /* Faculty registration uses the same popup workflow as College Add.  The
    wrapper keeps existing form rules scoped when the native dialog is portalled. */
-.faculty-form-dialog { --faculty-scrollbar-space: 6px; width: min(820px, 93vw); max-height: 86dvh; background: var(--surface); }
+.faculty-form-dialog { width: min(820px, 93vw); max-height: 86dvh; background: var(--surface); }
 .faculty-form-dialog > .shared-view-dialog__body { padding: 0; overflow: hidden; background: var(--surface); }
 .faculty-form-dialog .faculty-form-dialog-content { height: min(400px, calc(86dvh - 112px)); min-height: 0; background: var(--surface); }
 .faculty-form-dialog .faculty-form-dialog-content > .erp-two-column-layout { height: 100%; margin: 0; }
@@ -4809,7 +4811,7 @@
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-gutter: stable;
+  scrollbar-gutter: stable both-edges;
   scrollbar-width: thin;
   scrollbar-color: var(--border-strong) transparent;
 }

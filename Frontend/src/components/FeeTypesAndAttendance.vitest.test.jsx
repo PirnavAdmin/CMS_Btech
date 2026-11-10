@@ -1,24 +1,43 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import FeeTypesConfiguration from '../pages/fees/FeeTypesConfiguration'
-import { feeConfigurationApi } from '../api/apiEndpoints'
+import { academicFeePlanApi, feeConfigurationApi } from '../api/apiEndpoints'
 import { knownAttendanceRate, attendancePercentage } from '../utils/attendanceMetrics'
 vi.mock('../context/AcademicContext', () => ({ useAcademic: () => ({ selectedCollegeId:'7' }) }))
+vi.mock('../auth/ScreenAccess', () => ({ useScreenAccess: () => ({ canAction: () => true }) }))
 vi.mock('../components/ExportMenu', () => ({ default: () => <button>Export</button> }))
-vi.mock('../api/apiEndpoints', async original => ({ ...await original(), feeConfigurationApi: { categories:vi.fn() } }))
-beforeEach(() => { vi.clearAllMocks(); feeConfigurationApi.categories.mockResolvedValue([{id:1,code:'ACA',name:'Academic'},{id:2,code:'HOST',name:'Hostel'}]) })
+vi.mock('../api/apiEndpoints', async original => ({ ...await original(), feeConfigurationApi: { categories:vi.fn() }, academicFeePlanApi: { list:vi.fn() } }))
+beforeEach(() => { vi.clearAllMocks(); feeConfigurationApi.categories.mockResolvedValue([{id:1,code:'ACA',name:'Academic'},{id:2,code:'HOST',name:'Hostel'}]); academicFeePlanApi.list.mockResolvedValue([{ feeCategoryId: 1 }, { feeCategoryId: 2 }]) })
 afterEach(cleanup)
+const renderFeeTypes = () => render(<MemoryRouter><FeeTypesConfiguration /></MemoryRouter>)
 test('fee types use actual backend records without the unavailable mutation banner', async () => {
-  render(<FeeTypesConfiguration />); await screen.findByRole('table',{name:'Fee types'})
+  renderFeeTypes(); await screen.findByText('Hostel')
   expect(screen.queryByText(/read-only fee category API/)).toBeNull()
   fireEvent.change(screen.getByLabelText('Search fee types'), {target:{value:'Hostel'}})
   expect(screen.queryByText('Academic')).toBeNull(); expect(screen.getByText('Hostel')).toBeTruthy()
 })
+test('fee types are visible before a fee structure is saved', async () => {
+  feeConfigurationApi.categories.mockResolvedValueOnce([
+    { id: 2, code: 'ACA', name: 'Academic' },
+  ])
+  renderFeeTypes()
+  await screen.findByText('Academic')
+  expect(academicFeePlanApi.list).not.toHaveBeenCalled()
+  expect(screen.getByText('Academic')).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Add Fee Type' }).disabled).toBe(true)
+})
+test('empty fee types retain the table headers', async () => {
+  feeConfigurationApi.categories.mockResolvedValueOnce([])
+  renderFeeTypes()
+  expect((await screen.findByText('No fee types found.')).closest('table')).toBe(screen.getByRole('table', { name: 'Fee types' }))
+  expect(screen.getAllByRole('columnheader')).toHaveLength(4)
+})
 test('fee category read failure offers retry instead of a fallback list', async () => {
   feeConfigurationApi.categories.mockRejectedValueOnce(new Error('Fee categories offline'))
-  render(<FeeTypesConfiguration />); await screen.findByText('Fee categories offline')
-  expect(screen.queryByRole('table')).toBeNull(); fireEvent.click(screen.getByRole('button',{name:'Retry fee types'}))
-  await screen.findByRole('table',{name:'Fee types'})
+  renderFeeTypes(); await screen.findByText('Fee categories offline')
+  expect(screen.queryByText('Academic')).toBeNull(); fireEvent.click(screen.getByRole('button',{name:'Retry fee types'}))
+  await screen.findByText('Academic')
 })
 test('attendance zero is real only when recorded against a nonzero total', () => {
   expect(attendancePercentage(0,10)).toBe(0); expect(attendancePercentage(3,4)).toBe(75)

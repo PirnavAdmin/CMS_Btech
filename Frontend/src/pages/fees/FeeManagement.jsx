@@ -998,7 +998,7 @@ export const FeeStructureWizardModule = (() => {
       if (!s.batch?.trim() || (!legacyLocalEdit && !batches.includes(s.batch))) return "Select a valid admission batch.";
       if (legacyLocalEdit) {
         if (s.applicableTo === "Selected Category" && !s.category) return "Select a student category / quota.";
-        if (s.cycle === "Semester-wise" && !s.semesterId) return "Select a semester.";
+        if (step === "schedule" && s.cycle === "Semester-wise" && !s.semesterId) return "Select a semester.";
         if (step === "applicability") return "";
         const oldBreakdownError = feeHeadsError(s.components);
         if (oldBreakdownError) return oldBreakdownError;
@@ -1010,7 +1010,7 @@ export const FeeStructureWizardModule = (() => {
         return "";
       }
       if (s.cycle !== "Semester-wise") return "Annual applicability cannot be represented without a semester-specific record by the current API.";
-      if (!s.semesterId || !semesters.some(row => String(row.id) === String(s.semesterId))) return "Select a semester. The fee-plan API requires semester scope for every billing cycle.";
+      if (step === "schedule" && !semesters.some(row => String(row.id) === String(s.semesterId))) return "Select a semester before saving the fee plan.";
       if (!plansLoaded) return "Existing fee plans are still loading. Wait a moment and retry.";
 
       if (step === "applicability") return "";
@@ -1022,7 +1022,7 @@ export const FeeStructureWizardModule = (() => {
         const key = `${config.quota.trim().toLocaleLowerCase()}|${config.studentCategory.trim().toLocaleLowerCase()}`;
         if (keys.has(key)) return `Duplicate quota / category combination: ${config.quota} + ${config.studentCategory}.`;
         keys.add(key);
-        const matched = [...serverPlans, ...existingStructures].some(plan =>
+        const matched = step === "schedule" && [...serverPlans, ...existingStructures].some(plan =>
           String(plan.academicYearId || "") === String(s.academicYearId) &&
           String(plan.courseId || "") === String(s.courseId) &&
           String(plan.branchId || "") === String(s.branchId) &&
@@ -1189,18 +1189,16 @@ export const FeeStructureWizardModule = (() => {
     });
 
     return (
-      <div className="fm-create-plan-container fm-academic-plan-editor">
-        {/* Page Header */}
-        <header className="fm-page-header">
-          <div className="fm-create-heading-copy">
-            <h1>{s.id ? "Edit Academic Fee Plan" : "Create Academic Fee Plan"}</h1>
-            <p>Set charges and payment dates for a course, branch and batch.</p>
-          </div>
-          <button type="button" className="fm-back-btn fm-create-back-btn" onClick={close}>
-            <FiArrowLeft /> Back to Fee Plans
-          </button>
-        </header>
-
+      <SharedFeeDialog
+        title={s.id ? "Edit Academic Fee Plan" : "Create Academic Fee Plan"}
+        subtitle="Set charges and payment dates for a course, branch and batch."
+        onClose={close}
+        busy={saving}
+        showExport={false}
+        hideFooter
+        maxWidth="860px"
+        className="fm-plan-editor-dialog fm-academic-plan-editor"
+      >
         <div className="fm-create-layout" data-without-live-preview="true">
         <div className="fm-create-form-panel">
         {error && (
@@ -1256,13 +1254,6 @@ export const FeeStructureWizardModule = (() => {
                 onChange={(batch) => patch({ batch })}
               />
 
-              {(!legacyLocalEdit || s.cycle === "Semester-wise") && <FeeSelect
-                label="Applicable Semester *" disabled={!s.branchId || semesterLookup.loading || !semesters.length}
-                value={s.semesterId || ""}
-                options={[{ id: "", name: "Select Semester" }, ...semesters]}
-                onChange={(semesterId) => patch({ semesterId })}
-              />}
-
               <FeeSelect label="Fee Applicability Period *" value={s.cycle} options={legacyLocalEdit ? [{ id: "Yearly", name: "Annual" }, { id: "Semester-wise", name: "Semester" }] : [{ id: "Semester-wise", name: "Semester" }]} onChange={cycle => patch({ cycle })} />
               <FeeInput label="Fee Plan Name *" value={s.name || ""} maxLength={100} placeholder="Suggested from academic details" onChange={name => { setNameEdited(Boolean(name)); patch({ name }); }} />
 
@@ -1314,6 +1305,14 @@ export const FeeStructureWizardModule = (() => {
           {/* SECTION 3: When should they pay? */}
           <section className="fm-form-section" hidden={formTab !== "schedule"} role="tabpanel" id={formTabId + "-panel-schedule"} aria-labelledby={formTabId + "-tab-schedule"} tabIndex={0}>
             <FeeSectionHeading number="03" title="Payment Schedule" description="Choose full payment or scheduled installments." />
+
+            {(!legacyLocalEdit || s.cycle === "Semester-wise") && <FeeSelect
+              label="Semester *"
+              disabled={!s.branchId || semesterLookup.loading || !semesters.length}
+              value={s.semesterId || ""}
+              options={[{ id: "", name: "Select Semester" }, ...semesters]}
+              onChange={(semesterId) => patch({ semesterId })}
+            />}
 
             {!legacyLocalEdit && <div className="fm-config-schedule-select"><FeeSelect label="Payment schedule for" value={scheduleTarget} options={[{ id: "common", name: "Shared schedule" }, ...configurations.map((row, index) => ({ id: row.id, name: `${row.quota || `Configuration ${index + 1}`} · ${row.studentCategory || "Category not set"}` }))]} onChange={setScheduleTarget} /><small>The shared due date applies to every configuration. For installments, amounts shown use the first configuration total; customize the schedule for configurations with different totals.</small></div>}
             <FeePaymentScheduleEditor value={legacyLocalEdit || scheduleTarget === "common" ? s : (scheduleConfig?.schedule || s)} onChange={change => legacyLocalEdit || scheduleTarget === "common" ? patch(change) : scheduleConfig && configPatch(scheduleConfig.id, { schedule: { ...(scheduleConfig.schedule || structuredClone(s)), ...change } })} total={legacyLocalEdit || scheduleTarget === "common" ? total : (scheduleConfig ? totalFor(scheduleConfig) : total)} />
@@ -1401,6 +1400,7 @@ export const FeeStructureWizardModule = (() => {
           <button
             type="button"
             className="erp-btn erp-btn--secondary"
+            disabled={saving}
             onClick={close}
           >
             Cancel
@@ -1428,11 +1428,8 @@ export const FeeStructureWizardModule = (() => {
           </div>
         </footer>
         </div>
-        <></>
         </div>
-
-
-      </div>
+      </SharedFeeDialog>
     );
   }
 
@@ -1631,25 +1628,15 @@ export const FeeStructureModule = (() => {
     };
 
     return (
-      <div className="fm-create-plan-container fm-academic-plan-editor">
-        <header className="fm-page-header">
-          <div>
-            <button type="button" className="fm-back-btn" onClick={close}>
-              <FiArrowLeft /> Back to Fee Plans
-            </button>
-            <h1>
-              {form.id
-                ? `Edit ${hostel ? "Hostel" : "Transport"} Fee Plan`
-                : `Create ${hostel ? "Hostel" : "Transport"} Fee Plan`}
-            </h1>
-            <p>
-              {hostel
-                ? "Configure room occupancy and residential accommodation rates."
-                : "Configure campus bus routes, pickup stops and transit fares."}
-            </p>
-          </div>
-        </header>
-
+      <SharedFeeDialog
+        title={`${form.id ? "Edit" : "Create"} ${category} Fee Plan`}
+        subtitle={hostel ? "Configure room occupancy and residential accommodation rates." : "Configure campus bus routes, pickup stops and transit fares."}
+        onClose={close}
+        showExport={false}
+        hideFooter
+        maxWidth="860px"
+        className="fm-plan-editor-dialog fm-academic-plan-editor"
+      >
         <div className="fm-create-layout" data-without-live-preview="true">
         <div className="fm-create-form-panel">
 
@@ -1787,9 +1774,8 @@ export const FeeStructureModule = (() => {
           </div>
         </footer>
         </div>
-        <></>
         </div>
-      </div>
+      </SharedFeeDialog>
     );
   }
 
@@ -2252,11 +2238,8 @@ export const FeeStructureModule = (() => {
     }
 
     return (
-      <div className="fm-page-container">
-        {/* Page Header */}
+      <div className="fm-page-container fm-structure-directory">
         <FeePageHeading title="Fee Structures" description="Configure fee applicability, components and payment schedules." />
-        <FeeWorkspaceTabs tabs={feeManagementTabs} />
-
         {tab==="academic" && workflow?.error && <p role="alert" className="fm-error-banner">{workflow.error} <button type="button" onClick={workflow.retry}>Retry fee structures</button></p>}
         {tab==="academic" && workflow?.loading && <p role="status">Loading academic fee plans…</p>}
         {lookupError && <div className="fm-error-banner" role="alert">{lookupError} <button type="button" onClick={()=>setLookupAttempt(value=>value+1)}>Retry academic options</button></div>}
@@ -2295,7 +2278,6 @@ export const FeeStructureModule = (() => {
           </button>
         </nav>
 
-        {tab !== "academic" && <p role="status">Legacy facility configurations are shown for reference. Saving requires college-scoped backend configuration support.</p>}
         {/* Main Workspace */}
         <div className={`fm-plan-workspace fm-category--${tab}`}>
           {/* Workspace Context Header */}
@@ -2312,8 +2294,8 @@ export const FeeStructureModule = (() => {
                 {tab === "academic"
                   ? "Set course and batch fees."
                   : tab === "hostel"
-                  ? "Set hostel and room fees."
-                  : "Set route and boarding stop fees."}
+                  ? "View saved hostel and room fees. Creating plans requires college-scoped backend support."
+                  : "View saved route and boarding stop fees. Creating plans requires college-scoped backend support."}
               </p>
             </div>
           </div>
@@ -2642,7 +2624,7 @@ export const FeeStructureModule = (() => {
                   </div>
                   <h3 className="fm-plan-empty-title">{isHostelFiltered ? "No matching fee plans" : "No hostel fee plans yet"}</h3>
                   <p className="fm-plan-empty-desc">
-                    Create a hostel fee plan for accommodation, room type and occupancy.
+                    {isHostelFiltered ? "Adjust the filters to see more results." : "Saved hostel fee plans will appear here."}
                   </p>
                 </div>
               ) : (
@@ -3317,8 +3299,6 @@ export const ServerFeeCollectionModule = (() => {
             { label: "Overdue Amount", value: feeMoney(overdue), tone: "danger" },
           ]}
         />
-
-        <FeeWorkspaceTabs tabs={feeManagementTabs} />
 
         {yearOptions.length === 0 && <div className="fm-context-notice" role="status">
           <FiAlertCircle />
@@ -6151,10 +6131,14 @@ export const FeeManagementModule = (() => {
       <div className={`fm-page-container ${activeView === "directory" ? "fm-student-fees-page" : ""}`}>
         {/* Page Header */}
         <FeePageHeading
-          title={activeView === "transactions" ? "Payments" : "Student Fees"}
+          title="Student Fees"
           description={activeView === "transactions" ? "Review confirmed payments, transaction references, and official receipts." : "Manage student fee balances, collections, and receipts."}
           icon={activeView === "transactions" ? FiCreditCard : FiUsers}
         />
+        <FeeWorkspaceTabs tabs={[
+          { label: "Directory", to: "/fees/students", active: activeView === "directory", icon: FiUsers },
+          { label: "Receipts", to: "/fees/students/receipts", active: activeView === "transactions", icon: FiFileText },
+        ]} />
 
         {/* DIRECTORY VIEW: SUMMARY CARDS + STUDENT TABLE */}
         {activeView === "directory" && (
@@ -6218,8 +6202,6 @@ export const FeeManagementModule = (() => {
                 <span className="fm-summary-card__meta">Total overdue amount</span>
               </div>
             </div>
-            <FeeWorkspaceTabs tabs={feeManagementTabs} />
-
             {/* Main Content Workspace */}
             <div className="fm-workspace">
               <div className="fm-workspace-heading">
@@ -7220,8 +7202,6 @@ export const FeeManagementModule = (() => {
     const feeManagementTabs = [
       ['Overview','overview'],['Fee Types','types'],['Fee Structure','structures'],['Student Fees','students']
     ].map(([label,path]) => ({label,to:'/fees/' + path,active:pathname === '/fees/' + path || pathname.startsWith('/fees/' + path + '/')}));
-    const tabbedFeeRoutes = ['/fees/overview', '/fees/types', '/fees/structures', '/fees/students'];
-    const showFeeManagementTabs = !tabbedFeeRoutes.some(route => pathname === route);
 
 
     const mutationRoute = /\/(create|edit|assignments|collection)(\/|$)/.test(pathname)
@@ -7230,29 +7210,16 @@ export const FeeManagementModule = (() => {
       <DashboardLayout>
         <main className="fs-page fm-page">
           <FeeRequestState loading={!workspaceReady} error={storageError}>
-          {showFeeManagementTabs && (
-            <FeeWorkspaceTabs tabs={feeManagementTabs} />
-          )}
           <Routes>
             <Route path="types" element={<FeeTypesConfiguration feeManagementTabs={feeManagementTabs} />} />
             <Route path="reports" element={<Navigate to="/fees/overview" replace />} />
-            <Route path="payments" element={<Navigate to="/fees/students" replace />} />
-            <Route path="receipts" element={<Navigate to="/fees/students" replace />} />
+            <Route path="payments" element={<Navigate to="/fees/students/receipts" replace />} />
+            <Route path="receipts" element={<Navigate to="/fees/students/receipts" replace />} />
             <Route path="dues" element={<Navigate to="/fees/students" replace state={{ status: "Overdue" }} />} />
-            <Route index element={<Navigate to="/fees/overview" replace />} />
+            <Route index element={<Navigate to="/fees/structures" replace />} />
 
-            {/* 1. OVERVIEW */}
-            <Route
-              path="overview"
-              element={
-                <ServerFeeCollection
-                  overview
-                  academic={academic}
-                  configuration={state}
-                  feeManagementTabs={feeManagementTabs}
-                />
-              }
-            />
+            {/* Kept as a redirect for existing bookmarks; the workspace has no overview tab. */}
+            <Route path="overview" element={<Navigate to="/fees/structures" replace />} />
 
             {/* 2. FEE PLANS */}
             <Route
@@ -7354,10 +7321,12 @@ export const FeeManagementModule = (() => {
             ))}
 
             {/* 3. STUDENT FEES */}
-            <Route
-              path="students"
+            {[["students", "directory"], ["students/receipts", "transactions"]].map(([path, view]) => <Route
+              key={path}
+              path={path}
               element={
                 <StudentFees
+                  view={view}
                   academic={academic}
                   ledgers={ledgers}
                   assignments={state.assignments}
@@ -7367,7 +7336,7 @@ export const FeeManagementModule = (() => {
                   feeManagementTabs={feeManagementTabs}
                 />
               }
-            />
+            />)}
             <Route
               path="accounts/:studentId"
               element={

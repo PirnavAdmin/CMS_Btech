@@ -16,6 +16,14 @@ afterEach(()=>{cleanup();access.write=true})
 const masters = { years: [{ id: '1', name: '2026-27' }], courses: [{ id: '2', name: 'B.Tech' }, { id: '3', name: 'M.Tech' }], branches: [{ id: '4', courseId: '2', name: 'CSE' }, { id: '5', courseId: '3', name: 'ECE' }], semesters: [{ id: '6', courseId: '2', branchId: '4', name: 'Semester 3' }], batchScopes: [{ courseId: '2', branchId: '4', batch: '2025-2029' }] }
 function mount() { return render(<FeeStructureWizard value={newFeeStructure('1')} masters={masters} collegeId="9" close={() => {}} save={() => {}} />) }
 const choose = (name, value) => fireEvent.change(screen.getByLabelText(name), { target: { value } })
+test('creating an academic fee plan opens a modal and Cancel closes the flow', async () => {
+ const close = vi.fn()
+ render(<FeeStructureWizard value={newFeeStructure('1')} masters={masters} collegeId="9" close={close} save={() => {}} />)
+ const dialog = screen.getByRole('dialog', { name: 'Create Academic Fee Plan' })
+ await waitFor(() => expect(within(dialog).getByLabelText('Course *').disabled).toBe(false))
+ fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+ expect(close).toHaveBeenCalledOnce()
+})
 async function openBreakdown() {
  choose('Course *', '2'); choose('Branch *', '4');
  await waitFor(() => expect(screen.getByLabelText('Admission Batch *').disabled).toBe(false));

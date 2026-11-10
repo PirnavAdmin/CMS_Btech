@@ -1500,7 +1500,10 @@ export const academicFeePlanApi = {
 }
 
 export const feeConfigurationApi = {
-  categories: async () => listData(await request(API_ENDPOINTS.feeConfiguration.categories)),
+  categories: async () => listData(await request(API_ENDPOINTS.feeConfiguration.categories)).filter(row =>
+    !/^DEMO_/i.test(String(row?.code ?? '').trim())
+    && !/demonstration\s+category/i.test(String(row?.description ?? ''))
+  ),
 }
 
 // Contracts: Backend/DTOs/Fees/FeeCollectionDtos.cs. Reuse authentication,

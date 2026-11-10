@@ -22,6 +22,13 @@ export function groupAdminWorkspaces(groups) {
     const paths = new Set()
     const children = members.flatMap(entry => entry.children.length ? entry.children.map(child => ({ ...entry, ...child, aliases: child.aliases || [], moduleId: entry.id, children: [] })) : [{ ...entry, children: [] }])
       .filter(entry => { if (paths.has(entry.path)) return false; paths.add(entry.path); return true })
+    const workspaceChildren = workspace.id === 'fees'
+      ? [
+          { ...members[0], id: 'fee_types', label: 'Fee Types', path: '/fees/types', aliases: [] },
+          { ...members[0], id: 'fee_structures', label: 'Fee Structure', path: '/fees/structures', aliases: [] },
+          { ...members[0], id: 'workspace_student_fees', label: 'Student Fees', path: '/fees/students', aliases: ['/fees/accounts', '/fees/ledger', '/fees/collection'] },
+        ]
+      : children
     const spatialDirectory = workspace.id === 'academic'
       ? children.find(entry => entry.id === 'sections' || entry.id === 'rooms')
       : undefined
@@ -31,8 +38,8 @@ export function groupAdminWorkspaces(groups) {
       id: `workspace_${workspace.id}`,
       label: workspace.label,
       icon: workspace.icon,
-      children: !directPath && children.length > 1 ? children : [],
-      path: directPath || children[0].path,
+      children: !directPath && workspaceChildren.length > 1 ? workspaceChildren : [],
+      path: directPath || workspaceChildren[0].path,
       aliases: members.flatMap(entry => [entry.path, ...entry.aliases]),
       members,
     }]
