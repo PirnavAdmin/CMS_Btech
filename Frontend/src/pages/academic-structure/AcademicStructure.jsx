@@ -1803,10 +1803,12 @@ export default function AcademicStructure() {
                         value={branchForm.courseId}
                         onChange={(e) => {
                           const selectedCourse = courses.find((course) => String(courseIdOf(course)) === e.target.value)
+                          const mappedDepartmentId = courseDepartmentIdOf(selectedCourse)
                           setBranchForm((current) => ({
                             ...current,
                             courseId: e.target.value,
-                            departmentId: String(courseDepartmentIdOf(selectedCourse) ?? current.departmentId ?? ''),
+                            // Keep the current department when the course record has no mapping.
+                            departmentId: mappedDepartmentId || current.departmentId,
                           }))
                         }}
                         disabled={isLoading || !courses.some((course) => courseIdOf(course) != null)}
@@ -1840,11 +1842,16 @@ export default function AcademicStructure() {
                           const newDeptId = e.target.value
                           const deptCourses = courses.filter((c) => String(courseDepartmentIdOf(c)) === String(newDeptId))
                           const selectedCourseInDepartment = deptCourses.some((c) => String(courseIdOf(c)) === String(branchForm.courseId))
-                          setBranchForm({
-                            ...branchForm,
+                          setBranchForm((current) => ({
+                            ...current,
                             departmentId: newDeptId,
-                            courseId: selectedCourseInDepartment ? branchForm.courseId : String(courseIdOf(deptCourses[0]) ?? ''),
-                          })
+                            // Don't clear the course if the department has no mapped courses.
+                            courseId: selectedCourseInDepartment
+                              ? current.courseId
+                              : deptCourses.length
+                                ? String(courseIdOf(deptCourses[0]))
+                                : current.courseId,
+                          }))
                         }}
                         required
                       >
