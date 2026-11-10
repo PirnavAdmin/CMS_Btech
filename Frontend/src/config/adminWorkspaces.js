@@ -4,7 +4,7 @@ export const ADMIN_WORKSPACES = Object.freeze([
   { id: 'settings', label: 'Global Settings', icon: 'settings', path: '/settings', modules: ['academic_settings', 'colleges', 'academic_years'] },
   { id: 'academic_structure', label: 'Academic Structure', icon: 'layers-3', modules: ['academic_structure'] },
   { id: 'academic', label: 'Academic Configuration', icon: 'network', modules: ['departments', 'courses', 'branches', 'semesters', 'sections', 'rooms'] },
-  { id: 'fees', label: 'Fee Management', icon: 'wallet-cards', modules: ['fee_management', 'fee_structures'] },
+  { id: 'fees', label: 'Fee Management', icon: 'wallet-cards', modules: ['fee_management'] },
   { id: 'students', label: 'Student Management', icon: 'contact-round', modules: ['student_admissions', 'student_profiles', 'student_promotions'] },
   { id: 'faculty', label: 'Faculty & Staff', icon: 'briefcase-business', modules: ['faculty_directory', 'faculty_leaves', 'faculty_payroll'] },
   { id: 'subjects', label: 'Subjects & Curriculum', icon: 'notebook-tabs', modules: ['subjects', 'electives', 'credits', 'timetable'] },
