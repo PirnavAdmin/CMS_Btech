@@ -79,9 +79,13 @@ function Attendance() {
     currentAcademicYear,
     selectedAcademicYearId,
     selectedAcademicYear,
+    activeAcademicYears,
+    academicYears,
+    selectAcademicYear,
     selectedCollegeId,
     activeDepartments,
     activeCourses,
+    courses,
     getBranchesForCourse,
     getSemestersForCourse,
     getSectionsForScope,
@@ -131,12 +135,22 @@ function Attendance() {
     facultyId: '',
   })
   const currentAcademicYearId = selectedAcademicYearId || currentAcademicYear?.id || currentAcademicYear?.academicYearId || ''
+  const attendanceAcademicYear = selectedAcademicYear || currentAcademicYear || activeAcademicYears[0] || academicYears[0] || null
+  const attendanceAcademicYearId = attendanceAcademicYear?.id || attendanceAcademicYear?.academicYearId || ''
+  const attendanceAcademicYearName = attendanceAcademicYear?.name || attendanceAcademicYear?.academicYearName || attendanceAcademicYear?.academicYear || (attendanceAcademicYearId ? `Academic Year ${attendanceAcademicYearId}` : '')
+  const defaultYearSelection = useRef('')
   useEffect(() => {
-    if (!takeModalOpen || !currentAcademicYearId) return
-    setTakeScope(current => current.academicYearId === String(currentAcademicYearId)
+    if (selectedAcademicYearId || !attendanceAcademicYearId || defaultYearSelection.current === String(attendanceAcademicYearId)) return
+    defaultYearSelection.current = String(attendanceAcademicYearId)
+    selectAcademicYear?.(attendanceAcademicYearId)
+  }, [selectedAcademicYearId, attendanceAcademicYearId, selectAcademicYear])
+  useEffect(() => {
+    const yearId = currentAcademicYearId || attendanceAcademicYearId
+    if (!takeModalOpen || !yearId) return
+    setTakeScope(current => current.academicYearId === String(yearId)
       ? current
-      : { ...current, academicYearId: String(currentAcademicYearId) })
-  }, [takeModalOpen, currentAcademicYearId])
+      : { ...current, academicYearId: String(yearId) })
+  }, [takeModalOpen, currentAcademicYearId, attendanceAcademicYearId])
   const [markingStudents, setMarkingStudents] = useState([])
   const [loadingStudents, setLoadingStudents] = useState(false)
   const [savingSession, setSavingSession] = useState(false)
@@ -295,8 +309,11 @@ function Attendance() {
 
   // Cascading lists for Take Attendance
   const takeBranches = useMemo(() => {
-    return getBranchesForCourse(takeScope.courseId, true)
+    const active = getBranchesForCourse(takeScope.courseId, true)
+    return active.length ? active : getBranchesForCourse(takeScope.courseId, false)
   }, [getBranchesForCourse, takeScope.courseId])
+
+  const attendanceCourses = activeCourses.length ? activeCourses : courses
 
   const takeSemesters = useMemo(() => {
     const source = attendanceSemesterCatalog.length ? attendanceSemesterCatalog : getSemestersForCourse(takeScope.courseId, true)
@@ -942,7 +959,7 @@ function Attendance() {
 
         {/* Record Attendance popup */}
     {takeModalOpen && canRecord && (
-          <ViewDialog title="Record Student Attendance" onClose={() => setTakeModalOpen(false)} busy={savingSession} showExport={false} hideFooter maxWidth="1150px">{saveError && <p role="alert">{saveError}</p>}{rosterError && <p role="alert">{rosterError} <button type="button" onClick={()=>handleFetchStudentsForMarking(takeScope)}>Retry class roster</button></p>}
+          <ViewDialog title="Record Student Attendance" subtitle="Set the class scope and session details, then load the student roster." onClose={() => setTakeModalOpen(false)} busy={savingSession} showExport={false} hideFooter maxWidth="1150px">{saveError && <p role="alert">{saveError}</p>}{rosterError && <p role="alert">{rosterError} <button type="button" onClick={()=>handleFetchStudentsForMarking(takeScope)}>Retry class roster</button></p>}
             {savedPending ? <div><p>Attendance was saved. Refresh the register to see the saved session.</p><button type="button" className="erp-btn erp-btn--primary" disabled={savingSession} onClick={handleSaveAttendance}>Retry saved attendance refresh</button></div> : <><div className="attendance-record-body">
               {/* Scope Selection Form */}
               <div className="erp-form-grid">
@@ -951,8 +968,8 @@ function Attendance() {
                   <input
                     type="text"
                     className="erp-input attendance-academic-year"
-                    value={selectedAcademicYear?.name || selectedAcademicYear?.academicYearName || currentAcademicYear?.name || currentAcademicYear?.academicYearName || ''}
-                    placeholder="No active academic year"
+                    value={attendanceAcademicYearName}
+                    placeholder="No academic year configured"
                     readOnly
                   />
                 </div>
@@ -967,8 +984,8 @@ function Attendance() {
                     onChange={(e) => setTakeScope(prev => ({ ...prev, courseId: e.target.value, branchId: '', semesterId: '', sectionId: '', subjectId: '', subject: '', subjectCode: '', facultyId: '', faculty: '' }))}
                   >
                     <option value="">Select Course</option>
-                    {activeCourses.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
+                    {attendanceCourses.map(c => (
+                      <option key={c.id ?? c.courseId} value={c.id ?? c.courseId}>{c.name || c.courseName || c.CourseName || c.code || c.courseCode || `Course ${c.id ?? c.courseId}`}</option>
                     ))}
                   </ProjectSelect>
                 </div>
@@ -996,7 +1013,7 @@ function Attendance() {
                   >
                     <option value="">Select Branch</option>
                     {takeBranches.map(b => (
-                      <option key={b.id} value={b.id}>{b.name}</option>
+                      <option key={b.id ?? b.branchId} value={b.id ?? b.branchId}>{b.name || b.branchName || b.BranchName || b.code || b.branchCode || `Branch ${b.id ?? b.branchId}`}</option>
                     ))}
                   </ProjectSelect>
                 </div>
