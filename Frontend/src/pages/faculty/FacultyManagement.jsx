@@ -3243,7 +3243,7 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], 
               </p>
             </div>
           </div>
-          <div className="erp-form-scroll-body">
+          <div className="erp-form-scroll-body fm-registration-scroll">
             {step === 0 && (
               <div className="fm-photo-picker">
                 <Avatar faculty={data} large />
@@ -3271,8 +3271,8 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], 
               />
             )}
           </div>
-          {validationMessage && <div className="page-error-notice" role="alert" data-message-tone="error" style={{ margin: '12px 20px' }}><FiAlertCircle aria-hidden="true" /><span>{validationMessage}</span></div>}
-          {saveError && <div className="page-error-notice" role="alert" data-message-tone="error" style={{ margin: '12px 20px' }}><FiAlertCircle aria-hidden="true" /><span>{saveError}</span></div>}
+          {validationMessage && <div className="page-error-notice fm-registration-notice" role="alert" data-message-tone="error"><FiAlertCircle aria-hidden="true" /><span>{validationMessage}</span></div>}
+          {saveError && <div className="page-error-notice fm-registration-notice" role="alert" data-message-tone="error"><FiAlertCircle aria-hidden="true" /><span>{saveError}</span></div>}
           <footer className="fm-form-footer">
             <button type="button" className="fm-button secondary" onClick={onCancel}>Cancel</button>
             <span className="fm-muted">Step {step + 1} of {totalSteps}</span>
@@ -3577,7 +3577,7 @@ function FacultyManagement() {
     const defaultNewCategory = categoryParam || selected?.employeeCategory || selectedCategory || activeCategory || 'Teaching'
     content = (
       <>
-        <header className="faculty-page-header">
+        <header className="faculty-page-header fm-form-page-header">
           <div>
             <h1>{editId ? (defaultNewCategory === 'Non-Teaching' ? 'Edit Non-Teaching Staff' : 'Edit Teaching Faculty') : (defaultNewCategory === 'Non-Teaching' ? 'Add Non-Teaching Staff' : 'Add Teaching Faculty')}</h1>
             <p>{editId ? 'Faculty employment and profile record' : (defaultNewCategory === 'Non-Teaching' ? 'Non-teaching staff registration and employment record' : 'Teaching faculty registration and employment record')}</p>
@@ -3959,7 +3959,7 @@ function FacultyManagement() {
           ) : <strong aria-current="page">Faculty Directory</strong>}
         </nav>
       )}
-      <main className={`faculty-management${path === '/faculty' && !selectedCategory ? ' faculty-management--overview' : ''}`}>
+      <main className={`faculty-management${path === '/faculty' && !selectedCategory ? ' faculty-management--overview' : ''}${path === '/faculty' && selectedCategory ? ' faculty-management--directory' : ''}`}>
         {loadError && path !== '/faculty/new' && !editId && <p className="fm-error" role="alert">{loadError} <button type="button" onClick={() => setReloadDirectory(value => value + 1)}>Retry</button></p>}
         {loadingFaculty ? <section className="fm-panel">Loading faculty records...</section> : content}
         {assignedFaculty && (

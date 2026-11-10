@@ -3480,6 +3480,168 @@
 .flm-view-actions .approve-action { background: var(--flm-blue); border-color: var(--flm-blue); color: #fff; }
 .flm-view-actions .reject-action { background: #b42332; border-color: #b42332; color: #fff; }
 
+/* Leave workspace navigation and controls: keep them consistent with the
+   directory screens while staying scoped away from faculty attendance. */
+#root .flm-page > .flm-card {
+  overflow: hidden;
+  border-radius: 16px;
+}
+#root .flm-page > .flm-card > .flm-card-header {
+  align-items: center;
+  padding: 20px 22px;
+  background: var(--surface, #fff);
+}
+#root .flm-page > .flm-card > .flm-card-header > div:first-child {
+  flex: 1 1 280px;
+}
+#root .flm-page .flm-card-header p {
+  margin-bottom: 5px;
+  color: var(--text-muted);
+  font-size: 11px;
+  letter-spacing: .09em;
+}
+#root .flm-page .flm-card-header h2 {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+#root .flm-page .flm-header-actions {
+  justify-content: flex-end;
+  gap: 8px;
+}
+#root .flm-page .flm-category-toggle {
+  min-height: 42px;
+  padding: 3px;
+  border-color: var(--flm-line);
+  border-radius: 10px;
+  background: var(--flm-soft);
+}
+#root .flm-page .flm-cat-btn {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 7px;
+  white-space: nowrap;
+}
+#root .flm-page .flm-cat-btn.active {
+  background: var(--surface, #fff) !important;
+  color: var(--flm-blue) !important;
+  box-shadow: 0 1px 3px rgb(15 23 42 / 10%);
+}
+#root .flm-page .flm-filter-toggle,
+#root .flm-page .flm-header-actions > .export-menu-trigger {
+  min-height: 42px;
+  border-radius: 9px;
+}
+#root .flm-page .flm-tabs {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 58px;
+  padding: 8px 20px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--flm-line);
+  background: var(--flm-soft);
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong, var(--flm-line)) transparent;
+}
+#root .flm-page .flm-tabs button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 15px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-family);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.25;
+  transition: background-color .16s ease, color .16s ease, border-color .16s ease, box-shadow .16s ease;
+}
+#root .flm-page .flm-tabs button:hover {
+  border-color: var(--flm-line);
+  background: var(--surface, #fff);
+  color: var(--flm-blue);
+}
+#root .flm-page .flm-tabs button.active {
+  border-color: var(--flm-blue);
+  background: var(--flm-blue);
+  color: var(--text-on-accent, #fff);
+  box-shadow: 0 3px 9px color-mix(in srgb, var(--flm-blue) 22%, transparent);
+}
+#root .flm-page .flm-toolbar {
+  padding: 16px 20px 0;
+}
+#root .flm-page .flm-search {
+  flex: 1 1 420px;
+  max-width: 620px;
+  min-height: 44px;
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 10px;
+  background: var(--surface, #fff);
+  box-shadow: 0 1px 2px rgb(15 23 42 / 4%);
+}
+#root .flm-page .flm-search:focus-within {
+  border-color: var(--flm-blue);
+  box-shadow: 0 0 0 3px var(--brand-soft, rgb(23 105 194 / 12%));
+}
+#root .flm-page .flm-count {
+  padding: 12px 22px 8px;
+  font-size: 12px;
+}
+#root .flm-page .flm-empty {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  min-height: 230px;
+  margin: 8px 20px 18px;
+  padding: 28px 20px;
+  border: 1px dashed var(--flm-line);
+  border-radius: 12px;
+  background: var(--flm-soft);
+}
+#root .flm-page .flm-empty > svg {
+  width: 34px;
+  height: 34px;
+  padding: 7px;
+  box-sizing: content-box;
+  border-radius: 10px;
+  background: var(--brand-soft, var(--flm-soft));
+}
+#root .flm-page .flm-empty h3 {
+  margin: 12px 0 4px;
+  font-size: 15px;
+}
+#root .flm-page .flm-empty p {
+  max-width: 520px;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.5;
+}
+@media (max-width: 760px) {
+  #root .flm-page > .flm-card > .flm-card-header {
+    align-items: flex-start;
+    padding: 16px;
+  }
+  #root .flm-page .flm-header-actions {
+    justify-content: flex-start;
+    width: 100%;
+  }
+  #root .flm-page .flm-toolbar { padding: 14px 16px 0; }
+  #root .flm-page .flm-tabs { padding-inline: 14px; }
+  #root .flm-page .flm-count { padding-inline: 16px; }
+  #root .flm-page .flm-empty { margin-inline: 14px; }
+}
+@media (max-width: 520px) {
+  #root .flm-page .flm-header-actions > * { max-width: 100%; }
+  #root .flm-page .flm-category-toggle { width: 100%; }
+  #root .flm-page .flm-cat-btn { flex: 1 1 0; padding-inline: 7px; font-size: 11px; }
+  #root .flm-page .flm-search { flex-basis: 100%; max-width: none; }
+}
+
 
 
 
@@ -4522,5 +4684,311 @@
 
   #root .faculty-management .fm-attendance-screen .fm-attendance-bulkbar > .fm-button {
     flex: 1 1 100%;
+  }
+}
+
+/* Compact, consistent layout for each faculty registration step. */
+.faculty-management .fm-form-page-header {
+  margin-bottom: 14px;
+}
+
+.faculty-management .erp-two-column-layout[data-without-live-preview] > .erp-card-main {
+  border-color: color-mix(in srgb, var(--brand) 13%, var(--border)) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 8px 24px rgba(39, 54, 18, 0.055) !important;
+}
+
+.faculty-management .erp-two-column-layout[data-without-live-preview] .fm-reference-stepper {
+  gap: 5px;
+  padding: 7px 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+.faculty-management .erp-two-column-layout[data-without-live-preview] .fm-reference-stepper button {
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.faculty-management .erp-two-column-layout[data-without-live-preview] .fm-reference-stepper button:hover:not(.active) {
+  color: var(--text-primary);
+  background: var(--surface);
+}
+
+.faculty-management .erp-two-column-layout[data-without-live-preview] .fm-reference-stepper button.active {
+  color: var(--brand);
+  background: var(--surface);
+  border-color: color-mix(in srgb, var(--brand) 22%, var(--border));
+  box-shadow: 0 1px 3px rgba(39, 54, 18, 0.05);
+}
+
+.faculty-management .erp-two-column-layout[data-without-live-preview] .fm-reference-stepper button:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.faculty-management .erp-two-column-layout[data-without-live-preview] .fm-reference-stepper button span {
+  width: 23px;
+  height: 23px;
+  font-size: 11px;
+}
+
+.faculty-management [data-without-live-preview] > .erp-card-main .fm-section-heading {
+  margin: 0 10px 8px !important;
+  padding: 8px 12px !important;
+  border-radius: 9px;
+}
+
+.faculty-management [data-without-live-preview] .fm-registration-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 0 12px 12px;
+  box-sizing: border-box;
+}
+
+.faculty-management [data-without-live-preview] .fm-photo-picker {
+  min-height: 66px;
+  gap: 10px;
+  margin-bottom: 0;
+  padding: 8px 12px;
+  border-radius: 9px;
+  box-sizing: border-box;
+}
+
+.faculty-management [data-without-live-preview] .fm-form-grid {
+  gap: 10px 14px !important;
+}
+
+.faculty-management [data-without-live-preview] .fm-form-grid .fm-field input,
+.faculty-management [data-without-live-preview] .fm-form-grid .fm-field select {
+  height: 42px;
+  box-sizing: border-box;
+  border-radius: 8px;
+}
+
+.faculty-management [data-without-live-preview] .fm-form-grid .fm-field textarea {
+  min-height: 64px;
+  box-sizing: border-box;
+  border-radius: 8px;
+}
+
+.faculty-management [data-without-live-preview] .fm-documents-form {
+  gap: 8px;
+}
+
+.faculty-management [data-without-live-preview] .fm-documents-header {
+  gap: 8px;
+}
+
+.faculty-management [data-without-live-preview] .fm-document-grid {
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.faculty-management [data-without-live-preview] .fm-document-card {
+  min-height: 62px;
+  gap: 9px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  box-sizing: border-box;
+}
+
+.faculty-management [data-without-live-preview] .fm-document-icon {
+  width: 30px;
+  height: 30px;
+}
+
+.faculty-management [data-without-live-preview] .fm-document-actions select {
+  min-height: 32px;
+  border-radius: 7px;
+}
+
+.faculty-management .fm-registration-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 12px 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.faculty-management [data-without-live-preview] .fm-form-footer {
+  min-height: 60px;
+  gap: 10px;
+  margin-top: 0 !important;
+  padding: 8px 12px !important;
+}
+
+.faculty-management [data-without-live-preview] .fm-form-footer .fm-button {
+  min-height: 38px;
+  padding: 6px 13px;
+  border-radius: 8px;
+}
+
+.faculty-management [data-without-live-preview] .fm-form-footer > .fm-muted {
+  margin-inline: auto;
+  font-size: 11.5px;
+}
+
+.faculty-management [data-without-live-preview] .fm-form-footer > .fm-actions {
+  gap: 8px;
+}
+
+@media (max-width: 740px) {
+  .faculty-management [data-without-live-preview] .fm-document-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .faculty-management .erp-two-column-layout[data-without-live-preview] .fm-reference-stepper {
+    gap: 4px;
+    padding: 6px 8px;
+  }
+
+  .faculty-management .erp-two-column-layout[data-without-live-preview] .fm-reference-stepper button {
+    flex: 0 0 auto;
+    min-height: 35px;
+    padding: 5px 9px;
+  }
+
+  .faculty-management [data-without-live-preview] > .erp-card-main .fm-section-heading {
+    margin-inline: 8px !important;
+    padding: 8px 10px !important;
+  }
+
+  .faculty-management [data-without-live-preview] .fm-registration-scroll {
+    padding-inline: 10px;
+  }
+
+  .faculty-management [data-without-live-preview] .fm-form-footer {
+    flex-wrap: wrap;
+    padding: 8px 10px !important;
+  }
+
+  .faculty-management [data-without-live-preview] .fm-form-footer > .fm-muted {
+    order: 3;
+    flex: 1 0 100%;
+    text-align: center;
+  }
+
+  .faculty-management [data-without-live-preview] .fm-form-footer > .fm-actions {
+    margin-left: auto;
+  }
+}
+
+/* Reduce excess vertical spacing on the faculty directory screen. */
+#root .faculty-management--directory {
+  gap: 10px;
+}
+
+#root .faculty-management--directory > .erp-page-header {
+  gap: 16px;
+  margin-bottom: 0;
+}
+
+#root .faculty-management--directory > .erp-page-header .erp-page-header__breadcrumb {
+  margin-bottom: 8px;
+}
+
+#root .faculty-management--directory > .erp-page-header .compact-summary > .compact-summary__item {
+  min-height: 60px;
+  padding: 8px 10px;
+}
+
+#root .faculty-management--directory .fm-reference-categories {
+  margin: 0;
+}
+
+#root .faculty-management--directory > .faculty-directory > .fm-section-bar {
+  min-height: 0;
+  gap: 12px;
+  padding: 10px 16px;
+}
+
+#root .faculty-management--directory > .faculty-directory > .fm-section-bar .fm-eyebrow {
+  margin-bottom: 4px;
+}
+
+#root .faculty-management--directory > .faculty-directory > .fm-section-bar .fm-muted {
+  padding: 3px 8px;
+}
+
+#root .faculty-management--directory > .faculty-directory > .fm-section-bar > .fm-actions > .fm-button {
+  min-height: 38px;
+}
+
+#root .faculty-management--directory .faculty-directory .filter-disclosure__bar {
+  min-height: 0;
+  gap: 9px;
+  padding: 8px 14px;
+}
+
+#root .faculty-management--directory .faculty-directory .filter-disclosure__search .faculty-search {
+  min-height: 40px;
+}
+
+#root .faculty-management--directory .faculty-directory .filter-disclosure__search .faculty-search input {
+  height: 36px;
+}
+
+#root .faculty-management--directory .faculty-directory .filter-disclosure__bar > label select,
+#root .faculty-management--directory .faculty-directory .filter-disclosure__toggle {
+  min-height: 36px;
+}
+
+#root .faculty-management--directory .faculty-directory > .erp-empty-state {
+  min-height: 170px;
+  margin: 8px 10px 10px;
+  padding: 16px;
+}
+
+@media (max-width: 980px) {
+  #root .faculty-management--directory {
+    gap: 9px;
+  }
+
+  #root .faculty-management--directory > .erp-page-header {
+    gap: 10px;
+  }
+}
+
+@media (max-width: 720px) {
+  #root .faculty-management--directory .faculty-directory .filter-disclosure__bar {
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  #root .faculty-management--directory .faculty-directory .filter-disclosure__bar > label {
+    margin-left: 0;
+  }
+
+  #root .faculty-management--directory > .faculty-directory > .fm-section-bar {
+    padding: 10px 12px;
+  }
+}
+
+@media (max-width: 560px) {
+  #root .faculty-management--directory > .faculty-directory > .fm-section-bar > .fm-actions {
+    justify-content: stretch;
+  }
+
+  #root .faculty-management--directory > .faculty-directory > .fm-section-bar > .fm-actions > * {
+    flex: 1 1 auto;
+  }
+
+  #root .faculty-management--directory .faculty-directory > .erp-empty-state {
+    min-height: 150px;
+    margin: 8px;
+    padding: 14px;
   }
 }
