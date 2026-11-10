@@ -70,6 +70,7 @@ public sealed class LibraryManagementController : ControllerBase
     public Task<IActionResult> Categories([FromQuery] long collegeId, [FromQuery] string? search = null, [FromQuery] bool? status = null, [FromQuery] int page = 1, [FromQuery] int pageSize = 50) => Run("List categories", async () =>
     {
         College(collegeId); Page(page, pageSize);
+        await _store.EnsureDefaultCategories(collegeId);
         return await _store.Query("""
             SELECT * FROM library_categories WHERE college_id=@collegeId AND (@status IS NULL OR status=@status)
             AND (@search IS NULL OR category_name LIKE @term OR category_code LIKE @term)
