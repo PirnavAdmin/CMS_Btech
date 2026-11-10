@@ -1954,8 +1954,8 @@ function Avatar({ faculty, large = false }) {
     </span>
   )
 }
-function EmptyState({ title, description, action, onAction }) {
-  return <div className="fm-empty"><FiUsers aria-hidden="true" /><h3>{title}</h3>{description && <p>{description}</p>}{action && <button type="button" className="fm-button secondary" onClick={onAction}>{action}</button>}</div>
+function EmptyState({ title, description, action, onAction, className = '' }) {
+  return <div className={`fm-empty ${className}`.trim()}><FiUsers aria-hidden="true" /><h3>{title}</h3>{description && <p>{description}</p>}{action && <button type="button" className="fm-button secondary" onClick={onAction}>{action}</button>}</div>
 }
 function AttendanceTimeField({ label, value, disabled, onChange }) {
   const [hourText, minuteText] = String(value || '').split(':')
@@ -2439,7 +2439,7 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
   </table></div>
   const aggregatedTable = reportType === 'daily' ? <div className="fm-attendance-table fm-attendance-aggregate-table"><table><thead><tr>{['Faculty Code', 'Faculty', 'Department', 'Days With Data', 'Present', 'Absent', 'Late', 'Half Day', 'On Leave', 'Total Hours', 'Attendance %'].map(label => <th scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{visibleReportRows.map(row => <tr key={row.facultyId}><td><span className="fm-attendance-employee">{getFacultyCode(row.faculty)}</span></td><td><button type="button" className="student-name-link" title={row.faculty.fullName} onClick={() => openAttendance(row)}>{row.faculty.fullName}</button></td><td>{getFacultyDept(row.faculty)}</td><td>{row.total}</td>{['Present', 'Absent', 'Late', 'Half Day', 'On Leave'].map(status => <td key={status}>{row[status]}</td>)}<td>{row.hours}</td><td>{row.percentage}</td></tr>)}</tbody></table></div> : <><div className="fm-report-legend" aria-label="Attendance status legend">{Object.entries(statusMeta).map(([status, [code, tone]]) => <span key={status}>{statusCell({ status, date: period.from, checkIn: '—', checkOut: '—', hours: '—' })}<small>{attendanceStatusLabel(status)}</small></span>)}</div><div className="fm-attendance-table fm-attendance-matrix"><table><colgroup><col style={{ width: '130px', minWidth: '130px' }} /><col style={{ width: '220px', minWidth: '220px' }} />{matrixDates.map(date => <col key={date} style={{ width: '42px', minWidth: '42px' }} />)}{['P', 'A', 'L', 'HD', 'OL', 'LOP'].map(label => <col key={label} style={{ width: '40px', minWidth: '40px' }} />)}<col style={{ width: '55px', minWidth: '55px' }} /></colgroup><thead><tr><th>Faculty Code</th><th>Faculty</th>{matrixDates.map(date => <th key={date}><span>{new Date(date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short' }).toUpperCase()}</span><b>{new Date(date + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase()}</b></th>)}{['P', 'A', 'L', 'HD', 'OL', 'LOP', '%'].map(label => <th key={label}>{label}</th>)}</tr></thead><tbody>{visibleMatrixRows.map(({ member, cells, totals }) => <tr key={member.id}><td>{getFacultyCode(member)}</td><td className="fm-matrix-faculty"><button type="button" className="student-name-link" title={member.fullName} onClick={() => openAttendance({ faculty: member, facultyId: member.id, date: matrixDates[0] || today() })}>{member.fullName}</button><small>{getFacultyDept(member)}</small></td>{cells.map(cell => <td key={cell.date}>{statusCell(cell)}</td>)}{[['Present', 'present'], ['Absent', 'absent'], ['Late', 'late'], ['Half Day', 'half-day'], ['On Leave', 'leave'], ['LOP', 'lop']].map(([status, tone]) => <td className={`fm-report-total fm-report-total--${tone}`} key={status}>{totals[status]}</td>)}<td className="fm-report-total fm-report-total--percentage">{totals.percentage}</td></tr>)}</tbody></table></div></>
   const noSource = tab !== 'daily' && !attendanceRecords.length
-  const empty = <EmptyState title={noSource ? 'No attendance records are available yet.' : 'No attendance records match the selected filters.'} description={noSource ? 'Daily Attendance shows missing records as Not Marked; these are not saved historical records.' : undefined} action={noSource ? 'Go to Daily Attendance' : 'Clear Filters'} onAction={noSource ? () => setTab('daily') : clearFilters} />
+  const empty = <EmptyState className="fm-attendance-empty" title={noSource ? 'No attendance records are available yet.' : 'No attendance records match the selected filters.'} description={noSource ? 'Daily Attendance shows missing records as Not Marked; these are not saved historical records.' : undefined} action={noSource ? 'Go to Daily Attendance' : 'Clear Filters'} onAction={noSource ? () => setTab('daily') : clearFilters} />
   return (
     <div className="fm-attendance-screen">
       <ReferencePageHeader
@@ -2454,7 +2454,7 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
       <section className="fm-attendance-workspace">
         <div className="fm-attendance-panel">
           <header className="fm-attendance-directory-header">
-            <div className="fm-attendance-header-actions">{searchControl}{filterControl}{facultyCategoryControl}{contextualExport}</div>
+            <div className="fm-attendance-header-actions">{searchControl}{facultyCategoryControl}{contextualExport}{filterControl}</div>
           </header>
 
           {showFilters && (
