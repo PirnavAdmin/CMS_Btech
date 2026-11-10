@@ -230,6 +230,7 @@ function LibraryWorkspace() {
   const [selectedCategory, setSelectedCategory] = useState('All Categories')
   const [selectedDepartment, setSelectedDepartment] = useState('All Departments')
   const [availabilityFilter, setAvailabilityFilter] = useState('all') // 'all' | 'available' | 'low' | 'out'
+  const [showFilters, setShowFilters] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = viewMode === 'grid' ? 6 : 10
 
@@ -274,6 +275,10 @@ function LibraryWorkspace() {
     [libraryData.fines]
   )
   const activeBorrowersCount = libraryData.borrowers.length
+  const activeLibraryFilterCount =
+    Number(selectedCategory !== 'All Categories') +
+    Number(selectedDepartment !== 'All Departments') +
+    Number(availabilityFilter !== 'all')
 
   // Filtered Book Catalog
   const filteredBooks = useMemo(() => {

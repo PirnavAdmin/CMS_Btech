@@ -878,6 +878,10 @@
   gap: 18px;
 }
 
+.marks-management-marks-entry {
+  gap: 12px;
+}
+
 .marks-management-bulk-marks-upload {
   display: grid;
   grid-template-columns: minmax(320px, .82fr) minmax(0, 1.38fr);
@@ -913,9 +917,9 @@
   box-shadow: 0 3px 12px rgb(24 63 106 / 5%);
 }
 
-.marks-clean-nav a {
+.marks-management-marks-entry .marks-clean-nav a {
   justify-content: center;
-  min-height: 44px;
+  min-height: 40px;
   border-radius: 8px;
 }
 
@@ -1055,21 +1059,24 @@
 
 /* Marks entry workspace toolbar, filters, and dense records view */
 .marks-entry-card__header {
-  padding: 22px 24px 16px;
+  padding: 14px 20px 10px;
 }
 
 .marks-entry-card__header .erp-card-title {
+  margin: 0;
   font-size: clamp(20px, 1.6vw, 25px);
   letter-spacing: -.025em;
+  line-height: 1.2;
 }
 
 .marks-entry-card__header .erp-card-subtitle {
+  margin: 4px 0 0;
   max-width: 720px;
-  line-height: 1.55;
+  line-height: 1.4;
 }
 
 .marks-entry-filters {
-  margin: 0 20px 16px;
+  margin: 0 16px 10px;
   overflow: visible;
   border: 1px solid var(--border);
   border-radius: 14px;
@@ -1160,8 +1167,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  margin: 0 20px;
-  padding: 12px 14px;
+  margin: 0 16px;
+  padding: 8px 12px;
   border: 1px solid var(--border);
   border-bottom: 0;
   border-radius: 12px 12px 0 0;
@@ -1213,7 +1220,7 @@
 
 .marks-management-marks-entry .marks-entry-table-wrap {
   position: relative;
-  margin: 0 20px;
+  margin: 0 16px;
   width: auto;
   max-height: min(62vh, 680px);
   overflow: auto;
