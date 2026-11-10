@@ -823,3 +823,41 @@
   .sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-editor-footer { padding: 10px 12px; }
   .sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-editor-footer .erp-btn { min-height: 40px; padding-inline: 12px; }
 }
+
+/* The editor dialog is portalled outside .sm-screen.  Keep its shell aligned
+   with the compact College form instead of letting page-level rules leak in. */
+.subject-editor-dialog {
+  width: min(860px, 95vw);
+  max-height: 90dvh;
+  border-radius: var(--radius-dialog);
+}
+.subject-editor-dialog :is(.shared-view-dialog__header, .shared-view-dialog__footer) {
+  padding: 10px 22px;
+  background: var(--surface);
+}
+.subject-editor-dialog .shared-view-dialog__body {
+  gap: 10px;
+  padding: 12px 22px;
+  background: var(--surface-soft);
+}
+.subject-editor-dialog .shared-view-dialog__icon-badge { width: 40px; height: 40px; border-radius: 10px; }
+.subject-editor-dialog .shared-view-dialog__title { font-size: 20px; }
+.subject-editor-dialog .shared-view-dialog__subtitle { margin-top: 3px; font-size: 12px; }
+.subject-editor-dialog .sm-editor-layout { height: min(520px, calc(90dvh - 170px)); min-height: 330px; }
+.subject-editor-dialog .sm-editor-layout > .erp-card-main { border: 1px solid var(--border); border-radius: 12px; box-shadow: none; }
+.subject-editor-dialog .sm-reference-tabs { gap: 4px; padding: 6px 8px; background: var(--surface); }
+.subject-editor-dialog .sm-reference-tabs .erp-tab-btn { min-height: 34px; padding: 0 10px; font-size: 12px; }
+.subject-editor-dialog .sm-reference-tabs .erp-tab-btn span { width: 22px; height: 22px; font-size: 10px; }
+.subject-editor-dialog .sm-editor-step-content { padding: 12px; }
+.subject-editor-dialog .sm-editor-step-content > section { padding: 14px; border: 0; border-radius: 0; box-shadow: none; }
+.subject-editor-dialog .sm-editor-section-title { font-size: 16px; }
+.subject-editor-dialog .sm-editor-section-description { margin: 4px 0 12px; }
+.subject-editor-dialog .sm-form-grid-2, .subject-editor-dialog .sm-form-grid-3 { gap: 10px 14px; }
+.subject-editor-dialog .sm-field :is(input, .searchable-select__trigger) { min-height: 38px; border-radius: 8px; }
+.subject-editor-dialog .sm-editor-footer { padding: 10px 12px; }
+.subject-editor-dialog .sm-editor-footer .erp-btn { min-height: 38px; border-radius: 8px; padding-inline: 14px; }
+@media (max-width: 640px) {
+  .subject-editor-dialog { width: calc(100vw - 12px); max-height: calc(100dvh - 12px); }
+  .subject-editor-dialog :is(.shared-view-dialog__header, .shared-view-dialog__body, .shared-view-dialog__footer) { padding-inline: 14px; }
+  .subject-editor-dialog .sm-editor-layout { height: min(520px, calc(100dvh - 210px)); }
+}

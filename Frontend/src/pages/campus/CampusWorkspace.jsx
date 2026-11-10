@@ -2854,7 +2854,10 @@ function MeetingsEventsWorkspace() {
 
   const handleSaveModal = async e => {
     e.preventDefault()
-    if ((modalType === 'meeting' || modalType === 'event') && (!formData.title?.trim() || !formData.start || !formData.end || new Date(formData.end) <= new Date(formData.start))) { setModalError('Enter a title and an end time later than the start time.'); return }
+    if (modalType === 'meeting' || modalType === 'event') {
+      setModalError('Meetings and campus events cannot be saved because the date and time fields have been removed. Contact an administrator to schedule them.')
+      return
+    }
     setModalError('')
     if (await mutateApi(() => campusApi.saveMeetingEvent(modalType, formData, editingItem, apiScope))) { setModalOpen(false); setNotice('Record saved successfully.') }
   }
@@ -3837,6 +3840,7 @@ function MeetingsEventsWorkspace() {
 
               <form onSubmit={handleSaveModal}>
                 <div className="mew-modal-body">
+                  {(modalType === 'meeting' || modalType === 'event') && <p role="status" className="campus-notice">Meetings and campus events cannot be saved because the date and time fields have been removed. Contact an administrator to schedule them.</p>}
                   {/* Meeting Form */}
                   {modalType === 'meeting' && (
                     <>
@@ -3889,28 +3893,6 @@ function MeetingsEventsWorkspace() {
                           {departmentOptions.map(name => <option key={name} value={name}>{name}</option>)}
                         </ProjectSelect>
                       </label>
-
-                      <div className="mew-form-row">
-                        <label className="mew-form-field">
-                          Starts At *
-                          <input
-                            type="datetime-local"
-                            required
-                            value={formData.start || ''}
-                            onChange={e => setFormData({ ...formData, start: e.target.value })}
-                          />
-                        </label>
-
-                        <label className="mew-form-field">
-                          Ends At *
-                          <input
-                            type="datetime-local"
-                            required
-                            value={formData.end || ''}
-                            onChange={e => setFormData({ ...formData, end: e.target.value })}
-                          />
-                        </label>
-                      </div>
 
                       <div className="mew-form-row">
                         <label className="mew-form-field">
@@ -3993,28 +3975,6 @@ function MeetingsEventsWorkspace() {
                             required
                             value={formData.capacity || 100}
                             onChange={e => setFormData({ ...formData, capacity: e.target.value })}
-                          />
-                        </label>
-                      </div>
-
-                      <div className="mew-form-row">
-                        <label className="mew-form-field">
-                          Starts At *
-                          <input
-                            type="datetime-local"
-                            required
-                            value={formData.start || ''}
-                            onChange={e => setFormData({ ...formData, start: e.target.value })}
-                          />
-                        </label>
-
-                        <label className="mew-form-field">
-                          Ends At *
-                          <input
-                            type="datetime-local"
-                            required
-                            value={formData.end || ''}
-                            onChange={e => setFormData({ ...formData, end: e.target.value })}
                           />
                         </label>
                       </div>
@@ -4220,6 +4180,7 @@ function MeetingsEventsWorkspace() {
                   <button
                     type="submit"
                     className="mew-button mew-button--primary"
+                    disabled={modalType === 'meeting' || modalType === 'event'}
                   >
                     Save Changes
                   </button>
@@ -5095,6 +5056,10 @@ function PlacementWorkspace() {
   const handleSaveModal = async e => {
     e.preventDefault()
     if (!activeItem) return
+    if (modalType === 'interview') {
+      setNotice('Interview rounds cannot be saved because the date and time fields have been removed. Contact an administrator to schedule interviews.')
+      return
+    }
     if (await mutateApi(() => campusApi.savePlacement(modalType, activeItem, modalMode === 'edit', apiScope, data))) { setModalMode(null); setActiveItem(null); setNotice('Record saved successfully.') }
   }
 
@@ -5927,6 +5892,7 @@ function PlacementWorkspace() {
 
               <form onSubmit={handleSaveModal}>
                 <div className="plw-modal-body">
+                  {modalType === 'interview' && <p role="status" className="campus-notice">Interview rounds cannot be saved because the date and time fields have been removed. Contact an administrator to schedule interviews.</p>}
                   {/* DRIVE FORM */}
                   {modalType === 'drive' && (
                     <>
@@ -6256,27 +6222,6 @@ function PlacementWorkspace() {
 
                       <div className="plw-form-row">
                         <label className="plw-form-field">
-                          Start Date & Time *
-                          <input
-                            required
-                            type="datetime-local"
-                            value={activeItem.start}
-                            onChange={e => setActiveItem({ ...activeItem, start: e.target.value })}
-                          />
-                        </label>
-                        <label className="plw-form-field">
-                          End Date & Time *
-                          <input
-                            required
-                            type="datetime-local"
-                            value={activeItem.end}
-                            onChange={e => setActiveItem({ ...activeItem, end: e.target.value })}
-                          />
-                        </label>
-                      </div>
-
-                      <div className="plw-form-row">
-                        <label className="plw-form-field">
                           Venue / Link
                           <input
                             type="text"
@@ -6400,6 +6345,7 @@ function PlacementWorkspace() {
                   <button
                     type="submit"
                     className="grm-button grm-button--primary"
+                    disabled={modalType === 'interview'}
                   >
                     Save Changes
                   </button>
