@@ -5,8 +5,7 @@ import { collegeRequest } from '../utils/collegeRequest.js'
 import { createApiUnavailableError, notifyApiUnavailable } from '../api/apiFailureNotice'
 import { selectedCollegeId } from '../utils/collegeScope.js'
 const cleanUrl = (url) => (url || "").replace(/\/+$/, "");
-const DEFAULT_API_BASE_URL = "https://clarity-math-delouse.ngrok-free.dev";
-
+const DEFAULT_API_BASE_URL = "https://drivable-shaky-ferocious.ngrok-free.dev";
 const friendlyValidationMessage = (errors) => {
   if (!errors || typeof errors !== "object") return "";
   const fields = Object.keys(errors);
@@ -416,6 +415,7 @@ export const buildCollegePayload = (college = {}) => {
   const alternateContactNumber = value("alternateContactNumber", college.alternateContact);
   const principalName = value("principalName", college.principal);
   const principalEmail = value("principalEmail");
+  const email = value("email", college.collegeEmail);
   const principalContact = value("principalContact");
   const startDate = value("startDate", college.StartDate || college.start_date);
   const endDate = value("endDate", college.EndDate || college.end_date);
@@ -447,8 +447,8 @@ export const buildCollegePayload = (college = {}) => {
     phoneNumber: contactNumber,
     alternateContact: alternateContactNumber,
     alternateContactNumber,
-    email: value("email", college.collegeEmail),
-    collegeEmail: value("email", college.collegeEmail),
+    // Optional email is omitted when blank so it passes the DTO email validator.
+    ...(email ? { email, collegeEmail: email } : {}),
     // Website is optional. Omit it when empty so the backend URL validator
     // receives either a valid fully-qualified URL or no Website value at all.
     ...(website ? { Website: website } : {}),

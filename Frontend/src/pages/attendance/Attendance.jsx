@@ -192,12 +192,13 @@ function Attendance() {
         setFacultyAssignments(assignments || [])
         setAttendanceSemesterCatalog((semesters || []).map(semester => ({
           ...semester,
-          id: semester.semesterId ?? semester.semester_id ?? semester.id ?? semester.semesterNumber ?? semester.semester_number,
-          semesterId: semester.semesterId ?? semester.semester_id ?? semester.id ?? semester.semesterNumber ?? semester.semester_number,
+          id: semester.semesterId ?? semester.semester_id ?? semester.id,
+          semesterId: semester.semesterId ?? semester.semester_id ?? semester.id,
           semesterNumber: semester.semesterNumber ?? semester.semester_number ?? String(semester.semesterName || semester.semester_name || semester.name || '').match(/\d+/)?.[0],
           semesterName: semester.semesterName ?? semester.semester_name ?? semester.name ?? '',
           courseId: semester.courseId ?? semester.course_id,
           branchId: semester.branchId ?? semester.branch_id,
+          academicYearId: semester.academicYearId ?? semester.academic_year_id,
         })).filter(semester => semester.id != null))
 
         // Merge backend subjects and local subjects, ensuring numeric integer IDs and complete names
@@ -299,10 +300,11 @@ function Attendance() {
   }, [getBranchesForCourse, takeScope.courseId])
 
   const takeSemesters = useMemo(() => {
-    const source = attendanceSemesterCatalog.length ? attendanceSemesterCatalog : getSemestersForCourse(takeScope.courseId, true)
+    const source = attendanceSemesterCatalog.length ? attendanceSemesterCatalog : getSemestersForCourse(takeScope.courseId, false, takeScope)
     const filtered = source.filter(semester =>
-      (!semester.courseId || String(semester.courseId) === String(takeScope.courseId)) &&
-      (!takeScope.branchId || !semester.branchId || String(semester.branchId) === String(takeScope.branchId))
+      String(semester.courseId) === String(takeScope.courseId) &&
+      String(semester.branchId) === String(takeScope.branchId) &&
+      String(semester.academicYearId) === String(takeScope.academicYearId)
     )
     const unique = new Map()
     filtered.forEach(semester => {
@@ -310,7 +312,7 @@ function Attendance() {
       if (id != null && !unique.has(String(id))) unique.set(String(id), semester)
     })
     return Array.from(unique.values()).sort((a, b) => Number(a.semesterNumber || 0) - Number(b.semesterNumber || 0))
-  }, [attendanceSemesterCatalog, getSemestersForCourse, takeScope.courseId, takeScope.branchId])
+  }, [attendanceSemesterCatalog, getSemestersForCourse, takeScope])
 
   // The subject endpoint supports semester assignment filtering. Load that
   // authoritative list once the user has picked a semester, then attach the

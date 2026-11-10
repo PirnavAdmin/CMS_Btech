@@ -223,7 +223,7 @@ export function TimetableDashboard({ tables, sources, entries, today, open }) {
             const semesterIds = [...new Set(sections.map(section => String(section.semesterId)).filter(Boolean))]
             return <div className="tt-structure-branch" key={branch.id}><h3>{branch.name}</h3>{semesterIds.length ? semesterIds.map(semesterId => {
               const semester = sources.semesters.find(row => same(row.id, semesterId))
-              return <details key={semesterId} open><summary>{semester?.name || `Semester ${semesterId}`}</summary><div className="tt-recent-tables">{sections.filter(section => same(section.semesterId, semesterId)).map(sectionButton)}</div></details>
+              return <details key={semesterId} open><summary>{semester?.name || 'Saved semester unavailable'}</summary><div className="tt-recent-tables">{sections.filter(section => same(section.semesterId, semesterId)).map(sectionButton)}</div></details>
             }) : <p>No active sections.</p>}</div>
           })}
           {!branches.length && <p>No active branches.</p>}

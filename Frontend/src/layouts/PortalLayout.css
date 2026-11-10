@@ -4,8 +4,7 @@
 #root .portal-shell {
   min-height: 100dvh;
   background:
-    radial-gradient(ellipse at 92% 0%, color-mix(in srgb, var(--brand-soft) 64%, transparent), transparent 34rem),
-    var(--app-bg, #f4f7fb);
+    var(--main-bg);
 }
 
 #root .portal-shell .portal-content {
@@ -96,7 +95,7 @@
 
 #root .portal-shell .portal-card {
   border-radius: 20px;
-  box-shadow: 0 8px 26px rgb(22 50 83 / 6%);
+  box-shadow: var(--shadow-sm);
 }
 
 #root .portal-shell .portal-table-wrap {

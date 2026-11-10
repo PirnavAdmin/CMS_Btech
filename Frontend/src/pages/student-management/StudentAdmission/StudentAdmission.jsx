@@ -1,3 +1,5 @@
+import { calculateCompletion, completionSchemas } from '../../../utils/recordCompletion'
+import { CompletionIndicator, CompletionSummary, ResumeSetupAction } from '../../../components/RecordCompletion'
 import FilterPanel from '../../../components/FilterPanel'
 import StudentDocumentActions from '../../../components/StudentDocumentActions'
 import { studentIntegrationFees } from '../../../utils/studentIntegrationFees'
@@ -553,7 +555,7 @@ function AdmissionList() {
     studentAdmissionApi.getAll().then(items => {
       if (active && requestId === requestSequence.current) {
         setExportReady(isApiResult(items))
-        setRows(newestFirst('admissions', items).map(admissionFromApi))
+        setRows(newestFirst('admissions', items).map(row => ({ ...admissionFromApi(row), completion: isApiResult(items) ? calculateCompletion(completionSchemas.admission, row) : null })))
       }
     }).catch(error => {
       if (active && requestId === requestSequence.current) { setDirectoryError(error.message || 'Unable to load admissions.'); setLoadError(error.message || 'Unable to load admissions.'); setExportReady(false) }
@@ -673,6 +675,7 @@ function AdmissionList() {
                   <th className="table-center" style={{ width: '120px' }}>Fee Status</th>
                   <th className="table-center" style={{ width: '140px' }}>Application Status</th>
                   <th className="table-center" style={{ width: '140px' }}>Updated</th>
+                  <th>Completion</th>
                   <th className="table-center" style={{ width: '140px' }}>Actions</th>
                 </tr>
               </thead>
@@ -712,6 +715,7 @@ function AdmissionList() {
                       <td className="table-center" style={{ width: '120px' }}><StatusBadge value={formatFeeStatus(feeStat)} /></td>
                       <td className="table-center" style={{ width: '140px' }}><StatusBadge value={STATUS[normStat] || normStat} /></td>
                       <td className="table-center" style={{ width: '140px' }}><span className="sa-updated">{dateTime(item.updatedAt || item.createdAt)}</span></td>
+                      <td><CompletionIndicator completion={item.completion} /></td>
                       <td className="table-center" style={{ width: '176px', minWidth: '176px' }}>
                         <div className="sa-icon-actions table-actions-group">
                           <button
@@ -723,6 +727,7 @@ function AdmissionList() {
                           >
                             <FiEye />
                           </button>
+                          {isEditable && targetId && <ResumeSetupAction completion={item.completion} name={sName} to={`/student-management/admissions/${targetId}/edit`} />}
                           {isEditable && (
                             <button
                               type="button"
@@ -2142,17 +2147,7 @@ function AdmissionForm() {
   }
   const skipCurrentStep = () => {
     if (step !== 2) return
-    if (step === 2) {
-      setData(current => ({ ...current, parents: empty().parents }))
-      setErrors(current => Object.fromEntries(Object.entries(current).filter(([path]) => !path.startsWith('parents.'))))
-      notify('Parent / Guardian details skipped.', 'info')
-    } else if (step === 4) {
-      // Previous education is optional. Clear partially entered values so this
-      // step can be skipped without optional format validation blocking submit.
-      setData(current => ({ ...current, previousEducation: empty().previousEducation }))
-      setErrors(current => Object.fromEntries(Object.entries(current).filter(([path]) => !path.startsWith('previousEducation.'))))
-      notify('Previous education details skipped.', 'info')
-    }
+    notify('Parent / guardian step skipped. Entered values are kept in this form.', 'info')
     setStep(current => current + 1)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -2812,7 +2807,7 @@ function AdmissionDetails({ approval = false }) {
         parents: optional[4].status === 'fulfilled' && optional[4].value ? optional[4].value : row.parents,
         documents: Object.keys(mergedDocs).length ? mergedDocs : (row.documents || row.documentStatuses),
       })
-      if (active) setData({ ...hydrated, integrationFeeError: optional[2].status === 'rejected' ? optional[2].reason?.message || 'Fee information unavailable.' : '' })
+      if (active) setData({ ...hydrated, completion: calculateCompletion(completionSchemas.admission, row), integrationFeeError: optional[2].status === 'rejected' ? optional[2].reason?.message || 'Fee information unavailable.' : '' })
     }).catch(error => { if (active) { setDetailError(error.message || 'Unable to load admission.'); setToast({ message: error.message || 'Unable to load admission.', tone: 'error' }) } }).finally(() => { if (active) setLoadingDetail(false) }); return () => { active = false } }, [validId, setToast, loadAttempt])
   if (loadingDetail) return <section className="sa-empty"><FiClock /><h2>Loading admission...</h2></section>
   if (!data) return <section className="sa-empty"><FiAlertCircle /><h2>{detailError || 'Admission not found'}</h2><Button onClick={() => setLoadAttempt(current => current + 1)}>Retry</Button><Button onClick={() => navigate('/student-management/admissions')}>Back</Button></section>
@@ -2950,6 +2945,7 @@ function AdmissionDetails({ approval = false }) {
   return (
     <div className="cm-profile-view" data-export-record>
       <Breadcrumb tail="Admission Details" />
+      <CompletionSummary completion={data.completion} name={studentName(data)} to={authorized && ['DRAFT', 'CORRECTION_REQUIRED'].includes(normalizeStatus(data.status)) ? `/student-management/admissions/${id}/edit` : undefined} />
       <div className="cm-profile-top-bar">
         <ExportMenu mode="single" title="Student Admission" filename={`admission_${data.application.admissionNumber || data.application.number || id}`} recordSections={admissionDetailSections(data)} />
         <button type="button" className="cm-button secondary erp-btn erp-btn--secondary" onClick={() => navigate('/student-management/admissions')}>

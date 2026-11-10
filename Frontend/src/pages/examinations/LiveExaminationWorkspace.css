@@ -86,7 +86,7 @@
 .exam-workspace-view p { margin: 4px 0 0; color: var(--text-secondary); }
 
 .examination-setup--connected .examination-setup__table-wrap table thead th {
-  background: var(--es-soft);
-  color: var(--text-primary);
+  background: var(--table-head);
+  color: var(--text-secondary);
   border-bottom: 1px solid var(--es-line);
 }

@@ -26,7 +26,9 @@ test('grouping cannot add a denied configuration or fee action', () => {
 })
 test('Global Settings is one direct entry even with only a permitted configuration module', () => {
   for (const permissions of [{ isSuperAdmin: true }, { permissions: { colleges: { view: true } } }, { permissions: { academic_years: { view: true } } }, { permissions: { academic_settings: { view: true } } }]) {
-    const settings = grouped(permissions)[0].items.filter(entry => entry.id === 'workspace_settings')
+    const { items } = grouped(permissions)[0]
+    assert.equal(items.at(-1).id, 'workspace_settings')
+    const settings = items.filter(entry => entry.id === 'workspace_settings')
     assert.equal(settings.length, 1)
     assert.equal(settings[0].path, '/settings')
     assert.deepEqual(settings[0].children, [])

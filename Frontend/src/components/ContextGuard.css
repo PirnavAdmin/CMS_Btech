@@ -15,7 +15,7 @@
   background: var(--surface, var(--surface));
   border: 1px solid var(--border, var(--border));
   border-radius: 16px;
-  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.3);
+  box-shadow: var(--shadow-sm);
   padding: 32px 28px;
   animation: context-card-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -172,7 +172,7 @@
   height: 46px;
   border-radius: 8px;
   background: var(--cms-sidebar-bg);
-  color: #ffffff;
+  color: var(--text-on-dark);
   font-size: 0.92rem;
   font-weight: 600;
   border: none;
@@ -220,7 +220,7 @@
 
 :root[data-theme="dark"] .context-guard-card {
   background: var(--cms-sidebar-bg);
-  border-color: #334155;
+  border-color: var(--border);
 }
 
 :root[data-theme="dark"] .context-guard-hint {

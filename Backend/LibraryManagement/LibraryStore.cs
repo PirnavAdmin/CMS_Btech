@@ -60,6 +60,38 @@ internal sealed class LibraryStore
         return row!;
     }
 
+
+    // Seed the standard book categories only when this college has no categories.
+    // INSERT IGNORE plus the table's college-scoped unique keys makes concurrent
+    // first requests safe and prevents duplicate default rows.
+    public async Task EnsureDefaultCategories(long collegeId)
+    {
+        await using var db = new MySqlConnection(_connectionString);
+        await db.OpenAsync();
+        await db.ExecuteAsync("""
+            INSERT IGNORE INTO library_categories
+                (college_id, category_code, category_name, description, status)
+            SELECT @collegeId, defaults.category_code, defaults.category_name,
+                   defaults.description, 1
+            FROM (
+                SELECT 'PROG' AS category_code, 'Programming' AS category_name,
+                       'Programming languages, software development and coding.' AS description
+                UNION ALL SELECT 'CS', 'Computer Science', 'Computer science, algorithms and computing.'
+                UNION ALL SELECT 'MATH', 'Mathematics', 'Engineering and applied mathematics.'
+                UNION ALL SELECT 'PHY', 'Physics', 'Physics and applied science.'
+                UNION ALL SELECT 'ELEC', 'Electronics', 'Electronics, circuits and communication.'
+                UNION ALL SELECT 'MECH', 'Mechanical', 'Mechanical engineering and related subjects.'
+                UNION ALL SELECT 'CIVIL', 'Civil', 'Civil engineering, construction and structures.'
+                UNION ALL SELECT 'ENG', 'English', 'English language, grammar and literature.'
+                UNION ALL SELECT 'GK', 'General Knowledge', 'General knowledge and competitive examinations.'
+            ) AS defaults
+            WHERE NOT EXISTS (
+                SELECT 1 FROM library_categories existing
+                WHERE existing.college_id = @collegeId
+            )
+            """, new { collegeId });
+    }
+
     public Task<long> SaveCategory(long? id, LibraryCategoryRequest r, long actor) => Write(async (db, tx) =>
     {
         r.CategoryCode = Text(r.CategoryCode, "CategoryCode"); r.CategoryName = Text(r.CategoryName, "CategoryName");

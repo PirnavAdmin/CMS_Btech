@@ -67,12 +67,12 @@
 
 .fsa-summary-icon.tone-green {
   background: rgba(22, 128, 78, 0.12);
-  color: #16804e;
+  color: var(--success);
 }
 
 .fsa-summary-icon.tone-blue {
   background: rgba(37, 99, 235, 0.12);
-  color: #2563eb;
+  color: var(--info);
 }
 
 .fsa-summary-icon.tone-amber {
@@ -115,7 +115,7 @@
 }
 
 .fsa-summary-present {
-  color: #16804e !important;
+  color: var(--success) !important;
 }
 
 :root[data-theme="dark"] .fsa-summary-present {
@@ -183,7 +183,7 @@
   height: 46px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--brand), #2563eb);
-  color: #ffffff;
+  color: var(--text-on-dark);
   display: grid;
   place-items: center;
   font-size: 16px;
@@ -220,7 +220,7 @@
   padding: 2px 8px;
   border-radius: 12px;
   background: rgba(22, 128, 78, 0.12);
-  color: #16804e;
+  color: var(--success);
   letter-spacing: 0.02em;
 }
 
@@ -334,13 +334,13 @@
 .fsa-status-pill.status-present,
 .fsa-status-pill.status-checked-out {
   background: rgba(22, 128, 78, 0.12);
-  color: #16804e;
+  color: var(--success);
   border: 1px solid rgba(22, 128, 78, 0.25);
 }
 
 .fsa-status-pill.status-checked-in {
   background: rgba(37, 99, 235, 0.12);
-  color: #2563eb;
+  color: var(--info);
   border: 1px solid rgba(37, 99, 235, 0.25);
 }
 
@@ -433,7 +433,7 @@
 
 .fsa-btn-checkin {
   background: linear-gradient(135deg, #16804e, var(--success));
-  color: #ffffff;
+  color: var(--text-on-dark);
   border-color: #16804e;
   box-shadow: 0 2px 8px rgba(22, 128, 78, 0.25);
 }
@@ -446,7 +446,7 @@
 
 .fsa-btn-checkout {
   background: linear-gradient(135deg, var(--danger), var(--danger));
-  color: #ffffff;
+  color: var(--text-on-dark);
   border-color: var(--danger);
   box-shadow: 0 2px 8px rgba(220, 38, 38, 0.25);
 }
@@ -513,7 +513,7 @@
   padding: 2px 8px;
   border-radius: 6px;
   background: rgba(37, 99, 235, 0.1);
-  color: #2563eb;
+  color: var(--info);
   font-family: monospace;
 }
 
@@ -551,7 +551,7 @@
 
 .fsa-metric-tile-icon.tone-green {
   background: rgba(22, 128, 78, 0.12);
-  color: #16804e;
+  color: var(--success);
 }
 
 .fsa-metric-tile-icon.tone-amber {
@@ -561,7 +561,7 @@
 
 .fsa-metric-tile-icon.tone-blue {
   background: rgba(37, 99, 235, 0.12);
-  color: #2563eb;
+  color: var(--info);
 }
 
 .fsa-metric-tile-icon.tone-purple {
@@ -697,8 +697,8 @@
 }
 
 .fsa-tab-btn.is-active {
-  background: var(--brand, var(--brand));
-  color: #ffffff;
+  background: var(--brand-solid);
+  color: var(--text-on-dark);
   box-shadow: 0 2px 6px rgba(23, 76, 136, 0.25);
 }
 
@@ -724,8 +724,8 @@
 }
 
 .fa-button-primary {
-  background: var(--brand, var(--brand)) !important;
-  color: #ffffff !important;
+  background: var(--brand-solid) !important;
+  color: var(--text-on-dark) !important;
   border-color: var(--brand, var(--brand)) !important;
 }
 
@@ -806,8 +806,8 @@
   border-radius: 4px;
   font-size: 9px;
   font-weight: 800;
-  background: var(--brand, var(--brand));
-  color: #ffffff;
+  background: var(--brand-solid);
+  color: var(--text-on-dark);
 }
 
 .fsa-week-day-times {
@@ -951,8 +951,8 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #ffffff;
-  background: var(--table-head, var(--brand));
+  color: var(--text-secondary);
+  background: var(--table-head);
   white-space: nowrap;
 }
 
@@ -972,7 +972,7 @@
 }
 
 .fsa-table tbody tr.is-today-row {
-  background: rgba(37, 99, 235, 0.06) !important;
+  background: var(--selected-bg) !important;
   border-left: 4px solid var(--brand, var(--brand));
 }
 
@@ -1003,8 +1003,8 @@
   border-radius: 4px;
   font-size: 9px;
   font-weight: 800;
-  background: var(--brand, var(--brand));
-  color: #ffffff;
+  background: var(--brand-solid);
+  color: var(--text-on-dark);
   margin-left: 6px;
   vertical-align: middle;
 }
@@ -1031,7 +1031,7 @@
 
 .fsa-duration-badge.is-full {
   background: rgba(22, 128, 78, 0.1);
-  color: #16804e;
+  color: var(--success);
   border-color: rgba(22, 128, 78, 0.25);
 }
 
@@ -1118,5 +1118,5 @@
 #root .portal-shell .fsa-pagination select{width:65px;min-height:32px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text-primary);font-size:12px}
 #root .portal-shell .fsa-pagination nav{display:flex;gap:5px;flex-wrap:wrap}
 #root .portal-shell .fsa-pagination button{min-width:32px;min-height:32px;padding:6px 10px;font-size:12px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text-primary)}
-#root .portal-shell .fsa-pagination button[aria-current=page]{background:var(--brand);border-color:var(--brand);color:#fff}
+#root .portal-shell .fsa-pagination button[aria-current=page]{background:var(--brand-solid);border-color:var(--brand);color:var(--text-on-dark)}
 #root .portal-shell .fsa-pagination button:disabled{opacity:.45;cursor:not-allowed}

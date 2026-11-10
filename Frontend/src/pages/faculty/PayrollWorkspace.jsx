@@ -1,4 +1,4 @@
-import { FiCalendar, FiCreditCard, FiFileText, FiSearch, FiUsers } from 'react-icons/fi'
+import { FiCreditCard, FiFileText, FiSearch, FiUsers } from 'react-icons/fi'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import PageHeader from '../../components/PageHeader'
@@ -18,7 +18,7 @@ const monthNow = () => { const now = new Date(); return `${now.getFullYear()}-${
 const tabs = ['Payroll Processing','Salary Records','Payslips']
 export default function PayrollWorkspace() {
   const { selectedCollegeId, scopeRecords } = useAcademic(), { canAction } = useScreenAccess()
-  const [tab,setTab] = useState(tabs[0]), [month,setMonth] = useState(monthNow)
+  const [tab,setTab] = useState(tabs[0]), [month] = useState(monthNow)
   const [records,setRecords] = useState([]), [loading,setLoading] = useState(false), [error,setError] = useState('')
   const [query,setQuery] = useState(''), [type,setType] = useState(''), [status,setStatus] = useState(''), [page,setPage] = useState(1)
   const [selected,setSelected] = useState(null), [hold,setHold] = useState(null), [reason,setReason] = useState(''), [busy,setBusy] = useState(false), [notice,setNotice] = useState('')
@@ -69,7 +69,6 @@ export default function PayrollWorkspace() {
     <section className="payroll-directory" aria-labelledby="payroll-directory-title">
       <header className="payroll-directory-heading">
         <h2 id="payroll-directory-title">{tab === 'Payroll Processing' ? 'Payroll Directory' : tab}</h2>
-        <ExportMenu rows={rows} columns={exportColumns} screen="faculty-payroll" filename={`faculty-payroll-${month}`} title={`Faculty payroll ${month}`} scope="Filtered college records" />
       </header>
 
       <FilterPanel
@@ -80,10 +79,7 @@ export default function PayrollWorkspace() {
           <FiSearch aria-hidden="true" />
           <input type="search" aria-label="Search payroll" placeholder="Search employee or department…" value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} />
         </label>}
-        leadingActions={<label className="payroll-period">
-          <FiCalendar aria-hidden="true" />
-          <input aria-label="Payroll month" type="month" required value={month} onChange={event => { setMonth(event.target.value); setPage(1) }} />
-        </label>}
+        leadingActions={<ExportMenu rows={rows} columns={exportColumns} screen="faculty-payroll" filename={`faculty-payroll-${month}`} title={`Faculty payroll ${month}`} scope="Filtered college records" />}
         filters={<>
           <label>Employee type<select value={type} onChange={event => { setType(event.target.value); setPage(1) }}>
             <option value="">All types</option><option>Teaching</option><option>Non-Teaching</option>

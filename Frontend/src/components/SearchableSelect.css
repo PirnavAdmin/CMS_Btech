@@ -1,13 +1,13 @@
 :root {
   --ss-border: var(--border, #CBD5E1);
-  --ss-surface: var(--surface, #ffffff);
-  --ss-surface-soft: var(--surface-soft, #F8FAFC);
+  --ss-surface: var(--dropdown-surface, #ffffff);
+  --ss-surface-soft: var(--dropdown-surface-soft, #F8FAFC);
   --ss-brand: var(--brand, #125AA8);
   --ss-brand-soft: var(--brand-soft, #EAF3FF);
   --ss-text: var(--text-primary, #0F172A);
   --ss-text-muted: var(--text-muted, #64748B);
   --ss-danger: var(--danger, #EF4444);
-  --ss-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+  --ss-shadow: var(--shadow-md);
 }
 
 .searchable-select {
@@ -30,7 +30,7 @@
   padding: 8px 12px;
   border: 1px solid var(--ss-border);
   border-radius: 8px;
-  background: var(--ss-surface);
+  background: var(--input-bg);
   color: var(--ss-text);
   cursor: pointer;
   font: inherit;
@@ -47,7 +47,7 @@
 .searchable-select__trigger:focus-visible {
   outline: none;
   border-color: var(--ss-brand);
-  box-shadow: 0 0 0 3px rgba(43, 120, 197, 0.15);
+  box-shadow: var(--focus-ring);
 }
 
 .searchable-select__trigger-text {
@@ -69,12 +69,16 @@
 
 .searchable-select__menu {
   position: fixed;
-  z-index: 1050;
+  z-index: 4000;
   display: flex;
   flex-direction: column;
   border: 1px solid var(--ss-border);
   border-radius: 10px;
-  background: var(--ss-surface);
+  background: var(--dropdown-bg);
+  opacity: 1;
+  backdrop-filter: none;
+  mix-blend-mode: normal;
+  isolation: isolate;
   box-shadow: var(--ss-shadow);
   overflow: hidden;
   max-height: 320px;
@@ -231,9 +235,9 @@
    Dark Theme Overrides for Searchable Select Component
    ========================================================================== */
 :root[data-theme="dark"] {
-  --ss-border: #334155;
-  --ss-surface: #151B28;
-  --ss-surface-soft: #101622;
+  --ss-border: var(--border);
+  --ss-surface: var(--app-bg);
+  --ss-surface-soft: var(--app-bg);
   --ss-brand: #1769C2;
   --ss-brand-soft: rgba(23, 105, 194, 0.2);
   --ss-text: #F8FAFC;
@@ -242,8 +246,8 @@
 }
 
 :root[data-theme="dark"] .searchable-select__trigger {
-  background: #151B28;
-  border-color: #334155;
+  background: var(--app-bg);
+  border-color: var(--border);
   color: #F8FAFC;
 }
 
@@ -256,14 +260,14 @@
 }
 
 :root[data-theme="dark"] .searchable-select__menu {
-  background: #151B28;
-  border-color: #334155;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
+  background: var(--app-bg);
+  border-color: var(--border);
+  box-shadow: var(--shadow-md);
 }
 
 :root[data-theme="dark"] .searchable-select__search {
-  background: #101622;
-  border-bottom-color: #334155;
+  background: var(--app-bg);
+  border-bottom-color: var(--border);
   color: var(--text-muted);
 }
 
@@ -282,7 +286,7 @@
 
 :root[data-theme="dark"] .searchable-select__option:hover,
 :root[data-theme="dark"] .searchable-select__option:focus-visible {
-  background: #20293A;
+  background: var(--surface-soft);
   color: #F8FAFC;
 }
 

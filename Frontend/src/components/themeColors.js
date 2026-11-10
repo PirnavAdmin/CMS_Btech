@@ -1,0 +1,18 @@
+export const themeColors = [
+  ['Burgundy', '#800020'], ['Maroon', '#800000'], ['Red', '#C62828'], ['Orange', '#D75A12'],
+  ['Amber', '#E5A114'], ['Gold', '#C59A2A'], ['Yellow', '#E4CF38'], ['Forest Green', '#25603B'],
+  ['Emerald', '#16875F'], ['Ocean Blue', '#2378AF'], ['Royal Blue', '#345CCA'], ['Indigo', '#4646A8'],
+  ['Violet', '#7445BF'], ['Purple', '#883DA7'],
+  ['Butter', '#FFF0AE'], ['Peach', '#FFD9B5'], ['Blush', '#FFD0CC'], ['Rose', '#FFBFC7'], ['Pink', '#FFAFC3'], ['Mauve', '#E8ADD0'],
+  ['Lime', '#E3F7A9'], ['Mint', '#AEEFC1'], ['Seafoam', '#A9EBDD'], ['Sage', '#CDE8D9'], ['Aqua', '#A8F0D8'], ['Jade', '#A5E8D1'],
+  ['Ice', '#DCE5FF'], ['Orchid', '#F8D6F2'], ['Lavender', '#EBC8FA'], ['Lilac', '#E7B7E6'], ['Periwinkle', '#C9C9F5'], ['Cyan', '#B8F4F0'],
+  ['Pool', '#BCEBED'], ['Sky', '#AFE4F5'], ['Turquoise', '#A3F0EF'], ['Ocean', '#86C7DC'], ['Cloud', '#D6E0EE'], ['Slate', '#C3CCD8'],
+  ['Cream', '#FFF7D6'], ['Apricot', '#FFE8D1'], ['Coral', '#FFC7B8'], ['Salmon', '#FFB7A8'], ['Watermelon', '#FF9EA5'], ['Berry', '#D99AB8'],
+  ['Pistachio', '#ECF6C5'], ['Spring', '#C5F1A8'], ['Celadon', '#B7E3B2'], ['Eucalyptus', '#B8D9C5'], ['Lagoon', '#95E7D2'], ['Teal', '#8EDCCB'],
+  ['Mist', '#E7EDFF'], ['Wisteria', '#E8D8FF'], ['Grape', '#D9C2F2'], ['Plum', '#D5ACD6'], ['Iris', '#B9B9EA'], ['Glacier', '#A9E5E8'],
+  ['Frost', '#D1F1F1'], ['Breeze', '#C6EAF8'], ['Aqua Blue', '#9CE5E9'], ['Lagoon Blue', '#77BDD0'], ['Silver', '#E2E8EF'], ['Graphite', '#B4C0CE'],
+  ['Sunflower', '#F7DB78'], ['Honey', '#F2C67D'], ['Flamingo', '#F299A5'], ['Fuchsia', '#E987BA'], ['Orchid Rose', '#D990C8'], ['Heather', '#B98DC7'],
+  ['Chartreuse', '#CDE875'], ['Fern', '#A8D77C'], ['Clover', '#8FCB9A'], ['Forest Mist', '#86BDA4'], ['Sea Glass', '#78D1BD'], ['Lagoon Green', '#72C6B1'],
+  ['Cornflower', '#AFC8F4'], ['Bluebell', '#AEB0E7'], ['Violet', '#C6A7E8'], ['Magenta Mist', '#D9A2DA'], ['Lilac Blue', '#AAA9E1'], ['Arctic', '#91DADD'],
+  ['Powder', '#A9DCE0'], ['Ice Blue', '#8ED1E8'], ['Aqua Mist', '#7ED8D9'], ['Sea Blue', '#68B7D0'], ['Stone', '#C3CFD9'], ['Charcoal Mist', '#9EAAB8'],
+]

@@ -351,8 +351,8 @@
   color: var(--brand, var(--brand));
 }
 .faculty-management .fm-category-tab.active {
-  background: var(--brand, var(--brand));
-  color: #ffffff;
+  background: var(--brand-solid);
+  color: var(--text-on-dark);
   font-weight: 700;
   box-shadow: 0 2px 5px rgba(23, 105, 194, 0.3);
 }
@@ -369,7 +369,7 @@
 }
 .faculty-management .fm-category-tab.active .fm-tab-badge {
   background: rgba(255, 255, 255, 0.3);
-  color: #ffffff;
+  color: var(--text-on-dark);
 }
 
 /* Header and actions */
@@ -550,7 +550,7 @@
 .faculty-management .fm-attendance-table { width: 100%; overflow-x: auto; border-radius: 0 0 10px 10px; }
 .faculty-management .fm-attendance-table table { width: 100%; min-width: 1180px; table-layout: fixed; border-collapse: collapse; }
 .faculty-management .fm-attendance-table th, .faculty-management .fm-attendance-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
-.faculty-management .fm-attendance-table th { height: 40px; background: var(--table-head, var(--brand)) !important; color: #FFFFFF !important; font-size: 10px; font-weight: 700; line-height: 1.2; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; text-align: center; }
+.faculty-management .fm-attendance-table th { height: 40px; background: var(--table-head) !important; color: var(--text-secondary) !important; font-size: 10px; font-weight: 700; line-height: 1.2; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; text-align: center; }
 .faculty-management .fm-attendance-table td { height: 46px; border-bottom: 1px solid var(--border, var(--border)); color: var(--text-primary, var(--text-primary)); font-size: 12px; line-height: 1.2; text-align: center; }
 .faculty-management .fm-attendance-table tbody tr:hover td { background: var(--table-row-hover, #F3F6FC); }
 .faculty-management .fm-attendance-table tbody tr:hover { background: var(--surface-soft); }
@@ -586,7 +586,7 @@
   display: grid;
   place-items: center;
   padding: 18px;
-  background: rgba(9, 30, 55, 0.45);
+  background: var(--overlay);
   backdrop-filter: blur(4px);
 }
 .faculty-management .fm-attendance-detail {
@@ -699,7 +699,7 @@
   border-radius: 999px !important;
   background: rgba(255, 255, 255, 0.22) !important;
   border: 1px solid rgba(255, 255, 255, 0.4) !important;
-  color: #FFFFFF !important;
+  color: var(--text-on-dark) !important;
   font-size: 0.72rem !important;
   font-weight: 750 !important;
   letter-spacing: 0.04em !important;
@@ -707,7 +707,7 @@
 }
 .faculty-management .fm-attendance-detail .cm-profile-banner .cm-profile-title {
   margin: 0 !important;
-  color: #FFFFFF !important;
+  color: var(--text-on-dark) !important;
   font-size: 1.25rem !important;
   font-weight: 750 !important;
   line-height: 1.25 !important;
@@ -819,14 +819,14 @@
 .faculty-management .fm-attendance-screen .fm-attendance-table:not(.fm-attendance-matrix) table td:nth-child(n+5):nth-child(-n+7) { color: var(--text-muted) !important; }
 .faculty-management .fm-attendance-screen .fm-attendance-lop { color: #be185d; background: #fce7f3; border: 1px solid #f472b6; font-weight: 700; }
 .faculty-management .fm-attendance-screen .fm-attendance-lop i { background: #db2777; }
-.faculty-management .fm-attendance-screen .fm-attendance-present { color: #15803d; background: var(--cms-green-soft); border: 1px solid #86efac; font-weight: 700; }
+.faculty-management .fm-attendance-screen .fm-attendance-present { color: var(--success); background: var(--cms-green-soft); border: 1px solid var(--success-border); font-weight: 700; }
 .faculty-management .fm-attendance-screen .fm-attendance-present i { background: #15935b; }
-.faculty-management .fm-attendance-screen .fm-attendance-absent { color: #b91c1c; background: var(--cms-red-soft); border: 1px solid #fca5a5; font-weight: 700; }
+.faculty-management .fm-attendance-screen .fm-attendance-absent { color: var(--danger); background: var(--cms-red-soft); border: 1px solid var(--danger-border); font-weight: 700; }
 .faculty-management .fm-attendance-screen .fm-attendance-absent i { background: var(--danger); }
-.faculty-management .fm-attendance-screen .fm-attendance-late { color: #b45309; background: var(--cms-amber-soft); border: 1px solid #fcd34d; font-weight: 700; }
+.faculty-management .fm-attendance-screen .fm-attendance-late { color: var(--warning); background: var(--cms-amber-soft); border: 1px solid var(--warning-border); font-weight: 700; }
 .faculty-management .fm-attendance-screen .fm-attendance-half-day { color: #c2410c; background: #ffedd5; border: 1px solid #fdba74; font-weight: 700; }
 .faculty-management .fm-attendance-screen .fm-attendance-late i, .faculty-management .fm-attendance-screen .fm-attendance-half-day i { background: #c88909; }
-.faculty-management .fm-attendance-screen .fm-attendance-leave { color: #0369a1; background: #e0f2fe; border: 1px solid #7dd3fc; font-weight: 700; }
+.faculty-management .fm-attendance-screen .fm-attendance-leave { color: var(--info); background: var(--info-soft); border: 1px solid #7dd3fc; font-weight: 700; }
 .faculty-management .fm-attendance-screen .fm-attendance-leave i { background: #0284c7; }
 .faculty-management .fm-attendance-screen .fm-attendance-report-table table :is(th, td):nth-child(2) { text-align: center !important; }
 .faculty-management .fm-attendance-screen .fm-attendance-report-table table :is(th, td):nth-child(4) { text-align: left !important; }
@@ -966,7 +966,7 @@
 }
 .faculty-management .export-control .export-button {
   border-color: #0F172A;
-  background: var(--brand);
+  background: var(--brand-solid);
   color: var(--text-on-accent, #fff);
  border: 1px solid var(--border-strong);}
 .faculty-management .export-control .export-button:hover:not(:disabled) { border-color: #0F172A; background: var(--brand-soft); color: var(--text-primary); }
@@ -1056,8 +1056,8 @@
 .faculty-management .faculty-table-wrap th {
   height: 40px;
   padding: 8px 14px;
-  color: #FFFFFF !important;
-  background: var(--table-head, var(--brand)) !important;
+  color: var(--text-secondary) !important;
+  background: var(--table-head) !important;
   text-align: left !important;
   font-size: 10px !important;
   font-weight: 700 !important;
@@ -1229,7 +1229,7 @@
   border: 1px solid var(--border, var(--border)) !important;
   border-radius: 12px !important;
   padding: 0 !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+  box-shadow: var(--shadow-sm) !important;
   box-sizing: border-box !important;
   min-width: 0 !important;
 }
@@ -1273,7 +1273,7 @@
   border: 1px solid var(--border, var(--border)) !important;
   border-radius: 12px !important;
   padding: 12px 14px !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+  box-shadow: var(--shadow-sm) !important;
   box-sizing: border-box !important;
 }
 
@@ -1406,8 +1406,8 @@
   padding: 0 11px;
   border: 1px solid var(--brand-hover);
   border-radius: 5px;
-  color: #FFFFFF;
-  background: var(--brand-hover);
+  color: var(--text-on-dark);
+  background: var(--brand-solid-hover);
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
@@ -1571,7 +1571,7 @@
 .faculty-management .sp-profile-edit-icon {
   width: 15px !important;
   height: 15px !important;
-  color: #FFFFFF !important;
+  color: var(--text-on-dark) !important;
   stroke: #FFFFFF !important;
   display: inline-block !important;
   vertical-align: middle !important;
@@ -1584,7 +1584,7 @@
   border: 1px solid var(--border, var(--border)) !important;
   border-radius: 14px !important;
   background: var(--surface, var(--surface)) !important;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
+  box-shadow: var(--shadow-sm) !important;
   overflow: hidden !important;
   box-sizing: border-box !important;
   margin: 0 !important;
@@ -1600,7 +1600,7 @@
   border: 0 !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.18) !important;
   border-radius: 0 !important;
-  color: #FFFFFF !important;
+  color: var(--text-on-dark) !important;
   position: relative !important;
   overflow: hidden !important;
   min-height: 100px !important;
@@ -1631,7 +1631,7 @@
   border-radius: 50% !important;
   background: rgba(255, 255, 255, 0.25) !important;
   border: 3px solid #FFFFFF !important;
-  color: #FFFFFF !important;
+  color: var(--text-on-dark) !important;
   font-size: 20px !important;
   font-weight: 800 !important;
   display: flex !important;
@@ -1664,7 +1664,7 @@
   letter-spacing: 0.04em !important;
   border-radius: 20px !important;
   background: rgba(255, 255, 255, 0.22) !important;
-  color: #FFFFFF !important;
+  color: var(--text-on-dark) !important;
   backdrop-filter: blur(4px) !important;
 }
 
@@ -1692,7 +1692,7 @@
 
 .faculty-management .cm-profile-title {
   margin: 0 !important;
-  color: #FFFFFF !important;
+  color: var(--text-on-dark) !important;
   font-size: 22px !important;
   font-weight: 800 !important;
   letter-spacing: -0.01em !important;
@@ -1778,7 +1778,7 @@
   border-radius: 10px !important;
   background: var(--surface, var(--surface)) !important;
   overflow: hidden !important;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03) !important;
+  box-shadow: var(--shadow-sm) !important;
   width: 100% !important;
   box-sizing: border-box !important;
 }
@@ -2602,7 +2602,7 @@
   border: 1px solid var(--border) !important;
   border-radius: 14px !important;
   background: var(--surface) !important;
-  box-shadow: 0 8px 22px rgba(48, 38, 79, .08) !important;
+  box-shadow: var(--shadow-sm) !important;
 }
 :root:not([data-theme="dark"]) .faculty-management .fm-profile-header {
   min-height: 122px;
@@ -2616,12 +2616,12 @@
   color: #282342 !important;
 }
 :root:not([data-theme="dark"]) .faculty-management .fm-profile-header :is(p, small) {
-  color: #554F75 !important;
+  color: var(--text-secondary) !important;
 }
 :root:not([data-theme="dark"]) .faculty-management .fm-profile-view .fm-panel:not(.fm-profile-header), :root:not([data-theme="dark"]) .faculty-management .fm-profile-summary-strip {
   border-color: var(--border) !important;
   background: var(--surface) !important;
-  box-shadow: 0 3px 10px rgba(48, 38, 79, .06) !important;
+  box-shadow: var(--shadow-sm) !important;
 }
 :root:not([data-theme="dark"]) .faculty-management .fm-profile-view .fm-panel > h2, :root:not([data-theme="dark"]) .faculty-management .fm-sidebar-header h2 {
   color: var(--brand-hover) !important;
@@ -2641,8 +2641,8 @@
 /* Matrix Table Styling & Column Contrast */
 
 .faculty-management .fm-attendance-matrix thead th {
-  background: var(--table-head, var(--brand)) !important;
-  color: #ffffff !important;
+  background: var(--table-head) !important;
+  color: var(--text-secondary) !important;
   padding: 8px 4px !important;
   font-size: 10px !important;
   font-weight: 700 !important;
@@ -2666,7 +2666,7 @@
 
 /* Keep wide leave tables inside the card, rather than widening the page. */
 .flm-table :is(th, td) { padding: 8px 14px; text-align: left; vertical-align: middle; }
-.flm-table th { height: 40px; background: var(--table-head, var(--brand)); color: #FFFFFF; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; }
+.flm-table th { height: 40px; background: var(--table-head); color: var(--text-secondary); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; }
 .flm-table td { height: 46px; border-bottom: 1px solid var(--flm-line); color: var(--text-primary, var(--text-primary)); font-size: 12px; line-height: 1.5; }
 .flm-table tbody tr:hover td { background: var(--table-row-hover, #F3F6FC); }
 
@@ -2678,8 +2678,8 @@
 .fp-table th, .fp-table td { padding: 8px 14px; border-bottom: 1px solid var(--border, var(--border)); text-align: left; font-size: 12px; white-space: nowrap; }
 .fp-table th, .fp-table thead th {
   height: 40px;
-  color: #FFFFFF !important;
-  background: var(--table-head, var(--brand)) !important;
+  color: var(--text-secondary) !important;
+  background: var(--table-head) !important;
   font-size: 10px !important;
   font-weight: 700 !important;
   text-transform: uppercase;
@@ -2854,26 +2854,26 @@
 
 .faculty-management .fm-attendance-screen {
   --attendance-present-bg: #dcfce7;
-  --attendance-present-border: #86efac;
-  --attendance-present-text: #15803d;
+  --attendance-present-border: var(--success-border);
+  --attendance-present-text: var(--success);
   --attendance-absent-bg: #fee2e2;
-  --attendance-absent-border: #fca5a5;
-  --attendance-absent-text: #b91c1c;
+  --attendance-absent-border: var(--danger-border);
+  --attendance-absent-text: var(--danger);
   --attendance-late-bg: #fef3c7;
-  --attendance-late-border: #fcd34d;
-  --attendance-late-text: #b45309;
+  --attendance-late-border: var(--warning-border);
+  --attendance-late-text: var(--warning);
   --attendance-half-day-bg: #ffedd5;
   --attendance-half-day-border: #fdba74;
   --attendance-half-day-text: #c2410c;
   --attendance-leave-bg: #e0f2fe;
   --attendance-leave-border: #7dd3fc;
-  --attendance-leave-text: #0369a1;
+  --attendance-leave-text: var(--info);
   --attendance-lop-bg: #fce7f3;
   --attendance-lop-border: #f472b6;
   --attendance-lop-text: #be185d;
   --attendance-unmarked-bg: #f1f5f9;
-  --attendance-unmarked-border: #cbd5e1;
-  --attendance-unmarked-text: #64748b;
+  --attendance-unmarked-border: var(--border-strong);
+  --attendance-unmarked-text: var(--text-muted);
 }
 
 .faculty-management .fm-report-legend {
@@ -2925,21 +2925,21 @@
 }
 
 .faculty-management .fm-report-status--present {
-  color: #15803d !important;
+  color: var(--success) !important;
   background: var(--cms-green-soft) !important;
-  border-color: #86efac !important;
+  border-color: var(--success-border) !important;
 }
 
 .faculty-management .fm-report-status--absent {
-  color: #b91c1c !important;
+  color: var(--danger) !important;
   background: var(--cms-red-soft) !important;
-  border-color: #fca5a5 !important;
+  border-color: var(--danger-border) !important;
 }
 
 .faculty-management .fm-report-status--late {
-  color: #b45309 !important;
+  color: var(--warning) !important;
   background: var(--cms-amber-soft) !important;
-  border-color: #fcd34d !important;
+  border-color: var(--warning-border) !important;
 }
 
 .faculty-management .fm-report-status--half-day {
@@ -2949,8 +2949,8 @@
 }
 
 .faculty-management .fm-report-status--leave {
-  color: #0369a1 !important;
-  background: #e0f2fe !important;
+  color: var(--info) !important;
+  background: var(--info-soft) !important;
   border-color: #7dd3fc !important;
 }
 
@@ -2986,8 +2986,8 @@
 }
 
 .faculty-management .fm-attendance-matrix thead th {
-  background: #2b2347 !important;
-  color: #ffffff !important;
+  background: var(--table-head) !important;
+  color: var(--text-secondary) !important;
   padding: 8px 4px !important;
   font-size: 11px !important;
   font-weight: 700 !important;
@@ -3009,7 +3009,7 @@
   display: block;
   font-size: 10px;
   font-weight: 800;
-  color: #ffffff;
+  color: var(--text-on-dark);
   line-height: 1.25;
 }
 
@@ -3030,8 +3030,8 @@
   width: 130px !important;
   min-width: 130px !important;
   max-width: 130px !important;
-  background: #2b2347 !important;
-  color: #ffffff !important;
+  background: var(--table-head) !important;
+  color: var(--text-on-dark) !important;
   text-align: center !important;
 }
 
@@ -3057,8 +3057,8 @@
   width: 220px !important;
   min-width: 220px !important;
   max-width: 220px !important;
-  background: #2b2347 !important;
-  color: #ffffff !important;
+  background: var(--table-head) !important;
+  color: var(--text-on-dark) !important;
   text-align: left !important;
   padding-left: 12px !important;
   border-right: 2px solid var(--border-strong) !important;
@@ -3109,11 +3109,11 @@
   font-weight: 800;
   font-size: 11.5px;
 }
-.faculty-management .fm-report-total--present { color: #15803d; }
-.faculty-management .fm-report-total--absent { color: #b91c1c; }
-.faculty-management .fm-report-total--late { color: #b45309; }
+.faculty-management .fm-report-total--present { color: var(--success); }
+.faculty-management .fm-report-total--absent { color: var(--danger); }
+.faculty-management .fm-report-total--late { color: var(--warning); }
 .faculty-management .fm-report-total--half-day { color: #c2410c; }
-.faculty-management .fm-report-total--leave { color: #0369a1; }
+.faculty-management .fm-report-total--leave { color: var(--info); }
 .faculty-management .fm-report-total--lop { color: #be185d; }
 .faculty-management .fm-report-total--percentage { color: var(--brand-hover); font-weight: 900; }
 
@@ -3185,10 +3185,10 @@
   justify-content: space-between !important;
   gap: 12px !important;
   padding: 10px 14px !important;
-  border: 1px solid #FECACA !important;
+  border: 1px solid var(--danger-border) !important;
   border-radius: 8px !important;
   background: var(--cms-red-soft) !important;
-  color: #B91C1C !important;
+  color: var(--danger) !important;
   font-size: 12.5px !important;
   font-weight: 600 !important;
   margin: 0 0 10px 0 !important;
@@ -3198,10 +3198,10 @@
   display: inline-flex !important;
   align-items: center !important;
   padding: 4px 12px !important;
-  border: 1px solid #FCA5A5 !important;
+  border: 1px solid var(--danger-border) !important;
   border-radius: 6px !important;
   background: var(--surface) !important;
-  color: #B91C1C !important;
+  color: var(--danger) !important;
   font-size: 12px !important;
   font-weight: 700 !important;
   cursor: pointer !important;
@@ -3367,7 +3367,7 @@
 .flm-status { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px; white-space: nowrap; background: var(--flm-soft); color: var(--text-secondary); font-weight: 600; }
 .flm-status:is(.pending, .draft) { background: #fff7e6; color: #9a6700; }
 .flm-status:is(.approved, .active) { background: #e8f7ef; color: #167447; }
-.flm-status:is(.rejected, .inactive) { background: #fef0f0; color: #b42332; }
+.flm-status:is(.rejected, .inactive) { background: #fef0f0; color: var(--danger); }
 .flm-status:is(.cancelled, .expired), .flm-unassigned { color: var(--text-muted); }
 .flm-empty { padding: 48px 20px; text-align: center; color: var(--text-muted); }
 .flm-empty > svg { width: 28px; height: 28px; color: var(--flm-blue); }
@@ -3376,7 +3376,7 @@
 
 /* Leave dialogs share the page's controls and surface treatment. */
 .flm-overlay { position: fixed; inset: 0; z-index: 1200; display: grid; place-items: center; padding: 24px; background: rgb(15 23 42 / 45%); overflow-y: auto; }
-.flm-page .flm-config-dialog { position: relative; width: 100%; max-width: 760px; max-height: calc(100dvh - 48px); overflow-y: auto; border: 1px solid var(--flm-line); border-radius: 16px; background: var(--surface, #fff); color: var(--text-primary); box-shadow: 0 20px 60px rgb(15 23 42 / 20%); }
+.flm-page .flm-config-dialog { position: relative; width: 100%; max-width: 760px; max-height: calc(100dvh - 48px); overflow-y: auto; border: 1px solid var(--flm-line); border-radius: 16px; background: var(--surface, #fff); color: var(--text-primary); box-shadow: var(--shadow-md); }
 .flm-config-dialog { padding: 24px; }
 .flm-config-dialog h2 { margin: 0 40px 20px 0; font-size: 20px; }
 .flm-close { position: absolute; right: 18px; top: 18px; display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid var(--flm-line); border-radius: 8px; background: var(--surface); color: var(--text-secondary); cursor: pointer; }
@@ -3387,8 +3387,8 @@
 .flm-config-dialog textarea { min-height: 90px; resize: vertical; }
 .flm-config-dialog footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--flm-line); }
 .flm-config-dialog footer button { min-height: 36px; padding: 6px 16px; border: 1px solid var(--flm-line); border-radius: 8px; background: var(--surface); color: var(--text-secondary); font: inherit; font-weight: 600; cursor: pointer; }
-.flm-config-dialog footer .approve-action { background: var(--flm-blue); border-color: var(--flm-blue); color: #fff; }
-.flm-config-dialog footer .reject-action { background: #b42332; border-color: #b42332; color: #fff; }
+.flm-config-dialog footer .approve-action { background: var(--flm-blue); border-color: var(--flm-blue); color: var(--text-on-dark); }
+.flm-config-dialog footer .reject-action { background: #b42332; border-color: #b42332; color: var(--text-on-dark); }
 .flm-type-page-fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
 .flm-type-page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 2px 2px 4px; }
 .flm-type-page-header h1 { margin: 0; color: var(--text-primary); font-size: 26px; line-height: 1.2; }
@@ -3404,7 +3404,7 @@
 .flm-page .flm-type-form-card textarea { min-height: 90px; resize: vertical; }
 .flm-type-form-card footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--flm-line); }
 .flm-type-form-card footer button { min-height: 40px; padding: 8px 16px; border: 1px solid var(--flm-line); border-radius: 8px; background: var(--surface); color: var(--text-secondary); font: inherit; font-weight: 600; cursor: pointer; }
-.flm-type-form-card footer .approve-action { background: var(--flm-blue); border-color: var(--flm-blue); color: #fff; }
+.flm-type-form-card footer .approve-action { background: var(--flm-blue); border-color: var(--flm-blue); color: var(--text-on-dark); }
 .flm-info-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .flm-info-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .flm-info-grid small, .flm-info-grid strong { display: block; overflow-wrap: anywhere; }
@@ -3477,8 +3477,8 @@
 
 .flm-view-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--flm-line); }
 .flm-view-actions button { min-height: 36px; padding: 6px 16px; border: 1px solid var(--flm-line); border-radius: 8px; background: var(--surface); color: var(--text-secondary); font: inherit; font-weight: 600; cursor: pointer; }
-.flm-view-actions .approve-action { background: var(--flm-blue); border-color: var(--flm-blue); color: #fff; }
-.flm-view-actions .reject-action { background: #b42332; border-color: #b42332; color: #fff; }
+.flm-view-actions .approve-action { background: var(--flm-blue); border-color: var(--flm-blue); color: var(--text-on-dark); }
+.flm-view-actions .reject-action { background: #b42332; border-color: #b42332; color: var(--text-on-dark); }
 
 /* Leave workspace navigation and controls: keep them consistent with the
    directory screens while staying scoped away from faculty attendance. */
@@ -3656,20 +3656,20 @@
   margin-bottom: 16px;
 }
 .flm-page .cm-profile-avatar-wrap { flex-shrink: 0 !important; display: flex !important; align-items: center !important; position: relative !important; z-index: 2 !important; }
-.flm-page .fm-avatar-large { width: 58px !important; height: 58px !important; min-width: 58px !important; place-items: center !important; overflow: hidden !important; border-radius: 12px !important; background: #EAB308 !important; color: #111827 !important; font-size: 24px !important; font-weight: 800 !important; display: grid !important; }
+.flm-page .fm-avatar-large { width: 58px !important; height: 58px !important; min-width: 58px !important; place-items: center !important; overflow: hidden !important; border-radius: 12px !important; background: #EAB308 !important; color: var(--text-primary) !important; font-size: 24px !important; font-weight: 800 !important; display: grid !important; }
 .flm-page .cm-profile-header-info { display: flex !important; flex-direction: column !important; gap: 3px !important; min-width: 0 !important; flex: 1 1 auto !important; }
 .flm-page .cm-profile-badges { display: flex !important; align-items: center !important; gap: 6px !important; margin-bottom: 2px !important; }
-.flm-page .cm-badge { display: inline-flex !important; align-items: center !important; padding: 3px 10px !important; letter-spacing: 0.04em !important; text-transform: uppercase !important; border-radius: 99px !important; background: rgba(255,255,255,0.2) !important; color: #fff !important; font-size: 11px !important; font-weight: 700 !important; border: 1px solid rgba(255,255,255,0.4) !important;}
-.flm-page .cm-profile-title { margin: 0 !important; color: #FFFFFF !important; font-size: 1.25rem !important; font-weight: 750 !important; line-height: 1.25 !important; }
+.flm-page .cm-badge { display: inline-flex !important; align-items: center !important; padding: 3px 10px !important; letter-spacing: 0.04em !important; text-transform: uppercase !important; border-radius: 99px !important; background: rgba(255,255,255,0.2) !important; color: var(--text-on-dark) !important; font-size: 11px !important; font-weight: 700 !important; border: 1px solid rgba(255,255,255,0.4) !important;}
+.flm-page .cm-profile-title { margin: 0 !important; color: var(--text-on-dark) !important; font-size: 1.25rem !important; font-weight: 750 !important; line-height: 1.25 !important; }
 .flm-page .cm-profile-subtitle { margin: 2px 0 0 0 !important; color: rgba(255, 255, 255, 0.9) !important; font-size: 0.82rem !important; font-weight: 500 !important; }
 .flm-page .fm-attendance-detail-status { position: relative !important; z-index: 2 !important; margin-left: auto !important; flex-shrink: 0 !important; }
 
 .flm-page .preview-section-group { margin-bottom: 12px; }
 .flm-page .preview-section-title { display: block; margin-bottom: 8px; color: var(--brand, var(--brand-hover)); font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
 .flm-page .preview-kv-grid { display: grid; gap: 12px; }
-.flm-page .preview-kv-item { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 4px; }
+.flm-page .preview-kv-item { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 4px; }
 .flm-page .kv-label { font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
-.flm-page .kv-val { font-size: 15px; color: #1E293B; font-weight: 700; }
+.flm-page .kv-val { font-size: 15px; color: var(--text-primary); font-weight: 700; }
 
 /* Payroll.css */
 .fp-overlay{position:fixed!important;z-index:200!important;inset:0!important;display:grid!important;place-items:center!important;padding:16px!important;background:rgb(15 23 42 / .45)!important}.fp-dialog{position:relative!important;width:min(640px,100%)!important;max-height:calc(100dvh - 32px)!important;overflow:auto!important;padding:22px!important;border-radius:8px!important;background:var(--surface)!important;box-shadow:var(--shadow-lg)!important}.fp-close{position:sticky!important;top:0!important;z-index:2!important;float:right!important;display:grid!important;width:36px!important;height:36px!important;place-items:center!important;margin:-10px -10px 0 12px!important;border:1px solid var(--border-strong)!important;border-radius:8px!important;background:var(--surface)!important;color:var(--text-secondary)!important;cursor:pointer!important}.fp-close:hover{border-color:var(--brand)!important;color:var(--brand)!important;background:var(--brand-soft)!important}
@@ -3701,7 +3701,7 @@
 }
 .fp-summary>div:last-child{border-right:0}
 .fp-summary strong{margin:0;color:var(--text-primary);font-size:18px;font-weight:700;line-height:1}
-.fp-summary>div:nth-child(2) strong{color:#0284c7}
+.fp-summary>div:nth-child(2) strong{color:var(--info)}
 .fp-summary>div:nth-child(3) strong{color:var(--warning)}
 .fp-summary>div:nth-child(4) strong{color:var(--danger)}
 .fp-summary small{margin:0;color:var(--text-muted);font-size:8px;font-weight:800;line-height:1.2;letter-spacing:.1em;text-transform:uppercase;white-space:normal}
@@ -3735,8 +3735,8 @@
   color: var(--brand-hover);
 }
 .fp-card nav button.active {
-  background: var(--brand) !important;
-  color: #FFFFFF !important;
+  background: var(--brand-solid) !important;
+  color: var(--text-on-dark) !important;
   border-color: var(--brand-hover) !important;
   font-weight: 750 !important;
   box-shadow: 0 2px 8px rgba(18, 90, 168, 0.28) !important;
@@ -3752,8 +3752,8 @@
 .fp-table table { width: 100%; min-width: 1480px; border-collapse: collapse; }
 .fp-table th, .fp-table td { padding: 10px; border-bottom: 1px solid var(--border); text-align: left; font-size: 12px; white-space: nowrap; }
 .fp-table th, .fp-table thead th {
-  color: #FFFFFF !important;
-  background: var(--brand) !important;
+  color: var(--text-secondary) !important;
+  background: var(--table-head) !important;
   font-size: 11px !important;
   font-weight: 800 !important;
   text-transform: uppercase;
@@ -3764,9 +3764,9 @@
 .fp-table button { border: 0; background: none; color: var(--brand); cursor: pointer; }
 .fp-status { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 750; }
 .fp-status.draft { background: var(--surface-alt); color: var(--text-secondary); border: 1px solid var(--border-strong); }
-.fp-status.processed { background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; }
-.fp-status.paid { background: var(--cms-green-soft); color: #15803d; border: 1px solid #86efac; }
-.fp-status.hold { background: var(--cms-amber-soft); color: #b45309; border: 1px solid #fcd34d; }
+.fp-status.processed { background: var(--info-soft); color: var(--info); border: 1px solid #7dd3fc; }
+.fp-status.paid { background: var(--cms-green-soft); color: var(--success); border: 1px solid var(--success-border); }
+.fp-status.hold { background: var(--cms-amber-soft); color: var(--warning); border: 1px solid var(--warning-border); }
 .fp-lop { color: var(--danger); font-weight: 800; }
 .fp-unconfigured { color: var(--warning); font-size: 11px; font-weight: 700; }
 .fp-empty { padding: 38px; text-align: center; color: var(--text-muted); }
@@ -3778,16 +3778,16 @@
 .fp-dialog dl div { padding: 9px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-soft); }
 .fp-dialog dt { color: var(--text-muted); font-size: 10px; font-weight: 800; text-transform: uppercase; }
 .fp-dialog dd { margin: 4px 0 0; font-weight: 700; }
-.fp-attendance-summary .present { color: #16a34a; }
+.fp-attendance-summary .present { color: var(--success); }
 .fp-attendance-summary .late { color: var(--warning); }
 .fp-attendance-summary .half-day { color: var(--warning); }
-.fp-attendance-summary .leave { color: #0284c7; }
+.fp-attendance-summary .leave { color: var(--info); }
 .fp-attendance-summary .lop { color: var(--danger); }
 .fp-notice { padding: 10px; border: 1px solid color-mix(in srgb, var(--warning) 35%, var(--border)); border-radius: 6px; color: var(--text-secondary); background: var(--surface-soft); font-size: 12px; }
 .fp-close { position: absolute; top: 12px; right: 12px; border: 0; background: none; color: var(--text-muted); cursor: pointer; }
 .fp-dialog footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
 .fp-dialog footer button { padding: 8px 12px; border: 1px solid var(--border-strong); border-radius: 7px; background: var(--surface); color: var(--text-primary); font: inherit; cursor: pointer; }
-.fp-dialog footer .primary { border-color: var(--brand); background: var(--brand); color: var(--text-on-accent, #fff); }
+.fp-dialog footer .primary { border-color: var(--brand); background: var(--brand-solid); color: var(--text-on-accent, #fff); }
 .fp-dialog footer .primary:disabled { opacity: .55; cursor: not-allowed; }
 .fp-hold label { display: grid; gap: 6px; margin-top: 14px; font-size: 12px; font-weight: 700; }
 .fp-hold textarea { min-height: 88px; padding: 8px; border: 1px solid var(--border-strong); border-radius: 7px; background: var(--surface); color: var(--text-primary); font: inherit; }
@@ -3820,7 +3820,7 @@
 }
 .fp-actions .fp-hold-btn {
   color: var(--warning);
-  border-color: #fcd34d;
+  border-color: var(--warning-border);
 }
 .fp-actions .fp-hold-btn:hover {
   background: var(--cms-amber-soft);
@@ -3829,12 +3829,12 @@
 .fp-dialog footer .approve-action {
   background: var(--success, #15935b) !important;
   border-color: var(--success, #15935b) !important;
-  color: #fff !important;
+  color: var(--text-on-dark) !important;
 }
 .fp-dialog footer .reject-action {
   background: var(--warning) !important;
   border-color: var(--warning) !important;
-  color: #fff !important;
+  color: var(--text-on-dark) !important;
 }
 
 .fp-actions .fp-pay-btn {
@@ -3848,7 +3848,7 @@
 .fp-dialog footer .pay-action {
   background: var(--flm-blue, #0f4c81) !important;
   border-color: var(--flm-blue, #0f4c81) !important;
-  color: #fff !important;
+  color: var(--text-on-dark) !important;
 }
 
 .fp-actions .fp-edit-btn {
@@ -3881,8 +3881,8 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: var(--brand-hover);
-  color: #ffffff;
+  background: var(--brand-solid-hover);
+  color: var(--text-on-dark);
   border: none;
   padding: 8px 14px;
   border-radius: 6px;
@@ -3935,8 +3935,8 @@
 }
 
 .faculty-payroll .fp-bulkbar-btn.primary {
-  background: var(--brand-hover);
-  color: #ffffff;
+  background: var(--brand-solid-hover);
+  color: var(--text-on-dark);
 }
 
 .faculty-payroll .fp-bulkbar-btn.primary:hover {
@@ -3944,8 +3944,8 @@
 }
 
 .faculty-payroll .fp-bulkbar-btn.pay {
-  background: var(--brand);
-  color: #ffffff;
+  background: var(--brand-solid);
+  color: var(--text-on-dark);
 }
 
 .faculty-payroll .fp-bulkbar-btn.pay:hover {
@@ -3954,7 +3954,7 @@
 
 .faculty-payroll .fp-bulkbar-btn.secondary {
   background: var(--surface);
-  color: #374151;
+  color: var(--text-secondary);
   border: 1px solid #d1d5db;
 }
 
@@ -3967,8 +3967,8 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: var(--brand, var(--brand));
-  color: #ffffff;
+  background: var(--brand-solid);
+  color: var(--text-on-dark);
   border: none;
   padding: 8px 14px;
   border-radius: 6px;
@@ -4262,13 +4262,13 @@
 }
 
 #root .faculty-management .fm-reference-categories button:hover:not(.active) { background: var(--surface); color: var(--text-primary); }
-#root .faculty-management .fm-reference-categories button.active { background: var(--brand); color: var(--text-on-accent, #fff); box-shadow: 0 3px 9px color-mix(in srgb, var(--brand) 24%, transparent); }
+#root .faculty-management .fm-reference-categories button.active { background: var(--brand-solid); color: var(--text-on-accent, #fff); box-shadow: 0 3px 9px color-mix(in srgb, var(--brand) 24%, transparent); }
 
 #root .faculty-management > .faculty-directory {
   overflow: hidden;
   border-radius: 16px;
   border-color: color-mix(in srgb, var(--brand) 13%, var(--border));
-  box-shadow: 0 10px 28px rgba(39, 54, 18, .055);
+  box-shadow: var(--shadow-sm);
 }
 
 #root .faculty-management > .faculty-directory > .fm-section-bar {
@@ -4684,5 +4684,311 @@
 
   #root .faculty-management .fm-attendance-screen .fm-attendance-bulkbar > .fm-button {
     flex: 1 1 100%;
+  }
+}
+
+/* Compact, consistent layout for each faculty registration step. */
+.faculty-management .fm-form-page-header {
+  margin-bottom: 14px;
+}
+
+.faculty-management .erp-two-column-layout[data-without-live-preview] > .erp-card-main {
+  border-color: color-mix(in srgb, var(--brand) 13%, var(--border)) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 8px 24px rgba(39, 54, 18, 0.055) !important;
+}
+
+.faculty-management .erp-two-column-layout[data-without-live-preview] .fm-reference-stepper {
+  gap: 5px;
+  padding: 7px 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+.faculty-management .erp-two-column-layout[data-without-live-preview] .fm-reference-stepper button {
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.faculty-management .erp-two-column-layout[data-without-live-preview] .fm-reference-stepper button:hover:not(.active) {
+  color: var(--text-primary);
+  background: var(--surface);
+}
+
+.faculty-management .erp-two-column-layout[data-without-live-preview] .fm-reference-stepper button.active {
+  color: var(--brand);
+  background: var(--surface);
+  border-color: color-mix(in srgb, var(--brand) 22%, var(--border));
+  box-shadow: 0 1px 3px rgba(39, 54, 18, 0.05);
+}
+
+.faculty-management .erp-two-column-layout[data-without-live-preview] .fm-reference-stepper button:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.faculty-management .erp-two-column-layout[data-without-live-preview] .fm-reference-stepper button span {
+  width: 23px;
+  height: 23px;
+  font-size: 11px;
+}
+
+.faculty-management [data-without-live-preview] > .erp-card-main .fm-section-heading {
+  margin: 0 10px 8px !important;
+  padding: 8px 12px !important;
+  border-radius: 9px;
+}
+
+.faculty-management [data-without-live-preview] .fm-registration-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 0 12px 12px;
+  box-sizing: border-box;
+}
+
+.faculty-management [data-without-live-preview] .fm-photo-picker {
+  min-height: 66px;
+  gap: 10px;
+  margin-bottom: 0;
+  padding: 8px 12px;
+  border-radius: 9px;
+  box-sizing: border-box;
+}
+
+.faculty-management [data-without-live-preview] .fm-form-grid {
+  gap: 10px 14px !important;
+}
+
+.faculty-management [data-without-live-preview] .fm-form-grid .fm-field input,
+.faculty-management [data-without-live-preview] .fm-form-grid .fm-field select {
+  height: 42px;
+  box-sizing: border-box;
+  border-radius: 8px;
+}
+
+.faculty-management [data-without-live-preview] .fm-form-grid .fm-field textarea {
+  min-height: 64px;
+  box-sizing: border-box;
+  border-radius: 8px;
+}
+
+.faculty-management [data-without-live-preview] .fm-documents-form {
+  gap: 8px;
+}
+
+.faculty-management [data-without-live-preview] .fm-documents-header {
+  gap: 8px;
+}
+
+.faculty-management [data-without-live-preview] .fm-document-grid {
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.faculty-management [data-without-live-preview] .fm-document-card {
+  min-height: 62px;
+  gap: 9px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  box-sizing: border-box;
+}
+
+.faculty-management [data-without-live-preview] .fm-document-icon {
+  width: 30px;
+  height: 30px;
+}
+
+.faculty-management [data-without-live-preview] .fm-document-actions select {
+  min-height: 32px;
+  border-radius: 7px;
+}
+
+.faculty-management .fm-registration-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 12px 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.faculty-management [data-without-live-preview] .fm-form-footer {
+  min-height: 60px;
+  gap: 10px;
+  margin-top: 0 !important;
+  padding: 8px 12px !important;
+}
+
+.faculty-management [data-without-live-preview] .fm-form-footer .fm-button {
+  min-height: 38px;
+  padding: 6px 13px;
+  border-radius: 8px;
+}
+
+.faculty-management [data-without-live-preview] .fm-form-footer > .fm-muted {
+  margin-inline: auto;
+  font-size: 11.5px;
+}
+
+.faculty-management [data-without-live-preview] .fm-form-footer > .fm-actions {
+  gap: 8px;
+}
+
+@media (max-width: 740px) {
+  .faculty-management [data-without-live-preview] .fm-document-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .faculty-management .erp-two-column-layout[data-without-live-preview] .fm-reference-stepper {
+    gap: 4px;
+    padding: 6px 8px;
+  }
+
+  .faculty-management .erp-two-column-layout[data-without-live-preview] .fm-reference-stepper button {
+    flex: 0 0 auto;
+    min-height: 35px;
+    padding: 5px 9px;
+  }
+
+  .faculty-management [data-without-live-preview] > .erp-card-main .fm-section-heading {
+    margin-inline: 8px !important;
+    padding: 8px 10px !important;
+  }
+
+  .faculty-management [data-without-live-preview] .fm-registration-scroll {
+    padding-inline: 10px;
+  }
+
+  .faculty-management [data-without-live-preview] .fm-form-footer {
+    flex-wrap: wrap;
+    padding: 8px 10px !important;
+  }
+
+  .faculty-management [data-without-live-preview] .fm-form-footer > .fm-muted {
+    order: 3;
+    flex: 1 0 100%;
+    text-align: center;
+  }
+
+  .faculty-management [data-without-live-preview] .fm-form-footer > .fm-actions {
+    margin-left: auto;
+  }
+}
+
+/* Reduce excess vertical spacing on the faculty directory screen. */
+#root .faculty-management--directory {
+  gap: 10px;
+}
+
+#root .faculty-management--directory > .erp-page-header {
+  gap: 16px;
+  margin-bottom: 0;
+}
+
+#root .faculty-management--directory > .erp-page-header .erp-page-header__breadcrumb {
+  margin-bottom: 8px;
+}
+
+#root .faculty-management--directory > .erp-page-header .compact-summary > .compact-summary__item {
+  min-height: 60px;
+  padding: 8px 10px;
+}
+
+#root .faculty-management--directory .fm-reference-categories {
+  margin: 0;
+}
+
+#root .faculty-management--directory > .faculty-directory > .fm-section-bar {
+  min-height: 0;
+  gap: 12px;
+  padding: 10px 16px;
+}
+
+#root .faculty-management--directory > .faculty-directory > .fm-section-bar .fm-eyebrow {
+  margin-bottom: 4px;
+}
+
+#root .faculty-management--directory > .faculty-directory > .fm-section-bar .fm-muted {
+  padding: 3px 8px;
+}
+
+#root .faculty-management--directory > .faculty-directory > .fm-section-bar > .fm-actions > .fm-button {
+  min-height: 38px;
+}
+
+#root .faculty-management--directory .faculty-directory .filter-disclosure__bar {
+  min-height: 0;
+  gap: 9px;
+  padding: 8px 14px;
+}
+
+#root .faculty-management--directory .faculty-directory .filter-disclosure__search .faculty-search {
+  min-height: 40px;
+}
+
+#root .faculty-management--directory .faculty-directory .filter-disclosure__search .faculty-search input {
+  height: 36px;
+}
+
+#root .faculty-management--directory .faculty-directory .filter-disclosure__bar > label select,
+#root .faculty-management--directory .faculty-directory .filter-disclosure__toggle {
+  min-height: 36px;
+}
+
+#root .faculty-management--directory .faculty-directory > .erp-empty-state {
+  min-height: 170px;
+  margin: 8px 10px 10px;
+  padding: 16px;
+}
+
+@media (max-width: 980px) {
+  #root .faculty-management--directory {
+    gap: 9px;
+  }
+
+  #root .faculty-management--directory > .erp-page-header {
+    gap: 10px;
+  }
+}
+
+@media (max-width: 720px) {
+  #root .faculty-management--directory .faculty-directory .filter-disclosure__bar {
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  #root .faculty-management--directory .faculty-directory .filter-disclosure__bar > label {
+    margin-left: 0;
+  }
+
+  #root .faculty-management--directory > .faculty-directory > .fm-section-bar {
+    padding: 10px 12px;
+  }
+}
+
+@media (max-width: 560px) {
+  #root .faculty-management--directory > .faculty-directory > .fm-section-bar > .fm-actions {
+    justify-content: stretch;
+  }
+
+  #root .faculty-management--directory > .faculty-directory > .fm-section-bar > .fm-actions > * {
+    flex: 1 1 auto;
+  }
+
+  #root .faculty-management--directory .faculty-directory > .erp-empty-state {
+    min-height: 150px;
+    margin: 8px;
+    padding: 14px;
   }
 }

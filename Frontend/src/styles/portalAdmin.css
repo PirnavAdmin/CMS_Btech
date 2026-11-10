@@ -27,7 +27,7 @@
 .portal-field { gap: 6px; font-size: 12px; }
 .portal-field > input, .portal-field > select, .portal-field > textarea, .portal-table input, .portal-table select { padding: 9px 11px; border-radius: 7px; background: var(--surface); font-size: 13px; min-height: 38px; }
 .portal-page button, .portal-dialog button { min-height: 36px; font-size: 12px; border-radius: 7px; }
-.portal-page button.primary, .portal-dialog button.primary { background: var(--brand-dark); border-color: var(--brand-dark); color: #fff; }
+.portal-page button.primary, .portal-dialog button.primary { background: var(--brand-solid); border-color: var(--brand-dark); color: var(--text-on-dark); }
 .portal-page button.primary:hover, .portal-dialog button.primary:hover { background: var(--brand-dark-hover); }
 .portal-table-wrap { border-radius: 9px; margin-top: 14px; }
 .portal-table td { padding: 12px 14px; font-size: 12px; }

@@ -20,7 +20,7 @@
 .campus-workspace :is(input,select,textarea,button,a):focus-visible{outline:2px solid var(--brand);outline-offset:3px}
 .campus-search{position:relative}.campus-search svg{position:absolute;top:13px;left:12px;color:var(--text-muted)}.campus-search input{padding-left:36px}
 .campus-table{overflow-x:auto}.campus-table table{width:100%;border-collapse:collapse;white-space:nowrap;font-size:12px}.campus-table caption{text-align:left;padding:0 0 12px}
-.campus-table th{height:40px;text-align:left;background:var(--table-head,var(--brand))!important;color:#FFFFFF!important;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:8px 14px;border-bottom:1px solid #0f3661}.campus-table td{height:46px;padding:8px 14px;border-bottom:1px solid var(--border,var(--border));color:var(--text-primary,var(--text-primary));font-size:12px;vertical-align:middle}.campus-table tbody tr:hover td{background:var(--table-row-hover,#F3F6FC)}
+.campus-table th{height:40px;text-align:left;background:var(--table-head)!important;color:var(--text-secondary)!important;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:8px 14px;border-bottom:1px solid #0f3661}.campus-table td{height:46px;padding:8px 14px;border-bottom:1px solid var(--border,var(--border));color:var(--text-primary,var(--text-primary));font-size:12px;vertical-align:middle}.campus-table tbody tr:hover td{background:var(--table-row-hover,#F3F6FC)}
 .campus-badge{display:inline-block;background:var(--brand-soft);color:var(--brand);padding:4px 8px;border-radius:5px;font-size:12px}
 .campus-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .campus-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin:24px 0}.campus-form textarea{min-height:100px;resize:vertical}.campus-form dd{margin:8px 0;white-space:pre-wrap;overflow-wrap:anywhere}
@@ -39,7 +39,7 @@
 .campus-workspace--library .campus-summary>div:before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--brand,var(--brand))}
 .campus-workspace--library .campus-summary span{font-size:11px;font-weight:700;letter-spacing:.045em;text-transform:uppercase;color:var(--text-secondary,var(--text-muted))}
 .campus-workspace--library .campus-summary strong{font-size:17px;line-height:1.35;color:var(--text-primary,#172B4D)}
-.campus-workspace--library .campus-panel{padding:26px;border-radius:12px;border-color:var(--border,#DCE3EC);box-shadow:0 4px 18px rgba(24,45,75,.045)}
+.campus-workspace--library .campus-panel{padding:26px;border-radius:12px;border-color:var(--border,#DCE3EC);box-shadow:var(--shadow-sm)}
 .campus-workspace--library .campus-panel h2{font-size:19px;letter-spacing:-.015em;color:var(--text-primary,#172B4D)}
 .campus-workspace--library .campus-muted{margin-top:4px;color:var(--text-secondary,var(--text-muted));font-size:13px;line-height:1.55}
 .campus-workspace--library .campus-panel-heading{align-items:center;margin-bottom:22px}
@@ -54,7 +54,7 @@
 .campus-workspace--library .campus-table{border:1px solid var(--border,#DCE3EC);border-radius:10px;background:var(--surface,#fff)}
 .campus-workspace--library .campus-table table{font-size:12.5px}
 .campus-workspace--library .campus-table caption{padding:14px 16px;color:var(--text-secondary,var(--text-muted));font-size:12px}
-.campus-workspace--library .campus-table th{height:40px;background:var(--table-head,var(--brand))!important;color:#FFFFFF!important;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.campus-workspace--library .campus-table th{height:40px;background:var(--table-head)!important;color:var(--text-secondary)!important;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
 .campus-workspace--library .campus-table th,.campus-workspace--library .campus-table td{padding:8px 14px;border-bottom:1px solid var(--border,var(--border))}
 .campus-workspace--library .campus-table td{height:46px;color:var(--text-primary,var(--text-primary));font-size:12px}
 .campus-workspace--library .campus-table tbody tr:last-child td{border-bottom:0}
@@ -72,7 +72,7 @@
 quiet summary cards, standard ERP card headers and ERP table styling. */
 .campus-workspace--library .campus-tabs{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-radius:10px;padding:6px;gap:6px}
 .campus-workspace--library .campus-tabs a{display:flex;align-items:center;justify-content:center;min-height:40px;padding:9px 12px}
-.campus-workspace--library .campus-tabs a.is-selected{background:var(--brand,var(--brand));color:#fff;box-shadow:none}
+.campus-workspace--library .campus-tabs a.is-selected{background:var(--brand-solid);color:var(--text-on-dark);box-shadow:none}
 .campus-workspace--library .campus-summary>div{min-height:0;gap:8px;padding:16px;border-radius:10px;box-shadow:none}
 .campus-workspace--library .campus-summary>div:before{display:none}
 .campus-workspace--library .campus-summary span{font-size:12px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--text-secondary,var(--text-muted))}
@@ -88,7 +88,7 @@ quiet summary cards, standard ERP card headers and ERP table styling. */
 .campus-workspace--library .campus-panel.erp-card>.campus-filters{margin:16px 20px;padding:14px;background:var(--surface-soft,#F7F9FC);border-radius:8px}
 .campus-workspace--library .campus-panel.erp-card>.campus-table{margin:0 20px 18px;border:0;border-radius:0;background:transparent}
 .campus-workspace--library .campus-panel.erp-card>.campus-table table.erp-table{width:100%;border-collapse:collapse}
-.campus-workspace--library .campus-panel.erp-card>.campus-table table.erp-table th{height:40px;background:var(--table-head,var(--brand))!important;color:#FFFFFF!important;text-transform:uppercase;letter-spacing:.05em;font-size:10px;font-weight:700}
+.campus-workspace--library .campus-panel.erp-card>.campus-table table.erp-table th{height:40px;background:var(--table-head)!important;color:var(--text-secondary)!important;text-transform:uppercase;letter-spacing:.05em;font-size:10px;font-weight:700}
 .campus-workspace--library .campus-panel.erp-card>.campus-table table.erp-table td{font-size:13px}
 .campus-workspace--library .campus-panel.erp-card>.campus-table table.erp-table caption{padding:0 0 10px}
 .campus-workspace--library .campus-panel.erp-card>.empty-state{margin:20px}
@@ -98,7 +98,7 @@ quiet summary cards, standard ERP card headers and ERP table styling. */
 .campus-workspace--library .campus-overview .campus-summary>div{min-height:70px;padding:12px 14px}
 .campus-workspace--library .campus-overview .campus-summary span{font-size:11px;line-height:1.25}
 .campus-workspace--library .campus-overview .campus-summary strong{font-size:15px;line-height:1.25;overflow-wrap:anywhere}
-.campus-workspace--library .campus-overview .campus-summary{display:flex;justify-self:end;width:max-content;max-width:100%;gap:0;overflow:hidden;border:1px solid var(--border,#D9E2EF);border-radius:9px;background:var(--surface,#fff);box-shadow:0 2px 7px rgba(24,45,75,.04)}
+.campus-workspace--library .campus-overview .campus-summary{display:flex;justify-self:end;width:max-content;max-width:100%;gap:0;overflow:hidden;border:1px solid var(--border,#D9E2EF);border-radius:9px;background:var(--surface,#fff);box-shadow:var(--shadow-sm)}
 .campus-workspace--library .campus-overview .campus-summary>div{display:flex;min-width:104px;min-height:0;flex:1 1 104px;flex-direction:column;justify-content:center;align-items:center;gap:3px;padding:8px 13px;border:0;border-right:1px solid var(--border,#D9E2EF);border-radius:0;background:transparent;text-align:center;box-shadow:none}
 .campus-workspace--library .campus-overview .campus-summary>div:last-child{border-right:0}
 .campus-workspace--library .campus-overview .campus-summary span{order:2;color:var(--text-secondary,var(--text-muted));font-size:8px;font-weight:750;line-height:1.15;letter-spacing:.055em;text-transform:uppercase;white-space:nowrap}
@@ -129,7 +129,7 @@ feels part of the table card rather than a second, dashed card. */
 .campus-workspace--library .campus-table-caption__title{color:var(--text-primary,#172B4D);font-size:12px;font-weight:750}
 .campus-workspace--library .campus-table-caption__count{float:right;padding:3px 8px;border:1px solid var(--border,#DCE3EC);border-radius:999px;background:var(--surface,#fff);color:var(--text-secondary,var(--text-muted));font-size:10px;font-weight:700;line-height:1.4}
 .campus-workspace--library .campus-table-caption__note{display:block;margin-top:2px;color:var(--text-muted,#758399);font-size:10px}
-.campus-workspace--library .campus-overview .campus-summary{box-shadow:0 3px 12px rgba(24,45,75,.05)}
+.campus-workspace--library .campus-overview .campus-summary{box-shadow:var(--shadow-sm)}
 .campus-workspace--library>.campus-notice{position:relative;overflow:hidden}
 .campus-workspace--library>.campus-notice:before{position:absolute;inset:0 auto 0 0;width:3px;background:var(--brand,var(--brand));content:""}
 .campus-workspace--library .campus-tabs a{position:relative;isolation:isolate}
@@ -240,7 +240,7 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 .adv-toast__close:hover {
-  color: #ffffff;
+  color: var(--text-on-dark);
 }
 
 /* Header & Quick Action Buttons */
@@ -277,7 +277,7 @@ feels part of the table card rather than a second, dashed card. */
 
 .adv-btn--primary {
   background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
-  color: #ffffff;
+  color: var(--text-on-dark);
   box-shadow: 0 4px 12px rgba(29, 78, 216, 0.25);
 }
 
@@ -313,8 +313,8 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 .adv-btn--danger {
-  background: var(--danger);
-  color: #ffffff;
+  background: var(--danger-solid);
+  color: var(--text-on-dark);
 }
 
 .adv-btn--danger:hover {
@@ -358,7 +358,7 @@ feels part of the table card rather than a second, dashed card. */
 .adv-icon-btn--danger:hover:not(:disabled) {
   background: var(--cms-red-soft);
   color: var(--danger);
-  border-color: #fca5a5;
+  border-color: var(--danger-border);
 }
 
 /* Executive KPI Stat Cards */
@@ -378,7 +378,7 @@ feels part of the table card rather than a second, dashed card. */
   background: var(--surface, var(--surface));
   border: 1px solid var(--border, var(--border));
   border-radius: 14px;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  box-shadow: var(--shadow-sm);
   transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
@@ -386,7 +386,7 @@ feels part of the table card rather than a second, dashed card. */
 
 .adv-kpi-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.07);
+  box-shadow: var(--shadow-sm);
 }
 
 .adv-kpi-card__icon {
@@ -402,22 +402,22 @@ feels part of the table card rather than a second, dashed card. */
 
 .adv-kpi-card--blue .adv-kpi-card__icon {
   background: var(--brand-soft);
-  color: #2563eb;
+  color: var(--info);
 }
 
 .adv-kpi-card--emerald .adv-kpi-card__icon {
-  background: #ecfdf5;
+  background: var(--success-soft);
   color: var(--success);
 }
 
 .adv-kpi-card--amber .adv-kpi-card__icon {
-  background: #fffbeb;
+  background: var(--warning-soft);
   color: var(--warning);
 }
 
 .adv-kpi-card--indigo .adv-kpi-card__icon {
-  background: #f5f3ff;
-  color: #7c3aed;
+  background: var(--cms-violet-soft);
+  color: var(--cms-violet);
 }
 
 .adv-kpi-card__body {
@@ -525,12 +525,12 @@ feels part of the table card rather than a second, dashed card. */
 
 .adv-mode-toggle-btn:hover {
   border-color: #2563eb;
-  color: #2563eb;
+  color: var(--info);
   background: var(--brand-soft);
 }
 
 .adv-mode-toggle-btn strong {
-  color: #1e40af;
+  color: var(--info);
 }
 
 @keyframes advPulse {
@@ -580,7 +580,7 @@ feels part of the table card rather than a second, dashed card. */
 .adv-btn-text {
   background: transparent;
   border: none;
-  color: #2563eb;
+  color: var(--info);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -589,7 +589,7 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 .adv-btn-text:hover {
-  color: #1d4ed8;
+  color: var(--info);
 }
 
 /* 7 Tabs Bar */
@@ -632,13 +632,13 @@ feels part of the table card rather than a second, dashed card. */
 
 .adv-tab-btn.is-active {
   background: #1e40af;
-  color: #ffffff;
+  color: var(--text-on-dark);
   box-shadow: 0 3px 10px rgba(30, 64, 175, 0.25);
 }
 
 .adv-tab-btn.is-active .adv-tab-count {
   background: rgba(255, 255, 255, 0.22);
-  color: #ffffff;
+  color: var(--text-on-dark);
 }
 
 .adv-tab-count {
@@ -784,7 +784,7 @@ feels part of the table card rather than a second, dashed card. */
 
 .adv-view-btn.is-selected {
   background: var(--surface, var(--surface));
-  color: #2563eb;
+  color: var(--info);
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
 }
 
@@ -810,7 +810,7 @@ feels part of the table card rather than a second, dashed card. */
   gap: 6px;
   padding: 3px 10px;
   background: var(--brand-soft);
-  color: #1d4ed8;
+  color: var(--info);
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
@@ -819,7 +819,7 @@ feels part of the table card rather than a second, dashed card. */
 .adv-filter-chip button {
   background: transparent;
   border: none;
-  color: #1d4ed8;
+  color: var(--info);
   cursor: pointer;
   font-size: 14px;
   font-weight: bold;
@@ -839,7 +839,7 @@ feels part of the table card rather than a second, dashed card. */
   border: 1px solid var(--border, var(--border));
   border-radius: 14px;
   overflow: hidden;
-  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+  box-shadow: var(--shadow-sm);
   transition: all 0.2s ease;
   min-height: 280px;
   min-width: 0;
@@ -848,7 +848,7 @@ feels part of the table card rather than a second, dashed card. */
 
 .adv-book-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--shadow-sm);
   border-color: #93c5fd;
 }
 
@@ -860,7 +860,7 @@ feels part of the table card rather than a second, dashed card. */
   position: relative;
   padding: 16px 12px;
   box-sizing: border-box;
-  color: #ffffff;
+  color: var(--text-on-dark);
   overflow: hidden;
   box-shadow: inset -5px 0 10px rgba(0, 0, 0, 0.25);
 }
@@ -871,7 +871,7 @@ feels part of the table card rather than a second, dashed card. */
   bottom: 0;
   left: 0;
   width: 8px;
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--surface);
 }
 
 .adv-book-card__cover-content {
@@ -887,7 +887,7 @@ feels part of the table card rather than a second, dashed card. */
   font-size: 10px;
   font-weight: 800;
   padding: 2px 6px;
-  background: rgba(255, 255, 255, 0.25);
+  background: var(--surface);
   border-radius: 4px;
   align-self: flex-start;
   letter-spacing: 0.05em;
@@ -960,12 +960,12 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 .adv-stock-badge--avail {
-  background: #ecfdf5;
+  background: var(--success-soft);
   color: var(--success);
 }
 
 .adv-stock-badge--low {
-  background: #fffbeb;
+  background: var(--warning-soft);
   color: var(--warning);
 }
 
@@ -989,7 +989,7 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 .adv-book-card__title:hover {
-  color: #2563eb;
+  color: var(--info);
 }
 
 .adv-book-card__author {
@@ -1023,7 +1023,7 @@ feels part of the table card rather than a second, dashed card. */
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: #2563eb;
+  color: var(--info);
   font-weight: 600;
 }
 
@@ -1073,7 +1073,7 @@ feels part of the table card rather than a second, dashed card. */
   min-width: 0;
   box-sizing: border-box;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--shadow-sm);
 }
 
 .adv-table-responsive {
@@ -1125,8 +1125,8 @@ feels part of the table card rather than a second, dashed card. */
 
 .adv-table th {
   padding: 12px 14px;
-  background: var(--surface-soft, var(--surface-soft));
-  color: var(--text-secondary, var(--text-secondary));
+  background: var(--table-head);
+  color: var(--text-secondary);
   font-size: 11.5px;
   font-weight: 700;
   text-transform: uppercase;
@@ -1148,7 +1148,7 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 .adv-row--warn {
-  background: #fffbeb !important;
+  background: var(--warning-soft) !important;
 }
 
 .adv-table-book {
@@ -1172,7 +1172,7 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 .adv-table-book__title:hover {
-  color: #2563eb;
+  color: var(--info);
 }
 
 .adv-table-actions {
@@ -1193,17 +1193,17 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 .adv-status-pill--green {
-  background: #ecfdf5;
+  background: var(--success-soft);
   color: var(--success);
 }
 
 .adv-status-pill--blue {
   background: var(--brand-soft);
-  color: #1d4ed8;
+  color: var(--info);
 }
 
 .adv-status-pill--orange {
-  background: #fffbeb;
+  background: var(--warning-soft);
   color: var(--warning);
 }
 
@@ -1223,12 +1223,12 @@ feels part of the table card rather than a second, dashed card. */
 
 .adv-condition-pill--good,
 .adv-condition-pill--mint {
-  background: #ecfdf5;
+  background: var(--success-soft);
   color: var(--success);
 }
 
 .adv-condition-pill--worn {
-  background: #fffbeb;
+  background: var(--warning-soft);
   color: var(--warning);
 }
 
@@ -1255,7 +1255,7 @@ feels part of the table card rather than a second, dashed card. */
   gap: 5px;
   font-size: 12px;
   font-weight: 500;
-  color: #1e40af;
+  color: var(--info);
 }
 
 .adv-role-badge {
@@ -1268,12 +1268,12 @@ feels part of the table card rather than a second, dashed card. */
 
 .adv-role-badge--student {
   background: var(--brand-soft);
-  color: #2563eb;
+  color: var(--info);
 }
 
 .adv-role-badge--faculty {
-  background: #f5f3ff;
-  color: #7c3aed;
+  background: var(--cms-violet-soft);
+  color: var(--cms-violet);
 }
 
 .adv-fine-tag {
@@ -1287,7 +1287,7 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 .adv-fine-tag--clear {
-  background: #ecfdf5;
+  background: var(--success-soft);
   color: var(--success);
 }
 
@@ -1322,7 +1322,7 @@ feels part of the table card rather than a second, dashed card. */
   display: inline-flex;
   padding: 3px 8px;
   background: var(--brand-soft);
-  color: #1d4ed8;
+  color: var(--info);
   border-radius: 6px;
   font-weight: 700;
 }
@@ -1360,7 +1360,7 @@ feels part of the table card rather than a second, dashed card. */
   border: 1px solid var(--border, var(--border));
   border-radius: 14px;
   padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--shadow-sm);
 }
 
 .adv-analytics-card h4 {
@@ -1425,7 +1425,7 @@ feels part of the table card rather than a second, dashed card. */
 .adv-dept-stat-box strong {
   font-size: 20px;
   font-weight: 800;
-  color: #1e40af;
+  color: var(--info);
 }
 
 .adv-dept-stat-box small {
@@ -1470,7 +1470,7 @@ feels part of the table card rather than a second, dashed card. */
   position: fixed;
   inset: 0;
   z-index: 1000;
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--overlay);
   backdrop-filter: blur(4px);
   display: grid;
   place-items: center;
@@ -1482,7 +1482,7 @@ feels part of the table card rather than a second, dashed card. */
 .adv-modal {
   background: var(--surface, var(--surface));
   border-radius: 16px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-md);
   width: 100%;
   max-height: 90vh;
   display: flex;
@@ -1621,7 +1621,7 @@ feels part of the table card rather than a second, dashed card. */
   grid-column: 1 / -1;
   padding: 10px 14px;
   background: var(--cms-red-soft);
-  border: 1px solid #fecaca;
+  border: 1px solid var(--danger-border);
   color: var(--danger);
   border-radius: 8px;
   font-size: 12.5px;
@@ -1642,7 +1642,7 @@ feels part of the table card rather than a second, dashed card. */
   display: flex;
   position: relative;
   padding: 16px 12px;
-  color: #ffffff;
+  color: var(--text-on-dark);
   overflow: hidden;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
 }
@@ -1826,15 +1826,15 @@ feels part of the table card rather than a second, dashed card. */
 }
 .mew-button svg { width: 17px; height: 17px; flex-shrink: 0; }
 .mew-button--primary {
-  background: var(--brand, var(--brand));
+  background: var(--brand-solid);
   border-color: var(--brand, var(--brand));
-  color: #fff;
+  color: var(--text-on-dark);
 }
 .mew-button--primary:hover:not(:disabled) { background: var(--brand-hover, var(--brand-hover)); border-color: var(--brand-hover, var(--brand-hover)); }
 .mew-button:not(.mew-button--primary):not(.mew-btn-delete-confirm):hover:not(:disabled) { background: var(--surface-soft, var(--brand-soft)); border-color: var(--brand, var(--brand)); }
 .mew-button:focus-visible { outline: 2px solid var(--brand, var(--brand)); outline-offset: 3px; }
 .mew-button:disabled { opacity: .55; cursor: not-allowed; }
-.mew-form-error{flex:1;flex-basis:100%;margin:0;color:#b42318;font-size:12px;line-height:1.5}
+.mew-form-error{flex:1;flex-basis:100%;margin:0;color:var(--danger);font-size:12px;line-height:1.5}
 .mew-workspace {
   display: grid;
   gap: 20px;
@@ -1873,13 +1873,13 @@ feels part of the table card rather than a second, dashed card. */
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-sm);
   transition: transform 0.16s ease, box-shadow 0.16s ease;
 }
 
 .mew-kpi-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-sm);
 }
 
 .mew-kpi-icon {
@@ -1895,9 +1895,9 @@ feels part of the table card rather than a second, dashed card. */
   flex-shrink: 0;
 }
 
-.mew-kpi-icon--blue { background: #e0f2fe; color: #0284c7; }
-.mew-kpi-icon--purple { background: #f3e8ff; color: #9333ea; }
-.mew-kpi-icon--emerald { background: var(--cms-green-soft); color: #16a34a; }
+.mew-kpi-icon--blue { background: var(--info-soft); color: var(--info); }
+.mew-kpi-icon--purple { background: var(--cms-violet-soft); color: #9333ea; }
+.mew-kpi-icon--emerald { background: var(--cms-green-soft); color: var(--success); }
 .mew-kpi-icon--amber { background: var(--cms-amber-soft); color: var(--warning); }
 
 .mew-kpi-info {
@@ -1966,8 +1966,8 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 .mew-nav button.active {
-  background: var(--brand);
-  color: #ffffff;
+  background: var(--brand-solid);
+  color: var(--text-on-dark);
   box-shadow: 0 2px 6px rgba(29, 104, 189, 0.28);
 }
 
@@ -1987,7 +1987,7 @@ feels part of the table card rather than a second, dashed card. */
 
 .mew-nav button.active .mew-badge-count {
   background: rgba(255, 255, 255, 0.25);
-  color: #ffffff;
+  color: var(--text-on-dark);
 }
 
 /* Filters & Toolbar */
@@ -2106,7 +2106,7 @@ feels part of the table card rather than a second, dashed card. */
 .mew-card:hover {
   transform: translateY(-2px);
   border-color: var(--brand);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-sm);
 }
 
 .mew-card-header {
@@ -2252,20 +2252,20 @@ feels part of the table card rather than a second, dashed card. */
   font-weight: 600;
 }
 
-.mew-status--upcoming { background: var(--brand-soft); color: #1d4ed8; border: 1px solid #bfdbfe; }
-.mew-status--live { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
-.mew-status--completed { background: #f3f4f6; color: #4b5563; border: 1px solid #e5e7eb; }
-.mew-status--cancelled { background: var(--cms-red-soft); color: #b91c1c; border: 1px solid #fecaca; }
+.mew-status--upcoming { background: var(--brand-soft); color: var(--info); border: 1px solid var(--info-border); }
+.mew-status--live { background: var(--success-soft); color: var(--success); border: 1px solid var(--success-border); }
+.mew-status--completed { background: #f3f4f6; color: #4b5563; border: 1px solid var(--border); }
+.mew-status--cancelled { background: var(--cms-red-soft); color: var(--danger); border: 1px solid var(--danger-border); }
 
-.mew-status--confirmed { background: #ecfdf5; color: #047857; }
-.mew-status--waitlisted { background: #fffbeb; color: #b45309; }
-.mew-status--present { background: #ecfdf5; color: #047857; }
-.mew-status--absent { background: var(--cms-red-soft); color: #b91c1c; }
-.mew-status--late { background: #fffbeb; color: #b45309; }
+.mew-status--confirmed { background: var(--success-soft); color: var(--success); }
+.mew-status--waitlisted { background: var(--warning-soft); color: var(--warning); }
+.mew-status--present { background: var(--success-soft); color: var(--success); }
+.mew-status--absent { background: var(--cms-red-soft); color: var(--danger); }
+.mew-status--late { background: var(--warning-soft); color: var(--warning); }
 
 .mew-priority--high { color: var(--danger); font-weight: 700; }
 .mew-priority--medium { color: var(--warning); font-weight: 600; }
-.mew-priority--low { color: #16a34a; font-weight: 500; }
+.mew-priority--low { color: var(--success); font-weight: 500; }
 
 /* Table View */
 .mew-table-wrapper {
@@ -2273,7 +2273,7 @@ feels part of the table card rather than a second, dashed card. */
   border: 1px solid var(--border);
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-sm);
 }
 
 .mew-table-scroll {
@@ -2289,7 +2289,7 @@ feels part of the table card rather than a second, dashed card. */
 
 .mew-table th {
   padding: 12px 16px;
-  background: var(--surface-soft);
+  background: var(--table-head);
   color: var(--text-secondary);
   font-weight: 600;
   border-bottom: 1px solid var(--border);
@@ -2360,35 +2360,35 @@ feels part of the table card rather than a second, dashed card. */
 /* Delete / Danger action icon - Soft Coral / Red theme from ERP standard */
 .mew-btn-icon--danger,
 .mew-btn-icon.action-delete {
-  color: #B91C1C !important;
+  color: var(--danger) !important;
   background: var(--cms-red-soft) !important;
-  border: 1px solid #FECACA !important;
+  border: 1px solid var(--danger-border) !important;
 }
 
 .mew-btn-icon--danger:hover,
 .mew-btn-icon.action-delete:hover {
-  background: #FECACA !important;
+  background: var(--danger-soft) !important;
   border-color: var(--danger) !important;
-  color: #991B1B !important;
+  color: var(--danger) !important;
 }
 
 .mew-btn-icon--danger svg,
 .mew-btn-icon.action-delete svg {
-  color: #B91C1C !important;
-  stroke: #B91C1C !important;
+  color: var(--danger) !important;
+  stroke: var(--danger) !important;
 }
 
 .mew-btn-icon--danger:hover svg,
 .mew-btn-icon.action-delete:hover svg {
-  color: #991B1B !important;
-  stroke: #991B1B !important;
+  color: var(--danger) !important;
+  stroke: var(--danger) !important;
 }
 
 /* Modals */
 .mew-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.55);
+  background: var(--overlay);
   backdrop-filter: blur(3px);
   z-index: 1000;
   display: flex;
@@ -2404,7 +2404,7 @@ feels part of the table card rather than a second, dashed card. */
   width: min(100%, 620px);
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.22);
+  box-shadow: var(--shadow-md);
   display: flex;
   flex-direction: column;
 }
@@ -2538,7 +2538,7 @@ feels part of the table card rather than a second, dashed card. */
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 14px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.22);
+  box-shadow: var(--shadow-md);
 }
 
 .mew-delete-icon {
@@ -2576,9 +2576,9 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 .mew-btn-delete-confirm {
-  background: var(--danger) !important;
+  background: var(--danger-solid) !important;
   border-color: var(--danger) !important;
-  color: #ffffff !important;
+  color: var(--text-on-dark) !important;
   font-weight: 600;
 }
 
@@ -2651,9 +2651,9 @@ feels part of the table card rather than a second, dashed card. */
 
 /* Present Selected */
 .mew-radio-chip--present.is-selected {
-  background: #ecfdf5;
-  border-color: #a7f3d0;
-  color: #047857;
+  background: var(--success-soft);
+  border-color: var(--success-border);
+  color: var(--success);
 }
 .mew-radio-chip--present.is-selected .mew-radio-circle {
   border-color: var(--success);
@@ -2665,8 +2665,8 @@ feels part of the table card rather than a second, dashed card. */
 /* Absent Selected */
 .mew-radio-chip--absent.is-selected {
   background: var(--cms-red-soft);
-  border-color: #fecaca;
-  color: #b91c1c;
+  border-color: var(--danger-border);
+  color: var(--danger);
 }
 .mew-radio-chip--absent.is-selected .mew-radio-circle {
   border-color: var(--danger);
@@ -2677,9 +2677,9 @@ feels part of the table card rather than a second, dashed card. */
 
 /* Late Selected */
 .mew-radio-chip--late.is-selected {
-  background: #fffbeb;
-  border-color: #fde68a;
-  color: #b45309;
+  background: var(--warning-soft);
+  border-color: var(--warning-border);
+  color: var(--warning);
 }
 .mew-radio-chip--late.is-selected .mew-radio-circle {
   border-color: #f59e0b;
@@ -2689,19 +2689,19 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 /* Consolidated MeetingsEventsCalendar.css */
-.mew-calendar{background:var(--surface,#fff);border:1px solid var(--border,#e5e7eb);border-radius:14px;overflow:hidden;min-width:0}.mew-calendar__toolbar{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 18px;border-bottom:1px solid var(--border,#e5e7eb);flex-wrap:wrap}.mew-calendar__period,.mew-calendar__controls,.mew-calendar__views,.mew-calendar__quick-actions,.mew-calendar__quick-actions>div{display:flex;align-items:center;gap:8px}.mew-calendar__period button,.mew-calendar__views button,.mew-calendar__quick-actions button,.mew-calendar__agenda-item>button{border:1px solid var(--border,#dce3ec);background:var(--surface,#fff);color:var(--text-primary,#26364a);border-radius:7px;padding:8px 10px;font:inherit;cursor:pointer}.mew-calendar__period h2{font-size:18px;margin:0 0 0 8px}.mew-calendar__period .mew-calendar__today{font-weight:700}.mew-calendar__controls{flex-wrap:wrap}.mew-calendar__date{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary,#667085)}.mew-calendar__date input,.mew-calendar__date select{height:34px;border:1px solid var(--border,#dce3ec);border-radius:7px;padding:0 8px;background:var(--surface,#fff);color:inherit}.mew-calendar__views{background:#f3f6fa;padding:3px;border-radius:8px}.mew-calendar__views button{border:0;background:transparent;padding:7px 9px;font-size:12px}.mew-calendar__views button.active{background:#fff;box-shadow:0 1px 4px #182b451c;color:var(--brand,var(--brand));font-weight:700}.mew-calendar__quick-actions{justify-content:space-between;padding:10px 18px;border-bottom:1px solid var(--border,#e5e7eb);font-size:12px;color:var(--text-secondary,#667085)}.mew-calendar__quick-actions>span{display:flex;align-items:center;gap:7px}.mew-calendar__quick-actions button{display:inline-flex;align-items:center;gap:5px;font-size:12px}.mew-calendar__legend-dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-left:8px}.mew-calendar__legend-dot.meeting{background:#3b82f6}.mew-calendar__legend-dot.event{background:#8b5cf6}.mew-calendar__layout{display:grid;grid-template-columns:minmax(0,1fr) 310px;min-height:620px}.mew-calendar__main{min-width:0;overflow:auto}.mew-calendar__month-grid{display:grid;grid-template-columns:repeat(7,minmax(105px,1fr));min-width:735px}.mew-calendar__weekday{text-align:center;padding:10px 4px;font-size:11px;font-weight:750;color:var(--text-secondary,#667085);border-bottom:1px solid var(--border,#e5e7eb)}.mew-calendar__day{appearance:none;text-align:left;min-height:105px;padding:6px;border:0;border-right:1px solid var(--border,#edf0f3);border-bottom:1px solid var(--border,#edf0f3);background:transparent;color:inherit;cursor:pointer;overflow:hidden}.mew-calendar__day:hover,.mew-calendar__day.selected{background:#f4f8ff}.mew-calendar__day.outside{background:#fafbfc;color:#a0a8b3}.mew-calendar__day.today .mew-calendar__day-number{background:var(--brand,var(--brand));color:#fff}.mew-calendar__day-number{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;font-size:12px;font-weight:650}.mew-calendar__day-items{display:grid;gap:3px;margin-top:4px}.mew-calendar__event{display:block;padding:3px 4px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10px}.mew-calendar__event.meeting,.mew-calendar__timed-event.meeting,.mew-calendar__agenda-item.meeting{--calendar-color:#2563eb;--calendar-bg:#eff6ff}.mew-calendar__event.event,.mew-calendar__timed-event.event,.mew-calendar__agenda-item.event{--calendar-color:#7c3aed;--calendar-bg:#f5f3ff}.mew-calendar__event{background:var(--calendar-bg);color:var(--calendar-color)}.mew-calendar__event b{font-size:9px}.mew-calendar__day-items small{font-size:9px;color:var(--text-secondary,#667085)}.mew-calendar__daily{border-left:1px solid var(--border,#e5e7eb);display:flex;flex-direction:column;min-width:0}.mew-calendar__daily>header{display:flex;justify-content:space-between;align-items:center;padding:17px 15px;border-bottom:1px solid var(--border,#e5e7eb);color:var(--brand,var(--brand))}.mew-calendar__daily>header small{font-size:9px;letter-spacing:.08em;font-weight:800}.mew-calendar__daily h3{color:var(--text-primary,#26364a);font-size:14px;margin:5px 0 0}.mew-calendar__daily-list{padding:8px 12px;display:grid;align-content:start;gap:8px;flex:1}.mew-calendar__daily>footer{padding:12px 15px;border-top:1px solid var(--border,#e5e7eb);font-size:12px;color:var(--text-secondary,#667085)}.mew-calendar__agenda-item{display:flex;align-items:flex-start;gap:12px;padding:12px;border:1px solid var(--border,#e5e7eb);border-left:3px solid var(--calendar-color);border-radius:9px;background:var(--calendar-bg);min-width:0}.mew-calendar__agenda-date{display:grid;gap:4px;min-width:60px;color:var(--calendar-color);font-size:11px}.mew-calendar__agenda-date span{font-size:10px;color:var(--text-secondary,#667085)}.mew-calendar__agenda-content{flex:1;min-width:0}.mew-calendar__kind{text-transform:capitalize;font-size:9px;font-weight:800;color:var(--calendar-color)}.mew-calendar__agenda-content h4{font-size:13px;margin:3px 0 6px;color:var(--text-primary,#26364a)}.mew-calendar__agenda-content p,.mew-calendar__agenda-content small{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-secondary,#667085);margin:3px 0}.mew-calendar__agenda-item>button{white-space:nowrap;font-size:10px}.mew-calendar__empty{margin:0;padding:18px 10px;color:var(--text-secondary,#667085);font-size:12px;text-align:center}.mew-calendar__agenda{padding:14px;display:grid;gap:9px}.mew-calendar__time-grid{display:grid;grid-template-columns:repeat(7,minmax(170px,1fr));min-width:1190px;overflow:auto}.mew-calendar__time-grid.day{grid-template-columns:minmax(260px,1fr);min-width:0}.mew-calendar__time-day{border-right:1px solid var(--border,#e5e7eb)}.mew-calendar__time-day>button{width:100%;padding:12px;border:0;border-bottom:1px solid var(--border,#e5e7eb);background:var(--surface-soft);font-weight:700;color:inherit;cursor:pointer}.mew-calendar__time-day>button.selected{color:var(--brand,var(--brand))}.mew-calendar__hour{display:grid;grid-template-columns:45px 1fr;min-height:60px;border-bottom:1px solid #edf0f3}.mew-calendar__hour>span{padding:6px;font-size:10px;color:var(--text-secondary,#667085)}.mew-calendar__hour>div{padding:3px}.mew-calendar__timed-event{display:grid;text-align:left;gap:4px;width:100%;padding:7px;border:0;border-left:3px solid var(--calendar-color);border-radius:4px;background:var(--calendar-bg);color:var(--text-primary,#26364a);cursor:pointer}.mew-calendar__timed-event strong{font-size:10px}.mew-calendar__timed-event span{font-size:9px;color:var(--text-secondary,#667085)}
+.mew-calendar{background:var(--surface,#fff);border:1px solid var(--border,#e5e7eb);border-radius:14px;overflow:hidden;min-width:0}.mew-calendar__toolbar{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 18px;border-bottom:1px solid var(--border,#e5e7eb);flex-wrap:wrap}.mew-calendar__period,.mew-calendar__controls,.mew-calendar__views,.mew-calendar__quick-actions,.mew-calendar__quick-actions>div{display:flex;align-items:center;gap:8px}.mew-calendar__period button,.mew-calendar__views button,.mew-calendar__quick-actions button,.mew-calendar__agenda-item>button{border:1px solid var(--border,#dce3ec);background:var(--surface,#fff);color:var(--text-primary,#26364a);border-radius:7px;padding:8px 10px;font:inherit;cursor:pointer}.mew-calendar__period h2{font-size:18px;margin:0 0 0 8px}.mew-calendar__period .mew-calendar__today{font-weight:700}.mew-calendar__controls{flex-wrap:wrap}.mew-calendar__date{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary,#667085)}.mew-calendar__date input,.mew-calendar__date select{height:34px;border:1px solid var(--border,#dce3ec);border-radius:7px;padding:0 8px;background:var(--surface,#fff);color:inherit}.mew-calendar__views{background:#f3f6fa;padding:3px;border-radius:8px}.mew-calendar__views button{border:0;background:transparent;padding:7px 9px;font-size:12px}.mew-calendar__views button.active{background:var(--surface);box-shadow:0 1px 4px #182b451c;color:var(--brand,var(--brand));font-weight:700}.mew-calendar__quick-actions{justify-content:space-between;padding:10px 18px;border-bottom:1px solid var(--border,#e5e7eb);font-size:12px;color:var(--text-secondary,#667085)}.mew-calendar__quick-actions>span{display:flex;align-items:center;gap:7px}.mew-calendar__quick-actions button{display:inline-flex;align-items:center;gap:5px;font-size:12px}.mew-calendar__legend-dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-left:8px}.mew-calendar__legend-dot.meeting{background:#3b82f6}.mew-calendar__legend-dot.event{background:#8b5cf6}.mew-calendar__layout{display:grid;grid-template-columns:minmax(0,1fr) 310px;min-height:620px}.mew-calendar__main{min-width:0;overflow:auto}.mew-calendar__month-grid{display:grid;grid-template-columns:repeat(7,minmax(105px,1fr));min-width:735px}.mew-calendar__weekday{text-align:center;padding:10px 4px;font-size:11px;font-weight:750;color:var(--text-secondary,#667085);border-bottom:1px solid var(--border,#e5e7eb)}.mew-calendar__day{appearance:none;text-align:left;min-height:105px;padding:6px;border:0;border-right:1px solid var(--border,#edf0f3);border-bottom:1px solid var(--border,#edf0f3);background:transparent;color:inherit;cursor:pointer;overflow:hidden}.mew-calendar__day:hover,.mew-calendar__day.selected{background:#f4f8ff}.mew-calendar__day.outside{background:#fafbfc;color:#a0a8b3}.mew-calendar__day.today .mew-calendar__day-number{background:var(--brand-solid);color:var(--text-on-dark)}.mew-calendar__day-number{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;font-size:12px;font-weight:650}.mew-calendar__day-items{display:grid;gap:3px;margin-top:4px}.mew-calendar__event{display:block;padding:3px 4px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10px}.mew-calendar__event.meeting,.mew-calendar__timed-event.meeting,.mew-calendar__agenda-item.meeting{--calendar-color:#2563eb;--calendar-bg:#eff6ff}.mew-calendar__event.event,.mew-calendar__timed-event.event,.mew-calendar__agenda-item.event{--calendar-color:#7c3aed;--calendar-bg:#f5f3ff}.mew-calendar__event{background:var(--calendar-bg);color:var(--calendar-color)}.mew-calendar__event b{font-size:9px}.mew-calendar__day-items small{font-size:9px;color:var(--text-secondary,#667085)}.mew-calendar__daily{border-left:1px solid var(--border,#e5e7eb);display:flex;flex-direction:column;min-width:0}.mew-calendar__daily>header{display:flex;justify-content:space-between;align-items:center;padding:17px 15px;border-bottom:1px solid var(--border,#e5e7eb);color:var(--brand,var(--brand))}.mew-calendar__daily>header small{font-size:9px;letter-spacing:.08em;font-weight:800}.mew-calendar__daily h3{color:var(--text-primary,#26364a);font-size:14px;margin:5px 0 0}.mew-calendar__daily-list{padding:8px 12px;display:grid;align-content:start;gap:8px;flex:1}.mew-calendar__daily>footer{padding:12px 15px;border-top:1px solid var(--border,#e5e7eb);font-size:12px;color:var(--text-secondary,#667085)}.mew-calendar__agenda-item{display:flex;align-items:flex-start;gap:12px;padding:12px;border:1px solid var(--border,#e5e7eb);border-left:3px solid var(--calendar-color);border-radius:9px;background:var(--calendar-bg);min-width:0}.mew-calendar__agenda-date{display:grid;gap:4px;min-width:60px;color:var(--calendar-color);font-size:11px}.mew-calendar__agenda-date span{font-size:10px;color:var(--text-secondary,#667085)}.mew-calendar__agenda-content{flex:1;min-width:0}.mew-calendar__kind{text-transform:capitalize;font-size:9px;font-weight:800;color:var(--calendar-color)}.mew-calendar__agenda-content h4{font-size:13px;margin:3px 0 6px;color:var(--text-primary,#26364a)}.mew-calendar__agenda-content p,.mew-calendar__agenda-content small{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-secondary,#667085);margin:3px 0}.mew-calendar__agenda-item>button{white-space:nowrap;font-size:10px}.mew-calendar__empty{margin:0;padding:18px 10px;color:var(--text-secondary,#667085);font-size:12px;text-align:center}.mew-calendar__agenda{padding:14px;display:grid;gap:9px}.mew-calendar__time-grid{display:grid;grid-template-columns:repeat(7,minmax(170px,1fr));min-width:1190px;overflow:auto}.mew-calendar__time-grid.day{grid-template-columns:minmax(260px,1fr);min-width:0}.mew-calendar__time-day{border-right:1px solid var(--border,#e5e7eb)}.mew-calendar__time-day>button{width:100%;padding:12px;border:0;border-bottom:1px solid var(--border,#e5e7eb);background:var(--surface-soft);font-weight:700;color:inherit;cursor:pointer}.mew-calendar__time-day>button.selected{color:var(--brand,var(--brand))}.mew-calendar__hour{display:grid;grid-template-columns:45px 1fr;min-height:60px;border-bottom:1px solid var(--border)}.mew-calendar__hour>span{padding:6px;font-size:10px;color:var(--text-secondary,#667085)}.mew-calendar__hour>div{padding:3px}.mew-calendar__timed-event{display:grid;text-align:left;gap:4px;width:100%;padding:7px;border:0;border-left:3px solid var(--calendar-color);border-radius:4px;background:var(--calendar-bg);color:var(--text-primary,#26364a);cursor:pointer}.mew-calendar__timed-event strong{font-size:10px}.mew-calendar__timed-event span{font-size:9px;color:var(--text-secondary,#667085)}
 @media(max-width:1000px){.mew-calendar__layout{grid-template-columns:minmax(0,1fr)}.mew-calendar__daily{border:0;border-top:1px solid var(--border,#e5e7eb)}.mew-calendar__daily-list{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}.mew-calendar__toolbar{align-items:flex-start}.mew-calendar__controls{justify-content:flex-start}}
 @media(max-width:600px){.mew-calendar__toolbar{padding:12px}.mew-calendar__period{flex-wrap:wrap}.mew-calendar__period h2{font-size:15px}.mew-calendar__controls{width:100%}.mew-calendar__date{width:100%;justify-content:space-between}.mew-calendar__quick-actions{align-items:flex-start;gap:9px;flex-direction:column}.mew-calendar__quick-actions>div{width:100%}.mew-calendar__quick-actions button{flex:1;justify-content:center}.mew-calendar__views{width:100%;justify-content:space-between}.mew-calendar__views button{flex:1;padding:7px 3px}.mew-calendar__agenda-item{flex-wrap:wrap}.mew-calendar__agenda-item>button{margin-left:auto}}
 .mew-calendar__details .mew-modal-header h2{margin:5px 0 0;font-size:19px}.mew-calendar__details .mew-modal-body dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.mew-calendar__details .mew-modal-body dl>div{display:grid;gap:4px}.mew-calendar__details dt{font-size:10px;color:var(--text-secondary,#667085);font-weight:700}.mew-calendar__details dd{margin:0;font-size:13px;color:var(--text-primary,#26364a)}
 .mew-calendar__main{overflow:visible}.mew-calendar__month-grid{min-width:0;grid-template-columns:repeat(7,minmax(0,1fr))}.mew-calendar__time-grid{min-width:0;grid-template-columns:repeat(7,minmax(0,1fr));overflow:visible}.mew-calendar__time-grid.day{grid-template-columns:minmax(0,1fr)}.mew-calendar__event{min-width:0}.mew-calendar__time-day{min-width:0}
 .mew-calendar__quick-actions-right,.mew-calendar__create-actions{display:flex;align-items:center;gap:8px}.mew-calendar__quick-actions-right{margin-left:auto}.mew-calendar__quick-actions .mew-calendar__views button{flex:initial}.mew-calendar__filter-label{font-size:13px;font-weight:650;color:var(--text-secondary,#667085)}
 @media(max-width:700px){.mew-calendar__time-grid:not(.day){grid-template-columns:minmax(0,1fr)}.mew-calendar__day{min-height:76px;padding:3px}.mew-calendar__event{font-size:8px;padding:2px}.mew-calendar__event b{display:none}}
-.mew-calendar__quick-actions .mew-action-meeting,.grm-button.mew-action-meeting,.mew-calendar__quick-actions .mew-action-event,.grm-button.mew-action-event{background:#2563eb;border-color:#2563eb;color:#fff}.mew-calendar__quick-actions .mew-action-meeting:hover,.grm-button.mew-action-meeting:hover,.mew-calendar__quick-actions .mew-action-event:hover,.grm-button.mew-action-event:hover{background:#1d4ed8;border-color:#1d4ed8;color:#fff}
+.mew-calendar__quick-actions .mew-action-meeting,.grm-button.mew-action-meeting,.mew-calendar__quick-actions .mew-action-event,.grm-button.mew-action-event{background:#2563eb;border-color:#2563eb;color:var(--text-on-dark)}.mew-calendar__quick-actions .mew-action-meeting:hover,.grm-button.mew-action-meeting:hover,.mew-calendar__quick-actions .mew-action-event:hover,.grm-button.mew-action-event:hover{background:#1d4ed8;border-color:#1d4ed8;color:var(--text-on-dark)}
 .mew-calendar__toolbar{padding:11px 14px;gap:10px}.mew-calendar__period,.mew-calendar__quick-actions-right,.mew-calendar__create-actions{gap:6px}.mew-calendar__period button{padding:6px 8px}.mew-calendar__period h2{font-size:16px}.mew-calendar__quick-actions{padding:8px 14px}.mew-calendar__quick-actions button{padding:6px 9px}.mew-calendar__layout{min-height:0}.mew-calendar__weekday{padding:7px 3px}.mew-calendar__day{min-height:88px;padding:5px}.mew-calendar__daily>header{padding:12px}.mew-calendar__daily-list{padding:7px 9px;gap:6px}.mew-calendar__agenda-item{padding:9px;gap:9px}.mew-calendar__agenda{padding:10px;gap:7px}
 .mew-calendar__quick-actions{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)}.mew-calendar__quick-actions>span{grid-column:1;justify-self:start}.mew-calendar__quick-actions>.mew-calendar__views{grid-column:2;justify-self:center}.mew-calendar__quick-actions>.mew-calendar__quick-actions-right{grid-column:3;justify-self:end;margin-left:0}
 @media(max-width:600px){.mew-calendar__toolbar{padding:9px 10px}.mew-calendar__quick-actions{padding:7px 10px}.mew-calendar__day{min-height:72px;padding:3px}.mew-calendar__daily-list{padding:6px}.mew-calendar__agenda{padding:8px}}
 @media(max-width:600px){.mew-calendar__quick-actions{grid-template-columns:1fr;justify-items:stretch}.mew-calendar__quick-actions>span,.mew-calendar__quick-actions>.mew-calendar__views,.mew-calendar__quick-actions>.mew-calendar__quick-actions-right{grid-column:1;justify-self:stretch;width:100%}.mew-calendar__quick-actions>.mew-calendar__views{justify-content:center}.mew-calendar__quick-actions>.mew-calendar__quick-actions-right{justify-content:flex-end}.mew-calendar__create-actions{width:100%}}
-.mew-workspace{--mew-action-blue:#2563eb;--mew-action-blue-hover:#1d4ed8}.mew-calendar__quick-actions .mew-action-event,.grm-button.mew-action-event{background:var(--mew-action-blue)!important;border-color:var(--mew-action-blue)!important;color:#fff!important}.mew-calendar__quick-actions .mew-action-event:hover,.grm-button.mew-action-event:hover{background:var(--mew-action-blue-hover)!important;border-color:var(--mew-action-blue-hover)!important;color:#fff!important}.mew-calendar .mew-calendar__filter-toggle,.mew-calendar .mew-calendar__filter-toggle:focus{height:40px!important;min-height:40px!important;padding:0 15px!important;gap:8px!important;border:1px solid #d4e3f3!important;border-radius:9px!important;background:#fff!important;color:#17375e!important;font-size:14px!important;font-weight:700!important;box-shadow:none!important}.mew-calendar .mew-calendar__filter-toggle:hover{background:#f4f8fc!important;border-color:#b9cee5!important;color:#17375e!important}.mew-calendar .mew-calendar__filter-toggle svg{width:16px;height:16px;color:#17375e!important}
+.mew-workspace{--mew-action-blue:#2563eb;--mew-action-blue-hover:#1d4ed8}.mew-calendar__quick-actions .mew-action-event,.grm-button.mew-action-event{background:var(--mew-action-blue)!important;border-color:var(--mew-action-blue)!important;color:var(--text-on-dark)!important}.mew-calendar__quick-actions .mew-action-event:hover,.grm-button.mew-action-event:hover{background:var(--mew-action-blue-hover)!important;border-color:var(--mew-action-blue-hover)!important;color:var(--text-on-dark)!important}.mew-calendar .mew-calendar__filter-toggle,.mew-calendar .mew-calendar__filter-toggle:focus{height:40px!important;min-height:40px!important;padding:0 15px!important;gap:8px!important;border:1px solid #d4e3f3!important;border-radius:9px!important;background:var(--surface)!important;color:#17375e!important;font-size:14px!important;font-weight:700!important;box-shadow:none!important}.mew-calendar .mew-calendar__filter-toggle:hover{background:#f4f8fc!important;border-color:#b9cee5!important;color:#17375e!important}.mew-calendar .mew-calendar__filter-toggle svg{width:16px;height:16px;color:#17375e!important}
 
 
 /* PlacementWorkspace.css */
@@ -2796,8 +2796,8 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 .plw-nav button.active .plw-badge-count {
-  background: #e0f2fe;
-  color: #0284c7;
+  background: var(--info-soft);
+  color: var(--info);
 }
 
 /* FilterPanel Integration */
@@ -2872,7 +2872,7 @@ feels part of the table card rather than a second, dashed card. */
 .plw-card:hover {
   transform: translateY(-2px);
   border-color: var(--brand, var(--brand));
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-sm);
 }
 
 .plw-card-header {
@@ -2898,7 +2898,7 @@ feels part of the table card rather than a second, dashed card. */
   font-size: 16px;
   font-weight: 800;
   background: linear-gradient(135deg, var(--brand), #3b82f6);
-  color: #ffffff;
+  color: var(--text-on-dark);
   flex-shrink: 0;
   box-shadow: 0 2px 6px rgba(23, 105, 194, 0.25);
 }
@@ -2932,9 +2932,9 @@ feels part of the table card rather than a second, dashed card. */
   border-radius: 8px;
   font-size: 13px;
   font-weight: 800;
-  background: #ecfdf5;
-  color: #047857;
-  border: 1px solid #a7f3d0;
+  background: var(--success-soft);
+  color: var(--success);
+  border: 1px solid var(--success-border);
   width: fit-content;
 }
 
@@ -3009,21 +3009,21 @@ feels part of the table card rather than a second, dashed card. */
 }
 
 .plw-tier--super-dream {
-  background: #f3e8ff;
+  background: var(--cms-violet-soft);
   color: #7e22ce;
   border: 1px solid #d8b4fe;
 }
 
 .plw-tier--dream {
   background: var(--brand-soft);
-  color: #1d4ed8;
-  border: 1px solid #bfdbfe;
+  color: var(--info);
+  border: 1px solid var(--info-border);
 }
 
 .plw-tier--core {
-  background: #ecfdf5;
-  color: #047857;
-  border: 1px solid #a7f3d0;
+  background: var(--success-soft);
+  color: var(--success);
+  border: 1px solid var(--success-border);
 }
 
 .plw-status-chip {
@@ -3036,17 +3036,17 @@ feels part of the table card rather than a second, dashed card. */
   font-weight: 600;
 }
 
-.plw-status--upcoming { background: var(--brand-soft); color: #1d4ed8; border: 1px solid #bfdbfe; }
-.plw-status--active { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
-.plw-status--completed { background: #f3f4f6; color: #4b5563; border: 1px solid #e5e7eb; }
-.plw-status--shortlisted { background: var(--cms-amber-soft); color: #b45309; border: 1px solid #fde68a; }
-.plw-status--interviewing { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
-.plw-status--selected { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
-.plw-status--rejected { background: var(--cms-red-soft); color: #b91c1c; border: 1px solid #fecaca; }
-.plw-status--accepted { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
-.plw-status--pending { background: var(--cms-amber-soft); color: #b45309; border: 1px solid #fde68a; }
-.plw-status--cleared { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
-.plw-status--scheduled { background: var(--brand-soft); color: #1d4ed8; border: 1px solid #bfdbfe; }
+.plw-status--upcoming { background: var(--brand-soft); color: var(--info); border: 1px solid var(--info-border); }
+.plw-status--active { background: var(--success-soft); color: var(--success); border: 1px solid var(--success-border); }
+.plw-status--completed { background: #f3f4f6; color: #4b5563; border: 1px solid var(--border); }
+.plw-status--shortlisted { background: var(--cms-amber-soft); color: var(--warning); border: 1px solid var(--warning-border); }
+.plw-status--interviewing { background: var(--info-soft); color: var(--info); border: 1px solid var(--info-border); }
+.plw-status--selected { background: var(--success-soft); color: var(--success); border: 1px solid var(--success-border); }
+.plw-status--rejected { background: var(--cms-red-soft); color: var(--danger); border: 1px solid var(--danger-border); }
+.plw-status--accepted { background: var(--success-soft); color: var(--success); border: 1px solid var(--success-border); }
+.plw-status--pending { background: var(--cms-amber-soft); color: var(--warning); border: 1px solid var(--warning-border); }
+.plw-status--cleared { background: var(--success-soft); color: var(--success); border: 1px solid var(--success-border); }
+.plw-status--scheduled { background: var(--brand-soft); color: var(--info); border: 1px solid var(--info-border); }
 
 /* Table Wrappers */
 .plw-table-wrap {
@@ -3054,7 +3054,7 @@ feels part of the table card rather than a second, dashed card. */
   border: 1px solid var(--border, var(--border));
   border-radius: 12px;
   overflow-x: auto;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-sm);
 }
 
 .plw-table {
@@ -3066,9 +3066,9 @@ feels part of the table card rather than a second, dashed card. */
 
 .plw-table th {
   padding: 12px 16px;
-  background: var(--surface-soft, var(--surface-soft));
+  background: var(--table-head);
   font-weight: 600;
-  color: var(--text-secondary, var(--text-secondary));
+  color: var(--text-secondary);
   border-bottom: 1px solid var(--border, var(--border));
   white-space: nowrap;
 }
@@ -3144,28 +3144,28 @@ feels part of the table card rather than a second, dashed card. */
 /* Delete / Danger action icon - Soft Coral Red Theme */
 .plw-btn-icon--danger,
 .plw-btn-icon.action-delete {
-  color: #b91c1c !important;
+  color: var(--danger) !important;
   background: var(--cms-red-soft) !important;
-  border: 1px solid #fecaca !important;
+  border: 1px solid var(--danger-border) !important;
 }
 
 .plw-btn-icon--danger:hover,
 .plw-btn-icon.action-delete:hover {
-  background: #fecaca !important;
+  background: var(--danger-soft) !important;
   border-color: var(--danger) !important;
-  color: #991b1b !important;
+  color: var(--danger) !important;
 }
 
 .plw-btn-icon--danger svg,
 .plw-btn-icon.action-delete svg {
-  color: #b91c1c !important;
-  stroke: #b91c1c !important;
+  color: var(--danger) !important;
+  stroke: var(--danger) !important;
 }
 
 .plw-btn-icon--danger:hover svg,
 .plw-btn-icon.action-delete:hover svg {
-  color: #991b1b !important;
-  stroke: #991b1b !important;
+  color: var(--danger) !important;
+  stroke: var(--danger) !important;
 }
 
 /* Analytics Tab Layout */
@@ -3189,7 +3189,7 @@ feels part of the table card rather than a second, dashed card. */
   display: flex;
   flex-direction: column;
   gap: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-sm);
 }
 
 .plw-panel-header {
@@ -3264,7 +3264,7 @@ feels part of the table card rather than a second, dashed card. */
 .plw-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.55);
+  background: var(--overlay);
   backdrop-filter: blur(3px);
   z-index: 1000;
   display: flex;
@@ -3280,7 +3280,7 @@ feels part of the table card rather than a second, dashed card. */
   width: min(100%, 640px);
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.22);
+  box-shadow: var(--shadow-md);
   display: flex;
   flex-direction: column;
 }
@@ -3389,10 +3389,10 @@ feels part of the table card rather than a second, dashed card. */
   gap: 10px;
   padding: 12px 16px;
   background: var(--brand-soft);
-  border: 1px solid #bfdbfe;
+  border: 1px solid var(--info-border);
   border-radius: 8px;
   font-size: 13px;
-  color: #1e40af;
+  color: var(--info);
 }
 
 /* ==========================================================================
@@ -3481,12 +3481,12 @@ feels part of the table card rather than a second, dashed card. */
 /* Scheduled (Blue) */
 .plw-radio-chip--scheduled:hover {
   background: var(--brand-soft);
-  color: #1d4ed8;
+  color: var(--info);
 }
 .plw-radio-chip--scheduled.is-selected {
   background: var(--brand-soft);
-  border-color: #bfdbfe;
-  color: #1d4ed8;
+  border-color: var(--info-border);
+  color: var(--info);
   font-weight: 700;
 }
 .plw-radio-chip--scheduled.is-selected .plw-radio-circle {
@@ -3499,14 +3499,14 @@ feels part of the table card rather than a second, dashed card. */
 /* Cleared / Accepted (Green) */
 .plw-radio-chip--cleared:hover,
 .plw-radio-chip--accepted:hover {
-  background: #ecfdf5;
-  color: #047857;
+  background: var(--success-soft);
+  color: var(--success);
 }
 .plw-radio-chip--cleared.is-selected,
 .plw-radio-chip--accepted.is-selected {
-  background: #ecfdf5;
-  border-color: #a7f3d0;
-  color: #047857;
+  background: var(--success-soft);
+  border-color: var(--success-border);
+  color: var(--success);
   font-weight: 700;
 }
 .plw-radio-chip--cleared.is-selected .plw-radio-circle,
@@ -3522,7 +3522,7 @@ feels part of the table card rather than a second, dashed card. */
 .plw-radio-chip--eliminated:hover,
 .plw-radio-chip--declined:hover {
   background: var(--cms-red-soft);
-  color: #b91c1c;
+  color: var(--danger);
 }
 .plw-radio-chip--eliminated:hover .plw-radio-circle,
 .plw-radio-chip--declined:hover .plw-radio-circle {
@@ -3531,8 +3531,8 @@ feels part of the table card rather than a second, dashed card. */
 .plw-radio-chip--eliminated.is-selected,
 .plw-radio-chip--declined.is-selected {
   background: var(--cms-red-soft);
-  border-color: #fca5a5;
-  color: #b91c1c;
+  border-color: var(--danger-border);
+  color: var(--danger);
   font-weight: 700;
 }
 .plw-radio-chip--eliminated.is-selected .plw-radio-circle,
@@ -3546,13 +3546,13 @@ feels part of the table card rather than a second, dashed card. */
 
 /* Pending (Amber) */
 .plw-radio-chip--pending:hover {
-  background: #fffbeb;
-  color: #b45309;
+  background: var(--warning-soft);
+  color: var(--warning);
 }
 .plw-radio-chip--pending.is-selected {
-  background: #fffbeb;
-  border-color: #fde68a;
-  color: #b45309;
+  background: var(--warning-soft);
+  border-color: var(--warning-border);
+  color: var(--warning);
   font-weight: 700;
 }
 .plw-radio-chip--pending.is-selected .plw-radio-circle {
@@ -3566,7 +3566,7 @@ feels part of the table card rather than a second, dashed card. */
 .mew-calendar__main .mew-calendar__time-grid{grid-template-columns:repeat(7,minmax(180px,1fr));min-width:1260px}
 .mew-calendar__main .mew-calendar__time-grid.day{grid-template-columns:minmax(280px,1fr);min-width:280px}
 .mew-calendar__time-grid .mew-calendar__time-day>button{position:sticky;top:0;z-index:2;height:44px;box-sizing:border-box;background:var(--surface-soft,var(--surface-soft))}
-.mew-calendar__time-grid .mew-calendar__time-day>button.selected{background:var(--brand,var(--brand));color:#fff}
+.mew-calendar__time-grid .mew-calendar__time-day>button.selected{background:var(--brand-solid);color:var(--text-on-dark)}
 .mew-calendar__time-grid .mew-calendar__hour{height:104px;min-height:104px;box-sizing:border-box;grid-template-columns:42px minmax(0,1fr);overflow:hidden}
 .mew-calendar__time-grid .mew-calendar__hour>div{min-width:0;overflow:auto;padding:5px;display:flex;flex-direction:column;gap:4px}
 .mew-calendar__time-grid .mew-calendar__timed-event{flex-shrink:0;min-width:0;padding:7px;line-height:1.4;overflow:hidden}

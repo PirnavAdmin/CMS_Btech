@@ -33,8 +33,8 @@
   vertical-align: middle !important;
   text-align: left;
   padding: 8px 14px !important;
-  background: var(--table-head, var(--brand)) !important;
-  color: #FFFFFF !important;
+  background: var(--table-head) !important;
+  color: var(--text-secondary) !important;
   font-size: 10px !important;
   font-weight: 700 !important;
   letter-spacing: 0.05em;
@@ -101,7 +101,7 @@
 
 .p-tabs button.active {
   background: var(--primary, var(--brand));
-  color: #FFFFFF;
+  color: var(--text-on-dark);
   box-shadow: 0 2px 6px rgba(23, 76, 136, 0.25);
 }
 
@@ -285,7 +285,7 @@
   padding: 18px 22px;
   background: linear-gradient(135deg, var(--cms-sidebar-bg) 0%, #554F75 100%);
   border-radius: 12px;
-  color: #ffffff;
+  color: var(--text-on-dark);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
 }
 
@@ -293,23 +293,23 @@
 :root:not([data-theme="dark"]) .p-drawer.promotion-review-drawer {
   border-color: var(--border) !important;
   background: var(--surface) !important;
-  box-shadow: 0 16px 40px rgba(16, 42, 76, 0.14) !important;
+  box-shadow: var(--shadow-md) !important;
 }
 :root:not([data-theme="dark"]) .promotion-review-drawer :is(.pr-modal-header, .pr-modal-footer) {
   background: var(--surface) !important;
   border-color: var(--border) !important;
 }
 :root:not([data-theme="dark"]) .promotion-review-drawer .pr-modal-body {
-  background: #F3F6FC !important;
+  background: var(--surface-soft) !important;
 }
 :root:not([data-theme="dark"]) .promotion-review-drawer .pr-banner {
   border: 1px solid var(--border) !important;
   background: linear-gradient(135deg, var(--brand) 0%, #1e3a8a 100%) !important;
-  color: #FFFFFF !important;
+  color: var(--text-on-dark) !important;
   box-shadow: none !important;
 }
 :root:not([data-theme="dark"]) .promotion-review-drawer :is(.pr-title, .pr-subtitle) {
-  color: #FFFFFF !important;
+  color: var(--text-on-dark) !important;
 }
 :root:not([data-theme="dark"]) .promotion-review-drawer .pr-avatar {
   border-color: var(--border) !important;
@@ -324,7 +324,7 @@
 :root:not([data-theme="dark"]) .promotion-review-drawer .pr-card {
   border-color: var(--border) !important;
   background: var(--surface) !important;
-  box-shadow: 0 1px 3px rgba(16, 42, 76, 0.05) !important;
+  box-shadow: var(--shadow-md) !important;
 }
 :root:not([data-theme="dark"]) .promotion-review-drawer .pr-card-header {
   border-color: var(--border) !important;
@@ -352,7 +352,7 @@
   justify-content: center;
   font-size: 20px;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--text-on-dark);
   flex-shrink: 0;
 }
 
@@ -378,7 +378,7 @@
   font-weight: 700;
   letter-spacing: 0.02em;
   background: rgba(255, 255, 255, 0.18);
-  color: #ffffff;
+  color: var(--text-on-dark);
 }
 
 .promotion-review-drawer .pr-badge-status {
@@ -390,20 +390,20 @@
 }
 
 .promotion-review-drawer .pr-badge-status.active {
-  background: var(--brand);
-  color: #ffffff;
+  background: var(--brand-solid);
+  color: var(--text-on-dark);
 }
 
 .promotion-review-drawer .pr-badge-status.inactive {
-  background: var(--danger);
-  color: #ffffff;
+  background: var(--danger-solid);
+  color: var(--text-on-dark);
 }
 
 .promotion-review-drawer .pr-title {
   margin: 0 0 3px;
   font-size: 19px;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--text-on-dark);
 }
 
 .promotion-review-drawer .pr-subtitle {
@@ -429,7 +429,7 @@
   border-radius: 10px;
   background: var(--surface, var(--surface));
   padding: 16px 18px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--shadow-md);
 }
 
 .promotion-review-drawer .pr-card-header {
@@ -501,7 +501,7 @@
 
 .promotion-review-drawer .pr-btn-ineligible {
   color: var(--danger) !important;
-  border-color: #fca5a5 !important;
+  border-color: var(--danger-border) !important;
   background: var(--surface, var(--surface)) !important;
 }
 
@@ -510,9 +510,9 @@
 }
 
 .promotion-review-drawer .pr-btn-eligible {
-  background: var(--brand) !important;
+  background: var(--brand-solid) !important;
   border-color: var(--brand) !important;
-  color: #ffffff !important;
+  color: var(--text-on-dark) !important;
 }
 
 .promotion-review-drawer .pr-btn-eligible:hover {
@@ -615,7 +615,7 @@
 }
 
 .student-promotion .is-current .promotion-step-indicator,
-.student-promotion .is-complete .promotion-step-indicator { border-color: var(--brand); color: #fff; background: var(--brand); }
+.student-promotion .is-complete .promotion-step-indicator { border-color: var(--brand); color: var(--text-on-dark); background: var(--brand-solid); }
 
 .student-promotion .promotion-workspace {
   display: grid;
@@ -753,23 +753,23 @@
   background: rgba(0, 0, 0, 0.76) !important;
 }
 :root[data-theme="dark"] .p-drawer.promotion-review-drawer {
-  background: #151B28 !important;
-  border-color: #334155 !important;
+  background: var(--app-bg) !important;
+  border-color: var(--border) !important;
 }
 :root[data-theme="dark"] .promotion-review-drawer :is(.pr-modal-header, .pr-modal-footer) {
-  background: #101622 !important;
-  border-color: #334155 !important;
+  background: var(--app-bg) !important;
+  border-color: var(--border) !important;
 }
 :root[data-theme="dark"] .promotion-review-drawer .pr-modal-body {
-  background: #151B28 !important;
+  background: var(--app-bg) !important;
 }
 :root[data-theme="dark"] .promotion-review-drawer .pr-card {
-  background: #20293A !important;
-  border-color: #334155 !important;
+  background: var(--surface-soft) !important;
+  border-color: var(--border) !important;
   box-shadow: none !important;
 }
 :root[data-theme="dark"] .promotion-review-drawer .pr-card-header {
-  border-color: #334155 !important;
+  border-color: var(--border) !important;
   color: var(--brand) !important;
 }
 :root[data-theme="dark"] .promotion-review-drawer :is(.pr-modal-title, .pr-card-header h3, .pr-value) {
@@ -784,11 +784,11 @@
 }
 :root[data-theme="dark"] .promotion-review-drawer .pr-close-btn {
   color: var(--brand) !important;
-  border-color: #475569 !important;
-  background: #20293A !important;
+  border-color: var(--border-strong) !important;
+  background: var(--surface-soft) !important;
 }
 :root[data-theme="dark"] .promotion-review-drawer .pr-close-btn:hover {
-  color: #FFFFFF !important;
+  color: var(--text-on-dark) !important;
   border-color: #A9D3F7 !important;
   background: rgba(43, 120, 197, .24) !important;
 }
@@ -947,7 +947,7 @@
   padding: 11px 14px;
   border: 1px solid #c9def8;
   border-radius: 10px;
-  background: #f1f7ff;
+  background: var(--surface);
   color: #315b89;
   font-size: 13px;
   line-height: 1.45;
@@ -1157,21 +1157,21 @@
 .student-promotion .erp-table thead th {
   height: 44px !important;
   color: var(--text-secondary) !important;
-  background: color-mix(in srgb, var(--brand-soft) 72%, var(--surface)) !important;
+  background: var(--table-head) !important;
   border-bottom: 1px solid var(--border) !important;
   font-size: 10px !important;
   letter-spacing: .045em;
 }
 
 :root:not([data-theme="dark"]) .student-promotion .erp-table thead th {
-  color: #465137 !important;
-  background: #edf1df !important;
+  color: var(--text-secondary) !important;
+  background: var(--table-head) !important;
   border-bottom: 1px solid #d9ddc9 !important;
 }
 
 :root[data-theme="dark"] .student-promotion .erp-table thead th {
-  color: #eef4df !important;
-  background: #26301d !important;
+  color: var(--text-secondary) !important;
+  background: var(--table-head) !important;
   border-bottom: 1px solid #3c4931 !important;
 }
 

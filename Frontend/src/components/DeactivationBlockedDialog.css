@@ -5,7 +5,7 @@
 .deactivation-blocked-dialog {
   position: relative; width: min(100%, 500px); box-sizing: border-box; padding: 28px 32px 26px;
   border: 1px solid color-mix(in srgb, var(--border) 78%, var(--brand)); border-radius: 18px;
-  color: var(--text-primary); background: var(--surface-raised); box-shadow: 0 28px 72px rgb(5 25 43 / 32%);
+  color: var(--text-primary); background: var(--surface-raised); box-shadow: var(--shadow-md);
   text-align: center; animation: deactivation-dialog-in 180ms ease-out both;
 }
 .deactivation-blocked-icon { display: grid; width: 56px; height: 56px; margin: 0 auto 16px; place-items: center; border-radius: 50%; color: #b54708; background: #fff0d1; }
@@ -18,7 +18,7 @@
 .deactivation-blocked-count dd { margin: 5px 0 0; color: var(--text-primary); font-size: 17px; font-weight: 800; }
 .deactivation-blocked-help { margin: 18px auto 20px !important; color: var(--text-secondary) !important; }
 .deactivation-blocked-close, .deactivation-blocked-button {
-  border: 1px solid var(--brand); color: #fff; background: var(--brand); font: inherit; font-weight: 800; cursor: pointer;
+  border: 1px solid var(--brand); color: var(--text-on-dark); background: var(--brand-solid); font: inherit; font-weight: 800; cursor: pointer;
   transition: background .16s ease, border-color .16s ease, transform .16s ease, box-shadow .16s ease;
 }
 .deactivation-blocked-close { position: absolute; top: 18px; right: 18px; display: grid; width: 42px; height: 42px; padding: 0; place-items: center; border-radius: 9px; }

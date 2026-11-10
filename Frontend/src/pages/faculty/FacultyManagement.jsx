@@ -1,3 +1,5 @@
+import { calculateCompletion, completionSchemas } from '../../utils/recordCompletion'
+import { CompletionIndicator, CompletionSummary, ResumeSetupAction } from '../../components/RecordCompletion'
 import React, { useLayoutEffect } from 'react'
 import { createFacultyAttendanceWriter } from '../../services/facultyAttendanceSaveWorkflow'
 import PayrollWorkspace from './PayrollWorkspace'
@@ -3243,7 +3245,7 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], 
               </p>
             </div>
           </div>
-          <div className="erp-form-scroll-body">
+          <div className="erp-form-scroll-body fm-registration-scroll">
             {step === 0 && (
               <div className="fm-photo-picker">
                 <Avatar faculty={data} large />
@@ -3271,8 +3273,8 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], 
               />
             )}
           </div>
-          {validationMessage && <div className="page-error-notice" role="alert" data-message-tone="error" style={{ margin: '12px 20px' }}><FiAlertCircle aria-hidden="true" /><span>{validationMessage}</span></div>}
-          {saveError && <div className="page-error-notice" role="alert" data-message-tone="error" style={{ margin: '12px 20px' }}><FiAlertCircle aria-hidden="true" /><span>{saveError}</span></div>}
+          {validationMessage && <div className="page-error-notice fm-registration-notice" role="alert" data-message-tone="error"><FiAlertCircle aria-hidden="true" /><span>{validationMessage}</span></div>}
+          {saveError && <div className="page-error-notice fm-registration-notice" role="alert" data-message-tone="error"><FiAlertCircle aria-hidden="true" /><span>{saveError}</span></div>}
           <footer className="fm-form-footer">
             <button type="button" className="fm-button secondary" onClick={onCancel}>Cancel</button>
             <span className="fm-muted">Step {step + 1} of {totalSteps}</span>
@@ -3373,7 +3375,10 @@ function FacultyManagement() {
         })
         setFaculty(scopeRecords(members)
           .filter(member => member && typeof member === 'object')
-          .map(member => normalize({ ...normalizeFaculty(member), assignments: allocationMap.get(String(member.id)) || member.assignments || [] })))
+          .map(member => {
+            const saved = normalizeFaculty(member)
+            return normalize({ ...saved, completion: calculateCompletion(completionSchemas.faculty, saved), assignments: allocationMap.get(String(member.id)) || member.assignments || [] })
+          }))
       })
       .catch(error => { if(active) setLoadError(error.message || 'Unable to load faculty records.') })
       .finally(() => { if (active) setLoadingFaculty(false) })
@@ -3431,6 +3436,7 @@ function FacultyManagement() {
             id: String(targetId),
             facultyId: String(targetId),
             profileExists: Boolean(profile),
+            completion: member ? calculateCompletion(completionSchemas.faculty, normalizeFaculty(safeMember)) : matchedListed?.completion,
             apiWorkload: work,
             assignments: existingAssignments
           }))
@@ -3577,7 +3583,7 @@ function FacultyManagement() {
     const defaultNewCategory = categoryParam || selected?.employeeCategory || selectedCategory || activeCategory || 'Teaching'
     content = (
       <>
-        <header className="faculty-page-header">
+        <header className="faculty-page-header fm-form-page-header">
           <div>
             <h1>{editId ? (defaultNewCategory === 'Non-Teaching' ? 'Edit Non-Teaching Staff' : 'Edit Teaching Faculty') : (defaultNewCategory === 'Non-Teaching' ? 'Add Non-Teaching Staff' : 'Add Teaching Faculty')}</h1>
             <p>{editId ? 'Faculty employment and profile record' : (defaultNewCategory === 'Non-Teaching' ? 'Non-teaching staff registration and employment record' : 'Teaching faculty registration and employment record')}</p>
@@ -3682,6 +3688,7 @@ function FacultyManagement() {
           </div>
         </div>
 
+        <CompletionSummary completion={selected.completion} name={selected.fullName} onClick={canEdit ? () => navigate('/faculty/' + selected.id + '/edit?category=' + activeCategory) : undefined} />
         <div className="cm-profile-card">
           <div className="fm-reference-identity"><Avatar faculty={selected} /><div><h3>{selected.fullName}</h3><p>{[displayCode,selected.designation,departmentName,collegeName].filter(Boolean).join(' · ')}</p></div><StatusBadge value={selected.employmentStatus || 'Working'} /></div>
           <div className="sp-profile-cards-container">
@@ -3870,7 +3877,7 @@ function FacultyManagement() {
                   <caption className="fm-sr-only">{selectedCategory} directory and records</caption>
                   <thead>
                     <tr>
-                      {['Employee ID', 'Name', 'Department', 'Designation', 'Experience', 'Employment Type', 'Status', 'Actions'].map(label => (
+                      {['Employee ID', 'Name', 'Department', 'Designation', 'Experience', 'Employment Type', 'Status', 'Completion', 'Actions'].map(label => (
                         <th scope="col" key={label} className={['Status', 'Actions'].includes(label) ? 'table-center' : ''}>{label}</th>
                       ))}
                     </tr>
@@ -3901,8 +3908,10 @@ function FacultyManagement() {
                         <td>{years(item.experience)}</td>
                         <td>{item.employmentType || '—'}</td>
                         <td className="table-center"><StatusBadge value={item.employmentStatus} /></td>
+                        <td><CompletionIndicator completion={item.completion} /></td>
                         <td className="table-center">
                           <div className="table-actions-cell table-actions-group">
+                            {canEdit && <ResumeSetupAction completion={item.completion} name={item.fullName} onClick={() => navigate('/faculty/' + item.id + '/edit?category=' + activeCategory)} />}
                             {selectedCategory === 'Teaching' && (
                               <button
                                 type="button"
@@ -3959,7 +3968,7 @@ function FacultyManagement() {
           ) : <strong aria-current="page">Faculty Directory</strong>}
         </nav>
       )}
-      <main className={`faculty-management${path === '/faculty' && !selectedCategory ? ' faculty-management--overview' : ''}`}>
+      <main className={`faculty-management${path === '/faculty' && !selectedCategory ? ' faculty-management--overview' : ''}${path === '/faculty' && selectedCategory ? ' faculty-management--directory' : ''}`}>
         {loadError && path !== '/faculty/new' && !editId && <p className="fm-error" role="alert">{loadError} <button type="button" onClick={() => setReloadDirectory(value => value + 1)}>Retry</button></p>}
         {loadingFaculty ? <section className="fm-panel">Loading faculty records...</section> : content}
         {assignedFaculty && (
