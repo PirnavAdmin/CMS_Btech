@@ -192,7 +192,7 @@ export default function SubjectManagement() {
                 ['Active Subjects', kpis.active, 'active'],
                 ['Theory Subjects', kpis.theory, 'theory'],
                 ['Practical / Lab', kpis.lab, 'lab'],
-                ['Total Credits', kpis.credits, 'credits'],
+                ['Listed Subject Credits', kpis.credits, 'credits'],
               ].map(([label, value, tone]) => (
                 <div className={`sm-summary-item sm-summary-item--${tone}`} key={label}>
                   <strong>{value}</strong>
@@ -498,7 +498,7 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
                 </Field>
                 <Input label="Description (optional)" value={form.description} change={v => change('description', v)} />
                 <div className="sm-field">
-                  <label><input type="checkbox" checked={form.electiveType === 'Elective'} onChange={event => change('electiveType', event.target.checked ? 'Elective' : 'Core Subject')} /> Is Elective</label>
+                  <label className="sm-elective-toggle"><input type="checkbox" checked={form.electiveType === 'Elective'} onChange={event => change('electiveType', event.target.checked ? 'Elective' : 'Core Subject')} /> Is Elective</label>
                   {form.electiveType === 'Elective' && <small>Link the saved subject to a group in Elective Allocation.</small>}
                 </div>
                 <Field label="Status">
@@ -517,6 +517,9 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
                 <Input label="Lecture Hours" type="number" value={form.lectureHours} change={v => change('lectureHours', v)} />
                 <Input label="Tutorial Hours" type="number" value={form.tutorialHours} change={v => change('tutorialHours', v)} />
                 <Input label="Practical Hours" type="number" value={form.practicalHours} change={v => change('practicalHours', v)} />
+              </div>
+              <p className="sm-editor-section-description">Weekly contact hours: {[form.lectureHours, form.tutorialHours, form.practicalHours].every(value => value !== '' && value != null && Number.isFinite(Number(value))) ? [form.lectureHours, form.tutorialHours, form.practicalHours].reduce((total, value) => total + Number(value), 0).toLocaleString() : '—'}</p>
+              <div className="sm-form-grid-3">
                 <Input label="Internal Marks" type="number" value={form.internalMarks} change={v => change('internalMarks', v)} />
                 <Input label="External Marks" type="number" value={form.externalMarks} change={v => change('externalMarks', v)} />
               </div>
