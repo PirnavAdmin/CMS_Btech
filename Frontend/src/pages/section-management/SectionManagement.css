@@ -444,3 +444,23 @@
 .section-completion { display: grid; gap: 2px; justify-items: center; }
 .section-completion strong { font-size: 13px; }
 .section-completion small { color: var(--text-muted); font-size: 10px; white-space: nowrap; }
+
+/* Keep the assign teacher/student chooser compact and focused. */
+.section-assignment-dialog {
+  width: min(620px, calc(100vw - 32px));
+  max-height: min(82vh, 660px);
+}
+.section-assignment-dialog > .shared-view-dialog__header { padding: 12px 18px; }
+.section-assignment-dialog > .shared-view-dialog__body { gap: 10px; padding: 12px 18px; }
+.section-assignment-dialog .section-assignment-context { margin-bottom: 2px; }
+.section-assignment-dialog .section-capacity { padding: 10px 14px; }
+.section-assignment-dialog .section-capacity i { height: 6px; margin-top: 7px; }
+.section-assignment-dialog .section-assignment-chooser { gap: 10px; padding: 10px 12px; }
+.section-assignment-dialog .section-assignment-chooser button { min-height: 68px; gap: 10px; padding: 10px 12px; }
+.section-assignment-dialog .section-assignment-chooser button svg { width: 19px; height: 19px; flex-basis: 19px; }
+@media (max-width: 640px) {
+  .section-assignment-dialog { width: calc(100vw - 20px); max-height: calc(100vh - 20px); }
+  .section-assignment-dialog > .shared-view-dialog__header,
+  .section-assignment-dialog > .shared-view-dialog__body { padding-inline: 14px; }
+  .section-assignment-dialog .section-assignment-chooser { grid-template-columns: 1fr; }
+}

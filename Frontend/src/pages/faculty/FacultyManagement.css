@@ -5079,6 +5079,34 @@
   gap: 10px;
 }
 
+#root .faculty-management--directory > .fm-directory-back {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 34px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  background: var(--surface);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color .16s ease, color .16s ease, background .16s ease;
+}
+
+#root .faculty-management--directory > .fm-directory-back:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+  background: var(--brand-soft);
+}
+
+#root .faculty-management--directory > .fm-directory-back:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
 #root .faculty-management--directory > .erp-page-header {
   gap: 16px;
   margin-bottom: 0;

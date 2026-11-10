@@ -3042,6 +3042,9 @@ function FacultyManagement() {
     ]
     content = (
       <>
+        {isCategoryDirectory && <button type="button" className="fm-directory-back" onClick={() => navigate('/faculty')}>
+          <FiArrowLeft aria-hidden="true" /> Back to Faculty &amp; Staff
+        </button>}
         <ReferencePageHeader
           title="Faculty & Staff Management"
           subtitle="Choose a workspace to manage teaching faculty or non-teaching staff."
