@@ -3,13 +3,14 @@ import { useScreenAccess } from '../auth/ScreenAccess.jsx'
 import { additionalScreens } from '../auth/screenPermissions.js'
 import { useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { FiBell, FiBriefcase, FiBook, FiBookOpen, FiCalendar, FiCheckSquare, FiClock, FiChevronLeft, FiChevronRight, FiCreditCard, FiEdit3, FiFileText, FiGrid, FiLogOut, FiMenu, FiMoon, FiSearch, FiShield, FiSun, FiUser, FiUsers, FiX } from 'react-icons/fi'
+import { FiBell, FiBriefcase, FiBook, FiBookOpen, FiCalendar, FiCheckSquare, FiClock, FiChevronLeft, FiChevronRight, FiCreditCard, FiEdit3, FiFileText, FiGrid, FiLogOut, FiMenu, FiSearch, FiShield, FiUser, FiUsers, FiX } from 'react-icons/fi'
 import { getAuthStorage, getUserRole, signOut } from '../auth/auth.js'
 import { facultyNavigation, studentNavigation, facultySidebarKeys } from '../components/portals/portalNavigation.js'
 import { isPortalPreview } from '../auth/portalPreview.js'
 import { PortalDialog } from '../components/portals/PortalUI.jsx'
 import FacultyNavbarActions from '../components/portals/FacultyNavbarActions.jsx'
 import FacultySignOutDialog from '../components/portals/FacultySignOutDialog.jsx'
+import ThemeColorPicker from '../components/ThemeColorPicker.jsx'
 import FacultyBreadcrumbs from '../features/faculty/components/FacultyBreadcrumbs.jsx'
 import './DashboardLayout.css'
 import './AccountMenu.css'
@@ -42,6 +43,7 @@ export default function PortalLayout({ children, title }) {
   const destination = key => key.startsWith('/') ? key : role === 'admin' ? base : `${base}/${key}`
   const results = query.trim() ? nav.filter(([, label]) => label.toLowerCase().includes(query.trim().toLowerCase())) : []
   useEffect(() => { document.documentElement.dataset.theme = theme; localStorage.setItem('pirnav-theme', theme) }, [theme])
+  useEffect(() => { const syncTheme = event => { if (event.detail?.theme) setTheme(event.detail.theme) }; window.addEventListener('pirnav-theme-change', syncTheme); return () => window.removeEventListener('pirnav-theme-change', syncTheme) }, [])
   const toggleCollapse = () => setCollapsed(value => { localStorage.setItem('pirnav-sidebar-collapsed', String(!value)); return !value })
 
   return <div className={`dashboard-layout portal-shell ${collapsed ? 'sidebar-collapsed' : ''}`}>
@@ -56,7 +58,7 @@ export default function PortalLayout({ children, title }) {
     <div className="portal-content"><header className="dashboard-header">
       <button className="header-sidebar-toggle portal-menu" aria-label="Open navigation" onClick={() => setOpen(true)}><FiMenu /></button>
       <div className="global-search"><FiSearch aria-hidden="true" /><input aria-label="Search workspace" placeholder="Search modules" value={query} onChange={event => setQuery(event.target.value)} />{query.trim() && <div className="global-search-results">{results.length ? results.map(([key, label]) => <Link key={key} to={destination(key)} onClick={() => setQuery('')}>{label}</Link>) : <p>No matching modules</p>}</div>}</div>
-      <div className="dashboard-header__actions">{role === 'faculty' ? <FacultyNavbarActions name={name} theme={theme} onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')} onSignOut={() => setLogout(true)} /> : <>{['faculty', 'student'].includes(role) && canView(destination('notifications')) && <Link className="portal-notification-link" to={destination('notifications')} aria-label="Notifications"><FiBell aria-hidden="true" /></Link>}<button className="theme-toggle" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label="Toggle theme">{theme === 'dark' ? <FiSun /> : <FiMoon />}</button><details className="account-menu"><summary aria-label="Open account menu"><span className="account-avatar"><FiUser aria-hidden="true" /></span><span><strong>{name}</strong><small>{role}</small></span><i className="account-menu__chevron" aria-hidden="true" /></summary><div className="account-menu__panel">{canView(profileUrl) && <button onClick={event => { event.currentTarget.closest('details').removeAttribute('open'); navigate(profileUrl) }}><FiUser />My Profile</button>}<button className="account-menu__signout" onClick={event => { event.currentTarget.closest('details').removeAttribute('open'); setLogout(true) }}><FiLogOut />Sign out</button></div></details></>}</div>
+      <div className="dashboard-header__actions">{role === 'faculty' ? <><FacultyNavbarActions name={name} onSignOut={() => setLogout(true)} /><ThemeColorPicker /></> : <>{['faculty', 'student'].includes(role) && canView(destination('notifications')) && <Link className="portal-notification-link" to={destination('notifications')} aria-label="Notifications"><FiBell aria-hidden="true" /></Link>}<ThemeColorPicker /><details className="account-menu"><summary aria-label="Open account menu"><span className="account-avatar"><FiUser aria-hidden="true" /></span><span><strong>{name}</strong><small>{role}</small></span><i className="account-menu__chevron" aria-hidden="true" /></summary><div className="account-menu__panel">{canView(profileUrl) && <button onClick={event => { event.currentTarget.closest('details').removeAttribute('open'); navigate(profileUrl) }}><FiUser />My Profile</button>}<button className="account-menu__signout" onClick={event => { event.currentTarget.closest('details').removeAttribute('open'); setLogout(true) }}><FiLogOut />Sign out</button></div></details></>}</div>
     </header>
       <div className="page-content portal-workspace">
         {role === 'faculty' ? (

@@ -1332,12 +1332,12 @@
 
 /* Match the admissions directory header and override the global transparent table heading. */
 :root:not([data-theme="dark"]) #root .marks-management-marks-entry .marks-entry-records-table thead th {
-  background: #6f8400 !important;
+  background: var(--brand) !important;
   color: #fff !important;
 }
 
 :root[data-theme="dark"] #root .marks-management-marks-entry .marks-entry-records-table thead th {
-  background: #34451f !important;
+  background: var(--brand-dark) !important;
   color: #f4f8ec !important;
 }
 
@@ -1508,8 +1508,8 @@
   top: 0;
   z-index: 3;
   padding: 13px 14px;
-  border-bottom: 1px solid #5e7400;
-  background: #6f8400 !important;
+  border-bottom: 1px solid var(--brand-dark);
+  background: var(--brand) !important;
   color: #fff !important;
   font-size: 10px !important;
   font-weight: 800 !important;

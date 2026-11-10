@@ -2135,12 +2135,12 @@
 
 :root:not([data-theme="dark"]) .student-admission .sa-admission-table thead th {
   color: #fff !important;
-  background: #6f8400 !important;
+  background: var(--brand) !important;
 }
 
 :root[data-theme="dark"] .student-admission .sa-admission-table thead th {
   color: #f4f8ec !important;
-  background: #34451f !important;
+  background: var(--brand-dark) !important;
 }
 
 .student-admission .sa-admission-table tbody td {

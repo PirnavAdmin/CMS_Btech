@@ -4,10 +4,11 @@ import { adminWorkspaceForModule } from '../config/adminWorkspaces.js'
 import useToastState from '../hooks/useToastState'
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { FiAlertCircle, FiLock, FiLogOut, FiMenu, FiMoon, FiSearch, FiSun, FiUser, FiX } from 'react-icons/fi'
+import { FiAlertCircle, FiLock, FiLogOut, FiMenu, FiSearch, FiUser, FiX } from 'react-icons/fi'
 import { getUserRole, signOut } from '../auth/auth'
 import { changePassword, profileApi } from '../api/apiEndpoints'
 import Sidebar from '../components/Sidebar'
+import ThemeColorPicker from '../components/ThemeColorPicker'
 import { feeBreadcrumbs } from '../utils/feeNavigation'
 import HeaderAcademicYear from '../components/HeaderAcademicYear'
 import AcademicContextSelect from '../components/AcademicContextSelect'
@@ -156,6 +157,12 @@ export default function DashboardLayout({ children }) {
     document.documentElement.dataset.theme = theme
     localStorage.setItem('pirnav-theme', theme)
   }, [theme])
+
+  useEffect(() => {
+    const syncTheme = event => { if (event.detail?.theme) setTheme(event.detail.theme) }
+    window.addEventListener('pirnav-theme-change', syncTheme)
+    return () => window.removeEventListener('pirnav-theme-change', syncTheme)
+  }, [])
 
   useEffect(() => {
     if (pathname.startsWith('/faculty')) return undefined
@@ -354,7 +361,7 @@ export default function DashboardLayout({ children }) {
             <AcademicContextSelect kind="college" compact />
           </div>
           <HeaderAcademicYear />
-          <button className="theme-toggle" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`} title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>{theme === 'dark' ? <FiSun /> : <FiMoon />}</button>
+          <ThemeColorPicker />
 
           <details className="account-menu" ref={accountMenuRef}>
             <summary aria-label="Open account menu">

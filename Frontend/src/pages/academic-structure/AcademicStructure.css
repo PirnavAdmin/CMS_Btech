@@ -551,7 +551,7 @@
   border: 1px solid #dce5bd;
   border-radius: 50%;
   background: #f3f7e6;
-  color: #6f8400;
+  color: var(--brand);
   font-size: 10px;
   font-weight: 800;
 }
@@ -1528,7 +1528,7 @@ select.as-form-control::-ms-expand {
   border: 1px solid #dce5bd;
   border-radius: 50%;
   background: #f3f7e6;
-  color: #6f8400;
+  color: var(--brand);
   font-size: 10px;
   font-weight: 800;
 }
