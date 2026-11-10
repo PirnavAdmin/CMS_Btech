@@ -50,7 +50,7 @@ const STEP_COURSES = 'courses'
 const STEP_BRANCHES = 'branches'
 const STEP_SEMESTERS = 'semesters'
 const courseIdOf = (course = {}) => String(course.courseId ?? course.CourseId ?? course.CourseID ?? course.courseID ?? course.course_id ?? course.id ?? course.Id ?? course.ID ?? '')
-const courseDepartmentIdOf = (course = {}) => String(course.departmentId ?? course.DepartmentId ?? course.DepartmentID ?? course.department_id ?? course.department?.departmentId ?? course.department?.DepartmentId ?? course.department?.id ?? '')
+const courseDepartmentIdOf = (course = {}) => String(course.departmentId ?? course.DepartmentId ?? course.DepartmentID ?? course.departmentID ?? course.department_id ?? course.department?.departmentId ?? course.department?.DepartmentId ?? course.department?.DepartmentID ?? course.department?.id ?? course.department?.Id ?? '')
 const branchIdOf = (branch = {}) => String(branch.branchId ?? branch.BranchId ?? branch.BranchID ?? branch.branch_id ?? branch.id ?? branch.Id ?? '')
 const branchCourseIdOf = (branch = {}) => String(branch.courseId ?? branch.CourseId ?? branch.CourseID ?? branch.course_id ?? '')
 
@@ -63,7 +63,7 @@ const STEPS = [
 
 const courseNameOf = (course) => course?.courseName ?? course?.CourseName ?? course?.name ?? course?.Name
 const courseCodeOf = (course) => course?.courseCode ?? course?.CourseCode ?? course?.code ?? course?.Code
-const departmentIdOf = (department) => department?.departmentId ?? department?.DepartmentId ?? department?.id ?? department?.Id
+const departmentIdOf = (department) => department?.departmentId ?? department?.DepartmentId ?? department?.DepartmentID ?? department?.departmentID ?? department?.id ?? department?.Id ?? department?.ID
 
 export default function AcademicStructure() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -608,7 +608,7 @@ export default function AcademicStructure() {
     if (
       branchForm.departmentId &&
       branchForm.courseId &&
-      mappedDepartmentId != null &&
+      mappedDepartmentId &&
       String(mappedDepartmentId) !== String(branchForm.departmentId)
     ) {
       errors.departmentId = 'This course belongs to a different department. Select the matching department or course.'
@@ -1809,7 +1809,7 @@ export default function AcademicStructure() {
                           setBranchForm((current) => ({
                             ...current,
                             courseId: e.target.value,
-                            departmentId: String(courseDepartmentIdOf(selectedCourse) ?? current.departmentId ?? ''),
+                            departmentId: courseDepartmentIdOf(selectedCourse) || current.departmentId || '',
                           }))
                           setFormErrors((current) => ({ ...current, courseId: '', departmentId: '' }))
                         }}
@@ -1841,14 +1841,23 @@ export default function AcademicStructure() {
                         className={`as-form-control ${formErrors.departmentId ? 'is-invalid' : ''}`}
                         value={branchForm.departmentId}
                         onChange={(e) => {
-                          setBranchForm((current) => ({ ...current, departmentId: e.target.value }))
-                          setFormErrors((current) => ({ ...current, departmentId: '' }))
+                          const departmentId = e.target.value
+                          const departmentCourses = courses.filter((course) => courseDepartmentIdOf(course) === departmentId)
+                          setBranchForm((current) => {
+                            const courseMatchesDepartment = departmentCourses.some((course) => courseIdOf(course) === String(current.courseId))
+                            return {
+                              ...current,
+                              departmentId,
+                              courseId: courseMatchesDepartment ? current.courseId : String(courseIdOf(departmentCourses[0]) || ''),
+                            }
+                          })
+                          setFormErrors((current) => ({ ...current, departmentId: '', courseId: '' }))
                         }}
                         required
                       >
                         <option value="">-- Choose Department --</option>
                         {departments.map((d) => {
-                          const id = String(d.departmentId ?? d.id)
+                          const id = String(departmentIdOf(d) ?? '')
                           return (
                             <option key={id} value={id}>
                               {d.departmentName ?? d.name} ({d.departmentCode ?? d.code})
@@ -1860,7 +1869,7 @@ export default function AcademicStructure() {
                       {branchForm.courseId && branchForm.departmentId && (() => {
                         const selectedCourse = courses.find((course) => String(courseIdOf(course)) === String(branchForm.courseId))
                         const mappedDepartmentId = courseDepartmentIdOf(selectedCourse)
-                        return mappedDepartmentId != null && String(mappedDepartmentId) !== String(branchForm.departmentId)
+                        return mappedDepartmentId && String(mappedDepartmentId) !== String(branchForm.departmentId)
                           ? <span className="as-form-hint">The selected course is linked to a different department. Choose its matching department or select another course.</span>
                           : null
                       })()}
