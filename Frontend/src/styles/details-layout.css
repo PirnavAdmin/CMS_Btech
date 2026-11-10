@@ -6,9 +6,9 @@
   height: 24px;
   padding: 0 9px;
   border-radius: 999px;
-  color: #15803d;
+  color: var(--success);
   background: var(--cms-green-soft);
-  border: 1px solid #86efac;
+  border: 1px solid var(--success-border);
   font-size: 0.72rem;
   font-weight: 750;
   line-height: 1;
@@ -31,18 +31,18 @@
 .details-status-badge.rejected,
 .details-status-badge.failed,
 .details-status-badge.unavailable {
-  color: #b91c1c;
+  color: var(--danger);
   background: var(--cms-red-soft);
-  border-color: #fca5a5;
+  border-color: var(--danger-border);
 }
 
 .details-status-badge.warning,
 .details-status-badge.upcoming,
 .details-status-badge.pending,
 .details-status-badge.hold {
-  color: #b45309;
+  color: var(--warning);
   background: var(--cms-amber-soft);
-  border-color: #fcd34d;
+  border-color: var(--warning-border);
 }
 
 :root[data-theme="dark"] .details-status-badge {

@@ -81,7 +81,7 @@
   height: 52px;
   border: 1px solid #f1d0d4;
   border-radius: 16px;
-  background: #fff1f2;
+  background: var(--danger-soft);
   color: #c13e4a;
 }
 
@@ -135,14 +135,14 @@
   min-height: 38px;
   padding: 0 14px;
   border-color: var(--brand);
-  background: var(--brand);
-  color: #fff;
+  background: var(--brand-solid);
+  color: var(--text-on-dark);
   font-size: 12px;
 }
 
 .tf-page .tf-retry-button:hover {
-  background: var(--brand-hover);
-  color: #fff;
+  background: var(--brand-solid-hover);
+  color: var(--text-on-dark);
 }
 
 .tf-loading-progress {
@@ -356,7 +356,7 @@
 .td-allocation-scroll th {
   position: sticky;
   top: 0;
-  background: var(--surface-soft);
+  background: var(--table-head);
 }
 
 .td-allocation-scroll tbody tr:hover {

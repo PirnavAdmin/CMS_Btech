@@ -1,3 +1,5 @@
+import { calculateCompletion, completionSchemas } from '../../utils/recordCompletion'
+import { CompletionSummary, ResumeSetupAction, completionColumn } from '../../components/RecordCompletion'
 import DataTable from '../../components/DataTable'
 import PageHeader from '../../components/PageHeader'
 import { useScreenAccess } from '../../auth/ScreenAccess'
@@ -184,6 +186,7 @@ const normalize = (input = {}) => {
 
   return {
     id,
+    completion: calculateCompletion(completionSchemas.branch, b),
     collegeId: normalizeId(b.collegeId ?? b.collegeNumericId ?? b.college?.collegeId ?? b.college?.id ?? ''),
     courseId: normalizeId(b.courseId ?? b.course?.id ?? ''),
     courseName: content(b.courseName ?? b.course?.name ?? b.course?.courseName ?? ''),
@@ -381,8 +384,9 @@ function List({ initialViewId = null }) {
         {key:'semesters',label:'Semesters',render:row => courseById.get(String(row.courseId))?.totalSemesters || row.totalSemesters || 'Not configured'},
         {key:'intakeCapacity',label:'Approved intake',sortable:true},
         {key:'status',label:'Status',render:row => <StatusBadge value={row.status} />},
-      ]} rowActions={row => <div className="branch-reference-actions"><button className="table-action-btn" aria-label={`View ${row.branchName}`} onClick={() => setViewId(row.id)}><FiEye /></button>{canEdit && <><Link className="table-action-btn action-edit" aria-label={`Edit ${row.branchName}`} to={`/branches/${row.id}/edit`}><FiEdit2 /></Link><button className="table-action-btn" aria-label={`${row.status === 'Active' ? 'Deactivate' : 'Activate'} ${row.branchName}`} onClick={() => onToggleStatus(row)}>{row.status === 'Active' ? <FiToggleRight data-status="active" /> : <FiToggleLeft data-status="inactive" />}</button></>}</div>} />
-    </section>{viewId && <Details branchId={viewId} onClose={closeView} />}
+        completionColumn,
+      ]} rowActions={row => <div className="branch-reference-actions"><button className="table-action-btn" aria-label={`View ${row.branchName}`} onClick={() => setViewId(row.id)}><FiEye /></button>{canEdit && <><Link className="table-action-btn action-edit" aria-label={`Edit ${row.branchName}`} to={`/branches/${row.id}/edit`}><FiEdit2 /></Link><ResumeSetupAction completion={row.completion} name={row.branchName} to={`/branches/${row.id}/edit`} /><button className="table-action-btn" aria-label={`${row.status === 'Active' ? 'Deactivate' : 'Activate'} ${row.branchName}`} onClick={() => onToggleStatus(row)}>{row.status === 'Active' ? <FiToggleRight data-status="active" /> : <FiToggleLeft data-status="inactive" />}</button></>}</div>} />
+    </section>{viewId && <Details branchId={viewId} onClose={closeView} canResume={canEdit} />}
   </Page>
 }
 
@@ -693,7 +697,7 @@ function Form() {
   </Page>
 }
 
-function Details({ branchId, onClose }) {
+function Details({ branchId, onClose, canResume }) {
   const { id: routeId } = useParams()
   const id = branchId || routeId
   const [attempt, setAttempt] = useState(0)
@@ -713,7 +717,7 @@ function Details({ branchId, onClose }) {
     return () => { active = false }
   }, [id, attempt, setError])
   return <ViewDialog title="Branch Details" subtitle={branch?.branchName} onClose={onClose} showExport={Boolean(branch)} exportFilename={`branch_${id}`} maxWidth="960px">
-    {error || !branch ? <AsyncState status={error ? 'error' : 'loading'} message={error || undefined} onRetry={() => setAttempt(value => value + 1)} /> : <><div className="branch-reference-detail-grid">
+    {error || !branch ? <AsyncState status={error ? 'error' : 'loading'} message={error || undefined} onRetry={() => setAttempt(value => value + 1)} /> : <><CompletionSummary completion={branch.completion} name={branch.branchName} to={canResume ? `/branches/${id}/edit` : undefined} /><div className="branch-reference-detail-grid">
       <InfoCard title="Branch Information" items={[{label:'Course Name',value:branch.courseName},{label:'Course Code',value:branch.courseCode},{label:'Branch Name',value:branch.branchName},{label:'Branch Code',value:branch.branchCode},{label:'Branch Type',value:typeOf(branch)},{label:'Specialization',value:branch.specialization},{label:'Status',value:branch.status}]} />
       <InfoCard title="Academic Structure" items={[{label:'Duration',value:branch.duration ? `${branch.duration} Years` : ''},{label:'Academic Pattern',value:branch.academicPattern},{label:'Total Semesters',value:branch.totalSemesters},{label:'Approved Intake',value:branch.intakeCapacity},{label:'Academic Year',value:branch.startingAcademicYearName},{label:'Start Date',value:branch.startDate},{label:'End Date',value:branch.endDate}]} />
     </div><BranchSemesterStructure course={{id:branch.courseId,name:branch.courseName,durationValue:branch.duration,totalSemesters:branch.totalSemesters}} branchId={id} /></>}
@@ -874,6 +878,7 @@ const mapCourse = (record) => {
 
   return {
     id: record.id ?? record.courseId,
+    completion: calculateCompletion(completionSchemas.course, record),
     name: record.courseName ?? record.name ?? '',
     code: record.courseCode ?? record.code ?? '',
     shortName: record.courseShortName ?? record.shortName ?? '',
@@ -1154,9 +1159,10 @@ function CourseList({ initialViewId = null }) {
         {key:'durationValue',label:'Duration',sortable:true,render:row => row.durationValue ? `${row.durationValue} ${row.durationUnit || 'Years'}` : 'Not available'},
         {key:'semesters',label:'Semesters',sortable:true,render:row => row.semesters || 'Not configured'},
         {key:'status',label:'Status',sortable:true,render:row => <StatusBadge value={row.status} />},
-      ]} rowActions={row => <div className="course-reference-actions"><button className="table-action-btn" aria-label={`View ${row.name}`} onClick={() => setViewId(row.id)}><FiEye /></button>{canEdit && <><Link className="table-action-btn action-edit" aria-label={`Edit ${row.name}`} to={`/courses/${row.id}/edit`}><FiEdit2 /></Link><button className="table-action-btn" aria-label={`${row.status === 'Active' ? 'Deactivate' : 'Activate'} ${row.name}`} onClick={() => toggleStatus(row)}>{row.status === 'Active' ? <FiToggleRight data-status="active" /> : <FiToggleLeft data-status="inactive" />}</button></>}</div>} />
+        completionColumn,
+      ]} rowActions={row => <div className="course-reference-actions"><button className="table-action-btn" aria-label={`View ${row.name}`} onClick={() => setViewId(row.id)}><FiEye /></button>{canEdit && <><Link className="table-action-btn action-edit" aria-label={`Edit ${row.name}`} to={`/courses/${row.id}/edit`}><FiEdit2 /></Link><ResumeSetupAction completion={row.completion} name={row.name} to={`/courses/${row.id}/edit`} /><button className="table-action-btn" aria-label={`${row.status === 'Active' ? 'Deactivate' : 'Activate'} ${row.name}`} onClick={() => toggleStatus(row)}>{row.status === 'Active' ? <FiToggleRight data-status="active" /> : <FiToggleLeft data-status="inactive" />}</button></>}</div>} />
     </section>
-    {viewId && <CourseDetails courseId={viewId} onClose={closeView} />}
+    {viewId && <CourseDetails courseId={viewId} onClose={closeView} canResume={canEdit} />}
     {pendingStatus && <StatusConfirmDialog entity="Course" name={`${pendingStatus.course.name} (${pendingStatus.course.code})`} nextStatus={pendingStatus.nextStatus} onCancel={() => { if (!isStatusSaving) { setPendingStatus(null); setCourseImpact(null) } }} onConfirm={confirmStatusChange} busy={isStatusSaving || impactChecking} blocked={Boolean(pendingStatus.blocked)} error={statusError} details={pendingStatus.nextStatus === 'Inactive' && courseImpact?.state === 'known' ? [['Associated Students', `${courseImpact.count} student${courseImpact.count === 1 ? '' : 's'}`]] : []} description={pendingStatus.blocked ? 'Deactivate is unavailable until all associated students are moved or removed from this course.' : pendingStatus.nextStatus === 'Active' ? 'This course will be marked active.' : 'No students are currently associated with this course. This course will be marked inactive for operations that exclude inactive courses.'} confirmLabel={pendingStatus.nextStatus === 'Inactive' ? 'Deactivate Course' : 'Activate Course'} />}
   </Page>
 }
@@ -1306,7 +1312,7 @@ function CourseForm() {
   </Page>
 }
 
-function CourseDetails({ courseId, onClose }) {
+function CourseDetails({ courseId, onClose, canResume }) {
   const { scopeRecords } = useAcademic()
   const { id: routeId } = useParams()
   const id = courseId || routeId
@@ -1376,7 +1382,7 @@ function CourseDetails({ courseId, onClose }) {
   const duration = course.durationValue ? `${course.durationValue} ${course.durationUnit || 'Years'}` : ''
   const pattern = course.academicSystem || 'Semester'
 
-  return <ViewDialog title="Course Details" subtitle={course.name} onClose={onClose} exportFilename={`course_${course.id}`}><div className="course-reference-detail-grid">
+  return <ViewDialog title="Course Details" subtitle={course.name} onClose={onClose} exportFilename={`course_${course.id}`}><CompletionSummary completion={course.completion} name={course.name} to={canResume ? `/courses/${course.id}/edit` : undefined} /><div className="course-reference-detail-grid">
             <InfoCard
               title="Basic Information"
               icon={FiBookOpen}

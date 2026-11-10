@@ -85,7 +85,7 @@ test('loaded personal values persist while navigating backward and forward', asy
   const first = await screen.findByLabelText(/First Name/)
   await waitFor(() => expect(first.value).toBe('Student 1'))
   fireEvent.change(first, { target: { value: 'Updated' } }); fireEvent.click(screen.getByRole('button', { name: /Save & Continue/ }))
-  await screen.findByText('Academic Enrollment'); fireEvent.click(screen.getByRole('button', { name: /Previous/ }))
+  await screen.findByText('Academic Enrollment'); fireEvent.click(screen.getByRole('button', { name: 'Go to previous admission step' }))
   expect(screen.getByLabelText(/First Name/).value).toBe('Updated')
   expect(studentAdmissionApi.create).not.toHaveBeenCalled()
 })

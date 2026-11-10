@@ -115,7 +115,6 @@ export default function DashboardLayout({ children }) {
     identifier: localStorage.getItem('btech-user-id') || sessionStorage.getItem('btech-user-id') || '',
   }))
   const { canView } = useScreenAccess()
-  const [theme, setTheme] = useState(() => localStorage.getItem('pirnav-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'))
 
   const userRole = getUserRole() || 'user'
   const mustChangePassword = localStorage.getItem('btech-must-change-password') === 'true' || sessionStorage.getItem('btech-must-change-password') === 'true'
@@ -128,7 +127,7 @@ export default function DashboardLayout({ children }) {
     ? 'Administrator'
     : userRole.charAt(0).toUpperCase() + userRole.slice(1)
   const pageName = ({
-    '/dashboard': 'Overview', '/academic-structure': 'Academic Structure', '/my-profile': 'My Profile', '/settings': 'Settings',
+    '/dashboard': 'Overview', '/academic-structure': 'Program Configuration', '/my-profile': 'My Profile', '/settings': 'Settings',
     '/college-institution-management': 'College', '/academic-year-management': 'Academic Years',
     '/student-management/attendance': 'Student Attendance',
     '/department-management': 'Departments', '/semester-management': 'Semesters', '/section-management': 'Sections',
@@ -152,17 +151,6 @@ export default function DashboardLayout({ children }) {
 
   const triggerRef = useRef(null)
   const closeRef = useRef(null)
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme
-    localStorage.setItem('pirnav-theme', theme)
-  }, [theme])
-
-  useEffect(() => {
-    const syncTheme = event => { if (event.detail?.theme) setTheme(event.detail.theme) }
-    window.addEventListener('pirnav-theme-change', syncTheme)
-    return () => window.removeEventListener('pirnav-theme-change', syncTheme)
-  }, [])
 
   useEffect(() => {
     if (pathname.startsWith('/faculty')) return undefined

@@ -1,3 +1,5 @@
+import { calculateCompletion, completionSchemas } from '../../utils/recordCompletion'
+import { CompletionIndicator, CompletionSummary, ResumeSetupAction } from '../../components/RecordCompletion'
 import React, { useLayoutEffect } from 'react'
 import { createFacultyAttendanceWriter } from '../../services/facultyAttendanceSaveWorkflow'
 import PayrollWorkspace from './PayrollWorkspace'
@@ -1339,7 +1341,7 @@ const { useAcademic } = pageDependency17
 const useCollegeState = pageDependency7.default
 const { useCallback, useEffect, useMemo, useRef, useState } = pageDependency1
 const { Link, Navigate, useLocation, useNavigate } = pageDependency18
-const { FiAlertCircle, FiArrowLeft, FiBriefcase, FiCheckCircle, FiChevronDown, FiChevronUp, FiEdit2, FiFilter, FiPlus, FiSearch, FiUser, FiUsers, FiClock, FiBookOpen, FiMapPin, FiX, FiTrash2, FiFileText } = pageDependency4
+const { FiAlertCircle, FiArrowLeft, FiBriefcase, FiCheckCircle, FiChevronDown, FiChevronUp, FiEdit2, FiFilter, FiPlus, FiSearch, FiUser, FiUsers, FiClock, FiBookOpen, FiMapPin, FiX, FiTrash2, FiFileText, FiCalendar, FiBarChart2, FiTrendingUp } = pageDependency4
 const DashboardLayout = pageDependency8.default
 const ExportMenu = pageDependency9.default
 const FilterPanel = pageDependency19.default
@@ -2036,6 +2038,10 @@ function RecordAttendanceDialog({ busy = false, faculty = [], collegeOptions = [
   return <ReferenceViewDialog title="Record Attendance" subtitle={title} onClose={onClose} busy={busy} showExport={false} hideFooter>
     <form className="fm-attendance-editor" onSubmit={submit}>
       <fieldset disabled={busy} style={{ border: 0, padding: 0, margin: 0 }}>
+        {!facultyOptions.length && <div className="fm-attendance-no-faculty" role="status">
+          <p>No faculty or staff profiles are available to record attendance. Add a profile first, then return here to record it.</p>
+          <Link className="fm-button secondary" to="/faculty">Open Faculty Directory</Link>
+        </div>}
         <div className="fm-attendance-record-fields">
           <label className="fm-attendance-record-faculty"><span>Faculty</span>
             <SearchableSelect label="Faculty" value={facultyId} options={facultyOptions} onChange={value => { setFacultyId(value); setError('') }} placeholder="Search Faculty & Staff" searchPlaceholder="Search by name, ID, or department" menuPlacement="bottom" required />
@@ -2064,7 +2070,7 @@ function RecordAttendanceDialog({ busy = false, faculty = [], collegeOptions = [
           <div><strong>Confirm attendance status?</strong><p>You are marking {selectedFaculty?.fullName || selectedFaculty?.facultyName || 'this faculty member'} as {attendanceStatusLabel(status)} for {new Date(attendanceDate + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}.</p></div>
           <div><button className="fm-button secondary" type="button" onClick={() => setConfirmLeave(false)}>Cancel</button><button className="fm-button" type="button" onClick={() => { setConfirmLeave(false); setError(''); saveRecord() }}>{status === 'LOP' ? 'Mark Loss of Pay' : 'Mark On Leave'}</button></div>
         </div>}
-        <footer><button className="fm-button secondary" type="button" onClick={onClose}>Cancel</button><button className="fm-button" type="submit">{busy ? 'Saving…' : 'Save Attendance'}</button></footer>
+        <footer><button className="fm-button secondary" type="button" onClick={onClose}>Cancel</button><button className="fm-button" type="submit" disabled={busy || !facultyOptions.length}>{busy ? 'Saving…' : 'Save Attendance'}</button></footer>
       </fieldset>
     </form>
   </ReferenceViewDialog>
@@ -2431,6 +2437,7 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
   )
   const facultyCategoryControl = <div className="fm-attendance-category-toggle flm-category-toggle" role="group" aria-label="Filter attendance by faculty type"><button type="button" className={`flm-cat-btn ${filters.facultyType === 'Teaching' ? 'active' : ''}`} onClick={() => updateFilter('facultyType', 'Teaching')}>Teaching Faculty ({faculty.filter(item => employeeCategoryOf(item) === 'Teaching').length})</button><button type="button" className={`flm-cat-btn ${filters.facultyType === 'Non-Teaching' ? 'active' : ''}`} onClick={() => updateFilter('facultyType', 'Non-Teaching')}>Non-Teaching Staff ({faculty.filter(item => employeeCategoryOf(item) === 'Non-Teaching').length})</button></div>
   const filterControl = <button type="button" className="fm-attendance-filter-toggle" aria-expanded={showFilters} aria-controls="faculty-attendance-filters-panel" onClick={() => setShowFilters(value => !value)}><FiFilter aria-hidden="true" /><span>Filters</span>{showFilters ? <FiChevronUp aria-hidden="true" /> : <FiChevronDown aria-hidden="true" />}</button>
+  const recordAttendanceControl = canRecord && <button type="button" className="fm-button fm-attendance-record-button" onClick={openNewAttendance} disabled={attendanceBusy || refreshPending || attendanceLoading}><FiPlus aria-hidden="true" /> Record Attendance</button>
   const normalizeViewRemark = value => {
     const clean = String(value || '').trim()
     if (!clean || clean === '—') return '—'
@@ -2574,7 +2581,7 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
       <section className="fm-attendance-workspace">
         <div className="fm-attendance-panel">
           <header className="fm-attendance-directory-header">
-            <div className="fm-attendance-header-actions">{searchControl}{facultyCategoryControl}{contextualExport}{filterControl}</div>
+            <div className="fm-attendance-header-actions">{searchControl}{facultyCategoryControl}{contextualExport}{filterControl}{recordAttendanceControl}</div>
           </header>
 
           {showFilters && (
@@ -2601,10 +2608,10 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
           )}
 
           <nav className="fm-attendance-tabs" aria-label="Faculty attendance views">
-            <button type="button" className={tab === 'daily' ? 'active' : ''} aria-current={tab === 'daily' ? 'page' : undefined} onClick={() => setTab('daily')}>Daily Attendance</button>
+            <button type="button" className={tab === 'daily' ? 'active' : ''} aria-current={tab === 'daily' ? 'page' : undefined} onClick={() => setTab('daily')}><FiCalendar aria-hidden="true" /><span>Daily Attendance</span></button>
             {['weekly', 'monthly'].map(type => (
               <button type="button" key={type} className={tab === 'reports' && reportType === type ? 'active' : ''} aria-current={tab === 'reports' && reportType === type ? 'page' : undefined} onClick={() => { setReportType(type); setTab('reports') }}>
-                {type === 'weekly' ? 'Weekly Report' : 'Monthly Report'}
+                {type === 'weekly' ? <FiBarChart2 aria-hidden="true" /> : <FiTrendingUp aria-hidden="true" />}<span>{type === 'weekly' ? 'Weekly Report' : 'Monthly Report'}</span>
               </button>
             ))}
           </nav>
@@ -2617,7 +2624,6 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
                 <h2>{tab === 'daily' ? 'Faculty Attendance' : exportTitle}</h2>
                 <p>{tab === 'reports' ? reportEmployeeRows.length : resultRows.length} employee records</p>
               </div>
-              {canRecord && <button type="button" className="fm-button fm-attendance-record-button" onClick={openNewAttendance} disabled={attendanceBusy || refreshPending || attendanceLoading || faculty.length === 0}><FiPlus aria-hidden="true" /> Record Attendance</button>}
             </header>
 
             {tab === 'daily' && selectedFacultyIds.length > 0 && (
@@ -3243,7 +3249,7 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], 
               </p>
             </div>
           </div>
-          <div className="erp-form-scroll-body">
+          <div className="erp-form-scroll-body fm-registration-scroll">
             {step === 0 && (
               <div className="fm-photo-picker">
                 <Avatar faculty={data} large />
@@ -3271,8 +3277,8 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], 
               />
             )}
           </div>
-          {validationMessage && <div className="page-error-notice" role="alert" data-message-tone="error" style={{ margin: '12px 20px' }}><FiAlertCircle aria-hidden="true" /><span>{validationMessage}</span></div>}
-          {saveError && <div className="page-error-notice" role="alert" data-message-tone="error" style={{ margin: '12px 20px' }}><FiAlertCircle aria-hidden="true" /><span>{saveError}</span></div>}
+          {validationMessage && <div className="page-error-notice fm-registration-notice" role="alert" data-message-tone="error"><FiAlertCircle aria-hidden="true" /><span>{validationMessage}</span></div>}
+          {saveError && <div className="page-error-notice fm-registration-notice" role="alert" data-message-tone="error"><FiAlertCircle aria-hidden="true" /><span>{saveError}</span></div>}
           <footer className="fm-form-footer">
             <button type="button" className="fm-button secondary" onClick={onCancel}>Cancel</button>
             <span className="fm-muted">Step {step + 1} of {totalSteps}</span>
@@ -3373,7 +3379,10 @@ function FacultyManagement() {
         })
         setFaculty(scopeRecords(members)
           .filter(member => member && typeof member === 'object')
-          .map(member => normalize({ ...normalizeFaculty(member), assignments: allocationMap.get(String(member.id)) || member.assignments || [] })))
+          .map(member => {
+            const saved = normalizeFaculty(member)
+            return normalize({ ...saved, completion: calculateCompletion(completionSchemas.faculty, saved), assignments: allocationMap.get(String(member.id)) || member.assignments || [] })
+          }))
       })
       .catch(error => { if(active) setLoadError(error.message || 'Unable to load faculty records.') })
       .finally(() => { if (active) setLoadingFaculty(false) })
@@ -3431,6 +3440,7 @@ function FacultyManagement() {
             id: String(targetId),
             facultyId: String(targetId),
             profileExists: Boolean(profile),
+            completion: member ? calculateCompletion(completionSchemas.faculty, normalizeFaculty(safeMember)) : matchedListed?.completion,
             apiWorkload: work,
             assignments: existingAssignments
           }))
@@ -3577,7 +3587,7 @@ function FacultyManagement() {
     const defaultNewCategory = categoryParam || selected?.employeeCategory || selectedCategory || activeCategory || 'Teaching'
     content = (
       <>
-        <header className="faculty-page-header">
+        <header className="faculty-page-header fm-form-page-header">
           <div>
             <h1>{editId ? (defaultNewCategory === 'Non-Teaching' ? 'Edit Non-Teaching Staff' : 'Edit Teaching Faculty') : (defaultNewCategory === 'Non-Teaching' ? 'Add Non-Teaching Staff' : 'Add Teaching Faculty')}</h1>
             <p>{editId ? 'Faculty employment and profile record' : (defaultNewCategory === 'Non-Teaching' ? 'Non-teaching staff registration and employment record' : 'Teaching faculty registration and employment record')}</p>
@@ -3682,6 +3692,7 @@ function FacultyManagement() {
           </div>
         </div>
 
+        <CompletionSummary completion={selected.completion} name={selected.fullName} onClick={canEdit ? () => navigate('/faculty/' + selected.id + '/edit?category=' + activeCategory) : undefined} />
         <div className="cm-profile-card">
           <div className="fm-reference-identity"><Avatar faculty={selected} /><div><h3>{selected.fullName}</h3><p>{[displayCode,selected.designation,departmentName,collegeName].filter(Boolean).join(' · ')}</p></div><StatusBadge value={selected.employmentStatus || 'Working'} /></div>
           <div className="sp-profile-cards-container">
@@ -3870,7 +3881,7 @@ function FacultyManagement() {
                   <caption className="fm-sr-only">{selectedCategory} directory and records</caption>
                   <thead>
                     <tr>
-                      {['Employee ID', 'Name', 'Department', 'Designation', 'Experience', 'Employment Type', 'Status', 'Actions'].map(label => (
+                      {['Employee ID', 'Name', 'Department', 'Designation', 'Experience', 'Employment Type', 'Status', 'Completion', 'Actions'].map(label => (
                         <th scope="col" key={label} className={['Status', 'Actions'].includes(label) ? 'table-center' : ''}>{label}</th>
                       ))}
                     </tr>
@@ -3901,8 +3912,10 @@ function FacultyManagement() {
                         <td>{years(item.experience)}</td>
                         <td>{item.employmentType || '—'}</td>
                         <td className="table-center"><StatusBadge value={item.employmentStatus} /></td>
+                        <td><CompletionIndicator completion={item.completion} /></td>
                         <td className="table-center">
                           <div className="table-actions-cell table-actions-group">
+                            {canEdit && <ResumeSetupAction completion={item.completion} name={item.fullName} onClick={() => navigate('/faculty/' + item.id + '/edit?category=' + activeCategory)} />}
                             {selectedCategory === 'Teaching' && (
                               <button
                                 type="button"
@@ -3959,7 +3972,7 @@ function FacultyManagement() {
           ) : <strong aria-current="page">Faculty Directory</strong>}
         </nav>
       )}
-      <main className={`faculty-management${path === '/faculty' && !selectedCategory ? ' faculty-management--overview' : ''}`}>
+      <main className={`faculty-management${path === '/faculty' && !selectedCategory ? ' faculty-management--overview' : ''}${path === '/faculty' && selectedCategory ? ' faculty-management--directory' : ''}`}>
         {loadError && path !== '/faculty/new' && !editId && <p className="fm-error" role="alert">{loadError} <button type="button" onClick={() => setReloadDirectory(value => value + 1)}>Retry</button></p>}
         {loadingFaculty ? <section className="fm-panel">Loading faculty records...</section> : content}
         {assignedFaculty && (

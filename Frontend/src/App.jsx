@@ -1,8 +1,7 @@
 import { Component, Suspense, lazy, useEffect } from 'react'
 import { MeetingsEventsWorkspace, LibraryWorkspace, PlacementWorkspace } from './pages/campus/CampusWorkspace'
 import { Dashboard, LandingPage, Login, ActivateAccount, Register, Unauthorized } from './pages/Pages'
-import { Course, CourseStructure, Branch } from './pages/courseManagement/Course'
-import { CollegeInstitutionManagement, AddCollege, AcademicYearManagement, DepartmentManagement, RolesAndDesignations, RoomsManagement } from './pages/admin-management/AdminManagement'
+import { CollegeInstitutionManagement, AddCollege, AcademicYearManagement, RolesAndDesignations, RoomsManagement } from './pages/admin-management/AdminManagement'
 import { MyProfile, Settings } from './pages/profile/MyProfile'
 import { Attendance, AttendanceSessionDetails } from './pages/attendance/Attendance'
 import { FacultyManagement, FacultyLeaveManagement, Payroll } from './pages/faculty/FacultyManagement'
@@ -28,6 +27,7 @@ const FacultySessionExpiredPage = lazy(() => import('./features/faculty/FacultyS
 import { ROLES } from './auth/roles'
 
 import AcademicStructure from './pages/academic-structure/AcademicStructure'
+import AcademicStructureRedirect from './pages/academic-structure/AcademicStructureRedirect'
 import SemesterManagement from './pages/semester-management/SemesterManagement'
 import SectionManagement from './pages/section-management/SectionManagement'
 import StudentAdmission from './pages/student-management/StudentAdmission/StudentAdmission'
@@ -291,14 +291,14 @@ export default function App() {
               <Route path="/academic-structure" element={<AcademicStructure />} />
 
               {/* Backwards-compatible route redirects to the unified Academic Structure page */}
-              <Route path="/department-management/*" element={<Navigate to="/academic-structure?step=departments" replace />} />
-              <Route path="/department-management" element={<Navigate to="/academic-structure?step=departments" replace />} />
-              <Route path="/courses/*" element={<Navigate to="/academic-structure?step=courses" replace />} />
-              <Route path="/courses" element={<Navigate to="/academic-structure?step=courses" replace />} />
-              <Route path="/branches/*" element={<Navigate to="/academic-structure?step=branches" replace />} />
-              <Route path="/branches" element={<Navigate to="/academic-structure?step=branches" replace />} />
-              <Route path="/semester-management/*" element={<Navigate to="/academic-structure?step=semesters" replace />} />
-              <Route path="/semester-management" element={<Navigate to="/academic-structure?step=semesters" replace />} />
+              <Route path="/department-management/*" element={<AcademicStructureRedirect step="departments" />} />
+              <Route path="/courses/*" element={<AcademicStructureRedirect step="courses" />} />
+              <Route path="/branches/*" element={<AcademicStructureRedirect step="branches" />} />
+              <Route path="/semester-management/*" element={<Navigate to="/semester-management" replace />} />
+              <Route path="/semester-management" element={<SemesterManagement />} />
+              <Route path="/semester-management/add" element={<Navigate to="/semester-management" replace />} />
+              <Route path="/semester-management/:id/edit" element={<SemesterManagement mode="edit" />} />
+              <Route path="/semester-management/:id" element={<SemesterManagement mode="details" />} />
               <Route path="/section-management" element={<SectionManagement />} />
               <Route path="/section-management/add" element={<SectionManagement mode="form" />} />
               <Route path="/section-management/:id/edit" element={<SectionManagement mode="edit" />} />

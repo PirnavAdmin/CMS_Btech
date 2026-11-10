@@ -304,24 +304,13 @@ export const AcademicProvider = ({ children }) => {
     return list.filter(b => String(b.courseId) === String(courseId))
   }, [scopeRecords, branches, activeBranches])
 
-  const getSemestersForCourse = useCallback((courseId, activeOnly = true) => {
+  const getSemestersForCourse = useCallback((courseId, activeOnly = true, scope = {}) => {
     const list = activeOnly ? activeSemesters : scopeRecords(semesters)
-    const filtered = !courseId ? list : list.filter(s => !s.courseId || String(s.courseId) === String(courseId))
-    const map = new Map()
-    filtered.forEach(s => {
-      const num = Number(s.semesterNumber ?? String(s.semesterName || s.name || s.id).match(/\d+/)?.[0] ?? s.id)
-      const name = s.semesterName || s.name || (num ? `Semester ${num}` : `Semester ${s.id}`)
-      const key = num || name
-      if (!map.has(key)) {
-        map.set(key, {
-          ...s,
-          id: s.id ?? key,
-          semesterNumber: num || s.semesterNumber || key,
-          semesterName: name,
-        })
-      }
-    })
-    return Array.from(map.values()).sort((a, b) => (Number(a.semesterNumber) || 0) - (Number(b.semesterNumber) || 0))
+    return list.filter(s => (s.semesterId ?? s.id) && (!courseId || String(s.courseId) === String(courseId)) &&
+      (!scope.branchId || String(s.branchId) === String(scope.branchId)) &&
+      (!scope.academicYearId || String(s.academicYearId) === String(scope.academicYearId)))
+      .map(s => ({ ...s, id: s.semesterId ?? s.id, semesterName: s.semesterName || s.name || `Semester ${s.semesterNumber}` }))
+      .sort((a, b) => Number(a.semesterNumber) - Number(b.semesterNumber))
   }, [scopeRecords, semesters, activeSemesters])
 
   const getSectionsForScope = useCallback((scope = {}, activeOnly = true) => {

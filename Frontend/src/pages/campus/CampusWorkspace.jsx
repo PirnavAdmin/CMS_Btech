@@ -487,6 +487,7 @@ function LibraryWorkspace() {
         )}
 
         {/* Top Header & Context */}
+        <div className="adv-library-top-layout">
         <div className="adv-library-header">
           <PageHeader
             breadcrumb={[
@@ -497,33 +498,9 @@ function LibraryWorkspace() {
             subtitle="Centralized catalog, physical copy tracking, circulation desk, borrower records, and analytics."
           />
 
-          <div className="adv-library-header__actions">
-            <ExportMenu
-              rows={currentList}
-              columns={libraryExportColumns[activeTab]}
-              filename={`library_${activeTab}`}
-              title={`Digital Library - ${activeTab.toUpperCase()}`}
-              directDownload
-            />
-
-            {isAdmin && (
-              <button
-                type="button"
-                className="adv-btn adv-btn--primary"
-                onClick={() => {
-                  setEditingBook(null)
-                  setAddBookModal(true)
-                }}
-              >
-                <FiPlus />
-                <span>Add Book to Catalog</span>
-              </button>
-            )}
-          </div>
         </div>
-
         {/* Executive KPI Stat Cards */}
-        <div className="adv-kpi-grid">
+        <div className="adv-kpi-grid adv-kpi-grid--library-summary">
           <div className="adv-kpi-card adv-kpi-card--blue">
             <div className="adv-kpi-card__icon">
               <FiBook />
@@ -587,6 +564,7 @@ function LibraryWorkspace() {
               </div>
             </div>
           </div>
+        </div>
         </div>
 
         {/* Informative Workspace Mode Banner */}
@@ -738,7 +716,41 @@ function LibraryWorkspace() {
           </div>
 
           {activeTab === 'catalog' && (
-            <>
+            <button
+              type="button"
+              className={`adv-btn adv-btn--filter${showFilters ? ' is-active' : ''}`}
+              aria-expanded={showFilters}
+              aria-controls="library-catalog-filters"
+              onClick={() => setShowFilters(value => !value)}
+            >
+              <FiFilter aria-hidden="true" /> Filters{activeLibraryFilterCount > 0 && <span className="adv-filter-count">{activeLibraryFilterCount}</span>}<FiChevronDown className={showFilters ? 'is-open' : ''} aria-hidden="true" />
+            </button>
+          )}
+
+          <ExportMenu
+            rows={currentList}
+            columns={libraryExportColumns[activeTab]}
+            filename={`library_${activeTab}`}
+            title={`Digital Library - ${activeTab.toUpperCase()}`}
+            directDownload
+          />
+
+          {isAdmin && (
+            <button
+              type="button"
+              className="adv-btn adv-btn--primary"
+              onClick={() => {
+                setEditingBook(null)
+                setAddBookModal(true)
+              }}
+            >
+              <FiPlus />
+              <span>Add Book to Catalog</span>
+            </button>
+          )}
+
+          {activeTab === 'catalog' && showFilters && (
+            <div className="adv-control-bar__filters" id="library-catalog-filters">
               <div className="adv-control-bar__select-group">
                 <ProjectSelect
                   value={selectedCategory}
@@ -797,7 +809,7 @@ function LibraryWorkspace() {
                   <FiList />
                 </button>
               </div>
-            </>
+            </div>
           )}
 
           <button

@@ -11,22 +11,7 @@
   background: linear-gradient(115deg, var(--hero-dark), var(--hero-blue));
 }
 /* Shared dark-mode contrast for directory tools, record banners and dialogs. */
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --text-on-accent: #FFFFFF;
-  --hero-dark: #0F172A;
-  --hero-blue: #1E293B;
-}
 /* Bright accents need dark text, including hover states. */
-:root[data-theme="dark"] .logout-confirmation__confirm {
-  color: #FFFFFF !important;
-  background: var(--brand) !important;
-  border-color: var(--brand) !important;
-}
-:root[data-theme="dark"] .logout-confirmation__confirm:hover {
-  background: var(--brand-hover) !important;
-  border-color: var(--brand-hover) !important;
-}
 :root[data-theme="dark"] :is(.settings-page header span, .settings-card > span,
 .settings-card > p:not(:first-child), .strength ul, .password-modal__strength ul) {
   color: var(--text-secondary);
@@ -56,20 +41,15 @@
 
 /* Dark Mode Universal Secondary, Toolbar, Export, and Filter Buttons */
 
-/* The dark UI has one accent family: lavender.  Older feature styles used
-   emerald/teal to indicate positive states, which made dark screens feel like
-   two different themes.  Preserve the meaning through labels and icons while
-   rendering those accents with the shared lavender tokens. */
 :root[data-theme="dark"] :is(
   .fp-status.paid,
   .fp-attendance-summary .present,
   .faculty-management .fm-attendance-screen .fm-attendance-present,
-  .faculty-management .fm-report-total--present,
-  .sm-credit-badge
+  .faculty-management .fm-report-total--present
 ) {
-  color: var(--brand) !important;
-  border-color: rgba(43, 120, 197, 0.42) !important;
-  background-color: rgba(43, 120, 197, 0.18) !important;
+  color: var(--success) !important;
+  border-color: var(--success-border) !important;
+  background-color: var(--success-soft) !important;
 }
 :root[data-theme="dark"] .promotion-review-drawer .pr-btn-eligible:hover {
   background: var(--brand-hover) !important;
@@ -96,8 +76,8 @@
   color: var(--text-primary) !important;
 }
 :root[data-theme="dark"] :is(.sm-btn--primary, .em-header-actions .sm-btn--primary) {
-  background: var(--brand) !important;
-  color: #FFFFFF !important;
+  background: var(--brand-solid) !important;
+  color: var(--text-on-dark) !important;
   border-color: var(--brand) !important;
 }
 :root[data-theme="dark"] :is(.sm-btn--primary, .em-header-actions .sm-btn--primary):hover {
@@ -149,10 +129,10 @@
   .action-popover,
   .table-menu
 ) {
-  background: #151B28 !important;
-  border: 1px solid #334155 !important;
+  background: var(--app-bg) !important;
+  border: 1px solid var(--border) !important;
   color: #F8FAFC !important;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5) !important;
+  box-shadow: var(--shadow-md) !important;
 }
 
 :root[data-theme="dark"] :is(
@@ -177,8 +157,8 @@
   .action-popover,
   .table-menu
 ) :is(button, a, .export-option, .dropdown-item):hover {
-  background: rgba(23, 105, 194, 0.22) !important;
-  color: #FFFFFF !important;
+  background: var(--surface-hover) !important;
+  color: var(--text-on-dark) !important;
 }
 
 /* Common Modal and Dialog Overlays in Dark Mode */
@@ -201,10 +181,10 @@
   .sa-modal-content,
   .view-dialog-content
 ) {
-  background: #151B28 !important;
-  border: 1px solid #334155 !important;
+  background: var(--app-bg) !important;
+  border: 1px solid var(--border) !important;
   color: #F8FAFC !important;
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.6) !important;
+  box-shadow: var(--shadow-md) !important;
 }
 
 :root[data-theme="dark"] :is(
@@ -214,8 +194,8 @@
   .sa-modal-header,
   .view-dialog-header
 ) {
-  background: #101622 !important;
-  border-bottom: 1px solid #334155 !important;
+  background: var(--app-bg) !important;
+  border-bottom: 1px solid var(--border) !important;
   color: #F8FAFC !important;
 }
 
@@ -226,8 +206,8 @@
   .sa-modal-footer,
   .view-dialog-footer
 ) {
-  background: #101622 !important;
-  border-top: 1px solid #334155 !important;
+  background: var(--app-bg) !important;
+  border-top: 1px solid var(--border) !important;
 }
 
 /* Universal Full Lavender Active Tabs in Dark Mode */

@@ -1,3 +1,5 @@
+import { calculateCompletion, completionSchemas } from '../../../utils/recordCompletion'
+import { CompletionIndicator, CompletionSummary, ResumeSetupAction } from '../../../components/RecordCompletion'
 import StudentDocumentActions from '../../../components/StudentDocumentActions'
 import { resetAdmissionAcademicDependents } from '../../../utils/admissionAcademicMapping'
 import eventBus, { ERP_EVENTS } from '../../../services/eventBus'
@@ -395,30 +397,6 @@ const detail = (label, content) => (
     <dd>{value(content)}</dd>
   </div>
 );
-const completion = (x) => {
-  const p = x.personal || {},
-    c = x.contact || {},
-    a = x.academic || {},
-    f = x.parents?.father || {},
-    app = x.application || {},
-    fields = [
-      name(x),
-      p.gender,
-      p.dob,
-      c.mobile,
-      c.email,
-      c.permanentAddress?.line1,
-      f.name,
-      f.mobile,
-      a.department,
-      a.course,
-      a.branch,
-      a.academicYear,
-      app.registrationNumber,
-      app.admissionNumber,
-    ];
-  return Math.round((fields.filter(Boolean).length / fields.length) * 100);
-};
 const setPath = (data, path, value) => {
   const next = clone(data),
     parts = path.split(".");
@@ -563,7 +541,7 @@ export default function StudentProfile() {
       if (requestId !== directorySequence.current) return;
       let rows =
         directory.status === "fulfilled"
-          ? directory.value.map(row => ({ ...profileFromApi(row), exportVerified: isApiResult(directory.value) }))
+          ? directory.value.map(row => ({ ...profileFromApi(row), completion: isApiResult(directory.value) ? calculateCompletion(completionSchemas.studentProfile, row) : null, exportVerified: isApiResult(directory.value) }))
           : [];
       if (profile.status === "fulfilled" && profile.value) {
         const [preview, documents] = profile.value;
@@ -573,6 +551,7 @@ export default function StudentProfile() {
           documents: documentsFromApi(documents),
         });
         if (requestId !== directorySequence.current) return;
+        latest.completion = calculateCompletion(completionSchemas.studentProfile, preview);
         setSelectedStudent(latest);
         rows = [
           { ...latest, exportVerified: isApiResult(preview) },
@@ -600,7 +579,7 @@ export default function StudentProfile() {
           return (rowAdmissionId && rowAdmissionId === itemAdmissionId) || (rowStudentId && rowStudentId === itemStudentId);
         });
         return admission
-          ? { ...profileFromApi(mergeFilledProfileData(admission, row)), exportVerified: row.exportVerified }
+          ? { ...profileFromApi(mergeFilledProfileData(admission, row)), completion: row.completion, exportVerified: row.exportVerified }
           : row;
       });
       rows = approvedStudentProfiles(rows, admissions.value);
@@ -762,13 +741,13 @@ export default function StudentProfile() {
     setTab("personal");
     try {
       let preview = directoryStudent ?? { id: requestedId };
+      let completion = directoryStudent?.completion;
       const studentIdToFetch = directoryStudent?.studentId || requestedId;
       if (studentIdToFetch) {
         try {
-          preview = {
-            ...preview,
-            ...(await studentProfilesApi.preview(studentIdToFetch)),
-          };
+          const saved = await studentProfilesApi.preview(studentIdToFetch);
+          completion = calculateCompletion(completionSchemas.studentProfile, saved);
+          preview = { ...preview, ...saved };
         } catch {
           // Some newly approved rows are initially keyed by admission ID rather
           // than student ID. Hydration below resolves the correct student record.
@@ -779,6 +758,7 @@ export default function StudentProfile() {
         studentId: directoryStudent?.studentId || (directoryStudent?.admissionId ? undefined : requestedId),
       });
       if (requestId !== detailSequence.current) return;
+      latest.completion = completion;
       const resolvedId = String(latest.id ?? latest.studentId ?? latest.admissionId ?? requestedId);
       setSelectedStudent(latest);
       setSelectedId(resolvedId);
@@ -1028,6 +1008,7 @@ export default function StudentProfile() {
     <ViewDialog title="Student Details" icon={FiUser} onClose={closeProfile} showExport={false} maxWidth="1120px">
     {detailLoading && <p role="status">Loading complete student details...</p>}
     {detailError && <div role="alert"><p>{detailError}</p><button type="button" onClick={() => openProfile(selected)}>Retry details</button></div>}
+    <CompletionSummary completion={selected.completion} name={studentFullName(selected)} onClick={canEdit && !detailLoading ? () => beginEdit(selected) : undefined} />
     <Profile
       student={selected}
       tab={tab}
@@ -1140,6 +1121,7 @@ export default function StudentProfile() {
                     <th style={{ minWidth: "200px" }}>Academic details</th>
                     <th style={{ minWidth: "160px" }}>Contact</th>
                     <th className="table-center" style={{ minWidth: "110px", width: "110px" }}>Status</th>
+                    <th>Completion</th>
                     <th className="table-center" style={{ minWidth: "100px", width: "100px" }}>Actions</th>
                   </tr>
                 </thead>
@@ -1193,8 +1175,10 @@ export default function StudentProfile() {
                         <td className="table-center">
                           <StatusBadge value={status(student.status)} />
                         </td>
+                        <td><CompletionIndicator completion={student.completion} /></td>
                         <td className="table-center">
                           <div className="table-actions-cell table-actions-group">
+                            {canEdit && <ResumeSetupAction completion={student.completion} name={studentFullName(student)} onClick={() => beginEdit(student)} />}
                             {canEdit && (
                               <button
                                 type="button"

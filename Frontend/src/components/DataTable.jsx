@@ -8,7 +8,7 @@ const compare = (left, right) => typeof left === 'number' && typeof right === 'n
 
 // Client-side table: pass the complete filtered rows, never a server-page slice.
 // Data ownership, API calls, filtering and action permissions stay with callers.
-export default function DataTable({ columns, rows, rowKey = 'id', caption, pagination, loading = false, error, onRetry, emptyState, rowActions, actionsLabel = 'Actions', className = '', tableClassName = 'erp-table' }) {
+export default function DataTable({ columns, rows, rowKey = 'id', caption, pagination, loading = false, error, onRetry, emptyState, rowActions, actionsLabel = 'Actions', actionsClassName = 'col-actions table-center', className = '', tableClassName = 'erp-table' }) {
   const [sort, setSort] = useState(null)
   const sorted = useMemo(() => {
     const column = columns.find(entry => entry.key === sort?.key && entry.sortable)
@@ -36,8 +36,8 @@ export default function DataTable({ columns, rows, rowKey = 'id', caption, pagin
             setSort({ key: column.key, direction: sort?.key === column.key && sort.direction === 'ascending' ? 'descending' : 'ascending' })
             pagination?.onPageChange(1)
           }}>{column.label}<span aria-hidden="true">{sort?.key === column.key ? sort.direction === 'ascending' ? ' ↑' : ' ↓' : ' ↕'}</span></button> : column.label}
-        </th>)}{rowActions && <th scope="col" className="col-actions table-center">{actionsLabel}</th>}</tr></thead>
-        <tbody>{visible.map(row => <tr key={typeof rowKey === 'function' ? rowKey(row) : row[rowKey]}>{columns.map(column => <td key={column.key} className={column.className}>{column.render ? column.render(row) : column.value ? column.value(row) : row[column.key]}</td>)}{rowActions && <td className="col-actions table-center">{rowActions(row)}</td>}</tr>)}</tbody>
+        </th>)}{rowActions && <th scope="col" className={actionsClassName}>{actionsLabel}</th>}</tr></thead>
+        <tbody>{visible.map(row => <tr key={typeof rowKey === 'function' ? rowKey(row) : row[rowKey]}>{columns.map(column => <td key={column.key} className={column.className}>{column.render ? column.render(row) : column.value ? column.value(row) : row[column.key]}</td>)}{rowActions && <td className={actionsClassName}>{rowActions(row)}</td>}</tr>)}</tbody>
       </table>
     </div>
     {pagination && <div className="erp-table-pagination-wrap"><TablePagination page={page} totalPages={totalPages} onPageChange={pagination.onPageChange} /></div>}

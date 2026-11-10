@@ -1,0 +1,10 @@
+.record-completion { display: inline-flex; align-items: center; gap: .35rem; white-space: nowrap; color: var(--text-secondary); font-size: var(--font-caption); font-variant-numeric: tabular-nums; }
+.record-completion progress { inline-size: 2.5rem; block-size: .35rem; accent-color: var(--brand); }
+.record-completion-cell { white-space: nowrap; }
+.record-completion-action { padding: 3px 5px; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--brand); font: inherit; font-size: var(--font-caption); white-space: nowrap; cursor: pointer; }
+.record-completion-action:hover { background: var(--surface-hover); }
+.record-completion-summary { padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-surface); background: var(--surface-soft); color: var(--text-primary); }
+.record-completion-summary > div { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); }
+.record-completion-summary details { margin-top: var(--space-1); color: var(--text-secondary); font-size: var(--font-caption); }
+.record-completion-summary summary { cursor: pointer; }
+.record-completion-summary ul { margin-block: var(--space-2) 0; padding-inline-start: var(--space-5); }

@@ -3,7 +3,7 @@ import {render,screen,fireEvent,waitFor,cleanup,act,within} from '@testing-libra
 import {MemoryRouter} from 'react-router-dom'
 import Attendance from '../pages/attendance/Attendance'
 import attendanceService from '../services/attendanceService'
-const fixture=vi.hoisted(()=>({edit:true,year:'1',scope:rows=>rows.filter(row=>!row.collegeId || row.collegeId===7),courses:[{id:2,name:'B.Tech'}],branches:[{id:3,name:'CSE',courseId:2}],semesters:[{id:4,semesterName:'Semester 1',courseId:2,branchId:3}],sections:[{id:5,name:'A',semesterId:4,branchId:3}],branchesFor:()=>fixture.branches,semestersFor:()=>fixture.semesters,sectionsFor:()=>fixture.sections}))
+const fixture=vi.hoisted(()=>({edit:true,year:'1',scope:rows=>rows.filter(row=>!row.collegeId || row.collegeId===7),courses:[{id:2,name:'B.Tech'}],branches:[{id:3,name:'CSE',courseId:2}],semesters:[{id:4,semesterName:'Semester 1',courseId:2,branchId:3,academicYearId:1}],sections:[{id:5,name:'A',semesterId:4,branchId:3}],branchesFor:()=>fixture.branches,semestersFor:()=>fixture.semesters,sectionsFor:()=>fixture.sections}))
 vi.mock('../layouts/DashboardLayout',()=>({default:({children})=>children}))
 vi.mock('../hooks/useCollegeState',async()=>({default:(await import('react')).useState}))
 vi.mock('../auth/ScreenAccess',()=>({useScreenAccess:()=>({canAction:()=>fixture.edit})}))

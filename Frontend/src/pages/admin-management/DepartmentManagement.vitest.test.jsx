@@ -3,7 +3,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { DepartmentManagement } from './AdminManagement'
-import { createDepartment, getDepartments, getDepartmentById, searchDepartments, updateDepartment, updateDepartmentStatus } from '../../auth/collegeApi'
+import { createDepartment, deleteDepartment, getDepartments, getDepartmentById, searchDepartments, updateDepartment, updateDepartmentStatus } from '../../auth/collegeApi'
 
 const fixture = vi.hoisted(() => ({ collegeId: '7', rows: [] }))
 vi.mock('../../auth/ScreenAccess', () => ({ useScreenAccess: () => ({ canAction: () => true }) }))
@@ -11,7 +11,7 @@ vi.mock('../../layouts/DashboardLayout', () => ({ default: ({ children }) => <>{
 vi.mock('../../components/ExportMenu', () => ({ default: () => <button type="button">Export</button>, PrintDetailsButton: () => null }))
 vi.mock('../../context/AcademicContext', () => ({ useAcademic: () => ({ selectedCollegeId: fixture.collegeId, selectedCollege: { id: fixture.collegeId, name: 'Selected college' }, scopeRecords: rows => rows.filter(row => String(row.collegeNumericId ?? row.collegeId) === fixture.collegeId) }) }))
 vi.mock('../../services/facultyService', async original => ({ ...await original(), normalizeFaculty: row => row, default: { list: vi.fn(async () => [{ id: 21, userId: 121, collegeId: 7, departmentId: 1, fullName: 'Configured faculty', status: 'Active' }]) } }))
-vi.mock('../../auth/collegeApi', async original => ({ ...await original(), getColleges: vi.fn(async () => ({ data: [{ collegeId: 7, collegeName: 'Selected college', status: 1 }] })), getDepartments: vi.fn(), searchDepartments: vi.fn(), getDepartmentById: vi.fn(), createDepartment: vi.fn(), updateDepartment: vi.fn(), updateDepartmentStatus: vi.fn() }))
+vi.mock('../../auth/collegeApi', async original => ({ ...await original(), getColleges: vi.fn(async () => ({ data: [{ collegeId: 7, collegeName: 'Selected college', status: 1 }] })), getDepartments: vi.fn(), searchDepartments: vi.fn(), getDepartmentById: vi.fn(), createDepartment: vi.fn(), deleteDepartment: vi.fn(), updateDepartment: vi.fn(), updateDepartmentStatus: vi.fn() }))
 const record = (id = 1, overrides = {}) => ({ departmentId: id, departmentName: `Department ${String.fromCharCode(64 + id)}`, departmentCode: `D${id}`, collegeId: 7, status: 1, ...overrides })
 beforeEach(() => {
  vi.clearAllMocks(); localStorage.clear(); sessionStorage.clear(); fixture.collegeId = '7'; fixture.rows = [record()]
@@ -24,6 +24,11 @@ beforeEach(() => {
 })
 afterEach(cleanup)
 const mount = () => render(<MemoryRouter><DepartmentManagement /></MemoryRouter>)
+test('opens the assignment dialog for the department linked from Academic Structure', async () => {
+  render(<MemoryRouter initialEntries={['/department-management?assignHod=1']}><DepartmentManagement /></MemoryRouter>)
+  expect(await screen.findByRole('dialog', { name: 'Assign Head / In-Charge' })).toBeTruthy()
+  expect(getDepartmentById).toHaveBeenCalledWith(1)
+})
 const openAdd = async () => { await screen.findByRole('button', { name: /Edit Department A/ }); fireEvent.click(screen.getByRole('button', { name: 'Add Department' })); return screen.findByRole('heading', { name: 'Add Department' }) }
 const fill = () => {
  fireEvent.change(screen.getByLabelText(/Department Name/), { target: { value: 'Computer Science' } })
@@ -60,7 +65,7 @@ test('new form retains required controls without a preview, native field transfo
  expect(document.querySelector('.erp-form-page[data-without-live-preview="true"]')).toBeTruthy(); expect(screen.getByLabelText(/Department Code/).value).toBe('CSE')
  fireEvent.click(screen.getByRole('button', { name: 'Create Department' })); await waitFor(() => expect(createDepartment).toHaveBeenCalledTimes(1))
  expect(createDepartment.mock.calls[0][0]).toEqual({ departmentName: 'Computer Science', departmentCode: 'CSE', collegeId: 7, description: 'Configured department', startDate: '2026-08-01', endDate: null, StartDate: '2026-08-01', EndDate: null, start_date: '2026-08-01', end_date: null })
- await screen.findByRole('heading', { name: 'Department Management' })
+ await screen.findByRole('heading', { name: 'Departments' })
 })
 test('edit and cancel preserve existing update identifier and avoid unintended saves', async () => {
  mount(); fireEvent.click(await screen.findByRole('button', { name: 'Edit Department A' })); await screen.findByDisplayValue('Department A')
@@ -72,7 +77,7 @@ test('duplicate validation remains visible and does not submit a new record', as
  await screen.findByText('This department code already exists for this college.'); expect(createDepartment).not.toHaveBeenCalled()
 })
 test('existing details and HOD actions remain connected after table migration', async () => {
- mount(); fireEvent.click(await screen.findByRole('button', { name: 'Department A' })); await screen.findByRole('heading', { name: 'Department A' }); expect(getDepartmentById).toHaveBeenCalledWith(1)
+ mount(); fireEvent.click(await screen.findByRole('button', { name: 'View Department A' })); await screen.findByRole('heading', { name: 'Department A' }); expect(getDepartmentById).toHaveBeenCalledWith(1)
  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Close', exact: true })); fireEvent.click(await screen.findByRole('button', { name: 'Assign Head for Department A' })); await screen.findByRole('dialog', { name: 'Assign Head / In-Charge' }); expect(screen.getByRole('button', { name: 'Assign Head' }).disabled).toBe(true)
  fireEvent.click(screen.getByRole('button', { name: 'Select Faculty Member' })); fireEvent.click(await screen.findByRole('option', { name: /Configured faculty/ })); fireEvent.click(screen.getByRole('button', { name: 'Assign Head' }))
  await waitFor(() => expect(updateDepartment).toHaveBeenCalledTimes(1)); expect(updateDepartment.mock.calls[0][0]).toBe(1); expect(updateDepartment.mock.calls[0][1].hodUserId).toBe(121)
@@ -80,4 +85,25 @@ test('existing details and HOD actions remain connected after table migration', 
 test('existing activation confirmation uses the same status API and identifier', async () => {
  fixture.rows = [record(1, { status: 0 })]; mount(); fireEvent.click(await screen.findByRole('button', { name: 'Activate Department A' })); await screen.findByRole('alertdialog'); expect(updateDepartmentStatus).not.toHaveBeenCalled()
  fireEvent.click(screen.getByRole('button', { name: 'Activate Department' })); await waitFor(() => expect(updateDepartmentStatus).toHaveBeenCalledWith(1, 1)); await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
+})
+
+test('the saved completion percentage matches in the list and view and ignores the optional HOD', async () => {
+ fixture.rows = [record(1, { description: 'Department profile' })];
+ mount();
+ const table = await screen.findByRole('table', { name: 'Department directory' });
+ expect(within(table).getByRole('progressbar').value).toBe(100);
+ fireEvent.click(within(table).getByRole('button', { name: 'View Department A' }));
+ const dialog = await screen.findByRole('dialog', { name: 'Department Details' });
+ expect((await within(dialog).findByRole('progressbar')).value).toBe(100);
+})
+
+test('deletion uses the saved department ID after confirmation', async () => {
+ deleteDepartment.mockImplementationOnce(async () => { fixture.rows = []; return { data: {} } });
+ mount();
+ fireEvent.click(await screen.findByRole('button', { name: 'Delete Department A' }));
+ const dialog = screen.getByRole('dialog', { name: 'Delete Department' });
+ expect(deleteDepartment).not.toHaveBeenCalled();
+ fireEvent.click(within(dialog).getByRole('button', { name: 'Delete Department' }));
+ await waitFor(() => expect(deleteDepartment).toHaveBeenCalledWith(1));
+ await screen.findByRole('heading', { name: 'No departments have been added yet.' });
 })

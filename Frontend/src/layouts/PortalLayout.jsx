@@ -32,7 +32,6 @@ export default function PortalLayout({ children, title }) {
   const [open, setOpen] = useState(false), [logout, setLogout] = useState(false)
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('pirnav-sidebar-collapsed') === 'true')
   const [query, setQuery] = useState('')
-  const [theme, setTheme] = useState(() => localStorage.getItem('pirnav-theme') || 'light')
   const allNav = role === 'faculty' ? facultyNavigation : role === 'student' ? studentNavigation : role === 'staff' ? [['dashboard', 'Dashboard'], ['profile', 'My Profile']] : [['users', 'Roles & Designations']]
   const nav = [...allNav.filter(([key]) => canView(`/${role}-portal/${key}`)), ...(['faculty', 'staff'].includes(role) ? additionalScreens.filter(([path]) => canView(path)) : [])]
   const sidebarNav = nav.filter(([key]) => role === 'faculty' ? facultySidebarKeys.has(key) : key !== 'notifications')
@@ -42,8 +41,6 @@ export default function PortalLayout({ children, title }) {
   const profileUrl = role === 'admin' ? base : `${base}/profile`
   const destination = key => key.startsWith('/') ? key : role === 'admin' ? base : `${base}/${key}`
   const results = query.trim() ? nav.filter(([, label]) => label.toLowerCase().includes(query.trim().toLowerCase())) : []
-  useEffect(() => { document.documentElement.dataset.theme = theme; localStorage.setItem('pirnav-theme', theme) }, [theme])
-  useEffect(() => { const syncTheme = event => { if (event.detail?.theme) setTheme(event.detail.theme) }; window.addEventListener('pirnav-theme-change', syncTheme); return () => window.removeEventListener('pirnav-theme-change', syncTheme) }, [])
   const toggleCollapse = () => setCollapsed(value => { localStorage.setItem('pirnav-sidebar-collapsed', String(!value)); return !value })
 
   return <div className={`dashboard-layout portal-shell ${collapsed ? 'sidebar-collapsed' : ''}`}>
