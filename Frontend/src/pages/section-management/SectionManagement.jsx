@@ -324,7 +324,6 @@ function SectionList({ initialViewId = null }) {
                       <td className="table-center" style={{ width: '130px' }}>{section.academicYear}</td>
                       <td className="table-center" style={{ width: '150px' }}>
                         <strong>{assigned} / {section.capacity}</strong>
-                        <small>{Math.max(Number(section.capacity || 0) - assigned, 0)} seats available</small>
                       </td>
                       <td className="table-center" style={{ minWidth: '170px', maxWidth: '220px' }}>
                         {section.advisor ? (
