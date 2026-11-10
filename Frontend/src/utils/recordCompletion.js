@@ -21,9 +21,27 @@ const section = (id, label, ...fields) => ({ id, label, fields })
 const required = { required: true }
 const requiredId = { required: true, validate: positive }
 const accreditationRequired = record => ['accredited', 'expired'].includes(String(record.accreditationStatus).toLowerCase())
+const subjectAmount = value => (typeof value === 'number' || meaningfulText(value))
+  && Number.isFinite(Number(value)) && Number(value) >= 0
 
 // Only fields returned by the saved-record contracts belong in these schemas.
 export const completionSchemas = {
+  subject: [
+    section('identity', 'Subject identity', field('subjectCode', 'Subject code', required),
+      field('subjectName', 'Subject name', required), field('subjectType', 'Subject type')),
+    section('mapping', 'Academic mapping', field('academicYearId', 'Academic year', requiredId),
+      field('courseId', 'Course', requiredId), field('branchId', 'Branch', requiredId),
+      field('semesterId', 'Semester', requiredId)),
+    section('credits', 'Credits and teaching hours', ...[
+      ['credits', 'Credits'], ['lectureHours', 'Lecture hours'], ['tutorialHours', 'Tutorial hours'],
+      ['practicalHours', 'Practical hours'],
+    ].map(([key, label]) => field(key, label, { validate: subjectAmount }))),
+    section('classification', 'Elective classification', field('electiveType', 'Elective classification', {
+      validate: value => /^(elective|non-elective|core subject)$/i.test(String(value ?? '')),
+    })),
+    section('assessment', 'Assessment', field('internalMarks', 'Internal marks', { validate: subjectAmount }),
+      field('externalMarks', 'External marks', { validate: subjectAmount })),
+  ],
   college: [
     section('college', 'College information',
       field('collegeName', 'College name', { ...required, aliases: ['name'] }),

@@ -2944,16 +2944,7 @@ const empty = {
   status: '',
 };
 
-const HOD_NAMES_KEY = 'btech-department-hod-names';
 const DEPT_DATES_KEY = 'pirnav-department-dates-map';
-
-const savedHodNames = () => {
-  try {
-    return JSON.parse(localStorage.getItem(HOD_NAMES_KEY) || '{}');
-  } catch {
-    return {};
-  }
-};
 
 const readCachedDeptDates = (id, code) => {
   try {
@@ -3024,20 +3015,11 @@ const listFrom = (response) => {
 const recordFrom = (response) => response?.data?.data ?? response?.data ?? response;
 
 const resolveHodName = (record, facultyList = []) => {
-  const departmentId = record.id ?? record.departmentId;
   const hodUserId = record.hodUserId ?? record.hodId ?? record.hod?.userId ?? record.hod?.id ?? '';
-  const savedName = departmentId ? savedHodNames()[departmentId] : '';
-
-  if (savedName && savedName.trim()) {
-    return savedName.trim();
-  }
 
   if (hodUserId && facultyList && facultyList.length) {
     const matched = facultyList.find((f) =>
-      String(f.id) === String(hodUserId) ||
-      String(f.facultyId) === String(hodUserId) ||
-      String(f.userId) === String(hodUserId) ||
-      String(f.employeeProfileId) === String(hodUserId)
+      String(f.userId) === String(hodUserId)
     );
     if (matched?.fullName) {
       return matched.fullName;
@@ -3109,7 +3091,7 @@ const payloadFor = (value) => ({
   end_date: value.endDate ? value.endDate.slice(0, 10) : null,
 });
 
-function DepartmentManagement() {
+function DepartmentManagement({ inlineCreate = false, onCreated, onDismiss } = {}) {
   const { scopeRecords, selectedCollegeId, selectedCollege, branches, loading: hierarchyLoading, error: hierarchyError } = useAcademic();
   const [departmentParams, setDepartmentParams] = react_router_domImports_useSearchParams();
   const { state: navigationState } = useLocation();
@@ -3129,6 +3111,7 @@ function DepartmentManagement() {
   const [error, setError] = useToastState('', 'error');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const departmentSaveLock = reactImports_useRef(false);
   const [isHodSaving, setIsHodSaving] = useState(false);
   const [isDetailsLoading, setIsDetailsLoading] = useState(false);
   const [colleges, setColleges] = useState([]);
@@ -3193,6 +3176,7 @@ function DepartmentManagement() {
   );
 
   const closeToList = () => {
+    if (inlineCreate) { onDismiss?.(); return; }
     detailRequest.current++;
     setForm({ ...empty, collegeId: selectedCollegeId || '', collegeNumericId: selectedCollegeId || '' });
     setScreen('list');
@@ -3301,14 +3285,12 @@ function DepartmentManagement() {
       return matchId || matchName || matchCode;
     });
 
-    const candidateList = directMatches.length > 0 ? directMatches : activeFaculty;
-
-    return candidateList
+    return directMatches
       .map((member) => ({
         ...member,
-        hodId: member.userId ?? member.employeeProfileId ?? member.facultyId ?? member.id,
+        hodId: member.userId,
       }))
-      .filter((member) => member.hodId !== undefined && member.hodId !== null && member.hodId !== '');
+      .filter((member) => Number.isSafeInteger(Number(member.hodId)) && Number(member.hodId) > 0);
   }, [faculty, form.id, form.name, form.code, form.collegeNumericId, form.collegeId, selectedCollegeId, selectedCollege, allDepartments]);
 
   const toggleStatus = async (item) => {
@@ -3425,6 +3407,7 @@ function DepartmentManagement() {
 
   const save = async (event) => {
     event.preventDefault();
+    if (departmentSaveLock.current || !(form.id ? canEditDepartment : canCreateDepartment)) return;
     if (!form.name.trim()) return setError('Department name is required.');
     if (!form.code.trim()) return setError('Department code is required.');
     const effectiveCollegeId = String(form.collegeNumericId || form.collegeId || selectedCollegeId || colleges[0]?.id || '');
@@ -3443,6 +3426,7 @@ function DepartmentManagement() {
         ? 'This department code already exists for this college.'
         : 'This department name already exists for this college.');
     }
+    departmentSaveLock.current = true;
     setIsSaving(true);
     setError('');
     try {
@@ -3459,11 +3443,17 @@ function DepartmentManagement() {
       }
       if (form.status === 'Inactive' && id) await updateDepartmentStatus(id, 0);
       showSuccess(`Department ${form.id ? 'updated' : 'created'} successfully.`);
+      eventBusImports_default.emit(eventBusImports_ERP_EVENTS.ACADEMIC_UPDATED);
+      if (inlineCreate) {
+        onCreated?.(id);
+        return;
+      }
       await loadDepartments('');
       closeToList();
     } catch (requestError) {
       setError(apiError(requestError, `Unable to ${form.id ? 'update' : 'create'} this department. Please try again.`));
     } finally {
+      departmentSaveLock.current = false;
       setIsSaving(false);
     }
   };
@@ -3474,9 +3464,9 @@ function DepartmentManagement() {
     setIsHodSaving(true);
     setError('');
     try {
-      const candidate = hodCandidates.find((m) => String(m.hodId) === String(form.hodUserId))
-        || faculty.find((m) => String(m.id) === String(form.hodUserId) || String(m.facultyId) === String(form.hodUserId) || String(m.userId) === String(form.hodUserId));
-      const chosenHodName = candidate?.fullName || form.hodName?.trim() || '';
+      const candidate = hodCandidates.find((m) => String(m.hodId) === String(form.hodUserId));
+      if (!candidate) throw new Error('Select an eligible faculty member from this department.');
+      const chosenHodName = candidate.fullName;
 
       if (!Number.isSafeInteger(Number(form.hodUserId)) || Number(form.hodUserId) <= 0) throw new Error('The selected faculty member does not have a valid account identifier.');
 
@@ -3504,9 +3494,7 @@ function DepartmentManagement() {
         }, faculty);
       }
 
-      const names = savedHodNames();
-      names[form.id] = chosenHodName;
-      localStorage.setItem(HOD_NAMES_KEY, JSON.stringify(names));
+      eventBusImports_default.emit(eventBusImports_ERP_EVENTS.ACADEMIC_UPDATED);
       setItems((current) => current.map((item) => (item.id === form.id ? updated : item)));
       setAllDepartments((current) => current.map((item) => (item.id === form.id ? updated : item)));
       setSelected(updated);
@@ -3538,6 +3526,36 @@ function DepartmentManagement() {
       setIsDeleting(false);
     }
   };
+
+  const departmentDialog = <ViewDialog className="department-form-dialog" title={form.id ? 'Edit Department' : 'Add Department'} onClose={closeToList} busy={isSaving} showExport={false} hideFooter><div className="erp-form-page" data-without-live-preview="true">{selected?.completion && <CompletionSummary completion={selected.completion} name={selected.name} />}<FormLayout onSubmit={save} busy={isSaving} error={error} actions={<>
+                    <button type="button" className="erp-btn erp-btn--secondary" onClick={closeToList} disabled={isSaving}>
+                      Cancel
+                    </button>
+                    <button type="submit" className="erp-btn erp-btn--primary" disabled={isSaving}>
+                      {isSaving ? 'Saving...' : form.id ? 'Save Changes' : 'Create Department'}
+                    </button>
+
+                </>}>
+                  <FormGroup title="Department Information">
+                    <FormField label="Department Name" required>
+                      <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value.replace(/[0-9]/g, '') })} placeholder="e.g. Computer Science & Engineering" />
+                    </FormField>
+                    <FormField label="Department Code" required>
+                      <input value={form.code} onChange={e => setForm({ ...form, code: e.target.value.toUpperCase() })} placeholder="e.g. CSE" />
+                    </FormField>
+                    <FormField label="Status" required>
+                      <ProjectSelect value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
+                        <option value="">Select Status</option>
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                      </ProjectSelect>
+                    </FormField>
+                    <FormField label="Description" className="erp-form-field--full"><textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Describe this organizational department..." rows={2} /></FormField>
+                  </FormGroup>
+                  {isDetailsLoading && <AsyncState status="loading" title="Loading department details..." />}
+                </FormLayout></div></ViewDialog>;
+
+  if (inlineCreate) return canCreateDepartment ? departmentDialog : null;
 
   return (
       <div className="department-management">
@@ -3662,35 +3680,9 @@ function DepartmentManagement() {
           </>
         )}
 
-        {screen === 'form' && <ViewDialog title={form.id ? 'Edit Department' : 'Add Department'} onClose={closeToList} busy={isSaving} showExport={false} hideFooter><div className="erp-form-page" data-without-live-preview="true">{selected?.completion && <CompletionSummary completion={selected.completion} name={selected.name} />}<FormLayout onSubmit={save} busy={isSaving} error={error} actions={<>
-                    <button type="button" className="erp-btn erp-btn--secondary" onClick={closeToList} disabled={isSaving}>
-                      Cancel
-                    </button>
-                    <button type="submit" className="erp-btn erp-btn--primary" disabled={isSaving}>
-                      {isSaving ? 'Saving...' : form.id ? 'Save Changes' : 'Create Department'}
-                    </button>
+        {screen === 'form' && departmentDialog}
 
-                </>}>
-                  <FormGroup title="Department Information">
-                    <FormField label="Department Name" required>
-                      <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value.replace(/[0-9]/g, '') })} placeholder="e.g. Computer Science & Engineering" />
-                    </FormField>
-                    <FormField label="Department Code" required>
-                      <input value={form.code} onChange={e => setForm({ ...form, code: e.target.value.toUpperCase() })} placeholder="e.g. CSE" />
-                    </FormField>
-                    <FormField label="Status" required>
-                      <ProjectSelect value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
-                        <option value="">Select Status</option>
-                        <option value="Active">Active</option>
-                        <option value="Inactive">Inactive</option>
-                      </ProjectSelect>
-                    </FormField>
-                    <FormField label="Description" className="erp-form-field--full"><textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Describe this organizational department..." rows={2} /></FormField>
-                  </FormGroup>
-                  {isDetailsLoading && <AsyncState status="loading" title="Loading department details..." />}
-                </FormLayout></div></ViewDialog>}
-
-        {screen === 'assign-hod' && <ViewDialog title="Assign Head / In-Charge" subtitle={form.name} onClose={closeToList} busy={isHodSaving} showExport={false} hideFooter><FormLayout onSubmit={saveHod} busy={isHodSaving} error={error} actions={<><button type="button" className="erp-btn erp-btn--secondary" onClick={closeToList} disabled={isHodSaving}>Cancel</button><button type="submit" className="erp-btn erp-btn--primary" disabled={isHodSaving || isDetailsLoading || !form.hodUserId}>{isHodSaving ? 'Saving Assignment...' : 'Assign Head'}</button></>}><p className="department-assignment-context">College: {form.collegeName || selectedCollege?.name || 'Selected college'} · Current head: {selected?.hod || 'Unassigned'}</p>{isDetailsLoading ? <AsyncState status="loading" title="Loading department leadership…" /> : <>                    <SearchableSelect
+        {screen === 'assign-hod' && <ViewDialog className="department-form-dialog" title="Assign Head / In-Charge" subtitle={form.name} onClose={closeToList} busy={isHodSaving} showExport={false} hideFooter><FormLayout onSubmit={saveHod} busy={isHodSaving} error={error} actions={<><button type="button" className="erp-btn erp-btn--secondary" onClick={closeToList} disabled={isHodSaving}>Cancel</button><button type="submit" className="erp-btn erp-btn--primary" disabled={isHodSaving || isDetailsLoading || !form.hodUserId}>{isHodSaving ? 'Saving Assignment...' : 'Assign Head'}</button></>}><p className="department-assignment-context">College: {form.collegeName || selectedCollege?.name || 'Selected college'} · Current head: {selected?.hod || 'Unassigned'}</p>{isDetailsLoading ? <AsyncState status="loading" title="Loading department leadership…" /> : <>                    <SearchableSelect
                       id="hod-faculty-search-select"
                       label="Select Faculty Member"
                       value={form.hodUserId ? String(form.hodUserId) : ''}
@@ -7425,10 +7417,10 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
 
   if (formMode) return (
     <DashboardLayout>
-      <div className="rooms-page rooms-form-page">
+      <div className="rooms-page">
         <ViewDialog
           title={roomId ? 'Edit Room / Classroom' : 'Add Room / Classroom'}
-          subtitle="Add room identity, location, capacity, and facilities in one compact form."
+          subtitle="Set room details, seating, and available equipment."
           icon={FiGrid}
           maxWidth="820px"
           showExport={false}
@@ -7440,8 +7432,6 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
         {!editingRoom ? <EmptyState title={roomsLoaded ? 'Room not found' : 'Loading room...'} /> : (
               <form id="room-editor-form" className="rooms-compact-form" onSubmit={handleSaveRoom}>
                 <div className="rooms-modal-body">
-                  <section className="rooms-form-section" aria-labelledby="room-identity-heading">
-                    <div className="rooms-form-section-heading"><span>01</span><div><h3 id="room-identity-heading">Room identity</h3><p>Set the room code and the name displayed across campus.</p></div></div>
                     <div className="rooms-form-grid">
                       <div className="rooms-form-group">
                         <label>Room Code / Number <span className="req-mark">*</span></label>
@@ -7464,12 +7454,6 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
                         <label htmlFor="other-room-type">Other Room Type <span className="req-mark">*</span></label>
                         <input id="other-room-type" className="rooms-input" type="text" value={editingRoom.roomType} onChange={(e) => setEditingRoom({ ...editingRoom, roomType: e.target.value })} onBlur={() => setEditingRoom((room) => ({ ...room, roomType: room.roomType.trim() }))} placeholder="Enter room type" required />
                       </div>}
-                    </div>
-                  </section>
-
-                  <section className="rooms-form-section" aria-labelledby="room-location-heading">
-                    <div className="rooms-form-section-heading"><span>02</span><div><h3 id="room-location-heading">Location & capacity</h3><p>Pinpoint the room and record its seating and availability.</p></div></div>
-                    <div className="rooms-form-grid">
                       <div className="rooms-form-group">
                         <label>Building Block <span className="req-mark">*</span></label>
                         <SearchableSelect label="Building Block" value={customBuildingBlock ? '__other__' : editingRoom.buildingBlock} options={[...BUILDING_BLOCKS, { value: '__other__', label: 'Others' }]} placeholder="Select Building Block" searchPlaceholder="Search building blocks..." noOptionsMessage="No matching building blocks. Clear the search and select Others to enter a custom block." onChange={(value) => {
@@ -7504,10 +7488,8 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
                         </ProjectSelect>
                       </div>
                     </div>
-                  </section>
-
-                  <section className="rooms-form-section" aria-labelledby="room-facilities-heading">
-                    <div className="rooms-form-section-heading"><span>03</span><div><h3 id="room-facilities-heading">Facilities & equipment</h3><p>Select all equipment and services available in this room.</p></div><span className="rooms-facility-count">{editingRoom.facilities?.length || 0} selected</span></div>
+                    <fieldset className="rooms-form-group rooms-equipment-group">
+                    <legend>Facilities & equipment</legend>
                     <div className="rooms-facilities-picker">
                       {ROOM_FACILITIES.map((facility) => {
                         const isSelected = editingRoom.facilities?.includes(facility)
@@ -7516,15 +7498,11 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
                         </button>
                       })}
                     </div>
-                  </section>
-
-                  <section className="rooms-form-section" aria-labelledby="room-notes-heading">
-                    <div className="rooms-form-section-heading"><span>04</span><div><h3 id="room-notes-heading">Additional notes</h3><p>Share details that help staff prepare the space.</p></div></div>
+                    </fieldset>
                     <div className="rooms-form-group">
-                      <label>Room Notes / Remarks</label>
-                      <textarea className="rooms-textarea" rows={3} placeholder="Special audio-visual equipment, teaching amenities, or layout notes..." value={editingRoom.description || ''} onChange={(e) => setEditingRoom({ ...editingRoom, description: e.target.value })} />
+                      <label htmlFor="room-editor-notes">Room Notes / Remarks</label>
+                      <textarea id="room-editor-notes" className="rooms-textarea" rows={2} placeholder="Equipment or layout notes" value={editingRoom.description || ''} onChange={(e) => setEditingRoom({ ...editingRoom, description: e.target.value })} />
                     </div>
-                  </section>
                   </div>
 
               </form>

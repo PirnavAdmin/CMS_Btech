@@ -13,6 +13,16 @@
 .department-detail-name { margin:0 0 14px; font-size:16px; }
 .department-assignment-context { margin:0 0 14px; color:var(--text-muted); font-size:12px; line-height:1.6; }
 .department-management .erp-form-page { padding:0; }
+.department-form-dialog > .shared-view-dialog__body,
+.department-form-dialog :is(.erp-form-page, .erp-form-layout, .erp-form-scroll-body, .erp-actions-bar) {
+  background: var(--surface);
+}
+.department-form-dialog .erp-form-page {
+  padding: 0;
+}
+.department-form-dialog .erp-form-scroll-body {
+  overflow: visible;
+}
 .department-management .erp-form-group { margin:0 0 12px; }
 @media(max-width:640px) { .department-detail-grid { grid-template-columns:1fr; }.department-management .erp-row-actions { flex-wrap:nowrap; } }
 
@@ -5229,26 +5239,28 @@
 }
 
 /* The room route opens the same compact dialog style as Section creation. */
-.rooms-compact-dialog .shared-view-dialog__body { max-height: min(68vh, 680px); padding: 0; background: var(--surface); }
+.rooms-compact-dialog > :is(.shared-view-dialog__header, .shared-view-dialog__body, .shared-view-dialog__footer) {
+  background: var(--surface);
+}
+.rooms-compact-dialog > .shared-view-dialog__body {
+  padding: 12px 16px;
+}
 .rooms-compact-form { display: grid; }
-.rooms-compact-dialog .rooms-modal-body { display: grid; gap: 0; padding: 0; background: var(--surface); }
-.rooms-compact-dialog .rooms-form-intro { padding: 17px 22px 12px; border-bottom: 1px solid var(--border); }
-.rooms-compact-dialog .rooms-form-intro h2 { margin: 4px 0 2px; font-size: 16px; }
-.rooms-compact-dialog .rooms-form-intro p { font-size: 11px; }
-.rooms-compact-dialog .rooms-form-section { padding: 16px 22px; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; box-shadow: none; }
-.rooms-compact-dialog .rooms-form-section-heading { margin-bottom: 11px; }
-.rooms-compact-dialog .rooms-form-section-heading h3 { font-size: 14px; }
-.rooms-compact-dialog .rooms-form-grid { gap: 11px 15px; }
-.rooms-compact-dialog .rooms-form-group { gap: 5px; }
+.rooms-compact-dialog .rooms-modal-body { display: grid; gap: 12px; padding: 0; max-height: none; overflow: visible; }
+.rooms-compact-dialog .rooms-form-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 12px; }
+.rooms-compact-dialog .rooms-form-group { gap: 5px; min-width: 0; }
+.rooms-compact-dialog .rooms-equipment-group { margin: 0; padding: 0; border: 0; }
+.rooms-compact-dialog .rooms-equipment-group legend { margin-bottom: 5px; color: var(--text-secondary); font-weight: 700; font-size: 12px; }
 .rooms-compact-dialog .rooms-input,
 .rooms-compact-dialog .rooms-select,
-.rooms-compact-dialog .rooms-form-group .searchable-select__trigger { min-height: 38px; font-size: 12px; }
-.rooms-compact-dialog .rooms-textarea { min-height: 72px; font-size: 12px; }
+.rooms-compact-dialog .rooms-form-group .searchable-select__trigger { min-height: 36px; font-size: 12px; background: var(--surface); }
+.rooms-compact-dialog .rooms-textarea { min-height: 54px; font-size: 12px; background: var(--surface); }
 .rooms-compact-dialog .facility-chip-btn { min-height: 31px; padding: 5px 9px; font-size: 10px; }
 @media (max-width: 640px) {
-  .rooms-compact-dialog .rooms-form-intro,
-  .rooms-compact-dialog .rooms-form-section { padding-inline: 16px; }
-  .rooms-compact-dialog .rooms-form-step-badge { display: none; }
+  .rooms-compact-dialog .rooms-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 420px) {
+  .rooms-compact-dialog .rooms-form-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 .rooms-form-page .rooms-editor-panel,

@@ -12,7 +12,13 @@ test('publication requires validation of the current revision and explicit confi
  const publish=vi.fn(async()=>true);workspace({publish});expect(screen.getByRole('button',{name:'Publish',exact:true}).disabled).toBe(true);fireEvent.click(screen.getByRole('button',{name:'Validate',exact:true}));await screen.findByRole('dialog',{name:'Validation result'});fireEvent.click(within(screen.getByRole('dialog')).getByRole('button',{name:'Close details'}));expect(screen.getByRole('button',{name:'Publish',exact:true}).disabled).toBe(false);fireEvent.click(screen.getByRole('button',{name:'Publish',exact:true}));expect(publish).not.toHaveBeenCalled();fireEvent.click(within(screen.getByRole('dialog')).getByRole('button',{name:'Confirm Publish Timetable'}));await waitFor(()=>expect(publish).toHaveBeenCalledWith([table]))
 })
 test('blocking validation keeps publication unavailable',async()=>{
- workspace({validate:vi.fn(async()=>[{sectionId:'5',reason:'Faculty conflict',blocking:true}])});fireEvent.click(screen.getByRole('button',{name:'Validate',exact:true}));await screen.findByText('VALIDATION FAILED',{selector:'h3'});expect(screen.getByRole('button',{name:'Publish',exact:true}).disabled).toBe(true)
+ workspace({validate:vi.fn(async()=>[{sectionId:'5',reason:'Faculty conflict',blocking:true}])})
+ fireEvent.click(screen.getByRole('button',{name:'Validate',exact:true}))
+ await screen.findByText('VALIDATION FAILED',{selector:'h3'})
+ fireEvent.click(within(screen.getByRole('dialog')).getByRole('button',{name:'Close details'}))
+ fireEvent.click(screen.getByRole('button',{name:/^\d+ Conflicts$/}))
+ fireEvent.click(within(screen.getByRole('dialog',{name:'Conflicts'})).getByRole('button',{name:'Close details'}))
+ expect(screen.getByRole('button',{name:'Publish',exact:true}).disabled).toBe(true)
 })
 test('published schedules preserve history with read-only entry details',()=>{
  render(<ScheduleDialog initial={entry} table={{...table,publicationStatus:'published'}} sources={sources} entries={[entry]} save={vi.fn()} remove={vi.fn()} close={vi.fn()} readOnly/>);expect(screen.getByRole('dialog',{name:'Schedule details'})).toBeTruthy();expect(screen.queryByRole('button',{name:'Save Draft Entry'})).toBeNull();expect(screen.queryByRole('button',{name:'Remove class'})).toBeNull()

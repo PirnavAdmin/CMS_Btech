@@ -1032,14 +1032,12 @@ export const facultyApi = {
     if (!Number.isSafeInteger(resolvedCollegeId) || resolvedCollegeId <= 0) throw new Error('College is required. Select a valid college.')
     const body = { ...payload, collegeId: resolvedCollegeId }
     const url = withQuery(API_ENDPOINTS.faculty.create, { collegeId: resolvedCollegeId })
-    console.log('Faculty Create Query collegeId:', resolvedCollegeId)
-    console.log('Faculty Create Body collegeId:', body.collegeId)
-    console.log('Faculty Create Payload:', body)
-    return normalizeRecord(await request(url, {
+    const response = await request(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
-    }, false, true))
+    }, false, true)
+    return { ...normalizeRecord(response), emailSent: response?.emailSent, emailMessage: response?.emailMessage }
   },
   update: async (facultyId, payload) => normalizeRecord(await jsonRequest(API_ENDPOINTS.faculty.update(requiredId(facultyId, 'Faculty ID')), 'PUT', payload)),
   getWorkload: async (facultyId, params) => normalizeRecord(await request(withQuery(API_ENDPOINTS.faculty.workload(requiredId(facultyId, 'Faculty ID')), params))),
@@ -1500,7 +1498,10 @@ export const academicFeePlanApi = {
 }
 
 export const feeConfigurationApi = {
-  categories: async () => listData(await request(API_ENDPOINTS.feeConfiguration.categories)),
+  categories: async () => listData(await request(API_ENDPOINTS.feeConfiguration.categories)).filter(row =>
+    !/^DEMO_/i.test(String(row?.code ?? '').trim())
+    && !/demonstration\s+category/i.test(String(row?.description ?? ''))
+  ),
 }
 
 // Contracts: Backend/DTOs/Fees/FeeCollectionDtos.cs. Reuse authentication,

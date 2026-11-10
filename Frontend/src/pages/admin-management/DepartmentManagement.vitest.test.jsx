@@ -36,6 +36,17 @@ const fill = () => {
  fireEvent.change(screen.getByLabelText(/Status/), { target: { value: 'Active' } })
 }
 
+test('inline mode reuses the department form and returns the persisted ID', async () => {
+ const onCreated = vi.fn()
+ render(<MemoryRouter><DepartmentManagement inlineCreate onCreated={onCreated} /></MemoryRouter>)
+ await screen.findByRole('dialog', { name: 'Add Department' })
+ fill()
+ fireEvent.click(screen.getByRole('button', { name: 'Create Department' }))
+ await waitFor(() => expect(onCreated).toHaveBeenCalledWith(90))
+ expect(createDepartment).toHaveBeenCalledOnce()
+ expect(screen.queryByRole('table')).toBeNull()
+})
+
 test('migrated directory keeps college isolation, five-row paging, sorting and row actions', async () => {
  fixture.rows = [...Array.from({ length: 6 }, (_, index) => record(index + 1)), record(20, { collegeId: 8, departmentName: 'Other college' })]
  mount(); const table = await screen.findByRole('table', { name: 'Department directory' }); expect(within(table).getAllByRole('row')).toHaveLength(6); expect(screen.queryByText('Other college')).toBeNull()

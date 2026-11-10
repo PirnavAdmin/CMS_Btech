@@ -10,6 +10,25 @@ test('student changed roster does not fabricate absent marks and preserves creat
 test('student attendance rejects fake IDs, impossible dates and unmarked students',async()=>{const f=studentFixture();for(const patch of [{subjectId:'SUB6'},{sectionId:0},{date:'2026-02-31'},{records:[{studentId:11,status:''}]}])await assert.rejects(f.write({...session,...patch}));assert.equal(f.calls.length,0)})
 test('student existing completed session blocks duplicate creation by actual subject ID',async()=>{const f=studentFixture();f.api.list=async()=>[{...session,attendanceDate:session.date,sessionStatus:'COMPLETED',attendanceSessionId:41}];await assert.rejects(f.write(session),/already exists/);assert.equal(f.calls.length,0)})
 test('student existing open session resumes marking without create',async()=>{const f=studentFixture();f.api.list=async()=>[{...session,attendanceDate:session.date,sessionStatus:'OPEN',attendanceSessionId:41}];await f.write(session);assert.equal(f.calls[0][0],'mark')})
+test('scheduled attendance distinguishes two periods for the same subject on one day', async () => {
+  const f = studentFixture()
+  f.api.list = async () => [{ ...session, timetableEntryId: 20, attendanceDate: session.date, sessionStatus: 'COMPLETED', attendanceSessionId: 40 }]
+  await f.write({ ...session, timetableId: 3, timetableEntryId: 21, timetableSlotId: 8 })
+  assert.equal(f.calls[0][1].timetableEntryId, 21)
+  assert.equal(f.calls[0][1].timetableSlotId, 8)
+  await assert.rejects(f.write({ ...session, timetableEntryId: 20 }), /already exists/)
+  assert.equal(f.calls.filter(([action]) => action === 'create').length, 1)
+})
+test('resuming a partially marked open session submits only unmarked students', async () => {
+  const f = studentFixture()
+  f.api.list = async () => [{ ...session, attendanceDate: session.date, sessionStatus: 'OPEN', attendanceSessionId: 41 }]
+  f.api.getStudents = async () => ({ students: [
+    { studentId: 11, attendanceDetailId: 50, attendanceStatus: 'PRESENT' },
+    { studentId: 12, attendanceStatus: 'UNMARKED' },
+  ] })
+  await f.write({ ...session, records: [...session.records, { studentId: 12, status: 'Absent' }] })
+  assert.deepEqual(f.calls[0][2].students, [{ studentId: 12, attendanceStatus: 'ABSENT', remarks: null }])
+})
 test('student missing create identity blocks blind retry',async()=>{const f=studentFixture();let count=0;f.api.create=async()=>{count++;return {}};await assert.rejects(f.write(session),/did not include/);await assert.rejects(f.write(session),/Verify the previous/);assert.equal(count,1)})
 test('student backend validation rejection allows corrected retry',async()=>{const f=studentFixture();let count=0;f.api.create=async()=>{if(++count===1)throw Object.assign(Error('Invalid faculty'),{status:400});return {id:41}};await assert.rejects(f.write(session),/Invalid faculty/);await f.write({...session,facultyId:10});assert.equal(count,2)})
 function facultyFixture(){const calls=[];const api={createAttendance:async()=>{calls.push('create');return {id:51}},updateAttendance:async()=>calls.push('update'),checkIn:async()=>calls.push('in'),checkOut:async()=>calls.push('out')};return {api,calls,write:createFacultyAttendanceWriter(api)}}

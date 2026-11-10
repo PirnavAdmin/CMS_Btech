@@ -64,7 +64,11 @@ test('legacy department bookmarks preserve their target, query, hash, and naviga
   expect(await screen.findByText('/academic-structure?source=dashboard&step=departments&departmentId=7&departmentAction=edit#leadership dashboard')).toBeTruthy()
 })
 
-vi.mock('../admin-management/AdminManagement', () => ({ DepartmentManagement: () => <table aria-label="Department directory" /> }))
+vi.mock('../admin-management/AdminManagement', () => ({
+  DepartmentManagement: ({ inlineCreate, onCreated }) => inlineCreate
+    ? <div role="dialog" aria-label="Add Department"><button type="button" onClick={() => onCreated(3)}>Create Department</button></div>
+    : <table aria-label="Department directory" />,
+}))
 vi.mock('../../auth/ScreenAccess', () => ({ useScreenAccess: () => ({ canAction: () => true }) }))
 
 vi.mock('../../layouts/DashboardLayout', () => ({
@@ -271,6 +275,25 @@ test('Add Program can select a saved course and continue without creating it aga
   const dialog = screen.getByRole('dialog', { name: 'Add Branch' })
   expect(within(dialog).getByLabelText(/^Select Course/).value).toBe('10')
   expect(createCourse).not.toHaveBeenCalled()
+})
+
+test('inline department creation selects the saved department and preserves branch details', async () => {
+  renderPage()
+  await screen.findByText('B.Tech Computer Science')
+  fireEvent.click(screen.getByRole('button', { name: 'Add Program' }))
+  const picker = screen.getByRole('button', { name: 'Use an existing course' })
+  fireEvent.click(within(document.getElementById(picker.getAttribute('popovertarget'))).getByText('B.Tech Computer Science (BTECH-CSE)', { selector: 'button' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Next: Branch' }))
+  const branch = within(screen.getByRole('dialog', { name: 'Add Branch' }))
+  fireEvent.change(branch.getByLabelText(/^Branch Name/), { target: { value: 'Data Engineering' } })
+  fireEvent.click(branch.getByRole('button', { name: '+ Add Department' }))
+  const department = within(screen.getByRole('dialog', { name: 'Add Department' }))
+  const saved = { departmentId: 3, departmentName: 'Data Science', departmentCode: 'DS', status: 1 }
+  getDepartments.mockResolvedValueOnce({ data: [...fixture.departments, saved] })
+  fireEvent.click(department.getByRole('button', { name: 'Create Department' }))
+  await waitFor(() => expect(branch.getByLabelText(/^Select Department/).value).toBe('3'))
+  expect(branch.getByLabelText(/^Branch Name/).value).toBe('Data Engineering')
+  expect(screen.queryByRole('dialog', { name: 'Add Department' })).toBeNull()
 })
 
 test('opens Add Program modal without a department selector and submits an unassigned course', async () => {

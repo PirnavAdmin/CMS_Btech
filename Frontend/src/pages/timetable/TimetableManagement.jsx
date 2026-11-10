@@ -8,36 +8,20 @@ import { selectedCollegeId as currentCollegeId } from '../../utils/collegeScope'
 import { getUserRole } from '../../auth/auth'
 import { showToast } from '../../utils/toast'
 import { backendWorkflow, loadBackendWorkflow } from '../../services/timetable/timetableBackendWorkflow'
-import { timetableService } from '../../services/timetableService'
-import { loadLive, resolveMyFaculty, workflowAdapter, draftCapabilityEnabled, saveBackendEntry, updateWeeklyRequirement } from '../../services/timetable/timetableWorkflowService'
-import { academicLevel, decorateEntries, tableEntries, scopeSections, contextOptions, changeContext, hierarchy, publishedForFaculty, availableSlots } from '../../services/timetable/timetableDomain'
-import { same, publicationState, existingSlots, DAYS, active, conflictsFor, conflictPairs, matchesScope, overlaps, timeMinutes, key, eligibleSubjects, eligibleFaculty } from '../../utils/timetableUtils'
-import { roomOptions, localDate, classesOnDate, schedulingIssues, subjectRequirements, planningErrors, suitableRoom, weekday, entryPlanningErrors, WEEKDAYS } from '../../utils/timetablePlanner'
+import { resolveMyFaculty, updateWeeklyRequirement } from '../../services/timetable/timetableWorkflowService'
+import { academicLevel, decorateEntries, scopeSections, contextOptions, changeContext, hierarchy, publishedForFaculty, availableSlots } from '../../services/timetable/timetableDomain'
+import { same, DAYS, active, conflictsFor, conflictPairs, matchesScope, overlaps, timeMinutes, key, eligibleSubjects, eligibleFaculty } from '../../utils/timetableUtils'
+import { roomOptions, localDate, schedulingIssues, subjectRequirements, planningErrors, suitableRoom, weekday, entryPlanningErrors, WEEKDAYS } from '../../utils/timetablePlanner'
 import { FiClock, FiUsers, FiCheckCircle, FiAlertTriangle, FiLayers, FiBookOpen, FiClipboard, FiUserCheck, FiHome, FiGrid, FiPlus } from 'react-icons/fi'
 import { useMemo, useState, useEffect, useRef } from 'react'
-import ExportMenu from '../../components/ExportMenu'
+import ExportMenu, { PrintDetailsButton } from '../../components/ExportMenu'
+import { exportToExcelXml } from '../../utils/exportUtils'
 import { dailyPeriods, DAILY_PERIOD_SETUP, isTeachingPeriod, periodLabel, periodType, periodSessions } from '../../utils/timetablePeriods'
 import EmptyState from '../../components/EmptyState'
 import SearchableSelect from '../../components/SearchableSelect'
 import './TimetableManagement.css'
 
 // TimetableManagement
-
-function backendTables(backend, sources) {
-  const groups = new Map()
-  for (const row of decorateEntries(backend, sources)) {
-    if (!row.timetableId) continue
-    const id = String(row.timetableId)
-    if (!groups.has(id)) {
-      const branch = sources.branches.find(item => same(item.id, row.branchId))
-      const semester = sources.semesters.find(item => same(item.id, row.semesterId))
-      const periods = existingSlots(backend, row.timetableId).map((slot, index) => ({ ...slot, name: `P${index + 1}`, type: 'class' }))
-      groups.set(id, { ...row, id, name: row.timetableName || `${branch?.name || 'Timetable'} / ${row.sectionName}`, level: academicLevel(semester || {}), departmentId: branch?.departmentId || '', publicationStatus: publicationState(row), origin: 'backend', entries: [], planning: { periods, requirements: {}, rooms: roomOptions(sources, backend).map(room => room.value), calendar: { startDate: row.effectiveFrom?.slice(0, 10) || '', endDate: row.effectiveTo?.slice(0, 10) || '', workingDays: DAYS, holidays: [], reviewed: true } } })
-    }
-    groups.get(id).entries.push(row)
-  }
-  return [...groups.values()]
-}
 
 export default function TimetableManagement() {
   const { canAction } = useScreenAccess()
@@ -49,20 +33,22 @@ export default function TimetableManagement() {
   const [loading, setLoading] = useState(true), [busy, setBusy] = useState(false), [error, setError] = useState('')
   const [refreshPending, setRefreshPending] = useState(false)
   const mutationLock = useRef(false)
+  const unsavedSetup = useRef(false)
+  const loadRevision = useRef(0)
   const [reloadAttempt,setReloadAttempt] = useState(0)
   const [initial, setInitial] = useState(null), [builderKey, setBuilderKey] = useState(0), [facultyId, setFacultyId] = useState(''), [facultyDrawer, setFacultyDrawer] = useState(''), [facultyError, setFacultyError] = useState('')
-  const adapter = () => draftCapabilityEnabled ? workflowAdapter() : backendWorkflow
   const refresh = async () => {
+    const revision = ++loadRevision.current
     const collegeId = currentCollegeId()
-    if (!draftCapabilityEnabled) { const live = await loadBackendWorkflow(); if (collegeId === currentCollegeId()) setData(live); return live }
-    const live = await loadLive()
-    const tables = draftCapabilityEnabled ? await workflowAdapter().list() : []
-    if (collegeId === currentCollegeId()) setData({ ...live, tables })
+    const live = await loadBackendWorkflow()
+    if (revision === loadRevision.current && collegeId === currentCollegeId()) setData(live)
     return live
   }
   useEffect(() => {
+    loadRevision.current += 1
+    unsavedSetup.current = false
     setData(null); setError(''); setLoading(true); setRefreshPending(false)
-    setInitial(null); setBuilderKey(value => value + 1); setFacultyId(''); setFacultyDrawer('')
+    setTab(admin ? 'dashboard' : 'faculty'); setInitial(null); setBuilderKey(value => value + 1); setFacultyId(''); setFacultyDrawer(''); setFacultyError('')
     if (contextLoading) return
     if (!['admin', 'faculty'].includes(role)) return
     let cancelled = false
@@ -91,25 +77,33 @@ export default function TimetableManagement() {
   const run = async (action, successMessage) => { try { return await mutate(action, successMessage) } catch { return null } }
   const validate = async tables => {
     setBusy(true); setError('')
-    try { const issues = await adapter().validate(tables); const blocking = issues.filter(issue => issue.blocking !== false).length; showToast(blocking ? `Validation found ${blocking} blocking issue(s).` : issues.length ? `Validation passed with ${issues.length} warning(s).` : 'Validation passed.', blocking ? 'warning' : issues.length ? 'warning' : 'success'); return issues }
+    try { const issues = await backendWorkflow.validate(tables); const blocking = issues.filter(issue => issue.blocking !== false).length; showToast(blocking ? `Validation found ${blocking} blocking issue(s).` : issues.length ? `Validation passed with ${issues.length} warning(s).` : 'Validation passed.', blocking ? 'warning' : issues.length ? 'warning' : 'success'); return issues }
     catch (reason) { setError(reason.message); showToast(reason.message, 'error'); return null }
     finally { setBusy(false) }
   }
   if (!['admin', 'faculty'].includes(role)) return <Navigate to="/unauthorized" replace />
   const sources = data?.sources
-  const tables = data ? draftCapabilityEnabled ? [...data.tables, ...backendTables(data.backend, sources)] : data.tables : []
-  const entries = data ? decorateEntries([...data.backend.map(row => ({ ...row, origin: 'backend' })), ...(draftCapabilityEnabled ? tableEntries(data.tables) : [])], sources) : []
-  const published = entries.filter(row => publicationState(row) === 'published')
-  const today = data ? classesOnDate(published, localDate(), row => tables.find(table => same(table.id, row.timetableId))?.planning.calendar) : []
-  const open = table => { if(!table && !canManage) return; setInitial(table || null); setBuilderKey(value => value + 1); setTab('builder') }
-  return <DashboardLayout><main className="tt-page tt-workflow"><PageHeader title={admin ? 'Timetable Management' : 'My Timetable'} subtitle={admin ? 'Plan, review and publish section timetables.' : 'Your published teaching schedule.'} />
-    {admin && <nav className="tt-actions" aria-label="Timetable navigation">{[['dashboard', 'Timetable Dashboard'], ['builder', 'Timetable Builder'], ['faculty', 'Faculty My Timetable']].map(([value, label]) => <button className={`tt-button ${tab === value ? 'tt-primary' : ''}`} key={value} aria-pressed={tab === value} onClick={() => setTab(value)}>{label}</button>)}</nav>}
+  const tables = data?.tables || []
+  const entries = data ? decorateEntries(data.backend, sources) : []
+  const leaveSetup = () => {
+    if (unsavedSetup.current && !window.confirm('Discard unsaved timetable settings?')) return false
+    unsavedSetup.current = false
+    return true
+  }
+  const backToOverview = () => { if (leaveSetup()) setTab('dashboard') }
+  const open = context => {
+    if (!leaveSetup()) return
+    if (!context?.id && !canManage) return
+    setInitial(context)
+    setBuilderKey(value => value + 1)
+    setTab('builder')
+  }
+  return <DashboardLayout><main className="tt-page tt-workflow"><PageHeader title={admin ? 'Timetable Management' : 'My Timetable'} subtitle={admin ? 'Create, organize, and manage academic schedules.' : 'Your published teaching schedule.'} secondaryActions={admin && tab === 'builder' ? <><button type="button" className="tt-button" disabled={busy} onClick={backToOverview}>← Back</button>{canManage && initial?.id && !initial.configure && sources.sections.some(row => same(row.id, initial.sectionId)) && <button className="tt-button tt-primary" disabled={busy || refreshPending} onClick={() => open({ ...contextFor(sources.sections.find(row => same(row.id, initial?.sectionId)), sources), configure: true })}>Create New Timetable Period</button>}</> : null} />
     {error && <p className="tt-error" role="alert">{error}{refreshPending ? <button disabled={busy} onClick={retrySavedRefresh}>Retry saved timetable refresh</button> : <button disabled={busy} onClick={()=>setReloadAttempt(value=>value+1)}>Retry timetable</button>}</p>}
     {loading ? <p role="status">Loading academic data and timetables...</p> : data && <>
-      {admin && draftCapabilityEnabled && <p className="tt-adapter-note"><strong>Mock Mode:</strong> timetable drafts and publication state are stored only in this browser. Academic records and allocations use the backend; this is not institution-wide publication.</p>}
-      {admin && tab === 'dashboard' && <TimetableDashboard tables={tables} sources={sources} entries={entries} today={today} open={open} />}
-      {admin && tab === 'builder' && <><button className="tt-button" hidden={!canManage} disabled={busy || refreshPending} onClick={() => open(null)}>Create New Timetable Period</button><TimetableBuilder mockMode={draftCapabilityEnabled} key={builderKey} defaultAcademicYearId={activeAcademicYearId} sources={sources} entries={entries} tables={tables} initial={initial} busy={busy || refreshPending} enabled={canManage && !refreshPending} refresh={refresh} faculty={setFacultyDrawer} generate={args => run(() => adapter().generate(args))} saveSetup={(tables, config) => run(() => adapter().saveSetup(tables, config))} save={(table, form) => mutate(() => draftCapabilityEnabled ? table.origin === 'backend' ? saveBackendEntry(table, form) : workflowAdapter().saveEntry(table, form) : backendWorkflow.saveEntry(table, form))} remove={(table, id) => mutate(() => draftCapabilityEnabled ? table.origin === 'backend' ? timetableService.remove(id) : workflowAdapter().removeEntry(table, id) : backendWorkflow.removeEntry(table, id))} validate={validate} publish={expected => run(() => adapter().publish(expected), draftCapabilityEnabled ? 'Mock Mode: timetable published in this browser only.' : 'Timetable published.')} reopen={table => run(() => adapter().reopen(table))} /></>}
-      {tab === 'faculty' && <section className="tt-card">{admin && <div className="tt-clean-step"><TimetableSelect label="Faculty" value={facultyId} options={sources.faculty} onChange={setFacultyId} /></div>}{facultyError && <p className="tt-error" role="alert">{facultyError}</p>}{facultyId ? <FacultyTimetable key={facultyId} facultyId={facultyId} sources={sources} entries={entries} tables={tables} /> : !facultyError && <p className="tt-clean-step">Select a faculty member to view published classes.</p>}</section>}
+      {admin && <div hidden={tab !== 'dashboard'}><TimetableOverview key={activeAcademicYearId} academicYearId={activeAcademicYearId} tables={tables} sources={sources} open={open} canManage={canManage && !refreshPending} /></div>}
+      {admin && tab === 'builder' && <><TimetableBuilder key={builderKey} defaultAcademicYearId={activeAcademicYearId} sources={sources} entries={entries} tables={tables} initial={initial} onBack={backToOverview} unsavedSetup={unsavedSetup} busy={busy || refreshPending} enabled={canManage && !refreshPending} refresh={refresh} faculty={setFacultyDrawer} generate={args => run(() => backendWorkflow.generate(args))} saveSetup={(tables, config) => run(() => backendWorkflow.saveSetup(tables, config))} save={(table, form) => mutate(() => backendWorkflow.saveEntry(table, form))} remove={(table, id) => mutate(() => backendWorkflow.removeEntry(table, id))} validate={validate} publish={expected => run(() => backendWorkflow.publish(expected), 'Timetable published.')} reopen={table => run(() => backendWorkflow.reopen(table))} /></>}
+      {tab === 'faculty' && <section className="tt-card">{facultyError && <p className="tt-error" role="alert">{facultyError}</p>}{facultyId ? <FacultyTimetable key={facultyId} facultyId={facultyId} sources={sources} entries={entries} tables={tables} /> : !facultyError && <p className="tt-clean-step">Select a faculty member to view published classes.</p>}</section>}
       {facultyDrawer && <WorkspaceDrawer title="Faculty schedule" close={() => setFacultyDrawer('')}><FacultyTimetable facultyId={facultyDrawer} sources={sources} entries={entries} tables={tables} /></WorkspaceDrawer>}
     </>}
   </main></DashboardLayout>
@@ -128,6 +122,68 @@ function contextFor(section, sources) {
     departmentId: section.departmentId || branch?.departmentId || course?.departmentId || '',
     courseId, branchId: section.branchId || '', level: academicLevel(semester || {}), semesterId: section.semesterId || '', sectionId: section.id,
   }
+}
+
+function scheduleCoverage(table, sources, entries) {
+  if (!table?.planning?.periods?.length) return null
+  const requirements = subjectRequirements(sources, table, table.planning.requirements)
+  if (!requirements.length || requirements.some(item => !Number.isInteger(item.periodsPerWeek) || item.periodsPerWeek <= 0)) return null
+  const required = requirements.reduce((sum, item) => sum + item.periodsPerWeek, 0)
+  const periods = table.planning.periods.filter(isTeachingPeriod)
+  const valid = entries.filter(row => same(row.timetableId, table.id) && active(row)
+    && !conflictsFor(row, entries).length && !entryPlanningErrors(row, table.planning, sources, table, entries).length)
+  const assigned = requirements.reduce((sum, item) => {
+    const count = valid.filter(row => same(row.subjectId, item.subject.id)).reduce((total, row) => total + periods.filter(period =>
+      timeMinutes(period.startTime) >= timeMinutes(row.startTime) && timeMinutes(period.endTime) <= timeMinutes(row.endTime)).length, 0)
+    return sum + Math.min(item.periodsPerWeek, count)
+  }, 0)
+  return Math.round(assigned / required * 100)
+}
+
+export function TimetableOverview({ academicYearId, tables, sources, open, canManage }) {
+  const [selection, setSelection] = useState({})
+  const fields = [
+    ['courseId', 'Course', sources.courses],
+    ['branchId', 'Branch', sources.branches],
+    ['semesterId', 'Current Semester', sources.semesters],
+    ['sectionId', 'Section', sources.sections],
+  ]
+  const contexts = sources.sections.filter(active).map(section => contextFor(section, sources))
+    .filter(context => same(context.academicYearId, academicYearId) && scopeSections(sources, context).some(section => same(section.id, context.sectionId)))
+  const context = contexts.find(row => fields.every(([field]) => same(row[field], selection[field])))
+  const latest = context && tables.filter(table => matchesScope(table, context) && same(table.sectionId, context.sectionId))
+    .sort((first, second) => String(second.updatedAt || second.planning?.calendar?.startDate || '').localeCompare(String(first.updatedAt || first.planning?.calendar?.startDate || '')))[0]
+  const change = (index, value) => setSelection(previous => ({
+    ...Object.fromEntries(fields.slice(0, index).map(([field]) => [field, previous[field]])),
+    [fields[index][0]]: value,
+  }))
+  return <>
+    <section className="tt-card tt-inter-context" aria-label="Timetable academic context">
+      {fields.map(([field, label, rows], index) => {
+        const ids = new Set(contexts.filter(row => fields.slice(0, index).every(([parent]) => same(row[parent], selection[parent]))).map(row => key(row[field])))
+        return <TimetableSelect key={field} label={label} value={selection[field] || ''} options={rows.filter(row => ids.has(key(row.id)))} disabled={!academicYearId || Boolean(index && !selection[fields[index - 1][0]])} onChange={value => change(index, value)} />
+      })}
+    </section>
+    <div className="tt-inter-cards">
+      <article className="tt-inter-overview-card">
+        <FiUsers size={24} aria-hidden="true" />
+        <h2>Timetable Setup</h2>
+        <p>Set working days, periods and subject requirements for the selected section.</p>
+        <button type="button" className="tt-button tt-primary" disabled={!context || !canManage} onClick={() => open({ ...context, ...(latest?.publicationStatus === 'draft' ? latest : {}), configure: true })}>Configure timetable →</button>
+      </article>
+      <article className="tt-inter-overview-card">
+        <FiBookOpen size={24} aria-hidden="true" />
+        <h2>Generated Timetable</h2>
+        <p>Open the latest saved timetable for your selected academic context.</p>
+        <button type="button" className="tt-button tt-primary" disabled={!latest} onClick={() => open(latest)}>View timetable →</button>
+        {context && !latest && <small role="status">No timetable exists for this context.</small>}
+      </article>
+    </div>
+    <section className="tt-inter-guide" aria-label="Timetable workflow guide">
+      <h2>Your scheduling workflow</h2><p>From daily structure to a published academic schedule.</p>
+      <ol>{['Period Structure', 'Generate Timetable', 'Validate', 'Publish'].map((label, index) => <li key={label}><span>{index + 1}</span>{label}</li>)}</ol>
+    </section>
+  </>
 }
 
 function readiness(section, sources, entries, table) {
@@ -264,13 +320,27 @@ const editablePlanning = planning => {
   const endDate = String(planning.calendar.endDate || '').slice(0, 10)
   return { ...planning, calendar: { ...planning.calendar, startDate, endDate } }
 }
-export function TimetableBuilder({ mockMode = false, defaultAcademicYearId = '', sources, entries, tables, initial, busy, enabled, refresh, faculty, generate, saveSetup, save, remove, validate, publish, reopen }) {
+export function TimetableBuilder({ mockMode = false, defaultAcademicYearId = '', sources, entries, tables, initial, onBack, unsavedSetup, busy, enabled, refresh, faculty, generate, saveSetup, save, remove, validate, publish, reopen }) {
   const [scope, setScope] = useState(initial || { ...Object.fromEntries(hierarchy.map(field => [field, ''])), academicYearId: defaultAcademicYearId || '' })
   const [origin, setOrigin] = useState(initial?.origin || (mockMode ? 'local' : 'backend'))
-  const [step, setStep] = useState(initial?.id ? 4 : 1)
+  const [step, setStep] = useState(initial?.configure ? 2 : initial?.id ? 4 : 1)
   const [selected, setSelected] = useState(initial?.sectionId ? [String(initial.sectionId)] : [])
   const [activeSection, setActiveSection] = useState(initial?.sectionId || '')
-  const [config, setConfig] = useState(initial?.planning ? editablePlanning(initial.planning) : null)
+  const [config, updateConfig] = useState(() => initial?.planning ? editablePlanning(initial.planning) : initial?.configure ? initialPlanning(sources, initial, entries) : null)
+  const setConfig = next => {
+    if (unsavedSetup) unsavedSetup.current = true
+    updateConfig(next)
+  }
+  useEffect(() => {
+    if (!unsavedSetup) return undefined
+    const confirmUnload = event => {
+      if (!unsavedSetup.current) return
+      event.preventDefault()
+      event.returnValue = true
+    }
+    window.addEventListener('beforeunload', confirmUnload)
+    return () => window.removeEventListener('beforeunload', confirmUnload)
+  }, [unsavedSetup])
   const [batchIds, setBatchIds] = useState(initial?.id ? [String(initial.id)] : [])
   const [impactOpen, setImpactOpen] = useState(false)
   const options = contextOptions(sources, scope), sections = scopeSections(sources, scope)
@@ -278,7 +348,7 @@ export function TimetableBuilder({ mockMode = false, defaultAcademicYearId = '',
   const table = currentTables.find(row => same(row.sectionId, activeSection)) || currentTables[0]
   const change = (field, value) => {
     const next = changeContext(scope, field, value)
-    setScope(next); setConfig(null); setBatchIds([]); setOrigin(mockMode ? 'local' : 'backend')
+    setScope(next); updateConfig(null); setBatchIds([]); setOrigin(mockMode ? 'local' : 'backend')
     const all = scopeSections(sources, next).map(row => String(row.id))
     setSelected(all); setActiveSection(all[0] || '')
   }
@@ -286,25 +356,25 @@ export function TimetableBuilder({ mockMode = false, defaultAcademicYearId = '',
     const existing = initial?.id ? tables.find(table => same(table.id, initial.id)) : null
     if (existing && matchesScope(existing, scope) && selected.some(id => same(id, existing.sectionId))) {
       const existingOrigin = existing.origin || 'local'
-      setOrigin(existingOrigin); setConfig(editablePlanning(existing.planning) || initialPlanning(sources, scope, entries)); setActiveSection(existing.sectionId)
+      setOrigin(existingOrigin); updateConfig(editablePlanning(existing.planning) || initialPlanning(sources, scope, entries)); setActiveSection(existing.sectionId)
       setStep(existing.publicationStatus === 'draft' ? 2 : 4)
       return
     }
-    setConfig(initialPlanning(sources, scope, entries))
+    updateConfig(initialPlanning(sources, scope, entries))
     setStep(2)
   }
   const errors = config ? [...planningErrors(config, sources, { ...scope, sectionId: selected[0] }, entries), ...(config.automaticErrors || [])] : []
-  const runGeneration = async replace => { const result = await generate({ scope: Object.fromEntries(hierarchy.map(field => [field, scope[field]])), selected, config, expected: currentTables, replace }); if (result) { if (Array.isArray(result)) setBatchIds(result.filter(row => matchesScope(row, scope) && selected.some(id => same(id, row.sectionId)) && row.planning?.calendar?.startDate === config.calendar.startDate && row.planning?.calendar?.endDate === config.calendar.endDate).map(row => String(row.id))); setActiveSection(activeSection || selected[0]); setStep(4) }; return result }
-  const applySetup = async () => { const result = await saveSetup(currentTables, config); if (result) { setImpactOpen(false); setStep(4) } }
+  const runGeneration = async replace => { const result = await generate({ scope: Object.fromEntries(hierarchy.map(field => [field, scope[field]])), selected, config, expected: currentTables, replace }); if (result) { if (unsavedSetup) unsavedSetup.current = false; if (Array.isArray(result)) setBatchIds(result.filter(row => matchesScope(row, scope) && selected.some(id => same(id, row.sectionId)) && row.planning?.calendar?.startDate === config.calendar.startDate && row.planning?.calendar?.endDate === config.calendar.endDate).map(row => String(row.id))); setActiveSection(activeSection || selected[0]); setStep(4) }; return result }
+  const applySetup = async () => { const result = await saveSetup(currentTables, config); if (result) { if (unsavedSetup) unsavedSetup.current = false; setImpactOpen(false); setStep(4) } }
   const setupChanged = currentTables.some(row => JSON.stringify(row.planning) !== JSON.stringify(config))
   const savedEntries = currentTables.flatMap(row => row.entries)
   return <section className="tt-clean-builder" aria-label="Timetable Builder">
-    <nav className="tt-stepper" aria-label="Builder steps">{['Academic Setup', 'Daily Schedule', 'Subjects & Faculty', 'Review & Publish'].map((label, index) => <button key={label} aria-current={step === index + 1 ? 'step' : undefined} className={step === index + 1 ? 'active' : ''} disabled={busy || (index > 0 && !config) || (index === 3 && !currentTables.length) || (currentTables.some(row => row.publicationStatus === 'published') && [1, 2].includes(index))} onClick={() => setStep(index + 1)}><span>{index + 1}</span>{label}</button>)}</nav>
+    <nav className="tt-stepper" aria-label="Builder steps">{['Academic Setup', 'Period Structure', 'Generate Timetable', 'Review & Publish'].map((label, index) => initial?.sectionId && index === 0 ? null : <button key={label} aria-current={step === index + 1 ? 'step' : undefined} className={step === index + 1 ? 'active' : ''} disabled={busy || (index > 0 && !config) || (index === 3 && !currentTables.length) || (currentTables.some(row => row.publicationStatus === 'published') && [1, 2].includes(index))} onClick={() => setStep(index + 1)}><span>{index + 1}</span>{label}</button>)}</nav>
     {step === 1 && <section className="tt-card tt-clean-step"><h2>Academic setup</h2><div className="tt-form-grid"><div className="tt-field"><span>Academic Year</span><div className="tt-readonly-value">{sources.years.find(row => same(row.id, scope.academicYearId))?.name || 'Active academic year unavailable'}</div></div>{hierarchy.slice(1).map((field, index) => <TimetableSelect key={field} label={labels[index + 1]} value={scope[field]} options={options[field]} disabled={busy || Boolean(index && !scope[hierarchy[index]])} onChange={value => change(field, value)} />)}</div>
       {scope.semesterId && <><h3>Sections ({sections.length})</h3><div className="tt-checks">{sections.map(section => <label key={section.id}><input type="checkbox" checked={selected.some(id => same(id, section.id))} onChange={event => setSelected(old => event.target.checked ? [...old, String(section.id)] : old.filter(id => !same(id, section.id)))} />{section.name}</label>)}</div>{!sections.length && <p>No active sections match this academic context.</p>}</>}
       <button className="tt-button tt-primary" disabled={!selected.length || busy} onClick={setup}>Continue</button></section>}
-    {step === 2 && config && <PeriodSetupStep config={config} setConfig={setConfig} sources={sources} scope={scope} entries={entries} busy={busy} errors={errors} back={() => setStep(1)} continueSetup={() => setStep(3)} />}
-    {step === 3 && config && <><SubjectCoverage sources={sources} scope={scope} selected={selected} config={config} setConfig={setConfig} refresh={refresh} faculty={faculty} disabled={busy} /><div className="tt-actions"><button className="tt-button" onClick={() => setStep(2)}>Back</button><button className="tt-button tt-primary" disabled={busy || !enabled || errors.length > 0} onClick={async () => { if (currentTables.length) { if (setupChanged && savedEntries.length) setImpactOpen(true); else await applySetup() } else await runGeneration(false) }}>{currentTables.length ? 'Save Settings' : busy ? 'Generating timetables...' : 'GENERATE ALL SELECTED SECTIONS'}</button></div>{busy && !currentTables.length && <p role="status">Generating coordinated section drafts and checking campus-wide conflicts...</p>}</>}
+    {step === 2 && config && <PeriodSetupStep config={config} setConfig={setConfig} sources={sources} scope={scope} entries={entries} busy={busy} errors={errors} back={initial?.sectionId && onBack ? onBack : () => setStep(1)} continueSetup={() => setStep(3)} />}
+    {step === 3 && config && <><SubjectCoverage sources={sources} scope={scope} selected={selected} config={config} setConfig={setConfig} refresh={refresh} faculty={faculty} disabled={busy} /><div className="tt-actions"><button className="tt-button" onClick={() => setStep(2)}>Back</button><button className="tt-button tt-primary" disabled={busy || !enabled || errors.length > 0} onClick={async () => { if (currentTables.length) { if (setupChanged && savedEntries.length) setImpactOpen(true); else await applySetup() } else await runGeneration(false) }}>{currentTables.length ? 'Save Settings' : busy ? 'Generating timetables…' : 'Generate Timetable'}</button></div>{busy && !currentTables.length && <p role="status">Generating coordinated section drafts and checking campus-wide conflicts...</p>}</>}
     {step === 4 && table && <TimetableWorkspace canManage={enabled} mockMode={mockMode} table={table} tables={currentTables} sources={sources} entries={entries} busy={busy} section={setActiveSection} faculty={faculty} generate={() => runGeneration(false)} regenerate={() => runGeneration(true)} save={save} remove={remove} validate={validate} publish={publish} reopen={reopen} />}
     {impactOpen && <WorkspaceDrawer modal title="Configuration change impact" busy={busy} close={() => setImpactOpen(false)}><div className="tt-clean-step"><p>Review the existing draft data before applying shared timing changes.</p><div className="tt-live-summary"><article><strong>{currentTables.length}</strong><span>affected sections</span></article><article><strong>{savedEntries.length}</strong><span>existing classes</span></article><article><strong>{new Set(savedEntries.map(row => String(row.facultyId)).filter(Boolean)).size}</strong><span>assigned faculty</span></article><article><strong>{new Set(savedEntries.map(row => row.roomId || row.classroom).filter(Boolean)).size}</strong><span>used rooms</span></article></div><p>Settings will be saved only if every existing class remains valid. No class will be regenerated or removed.</p><div className="tt-actions"><button className="tt-button" disabled={busy} onClick={() => setImpactOpen(false)}>Cancel</button><button className="tt-button tt-primary" disabled={busy} onClick={applySetup}>Review and Apply</button></div></div></WorkspaceDrawer>}
   </section>
@@ -324,7 +394,7 @@ function PeriodSetupStep({ config, setConfig, sources, entries, busy, errors, ba
   })
   const calendar = (field, value) => setConfig(old => ({ ...old, calendar: { ...old.calendar, [field]: value, reviewed: true } }))
   return <section className="tt-card tt-clean-step" aria-label="Daily Schedule Setup">
-    <h2>Daily schedule</h2><p>These timings apply to every selected section.</p>
+    <h2>Period Structure</h2><p>Set the working days, teaching periods and breaks.</p>
     <fieldset className="tt-period-controls" disabled={busy}>
       <div className="tt-form-grid">{[['startTime', 'College Start Time', 'time'], ['periodsPerDay', 'Periods Per Day', 'number'], ['duration', 'Period Duration (minutes)', 'number'], ['breakDuration', 'Short Break (minutes, 0 to disable)', 'number'], ['breakAfter', 'Break after period', 'number'], ['lunchDuration', 'Lunch (minutes, 0 to disable)', 'number'], ['lunchAfter', 'Lunch after period', 'number']].map(([field, label, type]) => <label className="tt-field" key={field}><span>{label}</span><input type={type} min={field.includes('Duration') ? 0 : 1} step={1} value={settings[field]} onChange={event => rebuild(field, event.target.value)} /></label>)}</div>
       <h3>Working days</h3><div className="tt-checks">{WEEKDAYS.map(day => <label key={day}><input type="checkbox" checked={config.calendar.workingDays.includes(day)} onChange={event => calendar('workingDays', event.target.checked ? WEEKDAYS.filter(value => value === day || config.calendar.workingDays.includes(value)) : config.calendar.workingDays.filter(value => value !== day))} />{day.slice(0, 3)}</label>)}</div>
@@ -332,6 +402,12 @@ function PeriodSetupStep({ config, setConfig, sources, entries, busy, errors, ba
       <p className="tt-hint">Validity is inherited from the selected academic year: {startDate || 'not configured'} to {endDate || 'not configured'}.</p>
       <details><summary>Available rooms ({config.rooms.length})</summary><div className="tt-checks">{rooms.map(room => <label key={room.value}><input type="checkbox" checked={config.rooms.includes(room.value)} onChange={event => setConfig(old => ({ ...old, rooms: event.target.checked ? [...old.rooms, room.value] : old.rooms.filter(value => value !== room.value) }))} />{room.name}</label>)}</div>{!rooms.length && <p>No room references were supplied by sections or existing timetable entries. Configure a section room in Section Management.</p>}</details>
     </fieldset>
+    {config.periods.length > 0 && <section aria-label="Generated Period Structure">
+      <h3>Generated Period Structure</h3>
+      <ol className="tt-generated-periods">{config.periods.map((period, index) => <li key={periodKey(period)} data-kind={periodType(period)}>
+        <strong>{periodLabel(period, index)}</strong><span>{period.startTime.slice(0, 5)} – {period.endTime.slice(0, 5)} · {timeMinutes(period.endTime) - timeMinutes(period.startTime)} min</span>
+      </li>)}</ol>
+    </section>}
     {errors.length > 0 && <div className="tt-error" role="alert">{errors.map(error => <p key={error}>{error}</p>)}</div>}
     <footer className="tt-actions"><button className="tt-button" onClick={back}>Back</button><button className="tt-button tt-primary" disabled={busy || Boolean(errors.length)} onClick={continueSetup}>Continue to Subjects</button></footer>
   </section>
@@ -362,7 +438,7 @@ function SubjectCoverage({ sources, scope, selected, config, setConfig, refresh,
   const sections = sources.sections.filter(row => selected.some(id => same(id, row.id)))
   const change = (id, field, value) => setConfig(old => ({ ...old, requirements: { ...old.requirements, [id]: { ...old.requirements[id], [field]: value } } }))
   return <section className="tt-card tt-clean-step"><h2>Subjects & faculty coverage</h2><p>Select existing semester subjects. Weekly periods are saved to the existing faculty allocation.</p>
-    {!subjects.length ? <p>No active subjects match this semester.</p> : <div className="tt-coverage-scroll"><table className="tt-coverage"><thead><tr><th>Subject</th><th>Periods per session</th>{sections.map(section => <th key={section.id}>{section.name}</th>)}</tr></thead><tbody>{subjects.map(subject => <tr key={subject.id}>
+    {!subjects.length ? <p>No active subjects are mapped to this semester.</p> : <div className="tt-coverage-scroll"><table className="tt-coverage"><thead><tr><th>Subject</th><th>Periods per session</th>{sections.map(section => <th key={section.id}>{section.name}</th>)}</tr></thead><tbody>{subjects.map(subject => <tr key={subject.id}>
       <th><label><input type="checkbox" disabled={disabled} checked={config.requirements[key(subject.id)]?.selected !== false} onChange={event => change(key(subject.id), 'selected', event.target.checked)} /> {subject.name}</label></th>
       <td><input aria-label={`Consecutive periods for ${subject.name}`} type="number" min="1" step="1" disabled={disabled} value={config.requirements[key(subject.id)]?.blockSize || 1} onChange={event => change(key(subject.id), 'blockSize', event.target.value)} /></td>
       {sections.map(section => {
@@ -386,6 +462,7 @@ export function TimetableWorkspace({ canManage = true, mockMode = false, table, 
   const blockingIssues = issues.filter(issue => issue.blocking !== false)
   const canPublish = local && draft && validationCurrent && blockingIssues.length === 0
   const unscheduled = schedulingIssues(sources, table, table.planning, table.entries)
+  const coverage = scheduleCoverage(table, sources, entries)
   const conflicts = rows.flatMap(row => conflictsFor(row, entries).map(item => ({ ...item, reason: item.message, sectionId: table.sectionId, entryId: row.id })))
   const review = async () => {
     setValidatedRevision('')
@@ -403,30 +480,31 @@ export function TimetableWorkspace({ canManage = true, mockMode = false, table, 
     ['Period conflicts', issue => /period|break|lunch|time range|overlap|invalid slot/i.test(issue.reason)],
     ['Subject requirements', issue => /requirement|weekly|allocation|unscheduled/i.test(issue.reason)],
   ].map(([label, matches]) => [label, issues.filter(matches).length])
+  const drawerIssues = drawer?.kind === 'unscheduled' ? unscheduled : drawer?.kind === 'conflicts' ? conflicts : issues
   const focus = issue => { section(issue.sectionId || table.sectionId); setHighlight(issue.entryId || ''); setDrawer(null) }
-  return <section className="tt-card tt-clean-workspace">
-    <nav className="tt-section-tabs" aria-label="Sections">{tables.map(item => {
+  return <section className="tt-card tt-clean-workspace" data-print-scope>
+    {tables.length > 1 && <nav className="tt-section-tabs" aria-label="Sections" data-no-print>{tables.map(item => {
       const missing = schedulingIssues(sources, item, item.planning, item.entries).length
       const count = entries.filter(row => same(row.timetableId, item.id)).filter(row => conflictsFor(row, entries).length).length
       return <button className={`tt-button ${item.id === table.id ? 'tt-primary' : ''}`} key={item.id} onClick={() => { section(item.sectionId); setHighlight('') }}><strong>{sources.sections.find(row => same(row.id, item.sectionId))?.name}</strong><small>{item.entries.length} classes | {missing} unscheduled | {count} conflicts</small></button>
-    })}</nav>
-    <header className="tt-card-heading"><div><h2>{table.name}</h2><span className="tt-status">{table.publicationStatus === 'published' ? 'PUBLISHED' : !local ? 'STATUS UNAVAILABLE' : validationCurrent ? blockingIssues.length ? 'VALIDATION FAILED' : 'READY TO PUBLISH' : 'DRAFT · NEEDS VALIDATION'}</span></div><div className="tt-actions">
+    })}</nav>}
+    <header className="tt-card-heading"><div><h2>{table.name}</h2><span className="tt-status">{table.publicationStatus === 'published' ? 'PUBLISHED' : !local ? 'STATUS UNAVAILABLE' : validationCurrent ? blockingIssues.length ? 'VALIDATION FAILED' : 'READY TO PUBLISH' : 'DRAFT · NEEDS VALIDATION'}</span><div className="tt-actions tt-workspace-counts"><span>{rows.length} Scheduled</span><button className="tt-button" onClick={() => { setDrawer({ kind: 'unscheduled' }) }}>{unscheduled.length} Unscheduled</button><button className="tt-button" onClick={() => { setDrawer({ kind: 'conflicts' }) }}>{conflicts.length} Conflicts</button></div></div><div className="tt-actions" data-no-print>
+      <PrintDetailsButton title={table.name} />
+      <ExportMenu rows={rows} columns={[
+        { label: 'Day', value: 'dayOfWeek' }, { label: 'Start', value: 'startTime' }, { label: 'End', value: 'endTime' },
+        { label: 'Subject', value: 'subjectName' }, { label: 'Faculty', value: 'facultyName' }, { label: 'Room', value: 'classroom' },
+      ]} title={table.name} filename="timetable" reportType="excel" onDownload={exportToExcelXml} />
       {draft && local && <button className="tt-button" disabled={busy} onClick={generate}>Generate Missing</button>}
-      <button className="tt-button" onClick={() => { setIssues(unscheduled); setDrawer({ kind: 'unscheduled' }) }}>{unscheduled.length} Unscheduled</button><button className="tt-button" onClick={() => { setIssues(conflicts); setDrawer({ kind: 'conflicts' }) }}>{conflicts.length} Conflicts</button>
-      {local && (draft || mockMode) && <details className="tt-more-actions"><summary>More Actions</summary>{draft ? <button className="tt-button" disabled={busy} onClick={() => setDrawer({ kind: 'regenerate' })}>Regenerate</button> : <button className="tt-button" disabled={busy} onClick={() => setDrawer({ kind: 'reopen' })}>Open as Draft</button>}</details>}
-    </div></header>
-    <div className="tt-review-actions" aria-label="Timetable validation and publishing">
-      <span>Review this timetable before sharing it with faculty.</span>
-      <div className="tt-actions">
+      {local && (draft || mockMode) && <details className="tt-more-actions"><summary className="tt-button">More Actions <span aria-hidden="true">⌄</span></summary>{draft ? <button className="tt-button" disabled={busy} onClick={() => setDrawer({ kind: 'regenerate' })}>Regenerate</button> : <button className="tt-button" disabled={busy} onClick={() => setDrawer({ kind: 'reopen' })}>Open as Draft</button>}</details>}
         <button className="tt-button" disabled={busy || !local} title={!local ? 'Validation is unavailable for backend timetables.' : undefined} onClick={review}>Validate</button>
         <button className="tt-button tt-primary" disabled={busy || !canPublish} title={!local ? 'Publishing requires a timetable lifecycle API.' : !draft ? 'This timetable is already published.' : !validationCurrent ? 'Validate this exact timetable revision before publishing.' : blockingIssues.length ? 'Resolve blocking validation issues before publishing.' : undefined} onClick={() => setDrawer({ kind: 'publish', revisions: tables.map(row => ({ id: row.id, revision: row.revision })) })}>Publish</button>
-      </div>
-    </div>
+    </div></header>
+    <p className="tt-workspace-coverage">Weekly coverage: {coverage == null ? 'Unavailable' : `${coverage}%`}</p>
     {!local && <p className="tt-notice">Backend entries use existing timetable and slot IDs. Publication status is not supplied by the entry API; publish and generation require a timetable lifecycle API.</p>}
-    <p>Timetable Validity Period: {table.planning.calendar.startDate || 'Not configured'} ? {table.planning.calendar.endDate || 'Not configured'}</p>
+    <p>Timetable Validity Period: {table.planning.calendar.startDate || 'Not configured'} – {table.planning.calendar.endDate || 'Not configured'}</p>
     <TimetableGrid rows={rows} periods={table.planning.periods} workingDays={table.planning.calendar.workingDays} editable={draft || (!local && table.publicationStatus === 'unavailable')} add={row => setDrawer({ kind: 'entry', initial: row })} inspect={row => setDrawer({ kind: 'entry', initial: row })} faculty={faculty} highlight={highlight} clearHighlight={() => setHighlight('')} />
     {drawer?.kind === 'entry' && <ScheduleDialog key={`${table.id}-${drawer.initial.id || 'new'}`} initial={drawer.initial} table={table} sources={sources} entries={entries} save={form => save(table, form)} remove={id => remove(table, id)} close={() => setDrawer(null)} readOnly={!canManage || table.publicationStatus === 'published'} />}
-    {['validation', 'unscheduled', 'conflicts'].includes(drawer?.kind) && <WorkspaceDrawer title={drawer.kind === 'validation' ? 'Validation result' : drawer.kind === 'unscheduled' ? 'Unscheduled requirements' : 'Conflicts'} close={() => setDrawer(null)}><div className="tt-clean-step">{drawer.kind === 'validation' && <><h3>{blockingIssues.length ? 'VALIDATION FAILED' : 'READY TO PUBLISH'}</h3><div className="tt-validation-summary">{categoryCounts.map(([label, count]) => <div key={label}><span>{label}</span><strong>{count}</strong></div>)}</div><p>{validationCurrent ? 'Checked against the current timetable revision and loaded campus schedule.' : 'Timetable changed after validation. Validate again before publishing.'}</p></>}{!issues.length ? <p>No issues found.</p> : issues.map((issue, index) => <button className="tt-issue" key={`${issue.tableId || ''}-${issue.entryId || ''}-${index}`} onClick={() => focus(issue)}><strong>{issue.blocking === false ? 'Warning · ' : ''}{sources.sections.find(row => same(row.id, issue.sectionId || table.sectionId))?.name || `Section ${issue.sectionId || table.sectionId}`} · {issue.subjectName || ''}</strong><span>{issue.reason}</span>{issue.entryId && <small>View Issue</small>}</button>)}</div></WorkspaceDrawer>}
+    {['validation', 'unscheduled', 'conflicts'].includes(drawer?.kind) && <WorkspaceDrawer title={drawer.kind === 'validation' ? 'Validation result' : drawer.kind === 'unscheduled' ? 'Unscheduled requirements' : 'Conflicts'} close={() => setDrawer(null)}><div className="tt-clean-step">{drawer.kind === 'validation' && <><h3>{blockingIssues.length ? 'VALIDATION FAILED' : 'READY TO PUBLISH'}</h3><div className="tt-validation-summary">{categoryCounts.map(([label, count]) => <div key={label}><span>{label}</span><strong>{count}</strong></div>)}</div><p>{validationCurrent ? 'Checked against the current timetable revision and loaded campus schedule.' : 'Timetable changed after validation. Validate again before publishing.'}</p></>}{!drawerIssues.length ? <p>No issues found.</p> : drawerIssues.map((issue, index) => <button className="tt-issue" key={`${issue.tableId || ''}-${issue.entryId || ''}-${index}`} onClick={() => focus(issue)}><strong>{issue.blocking === false ? 'Warning · ' : ''}{sources.sections.find(row => same(row.id, issue.sectionId || table.sectionId))?.name || `Section ${issue.sectionId || table.sectionId}`} · {issue.subjectName || ''}</strong><span>{issue.reason}</span>{issue.entryId && <small>View Issue</small>}</button>)}</div></WorkspaceDrawer>}
     {['publish', 'regenerate', 'reopen'].includes(drawer?.kind) && <WorkspaceDrawer modal title={drawer.kind === 'publish' ? 'Publish timetable' : drawer.kind === 'regenerate' ? 'Regenerate selected sections?' : 'Open published timetable as draft?'} busy={busy} close={() => setDrawer(null)}><div className="tt-clean-step"><p>{table.name}</p>{drawer.kind === 'publish' ? <><p>Academic scope: {sources.years.find(row => same(row.id, table.academicYearId))?.name || 'Unavailable'} · {sources.branches.find(row => same(row.id, table.branchId))?.name || 'Unavailable'} · {tables.length} section(s)</p><p>Current status: {table.publicationStatus.toUpperCase()} · Validation: READY TO PUBLISH · Blocking conflicts: 0</p><p className="tt-notice">{mockMode ? "Mock Mode: this publishes only to this browser's timetable view." : 'This publishes the selected timetable period through the backend. Existing published timetables are retained.'}</p></> : <p>{drawer.kind === 'regenerate' ? 'Generated scheduling may be replaced across the selected sections. Manual additions, edits and moves will be preserved.' : 'This section will stop appearing in published faculty schedules until it is published again.'}</p>}<div className="tt-actions"><button className="tt-button" disabled={busy} onClick={() => setDrawer(null)}>Cancel</button><button className="tt-button tt-primary" disabled={busy || (drawer.kind === 'publish' && !canPublish)} onClick={async () => { const result = drawer.kind === 'publish' ? await publish(tables) : drawer.kind === 'regenerate' ? await regenerate() : await reopen(table); if (result) setDrawer(null) }}>Confirm {drawer.kind === 'publish' ? 'Publish Timetable' : drawer.kind === 'regenerate' ? 'Regenerate' : 'Open Draft'}</button></div></div></WorkspaceDrawer>}
   </section>
 }
@@ -454,10 +532,13 @@ export function FacultyTimetable({ facultyId, sources, entries, tables, inspect 
 
 function TimetableCell({ row, inspect, faculty, highlight }) {
   return <article data-entry-id={row.id} className={`tt-class ${highlight === row.id ? 'tt-highlight' : ''}`}>
+    <div className="tt-print-slot" aria-hidden="true"><strong>{row.subjectName || row.subjectCode}</strong><small>{row.facultyName}</small><small>{row.classroom}</small></div>
     <button className="tt-class-details" onClick={() => inspect?.(row)}><strong>{row.subjectCode || row.subjectName || 'Subject unavailable'}</strong>{row.subjectCode && row.subjectName && row.subjectName !== row.subjectCode && <span>{row.subjectName}</span>}<small>{row.startTime?.slice(0, 5)} - {row.endTime?.slice(0, 5)}</small><small>{row.classroom || 'Room not assigned'}</small>{row.sectionName && <small>{row.sectionName}</small>}</button>
     {faculty ? <button className="tt-faculty-link" onClick={() => faculty(row.facultyId)}>{row.facultyName}</button> : <small>{row.facultyName || 'Faculty not assigned'}</small>}
   </article>
 }
+
+const periodKey = slot => [slot.startTime, slot.endTime, periodType(slot)].join('|')
 
 export function TimetableGrid({ rows, periods: configured = [], workingDays, editable = false, add, inspect, occupancy = false, faculty, highlight, clearHighlight }) {
   const days = [...new Set([...(workingDays?.length ? workingDays : DAYS), ...rows.map(row => row.dayOfWeek)])]
@@ -474,7 +555,7 @@ export function TimetableGrid({ rows, periods: configured = [], workingDays, edi
     .sort((a, b) => (timeMinutes(a.startTime) ?? 1440) - (timeMinutes(b.startTime) ?? 1440))
   if (!periods.length && !editable) return <EmptyState title="No scheduled classes for this selection" message="Choose a timetable or publish a draft for this academic context." />
   const slots = periods.length ? periods : [{ startTime: '', endTime: '', name: 'Period', type: 'class' }]
-  const empty = (slot, day) => <button className="tt-empty-cell" aria-label={`Add class ${day} ${slot.name} ${slot.startTime.slice(0, 5)}`} onClick={() => add({ dayOfWeek: day, startTime: slot.startTime, endTime: slot.endTime, timetableSlotId: slot.id })}><FiPlus /><span>Add class</span></button>
+  const empty = (slot, day) => <button className="tt-empty-cell" aria-label={`Add class ${day} ${slot.name} ${slot.startTime.slice(0, 5)}`} onClick={() => add({ dayOfWeek: day, startTime: slot.startTime, endTime: slot.endTime, timetableSlotId: slot.id })}><FiPlus /><span>Add Slot</span></button>
   const card = row => <TimetableCell key={`${row.origin}-${row.id}`} row={row} inspect={inspect} occupancy={occupancy} faculty={faculty} highlight={highlight} />
   const agenda = [
     ...rows.filter(row => row.dayOfWeek === day).map(row => ({ startTime: row.startTime, id: `entry-${row.origin}-${row.id}`, content: card(row) })),
@@ -482,14 +563,19 @@ export function TimetableGrid({ rows, periods: configured = [], workingDays, edi
   ].sort((a, b) => timeMinutes(a.startTime) - timeMinutes(b.startTime))
   return <div ref={root} className="tt-grid-container">
     {!rows.length && <p className="tt-notice tt-grid-empty-note" role="status">{editable ? 'No classes have been scheduled yet. Add a class or use Generate Missing to fill this draft.' : 'No scheduled classes were returned for this timetable.'}</p>}
-    <div className="tt-grid-scroll"><table className="tt-week" style={{ '--tt-day-count': days.length }}><caption>Weekly timetable</caption><thead><tr><th scope="col">Period</th>{days.map(day => <th scope="col" key={day}>{day.slice(0, 1) + day.slice(1).toLowerCase()}</th>)}</tr></thead><tbody>{slots.map(slot => <tr key={`${slot.startTime}-${slot.endTime}-${periodType(slot)}`} className={!isTeachingPeriod(slot) ? 'tt-break-row' : ''} data-period-type={periodType(slot)}>
-      <th scope="row">{slot.name}<small>{slot.startTime.slice(0, 5)}–{slot.endTime.slice(0, 5)}</small></th>
-      {!isTeachingPeriod(slot) ? <td colSpan={days.length}>{slot.name} · No teaching</td> : days.map(day => {
-        const matching = rows.filter(row => row.dayOfWeek === day && (overlaps(row, slot) || (!row.startTime && !slot.startTime)))
-        return <td key={day}>{matching.map(card)}{!matching.length && (editable ? empty(slot, day) : <span className="tt-empty-slot">{occupancy ? 'No published booking' : 'No class scheduled'}</span>)}</td>
-      })}
-    </tr>)}</tbody></table></div>
-    <div className="tt-day-view"><div className="tt-day-tabs" role="group" aria-label="Schedule Day">{days.map(value => <button key={value} className={value === day ? 'active' : ''} aria-pressed={value === day} onClick={() => { setSelectedDay(value); clearHighlight?.() }}>{value.slice(0, 3)}</button>)}</div>{agenda.map(item => <div key={item.id}>{item.content}</div>)}{!rows.some(row => row.dayOfWeek === day) && <p>No classes for this day.</p>}</div>
+    <div className="tt-grid-scroll" tabIndex={0} role="region" aria-label="Weekly timetable grid"><table className="tt-week tt-inter-grid" style={{ '--tt-period-count': slots.length }}>
+      <caption>Weekly timetable</caption>
+      <thead><tr><th scope="col">Day</th>{slots.map(slot => <th scope="col" key={periodKey(slot)}>{slot.name}<small>{slot.startTime.slice(0, 5)} – {slot.endTime.slice(0, 5)}</small></th>)}</tr></thead>
+      <tbody>{days.map(day => <tr key={day}>
+        <th scope="row">{day.slice(0, 1) + day.slice(1).toLowerCase()}</th>
+        {slots.map(slot => {
+          if (!isTeachingPeriod(slot)) return <td key={periodKey(slot)} className="tt-inter-break" data-period-type={periodType(slot)}>{slot.name}<small>{slot.startTime.slice(0, 5)} – {slot.endTime.slice(0, 5)}</small></td>
+          const matching = rows.filter(row => row.dayOfWeek === day && (overlaps(row, slot) || (!row.startTime && !slot.startTime)))
+          return <td key={periodKey(slot)}>{matching.map(card)}{!matching.length && (editable ? empty(slot, day) : <span className="tt-empty-slot" aria-label={occupancy ? 'No published booking' : 'No class scheduled'}>—</span>)}</td>
+        })}
+      </tr>)}</tbody>
+    </table></div>
+    <div className="tt-day-view" data-no-print><div className="tt-day-tabs" role="group" aria-label="Schedule Day">{days.map(value => <button key={value} className={value === day ? 'active' : ''} aria-pressed={value === day} onClick={() => { setSelectedDay(value); clearHighlight?.() }}>{value.slice(0, 3)}</button>)}</div>{agenda.map(item => <div key={item.id}>{item.content}</div>)}{!rows.some(row => row.dayOfWeek === day) && <p>No classes for this day.</p>}</div>
   </div>
 }
 
@@ -501,6 +587,10 @@ function TimetableSelect({ label, value, options, onChange, disabled = false, re
 
 export function ScheduleDialog({ initial, table, sources, entries, save, remove, close, readOnly = false }) {
   const [form, setForm] = useState({ subjectId: '', facultyId: '', dayOfWeek: table.planning?.calendar.workingDays[0] || 'MONDAY', startTime: '', endTime: '', classroom: '', entryType: '', ...initial })
+  const originalForm = useRef(form)
+  const closeEditor = () => {
+    if (readOnly || JSON.stringify(form) === JSON.stringify(originalForm.current) || window.confirm('Discard unsaved timetable entry changes?')) close()
+  }
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [confirmRemove, setConfirmRemove] = useState(false)
   const [mode, setMode] = useState('edit')
   const subjects = eligibleSubjects(sources.subjects, table).filter(row => table.planning?.requirements?.[key(row.id)]?.selected !== false)
@@ -516,7 +606,7 @@ export function ScheduleDialog({ initial, table, sources, entries, save, remove,
   const label = (list, id) => list.find(row => same(row.id, id))?.name || 'Unavailable'
   const details = readOnly || mode === 'details'
   const title = details ? 'Schedule details' : mode === 'move' ? 'Move schedule' : form.id ? 'Edit schedule' : 'Add Class'
-  return <WorkspaceDrawer title={title} subtitle={table.name || table.timetableName} busy={busy} close={close}>
+  return <WorkspaceDrawer title={title} subtitle={table.name || table.timetableName} busy={busy} close={closeEditor} className="tt-schedule-dialog">
     {details ? <div className="tt-dialog-body"><dl>{[['Subject', label(sources.subjects, form.subjectId)], ['Faculty', label(sources.faculty, form.facultyId)], ['Day', form.dayOfWeek], ['Period', sessions.find(session => session.startTime === form.startTime && session.endTime === form.endTime)?.name || 'Not supplied'], ['Time', `${form.startTime || 'Unavailable'} – ${form.endTime || 'Unavailable'}`], ['Classroom / Lab', form.classroom || 'Not assigned'], ['Source', table.publicationStatus === 'published' ? 'Published timetable' : 'Backend draft']].map(([name, value]) => <div key={name}><dt>{name}</dt><dd>{value}</dd></div>)}</dl>{readOnly ? <p>This schedule is read-only. Published periods preserve history; draft changes require timetable edit permission.</p> : <div className="tt-actions"><button className="tt-button tt-primary" onClick={() => setMode('edit')}>Edit</button><button className="tt-button" onClick={() => setMode('move')}>Move</button><button className="tt-button tt-danger" disabled={busy} onClick={() => confirmRemove ? execute(() => remove(form.id)) : setConfirmRemove(true)}>{confirmRemove ? 'Confirm removal' : 'Remove class'}</button></div>}{error && <p className="tt-error" role="alert">{error}</p>}</div> : <form onSubmit={event => { event.preventDefault(); if (!conflicts.length && !planErrors.length) execute(() => save(form)) }}>
       <div className="tt-dialog-body">{form.id && <p>To move this class, choose another day or teaching period. Every change is checked for conflicts before saving.</p>}<div className="tt-form-grid"><TimetableSelect label="Subject" value={form.subjectId} options={subjects.map(row => ({ ...row, name: `${row.subjectCode || ''} · ${row.name}` }))} onChange={value => { change('subjectId', value); setForm(old => ({ ...old, entryType: subjects.find(row => same(row.id, value))?.subjectType || '' })) }} disabled={busy || mode === 'move'} /><TimetableSelect label="Faculty" value={form.facultyId} options={faculty} onChange={value => change('facultyId', value)} disabled={busy || !form.subjectId || mode === 'move'} /><TimetableSelect label="Day" value={form.dayOfWeek} options={table.planning?.calendar.workingDays || [...DAYS, 'SUNDAY']} onChange={value => change('dayOfWeek', value)} disabled={busy} />
         {table.planning ? <TimetableSelect label="Classroom / Lab" value={rooms.find(room => form.roomId && room.roomId ? same(room.roomId, form.roomId) : room.classroom === form.classroom)?.value || ''} options={rooms} disabled={busy || mode === 'move'} onChange={value => { const room = rooms.find(row => row.value === value); setForm(old => ({ ...old, classroom: room?.classroom || '', roomId: room?.roomId || '' })) }} /> : <label className="tt-field"><span>Classroom / Lab</span><input required maxLength={120} value={form.classroom} disabled={busy} onChange={event => change('classroom', event.target.value)} /></label>}
@@ -530,13 +620,13 @@ export function ScheduleDialog({ initial, table, sources, entries, save, remove,
         {form.id && mode !== 'move' && <button type="button" className="tt-button" onClick={() => setMode('move')}>Move class</button>}
         {planErrors.length > 0 && <div className="tt-planning-help">{planErrors.map(message => <p key={message}>{message}</p>)}</div>}
         {error && <p className="tt-error" role="alert">{error}</p>}
-      </div><footer>{form.id && <button type="button" className="tt-button tt-danger" disabled={busy} onClick={() => confirmRemove ? execute(() => remove(form.id)) : setConfirmRemove(true)}>{confirmRemove ? 'Confirm removal' : 'Remove class'}</button>}<button type="button" className="tt-button" disabled={busy} onClick={close}>Cancel</button><button className="tt-button tt-primary" disabled={busy || Boolean(conflicts.length) || Boolean(planErrors.length) || !form.subjectId || !form.facultyId}>{busy ? 'Saving...' : 'Save Draft Entry'}</button></footer>
+      </div><footer>{form.id && <button type="button" className="tt-button tt-danger" disabled={busy} onClick={() => confirmRemove ? execute(() => remove(form.id)) : setConfirmRemove(true)}>{confirmRemove ? 'Confirm removal' : 'Remove class'}</button>}<button type="button" className="tt-button" disabled={busy} onClick={closeEditor}>Cancel</button><button className="tt-button tt-primary" disabled={busy || Boolean(conflicts.length) || Boolean(planErrors.length) || !form.subjectId || !form.facultyId}>{busy ? 'Saving...' : 'Save Draft Entry'}</button></footer>
     </form>}
   </WorkspaceDrawer>
 }
 
 // WorkspaceDrawer
 // Shared focus handling for timetable drawers and compact confirmations.
-function WorkspaceDrawer({ title, subtitle, close, busy = false, modal = false, children, footer }) {
-  return <ViewDialog title={title} subtitle={subtitle} onClose={close} busy={busy} showExport={false} hideFooter={!footer} footerActions={footer} maxWidth={modal ? '560px' : '1100px'}><div className="tt-drawer-content">{children}</div></ViewDialog>
+function WorkspaceDrawer({ title, subtitle, close, busy = false, modal = false, children, footer, className }) {
+  return <ViewDialog title={title} subtitle={subtitle} onClose={close} busy={busy} showExport={false} hideFooter={!footer} footerActions={footer} maxWidth={modal ? '560px' : '1100px'} className={className}><div className="tt-drawer-content">{children}</div></ViewDialog>
 }

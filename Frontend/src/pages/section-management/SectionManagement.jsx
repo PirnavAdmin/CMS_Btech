@@ -327,7 +327,6 @@ function SectionList({ initialViewId = null }) {
                       <td className="table-center" style={{ width: '130px' }}>{section.academicYear}</td>
                       <td className="table-center" style={{ width: '150px' }}>
                         <strong>{assigned} / {section.capacity}</strong>
-                        <small>{Math.max(Number(section.capacity || 0) - assigned, 0)} seats available</small>
                       </td>
                       <td className="table-center" style={{ minWidth: '170px', maxWidth: '220px' }}>
                         {section.advisor ? (
@@ -575,28 +574,15 @@ function SectionForm({ editMode = false }) {
           {yearWarning && <div className="section-form-warning" role="alert">{yearWarning}</div>}
 
           <section className="section-compact-form__group">
-            <header><h3>Academic mapping</h3><p>Only saved semester definitions are available.</p></header>
             <div className="section-form-grid">
               <Field label="Course *" error={errors.courseId}><SearchableSelect label="Course" value={form.courseId} options={scopedCourses.map(item => ({ id: item.id, value: item.id, name: item.name, code: item.code }))} onChange={setCourse} disabled={editMode} placeholder="Select course" /></Field>
               <Field label="Branch *" error={errors.branchId}><SearchableSelect label="Branch" value={form.branchId} options={branches.filter(item => !form.courseId || String(item.courseId) === String(form.courseId)).map(item => ({ id: item.id, value: item.id, name: item.name, code: item.code }))} onChange={setBranch} disabled={editMode || !form.courseId} placeholder={form.courseId ? 'Select branch' : 'Select course first'} /></Field>
               <Field label="Academic Year *" error={errors.academicYearId}>{editMode ? <ReadOnly value={form.academicYear || activeYear?.name} /> : <SearchableSelect label="Academic year" value={form.academicYearId || ''} options={academicYearOptions.filter(isSectionYearActive).map(item => ({ id: item.id, name: item.name }))} onChange={(academicYearId) => { const selectedYear = academicYearOptions.find(item => String(item.id) === String(academicYearId)); setForm(current => ({ ...current, academicYearId, academicYear: selectedYear?.name || '', semesterId: '', semester: '' })); setErrors(current => ({ ...current, academicYearId: '', semesterId: '' })) }} placeholder="Select academic year" />}</Field>
               <Field label="Semester *" error={errors.semesterId}><ProjectSelect aria-label="Semester" value={form.semesterId} onChange={(event) => setSemester(event.target.value)} disabled={editMode || !form.branchId || !form.academicYearId}><option value="">{form.branchId ? (semesterOptions.length ? 'Select semester' : 'No saved semesters') : 'Select branch first'}</option>{semesterOptions.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</ProjectSelect>{form.branchId && !semesterOptions.length && <small>Create the semester definition in Program Configuration first.</small>}</Field>
-            </div>
-          </section>
-
-          <section className="section-compact-form__group">
-            <header><h3>Section details</h3><p>Set the identity and approved capacity.</p></header>
-            <div className="section-form-grid">
               <Field label="Section Name *" error={errors.name}><input value={form.name} onChange={(event) => setField('name', event.target.value)} placeholder="e.g. Section A" /></Field>
               <Field label="Section Code *" error={errors.code}><input value={form.code} onChange={(event) => setField('code', event.target.value)} placeholder="e.g. CSE-S1-A" /></Field>
               <Field label="Capacity *" error={errors.capacity}><input type="number" min="1" max="120" value={form.capacity} onChange={(event) => setField('capacity', event.target.value)} placeholder="e.g. 60" /></Field>
               <Field label="Status *" error={errors.status}><ProjectSelect value={form.status} onChange={(event) => setField('status', event.target.value)}><option value="" disabled>Select status</option><option value="Active">Active</option><option value="Inactive">Inactive</option></ProjectSelect></Field>
-            </div>
-          </section>
-
-          <section className="section-compact-form__group">
-            <header><h3>Room & assignments</h3><p>Create a room first, then select it for this section. Advisor can be assigned later.</p></header>
-            <div className="section-form-grid">
               <Field label={editMode ? 'Room / Classroom' : 'Room / Classroom *'} error={errors.room}><ProjectSelect value={form.room} onChange={(event) => setField('room', event.target.value)}><option value="">{editMode ? 'Assign later' : 'Select a room'}</option>{availableRooms.map(room => <option key={room.id} value={room.roomNumber || room.roomName || room.id}>{roomLabel(room)}</option>)}</ProjectSelect>{!rooms.length && <small>No rooms configured. <Link to="/rooms-management/add">Add a room first</Link></small>}</Field>
               <Field label="Faculty Advisor" error={errors.facultyAdvisorEmployeeProfileId}><SearchableSelect label="Faculty advisor" value={form.facultyAdvisorEmployeeProfileId} options={teacherCandidates.map(item => ({ id: item.employeeProfileId, value: item.employeeProfileId, name: item.fullName, code: [item.employeeCode, item.designation].filter(clean).join(' / ') }))} onChange={(value) => { const teacher = teacherCandidates.find(item => String(item.employeeProfileId) === String(value)); setForm(current => ({ ...current, facultyAdvisorEmployeeProfileId: value, advisor: teacher?.fullName || '' })) }} placeholder="Assign later" noOptionsMessage="No eligible faculty found." /></Field>
             </div>

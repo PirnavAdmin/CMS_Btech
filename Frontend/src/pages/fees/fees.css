@@ -4334,9 +4334,8 @@
 #root .fm-page .fm-student-fee-summary-strip .fm-summary-card__icon-box,
 #root .fm-page .fm-student-fee-summary-strip .fm-summary-card__meta { display: none; }
 #root .fm-page .fm-student-fee-summary-strip .fm-summary-card__value { order: 1; margin: 0; font-size: 19px; line-height: 1.2; }
-#root .fm-page .fm-student-fees-page > [role="status"] { grid-column: 1 / -1; grid-row: 2; margin: 0; color: var(--fm-muted); font-size: 11px; }
-#root .fm-page .fm-student-fees-page > .fm-fee-workspace-nav { grid-column: 1 / -1; grid-row: 3; display: flex; width: 100%; }
-#root .fm-page .fm-student-fees-page > .fm-fee-workspace-nav .fm-workspace-tab { flex: 1 1 0; justify-content: center; min-width: 0; }
+#root .fm-page .fm-student-fees-page > [role="status"] { grid-column: 1 / -1; grid-row: 3; margin: 0; color: var(--fm-muted); font-size: 11px; }
+#root .fm-page .fm-student-fees-page > .fm-fee-workspace-nav { grid-column: 1 / -1; grid-row: 2; }
 #root .fm-page .fm-student-fees-page > .fm-workspace { grid-column: 1 / -1; grid-row: 4; width: 100%; }
 #root .fm-page .fm-student-fees-page .filter-disclosure__bar { display: flex; flex-wrap: nowrap; }
 #root .fm-page .fm-student-fees-page .filter-disclosure__search { flex: 1 1 auto; min-width: 220px; }
@@ -4345,6 +4344,100 @@
 #root .fm-page .fm-fee-types-search input { border: 0; background: transparent; box-shadow: none; }
 #root .fm-page .fm-fee-types-code-filter { display: grid; gap: 5px; min-width: 180px; color: var(--fm-muted); font-size: 11px; font-weight: 700; }
 #root .fm-page .fm-fee-types-code-filter select { min-width: 180px; }
+
+#root .fm-page .fm-structure-directory {
+  gap: 10px;
+}
+
+#root .fm-page .fm-page-container > :is(.fm-fee-type-nav, .fm-fee-workspace-nav) {
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  flex-wrap: wrap;
+  overflow: visible;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+#root .fm-page .fm-page-container > :is(.fm-fee-type-nav, .fm-fee-workspace-nav) > :is(.fm-fee-type-tab, .fm-workspace-tab) {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 10px;
+  border-color: var(--fm-border);
+  background: var(--fm-surface);
+  color: var(--fm-text);
+  font-size: 12px;
+  border-radius: 7px;
+}
+
+#root .fm-page .fm-page-container > :is(.fm-fee-type-nav, .fm-fee-workspace-nav) > :is(.fm-fee-type-tab.active, .fm-workspace-tab.is-active) {
+  background: color-mix(in srgb, var(--brand) 15%, var(--fm-surface));
+  border-color: color-mix(in srgb, var(--brand) 40%, var(--fm-border));
+  color: var(--fm-text);
+}
+
+#root .fm-page .fm-structure-directory .fm-plan-workspace {
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid var(--fm-border);
+  box-shadow: none;
+}
+
+#root .fm-page .fm-structure-directory .fm-plan-context {
+  margin: 0;
+  white-space: normal !important;
+}
+
+#root .fm-page .fm-structure-directory .fm-plan-empty-state {
+  min-height: 100px;
+  gap: 5px;
+  padding: 12px;
+  border: 0;
+  background: var(--fm-surface);
+}
+
+#root .fm-page .fm-structure-directory .fm-plan-empty-icon {
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+#root .fm-page .fm-plan-editor-dialog > .shared-view-dialog__body {
+  padding: 0;
+}
+
+#root .fm-page .fm-plan-editor-dialog .fm-create-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+#root .fm-page .fm-plan-editor-dialog .fm-create-form-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-height: max(240px, calc(86dvh - 100px));
+  overflow: auto;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+#root .fm-page .fm-plan-editor-dialog .fm-create-form-body {
+  flex: 1 1 auto;
+  min-height: 80px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+#root .fm-page .fm-plan-editor-dialog :is(.fm-plan-form-tabs, .fm-sticky-footer) {
+  flex-shrink: 0;
+}
 @media (max-width: 1050px) {
   #root .fm-page .fm-student-fees-page:has(.fm-student-fee-summary-strip) { grid-template-columns: minmax(0,1fr); }
   #root .fm-page .fm-student-fees-page > .erp-page-header { grid-column: 1; grid-row: 1; }

@@ -552,7 +552,7 @@ export default function ElectiveManagement() {
       <main className="em-screen em-screen--group-table">
         <header className="em-header">
           <div>
-            <h1>Elective Management</h1>
+            <h1>Elective Allocation</h1>
             <p>Review subjects and their elective classification.</p>
           </div>
         </header>

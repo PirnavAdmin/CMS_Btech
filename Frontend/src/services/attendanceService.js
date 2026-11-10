@@ -15,7 +15,7 @@ class AttendanceService {
       date: String(session.attendanceDate || '').slice(0, 10),
       subject: session.subjectName || session.subjectCode || '',
       course: session.courseName || '',
-      branch: session.sectionName || '',
+      branch: session.branchName || '',
       semester: session.semesterName || '',
       section: session.sectionName || '',
       faculty: session.facultyName || '',
@@ -120,6 +120,8 @@ class AttendanceService {
 
     return assigned.flatMap(item => {
       const studentId = item.studentId ?? item.StudentId ?? item.id
+      const assignmentStatus = String(item.status ?? item.isActive ?? '').trim().toLowerCase()
+      if (['0', 'false', 'inactive', 'withdrawn'].includes(assignmentStatus)) return []
       const profile = profileMap.get(String(studentId ?? '')) || {}
       const studentCollegeId = String(collegeIdOf(profile) || collegeIdOf(item) || '')
       if (selectedCollegeId && studentCollegeId && studentCollegeId !== selectedCollegeId) return []
@@ -133,6 +135,7 @@ class AttendanceService {
         id: studentId,
         name,
         rollNumber,
+        admissionNumber: item.admissionNumber || academic.admissionNumber || profile.admissionNumber || '',
         registrationNumber: item.registrationNumber || profile.registrationNumber || rollNumber,
         status: '',
       }]

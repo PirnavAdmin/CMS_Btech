@@ -60,10 +60,24 @@ test('faculty details use a cancellable native dialog with the original route', 
 
 test('faculty registration validates before creating an employee', async () => {
   mount('/faculty/new?category=Teaching')
-  await screen.findByRole('navigation', { name: 'Faculty form steps' })
-  fireEvent.submit(document.querySelector('.fm-form'))
-  expect(screen.getAllByRole('alert').length).toBeGreaterThan(0)
+  const dialog = await screen.findByRole('dialog', { name: 'Add Teaching Faculty' })
+  fireEvent.submit(dialog.querySelector('form'))
+  expect(within(dialog).getByRole('alert').textContent).toMatch(/full name is required/i)
   expect(facultyService.create).not.toHaveBeenCalled()
+})
+
+test('teaching registration exposes all steps and can skip optional details', async () => {
+  mount('/faculty/new?category=Teaching')
+  const dialog = within(await screen.findByRole('dialog', { name: 'Add Teaching Faculty' }))
+  const steps = within(dialog.getByRole('navigation', { name: 'Faculty form steps' }))
+  expect(steps.getAllByRole('button')).toHaveLength(5)
+  fireEvent.click(steps.getByRole('button', { name: /Academic Details/ }))
+  fireEvent.click(dialog.getByRole('button', { name: 'Skip for Now' }))
+  expect(steps.getByRole('button', { name: /Contact/ }).getAttribute('aria-current')).toBe('step')
+  fireEvent.click(dialog.getByRole('button', { name: 'Skip for Now' }))
+  fireEvent.click(dialog.getByRole('button', { name: 'Skip Documents & Save' }))
+  expect(facultyService.create).not.toHaveBeenCalled()
+  expect(steps.getByRole('button', { name: /Personal Details/ }).getAttribute('aria-current')).toBe('step')
 })
 
 test('allocation options fail visibly without fabricated academic choices', async () => {

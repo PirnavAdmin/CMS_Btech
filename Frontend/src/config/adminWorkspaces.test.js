@@ -6,15 +6,25 @@ import { ADMIN_WORKSPACES, groupAdminWorkspaces } from './adminWorkspaces.js'
 
 const modules = MODULE_REGISTRY.map(entry => entry.id === 'academic_settings' ? { ...entry, navigation: true } : entry)
 const grouped = permissions => groupAdminWorkspaces(navigationGroups({ role: 'admin', access: { collegeId: 7, ...permissions }, selectedCollegeId: 7, modules }))
-test('every existing admin destination belongs to exactly one workspace', () => {
+test('every existing admin destination belongs to a workspace', () => {
   const ids = ADMIN_WORKSPACES.flatMap(workspace => workspace.modules)
   assert.equal(new Set(ids).size, ids.length)
   for (const module of modules.filter(entry => entry.navigation && (entry.sidebarRoles || entry.roles).includes('admin'))) assert.ok(ids.includes(module.id), module.id)
   const old = navigationGroups({ role: 'admin', access: { isSuperAdmin: true }, modules }).flatMap(group => group.items).flatMap(entry => entry.children.length ? entry.children : [entry])
   const next = grouped({ isSuperAdmin: true }).flatMap(group => group.items).filter(entry => !entry.unavailable).flatMap(entry => entry.children.length ? entry.children : [entry])
   const configurationRoutes = ['/college-institution-management', '/academic-year-management', '/rooms-management']
-  assert.deepEqual(new Set(next.map(entry => entry.path)), new Set(old.map(entry => entry.path).filter(path => !configurationRoutes.includes(path))))
+  const expectedExisting = old.map(entry => entry.path).filter(path => !configurationRoutes.includes(path) && !path.startsWith('/fees'))
+  assert.deepEqual(new Set(next.map(entry => entry.path).filter(path => !path.startsWith('/fees/'))), new Set(expectedExisting))
+  for (const path of ['/fees/types', '/fees/structures', '/fees/students']) assert.ok(next.some(entry => entry.path === path))
   for (const path of configurationRoutes) assert.ok(MODULE_REGISTRY.some(entry => entry.path === path && entry.component))
+})
+test('Student Fees and its receipts route belong to Fee Management', () => {
+  const items = grouped({ isSuperAdmin: true })[0].items
+  const fees = items.find(entry => entry.id === 'workspace_fees')
+  assert.equal(items.some(entry => entry.id === 'workspace_student_fees'), false)
+  assert.deepEqual(fees.children.map(entry => entry.path), ['/fees/types', '/fees/structures', '/fees/students'])
+  assert.equal(activeSidebarChild(fees, '/fees/structures/create'), 'fee_structures')
+  assert.equal(activeSidebarChild(fees, '/fees/students/receipts'), 'workspace_student_fees')
 })
 test('grouping cannot add a denied configuration or fee action', () => {
   const items = grouped({ permissions: { rooms: { view: true }, fees: { view: true } } }).flatMap(group => group.items)
