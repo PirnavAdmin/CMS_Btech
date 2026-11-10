@@ -55,11 +55,11 @@ test('subject creation preserves engineering fields and uses the existing create
   fireEvent.click(form.getByRole('button',{name:/Continue/}))
   fireEvent.change(form.getByLabelText(/Subject Name/),{target:{value:'Algorithms'}})
   fireEvent.change(form.getByLabelText(/Subject Code/),{target:{value:'CS102'}})
-  fireEvent.change(form.getByLabelText('Credits'),{target:{value:'4'}})
-  fireEvent.change(form.getByLabelText('Elective Type'),{target:{value:'Core Subject'}})
+  fireEvent.click(form.getByRole('checkbox',{name:'Is Elective'}))
   fireEvent.click(form.getByRole('button',{name:/Continue/}))
+  fireEvent.change(form.getByLabelText('Credits'),{target:{value:'4'}})
   fireEvent.submit(dialog.querySelector('form'))
-  await waitFor(()=>expect(subjectService.createSubject).toHaveBeenCalledWith(expect.objectContaining({academicYearId:'1',courseId:'2',branchId:'3',semesterId:'4',subjectCode:'CS102',subjectName:'Algorithms',credits:4,electiveType:'Core Subject'})))
+  await waitFor(()=>expect(subjectService.createSubject).toHaveBeenCalledWith(expect.objectContaining({academicYearId:'1',courseId:'2',branchId:'3',semesterId:'4',subjectCode:'CS102',subjectName:'Algorithms',credits:'4',electiveType:'Elective'})))
   await waitFor(()=>expect(screen.queryByRole('dialog')).toBeNull())
 })
 
@@ -87,7 +87,7 @@ test('subject dependencies block deletion without losing records',async()=>{
 })
 
 test('subject creation without backend identity blocks repeated creation and avoids success',async()=>{
- subjectService.createSubject.mockResolvedValue({});mount();fireEvent.click(await screen.findByRole('button',{name:'Add Subject'}));const dialog=screen.getByRole('dialog'),form=within(dialog);await waitFor(()=>expect(form.getByLabelText('Course').options.length).toBeGreaterThan(1));for(const [label,value]of[['Course','2'],['Branch','3'],['Academic Level','1st Year'],['Semester','4']])fireEvent.change(form.getByLabelText(label),{target:{value}});fireEvent.click(form.getByRole('button',{name:/Continue/}));fireEvent.change(form.getByLabelText(/Subject Name/),{target:{value:'Algorithms'}});fireEvent.change(form.getByLabelText(/Subject Code/),{target:{value:'CS102'}});fireEvent.change(form.getByLabelText('Credits'),{target:{value:'4'}});fireEvent.change(form.getByLabelText('Elective Type'),{target:{value:'Core Subject'}});fireEvent.click(form.getByRole('button',{name:/Continue/}));fireEvent.click(form.getByRole('button',{name:'Create Subject'}));await form.findByText('The server did not return a subject identity. Verify the directory before creating again.');fireEvent.click(form.getByRole('button',{name:'Create Subject'}));await form.findByText('Verify the previous subject creation in the directory before another submission.');expect(subjectService.createSubject).toHaveBeenCalledTimes(1)
+ subjectService.createSubject.mockResolvedValue({});mount();fireEvent.click(await screen.findByRole('button',{name:'Add Subject'}));const dialog=screen.getByRole('dialog'),form=within(dialog);await waitFor(()=>expect(form.getByLabelText('Course').options.length).toBeGreaterThan(1));for(const [label,value]of[['Course','2'],['Branch','3'],['Academic Level','1st Year'],['Semester','4']])fireEvent.change(form.getByLabelText(label),{target:{value}});fireEvent.click(form.getByRole('button',{name:/Continue/}));fireEvent.change(form.getByLabelText(/Subject Name/),{target:{value:'Algorithms'}});fireEvent.change(form.getByLabelText(/Subject Code/),{target:{value:'CS102'}});fireEvent.click(form.getByRole('button',{name:/Continue/}));fireEvent.click(form.getByRole('button',{name:'Create Subject'}));await form.findByText('The server did not return a subject identity. Verify the directory before creating again.');fireEvent.click(form.getByRole('button',{name:'Create Subject'}));await form.findByText('Verify the previous subject creation in the directory before another submission.');expect(subjectService.createSubject).toHaveBeenCalledTimes(1)
 })
 
 

@@ -16,6 +16,8 @@ export const mapApiSubject = subject => ({
   status: Number(subject.status) === 0 || String(subject.status).toLowerCase() === 'inactive' ? 'Inactive' : 'Active',
 })
 
+const optionalNumber = value => value === '' || value == null ? null : Number(value)
+
 export const subjectApiPayload = subject => ({
   subjectCode: String(subject.subjectCode || '').trim(),
   subjectName: String(subject.subjectName || '').trim(),
@@ -23,7 +25,12 @@ export const subjectApiPayload = subject => ({
   branchId: Number(subject.branchId),
   semesterId: Number(subject.semesterId),
   academicYearId: subject.academicYearId ? Number(subject.academicYearId) : null,
-  credits: subject.credits === '' || subject.credits == null ? null : Number(subject.credits),
+  credits: optionalNumber(subject.credits),
+  lectureHours: optionalNumber(subject.lectureHours),
+  tutorialHours: optionalNumber(subject.tutorialHours),
+  practicalHours: optionalNumber(subject.practicalHours),
+  internalMarks: optionalNumber(subject.internalMarks),
+  externalMarks: optionalNumber(subject.externalMarks),
   subjectType: subject.subjectType || null,
   electiveType: subject.electiveType || null,
   description: subject.description || null,

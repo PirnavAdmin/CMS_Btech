@@ -6,7 +6,7 @@ export const ADMIN_WORKSPACES = Object.freeze([
   { id: 'fees', label: 'Fee Management', icon: 'wallet-cards', modules: ['fee_management'] },
   { id: 'students', label: 'Student Management', icon: 'contact-round', modules: ['student_admissions', 'student_profiles', 'student_promotions'] },
   { id: 'faculty', label: 'Faculty & Staff', icon: 'briefcase-business', modules: ['faculty_directory', 'faculty_leaves', 'faculty_payroll'] },
-  { id: 'subjects', label: 'Subjects & Curriculum', icon: 'notebook-tabs', modules: ['subjects', 'electives', 'credits', 'timetable'] },
+  { id: 'subjects', label: 'Subjects & Curriculum', icon: 'notebook-tabs', modules: ['subjects', 'electives', 'timetable'] },
   { id: 'attendance', label: 'Attendance', icon: 'clipboard-check', modules: ['student_attendance', 'faculty_attendance'] },
   { id: 'exams', label: 'Exams & Results', icon: 'file-pen-line', modules: ['examinations', 'marks', 'results'] },
   { id: 'administration', label: 'Administration', icon: 'shield-check', modules: ['user_access', 'roles_permissions'] },
