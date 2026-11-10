@@ -1,8 +1,26 @@
 const formatSubjectType = value => String(value ?? '').trim().toLowerCase().replace(/\b\w/g, character => character.toUpperCase())
 
-export function subjectTypeOptions(subjects) {
+const COMMON_SUBJECT_TYPES = [
+  'Theory',
+  'Practical',
+  'Laboratory',
+  'Tutorial',
+  'Project',
+  'Seminar',
+  'Viva',
+  'Internship',
+  'Elective',
+  'Open Elective',
+  'Professional Elective',
+  'Mandatory Course',
+]
+
+export function subjectTypeOptions(subjects = []) {
   const options = new Map()
-  for (const subjectType of [...subjects.map(subject => subject.subjectType), 'Practical']) {
+  for (const subjectType of [
+    ...COMMON_SUBJECT_TYPES,
+    ...subjects.flatMap(subject => [subject.subjectType, subject.type]),
+  ]) {
     const label = formatSubjectType(subjectType)
     if (!label) continue
     const normalized = label.toLowerCase()
