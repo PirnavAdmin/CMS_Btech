@@ -152,6 +152,18 @@ const nextCycle = (year) => {
     autoActivate: false,
   };
 };
+const academicYearDates = (name) => {
+  const match = String(name || '').trim().match(/^(\d{4})\s*[-–/]\s*(\d{2}|\d{4})$/);
+  if (!match) return null;
+  const startYear = Number(match[1]);
+  let endYear = Number(match[2]);
+  if (match[2].length === 2) endYear += Math.floor(startYear / 100) * 100;
+  if (endYear <= startYear) endYear += 100;
+  if (endYear !== startYear + 1) return null;
+  const start = new Date(startYear, 5, 1);
+  const end = new Date(endYear, 4, 31);
+  return { startDate: dateOnly(start), endDate: dateOnly(end) };
+};
 
 const ACADEMIC_YEAR_DATES_KEY = 'academic_year_dates_cache';
 
@@ -235,7 +247,7 @@ function AcademicYear() {
   const [exportLoading, setExportLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [saving, setSaving] = useState(false);
-  const [firstYearStart, setFirstYearStart] = useState(() => {
+  const [firstYearStart] = useState(() => {
     const today = new Date();
     return `${today.getFullYear() - (today.getMonth() < 5 ? 1 : 0)}-06-01`;
   });
@@ -354,18 +366,18 @@ function AcademicYear() {
   function validate() {
     let e = {},
       others = years.filter((x) => x.id !== selected?.id);
+    const dates = form.startDate && form.endDate ? form : academicYearDates(form.name);
     if (!selectedCollegeId) e.form = 'Select a college before adding an academic year.';
     if (!form.name.trim()) e.name = 'Academic year title is required.';
-    if (!form.startDate) e.startDate = 'Start date is required.';
-    if (!form.endDate) e.endDate = 'End date is required.';
-    if (form.startDate && form.endDate && d(form.endDate) <= d(form.startDate))
-      e.endDate = 'End date must be after start date.';
+    if (!dates) e.name = 'Use a consecutive academic year title, such as 2025 - 2026.';
+    if (dates?.startDate && dates?.endDate && d(dates.endDate) <= d(dates.startDate))
+      e.name = 'The academic year title must describe a valid date range.';
     if (form.name.trim() && others.some((x) => x.name.toLowerCase() === form.name.trim().toLowerCase()))
       e.name = 'This academic year already exists.';
     if (
-      form.startDate &&
-      form.endDate &&
-      others.some((x) => d(form.startDate) <= d(x.endDate) && d(form.endDate) >= d(x.startDate))
+      dates?.startDate &&
+      dates?.endDate &&
+      others.some((x) => d(dates.startDate) <= d(x.endDate) && d(dates.endDate) >= d(x.startDate))
     )
       e.range = 'This date range overlaps an existing academic year.';
     setErrors(e);
@@ -382,18 +394,19 @@ function AcademicYear() {
     if (!validate() || saving) return;
     setSaving(true);
     try {
+      const dates = form.startDate && form.endDate ? form : academicYearDates(form.name);
       const payload = {
         name: form.name.trim(),
         academicYearName: form.name.trim(),
-        startDate: form.startDate,
-        endDate: form.endDate,
-        StartDate: form.startDate,
-        EndDate: form.endDate,
+        startDate: dates.startDate,
+        endDate: dates.endDate,
+        StartDate: dates.startDate,
+        EndDate: dates.endDate,
         autoActivate: form.autoActivate,
       };
       const data = selected ? await academicYearApi.update(selected.id, payload) : await academicYearApi.create(payload);
       const targetId = data?.academicYearId ?? data?.id ?? selected?.id;
-      cacheYearDates(targetId, payload.name, { startDate: form.startDate, endDate: form.endDate });
+      cacheYearDates(targetId, payload.name, { startDate: dates.startDate, endDate: dates.endDate });
       if (!selected) {
         if (targetId) rememberCreated('academic-years', { id: targetId });
         setSearch(''); setFilter('ALL'); setPage(1);
@@ -650,12 +663,7 @@ function AcademicYear() {
                   <FormField label="Academic Year Title" required error={errors.name} className="erp-form-field--full">
                     <input autoFocus placeholder="e.g. 2025 - 2026" value={form.name} onChange={e => setForm(x => ({ ...x, name: e.target.value }))} />
                   </FormField>
-                  <FormField label="Start Date" required error={errors.startDate}>
-                    <input type="date" value={form.startDate} onChange={e => setForm(x => ({ ...x, startDate: e.target.value }))} />
-                  </FormField>
-                  <FormField label="End Date" required error={errors.endDate}>
-                    <input type="date" value={form.endDate} onChange={e => setForm(x => ({ ...x, endDate: e.target.value }))} />
-                  </FormField>
+                  {modal === 'add' && <p className="erp-form-field--full">Dates are generated from the academic year title (June 1 to May 31).</p>}
                 {modal === 'add' && (
                   <label className="toggle erp-form-field--full">
                     <input
@@ -680,10 +688,6 @@ function AcademicYear() {
               <p>College: <strong>{selectedCollege?.name || selectedCollege?.collegeName || 'Selected college'}</strong></p>
               {!generationBase && generatedCycle && <p className="ay-generation-note">The first academic year becomes active automatically if its dates include today.</p>}
               {errors.form && <p className="field-error" role="alert">{errors.form}</p>}
-              {!generationBase && <label className="field">
-                <span>Academic year start date</span>
-                <input type="date" value={firstYearStart} onChange={(event) => setFirstYearStart(event.target.value)} required />
-              </label>}
               <p style={{ marginTop: '12px', color: 'var(--text-secondary)' }}>
                 {generationBase ? `Generate the next annual cycle after ${generationBase.name}.` : 'Generate a new annual academic cycle for this college.'}
                 {generatedCycle && <> <strong>{generatedCycle.name}</strong> ({formatDate(generatedCycle.startDate)} – {formatDate(generatedCycle.endDate)}).</>}
@@ -873,8 +877,11 @@ function Dialog({ title, children, actions, onClose }) {
 
 function AddCollege() {
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
   const editId = searchParams.get('edit')
-  return <DashboardLayout><CollegeForm key={editId || 'new'} editId={editId} /></DashboardLayout>
+  // Direct add/edit URLs use the same dialog as the College Configuration
+  // directory, so navigation context never changes the form presentation.
+  return <DashboardLayout><CollegeForm key={editId || 'new'} editId={editId} onDismiss={() => navigate('/college-institution-management')} /></DashboardLayout>
 }
 
 function CollegeForm({ editId, onDismiss, onSaved, resumeDraft = false }) {
@@ -1339,7 +1346,9 @@ function CollegeForm({ editId, onDismiss, onSaved, resumeDraft = false }) {
         : getApiErrorMessage(error)
       setSubmitError(message)
       scrollToTop()
-      if (!inModal) setNotice(message, 'error')
+      // A modal keeps the user in context, but failures still need the same
+      // global feedback as the full-page editor (especially upload retries).
+      setNotice(message, 'error')
       setDialog(null)
     }
     finally { submitLock.current = false; setSubmitting(false) }
@@ -1409,8 +1418,6 @@ function CollegeForm({ editId, onDismiss, onSaved, resumeDraft = false }) {
           <label className="ac-field" htmlFor="ac-collegeType"><span>College Type</span><ProjectSelect id="ac-collegeType" name="collegeType" value={values.collegeType} onChange={update} onBlur={() => setTouched((current) => ({ ...current, collegeType: true }))} aria-invalid={Boolean((touched.collegeType || Boolean(values.collegeType)) && errors.collegeType)}><option value="">Select type</option>{TYPES.map((type) => <option key={type}>{type}</option>)}</ProjectSelect>{(touched.collegeType || Boolean(values.collegeType)) && errors.collegeType && <small className="ac-error" role="alert">{errors.collegeType}</small>}</label>
           {values.collegeType === 'Other' && <Field label="Specify College Type" name="collegeTypeOther" values={values} errors={errors} touched={touched} onChange={update} required maxLength={60} placeholder="e.g. Community College" />}
           <Field label="University Name" name="universityName" values={values} errors={errors} touched={touched} onChange={update} maxLength={120} placeholder="Affiliated university" readOnly={values.collegeType === 'Deemed University'} />
-          <Field label="Start Date" name="startDate" type="date" values={values} errors={errors} touched={touched} onChange={update} />
-          <Field label="End Date" name="endDate" type="date" values={values} errors={errors} touched={touched} onChange={update} />
           <div className="ac-upload ac-span-2" role="group" aria-label="College logo" aria-busy={readingLogo} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); selectLogo(e.dataTransfer.files[0]) }}>
             <input ref={fileRef} type="file" aria-label="Choose college logo" accept=".png,.jpg,.jpeg,.webp" onChange={(e) => selectLogo(e.target.files?.[0])} hidden />
             {values.logo ? (
@@ -3678,8 +3685,6 @@ function DepartmentManagement() {
                         <option value="Inactive">Inactive</option>
                       </ProjectSelect>
                     </FormField>
-                    <FormField label="Start Date"><input type="date" value={form.startDate || ''} onChange={e => setForm({ ...form, startDate: e.target.value })} /></FormField>
-                    <FormField label="End Date"><input type="date" value={form.endDate || ''} onChange={e => setForm({ ...form, endDate: e.target.value })} /></FormField>
                     <FormField label="Description" className="erp-form-field--full"><textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Describe this organizational department..." rows={2} /></FormField>
                   </FormGroup>
                   {isDetailsLoading && <AsyncState status="loading" title="Loading department details..." />}
@@ -7435,15 +7440,6 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
         {!editingRoom ? <EmptyState title={roomsLoaded ? 'Room not found' : 'Loading room...'} /> : (
               <form id="room-editor-form" className="rooms-compact-form" onSubmit={handleSaveRoom}>
                 <div className="rooms-modal-body">
-                  <header className="rooms-form-intro">
-                    <div>
-                      <span className="rooms-form-eyebrow"><FiGrid /> ROOM PROFILE</span>
-                      <h2>{editingRoom.id ? 'Update room specifications' : 'Create a room profile'}</h2>
-                      <p>Capture the room identity, location, capacity, and the equipment available to students and staff.</p>
-                    </div>
-                    <span className="rooms-form-step-badge"><FiCheckCircle /> {editingRoom.id ? 'Editing room' : 'New room'}</span>
-                  </header>
-
                   <section className="rooms-form-section" aria-labelledby="room-identity-heading">
                     <div className="rooms-form-section-heading"><span>01</span><div><h3 id="room-identity-heading">Room identity</h3><p>Set the room code and the name displayed across campus.</p></div></div>
                     <div className="rooms-form-grid">

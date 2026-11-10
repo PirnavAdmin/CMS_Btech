@@ -240,13 +240,24 @@ export function TimetableDashboard({ tables, sources, entries, today, open }) {
 
 // TimetableBuilder
 const labels = ['Academic Year', 'Course', 'Department', 'Branch', 'Academic Level', 'Semester']
-const initialPlanning = (sources, scope, entries) => ({
-  automatic: { ...DAILY_PERIOD_SETUP },
-  periods: sources.yearSettings?.[scope.academicYearId]?.periods?.length ? sources.yearSettings[scope.academicYearId].periods : dailyPeriods(DAILY_PERIOD_SETUP).periods,
-  calendar: { ...(sources.yearSettings?.[scope.academicYearId]?.calendar || {}), startDate: '', endDate: '', workingDays: sources.yearSettings?.[scope.academicYearId]?.calendar?.workingDays?.length ? sources.yearSettings[scope.academicYearId].calendar.workingDays : ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'], reviewed: true, holidays: sources.yearSettings?.[scope.academicYearId]?.calendar?.holidays || [] },
-  rooms: roomOptions(sources, entries).map(row => row.value),
-  requirements: {},
-})
+const initialPlanning = (sources, scope, entries) => {
+  const year = sources.years.find(row => same(row.id, scope.academicYearId))
+  const yearCalendar = sources.yearSettings?.[scope.academicYearId]?.calendar || {}
+  return {
+    automatic: { ...DAILY_PERIOD_SETUP },
+    periods: sources.yearSettings?.[scope.academicYearId]?.periods?.length ? sources.yearSettings[scope.academicYearId].periods : dailyPeriods(DAILY_PERIOD_SETUP).periods,
+    calendar: {
+      ...yearCalendar,
+      startDate: String(yearCalendar.startDate || year?.startDate || '').slice(0, 10),
+      endDate: String(yearCalendar.endDate || year?.endDate || '').slice(0, 10),
+      workingDays: yearCalendar.workingDays?.length ? yearCalendar.workingDays : ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'],
+      reviewed: true,
+      holidays: yearCalendar.holidays || [],
+    },
+    rooms: roomOptions(sources, entries).map(row => row.value),
+    requirements: {},
+  }
+}
 const editablePlanning = planning => {
   if (!planning?.calendar) return planning
   const startDate = String(planning.calendar.startDate || '').slice(0, 10)
@@ -306,23 +317,22 @@ function PeriodSetupStep({ config, setConfig, sources, entries, busy, errors, ba
   const rooms = roomOptions(sources, entries)
   const startDate = String(config.calendar.startDate || '').slice(0, 10)
   const endDate = String(config.calendar.endDate || '').slice(0, 10)
-  const visibleErrors = errors.filter(error => error !== 'Timetable start date and end date are required.')
   const rebuild = (field, value) => setConfig(old => {
     const automatic = { ...old.automatic, [field]: value }
     const result = dailyPeriods(automatic, old.periods)
     return { ...old, automatic, periods: result.periods, automaticErrors: result.errors }
   })
-  const calendar = (field, value) => setConfig(old => ({ ...old, calendar: { ...old.calendar, startDate: String(old.calendar.startDate || '').slice(0, 10), endDate: String(old.calendar.endDate || '').slice(0, 10), [field]: value, reviewed: true } }))
+  const calendar = (field, value) => setConfig(old => ({ ...old, calendar: { ...old.calendar, [field]: value, reviewed: true } }))
   return <section className="tt-card tt-clean-step" aria-label="Daily Schedule Setup">
     <h2>Daily schedule</h2><p>These timings apply to every selected section.</p>
     <fieldset className="tt-period-controls" disabled={busy}>
       <div className="tt-form-grid">{[['startTime', 'College Start Time', 'time'], ['periodsPerDay', 'Periods Per Day', 'number'], ['duration', 'Period Duration (minutes)', 'number'], ['breakDuration', 'Short Break (minutes, 0 to disable)', 'number'], ['breakAfter', 'Break after period', 'number'], ['lunchDuration', 'Lunch (minutes, 0 to disable)', 'number'], ['lunchAfter', 'Lunch after period', 'number']].map(([field, label, type]) => <label className="tt-field" key={field}><span>{label}</span><input type={type} min={field.includes('Duration') ? 0 : 1} step={1} value={settings[field]} onChange={event => rebuild(field, event.target.value)} /></label>)}</div>
       <h3>Working days</h3><div className="tt-checks">{WEEKDAYS.map(day => <label key={day}><input type="checkbox" checked={config.calendar.workingDays.includes(day)} onChange={event => calendar('workingDays', event.target.checked ? WEEKDAYS.filter(value => value === day || config.calendar.workingDays.includes(value)) : config.calendar.workingDays.filter(value => value !== day))} />{day.slice(0, 3)}</label>)}</div>
       <h3>Timetable Validity Period</h3>
-      <div className="tt-form-grid">{[['startDate', 'Timetable Start Date'], ['endDate', 'Timetable End Date']].map(([field, label]) => <label className="tt-field" key={field}><span>{label}</span><input type="date" value={field === 'startDate' ? startDate : endDate} onClick={event => { try { event.currentTarget.showPicker?.() } catch {} }} onChange={event => calendar(field, event.target.value)} /></label>)}</div>
+      <p className="tt-hint">Validity is inherited from the selected academic year: {startDate || 'not configured'} to {endDate || 'not configured'}.</p>
       <details><summary>Available rooms ({config.rooms.length})</summary><div className="tt-checks">{rooms.map(room => <label key={room.value}><input type="checkbox" checked={config.rooms.includes(room.value)} onChange={event => setConfig(old => ({ ...old, rooms: event.target.checked ? [...old.rooms, room.value] : old.rooms.filter(value => value !== room.value) }))} />{room.name}</label>)}</div>{!rooms.length && <p>No room references were supplied by sections or existing timetable entries. Configure a section room in Section Management.</p>}</details>
     </fieldset>
-    {visibleErrors.length > 0 && <div className="tt-error" role="alert">{visibleErrors.map(error => <p key={error}>{error}</p>)}</div>}
+    {errors.length > 0 && <div className="tt-error" role="alert">{errors.map(error => <p key={error}>{error}</p>)}</div>}
     <footer className="tt-actions"><button className="tt-button" onClick={back}>Back</button><button className="tt-button tt-primary" disabled={busy || Boolean(errors.length)} onClick={continueSetup}>Continue to Subjects</button></footer>
   </section>
 }

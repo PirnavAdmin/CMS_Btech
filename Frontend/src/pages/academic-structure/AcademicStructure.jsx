@@ -28,7 +28,6 @@ import { useScreenAccess } from '../../auth/ScreenAccess'
 import StatusBadge from '../../components/StatusBadge'
 import EmptyState from '../../components/EmptyState'
 import DataTable from '../../components/DataTable'
-import { ScheduleDialog } from '../semester-management/SemesterManagement'
 import { DepartmentManagement } from '../admin-management/AdminManagement'
 import { CompletionIndicator, CompletionSummary } from '../../components/RecordCompletion'
 import { meaningfulText, programCompletion } from '../../utils/recordCompletion'
@@ -107,8 +106,6 @@ export default function AcademicStructure() {
   const [programPage, setProgramPage] = useState(1)
   const [generationBranchId, setGenerationBranchId] = useState('')
   const [generationCourseId, setGenerationCourseId] = useState('')
-  const [semesterDates, setSemesterDates] = useState({})
-  const [chooseDatesFirst, setChooseDatesFirst] = useState(false)
   const [savedCourseChoice, setSavedCourseChoice] = useState('')
   const loadRequest = useRef(0)
   const loadedCollege = useRef(null)
@@ -123,7 +120,6 @@ export default function AcademicStructure() {
   const setupBody = useRef(null)
   const [editingItem, setEditingItem] = useState(null)
   const [programDetailsId, setProgramDetailsId] = useState('')
-  const [semesterSchedule, setSemesterSchedule] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null) // { type, item }
 
   // Form states
@@ -389,8 +385,6 @@ export default function AcademicStructure() {
       setupCourse.current = null
       setGenerationBranchId('')
       setGenerationCourseId('')
-      setSemesterDates({})
-      setChooseDatesFirst(false)
     }
     setModalType(type)
     setEditingItem(null)
@@ -597,11 +591,6 @@ export default function AcademicStructure() {
           setupDrafts.current.delete('branch')
           openAddModal('semester', true)
           setGenerationBranchId(branchIdOf(saved))
-          setSemesterDates({})
-          if (chooseDatesFirst) {
-            showToast('Branch saved. Choose semester dates, then create the definitions.')
-            return
-          }
           try {
             await saveBranchSemesters(saved, courseForBranch, collegeAtSave)
             showToast('Branch and semester definitions saved.')
@@ -658,9 +647,7 @@ export default function AcademicStructure() {
     setFormErrors({})
     const collegeId = selectedCollegeId
     try {
-      await saveBranchSemesters(generationBranch, generationCourse, collegeId, missingTerms.map(term => term.semesterNumber),
-        canAction('/semester-management', 'edit') ? semesterDates : {})
-      setSemesterDates({})
+      await saveBranchSemesters(generationBranch, generationCourse, collegeId, missingTerms.map(term => term.semesterNumber))
       if (repairOnly) closeModal()
       else openAddModal('semester', true)
       showToast('Semester structure verified and saved.')
@@ -980,7 +967,7 @@ export default function AcademicStructure() {
   const programActions = (type, item) => {
     const label = type[0].toUpperCase() + type.slice(1)
     return <div className="as-actions-cell">
-      {type === 'semester' ? <Link className="table-action-btn action-edit" title="Configure semester dates" aria-label="Configure semester dates" to={'/semester-management/' + (item.semesterId ?? item.id) + '/edit'}><FiEdit2 /></Link> : <button type="button" className="table-action-btn action-edit" title={'Edit ' + label} aria-label={'Edit ' + label} onClick={() => { setProgramDetailsId(''); openEditModal(type, item) }}><FiEdit2 /></button>}
+      {type !== 'semester' && <button type="button" className="table-action-btn action-edit" title={'Edit ' + label} aria-label={'Edit ' + label} onClick={() => { setProgramDetailsId(''); openEditModal(type, item) }}><FiEdit2 /></button>}
       {type !== 'semester' && <button type="button" className="table-action-btn" title={(programStatus(item) === 'Active' ? 'Deactivate ' : 'Activate ') + label} aria-label={(programStatus(item) === 'Active' ? 'Deactivate ' : 'Activate ') + label} onClick={() => handleToggleStatus(type, item)}><FiCheckCircle /></button>}
       <button type="button" className="table-action-btn" title={'Delete ' + label} aria-label={'Delete ' + label} onClick={() => { setProgramDetailsId(''); setDeleteConfirm({ type, item }) }}><FiTrash2 /></button>
     </div>
@@ -1240,7 +1227,6 @@ export default function AcademicStructure() {
                     <select className="as-form-control" value={generationCourseId} onChange={event => {
                       setGenerationCourseId(event.target.value)
                       setGenerationBranchId('')
-                      setSemesterDates({})
                     }} required>
                       <option value="" disabled>Select a saved course</option>
                       {courses.filter(course => courseIdOf(course)).map(course => <option key={courseIdOf(course)} value={courseIdOf(course)}>{courseNameOf(course)} ({courseCodeOf(course)})</option>)}
@@ -1249,7 +1235,6 @@ export default function AcademicStructure() {
                   <label className="as-form-group">Branch
                   <select className="as-form-control" value={generationBranchId} onChange={event => {
                     setGenerationBranchId(event.target.value)
-                    setSemesterDates({})
                   }} disabled={!generationCourseId} required>
                     <option value="">Select a branch</option>
                     {branches.filter(branch => branchCourseIdOf(branch) === generationCourseId).map(branch =>
@@ -1260,31 +1245,13 @@ export default function AcademicStructure() {
                 {structure.error && <p role="alert">{structure.error}</p>}
                 {generationPlan.length > 0 && <>
                   <p>{generationPlan.length - missingTerms.length} of {generationPlan.length} saved · {missingTerms.length} to add</p>
-                  {missingTerms.length > 0 && canAction('/semester-management', 'create') && canAction('/semester-management', 'edit') &&
-                    <>
-                      <p className="as-form-hint">Add both dates or leave both blank.</p>
-                      <div className="as-semester-date-heading" aria-hidden="true">
-                        <span>Semester</span><span>Start date</span><span>End date</span>
-                      </div>
-                    </>}
+                  {missingTerms.length > 0 && canAction('/semester-management', 'create') &&
+                    <p className="as-form-hint">Semester definitions are created without a scheduled date range.</p>}
                   <ol className="as-program-terms">{generationPlan.map(term => {
                     const savedTerms = semestersFor(generationBranch).filter(saved => Number(saved.semesterNumber) === term.semesterNumber &&
                       String(saved.courseId ?? saved.CourseId) === courseIdOf(generationCourse))
                     return <li key={term.semesterNumber}>
                       <strong>{term.semesterName}</strong>
-                      {!savedTerms.length && <>
-                        {canAction('/semester-management', 'create') && canAction('/semester-management', 'edit') && <div className="as-semester-date-fields">
-                          {['startDate', 'endDate'].map(key => {
-                            const label = key === 'startDate' ? 'Start date' : 'End date'
-                            return <input key={key} type="date" className="as-form-control" aria-label={term.semesterName + ' ' + label.toLowerCase()}
-                                value={semesterDates[term.semesterNumber]?.[key] || ''} disabled={isSubmitting}
-                                onChange={event => {
-                                  const value = event.target.value
-                                  setSemesterDates(current => ({ ...current, [term.semesterNumber]: { ...current[term.semesterNumber], [key]: value } }))
-                                }} />
-                          })}
-                        </div>}
-                      </>}
                       {savedTerms.map(saved => {
                         const id = saved.semesterId ?? saved.id
                         const year = yearMap.get(String(saved.academicYearId))
@@ -1504,11 +1471,6 @@ export default function AcademicStructure() {
                     <div className="as-setup-heading">
                       <div><h4 id="branch-details-heading">Branch details</h4><p>Set the branch identity and admission capacity.</p></div>
                     </div>
-                    {!editingItem && canAction('/semester-management', 'create') && canAction('/semester-management', 'edit') &&
-                      <label className="as-semester-date-choice">
-                        <input type="checkbox" checked={chooseDatesFirst} onChange={event => setChooseDatesFirst(event.target.checked)} />
-                        Choose semester dates before creating definitions
-                      </label>}
                     <div className="as-form-row">
                     <div className="as-form-group">
                       <label htmlFor="branch-name">
@@ -1578,19 +1540,6 @@ export default function AcademicStructure() {
         {/* ========================================================
             MODAL: DELETE CONFIRMATION
             ======================================================== */}
-        {semesterSchedule && <ScheduleDialog row={semesterSchedule.row}
-          yearName={yearMap.get(String(semesterSchedule.row.academicYearId)) || 'Academic year'}
-          onClose={() => setSemesterSchedule(null)}
-          context={() => {
-            if (String(collegeScope.current) !== String(semesterSchedule.collegeId) || !canAction('/semester-management', 'edit')) {
-              throw new Error('The scheduling context changed. Reopen the semester before saving.')
-            }
-          }}
-          onSaved={saved => {
-            setSemesters(current => current.map(term => String(term.semesterId ?? term.id) === String(saved.id) ? { ...term, ...saved } : term))
-            setSemesterSchedule(null)
-            showToast('Schedule saved.')
-          }} />}
         {deleteConfirm && (
           <div className="as-modal-backdrop" onClick={() => setDeleteConfirm(null)}>
             <div className="as-modal as-modal--sm" onClick={(e) => e.stopPropagation()}>

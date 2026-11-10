@@ -25,22 +25,27 @@ beforeEach(() => {
 })
 afterEach(cleanup)
 const mount = (path = '/faculty') => render(<MemoryRouter initialEntries={[path]}><Routes><Route path="/faculty/*" element={<FacultyManagement />} /></Routes></MemoryRouter>)
-test('faculty opens the actual directory with category controls and search', async () => {
-  mount(); await screen.findByRole('button', { name: 'View details for Teaching Member' })
+test('faculty opens configuration cards, then shows the selected directory and search', async () => {
+  mount(); expect(await screen.findByRole('button', { name: 'Teaching Faculty' })).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'View details for Teaching Member' })).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: 'Teaching Faculty' }))
+  await screen.findByRole('button', { name: 'View details for Teaching Member' })
   expect(screen.queryByText('View Teaching Directory')).toBeNull()
   fireEvent.change(screen.getByLabelText('Search teaching'), { target: { value: 'missing member' } })
   expect(screen.queryByRole('button', { name: 'View details for Teaching Member' })).toBeNull()
+  fireEvent.click(screen.getByRole('link', { name: 'Faculty Directory' }))
+  await screen.findByRole('button', { name: 'Non-Teaching Staff' })
   fireEvent.click(screen.getByRole('button', { name: 'Non-Teaching Staff', exact: true }))
   await screen.findByRole('button', { name: 'View details for Library Staff' })
 })
 test('directory API errors are visible and retry restores real data', async () => {
   facultyService.list.mockRejectedValueOnce(new Error('Faculty offline'))
-  mount(); await screen.findByText('Faculty offline')
+  mount('/faculty?category=Teaching'); await screen.findByText('Faculty offline')
   fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
   await screen.findByRole('button', { name: 'View details for Teaching Member' })
 })
 test('read-only faculty access hides mutation controls', async () => {
-  fixture.edit = false; mount(); await screen.findByRole('button', { name: 'View details for Teaching Member' })
+  fixture.edit = false; mount('/faculty?category=Teaching'); await screen.findByRole('button', { name: 'View details for Teaching Member' })
   expect(screen.queryByRole('button', { name: 'Add Teaching Faculty' })).toBeNull()
   expect(screen.queryByRole('button', { name: 'Edit: Teaching Member' })).toBeNull()
 })
@@ -63,7 +68,7 @@ test('faculty registration validates before creating an employee', async () => {
 
 test('allocation options fail visibly without fabricated academic choices', async () => {
   academicYearApi.getAll.mockRejectedValueOnce(new Error('Academic options offline'))
-  mount(); fireEvent.click(await screen.findByRole('button', { name: 'Assign academic work: Teaching Member' }))
+  mount('/faculty?category=Teaching'); fireEvent.click(await screen.findByRole('button', { name: 'Assign academic work: Teaching Member' }))
   const dialog = await screen.findByRole('dialog', { name: 'Teaching Member - Subject Allocations' })
   await within(dialog).findByText('Academic options offline')
   expect(within(dialog).queryByText('Section A')).toBeNull()
