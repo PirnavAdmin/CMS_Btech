@@ -1,0 +1,21 @@
+.theme-color-picker { position: relative; display: inline-flex; flex: 0 0 auto; }
+.theme-color-picker__trigger { position: relative; }
+.theme-color-picker__trigger > svg { width: 17px; height: 17px; }
+.theme-color-picker__current { position: absolute; right: 5px; bottom: 5px; width: 9px; height: 9px; border: 1px solid var(--surface); border-radius: 50%; box-shadow: 0 0 0 1px var(--border); }
+.theme-color-picker__popover { position: absolute; z-index: 180; top: calc(100% + 10px); right: 0; width: min(370px, calc(100vw - 24px)); padding: 15px; border: 1px solid var(--border); border-radius: 13px; background: var(--surface-raised); color: var(--text-primary); box-shadow: var(--shadow-md); }
+.theme-color-picker__heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 13px; }
+.theme-color-picker__heading > div { display: grid; gap: 3px; }
+.theme-color-picker__heading strong { font-size: 14px; }
+.theme-color-picker__heading span { color: var(--text-muted); font-size: 11px; }
+.theme-color-picker__preview { width: 25px; height: 25px; flex: 0 0 25px; border: 1px solid var(--border); border-radius: 7px; }
+.theme-color-picker__modes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 13px; padding: 4px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-soft); }
+.theme-color-picker__modes button { display: flex; justify-content: center; align-items: center; gap: 7px; min-height: 34px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--text-secondary); font: 12px var(--font-family); cursor: pointer; }
+.theme-color-picker__modes button.is-active { border-color: var(--border); background: var(--surface-raised); color: var(--brand); box-shadow: var(--shadow-sm); }
+.theme-color-picker__modes svg { width: 14px; height: 14px; }
+.theme-color-picker__grid { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 8px; }
+.theme-color-picker__swatch { display: grid; place-items: center; aspect-ratio: 1.55; min-width: 0; padding: 0; border: 1px solid color-mix(in srgb, var(--swatch-color) 75%, var(--border)); border-radius: 6px; background: var(--swatch-color); color: #263323; cursor: pointer; transition: transform .15s ease, box-shadow .15s ease; }
+.theme-color-picker__swatch:hover { z-index: 1; transform: translateY(-2px); box-shadow: 0 3px 9px color-mix(in srgb, var(--swatch-color) 70%, transparent); }
+.theme-color-picker__swatch.is-selected { outline: 2px solid var(--brand); outline-offset: 2px; }
+.theme-color-picker__swatch svg { width: 15px; height: 15px; stroke-width: 3; }
+@media(max-width:600px) { .theme-color-picker__popover { right: -48px; } .theme-color-picker__grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+@media(prefers-reduced-motion:reduce) { .theme-color-picker__swatch { transition: none; } }
