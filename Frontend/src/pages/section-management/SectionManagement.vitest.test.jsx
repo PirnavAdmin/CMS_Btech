@@ -113,3 +113,9 @@ it('opens the assignment dialog directly from the compact directory action', asy
   fireEvent(allocation, new Event('cancel', { cancelable:true }))
   expect(screen.queryByRole('dialog')).toBeNull()
 })
+
+it('enables Add Section when the room service returns an available room without a collegeId', async () => {
+  data.rooms = [{ id: 'room-api-1', roomNumber: 'LH-101', roomName: 'Lecture Hall 101', capacity: 60, status: 'Available' }]
+  render(<MemoryRouter><SectionManagement /></MemoryRouter>)
+  expect(await screen.findByRole('link', { name: /Add Section/ })).toBeTruthy()
+})

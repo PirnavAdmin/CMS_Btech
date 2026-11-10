@@ -8,7 +8,7 @@ import FacultyCardSkeleton from './components/FacultyCardSkeleton.jsx'
 import FacultyEmptyState from './components/FacultyEmptyState.jsx'
 import { facultyRouteByPath, restoredFacultyScreens } from './routeConfig.js'
 import { facultyService } from './services/facultyService.js'
-import { buildAttendanceRecords, calculateLeaveDays, getAttendanceCounts, hasLeaveOverlap, validateMarks } from './domain/validation.js'
+import { buildAttendanceRecords, getAttendanceCounts, validateMarks } from './domain/validation.js'
 import './workspace.css'
 
 const today = () => new Date().toISOString().slice(0, 10)
@@ -959,22 +959,14 @@ function MaterialsScreen({ data, action }) {
   </>
 }
 
-function LeaveScreen({ data, action }) {
-  const [form, setForm] = useState({ leaveType: 'Casual Leave (CL)', fromDate: '', toDate: '', reason: '', isHalfDay: false, attachmentName: '' })
+function LeaveScreen({ data }) {
+  const [form, setForm] = useState({ leaveType: 'Casual Leave (CL)', reason: '', attachmentName: '' })
   const [attachmentError, setAttachmentError] = useState('')
-  const [submitting, setSubmitting] = useState(false)
   const [history, setHistory] = useState(data.history)
   const [historyStatus, setHistoryStatus] = useState('All')
   const [cancelTarget, setCancelTarget] = useState(null)
   const [cancelPending, setCancelPending] = useState(false)
   const [cancelError, setCancelError] = useState('')
-  const overlap = hasLeaveOverlap(form.fromDate, form.toDate, history)
-  const days = calculateLeaveDays(form.fromDate, form.toDate, form.isHalfDay)
-  const balance = data.balances.find(row => row.type === form.leaveType)
-  const exceedsBalance = days > (balance?.available || 0)
-  const datesReady = Boolean(form.fromDate && form.toDate && !overlap && !exceedsBalance && (!form.isHalfDay || form.fromDate === form.toDate))
-  const detailsReady = Boolean(datesReady && form.reason.trim().length >= 10 && !attachmentError)
-  const requestStage = detailsReady ? 3 : datesReady ? 2 : 1
   const pendingRequests = history.filter(row => row.status === 'Pending').length
   const approvedRequests = history.filter(row => row.status === 'Approved')
   const approvedDays = approvedRequests.reduce((total, row) => total + (Number(row.daysCount) || 0), 0)
@@ -1000,17 +992,8 @@ function LeaveScreen({ data, action }) {
       setCancelError('The request could not be cancelled. Please try again.')
     }
   }
-  const submit = async event => {
+  const submit = event => {
     event.preventDefault()
-    if (!days || overlap || exceedsBalance || attachmentError || form.reason.trim().length < 10 || submitting) return
-    setSubmitting(true)
-    const created = await action(() => facultyService.applyLeave({ ...form, daysCount: days }), 'Leave request submitted to local preview.')
-    setSubmitting(false)
-    if (created) {
-      setHistory(current => [created, ...current])
-      setHistoryStatus('All')
-      setForm(current => ({ ...current, fromDate: '', toDate: '', reason: '' }))
-    }
   }
   const metrics = [
     ['Leave categories', data.balances.length, 'Balances available to you', FiBriefcase],
@@ -1046,31 +1029,15 @@ function LeaveScreen({ data, action }) {
 
     <div className="fw-leave-workspace fw-two-column">
       <section className="fw-card fw-leave-application">
-        <header className="fw-leave-panel-heading"><span className="fw-leave-panel-icon"><FiCalendar aria-hidden="true" /></span><div><p className="fw-eyebrow">NEW REQUEST</p><h2>Apply for leave</h2><p>Choose dates and share a short reason for your request.</p></div></header>
-        <ol className="fw-leave-request-steps" aria-label="Leave request progress">{[['Dates', 1], ['Details', 2], ['Submit', 3]].map(([label, step]) => <li key={label} className={`${requestStage === step ? 'is-current' : ''}${requestStage > step ? ' is-complete' : ''}`} aria-current={requestStage === step ? 'step' : undefined}><span>{requestStage > step ? <FiCheck aria-hidden="true" /> : step}</span><small>{label}</small></li>)}</ol>
-        <form className="fw-form fw-leave-application-form" onSubmit={submit} aria-busy={submitting}>
+        <header className="fw-leave-panel-heading"><span className="fw-leave-panel-icon"><FiCalendar aria-hidden="true" /></span><div><p className="fw-eyebrow">NEW REQUEST</p><h2>Apply for leave</h2><p>Choose a category and share a short reason for your request.</p></div></header>
+        <p className="fw-risk-text" role="status">Date selection has been removed. Leave requests need a date range to calculate duration and balance; contact HR or your administrator to submit a request.</p>
+        <form className="fw-form fw-leave-application-form" onSubmit={submit}>
           <label className="fw-field"><span>Leave category</span><select value={form.leaveType} onChange={event => setForm(current => ({ ...current, leaveType: event.target.value }))}>{data.balances.map(row => <option key={row.code}>{row.type}</option>)}</select></label>
-          <div className="fw-form-row fw-leave-date-fields">
-            <label className="fw-field"><span>Start date</span><input required type="date" value={form.fromDate} onChange={event => setForm(current => ({ ...current, fromDate: event.target.value }))} /></label>
-            <label className="fw-field"><span>End date</span><input required type="date" value={form.toDate} min={form.fromDate || undefined} onChange={event => setForm(current => ({ ...current, toDate: event.target.value }))} /></label>
-          </div>
-          <label className="fw-checkbox fw-leave-half-day"><input type="checkbox" checked={form.isHalfDay} onChange={event => setForm(current => ({ ...current, isHalfDay: event.target.checked }))} /><span><strong>Half-day leave</strong><small>Use this for a single date only.</small></span></label>
-
-          <div className="fw-leave-request-summary" aria-live="polite">
-            <span className="fw-leave-request-summary-icon"><FiClock aria-hidden="true" /></span>
-            <div><span>Estimated duration</span><strong>{days || '—'} <small>working day{days === 1 ? '' : 's'}</small></strong><p>{form.fromDate && form.toDate ? `${displayDate(form.fromDate)} – ${displayDate(form.toDate)}` : 'Select a date range to calculate your request.'}</p></div>
-            <div className="fw-leave-request-summary-balance"><span>Selected balance</span><strong>{balance?.available ?? 0} <small>days left</small></strong><p>{balance?.code || 'Leave'} balance</p></div>
-          </div>
-
-          {form.isHalfDay && form.fromDate !== form.toDate && form.toDate && <p className="fw-risk-text" role="alert">Half-day leave must be for a single date.</p>}
-          {overlap && <p className="fw-risk-text" role="alert">Dates overlap with an existing leave request.</p>}
-          {exceedsBalance && <p className="fw-risk-text" role="alert">Requested duration exceeds your {balance?.code} balance of {balance?.available} day(s).</p>}
-
           <label className="fw-field"><span>Reason for leave</span><textarea required minLength="10" rows="3" value={form.reason} onChange={event => setForm(current => ({ ...current, reason: event.target.value }))} placeholder="Share any details that will help your request be reviewed." /></label>
           <label className="fw-field fw-leave-attachment-field"><span>Supporting document <small>Optional · PDF or image up to 10 MB</small></span><span className="fw-leave-attachment-control"><FiFileText aria-hidden="true" /><span>{form.attachmentName || 'Choose a file to attach'}</span><input type="file" accept=".pdf,.jpg,.jpeg,.png" aria-label="Supporting document" onChange={event => { const file = event.target.files?.[0]; const valid = !file || (file.size <= 10 * 1024 * 1024 && /\.(pdf|jpe?g|png)$/i.test(file.name)); setAttachmentError(valid ? '' : 'Choose a PDF or image smaller than 10 MB.'); if (valid) setForm(current => ({ ...current, attachmentName: file?.name || '' })) }} /></span></label>
           {attachmentError && <p className="fw-risk-text" role="alert">{attachmentError}</p>}
           {form.attachmentName && <small className="fw-muted">{form.attachmentName} · local preview only</small>}
-          <div className="fw-leave-form-footer"><span>Requests are checked against your balance and existing leave dates.</span><button className="fw-button fw-button-primary" disabled={overlap || exceedsBalance || !days || form.reason.trim().length < 10 || !!attachmentError || submitting}>{submitting ? <><span className="fw-leave-submit-spinner" aria-hidden="true" />Submitting…</> : <><FiSend aria-hidden="true" /> Submit request</>}</button></div>
+          <div className="fw-leave-form-footer"><span>Requests cannot be submitted until date entry is available.</span><button className="fw-button fw-button-primary" disabled><FiSend aria-hidden="true" /> Submit request</button></div>
         </form>
       </section>
 

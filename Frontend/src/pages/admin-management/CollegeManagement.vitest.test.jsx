@@ -126,7 +126,7 @@ test('edit form retains entered values when context access refreshes and support
 test.each(['light', 'dark'])('add form uses the management stepper and validates before advancing in %s theme', async theme => {
   document.documentElement.dataset.theme = theme
   mount('/college-institution-management/add')
-  expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toBeTruthy()
+  expect(screen.getByRole('dialog', { name: 'Add New College' })).toBeTruthy()
   expect(screen.getByRole('tablist').classList.contains('erp-tabs-bar')).toBe(false)
   expect(screen.getAllByRole('tab')).toHaveLength(6)
   expect(screen.getByRole('tab', { name: 'College Information' }).getAttribute('aria-current')).toBe('step')
@@ -141,12 +141,13 @@ test.each(['light', 'dark'])('add form uses the management stepper and validates
   expect(createCollege).not.toHaveBeenCalled(); expect(updateCollege).not.toHaveBeenCalled()
 })
 
-test('entry resets the shared window scroll and stepper focus cannot scroll beneath the header', async () => {
+test('direct entry uses the compact dialog and stepper focus does not scroll its body', async () => {
   const scroll = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
   try {
     mount('/college-institution-management/add?edit=7')
     await waitFor(() => expect(screen.getByLabelText(/^College Name/).value).toBe('College G'))
-    expect(scroll).toHaveBeenCalledWith({ top: 0, left: 0, behavior: 'instant' })
+    expect(screen.getByRole('dialog', { name: 'Edit College' })).toBeTruthy()
+    expect(scroll).not.toHaveBeenCalled()
     const address = screen.getByRole('tab', { name: 'Address' })
     const focus = vi.spyOn(address, 'focus')
     fireEvent.keyDown(screen.getByRole('tab', { name: 'College Information' }), { key: 'ArrowRight' })

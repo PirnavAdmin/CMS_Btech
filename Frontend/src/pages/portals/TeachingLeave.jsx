@@ -162,7 +162,6 @@ const saveStoredRequests = requests => {
 }
 
 // Helpers for dates and day counting
-const pad = n => String(n).padStart(2, '0')
 const parseDate = str => new Date(`${str}T00:00:00`)
 const formatDateFormatted = str => {
   if (!str) return '—'
@@ -172,33 +171,6 @@ const formatDateFormatted = str => {
 }
 
 // Calculate working days skipping Sundays and 2nd/4th Saturdays
-const calculateWorkingDays = (fromStr, toStr, isHalfDay) => {
-  if (!fromStr || !toStr) return 0
-  const from = parseDate(fromStr)
-  const to = parseDate(toStr)
-  if (to < from) return 0
-
-  let workingDays = 0
-  const curr = new Date(from)
-  while (curr <= to) {
-    const dayOfWeek = curr.getDay() // 0 = Sun, 6 = Sat
-    const isSunday = dayOfWeek === 0
-    const isSaturday = dayOfWeek === 6
-    const satCount = isSaturday ? Math.ceil(curr.getDate() / 7) : 0
-    const isOff = isSunday || (isSaturday && (satCount === 2 || satCount === 4))
-
-    if (!isOff) {
-      workingDays++
-    }
-    curr.setDate(curr.getDate() + 1)
-  }
-
-  if (isHalfDay && fromStr === toStr && workingDays === 1) {
-    return 0.5
-  }
-  return workingDays
-}
-
 export default function TeachingLeave({ data, summaryTarget }) {
   const [requests, setRequests] = useState(loadStoredRequests)
   const [leaveTypes, setLeaveTypes] = useState(DEFAULT_LEAVE_TYPES)
@@ -211,17 +183,12 @@ export default function TeachingLeave({ data, summaryTarget }) {
   const [cancelModalItem, setCancelModalItem] = useState(null)
   const [showGuidelines, setShowGuidelines] = useState(false)
   const [toast, setToast] = useState('')
-  const [formBusy, setFormBusy] = useState(false)
 
   // Empty application form state
   const todayStr = '2026-10-27'
   const [form, setForm] = useState({
     typeId: 'lt-cl',
     policyId: 'lp-2026-27',
-    from: todayStr,
-    to: todayStr,
-    isHalfDay: false,
-    session: 'Full Day', // 'Full Day' | 'First Half (FN)' | 'Second Half (AN)'
     reason: '',
     substituteFaculty: 'Prof. Rajesh Kumar (Assistant Professor · EEE)',
     workloadArrangement: '',
@@ -294,11 +261,6 @@ export default function TeachingLeave({ data, summaryTarget }) {
     }
   }, [balances, requests])
 
-  // Working days count for active form
-  const formCalculatedDays = useMemo(() => {
-    return calculateWorkingDays(form.from, form.to, form.halfDay)
-  }, [form.from, form.to, form.halfDay])
-
   // Filtered requests list
   const filteredRequests = useMemo(() => {
     return requests
@@ -317,103 +279,10 @@ export default function TeachingLeave({ data, summaryTarget }) {
       .sort((a, b) => b.appliedDate.localeCompare(a.appliedDate))
   }, [requests, activeTab, search])
 
-  // Form Validation
-  const validateForm = () => {
-    const errs = {}
-    if (!form.typeId) errs.typeId = 'Please select a leave category'
-    if (!form.from) errs.from = 'Start date is required'
-    if (!form.to) errs.to = 'End date is required'
-    if (form.from && form.to && form.to < form.from) {
-      errs.to = 'End date cannot be prior to start date'
-    }
-    if (formCalculatedDays <= 0) {
-      errs.to = 'Selected dates fall entirely on holidays / weekly offs'
-    }
-
-    const selectedBal = balances.find(b => b.id === form.typeId || b.code === form.typeId)
-    if (selectedBal && selectedBal.code !== 'LOP' && formCalculatedDays > selectedBal.available) {
-      errs.typeId = `Insufficient balance. Available: ${selectedBal.available} day(s), Requested: ${formCalculatedDays} day(s)`
-    }
-
-    if (!form.reason.trim() || form.reason.trim().length < 10) {
-      errs.reason = 'Please provide a clear reason of at least 10 characters'
-    }
-
-    setFormErrors(errs)
-    return Object.keys(errs).length === 0
-  }
-
   // Handle Submit Application
-  const handleSubmitApplication = async e => {
+  const handleSubmitApplication = e => {
     e.preventDefault()
-    if (!validateForm()) return
-
-    setFormBusy(true)
-    const selectedTypeObj = leaveTypes.find(t => t.id === form.typeId) || DEFAULT_LEAVE_TYPES[0]
-    const selectedPolicyObj = policies.find(p => p.id === form.policyId) || DEFAULT_ACTIVE_POLICY
-
-    const newRequest = {
-      id: `REQ-2026-${Math.floor(885 + Math.random() * 900)}`,
-      typeId: selectedTypeObj.id,
-      typeName: selectedTypeObj.name,
-      typeCode: selectedTypeObj.code,
-      policyId: selectedPolicyObj.id,
-      policyName: selectedPolicyObj.name,
-      appliedDate: todayStr,
-      from: form.from,
-      to: form.to,
-      days: formCalculatedDays,
-      isHalfDay: Boolean(form.halfDay),
-      session: form.halfDay ? form.session : 'Full Day',
-      reason: form.reason.trim(),
-      substituteFaculty: form.substituteFaculty.trim() || 'Prof. Rajesh Kumar (EEE)',
-      workloadArrangement: form.workloadArrangement.trim() || 'Class schedules covered by alternate faculty',
-      documentName: form.documentName || '',
-      status: 'Pending',
-      approvedBy: '',
-      remarks: 'Application logged. Awaiting HOD review.',
-      timeline: [
-        { step: 'Application Submitted', date: `${todayStr} 10:30 AM`, actor: facultyName, status: 'done' },
-        { step: 'Alternate Arrangement Verified', date: `${todayStr} 11:00 AM`, actor: form.substituteFaculty.split('(')[0].trim(), status: 'done' },
-        { step: 'Pending HOD / Principal Approval', date: 'In Progress', actor: 'HOD Electrical Engineering', status: 'pending' }
-      ]
-    }
-
-    // Try sending to backend if available
-    try {
-      await service.requestLeave({
-        typeId: newRequest.typeId,
-        policyId: newRequest.policyId,
-        from: newRequest.from,
-        to: newRequest.to,
-        reason: newRequest.reason
-      }).catch(() => {
-        // Safe mock local fallback
-      })
-    } catch {
-      // Ignored
-    }
-
-    const updatedList = [newRequest, ...requests]
-    setRequests(updatedList)
-    saveStoredRequests(updatedList)
-
-    setFormBusy(false)
-    setShowApplyModal(false)
-    setForm({
-      typeId: 'lt-cl',
-      policyId: 'lp-2026-27',
-      from: todayStr,
-      to: todayStr,
-      isHalfDay: false,
-      session: 'Full Day',
-      reason: '',
-      substituteFaculty: 'Prof. Rajesh Kumar (Assistant Professor · EEE)',
-      workloadArrangement: '',
-      documentName: ''
-    })
-    setFormErrors({})
-    showToastMsg(`Leave application ${newRequest.id} submitted successfully! Status: Pending Approval.`)
+    setFormErrors({ submit: 'Leave applications require dates to calculate duration and balance. Contact HR or your administrator to submit a request.' })
   }
 
   // Handle Cancel Request
@@ -846,13 +715,15 @@ export default function TeachingLeave({ data, summaryTarget }) {
       {showApplyModal && (
         <PortalDialog
           title="Apply For Faculty Leave"
-          onClose={() => !formBusy && setShowApplyModal(false)}
+          onClose={() => setShowApplyModal(false)}
         >
           <form className="tl-apply-form" onSubmit={handleSubmitApplication}>
             <div className="tl-dialog-subtitle">
               <span>{facultyName} · {facultyDept}</span>
               <span className="tl-policy-tag">{DEFAULT_ACTIVE_POLICY.name}</span>
             </div>
+            <p className="tl-field-error" role="status">Date selection has been removed. Leave requests require a date range; contact HR or your administrator to submit a request.</p>
+            {formErrors.submit && <p className="tl-field-error" role="alert">{formErrors.submit}</p>}
 
             {/* Leave Category Selector */}
             <div className="tl-form-group">
@@ -869,80 +740,6 @@ export default function TeachingLeave({ data, summaryTarget }) {
                 ))}
               </select>
               {formErrors.typeId && <span className="tl-field-error">{formErrors.typeId}</span>}
-            </div>
-
-            {/* Date Range Fields */}
-            <div className="tl-form-row">
-              <div className="tl-form-group">
-                <label>From Date *</label>
-                <input
-                  type="date"
-                  value={form.from}
-                  onChange={e => setForm({ ...form, from: e.target.value })}
-                  required
-                />
-                {formErrors.from && <span className="tl-field-error">{formErrors.from}</span>}
-              </div>
-
-              <div className="tl-form-group">
-                <label>To Date *</label>
-                <input
-                  type="date"
-                  min={form.from}
-                  value={form.to}
-                  onChange={e => setForm({ ...form, to: e.target.value })}
-                  required
-                />
-                {formErrors.to && <span className="tl-field-error">{formErrors.to}</span>}
-              </div>
-            </div>
-
-            {/* Half Day Option */}
-            {form.from === form.to && (
-              <div className="tl-half-day-box">
-                <label className="tl-checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={form.halfDay}
-                    onChange={e => setForm({ ...form, halfDay: e.target.checked })}
-                  />
-                  <span>Apply as Half-Day Leave (0.5 working day)</span>
-                </label>
-
-                {form.halfDay && (
-                  <div className="tl-session-options">
-                    <label>
-                      <input
-                        type="radio"
-                        name="session"
-                        value="First Half (FN)"
-                        checked={form.session === 'First Half (FN)'}
-                        onChange={e => setForm({ ...form, session: e.target.value })}
-                      />
-                      <span>First Half (FN) - Morning Periods</span>
-                    </label>
-                    <label>
-                      <input
-                        type="radio"
-                        name="session"
-                        value="Second Half (AN)"
-                        checked={form.session === 'Second Half (AN)'}
-                        onChange={e => setForm({ ...form, session: e.target.value })}
-                      />
-                      <span>Second Half (AN) - Afternoon / Labs</span>
-                    </label>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Days Calculation Preview Card */}
-            <div className="tl-calc-box">
-              <div>
-                <span>Calculated Working Days:</span>
-                <p className="tl-calc-hint">Sundays and 2nd/4th Saturdays are automatically excluded</p>
-              </div>
-              <strong className="tl-calc-val">{formCalculatedDays} Day(s)</strong>
             </div>
 
             {/* Substitute Faculty (Teaching specific feature) */}
@@ -1000,7 +797,6 @@ export default function TeachingLeave({ data, summaryTarget }) {
             <div className="portal-actions">
               <button
                 type="button"
-                disabled={formBusy}
                 onClick={() => setShowApplyModal(false)}
               >
                 Cancel
@@ -1008,9 +804,9 @@ export default function TeachingLeave({ data, summaryTarget }) {
               <button
                 type="submit"
                 className="primary"
-                disabled={formBusy}
+                disabled
               >
-                {formBusy ? 'Submitting...' : 'Submit Leave Application'}
+                Submit Leave Application
               </button>
             </div>
           </form>

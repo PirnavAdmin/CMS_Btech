@@ -541,21 +541,39 @@
   background: radial-gradient(circle at 100% 0, var(--brand-dark) 0, transparent 35%), var(--cms-sidebar-bg);
 }
 :root[data-theme="dark"] .pirnav-login .login-form {
-  background: var(--brand-dark);
-  border-color: var(--border);
-  color: var(--brand-soft);
+  background: #172b38;
+  border-color: #3c5362;
+  color: #e2e8f0;
 }
 :root[data-theme="dark"] .pirnav-login .login-form h2 {
-  color: var(--text-on-dark);
+  color: #f8fafc;
+}
+:root[data-theme="dark"] .pirnav-login .login-form header > p:last-child {
+  color: #cbd5e1;
+}
+:root[data-theme="dark"] .pirnav-login .pirnav-greeting {
+  color: #93c5fd !important;
 }
 :root[data-theme="dark"] .pirnav-login .login-form > label {
-  color: var(--brand-soft);
+  color: #e2e8f0;
 }
 :root[data-theme="dark"] .pirnav-login .login-form input[type="text"],
 :root[data-theme="dark"] .pirnav-login .password-input input {
   background: var(--cms-sidebar-bg);
   border-color: var(--border);
   color: #f8fafc;
+  caret-color: #f8fafc;
+}
+:root[data-theme="dark"] .pirnav-login .login-form input::placeholder {
+  color: #aebdcc;
+  opacity: 1;
+}
+:root[data-theme="dark"] .pirnav-login .remember-me,
+:root[data-theme="dark"] .pirnav-login .access-note {
+  color: #cbd5e1;
+}
+:root[data-theme="dark"] .pirnav-login .sign-in-button {
+  color: #fff !important;
 }
 :root[data-theme="dark"] .login-public-actions .login-home-link {
   background: var(--brand-solid) !important;
@@ -569,7 +587,7 @@
   color: var(--text-on-dark) !important;
 }
 :root[data-theme="dark"] .pirnav-login .remember-me {
-  color: var(--border-strong);
+  color: #cbd5e1;
 }
 :root[data-theme="dark"] .pirnav-login .forgot-password-link {
   color: var(--brand) !important;
@@ -2036,12 +2054,12 @@
 .ym-card-title { color: var(--ym-ink); font-size: 1rem; font-weight: 750; letter-spacing: -.025em; }
 .text-indigo-title, .text-cyan-title, .text-emerald-title { color: var(--ym-ink); }
 .ym-card-subtitle { margin-top: 5px; color: var(--ym-muted); font-size: .76rem; font-weight: 500; }
-.ym-card-link { color: var(--ym-purple); }
-.link-indigo { color: var(--ym-purple); }
+.ym-card-link { color: var(--brand); }
+.link-indigo { color: var(--brand); }
 .link-emerald { color: var(--ym-teal); }
-.ym-timeframe-toggle { padding: 3px; border: 1px solid #eaecf4; border-radius: 10px; background: #f7f8fc; }
+.ym-timeframe-toggle { padding: 3px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-soft); }
 .ym-tf-btn { padding: 5px 9px; border-radius: 7px; font-size: .68rem; }
-.ym-tf-btn.is-active { color: var(--text-on-dark); background: var(--ym-purple); box-shadow: 0 3px 8px rgba(23,105,194,.22); }
+.ym-tf-btn.is-active { color: var(--text-on-brand); background: var(--brand-solid); box-shadow: var(--shadow-sm); }
 .ym-donut-track { stroke: #f0f2f8; }
 .ym-bar-pill--cyan { background: linear-gradient(180deg, #6a92f0 0%, #16b6ad 100%); box-shadow: 0 0 12px rgba(71,120,232,.2); }
 .ym-bar-track { width: 14px; border-radius: 99px; background: #f0f3fa; }
@@ -2749,6 +2767,8 @@
 .lp-page :is(.lp-overview, .lp-workflow, .lp-about) { background: var(--surface-soft); }
 .lp-page :is(.lp-roles, .lp-preview) { background: var(--brand-soft); }
 .lp-page .lp-brand > i { background: var(--brand-dark); color: var(--brand); box-shadow: var(--shadow-sm); }
+.lp-public .lp-footer-brand .lp-brand > i { display: grid; flex: 0 0 40px; color: #fff; background: var(--brand-dark); }
+.lp-public .lp-footer-brand .lp-brand > i svg { display: block; width: 20px; height: 20px; }
 :root:not([data-theme="dark"]) .lp-page .lp-nav { border-color: var(--border); background: var(--header-bg); }
 :root[data-theme="dark"] .lp-page :is(.lp-overview, .lp-workflow, .lp-about) { background: var(--surface-soft); }
 

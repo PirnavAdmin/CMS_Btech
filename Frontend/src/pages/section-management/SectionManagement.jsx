@@ -192,7 +192,10 @@ function SectionList({ initialViewId = null }) {
   const filtered = useMemo(() => scopedSections.filter((item) => `${item.name} ${item.code} ${item.course} ${item.courseCode} ${item.branch} ${item.branchCode} ${item.semester} ${item.academicYear} ${item.advisor}`.toLowerCase().includes(filters.query.toLowerCase().trim()) && (!filters.course || item.course === filters.course) && (!filters.branch || item.branch === filters.branch) && (!filters.semester || item.semester === filters.semester) && (!filters.academicYear || item.academicYear === filters.academicYear) && (!filters.status || item.status === filters.status)), [scopedSections, filters])
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)), currentPage = Math.min(page, pageCount), visible = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
   const summary = { total: scopedSections.length, active: scopedSections.filter((item) => item.status === 'Active').length, inactive: scopedSections.filter((item) => item.status === 'Inactive').length, students: scopedSections.reduce((sum, item) => sum + Math.max(Number(item.currentStrength || 0), count(item.id)), 0) }
-  const hasRooms = scopeRecords(rooms).some(room => !['inactive', 'maintenance', 'unavailable'].includes(String(room.status || '').toLowerCase()))
+  // roomService.getRooms already returns records scoped to the active college.
+  // Applying the generic hierarchy scope again drops valid room records because
+  // classroom responses do not always include a collegeId in their DTO.
+  const hasRooms = rooms.some(room => !['inactive', 'maintenance', 'unavailable'].includes(String(room.status || '').toLowerCase()))
   const changeFilter = (key, value) => { setFilters((current) => ({ ...current, [key]: value, ...(key === 'course' ? { branch: '' } : {}) })); setPage(1) }
   const clearFilters = () => { setFilters({ query: '', course: '', branch: '', semester: '', status: '', academicYear: '' }); setPage(1) }
   const openAssign = async (section) => { try { const latest = (await sectionAssignmentApi.listBySection(section.id)).map((item) => normalizeAssignment({ ...item, sectionId: section.id })); setAssignments((current) => [...current.filter((item) => String(item.sectionId) !== String(section.id)), ...latest]); setAssigning({ ...section, currentStrength: latest.length }) } catch (requestError) { setToast(apiError(requestError, 'Unable to load section assignments.'), 'error') } }
@@ -324,7 +327,6 @@ function SectionList({ initialViewId = null }) {
                       <td className="table-center" style={{ width: '130px' }}>{section.academicYear}</td>
                       <td className="table-center" style={{ width: '150px' }}>
                         <strong>{assigned} / {section.capacity}</strong>
-                        <small>{Math.max(Number(section.capacity || 0) - assigned, 0)} seats available</small>
                       </td>
                       <td className="table-center" style={{ minWidth: '170px', maxWidth: '220px' }}>
                         {section.advisor ? (

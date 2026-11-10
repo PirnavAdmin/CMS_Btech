@@ -285,13 +285,9 @@ export default function StaffDashboard() {
               <FiX />
             </button>
           </header>
-          <p>Submit a leave application for approval by your reporting officer.</p>
+          <p>Submit a leave application for approval by your reporting officer.          </p>
           <form
-            onSubmit={e => {
-              e.preventDefault()
-              setQuickLeaveOpen(false)
-              showToast('Leave application submitted for approval.')
-            }}
+            onSubmit={e => e.preventDefault()}
           >
             <div className="portal-field">
               <label htmlFor="leave-type">Leave Type</label>
@@ -301,16 +297,7 @@ export default function StaffDashboard() {
                 <option value="Earned Leave">Earned Leave (Balance: 3)</option>
               </select>
             </div>
-            <div className="portal-filters">
-              <div className="portal-field">
-                <label htmlFor="leave-from">From Date</label>
-                <input id="leave-from" type="date" required defaultValue="2026-10-28" />
-              </div>
-              <div className="portal-field">
-                <label htmlFor="leave-to">To Date</label>
-                <input id="leave-to" type="date" required defaultValue="2026-10-28" />
-              </div>
-            </div>
+            <p role="status" className="portal-feedback error">Leave requests cannot be submitted because the date fields have been removed. Contact HR or an administrator to arrange leave.</p>
             <div className="portal-field">
               <label htmlFor="leave-reason">Reason</label>
               <textarea
@@ -324,7 +311,7 @@ export default function StaffDashboard() {
               <button type="button" onClick={() => setQuickLeaveOpen(false)}>
                 Cancel
               </button>
-              <button type="submit" className="primary">
+              <button type="submit" className="primary" disabled>
                 Submit Application
               </button>
             </div>
