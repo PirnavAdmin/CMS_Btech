@@ -2,6 +2,15 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { automaticPeriods, DEFAULT_PERIOD_SETUP, teachingPeriods, periodSessions, periodSetupErrors } from './timetablePeriods.js'
 
+test('legacy Break and Lunch slots marked as class are excluded from allocation', () => {
+  const periods = [
+    { name: 'P1', type: 'class', startTime: '09:00', endTime: '10:00' },
+    { name: 'BREAK', type: 'class', startTime: '10:00', endTime: '10:15' },
+    { name: 'Lunch', type: 'class', startTime: '10:15', endTime: '11:00' },
+  ]
+  assert.deepEqual(periodSessions(periods), [[periods[0]]])
+})
+
 test('automatic setup matches the requested college day, with non-teaching break and lunch', () => {
   const result = automaticPeriods(DEFAULT_PERIOD_SETUP)
   assert.deepEqual(result.errors, [])

@@ -1,6 +1,10 @@
 import { key, same, timeMinutes, validTime, overlaps } from './timetableUtils.js'
 
-export const periodType = period => key(period.type || 'class').toLowerCase()
+export const periodType = period => {
+  const type = key(period.type || 'class').toLowerCase()
+  const label = key(period.name).toLowerCase()
+  return type === 'class' && (label === 'break' || label === 'lunch') ? label : type
+}
 export const isTeachingPeriod = period => periodType(period) === 'class'
 export const teachingPeriods = periods => (periods || []).filter(isTeachingPeriod)
 export const periodLabel = (period, index = 0) => period.name || (isTeachingPeriod(period) ? `P${index + 1}` : periodType(period) === 'lunch' ? 'Lunch' : 'Break')

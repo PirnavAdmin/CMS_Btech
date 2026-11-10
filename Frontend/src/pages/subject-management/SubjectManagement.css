@@ -342,18 +342,17 @@
   gap: 8px;
 }
 
-.sm-editor-config-section {
-  border-top: 1px solid var(--border);
-  padding-block: 8px;
-}
-
-.sm-editor-config-section > summary {
-  cursor: pointer;
+.sm-elective-field {
+  display: grid;
+  justify-items: start;
+  align-content: center;
+  gap: 4px;
+  color: var(--text-secondary);
+  font-size: 12px;
   font-weight: 600;
-  margin-bottom: 8px;
 }
 
-.sm-field .sm-elective-toggle input[type="checkbox"] {
+.sm-elective-toggle input[type="checkbox"] {
   width: 16px;
   height: 16px;
   min-height: 0;
@@ -651,22 +650,17 @@
 
 /* Add/Edit subject wizard: clear step hierarchy, focused fields, and a stable action bar. */
 .sm-screen .shared-view-dialog:has(.sm-editor-layout) {
-  width: min(980px, calc(100vw - 36px));
+  width: min(760px, calc(100vw - 24px));
   max-height: calc(100dvh - 32px);
   border-color: color-mix(in srgb, var(--brand) 18%, var(--border));
-  border-radius: 20px;
+  border-radius: var(--radius-dialog, 16px);
   box-shadow: var(--shadow-md);
 }
 
-.sm-screen .shared-view-dialog:has(.sm-editor-layout)::backdrop {
-  background: rgba(8, 16, 10, .58);
-  backdrop-filter: blur(7px);
-}
-
 .sm-screen .shared-view-dialog:has(.sm-editor-layout) > .shared-view-dialog__header {
-  padding: 16px 22px;
+  padding: 10px 16px;
   border-bottom-color: var(--border);
-  background: linear-gradient(110deg, var(--surface), color-mix(in srgb, var(--brand-soft) 30%, var(--surface)));
+  background: var(--surface);
 }
 
 .sm-screen .shared-view-dialog:has(.sm-editor-layout) .shared-view-dialog__icon-badge {
@@ -696,35 +690,38 @@
 
 .sm-screen .shared-view-dialog:has(.sm-editor-layout) > .shared-view-dialog__body {
   gap: 8px;
-  padding: 10px 14px 14px;
-  background: var(--surface-soft);
+  padding: 0;
+  overflow: hidden;
+  background: var(--surface);
 }
 
 .sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-editor-layout {
-  height: min(680px, calc(100dvh - 290px));
-  min-height: 360px;
+  flex: 1 1 auto;
+  height: auto;
+  max-height: calc(90dvh - 100px);
+  min-height: 0;
 }
 
 .sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-editor-layout > .erp-card-main {
   height: auto;
   min-height: 0;
   overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 15px;
+  border: 0;
+  border-radius: 0;
   background: var(--surface);
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
 }
 
 .sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-reference-tabs {
   flex: 0 0 auto;
   gap: 6px;
-  padding: 8px 14px;
+  padding: 6px 12px;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
 }
 
 .sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-reference-tabs .erp-tab-btn {
-  min-height: 42px;
+  min-height: 34px;
   gap: 9px;
   padding: 0 13px;
   border: 1px solid transparent;
@@ -769,19 +766,17 @@
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
-  padding: 14px 16px;
+  padding: 8px 14px;
   scrollbar-width: thin;
   overscroll-behavior: contain;
 }
 
 .sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-editor-step-content > section {
   margin: 0;
-  padding: 18px;
-  border: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--surface);
-  box-shadow: var(--shadow-md);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-editor-section-title {
@@ -793,7 +788,7 @@
 }
 
 .sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-editor-section-description {
-  margin: 5px 0 14px;
+  margin: 4px 0 8px;
   color: var(--text-muted);
   font-size: 12px;
   line-height: 1.55;
@@ -801,16 +796,14 @@
 
 .sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-form-grid-2,
 .sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-form-grid-3 {
-  gap: 12px 14px;
+  gap: 5px 10px;
+  align-items: start;
 }
 
-.sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-field { gap: 7px; }
+.sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-field { gap: 2px; }
 .sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-field > label,
 .sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-field > span { color: var(--text-secondary); font-size: 12px; font-weight: 700; }
-.sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-field :is(input, .searchable-select__trigger) { min-height: 46px; border-radius: 10px; }
-.sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-select-with-meta { display: grid; gap: 6px; min-width: 0; }
-.sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-select-with-meta > small { display: flex; align-items: center; gap: 6px; min-height: 16px; color: var(--text-muted); font-size: 10px; }
-.sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-select-with-meta > small strong { padding: 2px 7px; border: 1px solid color-mix(in srgb, var(--brand) 18%, var(--border)); border-radius: 999px; background: var(--brand-soft); color: var(--brand); font-size: 10px; font-weight: 750; }
+.sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-field :is(input:not([type="checkbox"]), .searchable-select__trigger) { min-height: 36px; border-radius: 8px; background: var(--surface); }
 
 .sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-editor-error {
   margin: 0 0 16px;
@@ -824,6 +817,8 @@
 }
 
 .sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-editor-footer {
+  flex: 0 0 auto;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 12px;
   margin: 0;
@@ -838,52 +833,12 @@
 
 @media (max-width: 640px) {
   .sm-screen .shared-view-dialog:has(.sm-editor-layout) { width: calc(100vw - 20px); max-height: calc(100dvh - 20px); border-radius: 15px; }
-  .sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-editor-layout { height: min(520px, calc(100dvh - 240px)); min-height: 300px; }
   .sm-screen .shared-view-dialog:has(.sm-editor-layout) > .shared-view-dialog__header { padding: 15px 16px; }
-  .sm-screen .shared-view-dialog:has(.sm-editor-layout) > .shared-view-dialog__body { padding: 10px; }
   .sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-reference-tabs { gap: 5px; padding: 9px; }
   .sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-reference-tabs .erp-tab-btn { min-height: 38px; padding: 0 9px; font-size: 11px; }
   .sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-reference-tabs .erp-tab-btn span { width: 21px; height: 21px; }
   .sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-editor-step-content { padding: 12px; }
-  .sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-editor-step-content > section { padding: 16px; }
   .sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-editor-footer { padding: 10px 12px; }
   .sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-editor-footer .erp-btn { min-height: 40px; padding-inline: 12px; }
 }
 
-/* The editor dialog is portalled outside .sm-screen.  Keep its shell aligned
-   with the compact College form instead of letting page-level rules leak in. */
-.subject-editor-dialog {
-  width: min(860px, 95vw);
-  max-height: 90dvh;
-  border-radius: var(--radius-dialog);
-}
-.subject-editor-dialog :is(.shared-view-dialog__header, .shared-view-dialog__footer) {
-  padding: 10px 22px;
-  background: var(--surface);
-}
-.subject-editor-dialog .shared-view-dialog__body {
-  gap: 10px;
-  padding: 12px 22px;
-  background: var(--surface-soft);
-}
-.subject-editor-dialog .shared-view-dialog__icon-badge { width: 40px; height: 40px; border-radius: 10px; }
-.subject-editor-dialog .shared-view-dialog__title { font-size: 20px; }
-.subject-editor-dialog .shared-view-dialog__subtitle { margin-top: 3px; font-size: 12px; }
-.subject-editor-dialog .sm-editor-layout { height: min(520px, calc(90dvh - 170px)); min-height: 330px; }
-.subject-editor-dialog .sm-editor-layout > .erp-card-main { border: 1px solid var(--border); border-radius: 12px; box-shadow: none; }
-.subject-editor-dialog .sm-reference-tabs { gap: 4px; padding: 6px 8px; background: var(--surface); }
-.subject-editor-dialog .sm-reference-tabs .erp-tab-btn { min-height: 34px; padding: 0 10px; font-size: 12px; }
-.subject-editor-dialog .sm-reference-tabs .erp-tab-btn span { width: 22px; height: 22px; font-size: 10px; }
-.subject-editor-dialog .sm-editor-step-content { padding: 12px; }
-.subject-editor-dialog .sm-editor-step-content > section { padding: 14px; border: 0; border-radius: 0; box-shadow: none; }
-.subject-editor-dialog .sm-editor-section-title { font-size: 16px; }
-.subject-editor-dialog .sm-editor-section-description { margin: 4px 0 12px; }
-.subject-editor-dialog .sm-form-grid-2, .subject-editor-dialog .sm-form-grid-3 { gap: 10px 14px; }
-.subject-editor-dialog .sm-field :is(input, .searchable-select__trigger) { min-height: 38px; border-radius: 8px; }
-.subject-editor-dialog .sm-editor-footer { padding: 10px 12px; }
-.subject-editor-dialog .sm-editor-footer .erp-btn { min-height: 38px; border-radius: 8px; padding-inline: 14px; }
-@media (max-width: 640px) {
-  .subject-editor-dialog { width: calc(100vw - 12px); max-height: calc(100dvh - 12px); }
-  .subject-editor-dialog :is(.shared-view-dialog__header, .shared-view-dialog__body, .shared-view-dialog__footer) { padding-inline: 14px; }
-  .subject-editor-dialog .sm-editor-layout { height: min(520px, calc(100dvh - 210px)); }
-}

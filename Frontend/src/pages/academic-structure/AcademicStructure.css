@@ -1771,14 +1771,16 @@ select.as-form-control::-ms-expand {
 /* The course, branch and semester tabs share the compact setup dialog. */
 .academic-structure .as-setup-dialog {
   --as-setup-control-border: color-mix(in srgb, var(--border-strong) 58%, var(--border));
+  background: var(--surface);
   width: min(700px, calc(100vw - 24px));
   max-height: min(620px, calc(100dvh - 24px));
 }
-.as-setup-dialog :is(.shared-view-dialog__header, .shared-view-dialog__footer) {
+.academic-structure .as-setup-dialog > :is(.shared-view-dialog__header, .shared-view-dialog__footer) {
   padding: 8px 14px;
   background: var(--surface);
 }
-.as-setup-dialog .shared-view-dialog__body {
+.academic-structure .as-setup-dialog > .shared-view-dialog__body {
+  background: var(--surface);
   padding: 8px 14px 12px;
   gap: 8px;
   overscroll-behavior: contain;
@@ -1837,13 +1839,13 @@ select.as-form-control::-ms-expand {
   padding: 6px 10px;
   border: 1px solid var(--as-setup-control-border);
   border-radius: var(--radius-control);
-  background: var(--input-bg);
+  background: var(--surface);
   color: var(--text-primary);
   font: var(--font-body) var(--font-family);
   box-shadow: none;
 }
 .as-setup-dialog select.as-form-control { appearance: auto; }
-.academic-structure .as-setup-dialog .as-setup-form .as-form-control:disabled { background: var(--surface-soft); }
+.academic-structure .as-setup-dialog .as-setup-form .as-form-control:disabled { color: var(--text-muted); }
 .academic-structure .as-setup-dialog .as-setup-form .as-form-control:focus {
   border-color: var(--brand);
   outline: 0;

@@ -3381,6 +3381,45 @@
 .flm-config-dialog h2 { margin: 0 40px 20px 0; font-size: 20px; }
 .flm-close { position: absolute; right: 18px; top: 18px; display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid var(--flm-line); border-radius: 8px; background: var(--surface); color: var(--text-secondary); cursor: pointer; }
 .flm-config-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.flm-editor-dialog > .shared-view-dialog__body { background: var(--surface); }
+.flm-editor-dialog .flm-config-form label { display: grid; gap: 5px; min-width: 0; font-size: var(--font-caption); }
+.flm-editor-dialog .flm-config-form :is(input, select:not(.project-select__native), textarea, .searchable-select__trigger) {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  color: var(--text-primary);
+  background: var(--surface);
+}
+.flm-editor-dialog .flm-config-form textarea { min-height: 64px; resize: vertical; }
+.flm-editor-dialog .flm-config-form :is(input, select, textarea, .searchable-select__trigger):focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
+}
+.flm-editor-dialog h3 { margin: 0; font-size: var(--font-body); }
+.flm-editor-dialog .flm-entitlements-table {
+  --table-head: var(--surface);
+  --table-row: var(--surface);
+  --table-row-hover: var(--surface);
+  --flm-line: var(--border);
+  margin: 0;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+}
+.flm-editor-dialog .flm-entitlements-table table { min-width: 540px; }
+#root .flm-editor-dialog .flm-entitlements-table :is(table, thead, tbody, tr, th, td) {
+  background: var(--surface);
+}
+#root .flm-editor-dialog .flm-entitlements-table :is(th, td) {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+#root .flm-editor-dialog .flm-entitlements-table tbody tr:last-child td { border-bottom: 0; }
 .flm-config-form > :is(aside, section, div, label:has(textarea)) { grid-column: 1 / -1; }
 .flm-config-dialog label { display: flex; flex-direction: column; gap: 6px; color: var(--text-secondary); font-weight: 600; }
 .flm-page :is(.flm-config-dialog, .flm-filter-panel) :is(input:not([type="checkbox"]), select, textarea) { min-width: 0; min-height: 40px; padding: 9px 12px; border: 1px solid var(--flm-line); border-radius: 8px; background: var(--surface); color: var(--text-primary); font: inherit; }
@@ -3513,7 +3552,7 @@
   padding: 3px;
   border-color: var(--flm-line);
   border-radius: 10px;
-  background: var(--flm-soft);
+  background: var(--surface);
 }
 #root .flm-page .flm-cat-btn {
   min-height: 34px;
@@ -3522,9 +3561,10 @@
   white-space: nowrap;
 }
 #root .flm-page .flm-cat-btn.active {
-  background: var(--surface, #fff) !important;
-  color: var(--flm-blue) !important;
-  box-shadow: 0 1px 3px rgb(15 23 42 / 10%);
+  background: var(--brand-solid) !important;
+  color: var(--text-on-brand, var(--text-on-dark)) !important;
+  border-color: var(--brand-solid);
+  box-shadow: none;
 }
 #root .flm-page .flm-filter-toggle,
 #root .flm-page .flm-header-actions > .export-menu-trigger {
@@ -3539,7 +3579,7 @@
   padding: 8px 20px;
   overflow-x: auto;
   border-bottom: 1px solid var(--flm-line);
-  background: var(--flm-soft);
+  background: var(--surface);
   scrollbar-width: thin;
   scrollbar-color: var(--border-strong, var(--flm-line)) transparent;
 }
@@ -3596,12 +3636,10 @@
   display: grid;
   justify-items: center;
   align-content: center;
-  min-height: 230px;
+  min-height: 136px;
   margin: 8px 20px 18px;
-  padding: 28px 20px;
-  border: 1px dashed var(--flm-line);
-  border-radius: 12px;
-  background: var(--flm-soft);
+  padding: 18px 16px;
+  background: var(--surface);
 }
 #root .flm-page .flm-empty > svg {
   width: 34px;
@@ -4613,9 +4651,8 @@
   align-items: center;
   gap: 4px;
   padding: 2px 14px 8px;
-  overflow-x: hidden;
-  overflow-y: auto;
-  scrollbar-gutter: stable both-edges;
+  flex-shrink: 0;
+  overflow: visible;
   border: 0;
   border-bottom: 1px solid var(--border);
   border-radius: 0;
@@ -4803,6 +4840,7 @@
    wrapper keeps existing form rules scoped when the native dialog is portalled. */
 .faculty-form-dialog { width: min(820px, 93vw); max-height: 86dvh; background: var(--surface); }
 .faculty-form-dialog > .shared-view-dialog__body { padding: 0; overflow: hidden; background: var(--surface); }
+.faculty-form-dialog > .shared-view-dialog__header { background: var(--surface); }
 .faculty-form-dialog .faculty-form-dialog-content { height: min(400px, calc(86dvh - 112px)); min-height: 0; background: var(--surface); }
 .faculty-form-dialog .faculty-form-dialog-content > .erp-two-column-layout { height: 100%; margin: 0; }
 .faculty-form-dialog .faculty-form-dialog-content .erp-card-main { height: 100%; min-height: 0; background: var(--surface) !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; }
@@ -5280,9 +5318,71 @@
   text-decoration: none;
 }
 
+
 @media (max-width: 560px) {
   .faculty-management .fm-attendance-no-faculty {
     align-items: stretch;
     flex-direction: column;
   }
 }
+.fm-attendance-monitor { display: grid; gap: 14px; min-width: 0; }
+.fm-attendance-monitor > .erp-page-header { align-items: center; margin: 0; }
+.fm-monitor-tabs, .fm-monitor-toolbar, .fm-monitor-actions, .fm-monitor-filters, .fm-monitor-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.fm-monitor-tabs button[aria-pressed="true"] {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  color: var(--text-primary);
+}
+.fm-monitor-card {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.fm-monitor-toolbar, .fm-monitor-filters, .fm-monitor-legend {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.fm-monitor-toolbar > label:first-child { flex: 1 1 220px; }
+.fm-monitor-actions { margin-inline-start: auto; }
+.fm-monitor-filters { align-items: end; }
+.fm-monitor-filters label { display: grid; gap: 5px; font-size: 12px; color: var(--text-secondary); }
+.fm-monitor-card :is(input, select) {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+}
+.fm-attendance-monitor :is(.fm-button, .export-button) { min-height: 38px; }
+.fm-monitor-card :is(input, select, button):focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.fm-monitor-scroll { min-width: 0; max-width: 100%; overflow-x: auto; }
+.fm-monitor-scroll .erp-table { width: 100%; }
+.fm-monitor-scroll .erp-table :is(th, td) { padding: 8px 12px; white-space: nowrap; }
+.fm-monitor-scroll .erp-table td { height: 48px; }
+.fm-monitor-period-grid { display: grid; grid-template-columns: minmax(0, min(44%, 430px)) minmax(0, 1fr); align-items: start; }
+.fm-monitor-period-grid > div { min-width: 0; }
+.fm-monitor-period-grid > div:first-child .erp-table { table-layout: fixed !important; }
+.fm-monitor-period-scroll { overflow-x: auto; border-inline-start: 1px solid var(--border-strong); }
+.fm-monitor-period-grid .erp-table :is(th, td) { box-sizing: border-box; padding: 4px; }
+.fm-monitor-period-grid .erp-table th { height: 58px; white-space: normal; overflow-wrap: anywhere; }
+.fm-monitor-period-grid .erp-table td { height: 52px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fm-monitor-period-scroll .erp-table :is(th, td) { min-width: 72px; white-space: nowrap; }
+.fm-monitor-legend { gap: 6px 12px; font-size: 12px; color: var(--text-secondary); }
+.fm-monitor-status { display: inline-block; padding: 3px 7px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-soft); color: var(--text-secondary); font-size: 12px; }
+.fm-monitor-status[data-status="Present"] { color: var(--success); }
+.fm-monitor-status:is([data-status="Absent"], [data-status="LOP"]) { color: var(--danger); }
+.fm-monitor-status:is([data-status="Late"], [data-status="Half Day"]) { color: var(--warning); }
+.fm-monitor-status[data-status="On Leave"] { color: var(--brand); }
+.fm-monitor-status[data-status="Holiday"] { color: var(--text-muted); }
+.fm-monitor-message { margin: 0; padding: 14px 16px; color: var(--text-secondary); }

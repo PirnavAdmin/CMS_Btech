@@ -1,3 +1,7 @@
+import { getUserRole } from '../../auth/auth'
+import { resolveMyFaculty } from '../../services/timetable/timetableWorkflowService'
+import { backendTimetableService } from '../../services/backendTimetableService'
+import { localDate } from '../../utils/timetablePlanner'
 import { useRef,useLayoutEffect } from 'react'
 import { knownAttendanceRate, attendancePercentage } from '../../utils/attendanceMetrics'
 import { useScreenAccess } from '../../auth/ScreenAccess'
@@ -7,10 +11,9 @@ import { newestFirst as newestFirstImports_newestFirst } from '../../utils/newes
 import useToastStateImports_default from '../../hooks/useToastState'
 import reactImports_default, { useState as reactImports_useState, useEffect as reactImports_useEffect, useMemo as reactImports_useMemo, useCallback as reactImports_useCallback } from 'react'
 import { useLocation as react_router_domImports_useLocation, useNavigate as react_router_domImports_useNavigate, Link as react_router_domImports_Link, useParams as react_router_domImports_useParams } from 'react-router-dom'
-import { FiCalendar, FiCheckCircle, FiClock, FiEye, FiLayers, FiPlus, FiSearch, FiUsers, FiUserCheck, FiUserX, FiAlertTriangle, FiBarChart2, FiBell, FiSave, FiFilter, FiChevronDown, FiChevronUp, FiArrowLeft } from 'react-icons/fi'
+import { FiCalendar, FiCheckCircle, FiClock, FiEye, FiLayers, FiPlus, FiSearch, FiUsers, FiUserCheck, FiUserX, FiAlertTriangle, FiBarChart2, FiSave, FiFilter, FiChevronDown, FiChevronUp, FiArrowLeft } from 'react-icons/fi'
 import DashboardLayoutImports_default from '../../layouts/DashboardLayout'
 import PageHeaderImports_default from '../../components/PageHeader'
-import CompactSummaryImports_default from '../../components/CompactSummary'
 import StatusBadgeImports_default from '../../components/StatusBadge'
 import EmptyStateImports_default from '../../components/EmptyState'
 import InfoCardImports_default from '../../components/InfoCard'
@@ -40,7 +43,6 @@ const useLocation = react_router_domImports_useLocation
 const useNavigate = react_router_domImports_useNavigate
 const DashboardLayout = DashboardLayoutImports_default
 const PageHeader = PageHeaderImports_default
-const CompactSummary = CompactSummaryImports_default
 const StatusBadge = StatusBadgeImports_default
 const EmptyState = EmptyStateImports_default
 const InfoCard = InfoCardImports_default
@@ -70,6 +72,11 @@ const ATTENDANCE_COLUMNS = [
 ]
 
 function Attendance() {
+  const isFaculty = getUserRole() === 'faculty'
+  const [ownFacultyId, setOwnFacultyId] = useState('')
+  const [facultyIdentityError, setFacultyIdentityError] = useState('')
+  const [occurrences, setOccurrences] = useState([])
+  const [occurrenceError, setOccurrenceError] = useState('')
   const { canAction } = useScreenAccess()
   const canRecord = canAction('/student-management/attendance','edit') || canAction('/student-management/attendance','create')
   const { pathname } = useLocation()
@@ -93,9 +100,10 @@ function Attendance() {
 
   const [activeTab, setActiveTab] = useState('register') // 'register' | 'shortage'
   const [reportView, setReportView] = useState('subject')
+  const [matrixPeriod, setMatrixPeriod] = useState('')
   const [reportStudent,setReportStudent]=useState('')
   const reportLayout=reportView==='daily'?'monthly':reportView
-  const [takeModalOpen, setTakeModalOpen] = useState(pathname.endsWith('/take') && canRecord)
+  const [takeEditorOpen, setTakeEditorOpen] = useState(pathname.endsWith('/take') && canRecord)
   const [sessions, setSessions] = useCollegeState([])
   const [loading, setLoading] = useState(false)
   const [saveError,setSaveError]=useState(''),[savedPending,setSavedPending]=useState(false)
@@ -104,16 +112,15 @@ function Attendance() {
   const currentScope=useRef('');const scopeKey=String(selectedCollegeId)+':'+String(selectedAcademicYearId);useLayoutEffect(()=>{currentScope.current=scopeKey},[scopeKey])
   const [, setToast] = useToastState('', 'success')
   const [selectedStudentReport, setSelectedStudentReport] = useState(null)
-  const [shortageDepartmentId, setShortageDepartmentId] = useState('')
-  const [shortageCourseId, setShortageCourseId] = useState('')
-  const [shortageBranchId, setShortageBranchId] = useState('')
   const [showShortageFilters, setShowShortageFilters] = useState(false)
 
   // Scope Filters for Register
   const [filterQuery, setFilterQuery] = useState('')
   const [filterCourseId, setFilterCourseId] = useState('')
   const [filterBranchId, setFilterBranchId] = useState('')
-  const [filterSemesterId] = useState('')
+  const [filterSemesterId, setFilterSemesterId] = useState('')
+  const [filterSectionId, setFilterSectionId] = useState('')
+  const [filterSubjectId, setFilterSubjectId] = useState('')
   const [filterDate, setFilterDate] = useState('')
   const [fromDate,setFromDate]=useState(''),[toDate,setToDate]=useState(''),[sessionStatus,setSessionStatus]=useState('')
   const [showRegisterFilters, setShowRegisterFilters] = useState(false)
@@ -127,10 +134,11 @@ function Attendance() {
     branchId: '',
     semesterId: '',
     sectionId: '',
-    date: new Date().toISOString().slice(0, 10),
+    date: localDate(new Date()),
     subject: '',
     subjectId: '',
     subjectCode: '',
+    timetableEntryId: '',
     faculty: '',
     facultyId: '',
   })
@@ -146,12 +154,29 @@ function Attendance() {
   }, [selectedAcademicYearId, attendanceAcademicYearId, selectAcademicYear])
   useEffect(() => {
     const yearId = currentAcademicYearId || attendanceAcademicYearId
-    if (!takeModalOpen || !yearId) return
+    if (!takeEditorOpen || !yearId) return
     setTakeScope(current => current.academicYearId === String(yearId)
       ? current
       : { ...current, academicYearId: String(yearId) })
-  }, [takeModalOpen, currentAcademicYearId, attendanceAcademicYearId])
+  }, [takeEditorOpen, currentAcademicYearId, attendanceAcademicYearId])
   const [markingStudents, setMarkingStudents] = useState([])
+  const [loadedSession, setLoadedSession] = useState(null)
+  const [selectedStudents, setSelectedStudents] = useState([])
+  const originalRoster = useRef([])
+  const dirty = markingStudents.some((row, index) => row.status !== originalRoster.current[index]?.status)
+  const confirmDiscard = () => !dirty || savedPending || window.confirm('Discard unsaved attendance marks?')
+  const changeTakeScope = update => {
+    if (savingSession || !confirmDiscard()) return
+    setMarkingStudents(originalRoster.current)
+    setSelectedStudents([])
+    setTakeScope(current => ({ ...update(current), timetableEntryId: '' }))
+  }
+  useEffect(() => {
+    if (!dirty || savedPending) return undefined
+    const warn = event => { event.preventDefault(); event.returnValue = true }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [dirty, savedPending])
   const [loadingStudents, setLoadingStudents] = useState(false)
   const [savingSession, setSavingSession] = useState(false)
   const [activeFaculty, setActiveFaculty] = useCollegeState([])
@@ -186,7 +211,7 @@ function Attendance() {
     catch(reason){if(version===profileRequest.current){setAllProfiles([]);setProfileError(reason.message || 'Unable to load student profiles.')}}
   },[selectedAcademicYearId,scopeRecords])
   const invalidateRequests=useCallback(()=>{sessionRequest.current++;profileRequest.current++;rosterRequest.current++},[])
-  useEffect(()=>{setSessions([]);setAllProfiles([]);setMarkingStudents([]);setSelectedStudentReport(null);setReportStudent('');setTakeModalOpen(pathname.endsWith('/take') && canRecord);setTakeScope(current=>({...current,academicYearId:String(selectedAcademicYearId || ''),courseId:'',branchId:'',semesterId:'',sectionId:'',subjectId:'',subject:'',subjectCode:'',facultyId:'',faculty:''}));saveAcknowledgement.current='';setSavedPending(false);loadSessions();loadProfiles();return invalidateRequests},[loadSessions,loadProfiles,invalidateRequests,canRecord,setSessions,setAllProfiles,selectedAcademicYearId,pathname])
+  useEffect(()=>{setSessions([]);setAllProfiles([]);setMarkingStudents([]);setSelectedStudentReport(null);setReportStudent('');setTakeEditorOpen(pathname.endsWith('/take') && canRecord);setTakeScope(current=>({...current,timetableEntryId:'',academicYearId:String(selectedAcademicYearId || ''),courseId:'',branchId:'',semesterId:'',sectionId:'',subjectId:'',subject:'',subjectCode:'',facultyId:'',faculty:''}));saveAcknowledgement.current='';setSavedPending(false);loadSessions();loadProfiles();return invalidateRequests},[loadSessions,loadProfiles,invalidateRequests,canRecord,setSessions,setAllProfiles,selectedAcademicYearId,pathname])
 
   useEffect(() => {
     let mounted = true
@@ -308,20 +333,46 @@ function Attendance() {
     return () => { mounted = false }
   }, [selectedCollegeId,selectedAcademicYearId,masterAttempt,setFacultyAssignments,setAllSubjects,setAttendanceSemesterCatalog,setActiveFaculty])
 
+  useEffect(() => {
+    if (!isFaculty || !activeFaculty.length) return undefined
+    let active = true
+    setOwnFacultyId('')
+    resolveMyFaculty({ faculty: activeFaculty.map(row => ({ ...row, id: row.facultyId ?? row.id })) })
+      .then(id => { if (active) { setOwnFacultyId(String(id)); setFacultyIdentityError('') } })
+      .catch(error => { if (active) setFacultyIdentityError(error.message) })
+    return () => { active = false }
+  }, [isFaculty, activeFaculty])
+  const ownAssignments = useMemo(() => facultyAssignments.filter(row => ownFacultyId &&
+    String(row.facultyId) === ownFacultyId && String(row.academicYearId) === String(takeScope.academicYearId)
+    && ![false, 0, '0', 'false', 'inactive'].includes(typeof row.status === 'string' ? row.status.toLowerCase() : row.status)
+  ), [facultyAssignments, ownFacultyId, takeScope.academicYearId])
+  useEffect(() => {
+    setOccurrences([]); setOccurrenceError('')
+    if (!takeEditorOpen || !takeScope.sectionId || !takeScope.date || (isFaculty && !ownFacultyId)) return undefined
+    let active = true
+    backendTimetableService.occurrences({ date: takeScope.date, sectionId: takeScope.sectionId, facultyId: isFaculty ? ownFacultyId : undefined })
+      .then(rows => { if (active) setOccurrences(Array.isArray(rows?.classes) ? rows.classes : []) })
+      .catch(error => { if (active) setOccurrenceError(error.message || 'Unable to load timetable sessions.') })
+    return () => { active = false }
+  }, [takeEditorOpen, takeScope.sectionId, takeScope.date, isFaculty, ownFacultyId])
   // Cascading lists for Take Attendance
   const takeBranches = useMemo(() => {
     const active = getBranchesForCourse(takeScope.courseId, true)
-    return active.length ? active : getBranchesForCourse(takeScope.courseId, false)
-  }, [getBranchesForCourse, takeScope.courseId])
+    return active.filter(branch => !isFaculty || ownAssignments.some(row => String(row.branchId) === String(branch.id)))
+  }, [getBranchesForCourse, takeScope.courseId, isFaculty, ownAssignments])
 
-  const attendanceCourses = activeCourses.length ? activeCourses : courses
+  const attendanceCourses = (activeCourses.length ? activeCourses : courses).filter(course => !isFaculty || ownAssignments.some(row => String(row.courseId) === String(course.id)))
+  const onlyCourseId = attendanceCourses.length === 1 ? String(attendanceCourses[0].id) : ''
+  useEffect(() => {
+    if (takeEditorOpen && onlyCourseId) setTakeScope(current => current.courseId ? current : { ...current, courseId: onlyCourseId })
+  }, [takeEditorOpen, onlyCourseId, scopeKey])
 
   const takeSemesters = useMemo(() => {
     const source = attendanceSemesterCatalog.length ? attendanceSemesterCatalog : getSemestersForCourse(takeScope.courseId, false, takeScope)
     const filtered = source.filter(semester =>
       String(semester.courseId) === String(takeScope.courseId) &&
       String(semester.branchId) === String(takeScope.branchId) &&
-      String(semester.academicYearId) === String(takeScope.academicYearId)
+      String(semester.academicYearId) === String(takeScope.academicYearId) && (!isFaculty || ownAssignments.some(row => String(row.semesterId) === String(semester.id ?? semester.semesterId)))
     )
     const unique = new Map()
     filtered.forEach(semester => {
@@ -329,7 +380,7 @@ function Attendance() {
       if (id != null && !unique.has(String(id))) unique.set(String(id), semester)
     })
     return Array.from(unique.values()).sort((a, b) => Number(a.semesterNumber || 0) - Number(b.semesterNumber || 0))
-  }, [attendanceSemesterCatalog, getSemestersForCourse, takeScope])
+  }, [attendanceSemesterCatalog, getSemestersForCourse, takeScope, isFaculty, ownAssignments])
 
   // The subject endpoint supports semester assignment filtering. Load that
   // authoritative list once the user has picked a semester, then attach the
@@ -378,15 +429,10 @@ function Attendance() {
     return () => { active = false }
   }, [takeScope.semesterId, takeScope.branchId, takeScope.courseId])
 
-  const selectedTakeCourse = useMemo(
-    () => activeCourses.find(course => String(course.id) === String(takeScope.courseId)),
-    [activeCourses, takeScope.courseId],
-  )
   const selectedTakeBranch = useMemo(
     () => takeBranches.find(branch => String(branch.id) === String(takeScope.branchId)),
     [takeBranches, takeScope.branchId],
   )
-  const takeCourseCode = selectedTakeCourse?.courseCode ?? selectedTakeCourse?.code ?? selectedTakeCourse?.shortName ?? ''
   const takeBranchCode = selectedTakeBranch?.branchCode ?? selectedTakeBranch?.code ?? selectedTakeBranch?.shortName ?? ''
 
   const normalizeKey = (val) => String(val || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '')
@@ -396,8 +442,10 @@ function Attendance() {
     if(!takeScope.courseId || !takeScope.branchId || !takeScope.semesterId)return false
     const fields=['courseId','branchId','semesterId','academicYearId']
     const exact=row=>fields.every(field=>String(row[field] ?? row[field.replace('Id','_id')] ?? '')===String(takeScope[field]))
-    return exact(subject) || facultyAssignments.some(row=>String(row.subjectId)===String(getSubjectId(subject)) && exact(row))
-  }),[allSubjects,facultyAssignments,takeScope])
+    const matchesSubject = row => String(row.subjectId) === String(getSubjectId(subject)) && exact(row)
+    if (isFaculty) return ownAssignments.some(row => matchesSubject(row) && String(row.sectionId) === String(takeScope.sectionId))
+    return exact(subject) || facultyAssignments.some(matchesSubject)
+  }),[allSubjects,facultyAssignments,takeScope,isFaculty,ownAssignments])
 
   useEffect(() => {
     if (!takeScope.subjectId || loadingSubjects) return
@@ -410,6 +458,7 @@ function Attendance() {
   }, [availableSubjects, loadingSubjects, takeScope.subjectId])
 
   const branchFaculty = useMemo(() => {
+    if (isFaculty) return activeFaculty.filter(row => String(row.facultyId ?? row.id) === ownFacultyId)
     if (!takeScope.branchId) return activeFaculty
     const selectedBranchName = String(selectedTakeBranch?.name || selectedTakeBranch?.branchName || '').trim().toLowerCase()
     const targetBranchKey = normalizeKey(selectedTakeBranch?.name || selectedTakeBranch?.branchName || takeBranchCode)
@@ -417,7 +466,7 @@ function Attendance() {
     const matched = activeFaculty.filter(member => {
       const memBranchKey = normalizeKey(member.branchCode || member.branch || member.branchName || member.departmentName || member.department || '')
       if (member.branchId && String(member.branchId) === String(takeScope.branchId)) return true
-      if (targetBranchKey && (memBranchKey === targetBranchKey || memBranchKey.includes(targetBranchKey) || targetBranchKey.includes(memBranchKey))) return true
+      if (targetBranchKey && memBranchKey && (memBranchKey === targetBranchKey || memBranchKey.includes(targetBranchKey) || targetBranchKey.includes(memBranchKey))) return true
 
       const isAllocated = facultyAssignments.some(assignment => {
         const assignmentFacultyId = assignment.facultyId ?? assignment.employeeProfileId ?? assignment.faculty?.facultyId ?? assignment.faculty?.id
@@ -430,7 +479,22 @@ function Attendance() {
     })
 
     return matched
-  }, [activeFaculty, facultyAssignments, selectedTakeBranch, takeScope.branchId, takeBranchCode])
+  }, [activeFaculty, facultyAssignments, selectedTakeBranch, takeScope.branchId, takeBranchCode, isFaculty, ownFacultyId])
+
+  const availableOccurrences = occurrences.filter(row =>
+    String(row.sectionId) === String(takeScope.sectionId) && String(row.academicYearId) === String(takeScope.academicYearId) &&
+    availableSubjects.some(subject => String(getSubjectId(subject)) === String(row.subjectId)) &&
+    branchFaculty.some(member => String(member.facultyId ?? member.id) === String(row.facultyId))
+  )
+  const selectOccurrence = entryId => {
+    if (savingSession || !confirmDiscard()) return
+    const session = availableOccurrences.find(row => String(row.timetableEntryId) === entryId)
+    const subject = availableSubjects.find(row => String(getSubjectId(row)) === String(session?.subjectId))
+    const member = branchFaculty.find(row => String(row.facultyId ?? row.id) === String(session?.facultyId))
+    setMarkingStudents(originalRoster.current)
+    setSelectedStudents([])
+    setTakeScope(current => ({ ...current, timetableEntryId: entryId, subjectId: session?.subjectId ?? '', subject: subject?.name || subject?.subjectName || '', subjectCode: subject?.subjectCode || '', facultyId: session?.facultyId ?? '', faculty: member?.fullName || member?.name || '' }))
+  }
 
   const filterBranches = useMemo(() => getBranchesForCourse(filterCourseId, true), [getBranchesForCourse, filterCourseId])
   const registerSections = useMemo(() => getSectionsForScope({
@@ -457,14 +521,18 @@ function Attendance() {
     }
 
     const request=++rosterRequest.current
-    setRosterError('');setMarkingStudents([])
+    setRosterError('');setMarkingStudents([]);setLoadedSession(null)
     try {
       setLoadingStudents(true)
       const selectedBranch = takeBranches.find(b => String(b.id) === String(scope.branchId))
       const selectedSemester = takeSemesters.find(s => String(s.id) === String(scope.semesterId))
       const selectedSection = takeSections.find(sec => String(sec.id) === String(scope.sectionId))
 
-      const list = await attendanceService.getStudentsForAttendance({
+      const existing = scope.subjectId && scope.facultyId && sessions.find(row =>
+        String(row.sectionId) === String(scope.sectionId) && row.date === scope.date &&
+        (scope.timetableEntryId ? String(row.timetableEntryId) === String(scope.timetableEntryId) :
+          !row.timetableEntryId && !row.timetableSlotId && String(row.subjectId) === String(scope.subjectId) && String(row.facultyId) === String(scope.facultyId)))
+      const list = existing ? await attendanceService.getSessionStudents(existing.id || existing.sessionId) : await attendanceService.getStudentsForAttendance({
         collegeId: selectedCollegeId,
         branchId: scope.branchId,
         branchCode: takeBranchCode,
@@ -476,7 +544,10 @@ function Attendance() {
       })
 
       if(request!==rosterRequest.current)return
-      setMarkingStudents(list || [])
+      setLoadedSession(existing || null)
+      originalRoster.current = list || []
+      setSelectedStudents([])
+      setMarkingStudents(originalRoster.current)
       if ((!list || list.length === 0) && !customScope) {
         notify('No students found for this section / academic scope. Please ensure students are enrolled or assigned in Section Management.', 'warning')
       }
@@ -494,29 +565,34 @@ function Attendance() {
     takeBranchCode,
   ])
 
-  const rosterScope=useMemo(()=>({academicYearId:takeScope.academicYearId,courseId:takeScope.courseId,branchId:takeScope.branchId,semesterId:takeScope.semesterId,sectionId:takeScope.sectionId,date:takeScope.date}),[takeScope.academicYearId,takeScope.courseId,takeScope.branchId,takeScope.semesterId,takeScope.sectionId,takeScope.date])
+  const { academicYearId, courseId, branchId, semesterId, sectionId, date, subjectId, facultyId, timetableEntryId } = takeScope
+  const rosterScope = useMemo(() => ({ academicYearId, courseId, branchId, semesterId, sectionId, date, subjectId, facultyId, timetableEntryId }),
+    [academicYearId, courseId, branchId, semesterId, sectionId, date, subjectId, facultyId, timetableEntryId])
+  const lockedSession = loadedSession && String(loadedSession.sessionStatus).toUpperCase() !== 'OPEN'
+
   useEffect(()=>{
-    if(!takeModalOpen){rosterRequest.current++;return}
+    if(!takeEditorOpen || activeTab !== 'register'){rosterRequest.current++;return}
     if(!rosterScope.courseId || !rosterScope.branchId || !rosterScope.semesterId || !rosterScope.sectionId){rosterRequest.current++;setMarkingStudents([]);return}
     handleFetchStudentsForMarking(rosterScope)
-  },[takeModalOpen,rosterScope,handleFetchStudentsForMarking])
+  },[takeEditorOpen,activeTab,rosterScope,handleFetchStudentsForMarking])
 
   // Quick action: Mark All Present
-  const handleMarkAll = (status) => {
-    setMarkingStudents(prev => prev.map(s => ({ ...s, status })))
+  const handleMarkAll = (status, selectedOnly = false) => {
+    setMarkingStudents(prev => prev.map(row =>
+      !row.attendanceDetailId && (!selectedOnly || selectedStudents.includes(row.studentId)) ? { ...row, status } : row))
   }
 
   // Toggle individual student status
   const handleStudentStatusChange = (studentId, status) => {
-    setMarkingStudents(prev => prev.map(s => (s.studentId === studentId ? { ...s, status } : s)))
+    setMarkingStudents(prev => prev.map(row => row.studentId === studentId && !row.attendanceDetailId ? { ...row, status } : row))
   }
 
   // Save session
   const handleSaveAttendance = async () => {
-    if (!canRecord || savingSession || saveLock.current) return
+    if (!canRecord || (lockedSession && !savedPending) || savingSession || saveLock.current) return
     if (savedPending) {
       saveLock.current=true;setSavingSession(true);setSaveError('')
-      try{await loadSessions(true);if(currentScope.current!==scopeKey)return;saveAcknowledgement.current='';setSavedPending(false);setActiveTab('register');setTakeModalOpen(false);notify('Saved attendance refreshed.')}
+      try{await loadSessions(true);if(currentScope.current!==scopeKey)return;saveAcknowledgement.current='';setSavedPending(false);setActiveTab('register');setTakeEditorOpen(false);notify('Saved attendance refreshed.')}
       catch(error){if(currentScope.current===scopeKey)setSaveError(error.message || 'Unable to refresh saved attendance.')}
       finally{saveLock.current=false;setSavingSession(false)}
       return
@@ -534,9 +610,21 @@ function Attendance() {
       return
     }
 
+    if (!takeScope.date || takeScope.date > localDate()) {
+      setSaveError('Choose today or a past attendance date.')
+      return
+    }
+    const statuses = ['Present', 'Absent', 'Late', 'Excused']
+    if (markingStudents.some(row => !statuses.includes(row.status))) {
+      setSaveError('Mark every student before saving attendance.')
+      return
+    }
+    const summary = statuses.map(status => status + ' ' + markingStudents.filter(row => row.status === status).length)
+    if (!window.confirm('Save attendance for ' + markingStudents.length + ' students?\n' + summary.join(' · '))) return
+
     try {
       saveLock.current=true;setSaveError('');setSavingSession(true)
-      const selectedCourse = activeCourses.find(c => String(c.id) === String(takeScope.courseId))
+      const selectedCourse = attendanceCourses.find(c => String(c.id) === String(takeScope.courseId))
       const selectedBranch = takeBranches.find(b => String(b.id) === String(takeScope.branchId))
       const selectedSemester = takeSemesters.find(s => String(s.id) === String(takeScope.semesterId))
       const selectedSection = takeSections.find(sec => String(sec.id) === String(takeScope.sectionId))
@@ -545,6 +633,8 @@ function Attendance() {
       const finalSubjectId=Number(takeScope.subjectId)
       if(!Number.isSafeInteger(finalSubjectId) || finalSubjectId<=0 || !availableSubjects.some(row=>Number(getSubjectId(row))===finalSubjectId))throw Error('Select a subject mapped to this academic year, course, branch and semester.')
       if(!selectedCourse || !selectedBranch || !selectedSemester || !selectedSection || !branchFaculty.some(row=>String(row.id ?? row.facultyId)===String(takeScope.facultyId)))throw Error('The academic or faculty selection is no longer valid. Review the selected class.')
+      const occurrence = availableOccurrences.find(row => String(row.timetableEntryId) === String(takeScope.timetableEntryId))
+      if (takeScope.timetableEntryId && !occurrence) throw Error('The selected timetable session is no longer available.')
       const saveSignature=JSON.stringify([scopeKey,takeScope,markingStudents])
       if(saveAcknowledgement.current && saveAcknowledgement.current!==saveSignature)throw Error('Attendance was saved. Refresh the register before changing saved marks.')
       if(!saveAcknowledgement.current)await attendanceService.recordAttendance({
@@ -555,6 +645,7 @@ function Attendance() {
         semesterId: Number(takeScope.semesterId),
         sectionId: Number(takeScope.sectionId),
         subjectId: finalSubjectId,
+        ...(occurrence ? { timetableEntryId: occurrence.timetableEntryId, timetableId: occurrence.timetableId, timetableSlotId: occurrence.timetableSlotId } : {}),
         academicYear: selectedYear?.name || '',
         course: selectedCourse?.name || '',
         courseCode: selectedCourse?.courseCode ?? selectedCourse?.code ?? selectedCourse?.shortName ?? '',
@@ -581,7 +672,7 @@ function Attendance() {
       setFilterDate(takeScope.date)
       setCurrentPage(1)
       setActiveTab('register')
-      setTakeModalOpen(false)
+      setTakeEditorOpen(false)
     } catch (err) {
       if(currentScope.current===scopeKey){setSaveError(err.message || 'Failed to save attendance.');notify(err.message || 'Failed to save attendance.', 'error')}
     } finally {
@@ -590,18 +681,21 @@ function Attendance() {
   }
 
   // Filtered Sessions for Register Tab
+  const studentQuery = activeTab === 'shortage' || (activeTab === 'reports' && reportView === 'student')
   const filteredSessions = useMemo(() => {
     const scopedSectionIds = new Set(registerSections.map(section => String(section.id)))
     return sessions.filter(s => {
-      const matchQuery = !filterQuery || `${s.subject} ${s.course} ${s.branch} ${s.section} ${s.faculty}`.toLowerCase().includes(filterQuery.toLowerCase())
+      const matchQuery = studentQuery || !filterQuery || `${s.subject} ${s.course} ${s.branch} ${s.section} ${s.faculty}`.toLowerCase().includes(filterQuery.toLowerCase())
       const matchScope = !filterCourseId || String(s.courseId) === String(filterCourseId) || scopedSectionIds.has(String(s.sectionId))
       const matchBranch = !filterBranchId || String(s.branchId) === String(filterBranchId) || scopedSectionIds.has(String(s.sectionId))
       const matchSemester = !filterSemesterId || String(s.semesterId) === String(filterSemesterId)
       const matchDate = (!filterDate || s.date === filterDate) && (!fromDate || s.date>=fromDate) && (!toDate || s.date<=toDate) && (!fromDate || !toDate || fromDate<=toDate)
-      const matchStatus=!sessionStatus || String(s.sessionStatus).toUpperCase()===sessionStatus
-      return matchQuery && matchScope && matchBranch && matchSemester && matchDate && matchStatus
+      const matchStatus=activeTab !== 'register' || !sessionStatus || String(s.sessionStatus).toUpperCase()===sessionStatus
+      const ownClass = !isFaculty || (ownFacultyId && (String(s.facultyId) === ownFacultyId || ownAssignments.some(row => String(row.sectionId) === String(s.sectionId) && String(row.subjectId) === String(s.subjectId))))
+      const matchDetail = (!filterSectionId || String(s.sectionId) === filterSectionId) && (!filterSubjectId || String(s.subjectId) === filterSubjectId)
+      return ownClass && matchDetail && matchQuery && matchScope && matchBranch && matchSemester && matchDate && matchStatus
     })
-  }, [sessions, registerSections, filterQuery, filterCourseId, filterBranchId, filterSemesterId, filterDate,fromDate,toDate,sessionStatus])
+  }, [sessions, registerSections, filterQuery, studentQuery, activeTab, isFaculty, ownFacultyId, ownAssignments, filterCourseId, filterBranchId, filterSemesterId, filterSectionId, filterSubjectId, filterDate,fromDate,toDate,sessionStatus])
 
   const paginatedSessions = useMemo(() => {
     const start = (currentPage - 1) * pageSize
@@ -610,108 +704,113 @@ function Attendance() {
   const totalPages = Math.max(1, Math.ceil(filteredSessions.length / pageSize))
 
   useEffect(() => {
-    if (currentPage > totalPages) setCurrentPage(totalPages)
-  }, [currentPage, totalPages])
+    if (activeTab === 'register' && currentPage > totalPages) setCurrentPage(totalPages)
+  }, [activeTab, currentPage, totalPages])
 
-  const hasRegisterFilters = Boolean(filterCourseId || filterBranchId || filterDate || fromDate || toDate || sessionStatus)
+  const hasRegisterFilters = Boolean(filterCourseId || filterBranchId || filterSemesterId || filterSectionId || filterSubjectId || filterDate || fromDate || toDate || sessionStatus)
   const clearRegisterFilters = () => {
     setFilterCourseId('')
     setFilterBranchId('')
+    setFilterSemesterId(''); setFilterSectionId(''); setFilterSubjectId('')
     setFilterDate('');setFromDate('');setToDate('');setSessionStatus('')
     setCurrentPage(1)
   }
 
   // Summary Metrics
   const summaryMetrics = useMemo(() => {
-    const totalSessions = sessions.length
-    const totalPresent = sessions.reduce((acc, s) => acc + (s.presentCount || 0), 0)
-    const totalHeadcount = sessions.reduce((acc, s) => acc + (s.totalStudents || 0), 0)
+    const completed = filteredSessions.filter(row => String(row.sessionStatus).toUpperCase() === 'COMPLETED')
+    const totalSessions = completed.length
+    const totalPresent = completed.reduce((acc, s) => acc + (s.presentCount || 0), 0)
+    const totalHeadcount = completed.reduce((acc, s) => acc + (s.totalStudents || 0), 0)
     const avgPercentage = attendancePercentage(totalPresent,totalHeadcount)
 
     return {
       totalSessions,
       totalPresent,
       avgPercentage: avgPercentage == null ? null : `${avgPercentage}%`,
-      shortageCount: allProfiles.filter(p => knownAttendanceRate(p.attendanceRate) != null && Number(p.attendanceRate) < 75).length,
     }
-  }, [sessions, allProfiles])
+  }, [filteredSessions])
 
   const [reportSessions,setReportSessions]=useState([]),[reportError,setReportError]=useState(''),[reportLoading,setReportLoading]=useState(false),[reportAttempt,setReportAttempt]=useState(0)
   useEffect(()=>{
     let current=true;setReportSessions([]);setReportError('')
     if(activeTab!=='reports' && activeTab!=='shortage')return
     setReportLoading(true)
-    Promise.all(filteredSessions.filter(row=>String(row.sessionStatus).toUpperCase()!=='CANCELLED').map(async row=>({...row,records:await attendanceService.getSessionStudents(row.id || row.sessionId)})))
+    Promise.all(filteredSessions.filter(row=>String(row.sessionStatus).toUpperCase()==='COMPLETED').map(async row=>({...row,records:await attendanceService.getSessionStudents(row.id || row.sessionId)})))
       .then(rows=>{if(current)setReportSessions(rows)}).catch(reason=>{if(current)setReportError(reason.message || 'Unable to load report records.')}).finally(()=>{if(current)setReportLoading(false)})
     return()=>{current=false}
   },[activeTab,filteredSessions,reportAttempt])
-  const weeklyAttendance=useMemo(()=>Object.values(filteredSessions.reduce((result,row)=>{
-    const day=new Date(row.date+'T12:00:00Z');if(Number.isNaN(day.getTime()))return result;day.setUTCDate(day.getUTCDate()-(day.getUTCDay()+6)%7);const week=day.toISOString().slice(0,10)
-    const item=result[week] || {month:'Week of '+week,sessions:0,present:0,total:0};item.sessions++;item.present+=Number(row.presentCount || 0);item.total+=Number(row.totalStudents || 0);result[week]=item;return result
-  },{})).map(row=>({...row,rate:attendancePercentage(row.present,row.total)})),[filteredSessions])
+  const confirmedSessions = useMemo(() => filteredSessions.filter(row => String(row.sessionStatus).toUpperCase() === 'COMPLETED'), [filteredSessions])
   // Report data is calculated from the sessions already returned by the
   // attendance API; no client-side sample records are introduced.
-  const subjectAttendance = useMemo(() => Object.values(filteredSessions.reduce((result, session) => {
-    const id = `${session.subject || 'Unassigned'}|${session.courseId || session.course || ''}|${session.semesterId || session.semester || ''}`
-    const current = result[id] || { subject: session.subject || 'Unassigned', sessions: 0, present: 0, total: 0 }
-    current.sessions += 1; current.present += Number(session.presentCount || 0); current.total += Number(session.totalStudents || 0)
+  const subjectAttendance = useMemo(() => Object.values(confirmedSessions.reduce((result, session) => {
+    const id = [session.subjectId || session.subject, session.facultyId || session.faculty, session.semesterId].join('|')
+    const current = result[id] || { id, subject: session.subject || 'Unassigned', code: session.subjectCode, faculty: session.faculty, sessions: 0, present: 0, absent: 0, total: 0 }
+    current.sessions += 1; current.present += Number(session.presentCount || 0); current.absent += Number(session.absentCount || 0); current.total += Number(session.totalStudents || 0)
     result[id] = current; return result
-  }, {})).map(row => ({ ...row, rate: attendancePercentage(row.present,row.total) })), [filteredSessions])
-  const dailyAttendance = useMemo(() => Object.values(filteredSessions.reduce((result, session) => {
-    const month = String(session.date || '') || 'Unspecified'
-    const current = result[month] || { month, sessions: 0, present: 0, total: 0 }
-    current.sessions += 1; current.present += Number(session.presentCount || 0); current.total += Number(session.totalStudents || 0)
-    result[month] = current; return result
-  }, {})).map(row => ({ ...row, rate: attendancePercentage(row.present,row.total) })), [filteredSessions])
-  const monthlyAttendance = useMemo(() => Object.values(filteredSessions.reduce((result, session) => {
-    const month = String(session.date || '').slice(0, 7) || 'Unspecified'
-    const current = result[month] || { month, sessions: 0, present: 0, total: 0 }
-    current.sessions += 1; current.present += Number(session.presentCount || 0); current.total += Number(session.totalStudents || 0)
-    result[month] = current; return result
-  }, {})).map(row => ({ ...row, rate: attendancePercentage(row.present,row.total) })), [filteredSessions])
+  }, {})).map(row => ({ ...row, rate: attendancePercentage(row.present,row.total) })), [confirmedSessions])
   const studentAttendance = useMemo(() => Object.values(reportSessions.reduce((result, session) => {
     ;(session.records || []).forEach(record => {
       const id = String(record.studentId || record.id || record.rollNumber || '')
       if (!id || !['Present','Absent','Late','Excused'].includes(record.status)) return
       const profile = allProfiles.find(item => String(item.studentId || item.id) === id) || {}
-      const current = result[id] || { id, name: record.name || profile.fullName || profile.name || 'Student', rollNumber: record.rollNumber || profile.rollNumber || id, course: profile.academic?.course || session.course || '-', branch: profile.academic?.branch || session.branch || '-', present: 0, total: 0 }
+      const current = result[id] || {
+        id, name: record.name || profile.fullName || profile.name || 'Student',
+        rollNumber: record.rollNumber || profile.rollNumber || id,
+        admissionNumber: record.admissionNumber || profile.academic?.admissionNumber || profile.admissionNumber,
+        course: profile.academic?.course || session.course || '—', branch: profile.academic?.branch || session.branch || '—',
+        semester: session.semester, section: session.section, present: 0, total: 0, marks: {},
+      }
+      current.marks[session.id || session.sessionId] = record.status
       current.total += 1
       if (['Present', 'Late'].includes(record.status)) current.present += 1
       result[id] = current
     })
     return result
-  }, {})).map(row => ({ ...row, rate: row.total ? Math.round((row.present / row.total) * 100) : 0 })), [reportSessions, allProfiles])
-  const filteredStudentAttendance=studentAttendance.filter(row=>!reportStudent||row.id===reportStudent)
-  const shortageStudents = useMemo(() => allProfiles.filter(profile => {
-    const courseId = profile.academic?.courseId || profile.courseId
-    const courseName = String(profile.academic?.course || profile.course || '').trim().toLowerCase()
-    const branchId = profile.academic?.branchId || profile.branchId
-    const branchName = String(profile.academic?.branch || profile.branch || '').trim().toLowerCase()
-
-    const selectedCourseObj = activeCourses.find(c => String(c.id) === String(filterCourseId))
-    const selectedBranchObj = filterBranches.find(b => String(b.id) === String(filterBranchId))
-
-    const courseMatches = !filterCourseId ||
-      String(courseId) === String(filterCourseId) ||
-      (selectedCourseObj && courseName === String(selectedCourseObj.name || '').trim().toLowerCase())
-
-    const branchMatches = !filterBranchId ||
-      String(branchId) === String(filterBranchId) ||
-      (selectedBranchObj && branchName === String(selectedBranchObj.name || selectedBranchObj.branchName || '').trim().toLowerCase())
-
-    const name = String(profile.personal?.fullName || profile.name || '').toLowerCase()
-    const rollNumber = String(profile.academic?.rollNumber || profile.rollNumber || '').toLowerCase()
-    const queryMatches = !filterQuery.trim() ||
-      name.includes(filterQuery.trim().toLowerCase()) ||
-      rollNumber.includes(filterQuery.trim().toLowerCase())
-
-    const matchingReport = studentAttendance.find(row => String(row.id) === String(profile.studentId || profile.id))
-    const rate = matchingReport?.rate ?? knownAttendanceRate(profile.attendanceRate)
-    return courseMatches && branchMatches && queryMatches && Number.isFinite(rate) && rate < 75
-  }).map(profile => {
-    const report = studentAttendance.find(row => String(row.id) === String(profile.studentId || profile.id))
-    return { ...profile, attendanceRate: report?.rate ?? Number(profile.attendanceRate), attendanceReport: report }
-  }), [allProfiles, filterCourseId, filterBranchId, filterBranches, filterQuery, activeCourses, studentAttendance])
+  }, {})).map(row => ({ ...row, rate: row.total ? row.present * 100 / row.total : 0 })), [reportSessions, allProfiles])
+  const matchesStudent = row => [row.name, row.rollNumber, row.admissionNumber].some(value => String(value || '').toLowerCase().includes(filterQuery.trim().toLowerCase()))
+  const filteredStudentAttendance = studentAttendance.filter(row => (!reportStudent || row.id === reportStudent) && matchesStudent(row))
+  const reportPeriod = date => {
+    if (reportView === 'monthly') return date.slice(0, 7)
+    if (reportView !== 'weekly') return date
+    const monday = new Date(date + 'T12:00:00Z')
+    if (Number.isNaN(monday.getTime())) return date
+    monday.setUTCDate(monday.getUTCDate() - (monday.getUTCDay() + 6) % 7)
+    return monday.toISOString().slice(0, 10)
+  }
+  const matrixPeriods = [...new Set(reportSessions.filter(row => /^\d{4}-\d{2}-\d{2}$/.test(row.date)).map(row => reportPeriod(row.date)))].sort().reverse()
+  const selectedPeriod = matrixPeriods.includes(matrixPeriod) ? matrixPeriod : matrixPeriods[0]
+  const matrixSessions = reportSessions.filter(row => matrixPeriods.length && /^\d{4}-\d{2}-\d{2}$/.test(row.date) && reportPeriod(row.date) === selectedPeriod)
+    .sort((first, second) => first.date.localeCompare(second.date))
+  const matrixRows = studentAttendance.flatMap(row => {
+    const marks = matrixSessions.map(session => row.marks[session.id || session.sessionId]).filter(Boolean)
+    if (!marks.length) return []
+    const present = marks.filter(mark => ['Present', 'Late'].includes(mark)).length
+    return [{ ...row, present, absent: marks.filter(mark => mark === 'Absent').length, rate: present * 100 / marks.length }]
+  })
+  const matrixColumns = [
+    ['Roll Number', row => row.rollNumber], ['Student', row => row.name],
+    ...matrixSessions.map(session => [session.date + ' · ' + session.subject + ' · ' + session.section + ' #' + (session.id || session.sessionId), row => row.marks[session.id || session.sessionId] || '—']),
+    ['Present', row => row.present], ['Absent', row => row.absent], ['Attendance %', row => row.rate.toFixed(2)],
+  ]
+  const selectedStudentGroups = field => {
+    const totals = new Map()
+    for (const session of reportSessions) {
+      const mark = selectedStudentReport?.marks?.[session.id || session.sessionId]
+      if (!mark) continue
+      const label = field === 'month' ? session.date.slice(0, 7) : session.subject || 'Subject unavailable'
+      const group = totals.get(label) || { id: label, total: 0, attended: 0 }
+      group.total += 1
+      if (mark === 'Present' || mark === 'Late') group.attended += 1
+      totals.set(label, group)
+    }
+    return [...totals.values()]
+  }
+  const shortageStudents = studentAttendance.filter(row => row.rate < 75 && matchesStudent(row)).map(row => ({
+    ...row, deficit: 75 - row.rate, recovery: Math.ceil((75 * row.total - 100 * row.present) / 25),
+  }))
+  const shortagePageCount = Math.max(1, Math.ceil(shortageStudents.length / pageSize))
+  const shortagePage = Math.min(currentPage, shortagePageCount)
 
   return (
     <DashboardLayout>
@@ -720,12 +819,11 @@ function Attendance() {
           className="attendance-page-header"
           title="Student Attendance"
           subtitle="Manage student attendance registers, daily marking, and shortage monitoring."
-          compactSummary={[
+          compactSummary={activeTab === 'register' ? [
             { label: 'Recorded Sessions', value: summaryMetrics.totalSessions },
             { label: 'Avg Attendance', value: summaryMetrics.avgPercentage ?? '—', tone: summaryMetrics.avgPercentage == null ? 'archived' : 'active' },
             { label: 'Present Entries', value: summaryMetrics.totalPresent },
-            { label: 'Students at Risk', value: summaryMetrics.shortageCount, tone: summaryMetrics.shortageCount > 0 ? 'inactive' : 'default' },
-          ]}
+          ] : undefined}
         />
 
 
@@ -737,7 +835,7 @@ function Attendance() {
                   <FiSearch aria-hidden="true" />
                   <input
                     type="search"
-                    placeholder="Search subject, faculty or student"
+                    placeholder={studentQuery ? "Search student name, roll or admission number" : "Search subject, faculty or section"}
                     value={filterQuery}
                     onChange={(e) => {
                       setFilterQuery(e.target.value)
@@ -747,7 +845,7 @@ function Attendance() {
                   />
                 </label>
                 <div className="attendance-register-actions">
-                  <ExportMenu
+                  {activeTab === 'register' && <ExportMenu
                     rows={filteredSessions.map(s => ({
                       ...s,
                       attendanceRate: attendancePercentage(s.presentCount,s.totalStudents)==null ? 'Unavailable' : attendancePercentage(s.presentCount,s.totalStudents)+'%',
@@ -755,7 +853,7 @@ function Attendance() {
                     columns={ATTENDANCE_COLUMNS}
                     title="Attendance Register"
                     filename="attendance-register"
-                  />
+                  />}
                   <button
                     type="button"
                     className={`attendance-filter-toggle${hasRegisterFilters ? ' attendance-filter-toggle--active' : ''}`}
@@ -767,10 +865,29 @@ function Attendance() {
                     {hasRegisterFilters && <span className="attendance-filter-count" aria-label="Filters applied">{[filterCourseId, filterBranchId, filterDate, fromDate, toDate, sessionStatus].filter(Boolean).length}</span>}
                     {showRegisterFilters ? <FiChevronUp aria-hidden="true" /> : <FiChevronDown aria-hidden="true" />}
                   </button>
+                  {activeTab === 'reports' && <ExportMenu
+                    rows={reportView === 'subject' ? subjectAttendance : reportView === 'student' ? filteredStudentAttendance : matrixRows}
+                    columns={reportView === 'subject' ? [
+                      { label: 'Subject', value: 'subject' }, { label: 'Code', value: 'code' }, { label: 'Faculty', value: 'faculty' },
+                      { label: 'Sessions', value: 'sessions' }, { label: 'Present', value: 'present' }, { label: 'Absent', value: 'absent' }, { label: 'Attendance %', value: 'rate' },
+                    ] : reportView === 'student' ? [
+                      { label: 'Roll Number', value: 'rollNumber' }, { label: 'Student', value: 'name' }, { label: 'Present', value: 'present' },
+                      { label: 'Total', value: 'total' }, { label: 'Attendance %', value: row => row.rate.toFixed(2) },
+                    ] : matrixColumns.map(([label, value]) => ({ label, value }))}
+                    title="Attendance Report" filename="attendance-report"
+                    loading={loading || (reportView !== 'subject' && (reportLoading || Boolean(reportError)))}
+                  />}
+                  {activeTab === 'shortage' && <ExportMenu rows={shortageStudents} columns={[
+                    { value: 'rollNumber', label: 'Roll Number' }, { value: 'name', label: 'Student' },
+                    { value: 'course', label: 'Course' }, { value: 'branch', label: 'Branch' },
+                    { value: 'semester', label: 'Semester' }, { value: 'section', label: 'Section' },
+                    { value: 'total', label: 'Conducted' }, { value: 'present', label: 'Attended' },
+                    { value: row => row.rate.toFixed(2), label: 'Attendance %' }, { value: 'recovery', label: 'Sessions Needed' },
+                  ]} title="Attendance Shortage" filename="attendance-shortage-list" loading={reportLoading} />}
                   <button
                     type="button"
                     className="erp-btn erp-btn--primary"
-                    hidden={!canRecord} onClick={() => setTakeModalOpen(true)}
+                    hidden={!canRecord || activeTab !== 'register'} onClick={() => setTakeEditorOpen(true)}
                   >
                     <FiPlus /> Record Attendance
                   </button>
@@ -782,7 +899,7 @@ function Attendance() {
                     <label htmlFor="attendance-filter-course">Course</label>
                     <ProjectSelect id="attendance-filter-course" aria-label="Course" value={filterCourseId} onChange={(e) => {
                       setFilterCourseId(e.target.value)
-                      setFilterBranchId('')
+                      setFilterBranchId(''); setFilterSemesterId(''); setFilterSectionId(''); setFilterSubjectId('')
                       setCurrentPage(1)
                     }}>
                       <option value="">All Courses</option>
@@ -792,13 +909,31 @@ function Attendance() {
                   <div className="attendance-register-field">
                     <label htmlFor="attendance-filter-branch">Branch</label>
                     <ProjectSelect id="attendance-filter-branch" aria-label="Branch" value={filterBranchId} disabled={!filterCourseId} onChange={(e) => {
-                      setFilterBranchId(e.target.value)
+                      setFilterBranchId(e.target.value); setFilterSemesterId(''); setFilterSectionId(''); setFilterSubjectId('')
                       setCurrentPage(1)
                     }}>
                       <option value="">All Branches</option>
                       {filterBranches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}
                     </ProjectSelect>
                   </div>
+                  <label className="attendance-register-field">Semester
+                    <select className="erp-select" value={filterSemesterId} onChange={event => { setFilterSemesterId(event.target.value); setFilterSectionId(''); setFilterSubjectId(''); setCurrentPage(1) }}>
+                      <option value="">All semesters</option>
+                      {attendanceSemesterCatalog.filter(row => (!filterCourseId || String(row.courseId) === filterCourseId) && (!filterBranchId || String(row.branchId) === filterBranchId) && String(row.academicYearId) === String(currentAcademicYearId)).map(row => <option key={row.id} value={row.id}>{row.semesterName}</option>)}
+                    </select>
+                  </label>
+                  <label className="attendance-register-field">Section
+                    <select className="erp-select" value={filterSectionId} onChange={event => { setFilterSectionId(event.target.value); setFilterSubjectId(''); setCurrentPage(1) }}>
+                      <option value="">All sections</option>
+                      {registerSections.filter(row => !filterSemesterId || String(row.semesterId) === filterSemesterId).map(row => <option key={row.id} value={row.id}>{row.name}</option>)}
+                    </select>
+                  </label>
+                  {activeTab === 'reports' && <label className="attendance-register-field">Subject
+                    <select className="erp-select" value={filterSubjectId} onChange={event => setFilterSubjectId(event.target.value)}>
+                      <option value="">All subjects</option>
+                      {[...new Map(sessions.filter(row => row.subjectId && (!filterSemesterId || String(row.semesterId) === filterSemesterId) && (!filterSectionId || String(row.sectionId) === filterSectionId)).map(row => [row.subjectId, row.subject])).entries()].map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+                    </select>
+                  </label>}
                   {[
                     ['Date', 'Attendance date', filterDate, setFilterDate],
                     ['From date', 'Attendance from date', fromDate, setFromDate],
@@ -812,7 +947,7 @@ function Attendance() {
                       }} />
                     </label>
                   ))}
-                  <div className="attendance-register-field">
+                  {activeTab === 'register' && <div className="attendance-register-field">
                     <label htmlFor="attendance-filter-status">Session status</label>
                     <select id="attendance-filter-status" className="erp-select" value={sessionStatus} onChange={event => {
                       setSessionStatus(event.target.value)
@@ -821,7 +956,7 @@ function Attendance() {
                       <option value="">All statuses</option>
                       {['OPEN', 'COMPLETED', 'CANCELLED'].map(value => <option key={value}>{value}</option>)}
                     </select>
-                  </div>
+                  </div>}
                 </div>
                 {hasRegisterFilters && <button type="button" className="attendance-clear-filters" onClick={clearRegisterFilters}>Clear Filters</button>}
               </div>}
@@ -833,25 +968,293 @@ function Attendance() {
           <button
             type="button"
             className={`attendance-tab ${activeTab === 'register' ? 'active' : ''}`}
-            onClick={() => setActiveTab('register')}
+            onClick={() => { if (!savingSession && confirmDiscard()) { setMarkingStudents(originalRoster.current); setCurrentPage(1); setFilterSubjectId(''); setActiveTab('register') } }}
           >
-            <FiCalendar /> Attendance Dashboard
+            <FiCalendar /> Daily Attendance
           </button>
           <button
             type="button"
             className={`attendance-tab ${activeTab === 'reports' ? 'active' : ''}`}
-            onClick={() => setActiveTab('reports')}
+            onClick={() => { if (!savingSession && confirmDiscard()) { setMarkingStudents(originalRoster.current); setCurrentPage(1); setActiveTab('reports') } }}
           >
-            <FiBarChart2 /> Reports
+            <FiBarChart2 /> Attendance Reports
           </button>
           <button
             type="button"
             className={`attendance-tab ${activeTab === 'shortage' ? 'active' : ''}`}
-            onClick={() => setActiveTab('shortage')}
+            onClick={() => { if (!savingSession && confirmDiscard()) { setMarkingStudents(originalRoster.current); setActiveTab('shortage') } }}
           >
             <FiAlertTriangle /> Shortage List (&lt;75%)
           </button>
         </nav>
+
+        {activeTab === 'register' && takeEditorOpen && canRecord && (
+          <ViewDialog
+            className="attendance-record-dialog"
+            title="Record Student Attendance"
+            subtitle={attendanceAcademicYearName}
+            maxWidth="1000px"
+            busy={savingSession}
+            showExport={false}
+            onClose={() => {
+              if (!savingSession && confirmDiscard()) {
+                setMarkingStudents(originalRoster.current)
+                setTakeEditorOpen(false)
+              }
+            }}
+            footerActions={savedPending || !lockedSession ? (
+              <button type="button" className="erp-btn erp-btn--primary" onClick={handleSaveAttendance}
+                disabled={savingSession || (!savedPending && (loadingStudents || Boolean(rosterError) || !markingStudents.length || !takeScope.subjectId || !takeScope.facultyId))}>
+                <FiSave /> {savingSession ? 'Saving…' : savedPending ? 'Retry saved attendance refresh' : 'Save Attendance'}
+              </button>
+            ) : null}
+          >
+            {facultyIdentityError && <p role="alert">{facultyIdentityError}</p>}{occurrenceError && <p role="status">Timetable sessions unavailable. {occurrenceError}</p>}{saveError && <p role="alert">{saveError}</p>}{rosterError && <p role="alert">{rosterError} <button type="button" onClick={()=>handleFetchStudentsForMarking(takeScope)}>Retry class roster</button></p>}
+            {savedPending ? <p role="status">Attendance was saved. Refresh the register to see the saved session.</p> : <><div className="attendance-record-body">
+              {/* Scope Selection Form */}
+              <div className="erp-form-grid">
+{!onlyCourseId && <div className="erp-form-group"><label>Course <span className="attendance-required-mark">*</span></label>
+                  <ProjectSelect
+                    className="erp-select"
+                    forceCustom
+                    menuPlacement="bottom"
+                    aria-label="Attendance course" value={takeScope.courseId}
+                    onChange={(e) => changeTakeScope(prev => ({ ...prev, courseId: e.target.value, branchId: '', semesterId: '', sectionId: '', subjectId: '', subject: '', subjectCode: '', facultyId: '', faculty: '' }))}
+                  >
+                    <option value="">Select Course</option>
+                    {attendanceCourses.map(c => (
+                      <option key={c.id ?? c.courseId} value={c.id ?? c.courseId}>{c.name || c.courseName || c.CourseName || c.code || c.courseCode || `Course ${c.id ?? c.courseId}`}</option>
+                    ))}
+                  </ProjectSelect>
+                </div>}
+
+<div className="erp-form-group">
+                  <label>Branch <span className="attendance-required-mark">*</span></label>
+                  <ProjectSelect
+                    className="erp-select"
+                    forceCustom
+                    menuPlacement="bottom"
+                    aria-label="Attendance branch" value={takeScope.branchId}
+                    disabled={!takeScope.courseId}
+                    onChange={(e) => changeTakeScope(prev => ({ ...prev, branchId: e.target.value, semesterId: '', sectionId: '', subjectId: '', subject: '', subjectCode: '', facultyId: '', faculty: '' }))}
+                  >
+                    <option value="">Select Branch</option>
+                    {takeBranches.map(b => (
+                      <option key={b.id ?? b.branchId} value={b.id ?? b.branchId}>{b.name || b.branchName || b.BranchName || b.code || b.branchCode || `Branch ${b.id ?? b.branchId}`}</option>
+                    ))}
+                  </ProjectSelect>
+                </div>
+
+<div className="erp-form-group">
+                  <label>Semester <span className="attendance-required-mark">*</span></label>
+                  <ProjectSelect
+                    className="erp-select"
+                    forceCustom
+                    menuPlacement="bottom"
+                    aria-label="Attendance semester" value={takeScope.semesterId}
+                    disabled={savingSession || !takeScope.branchId}
+                    onChange={(e) => changeTakeScope(prev => ({ ...prev, semesterId: e.target.value, sectionId: '', subjectId: '', subject: '', subjectCode: '' }))}
+                  >
+                    <option value="">Select Semester</option>
+                    {takeSemesters.map(s => (
+                      <option key={s.id} value={s.id}>{s.semesterName}</option>
+                    ))}
+                  </ProjectSelect>
+                </div>
+
+                <div className="erp-form-group">
+                  <label>Section <span className="attendance-required-mark">*</span></label>
+                  <ProjectSelect
+                    className="erp-select"
+                    forceCustom
+                    menuPlacement="bottom"
+                    aria-label="Attendance section" value={takeScope.sectionId} disabled={savingSession || !takeScope.semesterId}
+                    onChange={(e) => changeTakeScope(prev => ({ ...prev, sectionId: e.target.value, subjectId: '', subject: '', subjectCode: '', facultyId: '', faculty: '' }))}
+                  >
+                    <option value="">Select Section</option>
+                    {takeSections.map(sec => (
+                      <option key={sec.id} value={sec.id}>{sec.name}</option>
+                    ))}
+                  </ProjectSelect>
+                </div>
+
+                <div className="erp-form-group">
+                  <label>Session Date <span className="attendance-required-mark">*</span></label>
+                  <input
+                    type="date" max={localDate(new Date())}
+                    className="erp-input"
+                    value={takeScope.date}
+                    onChange={(e) => changeTakeScope(prev => ({ ...prev, date: e.target.value }))}
+                  />
+                </div>
+
+                                {availableOccurrences.length > 0 && <label className="erp-form-group">
+                  <span>Timetable session</span>
+                  <select className="erp-select" value={takeScope.timetableEntryId} onChange={event => selectOccurrence(event.target.value)}>
+                    <option value="">Select a session or mark manually</option>
+                    {availableOccurrences.map(row => <option key={row.timetableEntryId} value={row.timetableEntryId}>{row.subjectName} · {String(row.startTime || '').slice(0, 5)}–{String(row.endTime || '').slice(0, 5)}</option>)}
+                  </select>
+                </label>}
+
+                <div className="erp-form-group">
+                  <label>Subject <span className="attendance-required-mark">*</span></label>
+                  <ProjectSelect
+                    className="erp-select"
+                    forceCustom
+                    menuPlacement="bottom"
+                    aria-label="Attendance subject" value={takeScope.subjectId || ''}
+                    disabled={savingSession || loadingSubjects || !takeScope.sectionId || Boolean(takeScope.timetableEntryId)}
+                    onChange={(e) => {
+                      const selectedVal = e.target.value
+                      const selectedSub = availableSubjects.find(sub => String(getSubjectId(sub) ?? '') === String(selectedVal))
+                      if (selectedSub) {
+                        const subName = selectedSub.subjectName || selectedSub.name || ''
+                        const subCode = selectedSub.subjectCode || selectedSub.code || ''
+                        const subId = String(getSubjectId(selectedSub) ?? '')
+
+                        changeTakeScope(prev=>({...prev,subjectId:subId,subject:subName,subjectCode:subCode,facultyId:isFaculty ? ownFacultyId : '',faculty:isFaculty ? branchFaculty[0]?.fullName || branchFaculty[0]?.name || '' : ''}))
+                      } else {
+                        changeTakeScope(prev => ({ ...prev, subjectId: '', subject: '', subjectCode: '' }))
+                      }
+                    }}
+                  >
+                    <option value="">
+                      {loadingSubjects
+                        ? 'Loading subjects...'
+                        : !takeScope.branchId
+                        ? 'Select Branch first'
+                        : availableSubjects.length === 0
+                        ? 'No subjects found for this branch'
+                        : 'Select Subject'}
+                    </option>
+                    {availableSubjects.map((sub) => {
+                      const name = sub.subjectName || sub.subject_name || sub.name || sub.title || sub.subject || 'Subject'
+                      const code = sub.subjectCode || sub.subject_code || sub.code || ''
+                      const val = String(getSubjectId(sub) ?? '')
+                      return (
+                        <option key={val} value={val}>
+                          {name} {code ? `(${code})` : ''}
+                        </option>
+                      )
+                    })}
+                  </ProjectSelect>
+                  {!loadingSubjects && takeScope.branchId && availableSubjects.length === 0 && (
+                    <small className="attendance-field-help">No subjects configured in Subject Management for this branch.</small>
+                  )}
+                </div>
+
+                {!isFaculty && <div className="erp-form-group">
+                  <label>Faculty In-Charge <span className="attendance-required-mark">*</span></label>
+                  <ProjectSelect
+                    className="erp-select"
+                    forceCustom
+                    menuPlacement="bottom"
+                    aria-label="Attendance faculty" value={takeScope.facultyId || ''}
+                    disabled={savingSession || loadingFaculty || !takeScope.branchId || Boolean(takeScope.timetableEntryId)}
+                    onChange={(e) => {
+                      const selectedFaculty = activeFaculty.find(member => String(member.id || member.facultyId) === String(e.target.value))
+                      changeTakeScope(prev => ({ ...prev, facultyId: e.target.value, faculty: selectedFaculty?.fullName || '' }))
+                    }}
+                  >
+                    <option value="">{loadingFaculty ? 'Loading active faculty...' : !takeScope.branchId ? 'Select Branch first' : 'Select Faculty In-Charge'}</option>
+                    {branchFaculty.map(member => (
+                      <option key={member.id || member.facultyId} value={member.id || member.facultyId}>
+                        {[member.fullName, member.employeeId || member.facultyCode, member.designation].filter(Boolean).join(' - ')}
+                      </option>
+                    ))}
+                  </ProjectSelect>
+                  {!loadingFaculty && takeScope.branchId && branchFaculty.length === 0 && <small className="attendance-field-help">No active faculty assignment is available for the selected branch.</small>}
+                </div>}
+              </div>
+
+
+
+              {/* Roster Marking Grid / Loading / Empty State */}
+              {loadingStudents && (
+                <div className="attendance-marking-section">
+                  <p>Loading Student Roster...</p>
+                </div>
+              )}
+
+              {!loadingStudents && !rosterError && takeScope.courseId && takeScope.branchId && takeScope.semesterId && takeScope.sectionId && markingStudents.length === 0 && (
+                <div className="attendance-marking-section">
+                  <p>No students found for the selected section/scope.</p>
+                  <small>You can assign students in Section Management or select another section.</small>
+                </div>
+              )}
+
+              {!loadingStudents && markingStudents.length > 0 && (
+                <div className="attendance-marking-section">
+                  <div className="attendance-marking-header">
+                    <h3>Student Roster ({markingStudents.length})</h3>
+                    {lockedSession && <p role="status">This session is {String(loadedSession.sessionStatus).toLowerCase()}. Saved attendance is shown below.</p>}
+                    {!lockedSession && <div className="attendance-bulk-buttons"><button type="button" className="erp-btn erp-btn--secondary" disabled={savingSession || !selectedStudents.length} onClick={() => handleMarkAll('Present', true)}>Selected Present</button><button type="button" className="erp-btn erp-btn--secondary" disabled={savingSession || !selectedStudents.length} onClick={() => handleMarkAll('Absent', true)}>Selected Absent</button><button type="button" className="erp-btn erp-btn--secondary" disabled={savingSession || !dirty} onClick={() => setMarkingStudents(originalRoster.current)}>Reset Changes</button>
+                      <button
+                        type="button"
+                        className="erp-btn erp-btn--secondary"
+                        onClick={() => handleMarkAll('Present')}
+                      >
+                        <FiUserCheck /> Mark All Present
+                      </button>
+                      <button
+                        type="button"
+                        className="erp-btn erp-btn--secondary"
+                        onClick={() => handleMarkAll('Absent')}
+                      >
+                        <FiUserX /> Mark All Absent
+                      </button>
+                    </div>}
+                  </div>
+
+                  <div className="erp-table-responsive">
+                    <table className="erp-table attendance-marking-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">Select</th>
+                          <th>Roll Number</th>
+                          <th>Student Name</th>
+                          <th>Admission Number</th>
+                          <th>Attendance Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {markingStudents.map((s, idx) => (
+                          <tr key={s.studentId || idx}>
+                            <td><input type="checkbox" aria-label={`Select ${s.name}`} disabled={savingSession || lockedSession || Boolean(s.attendanceDetailId)} checked={selectedStudents.includes(s.studentId)} onChange={event => setSelectedStudents(current => event.target.checked ? [...current, s.studentId] : current.filter(id => id !== s.studentId))} /></td>
+                            <td><strong>{s.rollNumber || s.id}</strong></td>
+                            <td>{s.name}</td>
+                            <td>{s.admissionNumber || '—'}</td>
+                            <td>
+                              <div className="attendance-status-radios">
+                                {['Present', 'Absent', 'Late', 'Excused'].map((statusOption) => (
+                                  <label
+                                    key={statusOption}
+                                    className={`attendance-radio-chip ${s.status === statusOption ? `active active--${statusOption.toLowerCase()}` : ''}`}
+                                  >
+                                    <input
+                                      type="radio"
+                                      disabled={savingSession || lockedSession || Boolean(s.attendanceDetailId)} name={`status-${s.studentId}`}
+                                      value={statusOption}
+                                      checked={s.status === statusOption}
+                                      onChange={() => handleStudentStatusChange(s.studentId, statusOption)}
+                                    />
+                                    {statusOption}
+                                  </label>
+                                ))}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+
+                </div>
+              )}
+            </div>
+           </>}</ViewDialog>
+        )}
 
         {/* TAB 1: Attendance Register */}
         {activeTab === 'register' && (
@@ -939,406 +1342,50 @@ function Attendance() {
         )}
 
         {activeTab === 'reports' && (
-          <section className={`attendance-content attendance-reports report-view-${reportLayout}`}>
+          <section className="attendance-content attendance-reports">
             {reportLoading && <p role="status">Loading attendance report records…</p>}{reportError && <p role="alert">{reportError} <button type="button" onClick={()=>setReportAttempt(value=>value+1)}>Retry attendance reports</button></p>}
-            <ExportMenu rows={reportView==='subject'?subjectAttendance:reportView==='weekly'?weeklyAttendance:reportView==='monthly'?monthlyAttendance:reportView==='daily'?dailyAttendance:filteredStudentAttendance} columns={reportView==='student'?[{label:'Student',value:'name'},{label:'Present',value:'present'},{label:'Total',value:'total'},{label:'Attendance %',value:'rate'}]:[{label:reportView==='subject'?'Subject':'Period',value:reportView==='subject'?'subject':'month'},{label:'Sessions',value:'sessions'},{label:'Present',value:'present'},{label:'Total',value:'total'},{label:'Attendance %',value:'rate'}]} title="Attendance Report" filename="attendance-report" loading={loading || (reportView==='student' && (reportLoading || Boolean(reportError)))}/>
             <div className="attendance-report-nav" role="tablist" aria-label="Attendance report sections">
               <button type="button" role="tab" aria-selected={reportView === 'subject'} className={reportView === 'subject' ? 'active' : ''} onClick={() => setReportView('subject')}>Subject-wise</button>
               <button type="button" role="tab" aria-selected={reportView === 'daily'} className={reportView === 'daily' ? 'active' : ''} onClick={() => setReportView('daily')}>Daily</button><button type="button" role="tab" aria-selected={reportView === 'weekly'} className={reportView === 'weekly' ? 'active' : ''} onClick={() => setReportView('weekly')}>Weekly</button><button type="button" role="tab" aria-selected={reportView === 'monthly'} className={reportView === 'monthly' ? 'active' : ''} onClick={() => setReportView('monthly')}>Monthly</button>
               <button type="button" role="tab" aria-selected={reportView === 'student'} className={reportView === 'student' ? 'active' : ''} onClick={() => setReportView('student')}>Student Report</button>
             </div>
-            <div className="attendance-report-context">
-              <div><span>Attendance reports</span><strong>Review recorded attendance by subject, month, or student.</strong></div>
-              <small>Required attendance <b>75%</b></small>
-            </div>
-            <div className={`attendance-report-grid report-view-${reportLayout}`}>
-              <article className="erp-card"><div className="erp-card-header"><div><h2 className="erp-card-title">Subject-wise Attendance</h2><p className="erp-card-subtitle">Attendance performance for every recorded subject.</p></div></div><ReportTable rows={subjectAttendance} empty="No subject sessions recorded yet." columns={[['Subject', row => row.subject], ['Sessions', row => row.sessions], ['Present / Total', row => `${row.present} / ${row.total}`], ['Attendance', row => <AttendanceRateBadge rate={row.rate} />]]} /></article>
-              <article className="erp-card"><div className="erp-card-header"><div><h2 className="erp-card-title">{reportView==='daily'?'Daily Attendance':reportView==='weekly'?'Weekly Attendance':'Monthly Attendance'}</h2><p className="erp-card-subtitle">Class attendance for the selected period.</p></div></div><ReportTable rows={reportView==='daily'?dailyAttendance:reportView==='weekly'?weeklyAttendance:monthlyAttendance} empty="No attendance data for this period." columns={[['Period', row => row.month], ['Sessions', row => row.sessions], ['Present / Total', row => `${row.present} / ${row.total}`], ['Attendance', row => <AttendanceRateBadge rate={row.rate} />]]} /></article>
-            </div>
-            <article className="erp-card"><div className="erp-card-header"><div><h2 className="erp-card-title">Student Attendance Report</h2><p className="erp-card-subtitle">Student-wise attendance calculated from all recorded subject sessions.</p></div><label>Student<select value={reportStudent} onChange={event=>setReportStudent(event.target.value)}><option value="">All students</option>{studentAttendance.map(row=><option value={row.id} key={row.id}>{row.name} · {row.rollNumber}</option>)}</select></label></div><ReportTable rows={filteredStudentAttendance} empty="No student attendance records available." columns={[['Roll Number', row => row.rollNumber], ['Student', row => row.name], ['Course / Branch', row => `${row.course} | ${row.branch}`], ['Present / Total', row => `${row.present} / ${row.total}`], ['Attendance', row => <AttendanceRateBadge rate={row.rate} criticalThreshold={65} />], ['Action', row => <button type="button" className="erp-btn erp-btn--icon" title="View Student Report" aria-label="View Student Report" onClick={() => setSelectedStudentReport(row)}><FiEye /></button>]]} /></article>
+            {reportView === 'subject' && <article className="erp-card"><ReportTable rows={subjectAttendance} empty="No confirmed subject sessions." columns={[
+              ['Subject', row => row.subject], ['Code', row => row.code], ['Faculty', row => row.faculty], ['Conducted Sessions', row => row.sessions],
+              ['Present Marks', row => row.present], ['Absent Marks', row => row.absent], ['Attendance', row => <AttendanceRateBadge rate={row.rate} />],
+              ['Status', row => row.rate == null ? 'Unavailable' : row.rate < 75 ? 'Below threshold' : 'Meets threshold'],
+            ]} /></article>}
+            {['daily', 'weekly', 'monthly'].includes(reportView) && !reportLoading && !reportError && <article className="erp-card">
+              <div className="erp-card-header"><label>{reportView === 'monthly' ? 'Month' : reportView === 'weekly' ? 'Week starting' : 'Date'}
+                <select className="erp-select" value={selectedPeriod || ''} onChange={event => setMatrixPeriod(event.target.value)}>
+                  {!matrixPeriods.length && <option value="">No confirmed sessions</option>}
+                  {matrixPeriods.map(period => <option key={period}>{period}</option>)}
+                </select>
+              </label></div>
+              <ReportTable rows={matrixRows} columns={matrixColumns} empty="No confirmed attendance for this period." />
+            </article>}
+            {reportView === 'student' && !reportLoading && !reportError && <article className="erp-card"><div className="erp-card-header"><div><h2 className="erp-card-title">Student Attendance Report</h2><p className="erp-card-subtitle">Student-wise attendance calculated from all recorded subject sessions.</p></div><label>Student<select value={reportStudent} onChange={event=>setReportStudent(event.target.value)}><option value="">All students</option>{studentAttendance.map(row=><option value={row.id} key={row.id}>{row.name} · {row.rollNumber}</option>)}</select></label></div><ReportTable rows={filteredStudentAttendance} empty="No student attendance records available." columns={[['Roll Number', row => row.rollNumber], ['Student', row => row.name], ['Course / Branch', row => `${row.course} | ${row.branch}`], ['Present / Total', row => `${row.present} / ${row.total}`], ['Attendance', row => <AttendanceRateBadge rate={row.rate} criticalThreshold={65} />], ['Action', row => <button type="button" className="erp-btn erp-btn--icon" title="View Student Report" aria-label="View Student Report" onClick={() => setSelectedStudentReport(row)}><FiEye /></button>]]} /></article>}
           </section>
-        )}
-
-        {/* Record Attendance popup */}
-    {takeModalOpen && canRecord && (
-          <ViewDialog title="Record Student Attendance" subtitle="Set the class scope and session details, then load the student roster." onClose={() => setTakeModalOpen(false)} busy={savingSession} showExport={false} hideFooter maxWidth="1150px">{saveError && <p role="alert">{saveError}</p>}{rosterError && <p role="alert">{rosterError} <button type="button" onClick={()=>handleFetchStudentsForMarking(takeScope)}>Retry class roster</button></p>}
-            {savedPending ? <div><p>Attendance was saved. Refresh the register to see the saved session.</p><button type="button" className="erp-btn erp-btn--primary" disabled={savingSession} onClick={handleSaveAttendance}>Retry saved attendance refresh</button></div> : <><div className="attendance-record-body">
-              {/* Scope Selection Form */}
-              <div className="erp-form-grid">
-                <div className="erp-form-group">
-                  <label>Academic Year <span className="attendance-required-mark">*</span></label>
-                  <input
-                    type="text"
-                    className="erp-input attendance-academic-year"
-                    value={attendanceAcademicYearName}
-                    placeholder="No academic year configured"
-                    readOnly
-                  />
-                </div>
-
-                <div className="erp-form-group">
-                  <label>Course <span className="attendance-required-mark">*</span></label>
-                  <ProjectSelect
-                    className="erp-select"
-                    forceCustom
-                    menuPlacement="bottom"
-                    aria-label="Attendance course" value={takeScope.courseId}
-                    onChange={(e) => setTakeScope(prev => ({ ...prev, courseId: e.target.value, branchId: '', semesterId: '', sectionId: '', subjectId: '', subject: '', subjectCode: '', facultyId: '', faculty: '' }))}
-                  >
-                    <option value="">Select Course</option>
-                    {attendanceCourses.map(c => (
-                      <option key={c.id ?? c.courseId} value={c.id ?? c.courseId}>{c.name || c.courseName || c.CourseName || c.code || c.courseCode || `Course ${c.id ?? c.courseId}`}</option>
-                    ))}
-                  </ProjectSelect>
-                </div>
-
-                <div className="erp-form-group">
-                  <label>Course Code</label>
-                  <input
-                    type="text"
-                    className="erp-input attendance-auto-code"
-                    value={takeCourseCode}
-                    placeholder="Auto-filled after course selection"
-                    readOnly
-                  />
-                </div>
-
-                <div className="erp-form-group">
-                  <label>Branch <span className="attendance-required-mark">*</span></label>
-                  <ProjectSelect
-                    className="erp-select"
-                    forceCustom
-                    menuPlacement="bottom"
-                    aria-label="Attendance branch" value={takeScope.branchId}
-                    disabled={!takeScope.courseId}
-                    onChange={(e) => setTakeScope(prev => ({ ...prev, branchId: e.target.value, semesterId: '', sectionId: '', subjectId: '', subject: '', subjectCode: '', facultyId: '', faculty: '' }))}
-                  >
-                    <option value="">Select Branch</option>
-                    {takeBranches.map(b => (
-                      <option key={b.id ?? b.branchId} value={b.id ?? b.branchId}>{b.name || b.branchName || b.BranchName || b.code || b.branchCode || `Branch ${b.id ?? b.branchId}`}</option>
-                    ))}
-                  </ProjectSelect>
-                </div>
-
-                <div className="erp-form-group">
-                  <label>Branch Code</label>
-                  <input
-                    type="text"
-                    className="erp-input attendance-auto-code"
-                    value={takeBranchCode}
-                    placeholder="Auto-filled after branch selection"
-                    readOnly
-                  />
-                </div>
-
-                <div className="erp-form-group">
-                  <label>Semester <span className="attendance-required-mark">*</span></label>
-                  <ProjectSelect
-                    className="erp-select"
-                    forceCustom
-                    menuPlacement="bottom"
-                    aria-label="Attendance semester" value={takeScope.semesterId}
-                    disabled={!takeScope.courseId}
-                    onChange={(e) => setTakeScope(prev => ({ ...prev, semesterId: e.target.value, sectionId: '', subjectId: '', subject: '', subjectCode: '' }))}
-                  >
-                    <option value="">Select Semester</option>
-                    {takeSemesters.map(s => (
-                      <option key={s.id} value={s.id}>{s.semesterName}</option>
-                    ))}
-                  </ProjectSelect>
-                </div>
-
-                <div className="erp-form-group">
-                  <label>Section <span className="attendance-required-mark">*</span></label>
-                  <ProjectSelect
-                    className="erp-select"
-                    forceCustom
-                    menuPlacement="bottom"
-                    aria-label="Attendance section" value={takeScope.sectionId}
-                    onChange={(e) => setTakeScope(prev => ({ ...prev, sectionId: e.target.value }))}
-                  >
-                    <option value="">Select Section</option>
-                    {takeSections.map(sec => (
-                      <option key={sec.id} value={sec.id}>{sec.name}</option>
-                    ))}
-                  </ProjectSelect>
-                </div>
-
-                <div className="erp-form-group">
-                  <label>Session Date <span className="attendance-required-mark">*</span></label>
-                  <input
-                    type="date"
-                    className="erp-input"
-                    value={takeScope.date}
-                    onChange={(e) => setTakeScope(prev => ({ ...prev, date: e.target.value }))}
-                  />
-                </div>
-
-                <div className="erp-form-group">
-                  <label>Subject / Course Module <span className="attendance-required-mark">*</span></label>
-                  <ProjectSelect
-                    className="erp-select"
-                    forceCustom
-                    menuPlacement="bottom"
-                    aria-label="Attendance subject" value={takeScope.subjectId || ''}
-                    disabled={loadingSubjects || !takeScope.branchId}
-                    onChange={(e) => {
-                      const selectedVal = e.target.value
-                      const selectedSub = availableSubjects.find(sub => String(getSubjectId(sub) ?? '') === String(selectedVal))
-                      if (selectedSub) {
-                        const subName = selectedSub.subjectName || selectedSub.name || ''
-                        const subCode = selectedSub.subjectCode || selectedSub.code || ''
-                        const subId = String(getSubjectId(selectedSub) ?? '')
-
-                        setTakeScope(prev=>({...prev,subjectId:subId,subject:subName,subjectCode:subCode,facultyId:'',faculty:''}))
-                      } else {
-                        setTakeScope(prev => ({ ...prev, subjectId: '', subject: '', subjectCode: '' }))
-                      }
-                    }}
-                  >
-                    <option value="">
-                      {loadingSubjects
-                        ? 'Loading subjects...'
-                        : !takeScope.branchId
-                        ? 'Select Branch first'
-                        : availableSubjects.length === 0
-                        ? 'No subjects found for this branch'
-                        : 'Select Subject'}
-                    </option>
-                    {availableSubjects.map((sub) => {
-                      const name = sub.subjectName || sub.subject_name || sub.name || sub.title || sub.subject || 'Subject'
-                      const code = sub.subjectCode || sub.subject_code || sub.code || ''
-                      const val = String(getSubjectId(sub) ?? '')
-                      return (
-                        <option key={val} value={val}>
-                          {name} {code ? `(${code})` : ''}
-                        </option>
-                      )
-                    })}
-                  </ProjectSelect>
-                  {!loadingSubjects && takeScope.branchId && availableSubjects.length === 0 && (
-                    <small className="attendance-field-help">No subjects configured in Subject Management for this branch.</small>
-                  )}
-                </div>
-
-                <div className="erp-form-group">
-                  <label>Subject Code</label>
-                  <input
-                    type="text"
-                    className="erp-input attendance-auto-code"
-                    value={takeScope.subjectCode}
-                    placeholder="Auto-filled after subject selection"
-                    readOnly
-                  />
-                </div>
-
-                <div className="erp-form-group">
-                  <label>Faculty In-Charge <span className="attendance-required-mark">*</span></label>
-                  <ProjectSelect
-                    className="erp-select"
-                    forceCustom
-                    menuPlacement="bottom"
-                    aria-label="Attendance faculty" value={takeScope.facultyId || ''}
-                    disabled={loadingFaculty || !takeScope.branchId}
-                    onChange={(e) => {
-                      const selectedFaculty = activeFaculty.find(member => String(member.id || member.facultyId) === String(e.target.value))
-                      setTakeScope(prev => ({ ...prev, facultyId: e.target.value, faculty: selectedFaculty?.fullName || '' }))
-                    }}
-                  >
-                    <option value="">{loadingFaculty ? 'Loading active faculty...' : !takeScope.branchId ? 'Select Branch first' : 'Select Faculty In-Charge'}</option>
-                    {branchFaculty.map(member => (
-                      <option key={member.id || member.facultyId} value={member.id || member.facultyId}>
-                        {[member.fullName, member.employeeId || member.facultyCode, member.designation].filter(Boolean).join(' - ')}
-                      </option>
-                    ))}
-                  </ProjectSelect>
-                  {!loadingFaculty && takeScope.branchId && branchFaculty.length === 0 && <small className="attendance-field-help">No active faculty assignment is available for the selected branch.</small>}
-                </div>
-              </div>
-
-              <div className="attendance-fetch-action">
-                <button
-                  type="button"
-                  className="erp-btn erp-btn--primary"
-                  disabled={loadingStudents || !takeScope.courseId || !takeScope.branchId || !takeScope.semesterId || !takeScope.sectionId}
-                  onClick={() => handleFetchStudentsForMarking(takeScope)}
-                >
-                  {loadingStudents ? 'Fetching Roster...' : 'Refresh Student Roster'}
-                </button>
-              </div>
-
-              {/* Roster Marking Grid / Loading / Empty State */}
-              {loadingStudents && (
-                <div className="attendance-marking-section" style={{ textAlign: 'center', padding: '2rem 1rem' }}>
-                  <p style={{ color: '#4B3F72', fontWeight: 600 }}>Loading Student Roster...</p>
-                </div>
-              )}
-
-              {!loadingStudents && takeScope.courseId && takeScope.branchId && takeScope.semesterId && takeScope.sectionId && markingStudents.length === 0 && (
-                <div className="attendance-marking-section" style={{ textAlign: 'center', padding: '1.5rem 1rem', background: '#FAF9FE', borderRadius: '8px', margin: '1rem 0' }}>
-                  <p style={{ color: '#666', marginBottom: '0.5rem' }}>No students found for the selected section/scope.</p>
-                  <small style={{ color: '#888' }}>You can assign students in Section Management or select another section.</small>
-                </div>
-              )}
-
-              {!loadingStudents && markingStudents.length > 0 && (
-                <div className="attendance-marking-section">
-                  <div className="attendance-marking-header">
-                    <h3>Student Roster ({markingStudents.length} Students)</h3>
-                    <div className="attendance-bulk-buttons">
-                      <button
-                        type="button"
-                        className="erp-btn erp-btn--secondary"
-                        onClick={() => handleMarkAll('Present')}
-                      >
-                        <FiUserCheck /> Mark All Present
-                      </button>
-                      <button
-                        type="button"
-                        className="erp-btn erp-btn--secondary"
-                        onClick={() => handleMarkAll('Absent')}
-                      >
-                        <FiUserX /> Mark All Absent
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="erp-table-responsive">
-                    <table className="erp-table attendance-marking-table">
-                      <thead>
-                        <tr>
-                          <th>#</th>
-                          <th>Roll Number</th>
-                          <th>Student Name</th>
-                          <th>Status Marking</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {markingStudents.map((s, idx) => (
-                          <tr key={s.studentId || idx}>
-                            <td>{idx + 1}</td>
-                            <td><strong>{s.rollNumber || s.id}</strong></td>
-                            <td>{s.name}</td>
-                            <td>
-                              <div className="attendance-status-radios">
-                                {['Present', 'Absent', 'Late', 'Excused'].map((statusOption) => (
-                                  <label
-                                    key={statusOption}
-                                    className={`attendance-radio-chip ${s.status === statusOption ? `active active--${statusOption.toLowerCase()}` : ''}`}
-                                  >
-                                    <input
-                                      type="radio"
-                                      name={`status-${s.studentId}`}
-                                      value={statusOption}
-                                      checked={s.status === statusOption}
-                                      onChange={() => handleStudentStatusChange(s.studentId, statusOption)}
-                                    />
-                                    {statusOption}
-                                  </label>
-                                ))}
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div className="attendance-save-footer">
-                    <button
-                      type="button"
-                      className="erp-btn erp-btn--primary erp-btn--lg"
-                      disabled={savingSession || !canRecord}
-                      onClick={handleSaveAttendance}
-                    >
-                      <FiSave /> {savingSession ? 'Saving Session...' : savedPending ? 'Retry saved attendance refresh' : 'Save & Publish Attendance'}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-           </>}</ViewDialog>
         )}
 
         {/* TAB 3: Shortage List */}
-        {activeTab === 'shortage' && (
-          <section className="attendance-content">
-            <div className="erp-card">
-              <div className="erp-card-header">
-                <div>
-                  <h2 className="erp-card-title">Attendance Shortage List (&lt; 75% Threshold)</h2>
-                  <p className="erp-card-subtitle">{shortageStudents.length} students require attendance intervention. Filter using the toolbar above to notify an affected student.</p>
-                </div>
-                <div className="attendance-shortage-actions">
-                  <ExportMenu
-                    rows={shortageStudents.map(p => ({
-                      studentId: p.studentId || p.id,
-                      name: p.personal?.fullName || p.name,
-                      rollNumber: p.academic?.rollNumber || p.rollNumber,
-                      course: p.academic?.course || 'B.Tech',
-                      branch: p.academic?.branch || 'CSE',
-                      semester: p.academic?.semester || 'Semester 1',
-                      attendancePercentage: `${p.attendanceRate ?? 'Unavailable'}%`,
-                      status: 'Shortage (Exam Ineligible)',
-                    }))}
-                    columns={[
-                      { value: 'rollNumber', label: 'Roll No' },
-                      { value: 'name', label: 'Student Name' },
-                      { value: 'course', label: 'Course' },
-                      { value: 'branch', label: 'Branch' },
-                      { value: 'semester', label: 'Semester' },
-                      { value: 'attendancePercentage', label: 'Attendance' },
-                      { value: 'status', label: 'Eligibility Status' },
-                    ]}
-                    title="Attendance Shortage"
-                    filename="attendance-shortage-list"
-                  />
-                </div>
-              </div>
-
-              <div className="erp-table-responsive">
-                <table className="erp-table">
-                  <thead>
-                    <tr>
-                      <th>Roll Number</th>
-                      <th>Student Name</th>
-                      <th>Course / Branch</th>
-                      <th>Semester</th>
-                      <th>Recorded Attendance</th>
-                      <th>Deficit</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {shortageStudents.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="text-center py-6">
-                          <FiCheckCircle className="text-success text-2xl mb-2" />
-                          <p>No confirmed attendance shortages were found in the available API records.</p>
-                        </td>
-                      </tr>
-                    ) : (
-                      shortageStudents.map((p) => {
-                        const rate = p.attendanceRate || 68
-                        return (
-                          <tr key={p.studentId || p.id}>
-                            <td><strong>{p.academic?.rollNumber || p.rollNumber || p.id}</strong></td>
-                            <td>{p.personal?.fullName || p.name}</td>
-                            <td>{p.academic?.course || 'B.Tech'} | {p.academic?.branch || 'CSE'}</td>
-                            <td>{p.academic?.semester || 'Semester 1'}</td>
-                            <td><AttendanceRateBadge rate={rate} criticalThreshold={65} /></td>
-                            <td>{75 - rate}% required</td>
-                            <td><div className="attendance-shortage-status"><StatusBadge status={rate < 65 ? 'Danger' : 'Warning'} label={rate < 65 ? 'Critical' : 'Shortage'} /><button type="button" className="erp-btn erp-btn--icon" title="View Details" aria-label="View Details" onClick={() => setSelectedStudentReport(p.attendanceReport || { id: p.studentId || p.id, name: p.personal?.fullName || p.name, rollNumber: p.academic?.rollNumber || p.rollNumber, course: p.academic?.course || '-', branch: p.academic?.branch || '-', rate, present: 0, total: 0 })}><FiEye /></button><button type="button" className="erp-btn erp-btn--secondary" disabled title="Attendance notifications require a backend notification service"><FiBell /> Notify</button></div></td>
-                          </tr>
-                        )
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </section>
-        )}
+        {activeTab === 'shortage' && <section className="erp-card attendance-content attendance-shortage-table">
+          {reportError ? <p role="alert">{reportError} <button type="button" onClick={() => setReportAttempt(value => value + 1)}>Retry shortages</button></p> : reportLoading ? <p role="status">Loading confirmed attendance…</p> : <>
+            <ReportTable rows={shortageStudents.slice((shortagePage - 1) * pageSize, shortagePage * pageSize)}
+              empty={studentAttendance.length ? 'No students currently fall below the attendance threshold.' : 'No attendance records are available to calculate shortages.'}
+              columns={[
+                ['Roll Number', row => row.rollNumber], ['Student', row => row.name],
+                ['Course / Branch', row => row.course + ' / ' + row.branch],
+                ['Semester / Section', row => [row.semester, row.section].filter(Boolean).join(' / ')],
+                ['Conducted', row => row.total], ['Attended', row => row.present],
+                ['Attendance', row => <AttendanceRateBadge rate={Number(row.rate.toFixed(2))} />],
+                ['Deficit', row => row.deficit.toFixed(2) + ' pp'],
+                ['Sessions Needed', row => row.recovery],
+                ['Status', row => <StatusBadge status={row.rate < 65 ? 'Danger' : 'Warning'} label={row.rate < 65 ? 'Critical' : 'Shortage'} />],
+                ['Actions', row => <button type="button" className="erp-btn erp-btn--icon" aria-label={'View attendance for ' + row.name} onClick={() => setSelectedStudentReport(row)}><FiEye /></button>],
+              ]} />
+            {shortagePageCount > 1 && <TablePagination page={shortagePage} totalPages={shortagePageCount} onPageChange={setCurrentPage} />}
+          </>}
+        </section>}
 
         {/* View Details Dialog */}
         {selectedStudentReport && (
@@ -1349,9 +1396,16 @@ function Attendance() {
             onClose={() => setSelectedStudentReport(null)}
           >
             <div className="attendance-student-detail">
-              <div className="attendance-student-metric"><small>Attendance</small><strong className={selectedStudentReport.rate < 65 ? 'text-danger' : selectedStudentReport.rate < 75 ? 'text-warning' : 'text-success'}>{selectedStudentReport.rate ?? 0}%</strong><StatusBadge status={selectedStudentReport.rate >= 75 ? 'Active' : selectedStudentReport.rate >= 65 ? 'Warning' : 'Danger'} label={selectedStudentReport.rate >= 75 ? 'Eligible' : selectedStudentReport.rate >= 65 ? 'Shortage' : 'Critical'} /></div>
+              <div className="attendance-student-metric"><small>Attendance</small><strong className={selectedStudentReport.rate < 65 ? 'text-danger' : selectedStudentReport.rate < 75 ? 'text-warning' : 'text-success'}>{Number(selectedStudentReport.rate.toFixed(2))}%</strong><StatusBadge status={selectedStudentReport.rate >= 75 ? 'Active' : selectedStudentReport.rate >= 65 ? 'Warning' : 'Danger'} label={selectedStudentReport.rate >= 75 ? 'Eligible' : selectedStudentReport.rate >= 65 ? 'Shortage' : 'Critical'} /></div>
               <InfoCard icon={FiCalendar} title="Attendance Summary" items={[{ label: 'Classes attended', value: selectedStudentReport.present ?? 0 }, { label: 'Classes recorded', value: selectedStudentReport.total ?? 0 }, { label: 'Required attendance', value: '75%' }, { label: 'Shortfall', value: `${Math.max(0, 75 - Number(selectedStudentReport.rate || 0))}%` }]} />
             </div>
+            {[['Subject-wise attendance', 'subject'], ['Monthly trends', 'month']].map(([title, field]) => <section key={field}>
+              <h3>{title}</h3>
+              <ReportTable rows={selectedStudentGroups(field)} empty="No confirmed marks in this view." columns={[
+                [field === 'month' ? 'Month' : 'Subject', row => row.id], ['Attended', row => row.attended], ['Conducted', row => row.total],
+                ['Attendance %', row => (row.attended * 100 / row.total).toFixed(2) + '%'],
+              ]} />
+            </section>)}
           </ViewDialog>
         )}
       </div>

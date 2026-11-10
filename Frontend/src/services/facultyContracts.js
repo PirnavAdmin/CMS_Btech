@@ -51,7 +51,7 @@ export const facultyCreatePayload = value => {
     qualification: value.qualification || null,
     specialization: value.specialization || null,
     experienceYears: Number(value.experience) || 0,
-    employmentType: value.employmentType,
+    employmentType: value.employmentType || undefined,
     dateOfJoining: value.joiningDate || null,
     officialEmail: (value.email || value.officialEmail || '').trim(),
     mobile: (value.mobile || '').trim(),

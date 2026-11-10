@@ -153,7 +153,7 @@ export const facultyService = {
       facultyCode: created.facultyCode ?? '',
       employeeCategory: created.employeeCategory || payload.employeeCategory || 'Teaching',
     })
-    return result
+    return { ...result, emailSent: created.emailSent, emailMessage: created.emailMessage }
   },
   update: async (id,payload) => { const result = await facultyApi.update(id,facultyUpdatePayload(payload)); return normalizeFaculty({ ...payload,...result,id:String(id),facultyId:String(id) }) },
   getSummary: async params => {

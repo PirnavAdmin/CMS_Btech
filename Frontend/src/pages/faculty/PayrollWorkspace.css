@@ -9,26 +9,22 @@
 .payroll-navigation {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 8px;
   width: fit-content;
   max-width: 100%;
-  padding: 5px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface);
 }
 
 .payroll-navigation button {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 38px;
-  padding: 6px 12px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background: transparent;
+  min-height: 34px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
   color: var(--text-secondary);
-  font: 600 .875rem var(--font-family);
+  font: 600 var(--font-caption) var(--font-family);
 }
 
 .payroll-navigation button:hover,
@@ -37,7 +33,15 @@
   background: var(--surface-soft);
 }
 
-.payroll-navigation button[aria-pressed="true"] { border-color: var(--brand); }
+.payroll-navigation button[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--brand) 15%, var(--surface));
+  border-color: color-mix(in srgb, var(--brand) 40%, var(--border));
+}
+
+.payroll-navigation button:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
 
 .payroll-notice {
   display: flex;

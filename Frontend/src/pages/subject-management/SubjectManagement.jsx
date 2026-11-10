@@ -405,8 +405,6 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
     if (field === 'courseId' || field === 'branchId') setFormLevel('');
     updateForm(field, value);
   };
-  const selectedCourse = masters.courses.find(course => key(course.id) === key(form.courseId));
-  const selectedBranch = branches.find(branch => key(branch.id) === key(form.branchId));
   const selectLevel = v => {
     setFormLevel(v);
     change('semesterId', '');
@@ -472,16 +470,10 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
                   {!masters.years.length && <small>Academic years are unavailable. Check Academic Year setup and reopen this form.</small>}
                 </Field>
                 <Field label={<>Course <span className="sm-required">*</span></>}>
-                  <div className="sm-select-with-meta">
                     <Select label="Course" value={form.courseId} options={masters.courses} onChange={v => change('courseId', v)} />
-                    <small>{selectedCourse?.code ? <>Course code <strong>{selectedCourse.code}</strong></> : 'Course code will appear after selection'}</small>
-                  </div>
                 </Field>
                 <Field label={<>Branch <span className="sm-required">*</span></>}>
-                  <div className="sm-select-with-meta">
                     <Select label="Branch" value={form.branchId} options={branches} onChange={v => change('branchId', v)} disabled={!form.courseId} placeholder={form.courseId ? 'Select branch' : 'Choose a course first'} />
-                    <small>{selectedBranch?.code ? <>Branch code <strong>{selectedBranch.code}</strong></> : 'Branch code will appear after selection'}</small>
-                  </div>
                 </Field>
                 <Field label={<>Academic Level <span className="sm-required">*</span></>}>
                   <Select label="Academic Level" value={formLevel} options={levels} onChange={selectLevel} disabled={!form.branchId} placeholder={form.branchId ? 'Select academic level' : 'Choose a branch first'} />
@@ -504,7 +496,7 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
                   <Select label="Subject Type" value={form.subjectType} options={typeOptions} onChange={v => change('subjectType', v)} disabled={!typeOptions.length} />
                 </Field>
                 <Input label="Description (optional)" value={form.description} change={v => change('description', v)} />
-                <div className="sm-field">
+                <div className="sm-elective-field">
                   <label className="sm-elective-toggle"><input type="checkbox" checked={form.electiveType === 'Elective'} onChange={event => change('electiveType', event.target.checked ? 'Elective' : 'Core Subject')} /> Is Elective</label>
                   {form.electiveType === 'Elective' && <small>Link the saved subject to a group in Elective Allocation.</small>}
                 </div>
@@ -519,23 +511,15 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
             <section>
               <h3 className="sm-editor-section-title">Credits, Hours & Marks</h3>
               <p className="sm-editor-section-description">Enter the approved credit value, weekly teaching hours and assessment marks.</p>
-              <details open className="sm-editor-config-section">
-              <summary>Credits and teaching hours</summary>
               <div className="sm-form-grid-3">
                 <Input label="Credits" type="number" value={form.credits} change={v => change('credits', v)} />
                 <Input label="Lecture Hours" type="number" value={form.lectureHours} change={v => change('lectureHours', v)} />
                 <Input label="Tutorial Hours" type="number" value={form.tutorialHours} change={v => change('tutorialHours', v)} />
                 <Input label="Practical Hours" type="number" value={form.practicalHours} change={v => change('practicalHours', v)} />
-              </div>
-              <p className="sm-editor-section-description">Weekly contact hours: {[form.lectureHours, form.tutorialHours, form.practicalHours].every(value => value !== '' && value != null && Number.isFinite(Number(value))) ? [form.lectureHours, form.tutorialHours, form.practicalHours].reduce((total, value) => total + Number(value), 0).toLocaleString() : '—'}</p>
-              </details>
-              <details open className="sm-editor-config-section">
-              <summary>Assessment marks</summary>
-              <div className="sm-form-grid-3">
                 <Input label="Internal Marks" type="number" value={form.internalMarks} change={v => change('internalMarks', v)} />
                 <Input label="External Marks" type="number" value={form.externalMarks} change={v => change('externalMarks', v)} />
               </div>
-              </details>
+              <p className="sm-editor-section-description">Weekly contact hours: {[form.lectureHours, form.tutorialHours, form.practicalHours].every(value => value !== '' && value != null && Number.isFinite(Number(value))) ? [form.lectureHours, form.tutorialHours, form.practicalHours].reduce((total, value) => total + Number(value), 0).toLocaleString() : '—'}</p>
             </section>
           )}
           </div>

@@ -114,6 +114,7 @@ export default function AcademicStructure() {
 
   // Modals state
   const [modalType, setModalType] = useState(null) // 'department' | 'course' | 'branch' | 'semester'
+  const [inlineDepartmentCollege, setInlineDepartmentCollege] = useState(null)
   const setupDrafts = useRef(new Set())
   const setupCourse = useRef(null)
   const generationBusy = useRef(false)
@@ -183,7 +184,10 @@ export default function AcademicStructure() {
       loadedCollege.current = collegeId
       const loadedCourses = extractList(courseRes) || []
       const loadedBranches = extractList(branchRes)
-      const loadedDepartments = extractList(deptRes)
+      const loadedDepartments = extractList(deptRes)?.filter(department => {
+        const owner = department.collegeId ?? department.CollegeId
+        return owner == null || String(owner) === String(collegeId)
+      })
       setRelationsVerified(Boolean(loadedBranches && loadedDepartments))
       setDepartments([...(loadedDepartments || [])])
       setCourses([...loadedCourses])
@@ -463,6 +467,7 @@ export default function AcademicStructure() {
   const setupTab = SETUP_TABS.find(tab => tab.id === modalType)
 
   const closeModal = () => {
+    setInlineDepartmentCollege(null)
     setModalType(null)
     setEditingItem(null)
     setFormErrors({})
@@ -1462,6 +1467,11 @@ export default function AcademicStructure() {
                           )
                         })}
                       </select>
+                      {selectedCollegeId && canAction('/department-management', 'create') && <button
+                        type="button"
+                        className="erp-btn erp-btn--secondary"
+                        onClick={() => setInlineDepartmentCollege(String(selectedCollegeId))}
+                      >+ Add Department</button>}
                       {formErrors.departmentId && <span className="as-form-error">{formErrors.departmentId}</span>}
                     </div>
                     </div>
@@ -1536,6 +1546,20 @@ export default function AcademicStructure() {
             </form>
           </ViewDialog>
         )}
+        {modalType === 'branch' && inlineDepartmentCollege === String(selectedCollegeId) && <DepartmentManagement
+          inlineCreate
+          onDismiss={() => setInlineDepartmentCollege(null)}
+          onCreated={async id => {
+            setInlineDepartmentCollege(null)
+            if (String(collegeScope.current) !== inlineDepartmentCollege) return
+            if (id) {
+              setBranchForm(form => ({ ...form, departmentId: String(id) }))
+              setFormErrors(errors => ({ ...errors, departmentId: '' }))
+            }
+            await loadAcademicData()
+            if (!id) showToast('Department saved. Select it from the refreshed list.', 'success')
+          }}
+        />}
 
         {/* ========================================================
             MODAL: DELETE CONFIRMATION
