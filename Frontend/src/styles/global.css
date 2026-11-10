@@ -980,6 +980,28 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
    (multiple / size > 1) in their existing inline form. Older browsers retain
    their native select UI because they do not support customizable pickers. */
 
+/* Popups use dedicated opaque surfaces; page cards remain intentionally glassy. */
+:where(
+  .searchable-select__menu,
+  [role="listbox"],
+  [role="menu"],
+  [popover],
+  .account-menu__panel,
+  .faculty-account-panel,
+  .portal-menu,
+  .fm-structure-action-popover,
+  .tt-section-options,
+  .workspace-context-select__notice > div
+) {
+  z-index: 4000;
+  background-color: var(--dropdown-surface, #fff) !important;
+  background-image: none !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  mix-blend-mode: normal !important;
+  isolation: isolate;
+}
+
 /* Module padding must not push the selected value to the top of a fixed-height
    control. Preserve each module's height and horizontal spacing. */
 #root select:not([multiple]):not([size]), #root select:not([multiple])[size="1"] {
@@ -1007,6 +1029,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
   }
 
   select::picker(select) {
+    z-index: 4000;
     position-area: block-end span-inline-end;
     position-try-fallbacks: flip-block;
     margin-block: 4px 8px;
@@ -1015,13 +1038,21 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
     overscroll-behavior: contain;
     border: 1px solid var(--border, var(--border));
     border-radius: 8px;
-    background: var(--surface, var(--surface));
+    background: var(--dropdown-surface, #fff) !important;
+    background-color: var(--dropdown-surface, #fff) !important;
+    background-image: none !important;
     color: var(--text-primary, var(--text-primary));
     box-shadow: var(--shadow-sm);
+    opacity: 1 !important;
+    backdrop-filter: none !important;
+    mix-blend-mode: normal !important;
+    isolation: isolate;
   }
 
   select option {
     padding: 8px 12px;
+    background-color: var(--dropdown-surface, #fff) !important;
+    color: var(--text-primary, #1C2416) !important;
   }
 
   select option:checked, select option:hover {

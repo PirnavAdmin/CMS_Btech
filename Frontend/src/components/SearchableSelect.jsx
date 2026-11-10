@@ -191,7 +191,7 @@ export default function SearchableSelect({
       const index = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : event.key === 'ArrowDown' ? (current + 1) % buttons.length : (current <= 0 ? buttons.length - 1 : current - 1)
       buttons[index]?.focus({ preventScroll: true })
       buttons[index]?.scrollIntoView({ block: 'nearest' })
-    }} style={{ position: 'fixed', top: menuStyle.top, bottom: menuStyle.bottom, left: menuStyle.left, width: menuStyle.width, maxHeight: menuStyle.maxHeight, zIndex: 2000 }}>
+    }} style={{ position: 'fixed', top: menuStyle.top, bottom: menuStyle.bottom, left: menuStyle.left, width: menuStyle.width, maxHeight: menuStyle.maxHeight, zIndex: 4000 }}>
       {!hideSearch && <label className="searchable-select__search">
         <FiSearch aria-hidden="true" />
         <input

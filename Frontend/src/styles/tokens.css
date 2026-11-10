@@ -99,6 +99,8 @@
   --dropdown-bg: var(--cms-elevated);
   --surface-soft: var(--cms-subtle);
   --surface-raised: var(--cms-elevated);
+  --dropdown-surface: #FFFFFF;
+  --dropdown-surface-soft: #F7F8EF;
   --surface-alt: var(--cms-secondary);
   --text-primary: var(--cms-text);
   --text-secondary: var(--cms-text-secondary);
