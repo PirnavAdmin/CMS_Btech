@@ -1876,9 +1876,19 @@ function BookFormModal({ initialData, onClose, onSave, categories = [] }) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit}><label className="adv-field"><span>Accession number *</span><input required value={accessionNo} onChange={e => setAccessionNo(e.target.value)} /></label><label className="adv-field"><span>Language *</span><input required value={language} onChange={e => setLanguage(e.target.value)} /></label>
+        <form onSubmit={handleSubmit}>
           <div className="adv-modal__body adv-form-grid">
             {error && <div className="adv-form-error">{error}</div>}
+
+            <div className="adv-form-field">
+              <label>Accession number *</label>
+              <input required value={accessionNo} onChange={e => setAccessionNo(e.target.value)} />
+            </div>
+
+            <div className="adv-form-field">
+              <label>Language *</label>
+              <input required value={language} onChange={e => setLanguage(e.target.value)} />
+            </div>
 
             <div className="adv-form-field adv-form-field--full">
               <label>Book Title *</label>
@@ -5120,6 +5130,7 @@ function PlacementWorkspace() {
       <div className="plw-workspace">
         {/* Page Header (Stats in compactSummary top-right corner) */}
         <PageHeader
+          className="plw-page-header"
           title="Campus Placements & Corporate Relations"
           subtitle="Coordinate campus recruitment drives, manage partner employers, monitor student applications, and schedule interview rounds."
           breadcrumb={[
