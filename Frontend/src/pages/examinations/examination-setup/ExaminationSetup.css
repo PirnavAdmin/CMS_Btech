@@ -104,7 +104,7 @@
 .examination-setup__form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 .examination-setup__form label{display:flex;flex-direction:column;gap:6px;color:var(--text-secondary);font-size:12px;font-weight:600}
 .examination-setup__form label.wide,.examination-setup__form footer{grid-column:1/-1}
-.examination-setup__form label b{color:var(--danger)}
+.examination-setup__form label .examination-setup__required-mark{color:#dc2626!important;font-weight:800}
 .examination-setup__form textarea{min-height:90px;resize:vertical}
 .examination-setup__form input:focus,.examination-setup__form select:focus,.examination-setup__form textarea:focus,.examination-setup__filters select:focus{outline:2px solid color-mix(in srgb,var(--brand) 25%,transparent);border-color:var(--brand)}
 .examination-setup__form [aria-invalid=true]{border-color:#b42332}

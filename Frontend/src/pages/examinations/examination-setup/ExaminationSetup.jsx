@@ -1,4 +1,5 @@
 import LiveExaminationWorkspace from '../LiveExaminationWorkspace'
+import UnifiedExamManagement from '../UnifiedExamManagement'
 import { ProjectSelect as SearchableSelectImports_ProjectSelect } from '../../../components/SearchableSelect'
 import { useEffect as reactImports_useEffect, useState as reactImports_useState, useMemo as reactImports_useMemo, useRef as reactImports_useRef, useCallback as reactImports_useCallback } from 'react'
 import { Link as react_router_domImports_Link, useLocation as react_router_domImports_useLocation, useNavigate as react_router_domImports_useNavigate } from 'react-router-dom'
@@ -701,7 +702,7 @@ export const ExaminationSetup = () => {
   const screen = ['exam-type', 'exam-rules', 'exam-schedule'].includes(segment) ? segment : 'examination-list'
   return <LiveExaminationWorkspace screen={screen} />
 }
-export const ExaminationList = () => <LiveExaminationWorkspace screen="examination-list" />
+export const ExaminationList = () => <UnifiedExamManagement />
 export const ExamRules = () => <LiveExaminationWorkspace screen="exam-rules" />
 export const ExamSchedule = () => <LiveExaminationWorkspace screen="exam-schedule" />
 export const ExamType = () => <LiveExaminationWorkspace screen="exam-type" />

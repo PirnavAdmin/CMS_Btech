@@ -13,7 +13,7 @@ import { useAcademic } from '../../context/AcademicContext'
 import { getUserRole } from '../../auth/auth'
 import { studentProfileApi } from '../../api/apiEndpoints'
 import { call, list, record, requireId, dateOnly } from '../../services/scopedModulesService'
-import { loadExaminationData, loadScheduleLookups, scheduleConflict } from '../../services/examinationWorkspaceService'
+import { loadExaminationData, loadScheduleLookups, scheduleConflict, predefinedExamTypes, ensureExamTypeId, ensurePredefinedExamTypes } from '../../services/examinationWorkspaceService'
 import useScopedModule from '../../services/useScopedModule'
 import './examination-setup/ExaminationSetup.css'
 import './exam-timetable/ExamModule.css'
@@ -58,9 +58,12 @@ function Workspace({ academic, screen, timetable }) {
   const accessPath = timetable ? '/exam/timetable' : '/examination-setup/examination-list'
   const canCreate = canAction(accessPath, 'create'), canEdit = canAction(accessPath, 'edit'), canDelete = canAction(accessPath, 'delete')
   const [viewing, setViewing] = useState(null)
-  const collection = screen === 'exam-type' ? 'types' : screen === 'exam-rules' ? 'rules' : screen === 'halls' ? 'halls' : timetable || screen === 'exam-schedule' ? 'schedules' : 'examinations'
-  const scope = { collegeId: academic.selectedCollegeId, academicYearId: academic.selectedAcademicYearId,area:collection,resource:collection,enabled:!academic.loading && Boolean(academic.selectedCollegeId) }
+  const [collection, setCollection] = useState(screen === 'exam-type' ? 'types' : screen === 'exam-rules' ? 'rules' : screen === 'halls' ? 'halls' : timetable ? 'schedules' : 'examinations')
+  const unifiedWorkspace = !['student','completed'].includes(screen)
+  const scope = { collegeId: academic.selectedCollegeId, academicYearId: academic.selectedAcademicYearId,area:unifiedWorkspace ? 'overview' : collection,resource:collection,enabled:!academic.loading && Boolean(academic.selectedCollegeId) }
   const { data, state, mutate, reload, clearSaveError } = useScopedModule(getUserRole() === 'student' ? loadStudentExaminationData : loadExaminationData, scope, { examinations: [], types: [], schedules: [], rules: [], halls: [], lookups: {},loaded:[],resourceErrors:{} })
+  const [examTypeCatalog, setExamTypeCatalog] = useState(data.types)
+  useEffect(() => { setExamTypeCatalog(data.types) }, [data.types])
   const primaryError = data.resourceErrors?.[collection]
   const blocked = Boolean(primaryError || state.error || !scope.enabled)
   const initial = location.state?.exam
@@ -76,13 +79,21 @@ function Workspace({ academic, screen, timetable }) {
   const readonly = screen === 'student' || getUserRole() === 'student'
   const studentPortal = getUserRole() === 'student'
   const currentSection = screen === 'student' || screen === 'completed' ? screen : collection
-  const currentView = workspaceSections.flatMap(section => section.links).find(link => link.id === currentSection)
+  const currentView = workspaceSections.flatMap(section => section.links).find(link => link.id === currentSection) || workspaceSections.flatMap(section => section.links).find(link => link.id === collection)
   const idKey = ids[collection]
   const lookup = (keys, fallback = []) => { for (const k of keys) if (Array.isArray(data.lookups[k])) return data.lookups[k].map(record); return fallback }
   const courses = lookup(['courses'], academic.activeCourses || academic.courses || [])
   const branches = lookup(['branches'], academic.activeBranches || academic.branches || [])
   const semesters = lookup(['semesters'], academic.activeSemesters || academic.semesters || [])
   const classrooms = lookup(['classrooms', 'rooms'])
+  const examTypeOptions = [
+    ...predefinedExamTypes.filter(name => name !== 'Others').map(name => {
+      const existing = examTypeCatalog.find(type => String(type.name || '').trim().toLowerCase() === name.toLowerCase())
+      return { examTypeId: existing ? String(existing.examTypeId ?? existing.id) : `__predefined__:${name}`, name }
+    }),
+    ...examTypeCatalog.filter(type => !predefinedExamTypes.some(name => name.toLowerCase() === String(type.name || '').trim().toLowerCase())).map(type => ({ examTypeId: String(type.examTypeId ?? type.id), name: type.name })),
+    { examTypeId: '__others__', name: 'Others' },
+  ]
   const selectedExam = data.examinations.find(exam => String(exam.examId) === String(editor?.examId))
   const [scheduleMappings, setScheduleMappings] = useState(null)
   const [mappingAttempt, setMappingAttempt] = useState(0)
@@ -101,7 +112,14 @@ function Workspace({ academic, screen, timetable }) {
   const examStart = dateOnly(selectedExam?.startDate), examEnd = dateOnly(selectedExam?.endDate)
   const displayDate = date => new Date(`${date}T00:00:00`).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})
   const dateHint = examStart && examEnd ? `Choose a date between ${displayDate(examStart)} and ${displayDate(examEnd)}.` : 'Select an examination to choose the exam date.'
-  const openEditor = value => {setEditor(value);setFormError('');setFieldErrors({});clearSaveError()}
+  const openEditor = async value => {
+    setFormError(''); setFieldErrors({}); clearSaveError()
+    if (collection === 'examinations' && !value.examId) {
+      try { setExamTypeCatalog(await ensurePredefinedExamTypes(scope.collegeId)) }
+      catch (error) { setFormError(`Unable to load configured examination types: ${error.message}`) }
+    }
+    setEditor(value)
+  }
   const changeField = (key,value) => {
     setFormError('');clearSaveError()
     setFieldErrors(current=>({...current,[key]:'',...(key==='examId'?{examDate:''}:{})}))
@@ -127,7 +145,7 @@ function Workspace({ academic, screen, timetable }) {
     }
   }
   const fields = collection === 'examinations' ? [
-    ['examName','Examination Name'], ['examCode','Examination Code'], ['courseId','Course','select',courses,'courseId','courseName'], ['branchId','Branch','select',branches.filter(b => !editor?.courseId || String(b.courseId) === String(editor.courseId)),'branchId','branchName'], ['semesterId','Semester / Term','select',semesters.filter(s => (!editor?.courseId || !s.courseId || String(s.courseId) === String(editor.courseId)) && (!editor?.branchId || !s.branchId || String(s.branchId) === String(editor.branchId))),'semesterId','semesterName'], ['examTypeId','Exam Type','select',data.types,'examTypeId','name'], ['description','Description','textarea',false],
+    ['examName','Examination Name'], ['examCode','Examination Code'], ['courseId','Course','select',courses,'courseId','courseName'], ['branchId','Branch','select',branches.filter(b => !editor?.courseId || String(b.courseId) === String(editor.courseId)),'branchId','branchName'], ['semesterId','Semester / Term','select',semesters.filter(s => (!editor?.courseId || !s.courseId || String(s.courseId) === String(editor.courseId)) && (!editor?.branchId || !s.branchId || String(s.branchId) === String(editor.branchId))),'semesterId','semesterName'], ['examTypeId','Exam Type','select',examTypeOptions,'examTypeId','name'], ['startDate','Start Date','date'], ['endDate','End Date','date'], ['description','Description','textarea',false],
   ] : collection === 'types' ? [['name','Exam Type Name'], ['code','Type Code'], ['description','Description','textarea',false], ['defaultDurationMinutes','Default Duration (minutes)','number',false]] : collection === 'rules' ? [
     ['examId','Examination','select',data.examinations,'examId','examName'], ['ruleCode','Rule Code'], ['ruleName','Rule Name'], ['ruleValue','Rule Value'], ['description','Description','textarea',false],
   ] : collection === 'halls' ? [
@@ -156,12 +174,17 @@ function Workspace({ academic, screen, timetable }) {
     e.preventDefault(); if (state.saving || !(editor[idKey] ? canEdit : canCreate)) return; setFormError(''); setFieldErrors({}); setNotice('')
     try {
       const body = Object.fromEntries(fields.map(([key,,type,options,,,required]) => [key, type === 'number' || type === 'select' ? editor[key] === '' || editor[key] == null ? null : Number(editor[key]) : editor[key] || (required === false || options === false ? null : '')]))
-      body.status = editor.status == null ? true : active(editor.status)
+      if (editor.status == null || editor.status === '') throw new Error('Select a status before saving.')
+      body.status = active(editor.status)
       if (collection === 'examinations') {
+        const selectedType = String(editor.examTypeId || '')
+        if (selectedType === '__others__' && !String(editor.customExamTypeName || '').trim()) throw new Error('Enter a custom examination type.')
+        const selectedTypeName = selectedType === '__others__' ? editor.customExamTypeName : selectedType.startsWith('__predefined__:') ? selectedType.slice('__predefined__:'.length) : null
+        body.examTypeId = selectedTypeName ? await ensureExamTypeId(scope.collegeId, selectedTypeName) : requireId(selectedType, 'exam type')
         body.startDate = editor.startDate
         body.endDate = editor.endDate
-        if (!editor[idKey]) throw new Error('New examinations cannot be saved because the date fields have been removed. Contact an administrator to create the examination.')
-        if (!body.startDate || !body.endDate) throw new Error('Existing examination dates are unavailable. Contact an administrator before editing this record.')
+        if (!body.startDate || !body.endDate) throw new Error('Enter both the examination start date and end date.')
+        if (body.endDate < body.startDate) throw new Error('End date must be on or after the start date.')
         body.collegeId = requireId(scope.collegeId, 'college')
         body.academicYearId = requireId(scope.academicYearId, 'academic year')
         const course = courses.find(row => Number(row.courseId ?? row.id) === body.courseId)
@@ -171,7 +194,10 @@ function Workspace({ academic, screen, timetable }) {
           (semester.courseId && Number(semester.courseId) !== body.courseId) || (semester.branchId && Number(semester.branchId) !== body.branchId)) {
           throw new Error('Select a matching course, branch and semester from the current academic configuration.')
         }
-        if (!data.types.some(type => Number(type.examTypeId) === body.examTypeId)) throw new Error('Select a configured examination type.')
+        const configuredTypes = await list('exam-types', { collegeId: scope.collegeId })
+        const configuredType = configuredTypes.find(type => Number(type.examTypeId ?? type.id) === body.examTypeId && Number(type.collegeId) === Number(scope.collegeId) && String(type.status || '').toLowerCase() !== 'inactive' && type.statusValue !== 0 && type.statusValue !== '0')
+        if (!configuredType) throw new Error('The selected examination type is not active for this college. Reload the type list and select it again.')
+        setExamTypeCatalog(configuredTypes)
       }
       if (collection === 'types') body.collegeId = requireId(scope.collegeId, 'college')
       if (collection === 'schedules') {
@@ -201,17 +227,7 @@ function Workspace({ academic, screen, timetable }) {
   const count = key => state.loading || !scope.enabled || !data.loaded?.includes(key) || data.resourceErrors?.[key] ? '—' : data[key].length
   const addLabel = collection === 'schedules' ? 'Schedule' : collection === 'halls' ? 'Allocation' : collection === 'types' ? 'Exam Type' : collection === 'rules' ? 'Rule' : 'Examination'
   return <DashboardLayout><main className="examination-setup examination-setup--connected">
-    <PageHeader title={studentPortal ? 'Student Exam Schedule' : 'Exam Management'} subtitle={studentPortal ? currentView.description : 'Set up examinations, plan the timetable and allocate halls in one workspace.'} compactSummary={[{label:'Examinations',value:count('examinations')},{label:'Exam Types',value:count('types')},{label:'Schedules',value:count('schedules')}]} />
-    {!studentPortal && <nav className="exam-workspace-navigation" aria-label="Exam Management">
-      {workspaceSections.map(section => <div className="exam-workspace-navigation__group" key={section.label}>
-        <span>{section.label}</span>
-        <div className="exam-workspace-navigation__links">
-          {section.links.map(({ id, label, path, icon: Icon }) => <Link key={id} to={path} aria-current={currentSection === id ? 'page' : undefined}>
-            <Icon aria-hidden="true" />{label}
-          </Link>)}
-        </div>
-      </div>)}
-    </nav>}
+    <PageHeader title={studentPortal ? 'Student Exam Schedule' : 'Exam Management'} subtitle={studentPortal ? currentView.description : 'Create examinations, assign subjects, schedule exam sessions and allocate examination halls from one place.'} compactSummary={studentPortal ? [{label:'Scheduled Exams',value:count('schedules')}] : [{label:'Total Examinations',value:count('examinations')},{label:'Upcoming Exams',value:state.loading?'—':data.examinations.filter(item=>dateOnly(item.startDate)>=today()).length},{label:'Scheduled Subjects',value:count('schedules')},{label:'Allocated Rooms',value:count('halls')}]} />
     {scope.enabled ? <ScopedModuleNotice state={state} data={data} resource={collection} onRetry={reload} /> : <p role="status" className="campus-notice">{academic.loading ? 'Loading college configuration…' : 'Select a college to view examination records.'}</p>}{notice && <p role="status" className="examination-setup__success">{notice}</p>}
     {scope.enabled && !scope.academicYearId && collection !== 'types' && <p role="status" className="campus-notice">No active academic year is available for this college. Existing records can be reviewed; an academic year is required to save examinations and schedules.</p>}
     <section className="examination-setup__card" aria-labelledby="exam-workspace-view">
@@ -232,13 +248,13 @@ function Workspace({ academic, screen, timetable }) {
     {scope.enabled && !blocked && !state.loading && <TablePagination page={page} totalPages={Math.max(1,Math.ceil(filtered.length/10))} onPageChange={setPage} />}
     </section>
     {editor && !readonly && (editor[idKey] ? canEdit : canCreate) && <ViewDialog title={`Manage ${addLabel}`} subtitle={`${editor[idKey] ? "Edit" : "Add"} ${addLabel}`} onClose={() => setEditor(null)} showExport={false} hideFooter busy={state.saving} maxWidth="820px"><form className="examination-setup__form" onSubmit={save}>
-      {collection === 'examinations' && !editor[idKey] && <p role="status" className="campus-notice">New examinations cannot be saved because the date fields have been removed. Contact an administrator to create the examination.</p>}
-      {fields.map(([key,label,type = 'text', options, optionKey, optionLabel, required]) => <label key={key}><span>{label}{options === false || required === false ? '' : ' *'}</span>{type === 'select' ? <ProjectSelect required={required !== false} value={editor[key] ?? ''} onChange={e => changeField(key,e.target.value)}><option value="">Select {label.toLowerCase()}</option>{options.map((o,index) => <option key={o[optionKey] ?? o.id ?? index} value={o[optionKey] ?? o.id}>{o[optionLabel] || o.name || o.classroomName || o.roomNumber || o.code || o.id}</option>)}</ProjectSelect> : type === 'textarea' ? <textarea value={editor[key] || ''} onChange={e => changeField(key,e.target.value)} /> : <input required={options !== false} type={type} aria-invalid={Boolean(fieldErrors[key])} aria-describedby={fieldErrors[key] || key === 'examDate' ? `exam-field-${key}-hint` : undefined} disabled={key === 'examDate' && collection === 'schedules' && (!examStart || !examEnd)} min={key === 'examDate' && collection === 'schedules' ? examStart : type === 'number' ? key === 'allocatedStudents' ? 0 : 1 : undefined} max={key === 'examDate' && collection === 'schedules' ? examEnd : undefined} value={type === 'date' ? dateOnly(editor[key]) : editor[key] ?? ''} onChange={e => changeField(key,e.target.value)} />}{(fieldErrors[key] || key === 'examDate' && collection === 'schedules') && <small id={`exam-field-${key}-hint`} className={fieldErrors[key] ? 'examination-setup__field-error' : 'examination-setup__field-hint'} role={fieldErrors[key] ? 'alert' : undefined}>{fieldErrors[key] || dateHint}</small>}</label>)}
+      {fields.map(([key,label,type = 'text', options, optionKey, optionLabel, required]) => <label key={key}><span>{label}{options === false || required === false ? '' : <> <b className="examination-setup__required-mark" aria-label="required">*</b></>}</span>{type === 'select' ? <ProjectSelect required={required !== false} value={editor[key] ?? ''} onChange={e => { changeField(key,e.target.value); if (key === 'examTypeId' && e.target.value !== '__others__') setEditor(current => ({...current,customExamTypeName:''})) }}><option value="">Select {label.toLowerCase()}</option>{options.map((o,index) => <option key={o[optionKey] ?? o.id ?? index} value={o[optionKey] ?? o.id}>{o[optionLabel] || o.name || o.classroomName || o.roomNumber || o.code || o.id}</option>)}</ProjectSelect> : type === 'textarea' ? <textarea value={editor[key] || ''} onChange={e => changeField(key,e.target.value)} /> : <input required={options !== false} type={type} aria-invalid={Boolean(fieldErrors[key])} aria-describedby={fieldErrors[key] || key === 'examDate' ? `exam-field-${key}-hint` : undefined} disabled={key === 'examDate' && collection === 'schedules' && (!examStart || !examEnd)} min={key === 'examDate' && collection === 'schedules' ? examStart : type === 'number' ? key === 'allocatedStudents' ? 0 : 1 : undefined} max={key === 'examDate' && collection === 'schedules' ? examEnd : undefined} value={type === 'date' ? dateOnly(editor[key]) : editor[key] ?? ''} onChange={e => changeField(key,e.target.value)} />}{(fieldErrors[key] || key === 'examDate' && collection === 'schedules') && <small id={`exam-field-${key}-hint`} className={fieldErrors[key] ? 'examination-setup__field-error' : 'examination-setup__field-hint'} role={fieldErrors[key] ? 'alert' : undefined}>{fieldErrors[key] || dateHint}</small>}</label>)}
+      {collection === 'examinations' && editor.examTypeId === '__others__' && <label className="uem-custom-exam-type"><span>Custom Examination Type <b className="examination-setup__required-mark" aria-label="required">*</b></span><input required autoFocus value={editor.customExamTypeName || ''} placeholder="Enter new examination type" onChange={event => setEditor(current => ({...current,customExamTypeName:event.target.value}))} /></label>}
       {collection === 'schedules' && selectedExam && !currentMappings && <p role="status">Loading examination subject and section mappings…</p>}
       {currentMappings?.error && <div role="alert">{currentMappings.error} <button type="button" className="examination-setup__secondary" onClick={() => setMappingAttempt(attempt => attempt + 1)}>Retry mappings</button></div>}
       {currentMappings?.data && !subjects.length && <p role="status">No subjects are mapped to this examination’s course, branch and semester.</p>}
-      <label><span>Status</span><ProjectSelect value={editor.status == null || active(editor.status) ? 'active' : 'inactive'} onChange={e => setEditor(v => ({...v,status:e.target.value==='active'}))}><option value="active">Active</option><option value="inactive">Inactive</option></ProjectSelect></label>
-      {formError && <p role="alert" className="examination-setup__form-feedback">{formError}</p>}<footer><button type="button" className="examination-setup__secondary" onClick={() => setEditor(null)}>Cancel</button><button className="examination-setup__primary" disabled={state.loading || state.saving || blocked || collection === 'examinations' && !editor[idKey]} type="submit">{state.saving ? 'Saving…' : 'Save'}</button></footer>
+      <label><span>Status <b className="examination-setup__required-mark" aria-label="required">*</b></span><ProjectSelect required aria-label="Status" value={editor.status == null ? '' : active(editor.status) ? 'active' : 'inactive'} onChange={e => setEditor(v => ({...v,status:e.target.value==='' ? '' : e.target.value==='active'}))}><option value="">Select status</option><option value="active">Active</option><option value="inactive">Inactive</option></ProjectSelect></label>
+      {formError && <p role="alert" className="examination-setup__form-feedback">{formError}</p>}<footer><button type="button" className="examination-setup__secondary" onClick={() => setEditor(null)}>Cancel</button><button className="examination-setup__primary" disabled={state.loading || state.saving || blocked} type="submit">{state.saving ? 'Saving…' : 'Save'}</button></footer>
     </form></ViewDialog>}
     {deleteTarget && canDelete && <ViewDialog title="Confirm deletion" showExport={false} hideFooter busy={state.saving} onClose={() => setDeleteTarget(null)}><p>Delete this institutional record? Existing backend dependency rules still apply.</p>{state.saveError && <p role="alert">{String(state.saveError.message || state.saveError)}</p>}<div className="examination-setup__actions"><button className="examination-setup__secondary" disabled={state.saving} onClick={() => setDeleteTarget(null)}>Cancel</button><button className="examination-setup__primary" disabled={state.saving} onClick={remove}>Delete</button></div></ViewDialog>}
     {viewing && <ViewDialog title={addLabel+' Details'} subtitle={viewing.examName || viewing.name || viewing.subjectName} onClose={() => setViewing(null)} showExport={false}><dl className="examination-record-details">{[...columns,['courseName','Course'],['branchName','Branch'],['description','Description']].filter(([key],index,all)=>all.findIndex(([k])=>k===key)===index).map(([key,label])=><div key={key}><dt>{label}</dt><dd>{/Date$/.test(key) ? dateOnly(viewing[key]) || '—' : viewing[key] ?? '—'}</dd></div>)}<div><dt>Status</dt><dd>{active(viewing.status)?'Active':'Inactive'}</dd></div></dl></ViewDialog>}

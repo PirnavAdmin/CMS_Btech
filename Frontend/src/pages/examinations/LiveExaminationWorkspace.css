@@ -77,6 +77,28 @@
   border-color: var(--brand);
 }
 
+.exam-workspace-navigation__links button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 13px;
+  border: 1px solid var(--es-line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: .875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.exam-workspace-navigation__links button:hover,
+.exam-workspace-navigation__links button[aria-pressed="true"] {
+  border-color: var(--brand);
+  background: var(--es-soft);
+  color: var(--text-primary);
+}
+
 .exam-workspace-view {
   padding: 16px 20px;
   border-bottom: 1px solid var(--es-line);

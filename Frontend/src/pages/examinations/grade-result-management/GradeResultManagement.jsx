@@ -17,6 +17,7 @@ import * as pageDependency8 from '../../../components/ExportMenu'
 import * as pageDependency9 from '../../../components/TablePagination'
 import * as pageDependency10 from '../../../context/AcademicContext'
 import './GradeResultManagement.css'
+import StudentExaminationResults from './StudentExaminationResults'
 
 // GradeToolsNav screen and private helpers.
 const GradeToolsNavScreen = (() => {
@@ -529,60 +530,6 @@ function Workspace({ screen, academic }) {
           { label: 'Latest Exam Backlogs', value: stats.arrearsCount },
         ] : undefined}
       />
-      <GradeToolsNav />
-
-      {resultReport && (
-        <div className="res-nav-strip">
-          <nav className="res-clean-nav" aria-label="Official results views">
-            <NavLink to="/results" end className={({ isActive }) => (isActive ? 'active' : '')}>
-              <FiCpu />
-              <span>Result Review & Directory</span>
-            </NavLink>
-            <NavLink
-              to="/results/student-result"
-              className={({ isActive }) => (isActive ? 'active' : '')}
-            >
-              <FiUser />
-              <span>Student Results</span>
-              <span className="res-nav-count">{studentSummaries.length}</span>
-            </NavLink>
-            <NavLink
-              to="/results/semester-result"
-              className={({ isActive }) => (isActive ? 'active' : '')}
-            >
-              <FiLayers />
-              <span>Semester Summary</span>
-              <span className="res-nav-count">{semesterSummaries.length}</span>
-            </NavLink>
-            <NavLink
-              to="/results/department-result"
-              className={({ isActive }) => (isActive ? 'active' : '')}
-            >
-              <FiBarChart2 />
-              <span>Department Performance</span>
-              <span className="res-nav-count">{departmentSummaries.length}</span>
-            </NavLink>
-            <NavLink
-              to="/results/backlog-report"
-              className={({ isActive }) => (isActive ? 'active' : '')}
-            >
-              <FiAlertCircle />
-              <span>Backlogs & Arrears</span>
-              {arrearRecords.length > 0 && (
-                <span className="res-nav-count res-nav-count--danger">{arrearRecords.length}</span>
-              )}
-            </NavLink>
-            <NavLink
-              to="/results/consolidated-marks-memo"
-              className={({ isActive }) => (isActive ? 'active' : '')}
-            >
-              <FiFileText />
-              <span>Consolidated Memo (CMM)</span>
-            </NavLink>
-          </nav>
-        </div>
-      )}
-
       {notice && (
         <div className="res-notice" role="status">
           <FiCheckCircle />
@@ -1872,17 +1819,17 @@ return { default: StudentResult }
 
 export const GradeToolsNav = GradeToolsNavScreen.default
 export const GradeResultWorkspace = GradeResultWorkspaceScreen.default
-export const BacklogReport = BacklogReportScreen.default
-export const CGPACalculatorPage = CGPACalculatorPageScreen.default
-export const ConsolidatedMarksMemo = ConsolidatedMarksMemoScreen.default
-export const DepartmentResult = DepartmentResultScreen.default
+export const BacklogReport = StudentExaminationResults
+export const CGPACalculatorPage = StudentExaminationResults
+export const ConsolidatedMarksMemo = StudentExaminationResults
+export const DepartmentResult = StudentExaminationResults
 export const GradeConfiguration = GradeConfigurationScreen.default
-export const GradeResultManagement = GradeResultManagementScreen.default
-export const ResultGeneration = ResultGenerationScreen.default
+export const GradeResultManagement = StudentExaminationResults
+export const ResultGeneration = StudentExaminationResults
 export const ResultInsights = ResultInsightsScreen.ResultInsights
 export const ResultQuality = ResultInsightsScreen.ResultQuality
 export const PreviewComparison = ResultInsightsScreen.PreviewComparison
 export const StudentSemesterSummary = ResultInsightsScreen.StudentSemesterSummary
-export const SemesterResult = SemesterResultScreen.default
-export const StudentResult = StudentResultScreen.default
-export default GradeResultManagement
+export const SemesterResult = StudentExaminationResults
+export const StudentResult = StudentExaminationResults
+export default StudentExaminationResults
