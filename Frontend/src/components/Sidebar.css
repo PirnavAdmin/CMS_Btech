@@ -12,8 +12,8 @@
 .sidebar-navigation { flex:1; min-height:0; overflow-y:auto; padding:10px 4px 24px; scrollbar-width:none; }
 .sidebar-section-label { padding:14px 6px 6px; margin:0; font-size:10px; font-weight:800; letter-spacing:1.4px; text-transform:uppercase; color:var(--text-muted); }
 .sidebar-link { box-sizing:border-box; display:flex; align-items:center; gap:9px; width:calc(100% - 4px); min-height:42px; margin:0 0 2px 4px; padding:8px 7px; border:0; border-radius:10px; background:transparent; color:var(--cms-text-secondary); font:600 12px/1.3 var(--font-family); text-decoration:none; text-align:left; cursor:pointer; transition:background .18s ease,color .18s ease; }
-.sidebar-link:hover { background:var(--cms-hover); color:var(--brand); }
-.sidebar-link.active,.sidebar-link.is-module-active { background:linear-gradient(90deg,var(--cms-primary),var(--cms-primary-hover)); color:#fff; }
+.sidebar-link:hover { background:var(--cms-sidebar-hover,var(--cms-hover)); color:var(--brand); }
+.sidebar-link.active,.sidebar-link.is-module-active { background:var(--cms-sidebar-active); color:#fff; box-shadow:var(--cms-sidebar-active-glow); }
 .sidebar-link>svg { width:17px; height:17px; flex:0 0 17px; }
 .reference-nav-icon { width:20px; height:20px; flex:0 0 20px; display:block; object-fit:contain; filter:drop-shadow(0 2px 2px color-mix(in srgb,var(--text-primary) 18%,transparent)); }
 .reference-nav-icon--sprite { background-repeat:no-repeat; background-size:300% 200%; border-radius:5px; }
