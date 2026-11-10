@@ -3480,6 +3480,168 @@
 .flm-view-actions .approve-action { background: var(--flm-blue); border-color: var(--flm-blue); color: #fff; }
 .flm-view-actions .reject-action { background: #b42332; border-color: #b42332; color: #fff; }
 
+/* Leave workspace navigation and controls: keep them consistent with the
+   directory screens while staying scoped away from faculty attendance. */
+#root .flm-page > .flm-card {
+  overflow: hidden;
+  border-radius: 16px;
+}
+#root .flm-page > .flm-card > .flm-card-header {
+  align-items: center;
+  padding: 20px 22px;
+  background: var(--surface, #fff);
+}
+#root .flm-page > .flm-card > .flm-card-header > div:first-child {
+  flex: 1 1 280px;
+}
+#root .flm-page .flm-card-header p {
+  margin-bottom: 5px;
+  color: var(--text-muted);
+  font-size: 11px;
+  letter-spacing: .09em;
+}
+#root .flm-page .flm-card-header h2 {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+#root .flm-page .flm-header-actions {
+  justify-content: flex-end;
+  gap: 8px;
+}
+#root .flm-page .flm-category-toggle {
+  min-height: 42px;
+  padding: 3px;
+  border-color: var(--flm-line);
+  border-radius: 10px;
+  background: var(--flm-soft);
+}
+#root .flm-page .flm-cat-btn {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 7px;
+  white-space: nowrap;
+}
+#root .flm-page .flm-cat-btn.active {
+  background: var(--surface, #fff) !important;
+  color: var(--flm-blue) !important;
+  box-shadow: 0 1px 3px rgb(15 23 42 / 10%);
+}
+#root .flm-page .flm-filter-toggle,
+#root .flm-page .flm-header-actions > .export-menu-trigger {
+  min-height: 42px;
+  border-radius: 9px;
+}
+#root .flm-page .flm-tabs {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 58px;
+  padding: 8px 20px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--flm-line);
+  background: var(--flm-soft);
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong, var(--flm-line)) transparent;
+}
+#root .flm-page .flm-tabs button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 15px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-family);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.25;
+  transition: background-color .16s ease, color .16s ease, border-color .16s ease, box-shadow .16s ease;
+}
+#root .flm-page .flm-tabs button:hover {
+  border-color: var(--flm-line);
+  background: var(--surface, #fff);
+  color: var(--flm-blue);
+}
+#root .flm-page .flm-tabs button.active {
+  border-color: var(--flm-blue);
+  background: var(--flm-blue);
+  color: var(--text-on-accent, #fff);
+  box-shadow: 0 3px 9px color-mix(in srgb, var(--flm-blue) 22%, transparent);
+}
+#root .flm-page .flm-toolbar {
+  padding: 16px 20px 0;
+}
+#root .flm-page .flm-search {
+  flex: 1 1 420px;
+  max-width: 620px;
+  min-height: 44px;
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 10px;
+  background: var(--surface, #fff);
+  box-shadow: 0 1px 2px rgb(15 23 42 / 4%);
+}
+#root .flm-page .flm-search:focus-within {
+  border-color: var(--flm-blue);
+  box-shadow: 0 0 0 3px var(--brand-soft, rgb(23 105 194 / 12%));
+}
+#root .flm-page .flm-count {
+  padding: 12px 22px 8px;
+  font-size: 12px;
+}
+#root .flm-page .flm-empty {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  min-height: 230px;
+  margin: 8px 20px 18px;
+  padding: 28px 20px;
+  border: 1px dashed var(--flm-line);
+  border-radius: 12px;
+  background: var(--flm-soft);
+}
+#root .flm-page .flm-empty > svg {
+  width: 34px;
+  height: 34px;
+  padding: 7px;
+  box-sizing: content-box;
+  border-radius: 10px;
+  background: var(--brand-soft, var(--flm-soft));
+}
+#root .flm-page .flm-empty h3 {
+  margin: 12px 0 4px;
+  font-size: 15px;
+}
+#root .flm-page .flm-empty p {
+  max-width: 520px;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.5;
+}
+@media (max-width: 760px) {
+  #root .flm-page > .flm-card > .flm-card-header {
+    align-items: flex-start;
+    padding: 16px;
+  }
+  #root .flm-page .flm-header-actions {
+    justify-content: flex-start;
+    width: 100%;
+  }
+  #root .flm-page .flm-toolbar { padding: 14px 16px 0; }
+  #root .flm-page .flm-tabs { padding-inline: 14px; }
+  #root .flm-page .flm-count { padding-inline: 16px; }
+  #root .flm-page .flm-empty { margin-inline: 14px; }
+}
+@media (max-width: 520px) {
+  #root .flm-page .flm-header-actions > * { max-width: 100%; }
+  #root .flm-page .flm-category-toggle { width: 100%; }
+  #root .flm-page .flm-cat-btn { flex: 1 1 0; padding-inline: 7px; font-size: 11px; }
+  #root .flm-page .flm-search { flex-basis: 100%; max-width: none; }
+}
+
 
 
 
