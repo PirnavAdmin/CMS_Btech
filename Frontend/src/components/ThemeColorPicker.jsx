@@ -41,15 +41,36 @@ function applyColor(color) {
   root.style.setProperty('--cms-primary-active', hover)
   root.style.setProperty('--cms-primary-soft', `color-mix(in srgb, ${color} 55%, var(--surface))`)
   root.style.setProperty('--cms-primary-border', `color-mix(in srgb, ${color} 68%, var(--border))`)
+  root.style.setProperty('--cms-border', darkMode
+    ? `color-mix(in srgb, ${color} 20%, rgba(177, 194, 139, 0.2))`
+    : `color-mix(in srgb, ${color} 22%, rgba(111, 132, 78, 0.22))`)
+  root.style.setProperty('--cms-border-strong', darkMode
+    ? `color-mix(in srgb, ${color} 30%, rgba(187, 204, 148, 0.32))`
+    : `color-mix(in srgb, ${color} 32%, rgba(95, 115, 55, 0.34))`)
+  root.style.setProperty('--cms-secondary', darkMode
+    ? `color-mix(in srgb, ${color} 10%, rgba(35, 43, 31, 0.68))`
+    : `color-mix(in srgb, ${color} 12%, rgba(247, 248, 239, 0.66))`)
+  root.style.setProperty('--cms-subtle', darkMode
+    ? `color-mix(in srgb, ${color} 12%, rgba(41, 49, 36, 0.6))`
+    : `color-mix(in srgb, ${color} 14%, rgba(241, 244, 226, 0.62))`)
+  root.style.setProperty('--cms-table-header', darkMode
+    ? `color-mix(in srgb, ${color} 15%, rgba(43, 52, 38, 0.76))`
+    : `color-mix(in srgb, ${color} 18%, rgba(239, 243, 224, 0.76))`)
+  root.style.setProperty('--cms-hover', darkMode
+    ? `color-mix(in srgb, ${color} 22%, rgba(57, 68, 47, 0.66))`
+    : `color-mix(in srgb, ${color} 36%, rgba(228, 235, 202, 0.64))`)
   root.style.setProperty('--page-gradient', darkMode
     ? `linear-gradient(135deg, color-mix(in srgb, ${color} 14%, #121611) 0%, color-mix(in srgb, ${color} 7%, #192014) 48%, color-mix(in srgb, ${color} 18%, #0f140c) 100%)`
     : `linear-gradient(135deg, color-mix(in srgb, ${color} 28%, #f3f6e9) 0%, color-mix(in srgb, ${color} 10%, #ffffff) 48%, color-mix(in srgb, ${color} 34%, #e9f0da) 100%)`)
   root.style.setProperty('--cms-header', darkMode
-    ? `color-mix(in srgb, ${color} 12%, rgba(40, 49, 35, 0.9))`
-    : `color-mix(in srgb, ${color} 18%, rgba(231, 236, 213, 0.9))`)
+    ? `color-mix(in srgb, ${color} 22%, rgba(40, 49, 35, 0.9))`
+    : `color-mix(in srgb, ${color} 28%, rgba(231, 236, 213, 0.9))`)
   root.style.setProperty('--cms-sidebar', darkMode
-    ? `color-mix(in srgb, ${color} 9%, rgba(32, 40, 29, 0.92))`
-    : `color-mix(in srgb, ${color} 12%, rgba(238, 242, 224, 0.9))`)
+    ? `color-mix(in srgb, ${color} 24%, rgba(32, 40, 29, 0.92))`
+    : `color-mix(in srgb, ${color} 34%, rgba(238, 242, 224, 0.9))`)
+  root.style.setProperty('--cms-sidebar-hover', darkMode
+    ? `color-mix(in srgb, ${color} 22%, rgba(255, 255, 255, 0.08))`
+    : `color-mix(in srgb, ${color} 36%, rgba(228, 235, 202, 0.64))`)
   root.style.setProperty('--cms-sidebar-active', `linear-gradient(90deg, ${hover}, ${accent})`)
   root.style.setProperty('--cms-sidebar-active-glow', `0 4px 14px color-mix(in srgb, ${accent} 35%, transparent)`)
   root.style.setProperty('--scrollbar-thumb-hover', accent)
