@@ -199,7 +199,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
   padding: 22px 28px !important;
   overflow: hidden !important;
   border-radius: 14px !important;
-  background: linear-gradient(135deg, var(--brand) 0%, #195A99 60%, var(--brand-dark) 100%) !important;
+  background: linear-gradient(135deg, var(--brand) 0%, color-mix(in srgb, var(--brand) 70%, var(--brand-dark)) 60%, var(--brand-dark) 100%) !important;
   box-shadow: 0 8px 24px rgba(16, 42, 76, 0.22) !important;
   border: 1px solid rgba(255, 255, 255, 0.16) !important;
   color: #FFFFFF !important;
@@ -543,7 +543,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
   height: auto !important;
   padding: 22px 28px !important;
   border-radius: 14px !important;
-  background: linear-gradient(135deg, var(--brand) 0%, #195A99 60%, var(--brand-dark) 100%) !important;
+  background: linear-gradient(135deg, var(--brand) 0%, color-mix(in srgb, var(--brand) 70%, var(--brand-dark)) 60%, var(--brand-dark) 100%) !important;
   box-shadow: 0 8px 24px rgba(16, 42, 76, 0.22) !important;
 }
 
@@ -771,7 +771,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
   border: 1px solid rgba(255, 255, 255, 0.16) !important;
   border-radius: 14px;
   color: #fff;
-  background: linear-gradient(135deg, var(--brand) 0%, #195A99 60%, var(--brand-dark) 100%) !important;
+  background: linear-gradient(135deg, var(--brand) 0%, color-mix(in srgb, var(--brand) 70%, var(--brand-dark)) 60%, var(--brand-dark) 100%) !important;
   box-shadow: 0 8px 24px rgba(16, 42, 76, 0.22) !important;
 }
 
