@@ -5,7 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const baseUrl = (env.VITE_API_BASE_URL || 'https://stagnant-craftily-paving.ngrok-free.dev').trim().replace(/\/+$/, '')
+  const baseUrl = (env.VITE_API_BASE_URL || 'https://clarity-math-delouse.ngrok-free.dev').trim().replace(/\/+$/, '')
   const secureApiProxy = !/^https:\/\/localhost(?::|\/|$)/i.test(baseUrl)
   return {
   plugins: [tailwindcss(), react()],

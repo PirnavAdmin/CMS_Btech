@@ -34,6 +34,28 @@ export function downloadFile(content, filename, mimeType) {
 
 export const exportToCsv = ({ rows, columns, filename }) => downloadFile(toCsv(rows, columns), `${sanitizeFilename(filename)}.csv`, 'text/csv;charset=utf-8')
 
+const spreadsheetXmlValue = value => exportValue(value)
+  .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
+  .replaceAll('&', '&amp;')
+  .replaceAll('<', '&lt;')
+  .replaceAll('>', '&gt;')
+  .replaceAll('"', '&quot;')
+  .replaceAll("'", '&apos;')
+
+export function exportToExcelXml({ rows = [], columns = [], filename = 'attendance', title = 'Report', scope = '' }) {
+  if (!rows.length || !columns.length) throw new Error('No records available to export.')
+  const cell = value => `<Cell><Data ss:Type="String">${spreadsheetXmlValue(value)}</Data></Cell>`
+  const sheetName = String(title || 'Report').replace(/[\\/?*\[\]:]/g, ' ').trim().slice(0, 31) || 'Report'
+  const xmlRows = [
+    `<Row>${cell(title)}</Row>`,
+    `<Row>${cell(`${scope}${scope ? ' · ' : ''}${rows.length} records`)}</Row>`,
+    `<Row>${columns.map(column => cell(column.label)).join('')}</Row>`,
+    ...rows.map(row => `<Row>${columns.map(column => cell(typeof column.value === 'function' ? column.value(row) : row[column.value])).join('')}</Row>`),
+  ].join('')
+  const workbook = `<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="${spreadsheetXmlValue(sheetName)}"><Table>${xmlRows}</Table></Worksheet></Workbook>`
+  downloadFile(`\uFEFF${workbook}`, `${sanitizeFilename(filename)}.xml`, 'application/vnd.ms-excel;charset=utf-8')
+}
+
 export function downloadServerExport({ blob, contentDisposition, contentType }, fallback = 'export') {
   const encoded = /filename\*=UTF-8''([^;]+)/i.exec(contentDisposition)?.[1]
   const plain = /filename="([^"]+)"|filename=([^;]+)/i.exec(contentDisposition)
