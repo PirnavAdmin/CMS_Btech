@@ -505,30 +505,6 @@ function LibraryWorkspace() {
           />
         </div>
 
-        <div className="adv-library-header__actions">
-            <ExportMenu
-              rows={currentList}
-              columns={libraryExportColumns[activeTab]}
-              filename={`library_${activeTab}`}
-              title={`Digital Library - ${activeTab.toUpperCase()}`}
-              directDownload
-            />
-
-            {isAdmin && (
-              <button
-                type="button"
-                className="adv-btn adv-btn--primary"
-                onClick={() => {
-                  setEditingBook(null)
-                  setAddBookModal(true)
-                }}
-              >
-                <FiPlus />
-                <span>Add Book to Catalog</span>
-              </button>
-            )}
-        </div>
-
         {/* Executive KPI Stat Cards */}
         <div className="adv-kpi-grid adv-kpi-grid--library-summary">
           <div className="adv-kpi-card adv-kpi-card--blue">
@@ -754,6 +730,28 @@ function LibraryWorkspace() {
               onClick={() => setShowFilters(value => !value)}
             >
               <FiFilter aria-hidden="true" /> Filters{activeLibraryFilterCount > 0 && <span className="adv-filter-count">{activeLibraryFilterCount}</span>}<FiChevronDown className={showFilters ? 'is-open' : ''} aria-hidden="true" />
+            </button>
+          )}
+
+          <ExportMenu
+            rows={currentList}
+            columns={libraryExportColumns[activeTab]}
+            filename={`library_${activeTab}`}
+            title={`Digital Library - ${activeTab.toUpperCase()}`}
+            directDownload
+          />
+
+          {isAdmin && (
+            <button
+              type="button"
+              className="adv-btn adv-btn--primary"
+              onClick={() => {
+                setEditingBook(null)
+                setAddBookModal(true)
+              }}
+            >
+              <FiPlus />
+              <span>Add Book to Catalog</span>
             </button>
           )}
 
