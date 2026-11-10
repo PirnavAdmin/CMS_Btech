@@ -2,8 +2,8 @@ import React from 'react'
 import { afterEach, expect, test, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { FeeStructureWizard, FeeStructure } from './FeeManagement'
-import { academicFeePlanApi } from '../../api/apiEndpoints'
+import { academicFeeBatchScopes, FeeStructureWizard, FeeStructure } from './FeeManagement'
+import { academicFeePlanApi, feeConfigurationApi } from '../../api/apiEndpoints'
 import { newFeeStructure } from '../../services/feeStructureService'
 const access=vi.hoisted(()=>({write:true,scope:rows=>rows}))
 vi.mock('../../auth/ScreenAccess',()=>({useScreenAccess:()=>({canAction:()=>access.write})}))
@@ -30,6 +30,14 @@ async function openBreakdown() {
  choose('Admission Batch *', '2025-2029'); choose('Applicable Semester *', '6');
  fireEvent.click(screen.getByRole('button', { name: /Continue/ }));
 }
+test('admission API mapping preserves batch scope IDs and excludes other colleges or incomplete rows', () => {
+ expect(academicFeeBatchScopes([
+  { collegeId: 9, academicYearId: 1, courseId: 2, branchId: 4, batch: '2025-2029' },
+  { CollegeId: 10, AcademicYearId: 1, CourseId: 2, BranchId: 4, Batch: '2025-2029' },
+  { collegeId: 9, courseId: 2, branchId: 4, batch: '   ' },
+ ], '9')).toEqual([{ collegeId: '9', academicYearId: '1', courseId: '2', branchId: '4', batch: '2025-2029' }])
+})
+
 test('academic dependencies use stored cohorts, clear stale children and suggest editable names', async () => {
  mount(); await waitFor(() => expect(screen.getByLabelText('Course *').disabled).toBe(false));
  choose('Course *', '2'); choose('Branch *', '4');
@@ -43,6 +51,68 @@ test('academic dependencies use stored cohorts, clear stale children and suggest
  expect(screen.getByLabelText('Applicable Semester *').value).toBe(''); expect(screen.getByLabelText('Fee Plan Name *').value).toBe('Custom plan');
  expect(screen.getByLabelText('Branch *').textContent).not.toContain('CSE');
  expect(screen.getByLabelText('Fee Applicability Period *').textContent).not.toContain('Annual');
+})
+
+test('empty batch response keeps batch and semester unavailable with an explanatory state', async () => {
+ const emptyMasters = { ...masters, batchScopes: [] }
+ render(<FeeStructureWizard value={newFeeStructure('1')} masters={emptyMasters} collegeId="9" close={() => {}} save={() => {}} />)
+ await waitFor(() => expect(screen.getByLabelText('Course *').disabled).toBe(false))
+ choose('Course *', '2'); choose('Branch *', '4')
+ await waitFor(() => expect(screen.getByText(/No admission batches found/)).toBeTruthy())
+ expect(screen.getByLabelText('Admission Batch *').disabled).toBe(true)
+ expect(screen.getByLabelText('Applicable Semester *').disabled).toBe(true)
+})
+
+test('admission batch loading and failure states remain visible without enabling an empty batch list', async () => {
+ const emptyMasters = { ...masters, batchScopes: [] }
+ const props = { value: newFeeStructure('1'), masters: emptyMasters, collegeId: '9', close: () => {}, save: () => {} }
+ const view = render(<FeeStructureWizard {...props} admissionsLoading />)
+ await waitFor(() => expect(screen.getByLabelText('Course *').disabled).toBe(false))
+ choose('Course *', '2'); choose('Branch *', '4')
+ expect(screen.getByLabelText('Admission Batch *').disabled).toBe(true)
+ expect(screen.getByText(/Loading admission batches and existing fee plans/)).toBeTruthy()
+ view.rerender(<FeeStructureWizard {...props} admissionsError="Admissions offline" />)
+ expect((await screen.findByRole('alert')).textContent).toContain('Admissions offline')
+ expect(screen.getByLabelText('Admission Batch *').disabled).toBe(true)
+ expect(screen.getByLabelText('Applicable Semester *').disabled).toBe(true)
+})
+
+test('fee category failures do not discard successfully loaded plan batches', async () => {
+ feeConfigurationApi.categories.mockRejectedValueOnce(new Error('Fee categories offline'))
+ academicFeePlanApi.list.mockResolvedValueOnce([{ feeStructureId: 99, courseId: 2, branchId: 4, batch: '2024-2028' }])
+ const emptyMasters = { ...masters, batchScopes: [] }
+ render(<FeeStructureWizard value={newFeeStructure('1')} masters={emptyMasters} collegeId="9" close={() => {}} save={() => {}} />)
+ await waitFor(() => expect(screen.getByLabelText('Course *').disabled).toBe(false))
+ expect(await screen.findByText('Fee categories offline')).toBeTruthy()
+ choose('Course *', '2'); choose('Branch *', '4')
+ await waitFor(() => expect(screen.getByLabelText('Admission Batch *').disabled).toBe(false))
+ expect(screen.getByLabelText('Admission Batch *').textContent).toContain('2024-2028')
+})
+
+test('admission batch options are enabled while the existing-plan lookup is still loading', async () => {
+ let finishPlanLookup
+ academicFeePlanApi.list.mockImplementationOnce(() => new Promise(resolve => { finishPlanLookup = resolve }))
+ mount()
+ await waitFor(() => expect(screen.getByLabelText('Course *').disabled).toBe(false))
+ choose('Course *', '2'); choose('Branch *', '4')
+ expect(screen.getByLabelText('Admission Batch *').disabled).toBe(false)
+ expect(screen.getByText(/Loading admission batches and existing fee plans/)).toBeTruthy()
+ finishPlanLookup([])
+ await waitFor(() => expect(screen.queryByText(/Loading admission batches and existing fee plans/)).toBeNull())
+})
+
+test('a fee plan API failure leaves actual admission batches selectable and blocks unsafe submission', async () => {
+ academicFeePlanApi.list.mockRejectedValueOnce(new Error('Fee plans offline'))
+ mount()
+ await waitFor(() => expect(screen.getByLabelText('Course *').disabled).toBe(false))
+ choose('Course *', '2'); choose('Branch *', '4')
+ await waitFor(() => expect(screen.getByLabelText('Admission Batch *').disabled).toBe(false))
+ choose('Admission Batch *', '2025-2029')
+ expect(screen.getByLabelText('Applicable Semester *').disabled).toBe(false)
+ choose('Applicable Semester *', '6')
+ fireEvent.click(screen.getByRole('button', { name: /Continue/ }))
+ expect(await screen.findByText(/Existing fee plans could not be loaded/)).toBeTruthy()
+ expect(academicFeePlanApi.create).not.toHaveBeenCalled()
 })
 test('copied combinations expose duplicate validation and financial category is in breakdown', async () => {
  mount(); await waitFor(() => expect(screen.getByLabelText('Course *').disabled).toBe(false));

@@ -154,7 +154,7 @@ function getAllocatedRangePositions(allocations, range) {
 }
 
 function Status({ value }) { return <span className={`exm-status exm-status--${String(value).toLowerCase().replaceAll(' ', '-')}`}>{value}</span> }
-function Field({ label, children, required }) { return <label className="exm-field"><span>{label}{required && <b> *</b>}</span>{children}</label> }
+function Field({ label, children, required }) { return <label className="exm-field"><span>{label}{required && <> <b className="exm-required-marker" aria-label="required">*</b></>}</span>{children}</label> }
 function Empty({ children = 'No examination schedules found.' }) { return <div className="exm-empty"><ClipboardList size={28}/><strong>{children}</strong><span>Try changing your filters or create a new schedule.</span></div> }
 function Notice({ children, onClose }) { return <div className="exm-notice" role="status"><CheckCircle2 size={18}/><span>{children}</span>{onClose && <button onClick={onClose} aria-label="Close"><X size={16}/></button>}</div> }
 

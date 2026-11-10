@@ -4,3 +4,7 @@
 
 /.vs/BTech Backend/v17/.wsuo
 *.json
+/.vs/BTech Backend/CopilotIndices/17.14.1691.21253
+/.vs/BTech Backend/FileContentIndex/merges
+/.vs/BTech Backend/FileContentIndex
+*.sqlite

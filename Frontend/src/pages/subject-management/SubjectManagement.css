@@ -626,7 +626,7 @@
 /* Add/Edit subject wizard: clear step hierarchy, focused fields, and a stable action bar. */
 .sm-screen .shared-view-dialog:has(.sm-editor-layout) {
   width: min(980px, calc(100vw - 36px));
-  max-height: calc(100dvh - 48px);
+  max-height: calc(100dvh - 32px);
   border-color: color-mix(in srgb, var(--brand) 18%, var(--border));
   border-radius: 20px;
   box-shadow: var(--shadow-md);
@@ -638,7 +638,7 @@
 }
 
 .sm-screen .shared-view-dialog:has(.sm-editor-layout) > .shared-view-dialog__header {
-  padding: 20px 26px;
+  padding: 16px 22px;
   border-bottom-color: var(--border);
   background: linear-gradient(110deg, var(--surface), color-mix(in srgb, var(--brand-soft) 30%, var(--surface)));
 }
@@ -669,13 +669,13 @@
 }
 
 .sm-screen .shared-view-dialog:has(.sm-editor-layout) > .shared-view-dialog__body {
-  gap: 12px;
-  padding: 16px 20px 20px;
+  gap: 8px;
+  padding: 10px 14px 14px;
   background: var(--surface-soft);
 }
 
 .sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-editor-layout {
-  height: min(640px, calc(100dvh - 360px));
+  height: min(680px, calc(100dvh - 290px));
   min-height: 360px;
 }
 
@@ -691,8 +691,8 @@
 
 .sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-reference-tabs {
   flex: 0 0 auto;
-  gap: 8px;
-  padding: 12px 18px;
+  gap: 6px;
+  padding: 8px 14px;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
 }
@@ -743,14 +743,14 @@
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
-  padding: 20px 22px;
+  padding: 14px 16px;
   scrollbar-width: thin;
   overscroll-behavior: contain;
 }
 
 .sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-editor-step-content > section {
   margin: 0;
-  padding: 22px;
+  padding: 18px;
   border: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
   border-radius: 14px;
@@ -767,7 +767,7 @@
 }
 
 .sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-editor-section-description {
-  margin: 6px 0 20px;
+  margin: 5px 0 14px;
   color: var(--text-muted);
   font-size: 12px;
   line-height: 1.55;
@@ -775,7 +775,7 @@
 
 .sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-form-grid-2,
 .sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-form-grid-3 {
-  gap: 16px 18px;
+  gap: 12px 14px;
 }
 
 .sm-screen .shared-view-dialog:has(.sm-editor-layout) .sm-field { gap: 7px; }
@@ -801,7 +801,7 @@
   justify-content: space-between;
   gap: 12px;
   margin: 0;
-  padding: 13px 22px;
+  padding: 10px 18px;
   border-top: 1px solid var(--border);
   background: var(--surface);
 }
