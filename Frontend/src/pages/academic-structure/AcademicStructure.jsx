@@ -1447,14 +1447,10 @@ export default function AcademicStructure() {
                         className={`as-form-control ${formErrors.courseId ? 'is-invalid' : ''}`}
                         value={branchForm.courseId}
                         onChange={(e) => {
-                          const selectedCourse = courses.find((course) => String(courseIdOf(course)) === e.target.value)
                           setGenerationCourseId(e.target.value)
                           setGenerationBranchId('')
-                          setBranchForm((current) => ({
-                            ...current,
-                            courseId: e.target.value,
-                            departmentId: String(courseDepartmentIdOf(selectedCourse) ?? current.departmentId ?? ''),
-                          }))
+                          setBranchForm((current) => ({ ...current, courseId: e.target.value }))
+                          setFormErrors((current) => ({ ...current, courseId: '' }))
                         }}
                         disabled={isLoading || !courses.some((course) => courseIdOf(course) != null)}
                         required
@@ -1484,16 +1480,8 @@ export default function AcademicStructure() {
                         className={`as-form-control ${formErrors.departmentId ? 'is-invalid' : ''}`}
                         value={branchForm.departmentId}
                         onChange={(e) => {
-                          const newDeptId = e.target.value
-                          const deptCourses = courses.filter((c) => String(courseDepartmentIdOf(c)) === String(newDeptId))
-                          const selectedCourse = courses.find(course => String(courseIdOf(course)) === String(branchForm.courseId))
-                          const selectedDepartment = courseDepartmentIdOf(selectedCourse)
-                          const keepCourse = selectedCourse && (!selectedDepartment || String(selectedDepartment) === newDeptId)
-                          setBranchForm({
-                            ...branchForm,
-                            departmentId: newDeptId,
-                            courseId: keepCourse ? branchForm.courseId : String(courseIdOf(deptCourses[0]) ?? ''),
-                          })
+                          setBranchForm((current) => ({ ...current, departmentId: e.target.value }))
+                          setFormErrors((current) => ({ ...current, departmentId: '' }))
                         }}
                         required
                       >

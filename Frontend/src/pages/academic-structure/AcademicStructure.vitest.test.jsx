@@ -328,6 +328,19 @@ test('opens Add Branch modal with cascading selectors and submits new branch', a
   fireEvent.click(within(screen.getByRole('dialog', { name: 'B.Tech Computer Science' })).getByRole('button', { name: 'Add Branch' }))
   expect(await screen.findByRole('heading', { level: 2, name: 'Add Branch' })).toBeTruthy()
 
+  const courseSelect = screen.getByLabelText(/Select Course/i)
+  const departmentSelect = screen.getByLabelText(/Select Department/i)
+  fireEvent.change(departmentSelect, { target: { value: '2' } })
+  fireEvent.change(courseSelect, { target: { value: '10' } })
+  expect(departmentSelect.value).toBe('2')
+  expect(courseSelect.value).toBe('10')
+  expect(screen.queryByText(/different department/i)).toBeNull()
+
+  fireEvent.change(departmentSelect, { target: { value: '1' } })
+  fireEvent.change(departmentSelect, { target: { value: '2' } })
+  expect(departmentSelect.value).toBe('2')
+  expect(courseSelect.value).toBe('10')
+
   // Fill in form
   fireEvent.change(screen.getByLabelText(/Branch Name/i), { target: { value: 'Cyber Security' } })
   fireEvent.change(screen.getByLabelText(/Branch Code/i), { target: { value: 'CSE-CS' } })
@@ -340,6 +353,8 @@ test('opens Add Branch modal with cascading selectors and submits new branch', a
       expect.objectContaining({
         branchName: 'Cyber Security',
         branchCode: 'CSE-CS',
+        courseId: 10,
+        departmentId: 2,
       })
     )
   })
