@@ -342,6 +342,17 @@
   gap: 8px;
 }
 
+.sm-editor-config-section {
+  border-top: 1px solid var(--border);
+  padding-block: 8px;
+}
+
+.sm-editor-config-section > summary {
+  cursor: pointer;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
 .sm-field .sm-elective-toggle input[type="checkbox"] {
   width: 16px;
   height: 16px;

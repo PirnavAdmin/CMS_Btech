@@ -387,7 +387,14 @@ export function SubjectDetailsPage() {
 }
 function Select({ label, value, options, onChange, disabled, semester = false, hideSearch = false, placeholder = label }) { return <SearchableSelect placement="bottom" hideSearch={hideSearch} label={label} value={value} options={options} onChange={onChange} placeholder={placeholder} disabled={disabled} getOptionLabel={semester ? s => s.semesterName || s.name || `Semester ${semNo(s)}` : undefined} /> }
 function Field({ label, children }) { return <div className="sm-field"><label>{label}</label>{children}</div> }
-function Input({ label, value, change, type = 'text' }) { return <label className="sm-field"><span>{label}</span><input type={type} min={type === 'number' ? '0' : undefined} value={value ?? ''} onChange={e => change(e.target.value)} /></label> }
+function Input({ label, value, change, type = 'text' }) {
+  const numeric = type === 'number'
+  return <label className="sm-field">
+    <span>{label}</span>
+    <input type={type} min={numeric ? 0 : undefined} step={numeric ? '0.01' : undefined}
+      value={value ?? ''} onChange={event => change(event.target.value)} />
+  </label>
+}
 function StatusConfirmation({ subject, saving, close, confirm }) { return <ViewDialog title="Deactivate Subject?" onClose={close} busy={saving} showExport={false} hideFooter maxWidth="520px"><p><strong>{subject.subjectName} ({subject.subjectCode})</strong> will no longer be available for new academic use. Continue?</p><footer className="sm-modal-footer"><button type="button" className="sm-btn sm-btn--secondary" disabled={saving} onClick={close}>Cancel</button><button type="button" className="sm-btn sm-btn--danger" disabled={saving} onClick={confirm}>{saving ? 'Deactivating…' : 'Confirm Deactivate'}</button></footer></ViewDialog> }
 
 function Editor({ form, editing, masters, branches, semesters, levels, typeOptions, formLevel: initialLevel, change: updateForm, close, save, saving }) {
@@ -512,6 +519,8 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
             <section>
               <h3 className="sm-editor-section-title">Credits, Hours & Marks</h3>
               <p className="sm-editor-section-description">Enter the approved credit value, weekly teaching hours and assessment marks.</p>
+              <details open className="sm-editor-config-section">
+              <summary>Credits and teaching hours</summary>
               <div className="sm-form-grid-3">
                 <Input label="Credits" type="number" value={form.credits} change={v => change('credits', v)} />
                 <Input label="Lecture Hours" type="number" value={form.lectureHours} change={v => change('lectureHours', v)} />
@@ -519,10 +528,14 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
                 <Input label="Practical Hours" type="number" value={form.practicalHours} change={v => change('practicalHours', v)} />
               </div>
               <p className="sm-editor-section-description">Weekly contact hours: {[form.lectureHours, form.tutorialHours, form.practicalHours].every(value => value !== '' && value != null && Number.isFinite(Number(value))) ? [form.lectureHours, form.tutorialHours, form.practicalHours].reduce((total, value) => total + Number(value), 0).toLocaleString() : '—'}</p>
+              </details>
+              <details open className="sm-editor-config-section">
+              <summary>Assessment marks</summary>
               <div className="sm-form-grid-3">
                 <Input label="Internal Marks" type="number" value={form.internalMarks} change={v => change('internalMarks', v)} />
                 <Input label="External Marks" type="number" value={form.externalMarks} change={v => change('externalMarks', v)} />
               </div>
+              </details>
             </section>
           )}
           </div>
