@@ -44,7 +44,7 @@
 
 .em-header-actions .sm-btn--primary {
     background: var(--primary, var(--brand));
-    color: #ffffff;
+    color: var(--text-on-dark);
     height: 36px;
     border-radius: 7px;
 }
@@ -99,8 +99,8 @@
     padding: 16px 18px;
     border: 1px solid var(--border, var(--border));
     border-radius: 12px;
-    background: #fff;
-    box-shadow: 0 1px 3px rgba(16, 42, 76, 0.05);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
 }
 
 .em-kpi-card .sm-kpi-icon {
@@ -163,8 +163,8 @@
     overflow: hidden;
     border: 1px solid var(--border);
     border-radius: 10px;
-    background: #fff;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, .05);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
 }
 
 .sm-card-header {
@@ -396,7 +396,7 @@
     padding: 0 12px;
     border: 1px solid var(--border-strong);
     border-radius: 8px;
-    background: #fff;
+    background: var(--surface);
     color: var(--text-secondary);
     font: inherit;
     font-size: .82rem;
@@ -415,7 +415,7 @@
     padding: 4px;
     border: 1px solid var(--border-strong);
     border-radius: 14px;
-    background: #fff;
+    background: var(--surface);
 }
 
 .em-type-filter--segmented button {
@@ -440,8 +440,8 @@
 .em-table th {
     height: 40px;
     padding: 8px 14px;
-    background: var(--table-head, var(--brand)) !important;
-    color: #FFFFFF !important;
+    background: var(--table-head) !important;
+    color: var(--text-secondary) !important;
     border-bottom: 1px solid #0f3661 !important;
     font-size: 10px;
     font-weight: 700;
@@ -524,7 +524,7 @@
     place-items: center;
     border: 1px solid #dbe2ea;
     border-radius: 6px;
-    background: #fff;
+    background: var(--surface);
     color: var(--text-secondary);
     cursor: pointer;
 }
@@ -536,8 +536,8 @@
 }
 
 .em-icon-action--danger:hover {
-    border-color: #fecaca;
-    color: #b91c1c;
+    border-color: var(--danger-border);
+    color: var(--danger);
     background: #fff7f7;
 }
 
@@ -554,7 +554,7 @@
     gap: 4px;
     min-width: 0;
     padding: 12px 16px;
-    background: #fff;
+    background: var(--surface);
 }
 
 .em-group-details span {
@@ -648,9 +648,9 @@
 }
 
 .sm-btn--danger {
-    border: 1px solid #fecaca;
-    background: #fff;
-    color: #b91c1c;
+    border: 1px solid var(--danger-border);
+    background: var(--surface);
+    color: var(--danger);
 }
 
 .em-workflow-grid {
@@ -694,7 +694,7 @@
     gap: 4px;
     min-height: 92px;
     padding: 16px 20px;
-    background: #fff;
+    background: var(--surface);
     color: var(--text-muted);
     font-size: .78rem;
 }
@@ -721,7 +721,7 @@
 
 .em-report-card {
     border-color: #dbe4f0;
-    box-shadow: 0 8px 24px rgba(15, 23, 42, .06);
+    box-shadow: var(--shadow-sm);
 }
 
 .em-report-heading {
@@ -759,7 +759,7 @@
 }
 
 .em-report-table .em-table th {
-    background: var(--brand-soft);
+    background: var(--table-head);
     color: var(--text-secondary);
     text-align: center;
     vertical-align: middle;
@@ -806,7 +806,7 @@
 }
 
 .em-report-table .em-table tbody tr:nth-child(even) td {
-    background: #fcfdff;
+    background: var(--table-row);
 }
 
 .em-report-table .em-table tbody tr:hover td {
@@ -876,10 +876,10 @@
     gap: 8px;
     margin-bottom: 20px;
     padding: 12px 14px;
-    border: 1px solid #fecaca;
+    border: 1px solid var(--danger-border);
     border-radius: 8px;
-    background: #fff1f2;
-    color: #b91c1c;
+    background: var(--danger-soft);
+    color: var(--danger);
     font-size: .88rem;
 }
 
@@ -892,8 +892,8 @@
     padding: 20px;
     border: 1px solid var(--border);
     border-radius: 10px;
-    background: #fff;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, .05);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
 }
 
 .em-avatar {
@@ -982,7 +982,7 @@
     padding: 6px 8px;
     border: 1px solid var(--border-strong);
     border-radius: 5px;
-    background: #fff;
+    background: var(--surface);
     color: var(--text-secondary);
     cursor: pointer;
     font-size: .78rem;
@@ -991,8 +991,8 @@
 .em-pagination button:hover:not(:disabled),
 .em-pagination button.active {
     border-color: var(--brand-hover);
-    background: var(--brand-hover);
-    color: #ffffff;
+    background: var(--brand-solid-hover);
+    color: var(--text-on-dark);
 }
 
 .em-pagination button:hover:not(:disabled) {

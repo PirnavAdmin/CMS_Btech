@@ -21,7 +21,7 @@ test('generates only missing definitions, retains IDs and is idempotent', async 
   const a = adapter([{ semesterId: 22, branchId: 7, courseId: 10, semesterNumber: 1, yearNumber: 1, academicYearId: 5 }])
   await ensureBranchSemesters(options(a)); await ensureBranchSemesters(options(a))
   assert.equal(a.calls.length,3); assert.equal(a.rows[0].semesterId,22)
-  assert.ok(a.calls.every(row => row.academicYearId === null && row.startDate === null))
+  assert.ok(a.calls.every(row => row.academicYearId === 5 && row.startDate === null))
 })
 test('partial failure retries only missing saved records', async () => {
   const a = adapter(); const create = a.create; let fail = true
@@ -44,6 +44,14 @@ test('structural reductions preserve all records and require validation', async 
   const a = adapter([{ semesterId: 30, branchId:7,courseId:10,semesterNumber:8,yearNumber:4 }])
   await assert.rejects(ensureBranchSemesters(options(a)), /dependency validation/)
   assert.equal(a.calls.length,0); assert.equal(a.rows[0].semesterId,30)
+})
+test('ambiguous academic years and unapproved repairs never create records', async () => {
+  const one = { semesterId: 31, branchId: 7, courseId: 10, semesterNumber: 1, yearNumber: 1, academicYearId: 5 }
+  const a = adapter([one, { ...one, semesterId: 32, semesterNumber: 2, academicYearId: 6 }])
+  await assert.rejects(ensureBranchSemesters(options(a)), /multiple academic years/)
+  a.rows.pop()
+  await assert.rejects(ensureBranchSemesters(options({ ...a, approvedNumbers: [2, 3] })), /missing records changed/)
+  assert.equal(a.calls.length, 0)
 })
 test('a successful response without saved rows fails persistence verification', async () => {
   const a = adapter(); a.create = async () => ({ success: true })

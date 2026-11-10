@@ -3,13 +3,13 @@
 .student-dashboard-main,.student-dashboard-sidebar{min-width:0}
 .student-dashboard-sidebar{display:grid;gap:16px}
 .student-dashboard-sidebar .student-dashboard-card{margin-bottom:0}
-.student-welcome{position:relative;display:flex;min-height:180px;overflow:hidden;align-items:center;justify-content:space-between;gap:20px;padding:26px 30px;border-radius:16px;color:#fff;background:linear-gradient(115deg,var(--brand-dark),var(--brand) 70%,#3b8edb);box-shadow:var(--shadow-sm)}
+.student-welcome{position:relative;display:flex;min-height:180px;overflow:hidden;align-items:center;justify-content:space-between;gap:20px;padding:26px 30px;border-radius:16px;color:var(--text-on-dark);background:linear-gradient(115deg,var(--brand-dark),var(--brand) 70%,#3b8edb);box-shadow:var(--shadow-sm)}
 .student-welcome::after{position:absolute;right:60px;bottom:-125px;width:260px;height:260px;border:1px solid #ffffff2b;border-radius:50%;content:""}
 .student-welcome-copy{position:relative;z-index:1;max-width:620px}
 .student-welcome-eyebrow{margin:0 0 8px!important;color:#b9ddff!important;font-size:13px;font-weight:700;letter-spacing:.4px}
-.student-welcome h2{margin:0 0 8px!important;color:#fff;font-size:clamp(21px,2vw,29px);letter-spacing:-.5px}
+.student-welcome h2{margin:0 0 8px!important;color:var(--text-on-dark);font-size:clamp(21px,2vw,29px);letter-spacing:-.5px}
 .student-welcome-copy>p:not(.student-welcome-eyebrow){margin:0 0 18px;color:#e1efff;line-height:1.5}
-.student-welcome a{display:inline-flex;align-items:center;gap:8px;border:1px solid #ffffff72;border-radius:8px;padding:9px 13px;color:#fff;text-decoration:none;font-size:13px;font-weight:700}
+.student-welcome a{display:inline-flex;align-items:center;gap:8px;border:1px solid #ffffff72;border-radius:8px;padding:9px 13px;color:var(--text-on-dark);text-decoration:none;font-size:13px;font-weight:700}
 .student-welcome a:hover{background:#ffffff1a}
 .student-welcome-art{position:relative;z-index:1;display:grid;flex:0 0 104px;width:104px;height:104px;place-items:center;border:1px solid #ffffff4a;border-radius:28px;color:#d5ecff;background:#ffffff1c;transform:rotate(4deg)}
 .student-welcome-art svg{width:54px;height:54px}

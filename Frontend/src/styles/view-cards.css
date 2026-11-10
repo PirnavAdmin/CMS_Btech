@@ -6,7 +6,7 @@
   border: 1px solid var(--border, var(--border)) !important;
   border-radius: 14px !important;
   background: var(--surface, var(--surface-soft)) !important;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
+  box-shadow: var(--shadow-sm) !important;
   overflow: hidden !important;
   box-sizing: border-box !important;
   margin: 0 !important;
@@ -62,7 +62,7 @@
   border: 0 !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.18) !important;
   border-radius: 0 !important;
-  color: #FFFFFF !important;
+  color: var(--text-on-dark) !important;
   position: relative !important;
   overflow: hidden !important;
   min-height: 100px !important;
@@ -99,7 +99,7 @@
 :root[data-theme="dark"] body .college-management .cm-profile-banner--account {
   background: linear-gradient(116deg, var(--brand) 0%, #2B78C5 58%, #3C8DDA 100%) !important;
   border-color: transparent !important;
-  color: #FFFFFF !important;
+  color: var(--text-on-dark) !important;
 }
 
 :root body .college-management .cm-profile-banner--account::after {
@@ -161,7 +161,7 @@
 :root body .college-management .cm-account-facts dd {
   margin: 0 !important;
   overflow-wrap: anywhere !important;
-  color: #FFFFFF !important;
+  color: var(--text-on-dark) !important;
   font-size: .88rem !important;
   font-weight: 750 !important;
 }
@@ -289,7 +289,7 @@
   border-radius: 999px !important;
   background: rgba(255, 255, 255, 0.2) !important;
   border: 1px solid rgba(255, 255, 255, 0.35) !important;
-  color: #FFFFFF !important;
+  color: var(--text-on-dark) !important;
   font-size: 0.72rem !important;
   font-weight: 750 !important;
   letter-spacing: 0.04em !important;
@@ -318,15 +318,15 @@
 
 /* Keep status meaning clear in profile/detail view headers. */
 :root body :is(.cm-profile-banner, .sa-profile-header) :is(.cm-status-badge, .sa-status-badge, .status-badge).active {
-  color: #15803d !important;
+  color: var(--success) !important;
   background: var(--cms-green-soft) !important;
-  border-color: #86efac !important;
+  border-color: var(--success-border) !important;
 }
 
 :root body :is(.cm-profile-banner, .sa-profile-header) :is(.cm-status-badge, .sa-status-badge, .status-badge):is(.inactive, .deactive) {
-  color: #b91c1c !important;
+  color: var(--danger) !important;
   background: var(--cms-red-soft) !important;
-  border-color: #fca5a5 !important;
+  border-color: var(--danger-border) !important;
 }
 
 :root body :is(.cm-status-badge, .sa-status-badge, .status-badge, .sp-badge, .details-status-badge):is(.inactive, .rejected, .ineligible, .deactive, .archived, .cancelled, .unpaid, [class*="inactive"]) {
@@ -346,7 +346,7 @@
   border: 0 !important;
   border-bottom: 1px solid rgba(255, 255, 255, .18) !important;
   border-radius: 0 !important;
-  color: #FFFFFF !important;
+  color: var(--text-on-dark) !important;
   background: linear-gradient(116deg, var(--brand) 0%, #2B78C5 58%, #3C8DDA 100%) !important;
   box-shadow: none !important;
   overflow: hidden !important;
@@ -382,7 +382,7 @@
 :root body .view-modal-banner .view-modal-badge {
   border: 1px solid rgba(255, 255, 255, .35) !important;
   border-radius: 999px !important;
-  color: #FFFFFF !important;
+  color: var(--text-on-dark) !important;
   background: rgba(255, 255, 255, .2) !important;
 }
 :root body .view-modal-banner .view-modal-badge-status.active {
@@ -394,7 +394,7 @@
   position: relative !important;
   z-index: 1 !important;
   margin: 0 !important;
-  color: #FFFFFF !important;
+  color: var(--text-on-dark) !important;
 }
 :root body .view-modal-banner .view-modal-subtitle {
   position: relative !important;
@@ -406,7 +406,7 @@
   margin: 0 !important;
   font-size: 1.45rem !important;
   font-weight: 750 !important;
-  color: #FFFFFF !important;
+  color: var(--text-on-dark) !important;
   line-height: 1.25 !important;
   letter-spacing: -0.015em !important;
 }
@@ -420,7 +420,7 @@
 }
 
 :root body :is(.cm-profile-subtitle, .sa-profile-header p, .sp-identity p) strong {
-  color: #FFFFFF !important;
+  color: var(--text-on-dark) !important;
   font-weight: 750 !important;
 }
 

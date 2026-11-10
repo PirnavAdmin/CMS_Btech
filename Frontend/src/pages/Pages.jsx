@@ -355,15 +355,15 @@ function Dashboard() {
     const total = scopedAdmissions.length
     if (total === 0) {
       return [
-        { label: 'Approved', value: 0, color: '#10B981' },
-        { label: 'Pending Review', value: 0, color: '#E11D48' },
-        { label: 'Under Verification', value: 0, color: '#F59E0B' },
+        { label: 'Approved', value: 0, color: 'var(--success)' },
+        { label: 'Pending Review', value: 0, color: 'var(--info)' },
+        { label: 'Under Verification', value: 0, color: 'var(--warning)' },
       ]
     }
     return [
-      { label: 'Approved', value: approvedAdmissions.length, color: '#10B981' },
-      { label: 'Under Review', value: pendingAdmissions.length, color: '#E11D48' },
-      { label: 'Under Verification', value: otherAdmissions, color: '#F59E0B' },
+      { label: 'Approved', value: approvedAdmissions.length, color: 'var(--success)' },
+      { label: 'Under Review', value: pendingAdmissions.length, color: 'var(--info)' },
+      { label: 'Under Verification', value: otherAdmissions, color: 'var(--warning)' },
     ].filter((item) => item.value > 0 || total === 0)
   }, [scopedAdmissions.length, approvedAdmissions.length, pendingAdmissions.length, otherAdmissions])
 
@@ -381,7 +381,7 @@ function Dashboard() {
 
     const entries = Object.entries(map).sort((a, b) => b[1] - a[1])
     if (entries.length > 0) {
-      const distinctColors = ['#0284C7', '#1769C2', '#38BDF8', '#0D9488', '#F59E0B']
+      const distinctColors = ['var(--info)', 'var(--brand)', 'var(--chart-series-3)', 'var(--success)', 'var(--warning)']
       return entries.slice(0, 4).map(([label, val], idx) => ({
         label,
         value: val,
@@ -439,7 +439,7 @@ function Dashboard() {
           const deptCourses = courses.filter((c) => String(c.departmentId) === String(deptId))
           const deptBranches = branches.filter((b) => String(b.departmentId) === String(deptId))
           const deptIntake = deptBranches.reduce((acc, b) => acc + Number(b.intakeCapacity || b.intake || 0), 0)
-          const deptIcons = ['#1769C2', '#0284C7', '#0D9488', '#F59E0B']
+          const deptIcons = ['var(--brand)', 'var(--info)', 'var(--success)', 'var(--warning)']
 
           return {
             id: deptId || idx,
@@ -469,18 +469,18 @@ function Dashboard() {
   // setup-status source here, so they are shown as unavailable instead of guessed.
   const academicDataUnavailable = Boolean(academicLoading || academicError)
   const setupFlowSteps = [
-    { title: 'College', count: academicDataUnavailable ? 'Status unavailable' : selectedCollege ? 'Selected' : 'Select a college', route: '/college-institution-management', icon: FiHome, isConfigured: academicDataUnavailable ? null : Boolean(selectedCollege), color: '#1769C2' },
-    { title: 'Academic Year', count: academicDataUnavailable ? 'Status unavailable' : selectedAcademicYear ? `${yearName.split(' ')[0]}` : 'Configure', route: '/academic-year-management', icon: FiCalendar, isConfigured: academicDataUnavailable ? null : Boolean(selectedAcademicYear), color: '#1769C2' },
-    { title: 'Academic Levels', count: 'Status unavailable', route: null, icon: FiLayers, isConfigured: null, color: '#64748B' },
-    { title: 'Departments', count: academicDataUnavailable ? 'Status unavailable' : `${scopedDepartments.length} Units`, route: '/department-management', icon: FiGrid, isConfigured: academicDataUnavailable ? null : scopedDepartments.length > 0, color: '#0284C7' },
-    { title: 'Courses', count: academicDataUnavailable ? 'Status unavailable' : `${scopedCourses.length} Programs`, route: '/courses', icon: FiLayers, isConfigured: academicDataUnavailable ? null : scopedCourses.length > 0, color: '#0D9488' },
-    { title: 'Branches', count: academicDataUnavailable ? 'Status unavailable' : `${scopedBranches.length} Streams`, route: '/branches', icon: FiBriefcase, isConfigured: academicDataUnavailable ? null : scopedBranches.length > 0, color: '#F59E0B' },
-    { title: 'Semesters', count: academicDataUnavailable ? 'Status unavailable' : `${semesters.length} Terms`, route: '/semester-management', icon: FiClock, isConfigured: academicDataUnavailable ? null : semesters.length > 0, color: '#1769C2' },
-    { title: 'Sections', count: academicDataUnavailable ? 'Status unavailable' : `${scopedSections.length} Batches`, route: '/section-management', icon: FiUsers, isConfigured: academicDataUnavailable ? null : scopedSections.length > 0, color: '#0284C7' },
-    { title: 'Rooms & Classrooms', count: 'Status unavailable', route: '/rooms-management', icon: FiGrid, isConfigured: null, color: '#64748B' },
-    { title: 'Fee Structure', count: 'Status unavailable', route: '/fees/structures', icon: FiLayers, isConfigured: null, color: '#64748B' },
-    { title: 'Faculty Setup', count: setupApiAvailability.faculty === null ? 'Status unavailable' : `${faculty.length} Records`, route: '/faculty', icon: FiBriefcase, isConfigured: setupApiAvailability.faculty === null ? null : faculty.length > 0, color: '#0284C7' },
-    { title: 'Student Admissions', count: setupApiAvailability.admissions === null ? 'Status unavailable' : `${scopedAdmissions.length} Records`, route: '/student-management/admissions', icon: FiUserPlus, isConfigured: setupApiAvailability.admissions === null ? null : scopedAdmissions.length > 0, color: '#10B981' },
+    { title: 'College', count: academicDataUnavailable ? 'Status unavailable' : selectedCollege ? 'Selected' : 'Select a college', route: '/college-institution-management', icon: FiHome, isConfigured: academicDataUnavailable ? null : Boolean(selectedCollege), color: 'var(--brand)' },
+    { title: 'Academic Year', count: academicDataUnavailable ? 'Status unavailable' : selectedAcademicYear ? `${yearName.split(' ')[0]}` : 'Configure', route: '/academic-year-management', icon: FiCalendar, isConfigured: academicDataUnavailable ? null : Boolean(selectedAcademicYear), color: 'var(--brand)' },
+    { title: 'Academic Levels', count: 'Status unavailable', route: null, icon: FiLayers, isConfigured: null, color: 'var(--text-muted)' },
+    { title: 'Departments', count: academicDataUnavailable ? 'Status unavailable' : `${scopedDepartments.length} Units`, route: '/academic-structure?step=departments', icon: FiGrid, isConfigured: academicDataUnavailable ? null : scopedDepartments.length > 0, color: 'var(--info)' },
+    { title: 'Courses', count: academicDataUnavailable ? 'Status unavailable' : `${scopedCourses.length} Programs`, route: '/academic-structure?step=courses', icon: FiLayers, isConfigured: academicDataUnavailable ? null : scopedCourses.length > 0, color: 'var(--success)' },
+    { title: 'Branches', count: academicDataUnavailable ? 'Status unavailable' : `${scopedBranches.length} Streams`, route: '/academic-structure?step=branches', icon: FiBriefcase, isConfigured: academicDataUnavailable ? null : scopedBranches.length > 0, color: 'var(--warning)' },
+    { title: 'Semesters', count: academicDataUnavailable ? 'Status unavailable' : `${semesters.length} Terms`, route: '/semester-management', icon: FiClock, isConfigured: academicDataUnavailable ? null : semesters.length > 0, color: 'var(--brand)' },
+    { title: 'Sections', count: academicDataUnavailable ? 'Status unavailable' : `${scopedSections.length} Batches`, route: '/section-management', icon: FiUsers, isConfigured: academicDataUnavailable ? null : scopedSections.length > 0, color: 'var(--info)' },
+    { title: 'Rooms & Classrooms', count: 'Status unavailable', route: '/rooms-management', icon: FiGrid, isConfigured: null, color: 'var(--text-muted)' },
+    { title: 'Fee Structure', count: 'Status unavailable', route: '/fees/structures', icon: FiLayers, isConfigured: null, color: 'var(--text-muted)' },
+    { title: 'Faculty Setup', count: setupApiAvailability.faculty === null ? 'Status unavailable' : `${faculty.length} Records`, route: '/faculty', icon: FiBriefcase, isConfigured: setupApiAvailability.faculty === null ? null : faculty.length > 0, color: 'var(--info)' },
+    { title: 'Student Admissions', count: setupApiAvailability.admissions === null ? 'Status unavailable' : `${scopedAdmissions.length} Records`, route: '/student-management/admissions', icon: FiUserPlus, isConfigured: setupApiAvailability.admissions === null ? null : scopedAdmissions.length > 0, color: 'var(--success)' },
   ]
   const availableSetupStages = setupFlowSteps.filter(step => step.isConfigured !== null)
   const completedSetupStages = availableSetupStages.filter(step => step.isConfigured).length
@@ -521,7 +521,7 @@ function Dashboard() {
                 <button type="button" className="ym-hero-stat" onClick={() => navigate('/student-management/profiles')}>
                   <span className="ym-hero-stat-icon is-blue"><FiUsers /></span><span><strong>{scopedStudents.length}</strong><small>Total Students</small></span>
                 </button>
-                <button type="button" className="ym-hero-stat" onClick={() => navigate('/branches')}>
+                <button type="button" className="ym-hero-stat" onClick={() => navigate('/academic-structure?step=branches')}>
                   <span className="ym-hero-stat-icon is-teal"><FiLayers /></span><span><strong>{activeBranchesCount}</strong><small>Active Branches</small></span>
                 </button>
                 <button type="button" className="ym-hero-stat" onClick={() => navigate('/faculty')}>
@@ -561,7 +561,7 @@ function Dashboard() {
             <ExplicitWaveChart
               labels={inflowTrendData.labels}
               points={inflowTrendData.points}
-              color="#1769C2"
+              color="var(--brand)"
               gradientId="ymWaveGradIndigo"
               unit="Students"
             />
@@ -780,7 +780,7 @@ function Dashboard() {
                 <h3 className="ym-card-title">Academic Units & Capacities</h3>
                 <span className="ym-card-subtitle">{departments.length} Departments | {scopedCourses.length} Degree Programs</span>
               </div>
-              <Link to="/department-management" className="ym-card-link">
+              <Link to="/academic-structure?step=departments" className="ym-card-link">
                 Manage <FiArrowRight />
               </Link>
             </div>
@@ -800,7 +800,7 @@ function Dashboard() {
                     <tr key={dept.id}>
                       <td>
                         <div className="ym-prog-cell">
-                          <div className="ym-prog-icon" style={{ backgroundColor: `${dept.color}18`, color: dept.color }}>
+                          <div className="ym-prog-icon" style={{ backgroundColor: `color-mix(in srgb, ${dept.color} 12%, transparent)`, color: dept.color }}>
                             <FiGrid />
                           </div>
                           <div className="ym-candidate-info">
@@ -842,7 +842,7 @@ function Dashboard() {
               {setupFlowSteps.map((step, idx) => {
                 const StepIcon = step.icon
                 const content = <>
-                  <div className="ym-flow-icon-circle" style={{ backgroundColor: `${step.color}15`, color: step.color }}>
+                  <div className="ym-flow-icon-circle" style={{ backgroundColor: `color-mix(in srgb, ${step.color} 12%, transparent)`, color: step.color }}>
                     <StepIcon />
                   </div>
                   <div className="ym-flow-text">
@@ -885,7 +885,7 @@ function Dashboard() {
             {role === ROLES.ADMIN ? (
               <>
                 <Link to="/student-management/admissions/new" className="ym-action-item">
-                  <div className="ym-action-icon" style={{ backgroundColor: 'rgba(23, 105, 194, 0.12)', color: '#1769C2' }}><FiUserPlus /></div>
+                  <div className="ym-action-icon" style={{ backgroundColor: 'color-mix(in srgb, var(--brand) 12%, transparent)', color: 'var(--brand)' }}><FiUserPlus /></div>
                   <div className="ym-action-body">
                     <strong>New Student Admission</strong>
                     <small>Enroll new candidate</small>
@@ -894,7 +894,7 @@ function Dashboard() {
                 </Link>
 
                 <Link to="/student-management/admissions" className="ym-action-item">
-                  <div className="ym-action-icon" style={{ backgroundColor: 'rgba(225, 29, 72, 0.12)', color: '#E11D48' }}><FiUserCheck /></div>
+                  <div className="ym-action-icon" style={{ backgroundColor: 'color-mix(in srgb, var(--danger) 12%, transparent)', color: 'var(--danger)' }}><FiUserCheck /></div>
                   <div className="ym-action-body">
                     <strong>Review Admissions</strong>
                     <small>{pendingAdmissions.length} applications pending</small>
@@ -903,7 +903,7 @@ function Dashboard() {
                 </Link>
 
                 <Link to="/section-management" className="ym-action-item">
-                  <div className="ym-action-icon" style={{ backgroundColor: 'rgba(2, 132, 199, 0.12)', color: '#0284C7' }}><FiUsers /></div>
+                  <div className="ym-action-icon" style={{ backgroundColor: 'color-mix(in srgb, var(--info) 12%, transparent)', color: 'var(--info)' }}><FiUsers /></div>
                   <div className="ym-action-body">
                     <strong>Section Allotment</strong>
                     <small>{scopedSections.length} batches active</small>
@@ -912,7 +912,7 @@ function Dashboard() {
                 </Link>
 
                 <Link to="/subject-management" className="ym-action-item">
-                  <div className="ym-action-icon" style={{ backgroundColor: 'rgba(13, 148, 136, 0.12)', color: '#0D9488' }}><FiBookOpen /></div>
+                  <div className="ym-action-icon" style={{ backgroundColor: 'color-mix(in srgb, var(--success) 12%, transparent)', color: 'var(--success)' }}><FiBookOpen /></div>
                   <div className="ym-action-body">
                     <strong>Subject Management</strong>
                     <small>{subjects.length} syllabi configured</small>
@@ -921,7 +921,7 @@ function Dashboard() {
                 </Link>
 
                 <Link to="/faculty" className="ym-action-item">
-                  <div className="ym-action-icon" style={{ backgroundColor: 'rgba(245, 158, 11, 0.12)', color: '#F59E0B' }}><FiBriefcase /></div>
+                  <div className="ym-action-icon" style={{ backgroundColor: 'color-mix(in srgb, var(--warning) 12%, transparent)', color: 'var(--warning)' }}><FiBriefcase /></div>
                   <div className="ym-action-body">
                     <strong>Faculty Roster</strong>
                     <small>{faculty.length} teaching staff</small>
@@ -930,7 +930,7 @@ function Dashboard() {
                 </Link>
 
                 <Link to="/timetable" className="ym-action-item">
-                  <div className="ym-action-icon" style={{ backgroundColor: 'rgba(23, 105, 194, 0.12)', color: '#1769C2' }}><FiCalendar /></div>
+                  <div className="ym-action-icon" style={{ backgroundColor: 'color-mix(in srgb, var(--brand) 12%, transparent)', color: 'var(--brand)' }}><FiCalendar /></div>
                   <div className="ym-action-body">
                     <strong>Timetable Matrix</strong>
                     <small>Schedule classes & rooms</small>
@@ -940,7 +940,7 @@ function Dashboard() {
               </>
             ) : (
               <Link to="/my-subjects" className="ym-action-item">
-                <div className="ym-action-icon" style={{ backgroundColor: 'rgba(13, 148, 136, 0.12)', color: '#0D9488' }}><FiBookOpen /></div>
+                <div className="ym-action-icon" style={{ backgroundColor: 'color-mix(in srgb, var(--success) 12%, transparent)', color: 'var(--success)' }}><FiBookOpen /></div>
                 <div className="ym-action-body">
                   <strong>My Assigned Subjects</strong>
                   <small>View assigned curriculum</small>
@@ -958,7 +958,7 @@ function Dashboard() {
 /* =========================================================================
    EXPLICIT WAVE CHART WITH VISIBLE X-AXIS, Y-AXIS GRID & POINT LABELS
    ========================================================================= */
-function ExplicitWaveChart({ labels = [], points = [], color = '#1769C2', gradientId = 'grad', unit = '' }) {
+function ExplicitWaveChart({ labels = [], points = [], color = 'var(--brand)', gradientId = 'grad', unit = '' }) {
   const [hoveredIdx, setHoveredIdx] = useState(null)
 
   const width = 300
@@ -1081,7 +1081,7 @@ function ExplicitWaveChart({ labels = [], points = [], color = '#1769C2', gradie
                   cx={c.x}
                   cy={c.y}
                   r={hoveredIdx === idx ? 5 : 3.5}
-                  fill={hoveredIdx === idx ? '#FFFFFF' : color}
+                  fill={hoveredIdx === idx ? 'var(--surface)' : color}
                   stroke={color}
                   strokeWidth="2"
                   style={{ cursor: 'pointer', transition: 'all 0.15s ease' }}
@@ -1824,7 +1824,7 @@ function Login() {
                 type="button"
                 disabled={timer > 0 || isSubmitting}
                 onClick={handleSendCode}
-                style={{ background: 'none', border: 'none', color: timer > 0 ? '#9ca3af' : '#1769C2', cursor: timer > 0 ? 'not-allowed' : 'pointer', fontSize: '0.9rem' }}
+                style={{ background: 'none', border: 'none', color: timer > 0 ? 'var(--text-muted)' : 'var(--brand)', cursor: timer > 0 ? 'not-allowed' : 'pointer', fontSize: '0.9rem' }}
               >
                 {timer > 0 ? `Resend OTP in ${timer}s` : 'Resend OTP'}
               </button>
@@ -1843,7 +1843,7 @@ function Login() {
           <div className="login-form" style={{ textAlign: 'center' }}>
             <header>
               <h2>Verification Complete</h2>
-              <p style={{ color: '#1769C2', margin: '20px 0', fontSize: '1.1rem', fontWeight: 600 }}>
+              <p style={{ color: 'var(--brand)', margin: '20px 0', fontSize: '1.1rem', fontWeight: 600 }}>
                 Verified successfully
               </p>
             </header>

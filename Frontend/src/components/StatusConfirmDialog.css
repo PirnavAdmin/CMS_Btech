@@ -5,8 +5,8 @@
 .status-confirm-dialog p { margin:0 0 14px; font-size:13.5px; color:var(--text-secondary); line-height:1.5; }
 .status-confirm-dialog footer { display:flex; justify-content:flex-end; gap:10px; padding-top:14px; border-top:1px solid var(--border); }
 .status-confirm-dialog footer button { min-height:36px; padding:0 13px; border:1px solid var(--border); border-radius:9px; background:var(--surface); color:var(--text-primary); font:600 13px var(--font-family); cursor:pointer; }
-.status-confirm-dialog .confirm-active { background:var(--brand); color:#fff; border-color:var(--brand); }
-.status-confirm-dialog .confirm-inactive { background:var(--danger); color:#fff; border-color:var(--danger); }
+.status-confirm-dialog .confirm-active { background:var(--brand-solid); color:var(--text-on-dark); border-color:var(--brand); }
+.status-confirm-dialog .confirm-inactive { background:var(--danger-solid); color:var(--text-on-dark); border-color:var(--danger); }
 .status-confirm-dialog button:disabled { opacity:.6; cursor:not-allowed; }
 .status-confirm-close { position:absolute; top:12px; right:12px; width:28px; height:28px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text-muted); cursor:pointer; }
 .status-confirm-details { display:grid; gap:10px; margin:14px 0; }

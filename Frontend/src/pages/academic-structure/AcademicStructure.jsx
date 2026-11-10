@@ -1,32 +1,39 @@
+import { ensureBranchSemesters, inspectBranchSemesters, semesterRecords, semesterStructure } from '../../services/branchSemesterWorkflow'
+import eventBus, { ERP_EVENTS } from '../../services/eventBus'
 ﻿import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import {
   FiLayers,
   FiBookOpen,
-  FiGitBranch,
-  FiCalendar,
   FiPlus,
   FiSearch,
   FiEdit2,
   FiTrash2,
   FiCheckCircle,
-  FiXCircle,
   FiFilter,
   FiChevronDown,
   FiAlertCircle,
   FiX,
   FiInfo,
+  FiMoreHorizontal,
+  FiEye,
+  FiToggleRight,
+  FiToggleLeft,
+  FiPlayCircle,
 } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
+import ViewDialog from '../../components/ViewDialog'
 import { useAcademic } from '../../context/AcademicContext'
+import { useScreenAccess } from '../../auth/ScreenAccess'
 import StatusBadge from '../../components/StatusBadge'
 import EmptyState from '../../components/EmptyState'
+import DataTable from '../../components/DataTable'
+import { ScheduleDialog } from '../semester-management/SemesterManagement'
+import { DepartmentManagement } from '../admin-management/AdminManagement'
+import { CompletionIndicator, CompletionSummary } from '../../components/RecordCompletion'
+import { meaningfulText, programCompletion } from '../../utils/recordCompletion'
 import {
   getDepartments,
-  createDepartment,
-  updateDepartment,
-  updateDepartmentStatus,
-  deleteDepartment,
   getCourses,
   createCourse,
   updateCourse,
@@ -39,36 +46,45 @@ import {
   deleteBranch,
   getSemesters,
   createSemester,
-  updateSemester,
   deleteSemester,
 } from '../../auth/collegeApi'
 import { academicYearApi } from '../../api/apiEndpoints'
 import './AcademicStructure.css'
 
 const STEP_DEPARTMENTS = 'departments'
-const STEP_COURSES = 'courses'
-const STEP_BRANCHES = 'branches'
-const STEP_SEMESTERS = 'semesters'
+const STEP_PROGRAMS = 'programs'
+const PROGRAMS_PAGE_SIZE = 10
 const courseIdOf = (course = {}) => String(course.courseId ?? course.CourseId ?? course.CourseID ?? course.courseID ?? course.course_id ?? course.id ?? course.Id ?? course.ID ?? '')
 const courseDepartmentIdOf = (course = {}) => String(course.departmentId ?? course.DepartmentId ?? course.DepartmentID ?? course.department_id ?? course.department?.departmentId ?? course.department?.DepartmentId ?? course.department?.id ?? '')
 const branchIdOf = (branch = {}) => String(branch.branchId ?? branch.BranchId ?? branch.BranchID ?? branch.branch_id ?? branch.id ?? branch.Id ?? '')
 const branchCourseIdOf = (branch = {}) => String(branch.courseId ?? branch.CourseId ?? branch.CourseID ?? branch.course_id ?? '')
 
 const STEPS = [
-  { id: STEP_COURSES, stepNumber: 1, label: 'Courses', icon: FiBookOpen, description: 'Degree Programs' },
-  { id: STEP_DEPARTMENTS, stepNumber: 2, label: 'Departments', icon: FiLayers, description: 'Academic Units' },
-  { id: STEP_BRANCHES, stepNumber: 3, label: 'Branches', icon: FiGitBranch, description: 'Specializations' },
-  { id: STEP_SEMESTERS, stepNumber: 4, label: 'Semesters', icon: FiCalendar, description: 'Curriculum Terms' },
+  { id: STEP_PROGRAMS, label: 'Programs', icon: FiBookOpen },
+  { id: STEP_DEPARTMENTS, label: 'Departments', icon: FiLayers },
 ]
 
 const courseNameOf = (course) => course?.courseName ?? course?.CourseName ?? course?.name ?? course?.Name
 const courseCodeOf = (course) => course?.courseCode ?? course?.CourseCode ?? course?.code ?? course?.Code
 const departmentIdOf = (department) => department?.departmentId ?? department?.DepartmentId ?? department?.id ?? department?.Id
 
+const SETUP_TABS = [
+  { id: 'course', label: 'Course', subtitle: 'Set the course identity, duration, and semester count.' },
+  { id: 'branch', label: 'Branch', subtitle: 'Link the branch to a course and set its intake.' },
+  { id: 'semester', label: 'Semester Structure', subtitle: 'Set semester dates for a branch.' },
+  { id: 'review', label: 'Review & Save', subtitle: 'Verify the plan and generate missing semesters.' },
+]
+
 export default function AcademicStructure() {
+  const [semesterListVerified, setSemesterListVerified] = useState(false)
+  const [relationsVerified, setRelationsVerified] = useState(false)
+  const [repairOnly, setRepairOnly] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
-  const currentStep = searchParams.get('step') || STEP_COURSES
+  const { state: navigationState } = useLocation()
+  const legacyStep = searchParams.get('step')
+  const currentStep = legacyStep === STEP_DEPARTMENTS ? STEP_DEPARTMENTS : STEP_PROGRAMS
   const { selectedCollegeId, selectedCollege } = useAcademic()
+  const { canAction } = useScreenAccess()
 
   // Data states
   const [departments, setDepartments] = useState([])
@@ -85,26 +101,42 @@ export default function AcademicStructure() {
   const [selectedCourseFilter, setSelectedCourseFilter] = useState('')
   const [selectedBranchFilter, setSelectedBranchFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [completionFilter, setCompletionFilter] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const [programPage, setProgramPage] = useState(1)
+  const [generationBranchId, setGenerationBranchId] = useState('')
+  const [generationCourseId, setGenerationCourseId] = useState('')
+  const [semesterDates, setSemesterDates] = useState({})
+  const [chooseDatesFirst, setChooseDatesFirst] = useState(false)
+  const [savedCourseChoice, setSavedCourseChoice] = useState('')
+  const loadRequest = useRef(0)
+  const loadedCollege = useRef(null)
+  const collegeScope = useRef(selectedCollegeId)
+  collegeScope.current = selectedCollegeId
 
   // Modals state
   const [modalType, setModalType] = useState(null) // 'department' | 'course' | 'branch' | 'semester'
+  const setupDrafts = useRef(new Set())
+  const setupCourse = useRef(null)
+  const generationBusy = useRef(false)
+  const setupBody = useRef(null)
   const [editingItem, setEditingItem] = useState(null)
+  const [programDetailsId, setProgramDetailsId] = useState('')
+  const [semesterSchedule, setSemesterSchedule] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null) // { type, item }
 
   // Form states
-  const [deptForm, setDeptForm] = useState({ name: '', code: '', description: '', status: 'Active' })
   const [courseForm, setCourseForm] = useState({
     name: '',
     code: '',
     departmentId: '',
-    type: 'Undergraduate',
-    durationYears: 4,
-    totalSemesters: 8,
+    type: '',
+    durationYears: '',
+    totalSemesters: '',
     eligibility: '',
     description: '',
-    status: 'Active',
+    status: '',
   })
   const [branchForm, setBranchForm] = useState({
     name: '',
@@ -115,23 +147,8 @@ export default function AcademicStructure() {
     intakeCapacity: 60,
     status: 'Active',
   })
-  const [semesterForm, setSemesterForm] = useState({
-    departmentId: '',
-    courseId: '',
-    branchId: '',
-    academicYearId: '',
-    semesterNumber: 1,
-    semesterName: '1st Semester',
-    startDate: '',
-    endDate: '',
-    status: 'Upcoming',
-  })
 
   const [formErrors, setFormErrors] = useState({})
-
-  const selectedSemesterCourse = courses.find((course) => String(courseIdOf(course)) === String(semesterForm.courseId))
-  const selectedSemesterCourseDepartmentId = courseDepartmentIdOf(selectedSemesterCourse)
-  const semesterCourseHasDepartment = selectedSemesterCourseDepartmentId != null && String(selectedSemesterCourseDepartmentId) !== ''
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type })
@@ -142,7 +159,10 @@ export default function AcademicStructure() {
 
   // Load all academic data
   const loadAcademicData = useCallback(async () => {
+    const request = ++loadRequest.current
+    const collegeId = collegeScope.current
     setIsLoading(true)
+    setSemesterListVerified(false)
     try {
       const [deptRes, courseRes, branchRes, semRes, yearRes] = await Promise.allSettled([
         getDepartments(),
@@ -153,26 +173,40 @@ export default function AcademicStructure() {
       ])
 
       const extractList = (res) => {
-        if (res.status !== 'fulfilled') return []
+        if (res.status !== 'fulfilled') return null
         const raw = res.value?.data ?? res.value
         if (Array.isArray(raw)) return raw
         if (Array.isArray(raw?.data)) return raw.data
         if (Array.isArray(raw?.items)) return raw.items
         if (Array.isArray(raw?.semesters)) return raw.semesters
         if (Array.isArray(raw?.courses)) return raw.courses
-        return []
+        return null
       }
 
-      setDepartments(extractList(deptRes))
-      setCourses(extractList(courseRes))
-      setBranches(extractList(branchRes))
-      setSemesters(extractList(semRes))
+      if (request !== loadRequest.current || collegeScope.current !== collegeId) return
+      loadedCollege.current = collegeId
+      const loadedCourses = extractList(courseRes) || []
+      const loadedBranches = extractList(branchRes)
+      const loadedDepartments = extractList(deptRes)
+      setRelationsVerified(Boolean(loadedBranches && loadedDepartments))
+      setDepartments([...(loadedDepartments || [])])
+      setCourses([...loadedCourses])
+      setBranches([...(loadedBranches || [])])
+      let savedSemesters = []
+      try {
+        if (semRes.status === 'fulfilled') {
+          savedSemesters = semesterRecords(semRes.value)
+          setSemesterListVerified(true)
+        }
+      } catch { /* An unreadable response is not proof of missing records. */ }
+      setSemesters([...savedSemesters])
       setAcademicYears(yearRes.status === 'fulfilled' && Array.isArray(yearRes.value) ? yearRes.value : [])
+      return { courses: loadedCourses, branches: loadedBranches || [] }
     } catch (err) {
       console.error('Failed loading academic structure data:', err)
       showToast('Error loading academic structure data. Please try again.', 'error')
     } finally {
-      setIsLoading(false)
+      if (request === loadRequest.current && collegeScope.current === collegeId) setIsLoading(false)
     }
   }, [])
 
@@ -185,8 +219,8 @@ export default function AcademicStructure() {
   }, [])
 
   useEffect(() => {
-    loadAcademicData()
-  }, [loadAcademicData, selectedCollegeId])
+    if (currentStep === STEP_PROGRAMS) loadAcademicData()
+  }, [loadAcademicData, selectedCollegeId, currentStep])
 
   // Change active step
   const handleStepChange = (stepId) => {
@@ -200,6 +234,7 @@ export default function AcademicStructure() {
     setSelectedCourseFilter('')
     setSelectedBranchFilter('')
     setStatusFilter('')
+    setCompletionFilter('')
     setSearchQuery('')
   }
 
@@ -271,19 +306,7 @@ export default function AcademicStructure() {
   }, [academicYears])
 
   // Dynamic search placeholder based on current step
-  const searchPlaceholder = useMemo(() => {
-    switch (currentStep) {
-      case STEP_COURSES:
-        return 'Search courses by name, code...'
-      case STEP_BRANCHES:
-        return 'Search branches by name, code...'
-      case STEP_SEMESTERS:
-        return 'Search semesters by term, number...'
-      case STEP_DEPARTMENTS:
-      default:
-        return 'Search departments by name, code...'
-    }
-  }, [currentStep])
+  const searchPlaceholder = currentStep === STEP_PROGRAMS ? 'Search courses, branches, or semesters...' : 'Search departments by name, code...'
 
   // Count active filters for badge and reset toggle
   const activeFiltersCount = useMemo(() => {
@@ -292,6 +315,7 @@ export default function AcademicStructure() {
     if (selectedCourseFilter) count++
     if (selectedBranchFilter) count++
     if (statusFilter) count++
+    if (completionFilter) count++
     if (searchQuery.trim()) count++
     return count
   }, [selectedDeptFilter, selectedCourseFilter, selectedBranchFilter, statusFilter, searchQuery])
@@ -304,105 +328,91 @@ export default function AcademicStructure() {
     if (selectedBranchFilter) count++
     if (statusFilter) count++
     return count
-  }, [selectedDeptFilter, selectedCourseFilter, selectedBranchFilter, statusFilter])
+  }, [selectedDeptFilter, selectedCourseFilter, selectedBranchFilter, statusFilter, completionFilter])
 
   // Filtered lists for each step
-  const filteredDepartments = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase()
-    return departments.filter((d) => {
-      const name = String(d.departmentName ?? d.name ?? '').toLowerCase()
-      const code = String(d.departmentCode ?? d.code ?? '').toLowerCase()
-      const desc = String(d.description ?? '').toLowerCase()
-      const matchesSearch = !q || name.includes(q) || code.includes(q) || desc.includes(q)
-      const isRecordActive = String(d.status) === '1' || String(d.status).toLowerCase() === 'active' || d.status === true
-      const matchesStatus = !statusFilter || (statusFilter === 'Active' ? isRecordActive : !isRecordActive)
-      return matchesSearch && matchesStatus
-    })
-  }, [departments, searchQuery, statusFilter])
-
-  const filteredCourses = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase()
-    return courses.filter((c) => {
-      const name = String(c.courseName ?? c.name ?? '').toLowerCase()
-      const code = String(c.courseCode ?? c.code ?? '').toLowerCase()
-      const deptName = String(deptMap.get(String(c.departmentId ?? c.DepartmentId)) ?? '').toLowerCase()
-      const matchesSearch = !q || name.includes(q) || code.includes(q) || deptName.includes(q)
-      const isRecordActive = String(c.status) === '1' || String(c.status).toLowerCase() === 'active' || c.status === true
-      const matchesStatus = !statusFilter || (statusFilter === 'Active' ? isRecordActive : !isRecordActive)
-      const matchesDept = !selectedDeptFilter || String(c.departmentId ?? c.DepartmentId) === String(selectedDeptFilter)
-      return matchesSearch && matchesStatus && matchesDept
-    })
-  }, [courses, searchQuery, statusFilter, selectedDeptFilter, deptMap])
-
-  const filteredBranches = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase()
-    return branches.filter((b) => {
-      const name = String(b.branchName ?? b.name ?? '').toLowerCase()
-      const code = String(b.branchCode ?? b.code ?? '').toLowerCase()
-      const spec = String(b.specialization ?? '').toLowerCase()
-      const course = courseMap.get(String(b.courseId ?? b.CourseId))
-      const courseName = String(course?.courseName ?? course?.name ?? '').toLowerCase()
-      const matchesSearch = !q || name.includes(q) || code.includes(q) || spec.includes(q) || courseName.includes(q)
-      const isRecordActive = String(b.status) === '1' || String(b.status).toLowerCase() === 'active' || b.status === true
-      const matchesStatus = !statusFilter || (statusFilter === 'Active' ? isRecordActive : !isRecordActive)
-      const matchesDept = !selectedDeptFilter || String(b.departmentId) === String(selectedDeptFilter)
-      const matchesCourse = !selectedCourseFilter || String(b.courseId ?? b.CourseId) === String(selectedCourseFilter)
-      return matchesSearch && matchesStatus && matchesDept && matchesCourse
-    })
-  }, [branches, searchQuery, statusFilter, selectedDeptFilter, selectedCourseFilter, courseMap])
-
-  const filteredSemesters = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase()
-    return semesters.filter((s) => {
-      const name = String(s.semesterName ?? s.name ?? '').toLowerCase()
-      const num = String(s.semesterNumber ?? '')
-      const branch = branchMap.get(String(s.branchId ?? s.BranchId))
-      const branchName = String(branch?.branchName ?? branch?.name ?? '').toLowerCase()
-      const course = courseMap.get(String(s.courseId ?? s.CourseId))
-      const courseName = String(course?.courseName ?? course?.name ?? '').toLowerCase()
-      const yearName = String(yearMap.get(String(s.academicYearId ?? s.AcademicYearId)) ?? '').toLowerCase()
-      const matchesSearch =
-        !q ||
-        name.includes(q) ||
-        num.includes(q) ||
-        `semester ${num}`.includes(q) ||
-        branchName.includes(q) ||
-        courseName.includes(q) ||
-        yearName.includes(q)
-      const isRecordActive = String(s.status) === '1' || String(s.status).toLowerCase() === 'active' || s.status === true
-      const matchesStatus = !statusFilter || (statusFilter === 'Active' ? isRecordActive : !isRecordActive)
-      const matchesBranch = !selectedBranchFilter || String(s.branchId ?? s.BranchId) === String(selectedBranchFilter)
-      const matchesCourse = !selectedCourseFilter || String(s.courseId ?? s.CourseId) === String(selectedCourseFilter)
-      return matchesSearch && matchesStatus && matchesBranch && matchesCourse
-    })
-  }, [semesters, searchQuery, statusFilter, selectedBranchFilter, selectedCourseFilter, branchMap, courseMap, yearMap])
-
-  // ==========================================
-  // MODAL HANDLERS & CRUD OPERATIONS
-  // ==========================================
+  const matchesCompletion = completion => {
+    const percent = completion?.percent
+    if (!completionFilter) return true
+    if (completionFilter === 'unavailable') return percent == null
+    if (percent == null) return false
+    if (completionFilter === 'complete') return percent === 100
+    return completionFilter === 'early' ? percent < 50 : percent >= 50 && percent < 100
+  }
+  const branchesFor = course => branches.filter(branch => String(branchCourseIdOf(branch)) === String(courseIdOf(course)))
+  const semestersFor = branch => semesters.filter(semester => String(semester.branchId ?? semester.BranchId) === branchIdOf(branch))
+    .sort((left, right) => Number(left.semesterNumber) - Number(right.semesterNumber))
+  const savedProgram = course => {
+    const children = branchesFor(course)
+    const departmentIds = [courseDepartmentIdOf(course), ...children.map(courseDepartmentIdOf)]
+    const linkedDepartments = departments.filter(department => departmentIds.includes(String(departmentIdOf(department))))
+    let plan = []
+    try { plan = semesterStructure(course) } catch { /* A missing or invalid plan is incomplete. */ }
+    const academicBranches = children.map(branch => ({
+      name: branch.branchName ?? branch.name ?? 'Branch',
+      configured: meaningfulText(branch.branchName ?? branch.name) && meaningfulText(branch.branchCode ?? branch.code) &&
+        linkedDepartments.some(department => String(departmentIdOf(department)) === courseDepartmentIdOf(branch)),
+      terms: new Set(semestersFor(branch).filter(term => (term.semesterId ?? term.id) && String(term.courseId ?? term.CourseId) === courseIdOf(course)).map(term => Number(term.semesterNumber))),
+    }))
+    const completion = relationsVerified && semesterListVerified ? programCompletion({
+      ...course, courseName: courseNameOf(course), courseCode: courseCodeOf(course), collegeId: course.collegeId ?? course.CollegeId ?? selectedCollegeId,
+      totalSemesters: plan.length,
+      mapped: linkedDepartments.length > 0,
+    }, academicBranches, plan) : null
+    return { children, linkedDepartments, completion, academicBranches }
+  }
+  const programsById = new Map(courses.map(course => [courseIdOf(course), savedProgram(course)]))
+  const programRows = courses.flatMap(course => {
+    const children = branchesFor(course)
+    const query = searchQuery.trim().toLowerCase()
+    const matches = (...values) => values.some(value => String(value ?? '').toLowerCase().includes(query))
+    const active = course.status === true || ['1', 'active'].includes(String(course.status).toLowerCase())
+    if ((statusFilter && active !== (statusFilter === 'Active')) ||
+      !matchesCompletion(programsById.get(courseIdOf(course)).completion) ||
+      (selectedCourseFilter && courseIdOf(course) !== String(selectedCourseFilter))) return []
+    const programMatch = !query || matches(courseNameOf(course), courseCodeOf(course), deptMap.get(courseDepartmentIdOf(course)))
+    return (children.length ? children : [null]).filter(branch =>
+      (!selectedBranchFilter || (branch && branchIdOf(branch) === String(selectedBranchFilter))) &&
+      (!selectedDeptFilter || [course, branch].some(item => item && courseDepartmentIdOf(item) === String(selectedDeptFilter))) &&
+      (programMatch || (branch && (matches(branch.branchName, branch.name, branch.branchCode) ||
+        semestersFor(branch).some(term => matches(term.semesterName, 'Semester ' + term.semesterNumber)))))
+    ).map(branch => ({ id: courseIdOf(course) + ':' + (branch ? branchIdOf(branch) : ''), course, branch }))
+  })
+  useEffect(() => { setProgramPage(1) }, [currentStep, searchQuery, statusFilter, completionFilter, selectedDeptFilter, selectedCourseFilter, selectedBranchFilter])
 
   // Open Add Modals
-  const openAddModal = (type) => {
+  const openAddModal = (type, switchingTab = false) => {
+    if (!switchingTab) {
+      setSavedCourseChoice('')
+      setRepairOnly(false)
+      setupDrafts.current.clear()
+      setupCourse.current = null
+      setGenerationBranchId('')
+      setGenerationCourseId('')
+      setSemesterDates({})
+      setChooseDatesFirst(false)
+    }
     setModalType(type)
     setEditingItem(null)
     setFormErrors({})
+    if (setupBody.current) setupBody.current.scrollTop = 0
+    if (setupDrafts.current.has(type)) return
+    setupDrafts.current.add(type)
 
-    if (type === 'department') {
-      setDeptForm({ name: '', code: '', description: '', status: 'Active' })
-    } else if (type === 'course') {
+    if (type === 'course') {
       setCourseForm({
         name: '',
         code: '',
         departmentId: '',
-        type: 'Undergraduate',
-        durationYears: 4,
-        totalSemesters: 8,
+        type: '',
+        durationYears: '',
+        totalSemesters: '',
         eligibility: '',
         description: '',
-        status: 'Active',
+        status: '',
       })
     } else if (type === 'branch') {
-      const preferredCourse = courses.find((course) => String(courseIdOf(course)) === String(selectedCourseFilter))
+      const preferredCourse = setupCourse.current || (switchingTab && courseMap.get(savedCourseChoice)) || courses.find((course) => String(courseIdOf(course)) === String(selectedCourseFilter))
         || courses.find((course) => selectedDeptFilter && String(courseDepartmentIdOf(course)) === String(selectedDeptFilter))
         || courses[0]
       const defaultDept = courseDepartmentIdOf(preferredCourse)
@@ -410,6 +420,7 @@ export default function AcademicStructure() {
         ?? departments[0]?.departmentId
         ?? departments[0]?.id
         ?? ''
+      setGenerationCourseId(courseIdOf(preferredCourse))
       setBranchForm({
         name: '',
         code: '',
@@ -419,45 +430,17 @@ export default function AcademicStructure() {
         intakeCapacity: 60,
         status: 'Active',
       })
-    } else if (type === 'semester') {
-      const filteredCourse = courses.find((course) => String(courseIdOf(course)) === String(selectedCourseFilter))
-      const filteredDepartmentCourse = courses.find((course) => selectedDeptFilter && String(courseDepartmentIdOf(course)) === String(selectedDeptFilter))
-      const defaultCourseRecord = filteredCourse || filteredDepartmentCourse || courses[0]
-      const defaultCourse = String(courseIdOf(defaultCourseRecord) ?? '')
-      const courseDepartmentId = courseDepartmentIdOf(defaultCourseRecord)
-      const defaultDept = String(courseDepartmentId ?? (selectedDeptFilter || ''))
-      const courseBranches = branches.filter((branch) => String(branchCourseIdOf(branch)) === defaultCourse)
-      const selectedBranch = courseBranches.find((branch) => String(branchIdOf(branch)) === String(selectedBranchFilter))
-      const defaultBranch = String(branchIdOf(selectedBranch || courseBranches[0]) ?? '')
-
-      setSemesterForm({
-        departmentId: defaultDept,
-        courseId: defaultCourse,
-        branchId: defaultBranch,
-        academicYearId: academicYears[0]?.academicYearId ?? academicYears[0]?.id ?? '',
-        semesterNumber: 1,
-        semesterName: '1st Semester',
-        startDate: '',
-        endDate: '',
-        status: 'Upcoming',
-      })
     }
   }
 
   // Open Edit Modals
   const openEditModal = (type, item) => {
+    setSavedCourseChoice('')
     setModalType(type)
     setEditingItem(item)
     setFormErrors({})
 
-    if (type === 'department') {
-      setDeptForm({
-        name: item.departmentName ?? item.name ?? '',
-        code: item.departmentCode ?? item.code ?? '',
-        description: item.description ?? '',
-        status: String(item.status) === '1' || item.status === 'Active' || item.status === true ? 'Active' : 'Inactive',
-      })
-    } else if (type === 'course') {
+    if (type === 'course') {
       setCourseForm({
         name: item.courseName ?? item.name ?? '',
         code: item.courseCode ?? item.code ?? '',
@@ -479,83 +462,31 @@ export default function AcademicStructure() {
         intakeCapacity: item.intakeCapacity ?? 60,
         status: String(item.status) === '1' || item.status === 'Active' || item.status === true ? 'Active' : 'Inactive',
       })
-    } else if (type === 'semester') {
-      const course = courseMap.get(String(courseIdOf(item)))
-      setSemesterForm({
-        departmentId: String(courseDepartmentIdOf(course) ?? item.departmentId ?? item.DepartmentId ?? ''),
-        courseId: String(courseIdOf(item) ?? ''),
-        branchId: String(branchIdOf(item) ?? ''),
-        academicYearId: String(item.academicYearId ?? item.AcademicYearId ?? ''),
-        semesterNumber: item.semesterNumber ?? 1,
-        semesterName: item.semesterName ?? item.name ?? '1st Semester',
-        startDate: item.startDate ? String(item.startDate).slice(0, 10) : '',
-        endDate: item.endDate ? String(item.endDate).slice(0, 10) : '',
-        status: item.status === 1 || item.status === 'Active' ? 'Active' : item.status === 'Completed' ? 'Completed' : 'Upcoming',
-      })
     }
   }
 
   // Close Modal
+  const setupTab = SETUP_TABS.find(tab => tab.id === modalType)
+
   const closeModal = () => {
     setModalType(null)
     setEditingItem(null)
     setFormErrors({})
   }
 
-  // Submit Department Form
-  const handleSubmitDepartment = async (e) => {
-    e.preventDefault()
-    const errors = {}
-    if (!deptForm.name.trim()) errors.name = 'Department Name is required'
-    if (!deptForm.code.trim()) errors.code = 'Department Code is required'
-
-    // Duplicate check
-    const duplicate = departments.some(
-      (d) =>
-        String(d.departmentCode ?? d.code).toUpperCase() === deptForm.code.trim().toUpperCase() &&
-        String(d.departmentId ?? d.id) !== String(editingItem?.departmentId ?? editingItem?.id)
-    )
-    if (duplicate) errors.code = 'Department code already exists'
-
-    if (Object.keys(errors).length > 0) {
-      setFormErrors(errors)
-      return
-    }
-
-    setIsSubmitting(true)
-    try {
-      const payload = {
-        departmentName: deptForm.name.trim(),
-        departmentCode: deptForm.code.trim().toUpperCase(),
-        description: deptForm.description.trim() || null,
-        collegeId: selectedCollegeId ? Number(selectedCollegeId) : 1,
-        status: deptForm.status === 'Active' ? 1 : 0,
-      }
-
-      if (editingItem) {
-        const id = editingItem.departmentId ?? editingItem.id
-        await updateDepartment(id, payload)
-        showToast('Department updated successfully.')
-      } else {
-        await createDepartment(payload)
-        showToast('Department added successfully.')
-      }
-      closeModal()
-      loadAcademicData()
-    } catch (err) {
-      console.error(err)
-      showToast(err?.response?.data?.message || err?.message || 'Failed saving department.', 'error')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
   // Submit Course Form
   const handleSubmitCourse = async (e) => {
     e.preventDefault()
+    const savedCourse = !editingItem && courseMap.get(savedCourseChoice)
+    if (savedCourse) {
+      if (canAction('/branches', 'create')) addBranchFor(savedCourse)
+      return
+    }
     const errors = {}
     if (!courseForm.name.trim()) errors.name = 'Course Name is required'
     if (!courseForm.code.trim()) errors.code = 'Course Code is required'
+    if (!selectedCollegeId) errors.submit = 'Select a college before saving a course.'
+    try { semesterStructure(courseForm) } catch (error) { errors.submit ||= error.message }
 
     const duplicate = courses.some(
       (c) =>
@@ -575,7 +506,7 @@ export default function AcademicStructure() {
         courseName: courseForm.name.trim(),
         courseCode: courseForm.code.trim().toUpperCase(),
         departmentId: courseForm.departmentId ? Number(courseForm.departmentId) : null,
-        collegeId: selectedCollegeId ? Number(selectedCollegeId) : 1,
+        collegeId: Number(selectedCollegeId),
         courseType: courseForm.type,
         durationYears: Number(courseForm.durationYears),
         totalSemesters: Number(courseForm.totalSemesters),
@@ -586,17 +517,27 @@ export default function AcademicStructure() {
 
       if (editingItem) {
         const id = editingItem.courseId ?? editingItem.id
-        await updateCourse(id, payload)
+        await updateCourse(id, { ...payload, courseShortName: editingItem.courseShortName ?? editingItem.shortName })
         showToast('Course updated successfully.')
       } else {
         await createCourse(payload)
         showToast('Course created successfully.')
+        const refreshed = await loadAcademicData()
+        const saved = refreshed?.courses.find(course => String(courseCodeOf(course)).toUpperCase() === payload.courseCode)
+        if (saved) {
+          setupCourse.current = saved
+          setupDrafts.current.delete('course')
+          setupDrafts.current.delete('branch')
+          openAddModal('branch', true)
+          return
+        }
       }
       closeModal()
       loadAcademicData()
     } catch (err) {
       console.error(err)
-      showToast(err?.response?.data?.message || err?.message || 'Failed saving course.', 'error')
+      setFormErrors({ submit: err?.response?.data?.message || err?.message || 'Failed saving course.' })
+      if (setupBody.current) setupBody.current.scrollTop = 0
     } finally {
       setIsSubmitting(false)
     }
@@ -610,6 +551,12 @@ export default function AcademicStructure() {
     if (!branchForm.code.trim()) errors.code = 'Branch Code is required'
     if (!branchForm.departmentId) errors.departmentId = 'Please select a Department'
     if (!branchForm.courseId) errors.courseId = 'Please select a Course'
+    const collegeAtSave = selectedCollegeId
+    const courseForBranch = courses.find(course => String(courseIdOf(course)) === String(branchForm.courseId))
+    if (!editingItem) {
+      if (!collegeAtSave || loadedCollege.current !== collegeAtSave) errors.submit = 'Select a college and wait for its courses to load.'
+      try { semesterStructure(courseForBranch) } catch (error) { errors.submit ||= error.message }
+    }
 
     const duplicate = branches.some(
       (b) =>
@@ -637,77 +584,91 @@ export default function AcademicStructure() {
 
       if (editingItem) {
         const id = editingItem.branchId ?? editingItem.id
-        await updateBranch(id, payload)
+        const { shortName, branchType, duration, totalSemesters, startingAcademicYearId, description } = editingItem
+        await updateBranch(id, { ...payload, shortName, branchType, duration, totalSemesters, startingAcademicYearId, description })
         showToast('Branch updated successfully.')
       } else {
         await createBranch(payload)
-        showToast('Branch created successfully.')
+        const refreshed = await loadAcademicData()
+        const saved = refreshed?.branches.find(branch => String(branch.branchCode ?? branch.code).toUpperCase() === payload.branchCode && String(branchCourseIdOf(branch)) === String(payload.courseId))
+        if (saved) {
+          setupCourse.current = refreshed.courses.find(course => String(courseIdOf(course)) === String(payload.courseId))
+          setGenerationCourseId(String(payload.courseId))
+          setupDrafts.current.delete('branch')
+          openAddModal('semester', true)
+          setGenerationBranchId(branchIdOf(saved))
+          setSemesterDates({})
+          if (chooseDatesFirst) {
+            showToast('Branch saved. Choose semester dates, then create the definitions.')
+            return
+          }
+          try {
+            await saveBranchSemesters(saved, courseForBranch, collegeAtSave)
+            showToast('Branch and semester definitions saved.')
+          } catch (error) {
+            setFormErrors({ submit: 'The branch is saved. ' + error.message })
+          } finally {
+            if (String(collegeScope.current) === String(collegeAtSave)) await loadAcademicData()
+          }
+          return
+        }
+        showToast('The branch was submitted, but its saved ID could not be verified. Refresh Programs before retrying.', 'error')
       }
       closeModal()
       loadAcademicData()
     } catch (err) {
       console.error(err)
-      showToast(err?.response?.data?.message || err?.message || 'Failed saving branch.', 'error')
+      setFormErrors({ submit: err?.response?.data?.message || err?.message || 'Failed saving branch.' })
+      if (setupBody.current) setupBody.current.scrollTop = 0
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  // Submit Semester Form
-  const handleSubmitSemester = async (e) => {
-    e.preventDefault()
-    const errors = {}
-    if (!semesterForm.departmentId) errors.departmentId = 'Please select a Department'
-    if (!semesterForm.courseId) errors.courseId = 'Please select a Course'
-    if (!semesterForm.branchId) errors.branchId = 'Please select a Branch'
-    if (!semesterForm.semesterNumber) errors.semesterNumber = 'Semester Number is required'
+  const generationBranch = branches.find(branch => branchIdOf(branch) === generationBranchId)
+  const generationCourse = generationBranch && courseMap.get(String(branchCourseIdOf(generationBranch)))
+  const inspectBranch = (branch, course) => {
+    if (!semesterListVerified) return { error: 'Saved semester records could not be verified. Reload before checking for missing definitions.' }
+    try { return inspectBranchSemesters({ branchId: branchIdOf(branch), courseId: courseIdOf(course), course, rows: semesters }) }
+    catch (error) { return { error: error.message } }
+  }
+  const structure = generationCourse ? inspectBranch(generationBranch, generationCourse) : {}
+  const generationPlan = structure.expected || []
+  const missingTerms = structure.missing || []
+  const saveBranchSemesters = async (branch, course, collegeId, approvedNumbers, datesByNumber) => {
+    await ensureBranchSemesters({
+      branchId: branchIdOf(branch), courseId: branchCourseIdOf(branch), course, approvedNumbers, datesByNumber,
+      list: () => getSemesters(), create: createSemester,
+      assertScope: () => {
+        if (!collegeId || String(collegeScope.current) !== String(collegeId)) throw new Error('The working college changed. Reload Programs before continuing.')
+      },
+    })
+    eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED, { branchId: branchIdOf(branch) })
+  }
 
-    // Duplicate check: same branch + same semester number
-    const duplicate = semesters.some(
-      (s) =>
-        String(s.branchId ?? s.BranchId) === String(semesterForm.branchId) &&
-        Number(s.semesterNumber) === Number(semesterForm.semesterNumber) &&
-        String(s.semesterId ?? s.id) !== String(editingItem?.semesterId ?? editingItem?.id)
-    )
-    if (duplicate) errors.semesterNumber = 'This semester number already exists for the selected branch'
-
-    if (semesterForm.startDate && semesterForm.endDate && semesterForm.startDate > semesterForm.endDate) {
-      errors.endDate = 'End date cannot be earlier than start date'
-    }
-
-    if (Object.keys(errors).length > 0) {
-      setFormErrors(errors)
+  const generateStructure = async event => {
+    event.preventDefault()
+    if (generationBusy.current || !generationBranch || !missingTerms.length || !canAction('/semester-management', 'create')) return
+    if (loadedCollege.current !== selectedCollegeId) {
+      setFormErrors({ submit: 'Reload the selected college before generating semesters.' })
       return
     }
-
+    generationBusy.current = true
     setIsSubmitting(true)
+    setFormErrors({})
+    const collegeId = selectedCollegeId
     try {
-      const payload = {
-        courseId: Number(semesterForm.courseId),
-        branchId: Number(semesterForm.branchId),
-        academicYearId: semesterForm.academicYearId ? Number(semesterForm.academicYearId) : 1,
-        semesterNumber: Number(semesterForm.semesterNumber),
-        semesterName: semesterForm.semesterName.trim() || `Semester ${semesterForm.semesterNumber}`,
-        yearNumber: Math.ceil(Number(semesterForm.semesterNumber) / 2),
-        startDate: semesterForm.startDate || null,
-        endDate: semesterForm.endDate || null,
-        status: semesterForm.status === 'Active' ? 1 : semesterForm.status === 'Completed' ? 2 : 0,
-      }
-
-      if (editingItem) {
-        const id = editingItem.semesterId ?? editingItem.id
-        await updateSemester(id, payload)
-        showToast('Semester updated successfully.')
-      } else {
-        await createSemester(payload)
-        showToast('Semester saved successfully.')
-      }
-      closeModal()
-      loadAcademicData()
-    } catch (err) {
-      console.error(err)
-      showToast(err?.response?.data?.message || err?.message || 'Failed saving semester.', 'error')
+      await saveBranchSemesters(generationBranch, generationCourse, collegeId, missingTerms.map(term => term.semesterNumber),
+        canAction('/semester-management', 'edit') ? semesterDates : {})
+      setSemesterDates({})
+      if (repairOnly) closeModal()
+      else openAddModal('semester', true)
+      showToast('Semester structure verified and saved.')
+    } catch (error) {
+      setFormErrors({ submit: 'Course and branch records remain saved. Retry to create only missing semesters. ' + error.message })
     } finally {
+      if (String(collegeScope.current) === String(collegeId)) await loadAcademicData()
+      generationBusy.current = false
       setIsSubmitting(false)
     }
   }
@@ -717,10 +678,7 @@ export default function AcademicStructure() {
     const isCurrentActive = String(item.status) === '1' || item.status === 'Active' || item.status === true
     const newStatus = isCurrentActive ? 0 : 1
     try {
-      if (type === 'department') {
-        const id = item.departmentId ?? item.id
-        await updateDepartmentStatus(id, newStatus)
-      } else if (type === 'course') {
+      if (type === 'course') {
         const id = item.courseId ?? item.id
         await updateCourseStatus(id, newStatus)
       } else if (type === 'branch') {
@@ -741,11 +699,7 @@ export default function AcademicStructure() {
     const { type, item } = deleteConfirm
     setIsSubmitting(true)
     try {
-      if (type === 'department') {
-        const id = item.departmentId ?? item.id
-        await deleteDepartment(id)
-        showToast('Department deleted successfully.')
-      } else if (type === 'course') {
+      if (type === 'course') {
         const id = item.courseId ?? item.id
         await deleteCourse(id)
         showToast('Course deleted successfully.')
@@ -949,11 +903,114 @@ export default function AcademicStructure() {
                 <option value="Inactive">Inactive Only</option>
               </select>
             </div>
+            <div className="as-filter-control">
+              <select aria-label="Setup completion" className="as-control-select" value={completionFilter} onChange={event => setCompletionFilter(event.target.value)}>
+                <option value="">All completion ranges</option>
+                <option value="early">0–49%</option>
+                <option value="pending">50–99%</option>
+                <option value="complete">100%</option>
+                <option value="unavailable">Completion unavailable</option>
+              </select>
+            </div>
           </div>
         </div>
       )}
     </div>
   )
+
+  const programStatus = item => item.status === true || ['1', 'active'].includes(String(item.status).toLowerCase()) ? 'Active' : 'Inactive'
+  const renderCompletion = completion => completion?.percent == null ? 'Completion unavailable' : <>
+    <CompletionIndicator completion={completion} />
+    {!completion.complete && <small>{completion.sections.filter(section => !section.complete).length} pending sections</small>}
+  </>
+  const addBranchFor = course => {
+    setProgramDetailsId('')
+    openAddModal('branch')
+    setupCourse.current = course
+    setGenerationCourseId(courseIdOf(course))
+    setBranchForm(form => ({ ...form, courseId: courseIdOf(course), departmentId: courseDepartmentIdOf(course) }))
+  }
+  const openRepair = branch => {
+    setProgramDetailsId('')
+    openAddModal('review')
+    setRepairOnly(true)
+    setGenerationBranchId(branchIdOf(branch))
+  }
+  const openSemesterStructure = (course, branch) => {
+    openAddModal('semester')
+    setupCourse.current = course
+    setGenerationCourseId(courseIdOf(course))
+    setGenerationBranchId(branchIdOf(branch))
+  }
+  const programResumeAction = course => {
+    const { completion, children, academicBranches } = programsById.get(courseIdOf(course))
+    const pending = completion?.sections.find(section => !section.complete)?.id
+    if (!pending) return
+    if (pending === 'identity' || pending === 'structure' || pending === 'department') {
+      return canAction('/courses', 'edit') ? () => openEditModal('course', course) : undefined
+    }
+    if (pending === 'branch') {
+      const index = academicBranches.findIndex(branch => !branch.configured)
+      if (index < 0) return canAction('/branches', 'create') ? () => addBranchFor(course) : undefined
+      return canAction('/branches', 'edit') ? () => openEditModal('branch', children[index]) : undefined
+    }
+    const branch = children.find(item => inspectBranch(item, course).missing?.length)
+    if (branch && canAction('/semester-management', 'create')) return () => openRepair(branch)
+  }
+  const viewedCourse = courseMap.get(programDetailsId)
+  const viewedProgram = programsById.get(programDetailsId)
+  useEffect(() => {
+    if (currentStep !== STEP_PROGRAMS || isLoading || loadedCollege.current !== selectedCollegeId) return
+    for (const type of ['course', 'branch']) {
+      const action = searchParams.get(type + 'Action')
+      const id = searchParams.get(type + 'Id')
+      if (!action || !canAction(type === 'course' ? '/courses' : '/branches', action === 'add' ? 'create' : action)) continue
+      const item = (type === 'course' ? courseMap : branchMap).get(id)
+      if (action === 'add') openAddModal(type)
+      else if (item && action === 'edit') openEditModal(type, item)
+      else if (item && action === 'view') setProgramDetailsId(type === 'course' ? courseIdOf(item) : branchCourseIdOf(item))
+      else continue
+      const next = new URLSearchParams(searchParams)
+      next.delete(type + 'Action')
+      next.delete(type + 'Id')
+      setSearchParams(next, { replace: true, state: navigationState })
+      break
+    }
+  }, [currentStep, isLoading, selectedCollegeId, searchParams, navigationState, canAction, courseMap, branchMap])
+  const programActions = (type, item) => {
+    const label = type[0].toUpperCase() + type.slice(1)
+    return <div className="as-actions-cell">
+      {type === 'semester' ? <Link className="table-action-btn action-edit" title="Configure semester dates" aria-label="Configure semester dates" to={'/semester-management/' + (item.semesterId ?? item.id) + '/edit'}><FiEdit2 /></Link> : <button type="button" className="table-action-btn action-edit" title={'Edit ' + label} aria-label={'Edit ' + label} onClick={() => { setProgramDetailsId(''); openEditModal(type, item) }}><FiEdit2 /></button>}
+      {type !== 'semester' && <button type="button" className="table-action-btn" title={(programStatus(item) === 'Active' ? 'Deactivate ' : 'Activate ') + label} aria-label={(programStatus(item) === 'Active' ? 'Deactivate ' : 'Activate ') + label} onClick={() => handleToggleStatus(type, item)}><FiCheckCircle /></button>}
+      <button type="button" className="table-action-btn" title={'Delete ' + label} aria-label={'Delete ' + label} onClick={() => { setProgramDetailsId(''); setDeleteConfirm({ type, item }) }}><FiTrash2 /></button>
+    </div>
+  }
+
+  const renderProgramActions = ({ course, branch }) => {
+    const name = courseNameOf(course)
+    const id = 'program-actions-' + courseIdOf(course) + (branch ? '-' + branchIdOf(branch) : '')
+    const resume = programResumeAction(course)
+    const canEdit = canAction('/courses', 'edit')
+    const canDelete = canAction('/courses', 'delete')
+    const active = programStatus(course) === 'Active'
+    const statusAction = active ? 'Deactivate' : 'Activate'
+    return <div className="table-inline-actions">
+      <button type="button" className="table-action-btn action-view" title="View Program" aria-label={'View ' + name} onClick={() => setProgramDetailsId(courseIdOf(course))}><FiEye aria-hidden="true" /></button>
+      {canEdit && <button type="button" className="table-action-btn action-edit" title="Edit Program" aria-label="Edit Program" onClick={() => openEditModal('course', course)}><FiEdit2 aria-hidden="true" /></button>}
+      {resume && <button type="button" className="table-action-btn" title="Resume Setup" aria-label="Resume Setup" onClick={resume}><FiPlayCircle aria-hidden="true" /></button>}
+      {canEdit && <button type="button" className={`table-action-btn ${active ? 'action-activate' : 'action-deactivate'}`} title={statusAction} aria-label={statusAction} onClick={() => handleToggleStatus('course', course)}>{active ? <FiToggleRight aria-hidden="true" /> : <FiToggleLeft aria-hidden="true" />}</button>}
+      {canDelete && <>
+        <button type="button" className="table-action-btn" aria-label={'More Actions for ' + name} title="More Actions" popoverTarget={id}><FiMoreHorizontal aria-hidden="true" /></button>
+        <div id={id} popover="auto" className="table-action-popover" role="group" aria-label={'Actions for ' + name}
+          onToggle={event => { if (event.newState === 'open') event.currentTarget.querySelector('button')?.focus() }}>
+          <button type="button" onClick={event => {
+            event.currentTarget.parentElement.hidePopover?.()
+            setDeleteConfirm({ type: 'course', item: course })
+          }}>Delete Program</button>
+        </div>
+      </>}
+    </div>
+  }
 
   return (
     <DashboardLayout>
@@ -991,16 +1048,9 @@ export default function AcademicStructure() {
 
         {/* Page Header */}
         <div className="as-header">
-          <nav className="as-breadcrumb" aria-label="Breadcrumb">
-            <Link to="/dashboard">Dashboard</Link>
-            <span className="as-breadcrumb__separator">/</span>
-            <span>College & Academic Setup</span>
-            <span className="as-breadcrumb__separator">/</span>
-            <span className="as-breadcrumb__current">Academic Structure</span>
-          </nav>
           <div className="as-header__main">
             <div className="as-title-group">
-              <h1>Academic Structure</h1>
+              <h1>Program Configuration</h1>
               <p>
                 Configure departments, courses, branches, and semesters in one unified B.Tech academic workflow
                 {selectedCollege?.name ? ` for ${selectedCollege.name}` : ''}.
@@ -1015,14 +1065,6 @@ export default function AcademicStructure() {
             {STEPS.map((s) => {
               const StepIcon = s.icon
               const isActive = currentStep === s.id
-              const count =
-                s.id === STEP_DEPARTMENTS
-                  ? departments.length
-                  : s.id === STEP_COURSES
-                  ? courses.length
-                  : s.id === STEP_BRANCHES
-                  ? branches.length
-                  : semesters.length
 
               return (
                 <button
@@ -1030,11 +1072,10 @@ export default function AcademicStructure() {
                   type="button"
                   className={`as-tab-button ${isActive ? 'is-active' : ''}`}
                   onClick={() => handleStepChange(s.id)}
-                  aria-current={isActive ? 'step' : undefined}
+                  aria-current={isActive ? 'page' : undefined}
                 >
                   <StepIcon size={16} className="as-tab-icon" />
-                  <span className="as-tab-label">{s.stepNumber}. {s.label}</span>
-                  <span className="as-tab-count">{count}</span>
+                  <span className="as-tab-label">{s.label}</span>
                 </button>
               )
             })}
@@ -1042,7 +1083,7 @@ export default function AcademicStructure() {
         </div>
 
         {/* Active Cascade Filter Context Banner */}
-        {(selectedDeptFilter || selectedCourseFilter || selectedBranchFilter) && (
+        {currentStep === STEP_PROGRAMS && (selectedDeptFilter || selectedCourseFilter || selectedBranchFilter) && (
           <div className="as-context-banner">
             <span>
               <FiInfo style={{ marginRight: '6px', verticalAlign: 'middle' }} />
@@ -1072,605 +1113,243 @@ export default function AcademicStructure() {
           </div>
         )}
 
-        {/* ========================================================
-            STEP 1: DEPARTMENTS SECTION
-            ======================================================== */}
-        {currentStep === STEP_DEPARTMENTS && (
-          <div className="as-content-card">
+        {currentStep === STEP_DEPARTMENTS && <DepartmentManagement />}
+
+        {currentStep === STEP_PROGRAMS && (
+          <section className="as-programs" aria-label="Programs directory">
             <div className="as-card-header">
-              <div className="as-card-header__left">
-                <h2 className="as-card-header__title">ACADEMIC DEPARTMENTS DIRECTORY</h2>
-                <span className="as-card-header__count">{filteredDepartments.length} records</span>
-              </div>
-              <div className="as-card-header__right">
-                <button
-                  type="button"
-                  className="as-btn as-btn--primary"
-                  onClick={() => openAddModal('department')}
-                >
-                  <FiPlus size={16} /> Add Department
-                </button>
-              </div>
+              <h2>Programs</h2>
+              <Link className="erp-btn erp-btn--secondary" to="/semester-management">Academic Scheduling</Link>
+              <button type="button" className="erp-btn erp-btn--primary" onClick={() => openAddModal('course')}><FiPlus /> Add Program</button>
             </div>
-
             {renderCardFilterBar()}
-
-            {isLoading ? (
-              <div className="as-loading-state">
-                <div className="as-spinner" />
-                <span>Loading departments...</span>
-              </div>
-            ) : filteredDepartments.length === 0 ? (
-              <EmptyState
-                icon={FiLayers}
-                title="No departments found"
-                message={searchQuery || statusFilter ? 'Try clearing your search query or filters.' : 'Add your first academic department to begin.'}
-                actionLabel={searchQuery || statusFilter ? 'Reset Filters' : '+ Add Department'}
-                onAction={searchQuery || statusFilter ? handleResetFilters : () => openAddModal('department')}
-              />
-            ) : (
-              <div className="as-table-container">
-                <table className="as-table">
-                  <thead>
-                    <tr>
-                      <th>Department Name</th>
-                      <th>Department Code</th>
-                      <th>Description</th>
-                      <th>Status</th>
-                      <th style={{ textAlign: 'right' }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredDepartments.map((dept) => {
-                      const id = dept.departmentId ?? dept.id
-                      const isActive = String(dept.status) === '1' || dept.status === 'Active' || dept.status === true
-                      return (
-                        <tr key={id}>
-                          <td data-label="Department Name">
-                            <div className="as-cell-hierarchy">
-                              <span className="as-cell-hierarchy__main">{dept.departmentName ?? dept.name}</span>
-                            </div>
-                          </td>
-                          <td data-label="Department Code">
-                            <span className="as-badge-code">{dept.departmentCode ?? dept.code}</span>
-                          </td>
-                          <td data-label="Description">
-                            <span style={{ color: '#475569', fontSize: '0.8125rem' }}>
-                              {dept.description || '—'}
-                            </span>
-                          </td>
-                          <td data-label="Status">
-                            <StatusBadge status={isActive ? 'Active' : 'Inactive'} />
-                          </td>
-                          <td data-label="Actions">
-                            <div className="as-actions-cell" style={{ justifyContent: 'flex-end' }}>
-                              <button
-                                type="button"
-                                className={`as-action-btn as-action-btn--status ${isActive ? 'is-active' : 'is-inactive'}`}
-                                title={isActive ? 'Deactivate Department' : 'Activate Department'}
-                                onClick={() => handleToggleStatus('department', dept)}
-                              >
-                                {isActive ? <FiCheckCircle /> : <FiXCircle />}
-                              </button>
-                              <button
-                                type="button"
-                                className="as-action-btn as-action-btn--edit"
-                                title="Edit Department"
-                                onClick={() => openEditModal('department', dept)}
-                              >
-                                <FiEdit2 />
-                              </button>
-                              <button
-                                type="button"
-                                className="as-action-btn as-action-btn--delete"
-                                title="Delete Department"
-                                onClick={() => setDeleteConfirm({ type: 'department', item: dept })}
-                              >
-                                <FiTrash2 />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+            <DataTable caption="Programs directory" rows={programRows} tableClassName="erp-table programs-table" actionsClassName="table-actions-end"
+              loading={isLoading && 'Loading programs…'}
+              emptyState={<EmptyState title="No programs found" message="Add a course or clear the filters." />}
+              pagination={{ page: programPage, pageSize: PROGRAMS_PAGE_SIZE, onPageChange: setProgramPage }}
+              columns={[
+                { key: 'program', label: 'Program', className: 'table-left', width: '21%', render: ({ course }) => {
+                  const duration = course.durationYears ?? course.DurationYears ?? course.durationValue
+                  return <div className="as-program-identity">
+                    <span className="as-program-mark"><FiBookOpen aria-hidden="true" /></span>
+                    <div className="as-directory-record"><strong>{courseNameOf(course)}</strong>
+                      {duration > 0 && <small>{duration} {Number(duration) === 1 ? 'year' : 'years'}</small>}
+                    </div>
+                  </div>
+                } },
+                { key: 'code', label: 'Program Code', className: 'table-center', width: '11%', render: ({ course }) => courseCodeOf(course) || '—' },
+                { key: 'structure', label: 'Academic Structure', className: 'table-left', width: '20%', render: ({ course, branch }) => {
+                  const definitions = branch ? semestersFor(branch).filter(term => String(term.courseId ?? term.CourseId) === courseIdOf(course)) : []
+                  const count = new Set(definitions.map(term => term.semesterId ?? term.id).filter(Boolean).map(String)).size
+                  const name = branch?.branchName ?? branch?.name
+                  const code = branch?.branchCode ?? branch?.code
+                  return <div className="as-directory-record">
+                    {branch ? <button type="button" className="as-program-link" onClick={() => openSemesterStructure(course, branch)}>
+                      <strong>{name || code || 'Unnamed branch'}</strong>{name && code && name.toLowerCase() !== code.toLowerCase() && <small> · {code}</small>}
+                    </button> : <strong>{relationsVerified ? 'No branch configured' : 'Branches unavailable'}</strong>}
+                    <small className="as-program-term-counts">
+                      <span>{course.totalSemesters ?? course.TotalSemesters ?? course.semesters ?? '—'} planned per branch</span>
+                      <span>{semesterListVerified && relationsVerified ? count + ' configured definitions' : 'Definitions unavailable'}</span>
+                    </small>
+                  </div>
+                } },
+                { key: 'status', label: 'Status', className: 'table-center', width: '10%', render: ({ course }) => <StatusBadge status={programStatus(course)} /> },
+                { key: 'completion', label: 'Completion', className: 'table-center', width: '15%', render: ({ course }) => <div className="as-directory-record">{renderCompletion(programsById.get(courseIdOf(course)).completion)}</div> },
+              ]}
+              rowActions={renderProgramActions}
+            />
+          </section>
         )}
 
-        {/* ========================================================
-            STEP 2: COURSES SECTION
-            ======================================================== */}
-        {currentStep === STEP_COURSES && (
-          <div className="as-content-card">
-            <div className="as-card-header">
-              <div className="as-card-header__left">
-                <h2 className="as-card-header__title">DEGREE COURSES DIRECTORY</h2>
-                <span className="as-card-header__count">{filteredCourses.length} records</span>
-              </div>
-              <div className="as-card-header__right">
-                <button
-                  type="button"
-                  className="as-btn as-btn--primary"
-                  onClick={() => openAddModal('course')}
-                >
-                  <FiPlus size={16} /> Add Course
-                </button>
-              </div>
+        {viewedCourse && viewedProgram && <ViewDialog title={courseNameOf(viewedCourse)} subtitle={courseCodeOf(viewedCourse)} onClose={() => setProgramDetailsId('')} showExport={false}>
+          <div className="as-directory-details">
+            <p>{viewedCourse.courseType ?? viewedCourse.type ?? 'Type unconfigured'} · {viewedCourse.durationYears ?? viewedCourse.DurationYears ?? viewedCourse.durationValue ?? '—'} years · {programStatus(viewedCourse)}</p>
+            {viewedProgram.completion ? <CompletionSummary completion={viewedProgram.completion} name={courseNameOf(viewedCourse)} /> : <p>Completion unavailable</p>}
+            <h3>Linked departments</h3>
+            <p>{relationsVerified ? viewedProgram.linkedDepartments.map(item => item.departmentName ?? item.name).join(', ') || 'None configured' : 'Unavailable'}</p>
+            <div className="as-directory-actions">
+              <h3>Branches and semester structure</h3>
+              {canAction('/branches', 'create') && <button type="button" className="erp-btn erp-btn--secondary" onClick={() => addBranchFor(viewedCourse)}>Add Branch</button>}
             </div>
-
-            {renderCardFilterBar()}
-
-            {isLoading ? (
-              <div className="as-loading-state">
-                <div className="as-spinner" />
-                <span>Loading courses...</span>
-              </div>
-            ) : filteredCourses.length === 0 ? (
-              <EmptyState
-                icon={FiBookOpen}
-                title="No courses found"
-                message={
-                  selectedDeptFilter
-                    ? `No courses found under ${deptMap.get(String(selectedDeptFilter)) || 'selected department'}.`
-                    : 'Add your first course program linked to a department.'
-                }
-                actionLabel={searchQuery || selectedDeptFilter ? 'Reset Filters' : '+ Add Course'}
-                onAction={searchQuery || selectedDeptFilter ? handleResetFilters : () => openAddModal('course')}
-              />
-            ) : (
-              <div className="as-table-container">
-                <table className="as-table">
-                  <thead>
-                    <tr>
-                      <th>Course Name</th>
-                      <th>Course Code</th>
-                      <th>Department</th>
-                      <th>Course Level</th>
-                      <th>Duration</th>
-                      <th>Semesters</th>
-                      <th>Status</th>
-                      <th style={{ textAlign: 'right' }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredCourses.map((course) => {
-                      const id = course.courseId ?? course.id
-                      const deptName = deptMap.get(String(course.departmentId ?? course.DepartmentId)) || '—'
-                      const isActive = String(course.status) === '1' || course.status === 'Active' || course.status === true
-                      return (
-                        <tr key={id}>
-                          <td data-label="Course Name">
-                            <div className="as-cell-hierarchy">
-                              <span className="as-cell-hierarchy__main">{course.courseName ?? course.name}</span>
-                              {course.eligibility && (
-                                <span className="as-cell-hierarchy__sub">Eligibility: {course.eligibility}</span>
-                              )}
-                            </div>
-                          </td>
-                          <td data-label="Course Code">
-                            <span className="as-badge-code">{course.courseCode ?? course.code}</span>
-                          </td>
-                          <td data-label="Department">
-                            <span style={{ fontWeight: 500, color: '#334155' }}>{deptName}</span>
-                          </td>
-                          <td data-label="Course Level">
-                            <span style={{ fontSize: '0.8125rem', color: '#475569' }}>
-                              {course.courseType ?? course.type ?? 'Undergraduate'}
-                            </span>
-                          </td>
-                          <td data-label="Duration">{course.durationYears ?? course.DurationYears ?? 4} Years</td>
-                          <td data-label="Semesters">{course.totalSemesters ?? course.TotalSemesters ?? 8} Sems</td>
-                          <td data-label="Status">
-                            <StatusBadge status={isActive ? 'Active' : 'Inactive'} />
-                          </td>
-                          <td data-label="Actions">
-                            <div className="as-actions-cell" style={{ justifyContent: 'flex-end' }}>
-                              <button
-                                type="button"
-                                className={`as-action-btn as-action-btn--status ${isActive ? 'is-active' : 'is-inactive'}`}
-                                title={isActive ? 'Deactivate Course' : 'Activate Course'}
-                                onClick={() => handleToggleStatus('course', course)}
-                              >
-                                {isActive ? <FiCheckCircle /> : <FiXCircle />}
-                              </button>
-                              <button
-                                type="button"
-                                className="as-action-btn as-action-btn--edit"
-                                title="Edit Course"
-                                onClick={() => openEditModal('course', course)}
-                              >
-                                <FiEdit2 />
-                              </button>
-                              <button
-                                type="button"
-                                className="as-action-btn as-action-btn--delete"
-                                title="Delete Course"
-                                onClick={() => setDeleteConfirm({ type: 'course', item: course })}
-                              >
-                                <FiTrash2 />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ========================================================
-            STEP 3: BRANCHES SECTION
-            ======================================================== */}
-        {currentStep === STEP_BRANCHES && (
-          <div className="as-content-card">
-            <div className="as-card-header">
-              <div className="as-card-header__left">
-                <h2 className="as-card-header__title">ENGINEERING BRANCHES DIRECTORY</h2>
-                <span className="as-card-header__count">{filteredBranches.length} records</span>
-              </div>
-              <div className="as-card-header__right">
-                <button
-                  type="button"
-                  className="as-btn as-btn--primary"
-                  onClick={() => openAddModal('branch')}
-                >
-                  <FiPlus size={16} /> Add Branch
-                </button>
-              </div>
-            </div>
-
-            {renderCardFilterBar()}
-
-            {isLoading ? (
-              <div className="as-loading-state">
-                <div className="as-spinner" />
-                <span>Loading branches...</span>
-              </div>
-            ) : filteredBranches.length === 0 ? (
-              <EmptyState
-                icon={FiGitBranch}
-                title="No branches found"
-                message={
-                  selectedCourseFilter
-                    ? `No branches found under selected course.`
-                    : 'Add branches linked to their corresponding department and course.'
-                }
-                actionLabel={searchQuery || selectedCourseFilter ? 'Reset Filters' : '+ Add Branch'}
-                onAction={searchQuery || selectedCourseFilter ? handleResetFilters : () => openAddModal('branch')}
-              />
-            ) : (
-              <div className="as-table-container">
-                <table className="as-table">
-                  <thead>
-                    <tr>
-                      <th>Branch Name</th>
-                      <th>Branch Code</th>
-                      <th>Department</th>
-                      <th>Course</th>
-                      <th>Status</th>
-                      <th style={{ textAlign: 'right' }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredBranches.map((branch) => {
-                      const id = branch.branchId ?? branch.id
-                      const course = courseMap.get(String(branch.courseId ?? branch.CourseId))
-                      const deptName = deptMap.get(String(branch.departmentId ?? course?.departmentId)) || '—'
-                      const courseName = course?.courseName ?? course?.name ?? '—'
-                      const isActive = String(branch.status) === '1' || branch.status === 'Active' || branch.status === true
-                      return (
-                        <tr key={id}>
-                          <td data-label="Branch Name">
-                            <div className="as-cell-hierarchy">
-                              <span className="as-cell-hierarchy__main">{branch.branchName ?? branch.name}</span>
-                              {branch.specialization && (
-                                <span className="as-cell-hierarchy__sub">Specialization: {branch.specialization}</span>
-                              )}
-                            </div>
-                          </td>
-                          <td data-label="Branch Code">
-                            <span className="as-badge-code">{branch.branchCode ?? branch.code}</span>
-                          </td>
-                          <td data-label="Department">
-                            <span style={{ fontWeight: 500, color: '#334155' }}>{deptName}</span>
-                          </td>
-                          <td data-label="Course">
-                            <span style={{ color: '#475569' }}>{courseName}</span>
-                          </td>
-                          <td data-label="Status">
-                            <StatusBadge status={isActive ? 'Active' : 'Inactive'} />
-                          </td>
-                          <td data-label="Actions">
-                            <div className="as-actions-cell" style={{ justifyContent: 'flex-end' }}>
-                              <button
-                                type="button"
-                                className={`as-action-btn as-action-btn--status ${isActive ? 'is-active' : 'is-inactive'}`}
-                                title={isActive ? 'Deactivate Branch' : 'Activate Branch'}
-                                onClick={() => handleToggleStatus('branch', branch)}
-                              >
-                                {isActive ? <FiCheckCircle /> : <FiXCircle />}
-                              </button>
-                              <button
-                                type="button"
-                                className="as-action-btn as-action-btn--edit"
-                                title="Edit Branch"
-                                onClick={() => openEditModal('branch', branch)}
-                              >
-                                <FiEdit2 />
-                              </button>
-                              <button
-                                type="button"
-                                className="as-action-btn as-action-btn--delete"
-                                title="Delete Branch"
-                                onClick={() => setDeleteConfirm({ type: 'branch', item: branch })}
-                              >
-                                <FiTrash2 />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ========================================================
-            STEP 4: SEMESTERS SECTION
-            ======================================================== */}
-        {currentStep === STEP_SEMESTERS && (
-          <div className="as-content-card">
-            <div className="as-card-header">
-              <div className="as-card-header__left">
-                <h2 className="as-card-header__title">SEMESTER CURRICULUM DIRECTORY</h2>
-                <span className="as-card-header__count">{filteredSemesters.length} records</span>
-              </div>
-              <div className="as-card-header__right">
-                <button
-                  type="button"
-                  className="as-btn as-btn--primary"
-                  onClick={() => openAddModal('semester')}
-                >
-                  <FiPlus size={16} /> Add Semester
-                </button>
-              </div>
-            </div>
-
-            {renderCardFilterBar()}
-
-            {isLoading ? (
-              <div className="as-loading-state">
-                <div className="as-spinner" />
-                <span>Loading semesters...</span>
-              </div>
-            ) : filteredSemesters.length === 0 ? (
-              <EmptyState
-                icon={FiCalendar}
-                title="No semesters found"
-                message={
-                  selectedBranchFilter
-                    ? `No semesters configured for selected branch.`
-                    : 'Configure semesters (1 to 8) linked to their degree course and engineering branch.'
-                }
-                actionLabel={searchQuery || selectedBranchFilter ? 'Reset Filters' : '+ Add Semester'}
-                onAction={searchQuery || selectedBranchFilter ? handleResetFilters : () => openAddModal('semester')}
-              />
-            ) : (
-              <div className="as-table-container">
-                <table className="as-table">
-                  <thead>
-                    <tr>
-                      <th>Semester Name</th>
-                      <th>Semester No.</th>
-                      <th>Department</th>
-                      <th>Course</th>
-                      <th>Branch</th>
-                      <th>Status</th>
-                      <th style={{ textAlign: 'right' }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredSemesters.map((sem) => {
-                      const id = sem.semesterId ?? sem.id
-                      const branch = branchMap.get(String(sem.branchId ?? sem.BranchId))
-                      const course = courseMap.get(String(sem.courseId ?? sem.CourseId ?? branch?.courseId))
-                      const deptName = deptMap.get(String(course?.departmentId ?? course?.DepartmentId ?? branch?.departmentId)) || '—'
-                      const isActive = sem.status === 1 || sem.status === 'Active'
-                      const isCompleted = sem.status === 2 || sem.status === 'Completed'
-
-                      return (
-                        <tr key={id}>
-                          <td data-label="Semester Name">
-                            <span style={{ fontWeight: 600, color: '#0f172a' }}>
-                              {sem.semesterName ?? sem.name ?? `Semester ${sem.semesterNumber}`}
-                            </span>
-                          </td>
-                          <td data-label="Semester No.">
-                            <span className="as-badge-code">Sem {sem.semesterNumber}</span>
-                          </td>
-                          <td data-label="Department">
-                            <span style={{ fontWeight: 500, color: '#334155' }}>{deptName}</span>
-                          </td>
-                          <td data-label="Course">
-                            <span style={{ color: '#475569', fontSize: '0.8125rem' }}>{course?.courseName ?? course?.name ?? '—'}</span>
-                          </td>
-                          <td data-label="Branch">
-                            <span style={{ color: '#475569', fontSize: '0.8125rem' }}>{branch?.branchName ?? branch?.name ?? '—'}</span>
-                          </td>
-                          <td data-label="Status">
-                            <StatusBadge
-                              status={isActive ? 'Active' : isCompleted ? 'Completed' : 'Upcoming'}
-                              tone={isActive ? 'active' : isCompleted ? 'processed' : 'warning'}
-                            />
-                          </td>
-                          <td data-label="Actions">
-                            <div className="as-actions-cell" style={{ justifyContent: 'flex-end' }}>
-                              <button
-                                type="button"
-                                className="as-action-btn as-action-btn--edit"
-                                title="Edit Semester"
-                                onClick={() => openEditModal('semester', sem)}
-                              >
-                                <FiEdit2 />
-                              </button>
-                              <button
-                                type="button"
-                                className="as-action-btn as-action-btn--delete"
-                                title="Delete Semester"
-                                onClick={() => setDeleteConfirm({ type: 'semester', item: sem })}
-                              >
-                                <FiTrash2 />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ========================================================
-            MODAL: ADD / EDIT DEPARTMENT
-            ======================================================== */}
-        {modalType === 'department' && (
-          <div className="as-modal-backdrop" onClick={closeModal}>
-            <div className="as-modal as-modal--enhanced" role="dialog" aria-modal="true" aria-labelledby="department-modal-title" onClick={(e) => e.stopPropagation()}>
-              <div className="as-modal__header as-modal__header--enhanced">
-                <div className="as-modal-heading">
-                  <span className="as-modal-eyebrow"><FiLayers aria-hidden="true" /> Academic structure</span>
-                  <h3 id="department-modal-title">{editingItem ? 'Edit Department' : 'Add Department'}</h3>
-                  <p>Create an academic unit and set its directory status.</p>
+            <p>{viewedCourse.totalSemesters ?? viewedCourse.TotalSemesters ?? viewedCourse.semesters ?? '—'} planned per branch. Schedule dates are managed separately.</p>
+            {!viewedProgram.children.length && <p>{relationsVerified ? 'No branches configured.' : 'Branches unavailable.'}</p>}
+            {viewedProgram.children.map(branch => {
+              const check = inspectBranch(branch, viewedCourse)
+              const terms = semestersFor(branch)
+              return <section className="as-directory-branch" key={branchIdOf(branch)}>
+                <div className="as-directory-actions">
+                  <strong>{branch.branchName ?? branch.name}</strong><span>{branch.branchCode ?? branch.code}</span>
+                  {programActions('branch', branch)}
+                  {!!check.missing?.length && <button type="button" className="erp-btn erp-btn--secondary" onClick={() => openRepair(branch)}>Repair {check.missing.length} missing semesters</button>}
                 </div>
-                <button type="button" className="as-modal__close" onClick={closeModal} aria-label="Close department dialog">
-                  <FiX />
+                {check.error && <p>{check.error}</p>}
+                {terms.length ? <ul className="as-program-terms">{terms.map(term => <li key={term.semesterId ?? term.id}>
+                  <strong>{term.semesterName ?? 'Semester ' + term.semesterNumber}</strong>
+                  <span>{term.startDate && term.endDate ? (yearMap.get(String(term.academicYearId)) || 'Scheduled') : 'Not Scheduled'}</span>
+                  {programActions('semester', term)}
+                </li>)}</ul> : <p>{semesterListVerified ? 'No saved definitions.' : 'Definitions unavailable.'}</p>}
+              </section>
+            })}
+          </div>
+        </ViewDialog>}
+
+        {setupTab && (
+          <ViewDialog
+            title={repairOnly ? 'Repair Missing Semesters' : modalType === 'review' || (!editingItem && modalType === 'semester') ? setupTab.label : (editingItem ? 'Edit ' : 'Add ') + (modalType === 'semester' ? 'Semester' : modalType === 'course' && !editingItem ? 'Program' : setupTab.label)}
+            subtitle={repairOnly ? generationBranch?.branchName ?? generationBranch?.name : setupTab.subtitle}
+            className="as-setup-dialog"
+            maxWidth={repairOnly ? '520px' : '700px'}
+            onClose={closeModal}
+            busy={isSubmitting}
+            showExport={false}
+            bodyRef={setupBody}
+            footerContent={<div className="as-setup-actions">
+              <button type="button" className="erp-btn erp-btn--secondary" onClick={closeModal} disabled={isSubmitting}>{!editingItem && (modalType === 'branch' && setupCourse.current || ['semester', 'review'].includes(modalType)) ? 'Done' : 'Cancel'}</button>
+              {(!['semester', 'review'].includes(modalType) || missingTerms.length > 0) && <button type="submit" form="academic-setup-form" className="erp-btn erp-btn--primary" disabled={isSubmitting || (['semester', 'review'].includes(modalType) && !canAction('/semester-management', 'create'))}>
+                {isSubmitting ? 'Saving...' : editingItem ? 'Update ' + (modalType === 'semester' ? 'Semester' : setupTab.label) : modalType === 'semester' ? 'Review' : modalType === 'review' ? 'Generate Missing Semesters' : modalType === 'course' && savedCourseChoice ? 'Next: Branch' : 'Create ' + (modalType === 'course' ? 'Program' : setupTab.label)}
+              </button>}
+            </div>}
+          >
+            {!editingItem && !repairOnly && <div className="as-setup-tabs" role="tablist" aria-label="Academic setup">
+              {SETUP_TABS.map((tab, index) => (
+                <button key={tab.id} type="button" role="tab" id={`academic-setup-${tab.id}`}
+                  aria-controls="academic-setup-form" aria-selected={modalType === tab.id}
+                  tabIndex={modalType === tab.id ? 0 : -1} disabled={isSubmitting}
+                  onClick={() => openAddModal(tab.id, true)}
+                  onKeyDown={event => {
+                    const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End']
+                    if (!keys.includes(event.key)) return
+                    event.preventDefault()
+                    const next = event.key === 'Home' ? 0 : event.key === 'End' ? SETUP_TABS.length - 1
+                      : (index + (event.key === 'ArrowRight' ? 1 : -1) + SETUP_TABS.length) % SETUP_TABS.length
+                    openAddModal(SETUP_TABS[next].id, true)
+                    event.currentTarget.parentElement.children[next]?.focus()
+                  }}>
+                  <span aria-hidden="true">{index + 1}</span>{tab.label}
                 </button>
-              </div>
-              <form onSubmit={handleSubmitDepartment}>
-                <div className="as-modal__body as-modal__body--enhanced">
-                  <section className="as-modal-section" aria-labelledby="department-profile-heading">
-                    <div className="as-modal-section__heading"><span>01</span><div><h4 id="department-profile-heading">Department profile</h4><p>Use a clear name and short code for campus records.</p></div></div>
-                  <div className="as-form-row">
-                    <div className="as-form-group">
-                      <label htmlFor="dept-name">
-                        Department Name <span className="required">*</span>
-                      </label>
-                      <input
-                        id="dept-name"
-                        type="text"
-                        className={`as-form-control ${formErrors.name ? 'is-invalid' : ''}`}
-                        placeholder="e.g. Computer Science and Engineering"
-                        value={deptForm.name}
-                        onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })}
-                        required
-                      />
-                      {formErrors.name && <span className="as-form-error">{formErrors.name}</span>}
-                    </div>
-                    <div className="as-form-group">
-                      <label htmlFor="dept-code">
-                        Department Code <span className="required">*</span>
-                      </label>
-                      <input
-                        id="dept-code"
-                        type="text"
-                        className={`as-form-control ${formErrors.code ? 'is-invalid' : ''}`}
-                        placeholder="e.g. CSE"
-                        value={deptForm.code}
-                        onChange={(e) => setDeptForm({ ...deptForm, code: e.target.value.toUpperCase() })}
-                        required
-                      />
-                      {formErrors.code && <span className="as-form-error">{formErrors.code}</span>}
-                    </div>
-                  </div>
-
-                  <div className="as-form-group">
-                    <label htmlFor="dept-desc">Description</label>
-                    <textarea
-                      id="dept-desc"
-                      className="as-form-control"
-                      rows={3}
-                      placeholder="Enter a brief overview of the department..."
-                      value={deptForm.description}
-                      onChange={(e) => setDeptForm({ ...deptForm, description: e.target.value })}
-                    />
-                  </div>
-                  </section>
-
-                  <section className="as-modal-section" aria-labelledby="department-status-heading">
-                    <div className="as-modal-section__heading"><span>02</span><div><h4 id="department-status-heading">Availability</h4><p>Set whether this department is currently active.</p></div></div>
-                    <div className="as-form-group">
-                    <label htmlFor="dept-status">Status</label>
-                    <select
-                      id="dept-status"
-                      className="as-form-control"
-                      value={deptForm.status}
-                      onChange={(e) => setDeptForm({ ...deptForm, status: e.target.value })}
-                    >
-                      <option value="Active">Active</option>
-                      <option value="Inactive">Inactive</option>
+              ))}
+            </div>}
+            <form id="academic-setup-form" className="as-setup-form"
+              role={editingItem || repairOnly ? undefined : 'tabpanel'} aria-labelledby={editingItem || repairOnly ? undefined : `academic-setup-${modalType}`}
+              onSubmit={{ course: handleSubmitCourse, branch: handleSubmitBranch, semester: event => { event.preventDefault(); openAddModal('review', true) }, review: generateStructure }[modalType]}>
+              {formErrors.submit && <p className="as-setup-error" role="alert">{formErrors.submit}</p>}
+              {!editingItem && modalType === 'branch' && setupCourse.current && <p className="as-form-hint">Course saved or selected. Add a branch to this program without creating the course again.</p>}
+              {!editingItem && ['semester', 'review'].includes(modalType) && <section className="as-setup-section as-semester-setup">
+                {!repairOnly && <div className="as-form-row">
+                  <label className="as-form-group">Course
+                    <select className="as-form-control" value={generationCourseId} onChange={event => {
+                      setGenerationCourseId(event.target.value)
+                      setGenerationBranchId('')
+                      setSemesterDates({})
+                    }} required>
+                      <option value="" disabled>Select a saved course</option>
+                      {courses.filter(course => courseIdOf(course)).map(course => <option key={courseIdOf(course)} value={courseIdOf(course)}>{courseNameOf(course)} ({courseCodeOf(course)})</option>)}
                     </select>
-                    </div>
-                  </section>
-                </div>
-                <div className="as-modal__footer">
-                  <button type="button" className="as-btn as-btn--outline" onClick={closeModal}>
-                    Cancel
-                  </button>
-                  <button type="submit" className="as-btn as-btn--primary" disabled={isSubmitting}>
-                    {isSubmitting ? 'Saving...' : editingItem ? 'Update Department' : 'Create Department'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* ========================================================
-            MODAL: ADD / EDIT COURSE
-            ======================================================== */}
-        {modalType === 'course' && (
-          <div className="as-modal-backdrop" onClick={closeModal}>
-            <div className="as-modal as-modal--enhanced" role="dialog" aria-modal="true" aria-labelledby="course-modal-title" onClick={(e) => e.stopPropagation()}>
-              <div className="as-modal__header as-modal__header--enhanced">
-                <div className="as-modal-heading">
-                  <span className="as-modal-eyebrow"><FiBookOpen aria-hidden="true" /> Academic structure</span>
-                  <h3 id="course-modal-title">{editingItem ? 'Edit Course' : 'Add Course'}</h3>
-                  <p>Define the program identity, duration, and semester structure.</p>
-                </div>
-                <button type="button" className="as-modal__close" onClick={closeModal} aria-label="Close course dialog">
-                  <FiX />
-                </button>
-              </div>
-              <form onSubmit={handleSubmitCourse}>
-                <div className="as-modal__body as-modal__body--enhanced">
-                  <section className="as-modal-section" aria-labelledby="course-profile-heading">
-                    <div className="as-modal-section__heading"><span>01</span><div><h4 id="course-profile-heading">Program identity</h4><p>Enter the course name and its official code.</p></div></div>
+                  </label>
+                  <label className="as-form-group">Branch
+                  <select className="as-form-control" value={generationBranchId} onChange={event => {
+                    setGenerationBranchId(event.target.value)
+                    setSemesterDates({})
+                  }} disabled={!generationCourseId} required>
+                    <option value="">Select a branch</option>
+                    {branches.filter(branch => branchCourseIdOf(branch) === generationCourseId).map(branch =>
+                      <option key={branchIdOf(branch)} value={branchIdOf(branch)}>{branch.branchName ?? branch.name}</option>
+                    )}
+                  </select>
+                </label></div>}
+                {structure.error && <p role="alert">{structure.error}</p>}
+                {generationPlan.length > 0 && <>
+                  <p>{generationPlan.length - missingTerms.length} of {generationPlan.length} saved · {missingTerms.length} to add</p>
+                  {missingTerms.length > 0 && canAction('/semester-management', 'create') && canAction('/semester-management', 'edit') &&
+                    <>
+                      <p className="as-form-hint">Add both dates or leave both blank.</p>
+                      <div className="as-semester-date-heading" aria-hidden="true">
+                        <span>Semester</span><span>Start date</span><span>End date</span>
+                      </div>
+                    </>}
+                  <ol className="as-program-terms">{generationPlan.map(term => {
+                    const savedTerms = semestersFor(generationBranch).filter(saved => Number(saved.semesterNumber) === term.semesterNumber &&
+                      String(saved.courseId ?? saved.CourseId) === courseIdOf(generationCourse))
+                    return <li key={term.semesterNumber}>
+                      <strong>{term.semesterName}</strong>
+                      {!savedTerms.length && <>
+                        {canAction('/semester-management', 'create') && canAction('/semester-management', 'edit') && <div className="as-semester-date-fields">
+                          {['startDate', 'endDate'].map(key => {
+                            const label = key === 'startDate' ? 'Start date' : 'End date'
+                            return <input key={key} type="date" className="as-form-control" aria-label={term.semesterName + ' ' + label.toLowerCase()}
+                                value={semesterDates[term.semesterNumber]?.[key] || ''} disabled={isSubmitting}
+                                onChange={event => {
+                                  const value = event.target.value
+                                  setSemesterDates(current => ({ ...current, [term.semesterNumber]: { ...current[term.semesterNumber], [key]: value } }))
+                                }} />
+                          })}
+                        </div>}
+                      </>}
+                      {savedTerms.map(saved => {
+                        const id = saved.semesterId ?? saved.id
+                        const year = yearMap.get(String(saved.academicYearId))
+                        const scheduled = saved.startDate && saved.endDate
+                        return <div className="as-directory-actions" key={id}>
+                          <span>{year && year + ' · '}{scheduled ? String(saved.startDate).slice(0, 10) + ' to ' + String(saved.endDate).slice(0, 10) : 'Not scheduled'}</span>
+                          {id && canAction('/semester-management', 'edit') && <button type="button" className="erp-btn erp-btn--secondary"
+                            aria-label={(scheduled ? 'Edit dates for ' : 'Set dates for ') + term.semesterName + (year ? ' ' + year : '')}
+                            disabled={isSubmitting} onClick={() => setSemesterSchedule({
+                              row: { ...saved, id, courseId: courseIdOf(generationCourse), branchId: generationBranchId, name: saved.semesterName || term.semesterName },
+                              collegeId: selectedCollegeId,
+                            })}>{scheduled ? 'Edit dates' : 'Set dates'}</button>}
+                        </div>
+                      })}
+                    </li>
+                  })}</ol>
+                </>}
+              </section>}
+            {modalType === 'course' && <>
+                  {editingItem && <label className="as-form-group">Department
+                    <select className="as-form-control" value={courseForm.departmentId} onChange={event => setCourseForm({ ...courseForm, departmentId: event.target.value })}>
+                      <option value="">No direct department</option>
+                      {departments.map(department => <option key={departmentIdOf(department)} value={departmentIdOf(department)}>{department.departmentName ?? department.name}</option>)}
+                    </select>
+                  </label>}
+                  <section className="as-setup-section" aria-labelledby="course-profile-heading">
+                    <div className="as-setup-heading"><div><h4 id="course-profile-heading">Program identity</h4><p>Enter the course name and its official code.</p></div></div>
                   <div className="as-form-row">
                     <div className="as-form-group">
                       <label htmlFor="course-name">
                         Course Name <span className="required">*</span>
                       </label>
+                      <div className="as-course-name-control">
                       <input
                         id="course-name"
                         type="text"
                         className={`as-form-control ${formErrors.name ? 'is-invalid' : ''}`}
                         placeholder="e.g. Bachelor of Technology"
-                        value={courseForm.name}
-                        onChange={(e) => setCourseForm({ ...courseForm, name: e.target.value })}
+                        value={savedCourseChoice ? courseNameOf(courseMap.get(savedCourseChoice)) ?? '' : courseForm.name}
+                        onChange={(e) => {
+                          setSavedCourseChoice('')
+                          setCourseForm({ ...courseForm, name: e.target.value })
+                        }}
                         required
                       />
+                      {!editingItem && courses.some(course => courseIdOf(course)) && canAction('/branches', 'create') &&
+                        <>
+                          <button type="button" className="as-form-control as-course-picker" aria-label="Use an existing course"
+                            title="Select a saved course" popoverTarget="saved-course-options">
+                            <FiChevronDown aria-hidden="true" />
+                          </button>
+                          <div id="saved-course-options" className="table-action-popover as-course-options" popover="auto"
+                            role="group" aria-label="Saved courses" onToggle={event => {
+                              if (event.newState === 'open') event.currentTarget.querySelector('button')?.focus()
+                            }}>
+                            {courses.filter(course => courseIdOf(course)).map(course => (
+                              <button type="button" key={courseIdOf(course)} onClick={event => {
+                                event.currentTarget.parentElement.hidePopover?.()
+                                setSavedCourseChoice(courseIdOf(course))
+                                setFormErrors({})
+                              }}>{courseNameOf(course)} ({courseCodeOf(course)})</button>
+                            ))}
+                          </div>
+                        </>}
+                      </div>
                       {formErrors.name && <span className="as-form-error">{formErrors.name}</span>}
                     </div>
                     <div className="as-form-group">
@@ -1682,7 +1361,8 @@ export default function AcademicStructure() {
                         type="text"
                         className={`as-form-control ${formErrors.code ? 'is-invalid' : ''}`}
                         placeholder="e.g. BTECH"
-                        value={courseForm.code}
+                        value={savedCourseChoice ? courseCodeOf(courseMap.get(savedCourseChoice)) ?? '' : courseForm.code}
+                        readOnly={Boolean(savedCourseChoice)}
                         onChange={(e) => setCourseForm({ ...courseForm, code: e.target.value.toUpperCase() })}
                         required
                       />
@@ -1691,17 +1371,18 @@ export default function AcademicStructure() {
                   </div>
                   </section>
 
-                  <section className="as-modal-section" aria-labelledby="course-structure-heading">
-                    <div className="as-modal-section__heading"><span>02</span><div><h4 id="course-structure-heading">Program structure</h4><p>Set the course level, duration, and availability.</p></div></div>
+                  {!savedCourseChoice && <section className="as-setup-section" aria-labelledby="course-structure-heading">
+                    <div className="as-setup-heading"><div><h4 id="course-structure-heading">Program structure</h4><p>Set the course level, duration, and availability.</p></div></div>
                   <div className="as-form-row">
                     <div className="as-form-group">
                       <label htmlFor="course-type">Course Type</label>
                       <select
                         id="course-type"
                         className="as-form-control"
-                        value={courseForm.type}
+                        value={courseForm.type} required
                         onChange={(e) => setCourseForm({ ...courseForm, type: e.target.value })}
                       >
+                        <option value="" disabled>Select course type</option>
                         <option value="Undergraduate">Undergraduate (UG)</option>
                         <option value="Postgraduate">Postgraduate (PG)</option>
                         <option value="Diploma">Diploma</option>
@@ -1715,15 +1396,8 @@ export default function AcademicStructure() {
                         min="1"
                         max="6"
                         className="as-form-control"
-                        value={courseForm.durationYears}
-                        onChange={(e) => {
-                          const years = Number(e.target.value)
-                          setCourseForm({
-                            ...courseForm,
-                            durationYears: years,
-                            totalSemesters: years * 2,
-                          })
-                        }}
+                        value={courseForm.durationYears} required
+                        onChange={(e) => setCourseForm({ ...courseForm, durationYears: e.target.value })}
                       />
                     </div>
                   </div>
@@ -1737,8 +1411,8 @@ export default function AcademicStructure() {
                         min="1"
                         max="12"
                         className="as-form-control"
-                        value={courseForm.totalSemesters}
-                        onChange={(e) => setCourseForm({ ...courseForm, totalSemesters: Number(e.target.value) })}
+                        value={courseForm.totalSemesters} required
+                        onChange={(e) => setCourseForm({ ...courseForm, totalSemesters: e.target.value })}
                       />
                     </div>
                     <div className="as-form-group">
@@ -1746,50 +1420,21 @@ export default function AcademicStructure() {
                       <select
                         id="course-status"
                         className="as-form-control"
-                        value={courseForm.status}
+                        value={courseForm.status} required
                         onChange={(e) => setCourseForm({ ...courseForm, status: e.target.value })}
                       >
+                        <option value="" disabled>Select status</option>
                         <option value="Active">Active</option>
                         <option value="Inactive">Inactive</option>
                       </select>
                     </div>
                   </div>
-                  </section>
-                </div>
-                <div className="as-modal__footer">
-                  <button type="button" className="as-btn as-btn--outline" onClick={closeModal}>
-                    Cancel
-                  </button>
-                  <button type="submit" className="as-btn as-btn--primary" disabled={isSubmitting}>
-                    {isSubmitting ? 'Saving...' : editingItem ? 'Update Course' : 'Create Course'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
+                  </section>}
 
-        {/* ========================================================
-            MODAL: ADD / EDIT BRANCH
-            ======================================================== */}
-        {modalType === 'branch' && (
-          <div className="as-modal-backdrop" onClick={closeModal}>
-            <div className="as-modal as-modal--branch" role="dialog" aria-modal="true" aria-labelledby="branch-modal-title" onClick={(e) => e.stopPropagation()}>
-              <div className="as-modal__header as-modal__header--branch">
-                <div className="as-branch-modal-heading">
-                  <span className="as-branch-modal-eyebrow"><FiGitBranch aria-hidden="true" /> Academic structure</span>
-                  <h3 id="branch-modal-title">{editingItem ? 'Edit Branch' : 'Add Branch'}</h3>
-                  <p>Connect this branch to an existing course, then add its name and capacity.</p>
-                </div>
-                <button type="button" className="as-modal__close" onClick={closeModal} aria-label="Close branch dialog">
-                  <FiX />
-                </button>
-              </div>
-              <form onSubmit={handleSubmitBranch}>
-                <div className="as-modal__body as-modal__body--branch">
-                  <section className="as-branch-form-section" aria-labelledby="branch-academic-heading">
-                    <div className="as-branch-section-heading">
-                      <span>01</span>
+            </>}
+            {modalType === 'branch' && <>
+                  <section className="as-setup-section" aria-labelledby="branch-academic-heading">
+                    <div className="as-setup-heading">
                       <div><h4 id="branch-academic-heading">Academic mapping</h4><p>Select the course this branch belongs to.</p></div>
                     </div>
                     <div className="as-form-row">
@@ -1803,6 +1448,8 @@ export default function AcademicStructure() {
                         value={branchForm.courseId}
                         onChange={(e) => {
                           const selectedCourse = courses.find((course) => String(courseIdOf(course)) === e.target.value)
+                          setGenerationCourseId(e.target.value)
+                          setGenerationBranchId('')
                           setBranchForm((current) => ({
                             ...current,
                             courseId: e.target.value,
@@ -1839,11 +1486,13 @@ export default function AcademicStructure() {
                         onChange={(e) => {
                           const newDeptId = e.target.value
                           const deptCourses = courses.filter((c) => String(courseDepartmentIdOf(c)) === String(newDeptId))
-                          const selectedCourseInDepartment = deptCourses.some((c) => String(courseIdOf(c)) === String(branchForm.courseId))
+                          const selectedCourse = courses.find(course => String(courseIdOf(course)) === String(branchForm.courseId))
+                          const selectedDepartment = courseDepartmentIdOf(selectedCourse)
+                          const keepCourse = selectedCourse && (!selectedDepartment || String(selectedDepartment) === newDeptId)
                           setBranchForm({
                             ...branchForm,
                             departmentId: newDeptId,
-                            courseId: selectedCourseInDepartment ? branchForm.courseId : String(courseIdOf(deptCourses[0]) ?? ''),
+                            courseId: keepCourse ? branchForm.courseId : String(courseIdOf(deptCourses[0]) ?? ''),
                           })
                         }}
                         required
@@ -1863,11 +1512,15 @@ export default function AcademicStructure() {
                     </div>
                   </section>
 
-                  <section className="as-branch-form-section" aria-labelledby="branch-details-heading">
-                    <div className="as-branch-section-heading">
-                      <span>02</span>
+                  <section className="as-setup-section" aria-labelledby="branch-details-heading">
+                    <div className="as-setup-heading">
                       <div><h4 id="branch-details-heading">Branch details</h4><p>Set the branch identity and admission capacity.</p></div>
                     </div>
+                    {!editingItem && canAction('/semester-management', 'create') && canAction('/semester-management', 'edit') &&
+                      <label className="as-semester-date-choice">
+                        <input type="checkbox" checked={chooseDatesFirst} onChange={event => setChooseDatesFirst(event.target.checked)} />
+                        Choose semester dates before creating definitions
+                      </label>}
                     <div className="as-form-row">
                     <div className="as-form-group">
                       <label htmlFor="branch-name">
@@ -1929,254 +1582,27 @@ export default function AcademicStructure() {
                     </div>
                     </div>
                   </section>
-                </div>
-                <div className="as-modal__footer">
-                  <button type="button" className="as-btn as-btn--outline" onClick={closeModal}>
-                    Cancel
-                  </button>
-                  <button type="submit" className="as-btn as-btn--primary" disabled={isSubmitting}>
-                    {isSubmitting ? 'Saving...' : editingItem ? 'Update Branch' : 'Create Branch'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* ========================================================
-            MODAL: ADD / EDIT SEMESTER
-            ======================================================== */}
-        {modalType === 'semester' && (
-          <div className="as-modal-backdrop" onClick={closeModal}>
-            <div className="as-modal as-modal--enhanced as-modal--semester" role="dialog" aria-modal="true" aria-labelledby="semester-modal-title" onClick={(e) => e.stopPropagation()}>
-              <div className="as-modal__header as-modal__header--enhanced">
-                <div className="as-modal-heading">
-                  <span className="as-modal-eyebrow"><FiCalendar aria-hidden="true" /> Academic structure</span>
-                  <h3 id="semester-modal-title">{editingItem ? 'Edit Semester' : 'Add Semester'}</h3>
-                  <p>Choose a course, confirm its department, then select a branch.</p>
-                </div>
-                <button type="button" className="as-modal__close" onClick={closeModal} aria-label="Close semester dialog">
-                  <FiX />
-                </button>
-              </div>
-              <form onSubmit={handleSubmitSemester}>
-                <div className="as-modal__body as-modal__body--enhanced">
-                  <section className="as-modal-section" aria-labelledby="semester-mapping-heading">
-                    <div className="as-modal-section__heading"><span>01</span><div><h4 id="semester-mapping-heading">Academic mapping</h4><p>Follow the course → department → branch sequence.</p></div></div>
-                    <div className="as-semester-flow">
-                      <div className="as-form-group">
-                        <label htmlFor="sem-course">Select Course <span className="required">*</span></label>
-                        <select
-                          id="sem-course"
-                          className={`as-form-control ${formErrors.courseId ? 'is-invalid' : ''}`}
-                          value={semesterForm.courseId}
-                          onChange={(e) => {
-                            const course = courses.find((item) => String(courseIdOf(item)) === e.target.value)
-                            const mappedDepartmentId = courseDepartmentIdOf(course)
-                            setSemesterForm((current) => ({
-                              ...current,
-                              courseId: e.target.value,
-                              departmentId: mappedDepartmentId == null ? '' : String(mappedDepartmentId),
-                              branchId: '',
-                            }))
-                            setFormErrors((current) => ({ ...current, courseId: '', departmentId: '', branchId: '' }))
-                          }}
-                          required
-                        >
-                          <option value="">-- Choose Course --</option>
-                          {courses.filter((course) => courseIdOf(course) != null).map((course) => {
-                            const id = String(courseIdOf(course))
-                            const name = courseNameOf(course) || `Course ${id}`
-                            const code = courseCodeOf(course)
-                            return <option key={id} value={id}>{name}{code ? ` (${code})` : ''}</option>
-                          })}
-                        </select>
-                        {formErrors.courseId && <span className="as-form-error">{formErrors.courseId}</span>}
-                        <span className="as-form-hint">Choose the course first. Its department will be filled in when it is configured.</span>
-                      </div>
-
-                      <div className="as-form-group">
-                        <label htmlFor="sem-dept">Select Department <span className="required">*</span></label>
-                        <select
-                          id="sem-dept"
-                          className={`as-form-control ${formErrors.departmentId ? 'is-invalid' : ''}`}
-                          value={semesterForm.departmentId}
-                          onChange={(e) => {
-                            setSemesterForm((current) => ({ ...current, departmentId: e.target.value, branchId: '' }))
-                            setFormErrors((current) => ({ ...current, departmentId: '', branchId: '' }))
-                          }}
-                          disabled={!semesterForm.courseId || semesterCourseHasDepartment}
-                          required
-                        >
-                          <option value="">{semesterForm.courseId ? '-- Choose Department --' : 'Choose a course first'}</option>
-                          {semesterCourseHasDepartment && !departments.some((department) => String(departmentIdOf(department)) === String(selectedSemesterCourseDepartmentId)) && (
-                            <option value={String(selectedSemesterCourseDepartmentId)}>Department {selectedSemesterCourseDepartmentId}</option>
-                          )}
-                          {departments.map((department) => {
-                            const id = String(departmentIdOf(department))
-                            const name = department.departmentName ?? department.DepartmentName ?? department.name ?? department.Name ?? `Department ${id}`
-                            return <option key={id} value={id}>{name}</option>
-                          })}
-                        </select>
-                        {formErrors.departmentId && <span className="as-form-error">{formErrors.departmentId}</span>}
-                        <span className="as-form-hint">
-                          {!semesterForm.courseId
-                            ? 'Select a course to continue.'
-                            : semesterCourseHasDepartment
-                              ? 'Department linked to the selected course.'
-                              : 'Choose the department associated with this course.'}
-                        </span>
-                      </div>
-
-                      <div className="as-form-group">
-                        <label htmlFor="sem-branch">Select Branch <span className="required">*</span></label>
-                        <select
-                          id="sem-branch"
-                          className={`as-form-control ${formErrors.branchId ? 'is-invalid' : ''}`}
-                          value={semesterForm.branchId}
-                          onChange={(e) => {
-                            setSemesterForm((current) => ({ ...current, branchId: e.target.value }))
-                            setFormErrors((current) => ({ ...current, branchId: '' }))
-                          }}
-                          disabled={!semesterForm.courseId || !semesterForm.departmentId}
-                          required
-                        >
-                          <option value="">{!semesterForm.courseId ? 'Choose a course first' : !semesterForm.departmentId ? 'Choose a department first' : '-- Choose Branch --'}</option>
-                          {branches.filter((branch) => String(branchCourseIdOf(branch)) === String(semesterForm.courseId) && branchIdOf(branch) != null).map((branch) => {
-                            const id = String(branchIdOf(branch))
-                            const name = branch.branchName ?? branch.BranchName ?? branch.name ?? branch.Name ?? `Branch ${id}`
-                            const code = branch.branchCode ?? branch.BranchCode ?? branch.code ?? branch.Code
-                            return <option key={id} value={id}>{name}{code ? ` (${code})` : ''}</option>
-                          })}
-                        </select>
-                        {formErrors.branchId && <span className="as-form-error">{formErrors.branchId}</span>}
-                        {semesterForm.courseId && semesterForm.departmentId && !branches.some((branch) => String(branchCourseIdOf(branch)) === String(semesterForm.courseId)) && <span className="as-form-hint">No branches are configured for this course yet.</span>}
-                      </div>
-                    </div>
-                  </section>
-
-                  <section className="as-modal-section" aria-labelledby="semester-term-heading">
-                    <div className="as-modal-section__heading"><span>02</span><div><h4 id="semester-term-heading">Term details</h4><p>Name the term and select its academic year.</p></div></div>
-                    <div className="as-semester-term-grid">
-                    <div className="as-form-group">
-                      <label htmlFor="sem-num">
-                        Semester Number (1 to 8) <span className="required">*</span>
-                      </label>
-                      <select
-                        id="sem-num"
-                        className={`as-form-control ${formErrors.semesterNumber ? 'is-invalid' : ''}`}
-                        value={semesterForm.semesterNumber}
-                        onChange={(e) => {
-                          const n = Number(e.target.value)
-                          const ordinals = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th']
-                          setSemesterForm({
-                            ...semesterForm,
-                            semesterNumber: n,
-                            semesterName: `${ordinals[n - 1] || `${n}th`} Semester`,
-                          })
-                        }}
-                        required
-                      >
-                        {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => <option key={n} value={n}>Semester {n}</option>)}
-                      </select>
-                      {formErrors.semesterNumber && <span className="as-form-error">{formErrors.semesterNumber}</span>}
-                    </div>
-                    <div className="as-form-group">
-                      <label htmlFor="sem-name">Semester Name</label>
-                      <input
-                        id="sem-name"
-                        type="text"
-                        className="as-form-control"
-                        placeholder="e.g. 1st Semester"
-                        value={semesterForm.semesterName}
-                        onChange={(e) => setSemesterForm({ ...semesterForm, semesterName: e.target.value })}
-                      />
-                    </div>
-
-                    <div className="as-form-group">
-                      <label htmlFor="sem-year">Academic Year</label>
-                      <select
-                        id="sem-year"
-                        className="as-form-control"
-                        value={semesterForm.academicYearId}
-                        onChange={(e) => setSemesterForm({ ...semesterForm, academicYearId: e.target.value })}
-                      >
-                        <option value="">Current Academic Year</option>
-                        {academicYears.map((y) => {
-                          const id = String(y.academicYearId ?? y.id)
-                          return (
-                            <option key={id} value={id}>
-                              {y.academicYearName ?? y.name}
-                            </option>
-                          )
-                        })}
-                      </select>
-                    </div>
-                    </div>
-                  </section>
-
-                  <section className="as-modal-section" aria-labelledby="semester-dates-heading">
-                    <div className="as-modal-section__heading"><span>03</span><div><h4 id="semester-dates-heading">Schedule</h4><p>Set the planned start and end dates.</p></div></div>
-                  <div className="as-form-row">
-                    <div className="as-form-group">
-                      <label htmlFor="sem-start">Start Date</label>
-                      <input
-                        id="sem-start"
-                        type="date"
-                        className="as-form-control"
-                        value={semesterForm.startDate}
-                        onChange={(e) => setSemesterForm({ ...semesterForm, startDate: e.target.value })}
-                      />
-                    </div>
-                    <div className="as-form-group">
-                      <label htmlFor="sem-end">End Date</label>
-                      <input
-                        id="sem-end"
-                        type="date"
-                        className={`as-form-control ${formErrors.endDate ? 'is-invalid' : ''}`}
-                        value={semesterForm.endDate}
-                        onChange={(e) => setSemesterForm({ ...semesterForm, endDate: e.target.value })}
-                      />
-                      {formErrors.endDate && <span className="as-form-error">{formErrors.endDate}</span>}
-                    </div>
-                  </div>
-                  </section>
-
-                  <section className="as-modal-section" aria-labelledby="semester-status-heading">
-                    <div className="as-modal-section__heading"><span>04</span><div><h4 id="semester-status-heading">Availability</h4><p>Control the current semester workflow status.</p></div></div>
-                    <div className="as-form-row">
-                      <div className="as-form-group">
-                        <label htmlFor="sem-status">Semester Status</label>
-                        <select
-                          id="sem-status"
-                          className="as-form-control"
-                          value={semesterForm.status}
-                          onChange={(e) => setSemesterForm({ ...semesterForm, status: e.target.value })}
-                        >
-                          <option value="Upcoming">Upcoming</option>
-                          <option value="Active">Active</option>
-                          <option value="Completed">Completed</option>
-                        </select>
-                      </div>
-                    </div>
-                  </section>
-                </div>
-                <div className="as-modal__footer">
-                  <button type="button" className="as-btn as-btn--outline" onClick={closeModal}>
-                    Cancel
-                  </button>
-                  <button type="submit" className="as-btn as-btn--primary" disabled={isSubmitting}>
-                    {isSubmitting ? 'Saving...' : editingItem ? 'Update Semester' : 'Save Semester'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
+            </>}
+            </form>
+          </ViewDialog>
         )}
 
         {/* ========================================================
             MODAL: DELETE CONFIRMATION
             ======================================================== */}
+        {semesterSchedule && <ScheduleDialog row={semesterSchedule.row}
+          yearName={yearMap.get(String(semesterSchedule.row.academicYearId)) || 'Academic year'}
+          onClose={() => setSemesterSchedule(null)}
+          context={() => {
+            if (String(collegeScope.current) !== String(semesterSchedule.collegeId) || !canAction('/semester-management', 'edit')) {
+              throw new Error('The scheduling context changed. Reopen the semester before saving.')
+            }
+          }}
+          onSaved={saved => {
+            setSemesters(current => current.map(term => String(term.semesterId ?? term.id) === String(saved.id) ? { ...term, ...saved } : term))
+            setSemesterSchedule(null)
+            showToast('Schedule saved.')
+          }} />}
         {deleteConfirm && (
           <div className="as-modal-backdrop" onClick={() => setDeleteConfirm(null)}>
             <div className="as-modal as-modal--sm" onClick={(e) => e.stopPropagation()}>

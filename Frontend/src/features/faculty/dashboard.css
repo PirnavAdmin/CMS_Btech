@@ -504,7 +504,7 @@
   background:
     radial-gradient(circle at 92% 18%, color-mix(in srgb, var(--brand) 17%, transparent) 0, transparent 17rem),
     linear-gradient(115deg, var(--brand-soft), var(--surface) 76%);
-  box-shadow: 0 12px 32px rgb(22 50 83 / 7%);
+  box-shadow: var(--shadow-sm);
 }
 
 #root .portal-shell .faculty-dashboard-welcome h1 {
@@ -553,14 +553,14 @@
   min-height: 166px;
   padding: clamp(20px, 1.5vw, 29px);
   border-radius: 18px;
-  box-shadow: 0 8px 24px rgb(22 50 83 / 6%);
+  box-shadow: var(--shadow-sm);
   transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
 }
 
 #root .portal-shell .faculty-dashboard-metric:hover {
   transform: translateY(-3px);
   border-color: color-mix(in srgb, var(--brand) 42%, var(--border));
-  box-shadow: 0 14px 28px rgb(22 50 83 / 10%);
+  box-shadow: var(--shadow-sm);
 }
 
 #root .portal-shell .faculty-dashboard-metric-icon {
@@ -588,7 +588,7 @@
 #root .portal-shell .faculty-dashboard-empty-card {
   padding: clamp(20px, 1.45vw, 28px);
   border-radius: 18px;
-  box-shadow: 0 8px 26px rgb(22 50 83 / 6%);
+  box-shadow: var(--shadow-sm);
 }
 
 #root .portal-shell .faculty-dashboard-schedule h2,

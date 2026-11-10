@@ -44,7 +44,7 @@
   padding: 4px 10px;
   border-radius: 20px;
   background: rgba(59, 130, 246, 0.12);
-  color: #2563eb;
+  color: var(--info);
   display: inline-flex;
   align-items: center;
 }
@@ -91,7 +91,7 @@
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 20px 22px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-sm);
 }
 
 .tm-config-header {
@@ -255,8 +255,8 @@
 }
 
 .tm-exam-tab.is-active {
-  background: var(--brand);
-  color: #ffffff;
+  background: var(--brand-solid);
+  color: var(--text-on-dark);
   border-color: var(--brand);
   box-shadow: 0 2px 6px rgba(23, 105, 194, 0.3);
 }
@@ -275,7 +275,7 @@
   border: 1px solid rgba(245, 158, 11, 0.25);
   border-radius: 8px;
   font-size: 12px;
-  color: #92400e;
+  color: var(--warning);
 }
 
 .tm-btn-retry {
@@ -288,7 +288,7 @@
   border-radius: 6px;
   background: var(--surface);
   border: 1px solid #f59e0b;
-  color: #b45309;
+  color: var(--warning);
   cursor: pointer;
 }
 
@@ -307,13 +307,13 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 14px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-sm);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .tm-stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-sm);
 }
 
 .stat-icon {
@@ -329,7 +329,7 @@
 
 .theme-blue .stat-icon {
   background: rgba(59, 130, 246, 0.12);
-  color: #2563eb;
+  color: var(--info);
 }
 
 .theme-emerald .stat-icon {
@@ -406,7 +406,7 @@
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 22px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-sm);
 }
 
 .tm-roster-header {
@@ -518,8 +518,8 @@
 }
 
 .tm-table th {
-  background: var(--brand);
-  color: #ffffff;
+  background: var(--table-head);
+  color: var(--text-secondary);
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
@@ -550,7 +550,7 @@
 }
 
 .tm-table tbody tr:hover {
-  background: rgba(23, 105, 194, 0.03);
+  background: var(--table-row-hover);
 }
 
 .is-completed-row {
@@ -688,37 +688,37 @@
 
 .tm-grade-o {
   background: var(--success);
-  color: #ffffff;
+  color: var(--text-on-dark);
 }
 
 .tm-grade-aplus {
   background: var(--success);
-  color: #ffffff;
+  color: var(--text-on-dark);
 }
 
 .tm-grade-a {
   background: #3b82f6;
-  color: #ffffff;
+  color: var(--text-on-dark);
 }
 
 .tm-grade-bplus {
   background: #6366f1;
-  color: #ffffff;
+  color: var(--text-on-dark);
 }
 
 .tm-grade-b {
   background: #8b5cf6;
-  color: #ffffff;
+  color: var(--text-on-dark);
 }
 
 .tm-grade-c {
   background: #f59e0b;
-  color: #ffffff;
+  color: var(--text-on-dark);
 }
 
 .tm-grade-f {
-  background: var(--danger);
-  color: #ffffff;
+  background: var(--danger-solid);
+  color: var(--text-on-dark);
 }
 
 .tm-grade-none {
@@ -744,7 +744,7 @@
 
 .tm-status-pill.is-ready {
   background: rgba(59, 130, 246, 0.12);
-  color: #2563eb;
+  color: var(--info);
 }
 
 .tm-status-pill.is-pending {
@@ -859,8 +859,8 @@
   padding: 0 20px;
   border-radius: 8px;
   border: 1px solid var(--brand);
-  background: var(--brand);
-  color: #ffffff;
+  background: var(--brand-solid);
+  color: var(--text-on-dark);
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;

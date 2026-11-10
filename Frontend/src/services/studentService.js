@@ -269,7 +269,8 @@ class StudentService {
 
     const targetCourseNorm = normalizeAcademicTerm(course || courseCode)
     const targetBranchNorm = normalizeAcademicTerm(branch || branchCode)
-    const targetSemNum = parseNum(semesterId) ?? parseNum(semester)
+    const termNumber = value => parseNum(value) ?? ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'].indexOf(String(value ?? '').trim().replace(/^semester\s*/i, '').toUpperCase()) + 1
+    const targetSemNum = termNumber(semester)
     const targetYearNorm = normYear(academicYear)
 
     return all.filter((s) => {
@@ -330,13 +331,11 @@ class StudentService {
       }
 
       // Semester matching
-      const studentSemNum = parseNum(acad.semesterId) ?? parseNum(acad.semester || acad.semesterName)
-      if (targetSemNum !== null && studentSemNum !== null) {
-        if (targetSemNum !== studentSemNum) return false
-      } else if (semester && acad.semester) {
-        const tSem = String(semester).trim().toLowerCase()
-        const sSem = String(acad.semester).trim().toLowerCase()
-        if (!sSem.includes(tSem) && !tSem.includes(sSem)) return false
+      if (semesterId) {
+        if (String(acad.semesterId ?? '') !== String(semesterId)) return false
+      } else if (semester) {
+        const savedLabel = acad.semester || acad.semesterName
+        if (targetSemNum ? termNumber(savedLabel) !== targetSemNum : normalizeAcademicTerm(savedLabel) !== normalizeAcademicTerm(semester)) return false
       }
 
       // Section matching

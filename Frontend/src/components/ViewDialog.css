@@ -8,13 +8,13 @@
   border: 1px solid var(--border, var(--border));
   border-radius: 16px;
   color: var(--text-primary, var(--text-primary));
-  background: var(--surface, var(--surface));
+  background: var(--dialog-bg);
   box-shadow: var(--shadow-md);
   overflow: hidden;
 }
 
 .shared-view-dialog::backdrop {
-  background: rgba(13, 27, 51, 0.5);
+  background: var(--overlay);
   backdrop-filter: blur(2px);
 }
 
@@ -185,18 +185,18 @@
 }
 
 .view-modal-badge-status.active {
-  background: var(--brand);
-  color: #ffffff !important;
+  background: var(--brand-solid);
+  color: var(--text-on-dark) !important;
 }
 
 .view-modal-badge-status.inactive {
-  background: var(--danger);
-  color: #ffffff !important;
+  background: var(--danger-solid);
+  color: var(--text-on-dark) !important;
 }
 
 .view-modal-badge-status.warning {
-  background: var(--brand);
-  color: #ffffff !important;
+  background: var(--brand-solid);
+  color: var(--text-on-dark) !important;
 }
 
 .view-modal-title {
@@ -230,7 +230,7 @@
   border-radius: 10px;
   background: var(--surface, var(--surface));
   padding: 16px 18px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--shadow-md);
 }
 
 .view-modal-card-header {

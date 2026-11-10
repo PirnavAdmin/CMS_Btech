@@ -21,8 +21,8 @@
    ============================ */
 button.btn-primary,
 .header-actions button.primary {
-  background-color: var(--brand-blue);
-  color: #fff;
+  background-color: var(--brand-solid);
+  color: var(--text-on-dark);
   border: none;
   border-radius: 6px;
   padding: 10px 16px;
@@ -72,7 +72,7 @@ button.btn-primary:hover,
   border-radius: 16px;
   background: var(--surface, #fff);
   overflow: hidden;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+  box-shadow: var(--shadow-sm);
 }
 
 .cm-profile-banner {
@@ -164,7 +164,7 @@ button.btn-primary:hover,
 .cm-status-badge.archived,
 .cm-status-badge.deactive {
   background: var(--cms-red-soft);
-  color: #b91c1c;
+  color: var(--danger);
 }
 
 .cm-status-badge.active {
@@ -283,7 +283,7 @@ button.btn-primary:hover,
 .fp-category-toggle button.active,
 .flm-category-toggle button.active {
   background: #195A99 !important;
-  color: #FFFFFF !important;
+  color: var(--text-on-dark) !important;
   box-shadow: 0 1px 4px rgba(23, 105, 194, 0.35) !important;
 }
 

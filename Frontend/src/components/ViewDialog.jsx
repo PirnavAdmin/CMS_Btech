@@ -16,6 +16,9 @@ export default function ViewDialog({
   hideFooter = false,
   showExport = true,
   busy = false,
+  className = '',
+  bodyRef,
+  footerContent,
 }) {
   const dialog = useRef(null)
 
@@ -38,7 +41,7 @@ export default function ViewDialog({
   return (
     <dialog
       ref={dialog}
-      className="shared-view-dialog"
+      className={`shared-view-dialog ${className}`.trim()}
       data-export-record
       aria-label={title}
       style={{ maxWidth }}
@@ -82,12 +85,13 @@ export default function ViewDialog({
         </div>
       </header>
 
-      <div className="shared-view-dialog__body">
+      <div ref={bodyRef} className="shared-view-dialog__body">
         {children}
       </div>
 
       {!hideFooter && (
         <footer className="shared-view-dialog__footer">
+          {footerContent ?? <>
           <button
             type="button"
             className="erp-btn erp-btn--secondary"
@@ -100,6 +104,7 @@ export default function ViewDialog({
               {footerActions}
             </div>
           )}
+          </>}
         </footer>
       )}
     </dialog>

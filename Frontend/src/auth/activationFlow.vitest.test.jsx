@@ -18,7 +18,7 @@ beforeEach(() => {
  vi.stubGlobal('fetch', vi.fn(async () => response({ success: true, message: 'Account activated' })))
  login.mockReset().mockResolvedValue({ accessToken: 'access', refreshToken: 'refresh', roles: ['COLLEGE_ADMIN'], user: { role: 'admin', profileCompleted: false }, mustChangePassword: false })
 })
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); document.documentElement.removeAttribute('data-theme') })
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); document.documentElement.removeAttribute('data-theme'); document.documentElement.removeAttribute('data-appearance'); document.documentElement.style.removeProperty('--theme-color') })
 function Location() { const current = useLocation(); return <output data-testid="location">{current.pathname + current.search}</output> }
 const mount = (url = link) => render(<MemoryRouter initialEntries={[url]}><Routes><Route path="/activate-account" element={<><ActivateAccount /><Location /></>} /><Route path="/login" element={<><Login /><Location /></>} /><Route path="/my-profile" element={<Location />} /><Route path="/dashboard" element={<Location />} /></Routes></MemoryRouter>)
 const fill = (password = 'CorrectHorse123!', confirmation = password) => {

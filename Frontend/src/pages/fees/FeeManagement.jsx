@@ -1,3 +1,5 @@
+import { calculateCompletion, completionSchemas } from '../../utils/recordCompletion'
+import { CompletionIndicator, CompletionSummary, ResumeSetupAction } from '../../components/RecordCompletion'
 import { updateAcademicFeeDraft } from '../../services/academicFeeDraftUpdate'
 import { collectVerifiedPayment, hasOfficialFeeReceipt, feeAmountReported, canPrintFeeReceipt } from '../../services/verifiedFeeCollection'
 import { useScreenAccess } from '../../auth/ScreenAccess'
@@ -50,6 +52,7 @@ async function loadAcademicPlans(collegeId) {
 const liveFeePlanRow=plan=>({
                       ...feeStructureServiceModule.newFeeStructure(String(plan.academicYearId)),
                       id: String(plan.feeStructureId), name: plan.name, code: plan.code,
+                      completion: calculateCompletion(completionSchemas.academicFeePlan, plan),
                       status: ({DRAFT:"Draft",SUBMITTED:"Pending Approval",APPROVED:"Approved",PUBLISHED:"Published",ARCHIVED:"Archived"})[String(plan.status).toUpperCase()] || "Not reported",
                       collegeId: String(plan.collegeId), academicYearId: String(plan.academicYearId), courseId: String(plan.courseId), branchId: String(plan.branchId), semesterId: String(plan.semesterId), batch: plan.batch,
                       quota: plan.quota || "", studentCategory: plan.studentCategory || "", category: plan.quota || "", applicableTo: "Selected Category",
@@ -310,6 +313,7 @@ function FeePlanDetailsPage({ row, category = "Academic", masters, close, edit, 
   const title = row.name || row.hostelName || row.route || category + " Fee Plan";
   return <div className="fm-page-container fm-detail-page cm-profile-view">
     <div className="fm-detail-toolbar cm-profile-top-bar"><button type="button" className="erp-btn erp-btn--secondary cm-secondary-btn" onClick={close}><external3.FiArrowLeft /> Back to Fee Plans</button>{canEdit && <button type="button" className="erp-btn erp-btn--primary cm-primary-btn" onClick={edit}><external3.FiEdit2 /> Edit Fee Plan</button>}</div>
+    <CompletionSummary completion={row.completion} name={title} onClick={canEdit && row.status === "Draft" ? edit : undefined} />
     <article className="fm-detail-profile cm-profile-card">
       <header className="fm-detail-banner cm-profile-banner"><div className="cm-profile-avatar-wrap"><span className="fm-heading-icon cm-profile-logo cm-logo-emblem"><external3.FiLayers /></span></div><div className="fm-detail-identity cm-profile-header-info"><div className="fm-detail-badges cm-profile-badges"><span className="fm-count-chip cm-badge">{category} Fees</span><FeeBadge value={row.status} /></div><h1 className="cm-profile-title">{title}</h1><p className="cm-profile-subtitle">Fee plan details, charges and payment terms</p></div><div className="fm-detail-total"><span>Total {category} Fee</span><strong>{category === "Hostel" ? hostelPriceLabel(row) : feeMoney(total)}</strong></div></header>
       <div className="cm-profile-grid">
@@ -2421,6 +2425,7 @@ export const FeeStructureModule = (() => {
                       label: "Status",
                       render: (r) => <FeeBadge value={r.status} />,
                     },
+                    { label: "Completion", render: row => <CompletionIndicator completion={row.completion} /> },
                     {
                       label: "Actions",
                       align: "right",
@@ -2434,6 +2439,7 @@ export const FeeStructureModule = (() => {
                           >
                             <FiEye />
                           </button>
+                          {canEditPlan && r.status === "Draft" && <ResumeSetupAction completion={r.completion} name={r.name} to={`/fees/structures/${r.id}/edit`} />}
                           {canEditPlan && r.status === "Draft" && (
                             <button
                               type="button"

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import SemesterManagement from './SemesterManagement'
 
@@ -56,14 +56,8 @@ function open(path) {
     <Route path="/semester-management" element={<SemesterManagement />} />
     <Route path="/semester-management/add" element={<SemesterManagement mode="form" />} />
     <Route path="/semester-management/:id/edit" element={<SemesterManagement mode="edit" />} />
+    <Route path="/semester-management/:id" element={<SemesterManagement mode="details" />} />
   </Routes></MemoryRouter>)
-}
-
-async function generate() {
-  await screen.findByRole('option', { name: 'Computer Science' })
-  fireEvent.change(screen.getByRole('combobox', { name: 'Branch to recover' }), { target: { value: '7' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Recover missing definitions' }))
-  await screen.findByRole('heading', { name: 'Semester Overview & Academic Scheduling' }, { timeout: 4000 })
 }
 
 beforeEach(() => {
@@ -87,19 +81,15 @@ describe('saved semester directory', () => {
     fixtures.semesters = [{ semesterId: 101, branchId: 7, courseId: 10, academicYearId: 1, semesterNumber: 1, semesterName: 'Semester 1' }]
     open('/semester-management')
     const table = await screen.findByRole('table')
-    expect(within(table).getByRole('link', { name: 'Semester 1' })).toBeTruthy()
+    expect(within(table).getByRole('rowheader', { name: 'Semester 1' })).toBeTruthy()
     expect(within(table).getByText('Computer Science')).toBeTruthy()
     expect(getSemesters).toHaveBeenCalled()
   })
 
-  it('creates the structure, fetches all saved rows, and displays the table after navigation', async () => {
+  it('opens the overview from a legacy creation link without creating records', async () => {
     open('/semester-management/add')
-    await generate()
-    expect(createSemester).toHaveBeenCalledTimes(8)
-    expect(getSemesters.mock.calls.length).toBeGreaterThan(2)
-    expect(await screen.findByText('8 configured semesters')).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
-    expect(within(screen.getByRole('table')).getByRole('link', { name: 'Semester 8' })).toBeTruthy()
+    expect(await screen.findByText(/No semester definitions are saved/)).toBeTruthy()
+    expect(createSemester).not.toHaveBeenCalled()
   })
 
   it('allows clearing a search without a manual refresh button', async () => {
@@ -111,17 +101,21 @@ describe('saved semester directory', () => {
     expect(screen.queryByRole('button', { name: 'Refresh' })).toBeNull()
     fireEvent.change(screen.getByRole('textbox', { name: 'Search semesters' }), { target: { value: '' } })
     const table = await screen.findByRole('table')
-    expect(within(table).getByRole('link', { name: 'Semester 1' })).toBeTruthy()
+    expect(within(table).getByRole('rowheader', { name: 'Semester 1' })).toBeTruthy()
     expect(screen.getByRole('textbox', { name: 'Search semesters' }).value).toBe('')
   })
 
-  it('opens an already saved structure without duplicate creation or relying on calculated year labels', async () => {
-    fixtures.semesters = Array.from({ length: 8 }, (_, index) => ({ semesterId: 101 + index, branchId: 7, courseId: 10, academicYearId: 1, semesterNumber: index + 1, semesterName: `Semester ${index + 1}` }))
-    open('/semester-management/add')
-    await generate()
+  it('shows unscheduled records across saved academic years and filters by year', async () => {
+    fixtures.semesters = [
+      { semesterId: 101, branchId: 7, courseId: 10, academicYearId: 1, semesterNumber: 1, semesterName: 'Semester 1' },
+      { semesterId: 102, branchId: 7, courseId: 10, academicYearId: 2, academicYearName: '2027-2028', semesterNumber: 2, semesterName: 'Semester 2' },
+    ]
+    open('/semester-management')
+    expect(await screen.findAllByText('Not Scheduled')).toHaveLength(2)
+    fireEvent.change(screen.getByRole('combobox', { name: 'Academic year' }), { target: { value: '2' } })
+    expect(screen.queryByRole('rowheader', { name: 'Semester 1' })).toBeNull()
+    expect(screen.getByRole('rowheader', { name: 'Semester 2' })).toBeTruthy()
     expect(createSemester).not.toHaveBeenCalled()
-    expect(await screen.findByText('8 configured semesters')).toBeTruthy()
-    expect(screen.getByRole('table')).toBeTruthy()
   })
 
   it('edits dates on the same saved ID and verifies them through GET', async () => {
@@ -131,7 +125,7 @@ describe('saved semester directory', () => {
     fireEvent.change(start, { target: { value: '2026-06-01' } })
     fireEvent.change(screen.getByLabelText('Semester 1 end date'), { target: { value: '2026-10-31' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save Schedule' }))
-    await screen.findByRole('heading', { name:'Semester Overview & Academic Scheduling' })
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     expect(updateSemester).toHaveBeenCalledWith('101', expect.objectContaining({ startDate: '2026-06-01', endDate: '2026-10-31', status: 0, yearNumber: 1 }))
     expect(getSemesterById.mock.calls.length).toBeGreaterThanOrEqual(2)
     expect(createSemester).not.toHaveBeenCalled()
@@ -157,8 +151,7 @@ describe('saved semester directory', () => {
 
 it('opens semester details above the directory and restores the list on Escape', async () => {
   fixtures.semesters = [{ semesterId:101, branchId:7, courseId:10, academicYearId:1, semesterNumber:1, yearNumber:1, semesterName:'Semester 1' }]
-  open('/semester-management')
-  fireEvent.click(await screen.findByRole('link', { name:'Semester 1' }))
+  open('/semester-management/101')
   const dialog = await screen.findByRole('dialog', { name:'Semester Details' })
   await within(dialog).findByText('Academic Mapping')
   expect(screen.getByRole('table')).toBeTruthy()

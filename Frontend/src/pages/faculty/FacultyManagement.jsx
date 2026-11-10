@@ -1,3 +1,5 @@
+import { calculateCompletion, completionSchemas } from '../../utils/recordCompletion'
+import { CompletionIndicator, CompletionSummary, ResumeSetupAction } from '../../components/RecordCompletion'
 import React, { useLayoutEffect } from 'react'
 import { createFacultyAttendanceWriter } from '../../services/facultyAttendanceSaveWorkflow'
 import PayrollWorkspace from './PayrollWorkspace'
@@ -3261,7 +3263,10 @@ function FacultyManagement() {
         })
         setFaculty(scopeRecords(members)
           .filter(member => member && typeof member === 'object')
-          .map(member => normalize({ ...normalizeFaculty(member), assignments: allocationMap.get(String(member.id)) || member.assignments || [] })))
+          .map(member => {
+            const saved = normalizeFaculty(member)
+            return normalize({ ...saved, completion: calculateCompletion(completionSchemas.faculty, saved), assignments: allocationMap.get(String(member.id)) || member.assignments || [] })
+          }))
       })
       .catch(error => { if(active) setLoadError(error.message || 'Unable to load faculty records.') })
       .finally(() => { if (active) setLoadingFaculty(false) })
@@ -3319,6 +3324,7 @@ function FacultyManagement() {
             id: String(targetId),
             facultyId: String(targetId),
             profileExists: Boolean(profile),
+            completion: member ? calculateCompletion(completionSchemas.faculty, normalizeFaculty(safeMember)) : matchedListed?.completion,
             apiWorkload: work,
             assignments: existingAssignments
           }))
@@ -3570,6 +3576,7 @@ function FacultyManagement() {
           </div>
         </div>
 
+        <CompletionSummary completion={selected.completion} name={selected.fullName} onClick={canEdit ? () => navigate('/faculty/' + selected.id + '/edit?category=' + activeCategory) : undefined} />
         <div className="cm-profile-card">
           <div className="fm-reference-identity"><Avatar faculty={selected} /><div><h3>{selected.fullName}</h3><p>{[displayCode,selected.designation,departmentName,collegeName].filter(Boolean).join(' · ')}</p></div><StatusBadge value={selected.employmentStatus || 'Working'} /></div>
           <div className="sp-profile-cards-container">
@@ -3758,7 +3765,7 @@ function FacultyManagement() {
                   <caption className="fm-sr-only">{selectedCategory} directory and records</caption>
                   <thead>
                     <tr>
-                      {['Employee ID', 'Name', 'Department', 'Designation', 'Experience', 'Employment Type', 'Status', 'Actions'].map(label => (
+                      {['Employee ID', 'Name', 'Department', 'Designation', 'Experience', 'Employment Type', 'Status', 'Completion', 'Actions'].map(label => (
                         <th scope="col" key={label} className={['Status', 'Actions'].includes(label) ? 'table-center' : ''}>{label}</th>
                       ))}
                     </tr>
@@ -3789,8 +3796,10 @@ function FacultyManagement() {
                         <td>{years(item.experience)}</td>
                         <td>{item.employmentType || '—'}</td>
                         <td className="table-center"><StatusBadge value={item.employmentStatus} /></td>
+                        <td><CompletionIndicator completion={item.completion} /></td>
                         <td className="table-center">
                           <div className="table-actions-cell table-actions-group">
+                            {canEdit && <ResumeSetupAction completion={item.completion} name={item.fullName} onClick={() => navigate('/faculty/' + item.id + '/edit?category=' + activeCategory)} />}
                             {selectedCategory === 'Teaching' && (
                               <button
                                 type="button"

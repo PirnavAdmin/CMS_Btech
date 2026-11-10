@@ -131,8 +131,8 @@
   gap: 8px;
   padding: 10px 16px;
   border-radius: 8px;
-  background: var(--brand);
-  color: #ffffff;
+  background: var(--brand-solid);
+  color: var(--text-on-dark);
   border: 1px solid var(--brand);
   font-size: 12px;
   font-weight: 600;
@@ -469,13 +469,13 @@
 }
 
 .sp-duty-badge.is-completed {
-  background: #d1fae5;
-  color: #065f46;
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 .sp-duty-badge.is-in-progress {
   background: var(--cms-amber-soft);
-  color: #92400e;
+  color: var(--warning);
 }
 
 .sp-duty-badge.is-upcoming {
@@ -571,12 +571,12 @@
 
 .sp-priority-tag.is-high {
   background: var(--cms-red-soft);
-  color: #991b1b;
+  color: var(--danger);
 }
 
 .sp-priority-tag.is-normal {
-  background: #e0f2fe;
-  color: #0369a1;
+  background: var(--info-soft);
+  color: var(--info);
 }
 
 .sp-priority-tag.is-info {
@@ -742,7 +742,7 @@
   gap: 10px;
   padding: 12px 18px;
   background: var(--cms-sidebar-bg);
-  color: #ffffff;
+  color: var(--text-on-dark);
   border-radius: 9px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
   font-size: 12px;
@@ -751,8 +751,8 @@
 }
 
 :root[data-theme="dark"] .sp-toast {
-  background: #1e293b;
-  border: 1px solid #334155;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
 }
 
 .sp-toast svg {
@@ -805,7 +805,7 @@
   height: 68px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--brand), #104177);
-  color: #ffffff;
+  color: var(--text-on-dark);
   font-size: 24px;
   font-weight: 750;
   letter-spacing: 0.5px;
@@ -844,8 +844,8 @@
   border-radius: 20px;
   font-size: 11px;
   font-weight: 700;
-  background: #d1fae5;
-  color: #065f46;
+  background: var(--success-soft);
+  color: var(--success);
   border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
@@ -1168,18 +1168,18 @@
 }
 
 .sp-doc-badge.is-verified {
-  background: #d1fae5;
-  color: #065f46;
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 .sp-doc-badge.is-pending {
   background: var(--cms-amber-soft);
-  color: #92400e;
+  color: var(--warning);
 }
 
 .sp-doc-badge.is-missing {
   background: var(--cms-red-soft);
-  color: #991b1b;
+  color: var(--danger);
 }
 
 :root[data-theme="dark"] .sp-doc-badge.is-verified {
@@ -1318,7 +1318,7 @@
   padding: 10px 18px;
   border-radius: 8px;
   background: var(--success);
-  color: #ffffff;
+  color: var(--text-on-dark);
   border: 1px solid var(--success);
   font-size: 12px;
   font-weight: 650;
@@ -1343,8 +1343,8 @@
   gap: 7px;
   padding: 10px 18px;
   border-radius: 8px;
-  background: var(--danger);
-  color: #ffffff;
+  background: var(--danger-solid);
+  color: var(--text-on-dark);
   border: 1px solid var(--danger);
   font-size: 12px;
   font-weight: 650;
@@ -1373,9 +1373,9 @@
   gap: 6px;
   padding: 6px 12px;
   border-radius: 8px;
-  background: #e0f2fe;
-  color: #0369a1;
-  border: 1px solid #bae6fd;
+  background: var(--info-soft);
+  color: var(--info);
+  border: 1px solid var(--info-border);
   font-size: 12px;
   font-weight: 700;
 }
@@ -1528,7 +1528,7 @@
 
 .sp-att-card.is-leave .sp-att-card-icon {
   background: rgba(139, 92, 246, 0.12);
-  color: #7c3aed;
+  color: var(--cms-violet);
 }
 
 .sp-att-card-body {
@@ -1686,7 +1686,7 @@
   background: #8b5cf6;
 }
 .sp-cal-day-cell.status-leave .sp-cal-day-meta {
-  color: #7c3aed;
+  color: var(--cms-violet);
 }
 
 .sp-cal-day-cell.status-holiday {
@@ -1697,7 +1697,7 @@
   background: #3b82f6;
 }
 .sp-cal-day-cell.status-holiday .sp-cal-day-meta {
-  color: #2563eb;
+  color: var(--info);
 }
 
 .sp-cal-day-cell.status-weekly-off {
@@ -1784,8 +1784,8 @@
 }
 
 .sp-filter-pill.is-active {
-  background: var(--brand);
-  color: #ffffff;
+  background: var(--brand-solid);
+  color: var(--text-on-dark);
   border-color: var(--brand);
 }
 
@@ -1804,28 +1804,28 @@
 }
 
 .sp-status-chip.is-present {
-  background: #d1fae5;
-  color: #065f46;
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 .sp-status-chip.is-late {
   background: var(--cms-amber-soft);
-  color: #92400e;
+  color: var(--warning);
 }
 
 .sp-status-chip.is-absent {
   background: var(--cms-red-soft);
-  color: #991b1b;
+  color: var(--danger);
 }
 
 .sp-status-chip.is-leave {
-  background: #ede9fe;
+  background: var(--cms-violet-soft);
   color: #5b21b6;
 }
 
 .sp-status-chip.is-holiday {
-  background: #e0f2fe;
-  color: #0369a1;
+  background: var(--info-soft);
+  color: var(--info);
 }
 
 .sp-status-chip.is-weekly-off {

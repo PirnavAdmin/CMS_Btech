@@ -1,10 +1,12 @@
 /* Adapted from CMS Inter shared Button.css. Existing button APIs/classes retained. */
 .erp-btn,.cm-button { display:inline-flex; align-items:center; justify-content:center; min-height:clamp(34px,2.5vw,36px); gap:5px; border-radius:9px; border:1px solid transparent; padding:0 clamp(10px,.8vw,13px); font:600 clamp(11.5px,.82vw,13px) var(--font-family); cursor:pointer; text-decoration:none; white-space:nowrap; color:var(--text-primary); background:var(--surface); transition:background .18s ease,transform .18s ease; }
-.erp-btn--primary,.cm-button:not(.secondary):not(.danger) { background:var(--brand); color:#fff; }
-.erp-btn--primary:hover:not(:disabled),.cm-button:not(.secondary):not(.danger):hover:not(:disabled) { background:var(--brand-hover); transform:translateY(-1px); }
+.erp-btn--primary,.cm-button:not(.secondary):not(.danger) { background:var(--brand-solid); color:var(--text-on-brand); }
+.erp-btn--primary:hover:not(:disabled),.cm-button:not(.secondary):not(.danger):hover:not(:disabled) { background:var(--brand-solid-hover); transform:translateY(-1px); }
+.erp-btn--primary:active:not(:disabled),.cm-button:not(.secondary):not(.danger):active:not(:disabled) { background: var(--brand-solid-active); }
 .erp-btn--secondary,.cm-button.secondary { background:var(--surface); border-color:var(--border); color:var(--text-primary); }
 .erp-btn--secondary:hover:not(:disabled),.cm-button.secondary:hover:not(:disabled) { color:var(--brand); border-color:var(--cms-primary-border); background:var(--brand-soft); }
-.erp-btn--danger,.cm-button.danger { background:var(--danger); color:#fff; }
+.erp-btn--danger,.cm-button.danger { background:var(--danger-solid); color:var(--text-on-dark); }
+.erp-btn--danger:hover:not(:disabled),.cm-button.danger:hover:not(:disabled) { background:var(--danger-solid-hover); }
 :is(.erp-btn,.cm-button):disabled { opacity:.6; cursor:not-allowed; transform:none; }
 :is(.erp-btn,.cm-button,.table-action-btn,.erp-action-btn):focus-visible { outline:2px solid var(--brand); outline-offset:2px; }
 .table-action-btn,.erp-action-btn { width:34px; height:34px; flex:0 0 34px; padding:0; border:1px solid var(--border); border-radius:10px; background:var(--surface); display:inline-grid; place-items:center; cursor:pointer; color:var(--brand); text-decoration:none; transition:background .18s ease,transform .18s ease; }
@@ -14,3 +16,25 @@
 :is(.table-action-btn,.erp-action-btn):is(.action-deactivate,.action-delete,.action-danger) { color:var(--danger); background:var(--cms-red-soft); }
 :is(.table-action-btn,.erp-action-btn):is(.action-activate,.action-approve) { color:var(--success); background:var(--cms-green-soft); }
 :is(.table-action-btn,.erp-action-btn):disabled { opacity:.55; cursor:not-allowed; transform:none; }
+
+/* Native controls and legacy tables share the document palette. */
+:where(input[type="checkbox"], input[type="radio"], progress) { accent-color: var(--brand-solid); }
+:where(input, textarea)::placeholder { color: var(--text-muted); opacity: 1; }
+:where(input, select, textarea)[aria-invalid="true"] { border-color: var(--danger); }
+:where(input[type="file"])::file-selector-button {
+  min-height: var(--button-height);
+  margin-inline-end: var(--space-2);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface-soft);
+  color: var(--text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+:where(input[type="file"]:not(:disabled))::file-selector-button:hover { background: var(--surface-hover); }
+
+:where(thead) { background: var(--table-head); color: var(--text-secondary); }
+:where(thead th, thead td) { color: inherit; }
+:where(tbody tr[aria-selected="true"]) > :where(td, th) { background: var(--selected-bg); }
+dialog::backdrop { background: var(--overlay); }

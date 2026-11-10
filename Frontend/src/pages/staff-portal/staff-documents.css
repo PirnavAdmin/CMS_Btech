@@ -315,7 +315,7 @@
 .sd-table th {
   padding: 12px 13px;
   color: var(--text-secondary);
-  background: var(--surface-soft);
+  background: var(--table-head);
   font-size: 9px;
   font-weight: 750;
   letter-spacing: 0.055em;
