@@ -1,6 +1,5 @@
 export const feeNavigation = [
-  { label: 'Fee Structure', to: '/fees/structures', sections: ['structures', 'components', 'legacy'] },
-  { label: 'Fee Management', to: '/fees/overview', sections: ['overview', 'students', 'accounts', 'ledger', 'assignments', 'concessions', 'collection', 'refunds', 'types'] },
+  { label: 'Fee Management', to: '/fees/overview', sections: ['overview', 'students', 'accounts', 'ledger', 'assignments', 'concessions', 'collection', 'refunds', 'types', 'structures', 'components', 'legacy'] },
 ]
 
 export const studentAccountOperations = [
@@ -22,7 +21,7 @@ export function feeBreadcrumbs(pathname) {
   const section = pathname.split('/')[2] || 'overview'
   const managementTabs = {
     overview: 'Overview', students: 'Student Fees', accounts: 'Student Fees', ledger: 'Student Fees', assignments: 'Student Fees',
-    concessions: 'Student Fees', dues: 'Student Fees', payments: 'Student Fees', refunds: 'Student Fees', collection: 'Collect Payment', receipts: 'Student Fees', reports: 'Overview', types: 'Fee Types',
+    concessions: 'Student Fees', dues: 'Student Fees', payments: 'Student Fees', refunds: 'Student Fees', collection: 'Collect Payment', receipts: 'Student Fees', reports: 'Overview', types: 'Fee Types', structures: 'Fee Structure', components: 'Fee Structure', legacy: 'Fee Structure',
   }
   if (item?.label === 'Fee Management' && managementTabs[section]) crumbs.push({ label: managementTabs[section] })
   const operation = studentAccountOperations.find(operation => pathname === operation.to || pathname === `${operation.to}/`)

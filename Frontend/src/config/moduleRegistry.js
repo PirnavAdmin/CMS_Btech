@@ -87,7 +87,7 @@ const entries = [
     id: "fee_structures", label: "Fee Structure", icon: "wallet-cards",
     path: "/fees/structures", section: "finance", order: 10,
     permission: {"module":"fees","action":"view","source":"existing access matrix"}, authorization: "existing-guards-and-permissions",
-    roles: ["admin"], scope: "college", navigation: true,
+    roles: ["admin"], scope: "college", navigation: false,
     component: "src/pages/fees/FeeManagement.jsx", exportName: "FeeStructure",
     aliases: ["/fees/components","/fees/legacy"], children: [], prerequisites: ["college","academicYear","course","branch","batch","semester"],
   },
