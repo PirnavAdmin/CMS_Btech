@@ -782,7 +782,7 @@ button.btn-primary:hover, .header-actions button.primary:hover {
 }
 
 :root[data-theme="dark"] .profile-page .profile-overview {
-  background: linear-gradient(115deg, color-mix(in srgb, var(--brand-dark) 82%, #111827), color-mix(in srgb, var(--brand) 44%, #111827)) !important;
+  background: linear-gradient(115deg, #1E293B, var(--cms-sidebar-bg)) !important;
   border: 1px solid var(--border) !important;
 }
 :root[data-theme="dark"] .profile-page .profile-overview * {

@@ -3576,7 +3576,6 @@ feels part of the table card rather than a second, dashed card. */
 .mew-calendar__daily .mew-calendar__agenda-content{flex-basis:150px}
 .mew-calendar__daily .mew-calendar__agenda-content p,.mew-calendar__daily .mew-calendar__agenda-content small{display:block;line-height:1.6;overflow-wrap:anywhere}
 .mew-calendar__daily .mew-calendar__agenda-item>button{margin-left:auto}
-
 /* Library directory layout follows the shared workspace pattern. */
 .adv-library-workspace .adv-library-top-layout {
   display: grid;

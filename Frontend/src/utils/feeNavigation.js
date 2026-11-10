@@ -6,7 +6,6 @@ export const feeNavigation = [
 export const studentAccountOperations = [
   { label: 'Fee Assignment', to: '/fees/assignments', description: 'Assign published fee structures to eligible students.' },
   { label: 'Scholarships & Concessions', to: '/fees/concessions', description: 'Manage scholarships, waivers and approved fee reductions.' },
-  { label: 'Dues & Penalties', to: '/fees/dues', description: 'Review overdue balances and applicable penalties.' },
 ]
 
 export const isFeeRoute = pathname => pathname === '/fees' || pathname.startsWith('/fees/')

@@ -26,25 +26,6 @@
 :root[data-theme="dark"] .profile-content-card{border-color:var(--border);background:var(--surface-raised)}:root[data-theme="dark"] .profile-section-heading,:root[data-theme="dark"] .profile-tabs,:root[data-theme="dark"] .profile-actions{border-color:var(--border);background:var(--surface)}:root[data-theme="dark"] .profile-input input,:root[data-theme="dark"] .profile-input select,:root[data-theme="dark"] .profile-input textarea{color:var(--text-primary)}
 @media(max-width:650px){.profile-page{gap:13px;padding:2px 0 18px}.profile-heading{min-height:0;padding:0 2px}.profile-heading h1{font-size:1.65rem}.profile-overview{padding:19px}.profile-section-heading{padding:14px 18px}.profile-tabs{padding:8px 14px}.profile-panel-title{padding:16px 18px 0}.profile-fields{padding:19px 18px;row-gap:14px}.profile-input{height:42px;min-height:42px}.profile-input input,.profile-input select{height:40px}.profile-actions{padding:11px 18px}}
 
-/* Keep profile accents tied to the selected workspace palette. */
-.profile-page {
-  --navy: var(--brand-dark, #174C88);
-  --blue: var(--brand, #2563EB);
-  --ink: var(--text-primary, #102A4C);
-  --muted: var(--text-secondary, #526A86);
-  --line: var(--border, #DCE5F2);
-}
-.profile-page .profile-overview {
-  background: linear-gradient(120deg, var(--brand-dark) 0%, var(--brand) 100%);
-}
-.profile-page .profile-button:not(.secondary) { border-color: var(--brand); background: var(--brand); color: #fff; }
-.profile-page .profile-button:not(.secondary):hover { border-color: var(--brand-hover); background: var(--brand-hover); color: #fff; }
-.profile-page .profile-facts dt { color: rgba(255,255,255,.88); }
-.profile-page .profile-status { color: #fff; }
-:root[data-theme="dark"] .profile-page .profile-overview {
-  background: linear-gradient(120deg, var(--brand-dark) 0%, color-mix(in srgb, var(--brand) 74%, #111827) 100%) !important;
-}
-
 .profile-input{overflow:hidden;gap:0;transition:border-color .18s ease,box-shadow .18s ease,background-color .18s ease}.profile-input>.profile-icon{display:block;width:18px;height:18px;flex:0 0 44px;margin:0;padding:0 13px;box-sizing:border-box;color:#6687a2}.profile-input input,.profile-input select{flex:1;min-width:0;border-left:1px solid #e2eaf0!important;border-radius:0!important;background:var(--surface, #fff)!important}.profile-input textarea{flex:1;min-width:0;border-left:1px solid #e2eaf0!important;background:var(--surface, #fff)!important}.profile-input:focus-within{border-color:var(--blue);box-shadow:0 0 0 3px rgba(13,96,153,.12)}.profile-input:has(input:disabled),.profile-input:has(select:disabled),.profile-input:has(textarea:disabled){background:#f4f7fa}.profile-input input:disabled,.profile-input select:disabled,.profile-input textarea:disabled{background:#f4f7fa!important}.profile-field>span{letter-spacing:.01em}
 :root[data-theme="dark"] .profile-input{border-color:var(--border-strong);background:var(--surface-soft)}:root[data-theme="dark"] .profile-input input,:root[data-theme="dark"] .profile-input select,:root[data-theme="dark"] .profile-input textarea{border-left-color:var(--border)!important;background:var(--surface-soft)!important}:root[data-theme="dark"] .profile-input:has(input:disabled),:root[data-theme="dark"] .profile-input:has(select:disabled),:root[data-theme="dark"] .profile-input:has(textarea:disabled){background:var(--surface)!important}:root[data-theme="dark"] .profile-input input:disabled,:root[data-theme="dark"] .profile-input select:disabled,:root[data-theme="dark"] .profile-input textarea:disabled{background:var(--surface)!important}
 .profile-page{gap:14px}.profile-heading{padding:0 2px}.profile-heading h1{font-size:1.65rem}.profile-heading p{font-size:.84rem}.profile-overview{grid-template-columns:minmax(280px,.9fr) minmax(420px,1.25fr);gap:20px;padding:17px 21px}.profile-avatar{width:62px;height:62px;flex-basis:62px;border-radius:11px;font-size:1.2rem}.profile-identity{gap:14px}.profile-identity h2{font-size:1.12rem}.profile-facts{padding:11px 6px}.profile-facts div{padding:0 14px}.profile-content-card{border-radius:10px}.profile-section-heading{padding:13px 18px}.profile-section-icon{width:34px;height:34px}.profile-tabs{padding:0 18px}.profile-tabs button{min-height:58px;padding:8px 10px}.profile-tab-number{width:21px;height:21px;flex-basis:21px}.profile-tabs button>.profile-icon{width:17px;height:17px}.profile-panel{min-height:220px}.profile-panel-title{padding:15px 19px 0}.profile-fields{gap:14px 20px;padding:17px 19px}.profile-input{min-height:39px}.profile-input input,.profile-input select{height:38px}.profile-input textarea{min-height:62px}.profile-actions{min-height:64px;padding:10px 18px}.profile-button{min-height:38px;padding:0 14px;font-size:.8rem}

@@ -5964,7 +5964,7 @@ export const FeeManagementModule = (() => {
         let receiptId = payment ? payment.receiptId : student.receiptId;
         if (!receiptId && !payment) {
           const history = await feeCollectionApi.allHistory({ studentId: student.id });
-          receiptId = history.find(row => row.receiptId)?.receiptId;
+          receiptId = history.find(row => !isDemoFeeRecord(row) && row.receiptId)?.receiptId;
         }
         if (!receiptId) throw new Error('An official receipt is unavailable for this payment.');
         const receipt = await feeCollectionApi.receipt(receiptId);

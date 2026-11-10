@@ -768,7 +768,7 @@ const FORM_TABS = [
   { id: 'accreditation', label: 'Accreditation Details', shortLabel: 'Accreditation' },
 ]
 const TAB_FIELDS = {
-  college: ['collegeName', 'collegeCode', 'collegeType', 'collegeTypeOther', 'universityName'],
+  college: ['collegeName', 'collegeCode', 'collegeType', 'collegeTypeOther', 'universityName', 'startDate', 'endDate'],
   address: ['addressLine1', 'addressLine2', 'area', 'district', 'city', 'state', 'pincode', 'country'],
   contact: ['contactNumber', 'alternateContactNumber', 'email', 'website'],
   administration: ['principalName', 'principalEmail', 'principalContact'],
@@ -1349,9 +1349,11 @@ function AddCollege() {
         {section('College Information', 'Core identity and affiliation details.', <>
           <Field label="College Name" name="collegeName" values={values} errors={{ ...errors, ...(duplicateName ? { collegeName: 'A college with this name already exists.' } : {}) }} touched={touched} onChange={update} required maxLength={120} placeholder="e.g. Crescent Institute of Technology" />
           <Field label="College Code" name="collegeCode" values={values} errors={{ ...errors, ...(duplicateCode ? { collegeCode: 'This college code already exists.' } : {}) }} touched={touched} onChange={update} required maxLength={12} placeholder="e.g. CIT2026" />
-          <label className="ac-field" htmlFor="ac-collegeType"><span>College Type <b>*</b></span><ProjectSelect id="ac-collegeType" name="collegeType" value={values.collegeType} onChange={update} onBlur={() => setTouched((current) => ({ ...current, collegeType: true }))} aria-invalid={Boolean((touched.collegeType || Boolean(values.collegeType)) && errors.collegeType)} forceCustom><option value="">Select type</option>{TYPES.map((type) => <option key={type}>{type}</option>)}</ProjectSelect>{(touched.collegeType || Boolean(values.collegeType)) && errors.collegeType && <small className="ac-error" role="alert">{errors.collegeType}</small>}</label>
+          <label className="ac-field" htmlFor="ac-collegeType"><span>College Type <b>*</b></span><ProjectSelect id="ac-collegeType" name="collegeType" value={values.collegeType} onChange={update} onBlur={() => setTouched((current) => ({ ...current, collegeType: true }))} aria-invalid={Boolean((touched.collegeType || Boolean(values.collegeType)) && errors.collegeType)}><option value="">Select type</option>{TYPES.map((type) => <option key={type}>{type}</option>)}</ProjectSelect>{(touched.collegeType || Boolean(values.collegeType)) && errors.collegeType && <small className="ac-error" role="alert">{errors.collegeType}</small>}</label>
           {values.collegeType === 'Other' && <Field label="Specify College Type" name="collegeTypeOther" values={values} errors={errors} touched={touched} onChange={update} required maxLength={60} placeholder="e.g. Community College" />}
           <Field label="University Name" name="universityName" values={values} errors={errors} touched={touched} onChange={update} required maxLength={120} placeholder="Affiliated university" readOnly={values.collegeType === 'Deemed University'} />
+          <Field label="Start Date" name="startDate" type="date" values={values} errors={errors} touched={touched} onChange={update} />
+          <Field label="End Date" name="endDate" type="date" values={values} errors={errors} touched={touched} onChange={update} />
           <div className="ac-upload ac-span-2" role="group" aria-label="College logo" aria-busy={readingLogo} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); selectLogo(e.dataTransfer.files[0]) }}>
             <input ref={fileRef} type="file" aria-label="Choose college logo" accept=".png,.jpg,.jpeg,.webp" onChange={(e) => selectLogo(e.target.files?.[0])} hidden />
             {values.logo ? (

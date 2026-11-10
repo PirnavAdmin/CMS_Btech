@@ -141,7 +141,7 @@ export const allocationPayload = (row, updating = false) => {
   }
 }
 export const attendanceTime = (date, value) => !value || value === '-' ? null : value.includes('T') ? value : `${date}T${value.length === 5 ? `${value}:00` : value}`
-export const attendancePayload = row => ({ attendanceDate: row.date, status: row.status, checkIn: attendanceTime(row.date, row.checkIn), checkOut: attendanceTime(row.date, row.checkOut), remarks: row.remarks || null })
+export const attendancePayload = row => ({ attendanceDate: row.date, status: row.status, checkIn: attendanceTime(row.date, row.checkIn), checkOut: attendanceTime(row.date, row.checkOut), remarks: row.remarks ?? '' })
 const leaveStatus = (value, fallback = '') => {
   if (value === true || value === 1) return 'Active'
   if (value === false || value === 0) return 'Inactive'

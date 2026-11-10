@@ -74,7 +74,7 @@
   flex-direction: column;
   border: 1px solid var(--ss-border);
   border-radius: 10px;
-  background: #fff;
+  background: var(--ss-surface);
   box-shadow: var(--ss-shadow);
   overflow: hidden;
   max-height: 320px;
