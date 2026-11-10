@@ -9,6 +9,7 @@
 .campus-summary>div{display:grid;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:18px 20px}
 .campus-summary span,.campus-muted,.campus-form dt{color:var(--text-secondary);font-size:13px;line-height:1.6}
 .campus-summary strong{font-size:18px}
+#root .plw-page-header .compact-summary:not([hidden]) .compact-summary__item small{white-space:normal;overflow-wrap:anywhere;line-height:1.25;text-align:center}
 .campus-panel{padding:24px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);min-width:0;box-shadow:var(--shadow-sm)}
 .campus-panel h2{font-size:18px;margin:0 0 8px}
 .campus-panel-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:20px}
@@ -3576,3 +3577,179 @@ feels part of the table card rather than a second, dashed card. */
 .mew-calendar__daily .mew-calendar__agenda-content{flex-basis:150px}
 .mew-calendar__daily .mew-calendar__agenda-content p,.mew-calendar__daily .mew-calendar__agenda-content small{display:block;line-height:1.6;overflow-wrap:anywhere}
 .mew-calendar__daily .mew-calendar__agenda-item>button{margin-left:auto}
+/* Library directory layout follows the shared workspace pattern. */
+.adv-library-workspace .adv-library-top-layout {
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  grid-template-rows: auto;
+  align-items: start;
+  justify-items: stretch;
+  gap: 12px 24px;
+  min-width: 0;
+}
+.adv-library-workspace .adv-library-header { grid-column: 1; grid-row: 1; min-width: 0; }
+.adv-library-workspace .adv-kpi-grid--library-summary {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+  justify-self: stretch;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.adv-library-workspace .adv-kpi-grid--library-summary .adv-kpi-card {
+  min-width: 0;
+  min-height: 76px;
+  justify-content: center;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border-color: color-mix(in srgb, var(--brand) 24%, var(--border));
+  background: color-mix(in srgb, var(--brand) 5%, var(--surface));
+  box-shadow: none;
+}
+.adv-library-workspace .adv-kpi-grid--library-summary .adv-kpi-card__icon { display: none; }
+.adv-library-workspace .adv-kpi-grid--library-summary .adv-kpi-card__body { align-items: center; gap: 3px; text-align: center; }
+.adv-library-workspace .adv-kpi-grid--library-summary .adv-kpi-card__label { font-size: 10px; line-height: 1.35; }
+.adv-library-workspace .adv-kpi-grid--library-summary .adv-kpi-card__value { display: block; }
+.adv-library-workspace .adv-kpi-grid--library-summary .adv-kpi-card__value strong { color: var(--brand); font-size: 20px; }
+.adv-library-workspace .adv-kpi-grid--library-summary .adv-kpi-card__sub,
+.adv-library-workspace .adv-kpi-grid--library-summary .adv-kpi-card__badge { display: none; }
+.adv-library-workspace .adv-btn--primary { background: var(--brand); border-color: var(--brand); color: #fff; box-shadow: 0 4px 12px color-mix(in srgb, var(--brand) 24%, transparent); }
+.adv-library-workspace .adv-btn--primary:hover:not(:disabled) { background: var(--brand-hover); border-color: var(--brand-hover); color: #fff; }
+.adv-library-workspace .adv-btn--filter {
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 650;
+}
+.adv-library-workspace .adv-btn--filter:hover,
+.adv-library-workspace .adv-btn--filter.is-active { border-color: var(--brand); background: var(--brand-soft); color: var(--brand-dark); }
+.adv-library-workspace .adv-btn--filter > svg:last-child { transition: transform .16s ease; }
+.adv-library-workspace .adv-btn--filter > svg:last-child.is-open { transform: rotate(180deg); }
+.adv-library-workspace .adv-tabs-bar .adv-tab-btn.is-active {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: var(--text-on-accent, #fff);
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--brand) 24%, transparent);
+}
+.adv-library-workspace .adv-tabs-bar .adv-tab-btn.is-active .adv-tab-count {
+  background: color-mix(in srgb, var(--text-on-accent, #fff) 22%, transparent);
+  color: var(--text-on-accent, #fff);
+}
+.adv-library-workspace .adv-tabs-bar .adv-tab-btn:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--brand) 35%, transparent);
+  outline-offset: 2px;
+}
+.adv-library-workspace .adv-control-bar {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.adv-library-workspace .adv-control-bar__search {
+  flex: 1 1 320px;
+  max-width: 520px;
+  min-width: 240px;
+}
+.adv-library-workspace .adv-control-bar > .export-control {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: stretch;
+  min-height: 42px;
+}
+.adv-library-workspace .adv-control-bar > .export-control .export-button {
+  min-height: 42px;
+  border-radius: 9px;
+}
+.adv-library-workspace .adv-control-bar > .export-control .export-button--toggle {
+  min-width: 42px;
+}
+.adv-library-workspace .adv-control-bar > .adv-btn--primary {
+  min-height: 42px;
+  padding-inline: 15px;
+}
+.adv-library-workspace .adv-filter-count { display: inline-grid; min-width: 19px; height: 19px; padding: 0 5px; place-items: center; border-radius: 99px; background: var(--brand); color: #fff; font-size: 10px; }
+.adv-library-workspace .adv-control-bar__filters {
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.adv-library-workspace .adv-control-bar__filters .adv-control-bar__select-group {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(150px, 1fr));
+  gap: 10px;
+  min-width: 0;
+}
+.adv-library-workspace .adv-control-bar__filters .adv-view-switcher { justify-self: end; }
+.adv-library-workspace .adv-control-bar__filters .adv-btn--ghost { min-height: 38px; padding: 0 12px; }
+@media (max-width: 1000px) {
+  .adv-library-workspace .adv-library-top-layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; gap: 14px; }
+  .adv-library-workspace .adv-library-header { grid-column: 1; grid-row: auto; }
+  .adv-library-workspace .adv-kpi-grid--library-summary { grid-column: 1; grid-row: auto; width: 100%; }
+  .adv-library-workspace .adv-control-bar__search { max-width: 520px; }
+  .adv-library-workspace .adv-control-bar__filters { grid-template-columns: minmax(0, 1fr) auto; }
+  .adv-library-workspace .adv-control-bar__filters .adv-control-bar__select-group { grid-column: 1 / -1; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .adv-library-workspace .adv-kpi-grid--library-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .adv-library-workspace .adv-control-bar { display: flex; padding: 12px; }
+  .adv-library-workspace .adv-control-bar__search { flex: 1 1 100%; max-width: none; min-width: 0; }
+  .adv-library-workspace .adv-control-bar > .adv-btn--filter { margin-left: auto; }
+  .adv-library-workspace .adv-control-bar > .adv-btn--primary { padding-inline: 11px; }
+  .adv-library-workspace .adv-control-bar__filters { grid-template-columns: minmax(0, 1fr); }
+  .adv-library-workspace .adv-control-bar__filters .adv-control-bar__select-group { grid-template-columns: minmax(0, 1fr); }
+  .adv-library-workspace .adv-control-bar__filters .adv-view-switcher { justify-self: start; }
+}
+
+/* The ILMS status banner uses the user's selected workspace accent too. */
+.adv-library-workspace .adv-notice-banner {
+  border-color: color-mix(in srgb, var(--brand) 22%, var(--border));
+  border-left-color: var(--brand);
+  background: linear-gradient(
+    105deg,
+    color-mix(in srgb, var(--brand) 6%, var(--surface)) 0%,
+    var(--surface) 58%,
+    color-mix(in srgb, var(--brand) 9%, var(--surface)) 100%
+  );
+}
+.adv-library-workspace .adv-notice-banner--draft {
+  border-left-color: var(--warning);
+  background: linear-gradient(
+    105deg,
+    color-mix(in srgb, var(--warning) 9%, var(--surface)) 0%,
+    var(--surface) 58%,
+    color-mix(in srgb, var(--brand) 8%, var(--surface)) 100%
+  );
+}
+.adv-library-workspace .adv-mode-toggle-btn {
+  border-color: color-mix(in srgb, var(--brand) 24%, var(--border));
+  background: color-mix(in srgb, var(--brand) 5%, var(--surface));
+}
+.adv-library-workspace .adv-mode-toggle-btn:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+  background: var(--brand-soft);
+}
+.adv-library-workspace .adv-mode-toggle-btn strong {
+  color: var(--brand);
+}
+.adv-library-workspace .adv-pill-badge {
+  border-color: color-mix(in srgb, var(--brand) 24%, var(--border));
+  background: color-mix(in srgb, var(--brand) 7%, var(--surface));
+}
+.adv-library-workspace .adv-btn-text {
+  color: var(--brand);
+}
+.adv-library-workspace .adv-btn-text:hover {
+  color: var(--brand-hover);
+}

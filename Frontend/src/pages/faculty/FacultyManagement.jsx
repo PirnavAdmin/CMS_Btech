@@ -34,6 +34,7 @@ import * as pageDependency22 from '../../components/InfoCard'
 import * as pageDependency24 from '../../utils/academicYearUtils'
 import * as pageDependency25 from '../../services/subjectService'
 import * as pageDependency26 from '../../utils/facultyAttendance'
+import { exportToExcelXml } from '../../utils/exportUtils'
 import './FacultyManagement.css'
 
 // FacultyApiPanels screen and private helpers.
@@ -1354,7 +1355,7 @@ const { getDefaultAcademicYear } = pageDependency24
 const { normalizeFaculty, mergeFacultyData, resolveFacultyPhoto } = pageDependency2
 const facultyService = pageDependency2.default
 
-const { localAttendanceDate, loadDailyAttendancePeriod, attendanceStatusLabel, normalizeAttendanceRow, combineAttendance, attendanceFacultyMap } = pageDependency26
+const { localAttendanceDate, attendanceStatusLabel, normalizeAttendanceRow, combineAttendance, attendanceFacultyMap } = pageDependency26
 const { showSuccess, showError } = pageDependency15
 
 const PAGE_SIZE = 5
@@ -1723,6 +1724,7 @@ const aggregateFacultyAttendance = (rows, label = '') => {
         facultyId: key,
         faculty: row.faculty,
         total: 0,
+        marked: 0,
         Present: 0,
         Absent: 0,
         Late: 0,
@@ -1735,18 +1737,19 @@ const aggregateFacultyAttendance = (rows, label = '') => {
     const group = groups.get(key)
     group.total += 1
     const status = row.status || 'Not Marked'
+    if (status !== 'Not Marked') group.marked += 1
     if (status in group) group[status] += 1
     group.hours += Number(row.workingMinutes || 0)
   }
   return [...groups.values()].map(group => {
-    const marked = group.total
+    const marked = group.marked
     const counted = group.Present + group.Late + group['Half Day']
     const percentage = marked ? Math.round((counted / marked) * 100) : 0
     return {
       ...group,
       percentage: `${percentage}%`,
       hours: formatMinutes(group.hours),
-      total: group.total,
+      total: group.marked,
     }
   })
 }
@@ -1956,8 +1959,8 @@ function Avatar({ faculty, large = false }) {
     </span>
   )
 }
-function EmptyState({ title, description, action, onAction }) {
-  return <div className="fm-empty"><FiUsers aria-hidden="true" /><h3>{title}</h3>{description && <p>{description}</p>}{action && <button type="button" className="fm-button secondary" onClick={onAction}>{action}</button>}</div>
+function EmptyState({ title, description, action, onAction, className = '' }) {
+  return <div className={`fm-empty ${className}`.trim()}><FiUsers aria-hidden="true" /><h3>{title}</h3>{description && <p>{description}</p>}{action && <button type="button" className="fm-button secondary" onClick={onAction}>{action}</button>}</div>
 }
 function AttendanceTimeField({ label, value, disabled, onChange }) {
   const [hourText, minuteText] = String(value || '').split(':')
@@ -1985,6 +1988,90 @@ function AttendanceTimeField({ label, value, disabled, onChange }) {
   }
   return <div className="fm-attendance-time-field"><span>{label}</span><span className="fm-attendance-time-controls">{disabled ? <span className="fm-attendance-disabled-value">—</span> : <><ProjectSelect aria-label={`${label} hour`} value={parts.hour} onChange={event => update('hour', event.target.value)}><option value="">HH</option>{Array.from({ length: 12 }, (_, index) => { const item = String(index + 1).padStart(2, '0'); return <option key={item} value={item}>{item}</option> })}</ProjectSelect><span>:</span><ProjectSelect aria-label={`${label} minute`} value={parts.minute} onChange={event => update('minute', event.target.value)}><option value="">MM</option>{Array.from({ length: 60 }, (_, index) => { const item = String(index).padStart(2, '0'); return <option key={item} value={item}>{item}</option> })}</ProjectSelect><ProjectSelect aria-label={`${label} period`} value={parts.period} onChange={event => update('period', event.target.value)}><option value="">AM/PM</option><option value="AM">AM</option><option value="PM">PM</option></ProjectSelect></>}</span></div>
 }
+function RecordAttendanceDialog({ busy = false, faculty = [], collegeOptions = [], departmentOptions = [], initialDate, onClose, onSave }) {
+  const [facultyId, setFacultyId] = useState('')
+  const [attendanceDate, setAttendanceDate] = useState(initialDate || today())
+  const [status, setStatus] = useState('Present')
+  const [checkIn, setCheckIn] = useState('')
+  const [checkOut, setCheckOut] = useState('')
+  const [remarks, setRemarks] = useState('')
+  const [error, setError] = useState('')
+  const [confirmLeave, setConfirmLeave] = useState(false)
+  const selectedFaculty = faculty.find(item => String(item.id ?? item.facultyId ?? item.FacultyId ?? '') === facultyId)
+  const backendFacultyId = selectedFaculty?.id ?? selectedFaculty?.facultyId ?? selectedFaculty?.FacultyId
+  const departmentValue = selectedFaculty?.departmentId || selectedFaculty?.department || selectedFaculty?.departmentName || ''
+  const department = departmentOptions.find(item => String(item.value) === String(departmentValue))?.label || selectedFaculty?.department || selectedFaculty?.departmentName || '—'
+  const facultyOptions = faculty.map(item => {
+    const id = item.id ?? item.facultyId ?? item.FacultyId
+    const name = item.fullName || item.facultyName || item.name || 'Faculty member'
+    const code = item.employeeId || item.facultyCode || ''
+    const itemDepartment = item.department || item.departmentName || ''
+    return { value: String(id ?? ''), label: name, code, subLabel: [code, item.designation, itemDepartment].filter(Boolean).join(' · ') }
+  }).filter(item => item.value)
+  const isNonWorkingStatus = ['Absent', 'On Leave', 'LOP'].includes(status)
+  const displayCode = selectedFaculty ? formatFacultyDisplayCode(selectedFaculty, collegeOptions, faculty) || selectedFaculty.employeeId || selectedFaculty.facultyCode || '—' : '—'
+  const saveRecord = () => onSave({
+    faculty: selectedFaculty,
+    facultyId: Number(backendFacultyId),
+    date: attendanceDate,
+    status,
+    checkIn: isNonWorkingStatus ? '' : checkIn,
+    checkOut: isNonWorkingStatus ? '' : checkOut,
+    remarks: remarks.trim(),
+    isNew: true,
+  })
+  const submit = event => {
+    event.preventDefault()
+    if (busy) return
+    if (!selectedFaculty || !Number.isSafeInteger(Number(backendFacultyId)) || Number(backendFacultyId) <= 0) return setError('Select a faculty member from Faculty & Staff.')
+    if (!attendanceDate) return setError('Attendance date is required.')
+    if (attendanceDate > today()) return setError('Attendance cannot be recorded for a future date.')
+    if (['On Leave', 'LOP'].includes(status) && !confirmLeave) return setConfirmLeave(true)
+    if (['Present', 'Late', 'Half Day'].includes(status) && !checkIn) return setError('Check In is required for this attendance status.')
+    if (['Present', 'Late'].includes(status) && !checkOut) return setError('Check Out is required for Present and Late attendance.')
+    if (checkIn && checkOut && checkOut <= checkIn) return setError('Check Out must be later than Check In.')
+    setError('')
+    saveRecord()
+  }
+  const title = selectedFaculty ? `${selectedFaculty.fullName || selectedFaculty.facultyName || selectedFaculty.name} · ${displayCode} · ${department}` : 'Select a faculty member and enter attendance details.'
+
+  return <ReferenceViewDialog title="Record Attendance" subtitle={title} onClose={onClose} busy={busy} showExport={false} hideFooter>
+    <form className="fm-attendance-editor" onSubmit={submit}>
+      <fieldset disabled={busy} style={{ border: 0, padding: 0, margin: 0 }}>
+        <div className="fm-attendance-record-fields">
+          <label className="fm-attendance-record-faculty"><span>Faculty</span>
+            <SearchableSelect label="Faculty" value={facultyId} options={facultyOptions} onChange={value => { setFacultyId(value); setError('') }} placeholder="Search Faculty & Staff" searchPlaceholder="Search by name, ID, or department" menuPlacement="bottom" required />
+          </label>
+          <label className="fm-attendance-record-date"><span>Attendance Date</span>
+            <input type="date" value={attendanceDate} max={today()} required onChange={event => { setAttendanceDate(event.target.value); setError('') }} />
+          </label>
+          <div className="fm-attendance-selected-faculty" aria-live="polite">
+            {selectedFaculty ? <>
+              <Avatar faculty={selectedFaculty} />
+              <div><strong>{selectedFaculty.fullName || selectedFaculty.facultyName || selectedFaculty.name}</strong><small>{[displayCode, selectedFaculty.designation].filter(Boolean).join(' · ')}</small></div>
+              <div className="fm-attendance-selected-department"><small>Department</small><strong>{department}</strong></div>
+            </> : <p>Select a faculty member to load their details and department.</p>}
+          </div>
+        </div>
+        <div className="fm-form-grid">
+          <label>Status<ProjectSelect value={status} onChange={event => { const next = event.target.value; setStatus(next); if (['Absent', 'On Leave', 'LOP'].includes(next)) { setCheckIn(''); setCheckOut('') }; setError(''); setConfirmLeave(false) }}>
+            {['Present', 'Absent', 'Late', 'Half Day', 'On Leave'].map(value => <option key={value}>{value}</option>)}<option value="LOP">Loss of Pay</option>
+          </ProjectSelect></label>
+          <AttendanceTimeField label="Check In" value={checkIn} disabled={isNonWorkingStatus} onChange={value => { setCheckIn(value); setError('') }} />
+          <AttendanceTimeField label="Check Out" value={checkOut} disabled={isNonWorkingStatus} onChange={value => { setCheckOut(value); setError('') }} />
+          <label className="fm-wide">Remarks<textarea rows="2" value={remarks} onChange={event => setRemarks(event.target.value)} placeholder="Optional attendance notes" /></label>
+        </div>
+        {error && <p className="fm-error" role="alert">{error}</p>}
+        {confirmLeave && <div className="fm-lop-confirm" role="alert">
+          <div><strong>Confirm attendance status?</strong><p>You are marking {selectedFaculty?.fullName || selectedFaculty?.facultyName || 'this faculty member'} as {attendanceStatusLabel(status)} for {new Date(attendanceDate + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}.</p></div>
+          <div><button className="fm-button secondary" type="button" onClick={() => setConfirmLeave(false)}>Cancel</button><button className="fm-button" type="button" onClick={() => { setConfirmLeave(false); setError(''); saveRecord() }}>{status === 'LOP' ? 'Mark Loss of Pay' : 'Mark On Leave'}</button></div>
+        </div>}
+        <footer><button className="fm-button secondary" type="button" onClick={onClose}>Cancel</button><button className="fm-button" type="submit">{busy ? 'Saving…' : 'Save Attendance'}</button></footer>
+      </fieldset>
+    </form>
+  </ReferenceViewDialog>
+}
+
 function AttendanceEditor({ busy = false, record, collegeOptions = [], departmentOptions = [], allFaculty = [], onClose, onSave, onReset }) {
   const initialStatus = record.status === 'Not Marked' ? 'Present' : record.status
   const isInitialWorking = ['Present', 'Late', 'Half Day'].includes(initialStatus)
@@ -2050,12 +2137,13 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
   const canRecord = canAction('/faculty/attendance','edit') || canAction('/faculty/attendance','create')
   const [tab, setTab] = useState('daily')
   const [reportType, setReportType] = useState('daily')
-  const [showFilters, setShowFilters] = useState(false)
+  const [showFilters, setShowFilters] = useState(true)
   const [selected, setSelected] = useState(null)
   const [editingRecord, setEditingRecord] = useState(null)
   const [bulkConfirmation, setBulkConfirmation] = useState(null)
   const [bulkRemarks, setBulkRemarks] = useState('')
   const [selectedFacultyIds, setSelectedFacultyIds] = useState([])
+  const [bulkStatus, setBulkStatus] = useState('Present')
   const [attendanceRecords, setAttendanceRecords] = useCollegeState([], { faculty })
   const [todayRecords, setTodayRecords] = useCollegeState([], { faculty })
   const [serverDaily, setServerDaily] = useCollegeState([], { faculty })
@@ -2087,22 +2175,46 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
     return f.employeeId || f.facultyCode || (f.id ? `FAC-${f.id}` : '—')
   }
   const normalizeAttendance = useCallback((rows, options) => mergeAttendanceRecords(faculty, rows.map(row => normalizeAttendanceRow(row, options))), [faculty])
-  const loadAttendance = useCallback(async () => {
+  const loadAttendance = useCallback(async (dateOverride = '') => {
     if(attendanceScope.current!==attendanceCollegeId)return false
     const version = ++attendanceVersion.current; setAttendanceError('');setAttendanceLoading(true)
     try {
       const reportFilter = reportFilters[reportType]
       const dates = attendancePeriod(reportType, reportFilter)
-      const params = tab === 'register' ? { facultyId: registerFilters.facultyId, fromDate: registerFilters.from, toDate: registerFilters.to, status: registerFilters.status } : tab === 'reports' ? { facultyId: reportFilter.facultyId, fromDate: dates.from, toDate: dates.to } : { fromDate: dailyFilters.date, toDate: dailyFilters.date }
-      const records = await facultyService.getAttendance(params)
-      const dailyDate = tab === 'reports' && reportType === 'daily' ? reportFilter.date : dailyFilters.date
+      const dailyDate = tab === 'reports' && reportType === 'daily' ? reportFilter.date : (dateOverride || dailyFilters.date)
+      const params = tab === 'register' ? { facultyId: registerFilters.facultyId, fromDate: registerFilters.from, toDate: registerFilters.to, status: registerFilters.status } : tab === 'reports' ? { facultyId: reportFilter.facultyId, fromDate: dates.from, toDate: dates.to } : { fromDate: dailyDate, toDate: dailyDate }
+      const isMatrixReport = tab === 'reports' && reportType !== 'daily'
+      let records
+      if (isMatrixReport) {
+        const reportParams = {
+          ...(reportType === 'weekly'
+            ? { weekStart: reportFilter.weekStart }
+            : { month: Number(reportFilter.month || new Date().getMonth() + 1), year: Number(reportFilter.year || new Date().getFullYear()) }),
+          facultyType: reportFilter.facultyType,
+          department: reportFilter.department,
+          facultyId: reportFilter.facultyId,
+          status: reportFilter.status,
+          search: reportFilter.search,
+        }
+        const reportRows = reportType === 'weekly'
+          ? await facultyService.getWeeklyAttendance(reportParams)
+          : await facultyService.getMonthlyAttendance(reportParams)
+        records = (reportRows || []).flatMap(row => (row.days || []).map(day => ({
+          ...day,
+          facultyId: row.facultyId,
+          employeeId: row.employeeId,
+          facultyName: row.facultyName,
+          designation: row.designation,
+          department: row.department,
+          facultyType: row.facultyType,
+        })))
+      } else {
+        records = await facultyService.getAttendance(params)
+      }
       const needsDaily = tab === 'daily' || (tab === 'reports' && reportType === 'daily')
       const daily = needsDaily ? await facultyService.getDailyAttendance({ date: dailyDate }) : []
-      const periodDaily = tab === 'reports' && reportType !== 'daily'
-        ? await loadDailyAttendancePeriod(facultyService.getDailyAttendance, dates.from, dates.to, today())
-        : []
       const combined = combineAttendance(
-        mergeAttendanceRecords(faculty, periodDaily),
+        mergeAttendanceRecords(faculty),
         normalizeAttendance(records),
         normalizeAttendance(daily, { daily: true, date: dailyDate })
       )
@@ -2203,7 +2315,9 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
 
       await writeAttendance({facultyId:facultyIdParam,date:values.date,id,payload,status:values.status,remarks:values.remarks})
       setEditingRecord(null)
-      if(!await loadAttendance()){setRefreshPending(true);throw Error('Attendance was saved, but refresh failed. Retry the saved attendance refresh before another write.')}
+      const refreshDate = values.isNew && tab === 'daily' ? values.date : ''
+      if (refreshDate) setDailyFilters(old => ({ ...old, date: refreshDate }))
+      if(!await loadAttendance(refreshDate)){setRefreshPending(true);throw Error('Attendance was saved, but refresh failed. Retry the saved attendance refresh before another write.')}
       showSuccess('Attendance saved successfully.')
     } catch (error) {
       await loadAttendance()
@@ -2270,6 +2384,10 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
       if (edit) setEditingRecord(value); else setSelected(value)
     }
   }
+  const openNewAttendance = () => {
+    if (!canRecord || attendanceBusy || refreshPending || attendanceLoading) return
+    setEditingRecord({ isNew: true, synthetic: true, status: 'Not Marked', date: tab === 'daily' ? dailyFilters.date : today(), faculty: null, remarks: '' })
+  }
   const bulkMark = status => {
     const selectedRows = dailyRows.filter(row => selectedFacultyIds.includes(String(row.facultyId)))
     const overwrites = selectedRows.filter(row => !row.synthetic)
@@ -2295,7 +2413,7 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
   const displayDate = value => value ? new Date(value + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'All dates'
   const rangeLabel = tab === 'daily' ? displayDate(dailyFilters.date) : tab === 'register' ? displayDate(registerFilters.from) + ' - ' + (registerFilters.to ? displayDate(registerFilters.to) : 'Latest') : period.from && period.to ? displayDate(period.from) + (period.from === period.to ? '' : ' - ' + displayDate(period.to)) : 'Select a valid period'
   const exportScope = ['All filtered results', rangeLabel, filters.department, faculty.find(item => String(item.id) === filters.facultyId)?.fullName, (!aggregated && filters.status), filters.search && 'Search: ' + filters.search, tab === 'reports' && ATTENDANCE_PERCENTAGE_NOTE].filter(Boolean).join(' | ')
-  const contextualExport = <ExportMenu rows={exportRows} columns={columns} filename={filename} title={exportTitle} scope={exportScope} loading={attendanceBusy || attendanceLoading || Boolean(attendanceError)} unavailable={rangeInvalid || periodInvalid ? 'Select a valid date range.' : ''} />
+  const contextualExport = <ExportMenu rows={exportRows} columns={columns} filename={filename} title={exportTitle} scope={exportScope} reportType="Excel" onDownload={exportToExcelXml} loading={attendanceBusy || attendanceLoading || Boolean(attendanceError)} unavailable={rangeInvalid || periodInvalid ? 'Select a valid date range.' : !exportRows.length ? 'No attendance records are available to export.' : ''} />
   const attendanceBadge = value => <StatusBadge value={attendanceStatusLabel(value)} className={value === 'Not Marked' ? 'fm-attendance-pending' : value === 'Present' ? 'fm-attendance-present' : value === 'Absent' ? 'fm-attendance-absent' : value === 'Late' ? 'fm-attendance-late' : value === 'Half Day' ? 'fm-attendance-half-day' : value === 'On Leave' ? 'fm-attendance-leave' : value === 'LOP' ? 'fm-attendance-lop' : ''} />
   const dateControl = (key, label, options = {}) => <label className="fm-attendance-field"><span>{label}</span><input type="date" value={filters[key]} max={today()} onChange={event => updateFilter(key, event.target.value)} {...options} /></label>
   const selectControl = (key, label, options, placeholder) => <div className="fm-attendance-field"><span>{label}</span><SearchableSelect placement="bottom" label={label} value={filters[key]} options={[{ value: '', label: placeholder }, ...options.map(option => option === 'LOP' ? { value: 'LOP', label: 'Loss of Pay' } : option)]} onChange={value => updateFilter(key, value)} placeholder={placeholder} /></div>
@@ -2440,8 +2558,10 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
     </tr>)}</tbody>
   </table></div>
   const aggregatedTable = reportType === 'daily' ? <div className="fm-attendance-table fm-attendance-aggregate-table"><table><thead><tr>{['Faculty Code', 'Faculty', 'Department', 'Days With Data', 'Present', 'Absent', 'Late', 'Half Day', 'On Leave', 'Total Hours', 'Attendance %'].map(label => <th scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{visibleReportRows.map(row => <tr key={row.facultyId}><td><span className="fm-attendance-employee">{getFacultyCode(row.faculty)}</span></td><td><button type="button" className="student-name-link" title={row.faculty.fullName} onClick={() => openAttendance(row)}>{row.faculty.fullName}</button></td><td>{getFacultyDept(row.faculty)}</td><td>{row.total}</td>{['Present', 'Absent', 'Late', 'Half Day', 'On Leave'].map(status => <td key={status}>{row[status]}</td>)}<td>{row.hours}</td><td>{row.percentage}</td></tr>)}</tbody></table></div> : <><div className="fm-report-legend" aria-label="Attendance status legend">{Object.entries(statusMeta).map(([status, [code, tone]]) => <span key={status}>{statusCell({ status, date: period.from, checkIn: '—', checkOut: '—', hours: '—' })}<small>{attendanceStatusLabel(status)}</small></span>)}</div><div className="fm-attendance-table fm-attendance-matrix"><table><colgroup><col style={{ width: '130px', minWidth: '130px' }} /><col style={{ width: '220px', minWidth: '220px' }} />{matrixDates.map(date => <col key={date} style={{ width: '42px', minWidth: '42px' }} />)}{['P', 'A', 'L', 'HD', 'OL', 'LOP'].map(label => <col key={label} style={{ width: '40px', minWidth: '40px' }} />)}<col style={{ width: '55px', minWidth: '55px' }} /></colgroup><thead><tr><th>Faculty Code</th><th>Faculty</th>{matrixDates.map(date => <th key={date}><span>{new Date(date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short' }).toUpperCase()}</span><b>{new Date(date + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase()}</b></th>)}{['P', 'A', 'L', 'HD', 'OL', 'LOP', '%'].map(label => <th key={label}>{label}</th>)}</tr></thead><tbody>{visibleMatrixRows.map(({ member, cells, totals }) => <tr key={member.id}><td>{getFacultyCode(member)}</td><td className="fm-matrix-faculty"><button type="button" className="student-name-link" title={member.fullName} onClick={() => openAttendance({ faculty: member, facultyId: member.id, date: matrixDates[0] || today() })}>{member.fullName}</button><small>{getFacultyDept(member)}</small></td>{cells.map(cell => <td key={cell.date}>{statusCell(cell)}</td>)}{[['Present', 'present'], ['Absent', 'absent'], ['Late', 'late'], ['Half Day', 'half-day'], ['On Leave', 'leave'], ['LOP', 'lop']].map(([status, tone]) => <td className={`fm-report-total fm-report-total--${tone}`} key={status}>{totals[status]}</td>)}<td className="fm-report-total fm-report-total--percentage">{totals.percentage}</td></tr>)}</tbody></table></div></>
-  const noSource = tab !== 'daily' && !attendanceRecords.length
-  const empty = <EmptyState title={noSource ? 'No attendance records are available yet.' : 'No attendance records match the selected filters.'} description={noSource ? 'Daily Attendance shows missing records as Not Marked; these are not saved historical records.' : undefined} action={noSource ? 'Go to Daily Attendance' : 'Clear Filters'} onAction={noSource ? () => setTab('daily') : clearFilters} />
+  const hasSavedAttendance = attendanceRecords.some(row => row.attendanceId || (row.id && !row.synthetic))
+  const noFaculty = faculty.length === 0
+  const noSource = tab !== 'daily' && !hasSavedAttendance
+  const empty = <EmptyState className="fm-attendance-empty" title={noFaculty ? 'No faculty records found.' : noSource ? 'No attendance records are available yet.' : 'No attendance records match the selected filters.'} description={noFaculty ? 'Add faculty in Faculty & Staff before recording attendance.' : noSource ? 'Daily Attendance shows missing records as Not Marked; these are not saved historical records.' : undefined} action={noFaculty ? undefined : noSource ? 'Go to Daily Attendance' : 'Clear Filters'} onAction={noSource ? () => setTab('daily') : clearFilters} />
   return (
     <div className="fm-attendance-screen">
       <ReferencePageHeader
@@ -2456,7 +2576,7 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
       <section className="fm-attendance-workspace">
         <div className="fm-attendance-panel">
           <header className="fm-attendance-directory-header">
-            <div className="fm-attendance-header-actions">{searchControl}{filterControl}{facultyCategoryControl}{contextualExport}</div>
+            <div className="fm-attendance-header-actions">{searchControl}{facultyCategoryControl}{contextualExport}{filterControl}</div>
           </header>
 
           {showFilters && (
@@ -2464,7 +2584,7 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
               <div className="fm-attendance-filter-fields">
                 {tab === 'daily' && dateControl('date', 'Date')}
                 {tab === 'reports' && reportType === 'daily' && dateControl('date', 'Date')}
-                {tab === 'reports' && reportType === 'weekly' && dateControl('weekStart', 'Week Start')}
+                {tab === 'reports' && reportType === 'weekly' && dateControl('weekStart', 'Week starting (Monday)', { onChange: event => updateFilter('weekStart', mondayOf(event.target.value)) })}
                 {tab === 'reports' && reportType === 'monthly' && (
                   <>
                     {selectControl('month', 'Month', Array.from({ length: 12 }, (_, index) => ({ value: String(index + 1).padStart(2, '0'), label: new Date(2000, index, 1).toLocaleDateString('en-GB', { month: 'long' }) })), 'Select month')}
@@ -2483,23 +2603,13 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
           )}
 
           <nav className="fm-attendance-tabs" aria-label="Faculty attendance views">
-            {[['daily', 'Daily Attendance'], ['reports', 'Reports']].map(([key, label]) => (
-              <button type="button" key={key} className={tab === key ? 'active' : ''} aria-current={tab === key ? 'page' : undefined} onClick={() => setTab(key)}>
-                {label}
+            <button type="button" className={tab === 'daily' ? 'active' : ''} aria-current={tab === 'daily' ? 'page' : undefined} onClick={() => setTab('daily')}>Daily Attendance</button>
+            {['weekly', 'monthly'].map(type => (
+              <button type="button" key={type} className={tab === 'reports' && reportType === type ? 'active' : ''} aria-current={tab === 'reports' && reportType === type ? 'page' : undefined} onClick={() => { setReportType(type); setTab('reports') }}>
+                {type === 'weekly' ? 'Weekly Report' : 'Monthly Report'}
               </button>
             ))}
           </nav>
-
-
-          {tab === 'reports' && (
-            <div className="fm-attendance-report-tabs" aria-label="Report period">
-              {['daily', 'weekly', 'monthly'].map(type => (
-                <button type="button" key={type} className={reportType === type ? 'active' : ''} aria-pressed={reportType === type} onClick={() => setReportType(type)}>
-                  {type[0].toUpperCase() + type.slice(1)}
-                </button>
-              ))}
-            </div>
-          )}
           {rangeInvalid && <p className="fm-error" role="alert">From Date must be on or before To Date.</p>}
           {periodInvalid && <p className="fm-error" role="alert">Select a valid reporting period.</p>}
 
@@ -2509,19 +2619,20 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
                 <h2>{tab === 'daily' ? 'Faculty Attendance' : exportTitle}</h2>
                 <p>{tab === 'reports' ? reportEmployeeRows.length : resultRows.length} employee records</p>
               </div>
+              {canRecord && <button type="button" className="fm-button fm-attendance-record-button" onClick={openNewAttendance} disabled={attendanceBusy || refreshPending || attendanceLoading || faculty.length === 0}><FiPlus aria-hidden="true" /> Record Attendance</button>}
             </header>
 
             {tab === 'daily' && selectedFacultyIds.length > 0 && (
               <div className="fm-attendance-bulkbar">
                 <strong>{selectedFacultyIds.length} selected</strong>
-                <button type="button" className="fm-button" onClick={() => bulkMark('Present')}>Mark Present</button>
-                <button type="button" className="fm-button secondary" disabled={attendanceBusy || refreshPending || attendanceLoading} onClick={() => bulkMark('Absent')}>Mark Absent</button>
+                <label className="fm-attendance-bulk-status"><span>Mark as</span><ProjectSelect value={bulkStatus} onChange={event => setBulkStatus(event.target.value)} disabled={attendanceBusy || refreshPending || attendanceLoading}>{['Present', 'Absent', 'Late', 'Half Day', 'On Leave'].map(value => <option key={value}>{value}</option>)}</ProjectSelect></label>
+                <button type="button" className="fm-button" disabled={attendanceBusy || refreshPending || attendanceLoading} onClick={() => bulkMark(bulkStatus)}>Apply to selected</button>
               </div>
             )}
 
-            {(aggregated ? matrixRows.length : resultRows.length) ? aggregated ? aggregatedTable : recordTable : empty}
+            {(aggregated ? matrixRows.length > 0 && !noSource : resultRows.length > 0) ? aggregated ? aggregatedTable : recordTable : empty}
             {tab === 'daily' && dailyRows.length > PAGE_SIZE && <TablePagination currentPage={currentDailyPage} totalPages={dailyPageCount} onPageChange={setDailyPage} />}
-            {tab === 'reports' && reportEmployeeRows.length > PAGE_SIZE && <TablePagination currentPage={currentReportPage} totalPages={reportPageCount} onPageChange={setReportPage} />}
+            {tab === 'reports' && !noSource && reportEmployeeRows.length > PAGE_SIZE && <TablePagination currentPage={currentReportPage} totalPages={reportPageCount} onPageChange={setReportPage} />}
           </section>
         </div>
       </section>
@@ -2587,7 +2698,8 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
         </ReferenceViewDialog>
       )}
 
-      {attendanceError && <p className="fm-error" role="alert" style={{ position: 'relative', zIndex: 1500 }}>{attendanceError} <button type="button" disabled={attendanceBusy || attendanceLoading} onClick={async()=>{if(await loadAttendance())setRefreshPending(false)}}>{refreshPending?'Retry saved attendance refresh':'Retry attendance'}</button></p>}{attendanceLoading && <p role="status">Loading faculty attendance…</p>}{tab !== 'reports' && editingRecord && <fieldset disabled={attendanceBusy} style={{ border: 0, margin: 0, padding: 0 }}><AttendanceEditor busy={attendanceBusy} record={editingRecord} collegeOptions={collegeOptions} departmentOptions={departmentOptions} allFaculty={faculty} onClose={() => setEditingRecord(null)} onSave={saveAttendance} onReset={record => saveAttendance({ ...record, status: 'Not Marked' })} /></fieldset>}
+      {attendanceError && <p className="fm-error" role="alert" style={{ position: 'relative', zIndex: 1500 }}>{attendanceError} <button type="button" disabled={attendanceBusy || attendanceLoading} onClick={async()=>{if(await loadAttendance())setRefreshPending(false)}}>{refreshPending?'Retry saved attendance refresh':'Retry attendance'}</button></p>}{attendanceLoading && <p role="status">Loading faculty attendance…</p>}{tab !== 'reports' && editingRecord && !editingRecord.isNew && <fieldset disabled={attendanceBusy} style={{ border: 0, margin: 0, padding: 0 }}><AttendanceEditor busy={attendanceBusy} record={editingRecord} collegeOptions={collegeOptions} departmentOptions={departmentOptions} allFaculty={faculty} onClose={() => setEditingRecord(null)} onSave={saveAttendance} onReset={record => saveAttendance({ ...record, status: 'Not Marked' })} /></fieldset>}
+      {editingRecord?.isNew && <RecordAttendanceDialog busy={attendanceBusy} faculty={faculty} collegeOptions={collegeOptions} departmentOptions={departmentOptions} initialDate={editingRecord.date} onClose={() => setEditingRecord(null)} onSave={saveAttendance} />}
       {bulkConfirmation && (
         <ReferenceViewDialog title={`Mark ${bulkConfirmation.status} attendance?`} onClose={() => setBulkConfirmation(null)} busy={attendanceBusy} showExport={false} hideFooter><section className="fm-attendance-confirm"><div className="fm-attendance-confirm-content">
               <p className="fm-eyebrow">BULK ATTENDANCE UPDATE</p>
@@ -3133,7 +3245,7 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], 
               </p>
             </div>
           </div>
-          <div className="erp-form-scroll-body">
+          <div className="erp-form-scroll-body fm-registration-scroll">
             {step === 0 && (
               <div className="fm-photo-picker">
                 <Avatar faculty={data} large />
@@ -3161,8 +3273,8 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], 
               />
             )}
           </div>
-          {validationMessage && <div className="page-error-notice" role="alert" data-message-tone="error" style={{ margin: '12px 20px' }}><FiAlertCircle aria-hidden="true" /><span>{validationMessage}</span></div>}
-          {saveError && <div className="page-error-notice" role="alert" data-message-tone="error" style={{ margin: '12px 20px' }}><FiAlertCircle aria-hidden="true" /><span>{saveError}</span></div>}
+          {validationMessage && <div className="page-error-notice fm-registration-notice" role="alert" data-message-tone="error"><FiAlertCircle aria-hidden="true" /><span>{validationMessage}</span></div>}
+          {saveError && <div className="page-error-notice fm-registration-notice" role="alert" data-message-tone="error"><FiAlertCircle aria-hidden="true" /><span>{saveError}</span></div>}
           <footer className="fm-form-footer">
             <button type="button" className="fm-button secondary" onClick={onCancel}>Cancel</button>
             <span className="fm-muted">Step {step + 1} of {totalSteps}</span>
@@ -3471,7 +3583,7 @@ function FacultyManagement() {
     const defaultNewCategory = categoryParam || selected?.employeeCategory || selectedCategory || activeCategory || 'Teaching'
     content = (
       <>
-        <header className="faculty-page-header">
+        <header className="faculty-page-header fm-form-page-header">
           <div>
             <h1>{editId ? (defaultNewCategory === 'Non-Teaching' ? 'Edit Non-Teaching Staff' : 'Edit Teaching Faculty') : (defaultNewCategory === 'Non-Teaching' ? 'Add Non-Teaching Staff' : 'Add Teaching Faculty')}</h1>
             <p>{editId ? 'Faculty employment and profile record' : (defaultNewCategory === 'Non-Teaching' ? 'Non-teaching staff registration and employment record' : 'Teaching faculty registration and employment record')}</p>
@@ -3856,7 +3968,7 @@ function FacultyManagement() {
           ) : <strong aria-current="page">Faculty Directory</strong>}
         </nav>
       )}
-      <main className={`faculty-management${path === '/faculty' && !selectedCategory ? ' faculty-management--overview' : ''}`}>
+      <main className={`faculty-management${path === '/faculty' && !selectedCategory ? ' faculty-management--overview' : ''}${path === '/faculty' && selectedCategory ? ' faculty-management--directory' : ''}`}>
         {loadError && path !== '/faculty/new' && !editId && <p className="fm-error" role="alert">{loadError} <button type="button" onClick={() => setReloadDirectory(value => value + 1)}>Retry</button></p>}
         {loadingFaculty ? <section className="fm-panel">Loading faculty records...</section> : content}
         {assignedFaculty && (

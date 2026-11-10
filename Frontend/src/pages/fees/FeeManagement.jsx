@@ -75,6 +75,8 @@ function FeeRequestState({ loading, error, children }) {
 }
 
 const date = (val) => (val ? String(val).slice(0, 10) : "—");
+const isDemoFeeRecord = row => [row?.receiptNumber, row?.transactionReference]
+  .some(value => /^DEMO(?:_|$)/i.test(String(value || "").trim()));
 
 // Configuration forms require active years; upcoming years are not a fallback.
 const activeFeeYearOptions = (years) => academicYearUtilsModule
@@ -95,8 +97,8 @@ function calculatedFeeBatch(year, course) {
   return `${startYear}-${startYear + Math.ceil(years)}`;
 }
 
-function FeePageHeading({ title, description, icon: Icon = external3.FiCreditCard, children }) {
-  return <SharedFeeHeader title={title} subtitle={description} secondaryActions={children} />;
+function FeePageHeading({ title, description, icon: Icon = external3.FiCreditCard, compactSummary, children }) {
+  return <SharedFeeHeader title={title} subtitle={description} compactSummary={compactSummary} secondaryActions={children} />;
 }
 
 function FeeMetric({ label, value, meta, tone = "blue", icon: Icon = external3.FiBarChart2 }) {
@@ -2879,7 +2881,7 @@ export const ServerFeeCollectionModule = (() => {
             setDashData(dashRes.value);
           }
           if (histRes.status === "fulfilled" && histRes.value) {
-            setRecentPayments(histRes.value.items || []);
+            setRecentPayments((histRes.value.items || []).filter(row => !isDemoFeeRecord(row)));
           }
         })
         .catch((e) => {
@@ -2928,7 +2930,7 @@ export const ServerFeeCollectionModule = (() => {
 
       req
         .then((data) => {
-          if (active) setReportResult(data);
+          if (active) setReportResult(isTx && Array.isArray(data) ? data.filter(row => !isDemoFeeRecord(row)) : data);
         })
         .catch((err) => {
           if (active) setReportError(err.message || "Unable to load report data.");
@@ -3436,8 +3438,8 @@ export const ServerFeeCollectionModule = (() => {
                 <h2>Recent Payments</h2>
                 <p>Latest college-scoped transactions; payment history does not support academic-year filtering.</p>
               </div>
-              <Link to="/fees/students" state={{ tab: "transactions" }} className="fm-link-more">
-                View All Transactions in Student Fees →
+              <Link to="/fees/students" className="fm-link-more">
+                View Student Fee Register →
               </Link>
             </div>
 
@@ -3593,8 +3595,14 @@ export const ServerFeeCollectionModule = (() => {
 
     useEffect(() => {
       let active = true;
+      const collegeId = academic.selectedCollegeId;
+      if (!collegeId) {
+        setDailySummary(null);
+        setError("");
+        return () => { active = false; };
+      }
       feeCollectionApi
-        .dashboard({ fromDate: feeToday(), toDate: feeToday() })
+        .dashboard({ collegeId, fromDate: feeToday(), toDate: feeToday() })
         .then((res) => {
           if (active) setDailySummary(res);
         })
@@ -3606,10 +3614,18 @@ export const ServerFeeCollectionModule = (() => {
 
     useEffect(() => {
       let active = true;
+      const collegeId = academic.selectedCollegeId;
+      if (!collegeId) {
+        setResult(null);
+        setLoading(false);
+        setError("");
+        return () => { active = false; };
+      }
       setLoading(true);
       setError("");
       feeCollectionApi
         .history({
+          collegeId,
           search,
           paymentMode,
           fromDate,
@@ -3618,7 +3634,12 @@ export const ServerFeeCollectionModule = (() => {
           pageSize: 10,
         })
         .then((data) => {
-          if (active) setResult(data);
+          if (active) {
+            const items = (data?.items || []).filter((row) =>
+              !isDemoFeeRecord(row) && (row.collegeId == null || String(row.collegeId) === String(collegeId))
+            );
+            setResult({ ...data, items, totalPages: items.length ? data.totalPages : 1 });
+          }
         })
         .catch((reason) => { if (active) setError(reason.message || "Unable to load fee records. Please try again."); })
         .finally(() => {
@@ -3643,23 +3664,16 @@ export const ServerFeeCollectionModule = (() => {
     return (
       <div className="fm-page-container">
         {/* Page Header */}
-        <FeePageHeading title="Receipts & History" description="Search confirmed transactions, open official receipts and review payment methods." icon={external3.FiCreditCard} />
-        <ExportMenu title="Filtered payment history" filename="payment-history" loading={loading} unavailable={error}
-          onDownload={async options => {
-            const rows = await feeCollectionApi.allHistory({ search, paymentMode, fromDate, toDate });
-            exportUtilsModule.exportToCsv({ ...options, rows, columns: [
-              {label:'Receipt',value:'receiptNumber'},{label:'Student',value:'studentName'},
-              {label:'Date',value:'paymentDate'},{label:'Method',value:'paymentMode'},
-              {label:'Amount',value:'totalAmount'},
-            ] });
-          }}/>
-
-
-        <div className="fm-summary-strip">
-          <FeeMetric label="Collected Today" value={feeMoney(dailySummary?.totalCollected || 0)} meta="Today's collections" tone="green" icon={external3.FiDollarSign} />
-          <FeeMetric label="Payments Today" value={dailySummary?.paymentsCount || 0} meta="Recorded transactions today" icon={external3.FiCreditCard} />
-          <FeeMetric label="Receipts Issued" value={dailySummary?.receiptsCount || 0} meta="Receipts issued today" tone="lavender" icon={external3.FiFileText} />
-        </div>
+        <FeePageHeading
+          title="Receipts & History"
+          description="Search confirmed transactions, open official receipts and review payment methods."
+          icon={external3.FiCreditCard}
+          compactSummary={[
+            { label: 'Collected Today', value: dailySummary ? feeMoney(dailySummary.totalCollected ?? 0) : '—', tone: 'active' },
+            { label: 'Payments Today', value: dailySummary?.paymentsCount ?? '—' },
+            { label: 'Receipts Issued', value: dailySummary?.receiptsCount ?? '—', tone: 'warning' },
+          ]}
+        />
 
         {/* Main Content Surface */}
         <div className="fm-workspace">
@@ -3729,6 +3743,17 @@ export const ServerFeeCollectionModule = (() => {
                   setPage(1);
                 }}
               />
+              <ExportMenu title="Filtered payment history" filename="payment-history" rows={result?.items || []} loading={loading} unavailable={error}
+                onDownload={async options => {
+                  const rows = (await feeCollectionApi.allHistory({ collegeId: academic.selectedCollegeId, search, paymentMode, fromDate, toDate })).filter(row =>
+                    !isDemoFeeRecord(row) && (row.collegeId == null || String(row.collegeId) === String(academic.selectedCollegeId))
+                  );
+                  exportUtilsModule.exportToCsv({ ...options, rows, columns: [
+                    {label:'Receipt',value:'receiptNumber'},{label:'Student',value:'studentName'},
+                    {label:'Date',value:'paymentDate'},{label:'Method',value:'paymentMode'},
+                    {label:'Amount',value:'totalAmount'},
+                  ] });
+                }}/>
             </div>
           </FilterPanel>
 
@@ -3833,17 +3858,32 @@ export const ServerFeeCollectionModule = (() => {
     // Step 1: Search students
     useEffect(() => {
       let active = true;
+      const collegeId = academic.selectedCollegeId;
+      if (!collegeId) {
+        setStudentsList([]);
+        setSearching(false);
+        setError("");
+        return () => { active = false; };
+      }
       setSearching(true);
       setStudentsList([]);
       setError("");
       feeCollectionApi
         .pending({
+          collegeId,
           search: searchQuery,
           page: 1,
           pageSize: 8,
         })
         .then((res) => {
-          if (active) setStudentsList(res?.items || []);
+          if (active) {
+            const items = res?.items || [];
+            // Keep records scoped to the selected college even if an API response
+            // unexpectedly includes a row from another college.
+            setStudentsList(items.filter((item) =>
+              item.collegeId == null || String(item.collegeId) === String(collegeId)
+            ));
+          }
         })
         .catch(reason => { if (active) setError(reason.message || "Unable to search students."); })
         .finally(() => {
@@ -3866,7 +3906,7 @@ export const ServerFeeCollectionModule = (() => {
       setSelectedDues([]);
       setError("");
       feeCollectionApi
-        .allPending({ studentId: st.studentId })
+        .allPending({ studentId: st.studentId, collegeId: academic.selectedCollegeId })
         .then((dues) => {
           if (request !== duesRequest.current) return;
           dues = dues.filter(row => String(row.studentId) === String(st.studentId));
@@ -3931,9 +3971,9 @@ export const ServerFeeCollectionModule = (() => {
             <button
               type="button"
               className="fm-back-btn"
-              onClick={() => navigate("/fees/receipts")}
+              onClick={() => navigate("/fees/students")}
             >
-              <FiArrowLeft /> Back to Payments
+              <FiArrowLeft /> Back to Student Fees
             </button>
             <h1>Collect Payment</h1>
             <p>Cashier desk: search student, select unpaid items, and collect payment.</p>
@@ -5305,7 +5345,8 @@ export const FeeManagementModule = (() => {
           const failure = [pRes,hRes].find(result => result.status === 'rejected');
           if (failure) setError(failure.reason?.message || 'Some fee records could not be loaded. Retry by reopening this profile.');
           const dues = pRes.status === "fulfilled" ? pRes.value || [] : [];
-          const payments = hRes.status === "fulfilled" ? hRes.value || [] : [];
+          const payments = (hRes.status === "fulfilled" ? hRes.value || [] : (student.paymentHistory || []))
+            .filter(row => !isDemoFeeRecord(row));
           setDetails({ dues, payments });
         })
         .catch((err) => {
@@ -5321,7 +5362,8 @@ export const FeeManagementModule = (() => {
     }, [student.id]);
 
     const dues = details.dues;
-    const payments = details.payments.length > 0 ? details.payments : (student.paymentHistory || []);
+    const payments = (details.payments.length > 0 ? details.payments : (student.paymentHistory || []))
+      .filter(row => !isDemoFeeRecord(row));
 
     const categorySummary = useMemo(() => {
       const cats = {
@@ -5550,19 +5592,10 @@ export const FeeManagementModule = (() => {
   // ==========================================================================
   // STUDENT FEES MAIN DIRECTORY PAGE (`/fees/students`)
   // ==========================================================================
-  function StudentFees({ academic, ledgers, assignments, masters, students = [], structures = [] }) {
+  function StudentFees({ academic, ledgers, assignments, masters, students = [], structures = [], view = "directory" }) {
     const navigate = useNavigate();
     const location = useLocation();
-
-    const [activeView, setActiveView] = useState(
-      location.state?.tab === "transactions" ? "transactions" : "directory"
-    );
-
-    useEffect(() => {
-      if (location.state?.tab === "transactions") {
-        setActiveView("transactions");
-      }
-    }, [location.state?.tab]);
+    const activeView = view;
 
     const [query, setQuery] = useState("");
     const [academicYearId, setAcademicYearId] = useState(
@@ -5620,7 +5653,7 @@ export const FeeManagementModule = (() => {
             setError(pendingRes.reason?.message || "Unable to load fee records. Please try again.");
           }
           if (historyRes.status === "fulfilled") {
-            setServerHistory(historyRes.value || []);
+            setServerHistory((historyRes.value || []).filter(row => !isDemoFeeRecord(row)));
           }
         })
         .catch((reason) => {
@@ -5635,8 +5668,9 @@ export const FeeManagementModule = (() => {
     };
 
     useEffect(() => {
+      if (activeView !== "directory") return;
       return fetchRecords();
-    }, [academicYearId, courseId, branchId, semesterId, query, academic.selectedCollegeId]);
+    }, [activeView, academicYearId, courseId, branchId, semesterId, query, academic.selectedCollegeId]);
 
     // Unified student rows merging live server fee records, payment history, student profiles, and fee plans
     const studentRows = useMemo(() => {
@@ -5936,7 +5970,7 @@ export const FeeManagementModule = (() => {
         let receiptId = payment ? payment.receiptId : student.receiptId;
         if (!receiptId && !payment) {
           const history = await feeCollectionApi.allHistory({ studentId: student.id });
-          receiptId = history.find(row => row.receiptId)?.receiptId;
+          receiptId = history.find(row => !isDemoFeeRecord(row) && row.receiptId)?.receiptId;
         }
         if (!receiptId) throw new Error('An official receipt is unavailable for this payment.');
         const receipt = await feeCollectionApi.receipt(receiptId);
@@ -5952,6 +5986,7 @@ export const FeeManagementModule = (() => {
       setTxError("");
       feeCollectionApi
         .history({
+          collegeId: academic.selectedCollegeId,
           page: txPage,
           pageSize: 10,
           search: txQuery,
@@ -5960,7 +5995,14 @@ export const FeeManagementModule = (() => {
           toDate: txToDate,
         })
         .then((res) => {
-          if (active) setTxData(res || { items: [], total: 0, totalPages: 1 });
+          if (active) {
+            const items = (res?.items || []).filter(row =>
+              !isDemoFeeRecord(row) && (row.collegeId == null || String(row.collegeId) === String(academic.selectedCollegeId))
+            );
+            const removedFromPage = (res?.items || []).length - items.length;
+            const total = Math.max(0, Number(res?.total || 0) - removedFromPage);
+            setTxData({ ...(res || {}), items, total, totalPages: Math.max(1, Math.ceil(total / 10)) });
+          }
         })
         .catch((reason) => {
           if (active) setTxError(reason.message || "Unable to load transaction register.");
@@ -6005,40 +6047,12 @@ export const FeeManagementModule = (() => {
       <div className="fm-page-container">
         {/* Page Header */}
         <FeePageHeading
-          title="Student Fees"
-          description="Manage student fee balances, collections, and receipts."
-          icon={FiUsers}
+          title={activeView === "transactions" ? "Payments" : "Student Fees"}
+          description={activeView === "transactions" ? "Review confirmed payments, transaction references, and official receipts." : "Manage student fee balances, collections, and receipts."}
+          icon={activeView === "transactions" ? FiCreditCard : FiUsers}
         >
+          {activeView === "transactions" && <button type="button" className="erp-btn erp-btn--primary" onClick={() => navigate("/fees/collection")}><FiPlus /> Collect Payment</button>}
         </FeePageHeading>
-
-        {/* Workspace View Switcher */}
-        <div className="fm-workspace-header-row">
-          <div className="fm-workspace-tabs" role="tablist" aria-label="Student Fees Workspace Views">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeView === "directory"}
-              className={`fm-workspace-tab ${activeView === "directory" ? "is-active" : ""}`}
-              onClick={() => setActiveView("directory")}
-            >
-              <FiUsers /> Student Fee Directory
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeView === "transactions"}
-              className={`fm-workspace-tab ${activeView === "transactions" ? "is-active" : ""}`}
-              onClick={() => setActiveView("transactions")}
-            >
-              <FiCreditCard /> Transaction Register
-            </button>
-          </div>
-          <span className="fm-count-chip">
-            {activeView === "directory"
-              ? `${filteredStudents.length} Students`
-              : `${txData.total || txData.items?.length || 0} Transactions`}
-          </span>
-        </div>
 
         {/* DIRECTORY VIEW: SUMMARY CARDS + STUDENT TABLE */}
         {activeView === "directory" && (
@@ -6333,7 +6347,7 @@ export const FeeManagementModule = (() => {
           <div className="fm-workspace">
             <div className="fm-workspace-heading">
               <div>
-                <h2>Payment Transaction Register</h2>
+                <h2>Payment Register</h2>
                 <p>Audit trail of all recorded student fee payments, receipts, and payment channels.</p>
               </div>
               <span className="fm-count-chip">{txData.total || txData.items?.length || 0} Records</span>
@@ -6546,7 +6560,7 @@ export const FeeManagementModule = (() => {
             const failed = [pRes, hRes].find(res => res.status === "rejected");
             if (failed) { setError(failed.reason?.message || "Unable to load student fees."); return; }
             const dues = pRes.status === "fulfilled" ? pRes.value || [] : [];
-            const hist = hRes.status === "fulfilled" ? hRes.value || [] : [];
+            const hist = hRes.status === "fulfilled" ? (hRes.value || []).filter(row => !isDemoFeeRecord(row)) : [];
             setStudentData({ dues, payments: hist });
           })
           .catch(() => {})
@@ -7100,8 +7114,9 @@ export const FeeManagementModule = (() => {
     const ledgers = []; // Financial rows are loaded from backend fee APIs only.
 
     const feeManagementTabs = [
-      ['Overview','overview'],['Fee Types','types'],['Fee Structures','structures'],['Student Fees','students'],['Payments','collection'],['Receipts & History','receipts'],['Overdues','dues'],['Reports','reports']
+      ['Overview','overview'],['Fee Types','types'],['Student Fees','students']
     ].map(([label,path]) => ({label,to:'/fees/' + path,active:pathname === '/fees/' + path || pathname.startsWith('/fees/' + path + '/')}));
+    const showFeeManagementTabs = !pathname.startsWith('/fees/structures');
 
 
     const mutationRoute = /\/(create|edit|assignments|collection)(\/|$)/.test(pathname)
@@ -7110,13 +7125,17 @@ export const FeeManagementModule = (() => {
       <DashboardLayout>
         <main className="fs-page fm-page">
           <FeeRequestState loading={!workspaceReady} error={storageError}>
-          {(
+          {showFeeManagementTabs && (
             <nav className="fm-workspace-tabs fm-fee-workspace-nav" role="tablist" aria-label="Fee management sections">
               {feeManagementTabs.map(tab => <Link key={tab.to} to={tab.to} role="tab" aria-selected={tab.active} className={`fm-workspace-tab ${tab.active ? 'is-active' : ''}`}>{tab.label}</Link>)}
             </nav>
           )}
           <Routes>
             <Route path="types" element={<FeeTypesConfiguration />} />
+            <Route path="reports" element={<Navigate to="/fees/overview" replace />} />
+            <Route path="payments" element={<Navigate to="/fees/students" replace />} />
+            <Route path="receipts" element={<Navigate to="/fees/students" replace />} />
+            <Route path="dues" element={<Navigate to="/fees/students" replace state={{ status: "Overdue" }} />} />
             <Route index element={<Navigate to="/fees/overview" replace />} />
 
             {/* 1. OVERVIEW */}
@@ -7275,24 +7294,12 @@ export const FeeManagementModule = (() => {
               }
             />
             <Route path="concessions" element={<Navigate to="/fees/students" replace />} />
-            <Route path="dues" element={<ServerFeeCollection page="dues" academic={academic} />} />
-
-            {/* 4. PAYMENTS */}
-            <Route
-              path="receipts"
-              element={<ServerFeeCollection page="receipts" academic={academic} />}
-            />
+            {/* Payment receipts and overdue installments are available from each student's fee profile. */}
             <Route
               path="collection"
               element={<ServerFeeCollection page="collection" academic={academic} configuration={state} />}
             />
             <Route path="refunds" element={<Navigate to="/fees/students" replace />} />
-
-            {/* 5. REPORTS */}
-            <Route
-              path="reports"
-              element={<ServerFeeCollection page="reports" academic={academic} />}
-            />
 
             <Route path="*" element={<Navigate to="/fees/overview" replace />} />
           </Routes>

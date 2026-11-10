@@ -730,6 +730,15 @@ function Attendance() {
                   />
                 </label>
                 <div className="attendance-register-actions">
+                  <ExportMenu
+                    rows={filteredSessions.map(s => ({
+                      ...s,
+                      attendanceRate: attendancePercentage(s.presentCount,s.totalStudents)==null ? 'Unavailable' : attendancePercentage(s.presentCount,s.totalStudents)+'%',
+                    }))}
+                    columns={ATTENDANCE_COLUMNS}
+                    title="Attendance Register"
+                    filename="attendance-register"
+                  />
                   <button
                     type="button"
                     className={`attendance-filter-toggle${hasRegisterFilters ? ' attendance-filter-toggle--active' : ''}`}
@@ -741,15 +750,6 @@ function Attendance() {
                     {hasRegisterFilters && <span className="attendance-filter-count" aria-label="Filters applied">{[filterCourseId, filterBranchId, filterDate, fromDate, toDate, sessionStatus].filter(Boolean).length}</span>}
                     {showRegisterFilters ? <FiChevronUp aria-hidden="true" /> : <FiChevronDown aria-hidden="true" />}
                   </button>
-                  <ExportMenu
-                    rows={filteredSessions.map(s => ({
-                      ...s,
-                      attendanceRate: attendancePercentage(s.presentCount,s.totalStudents)==null ? 'Unavailable' : attendancePercentage(s.presentCount,s.totalStudents)+'%',
-                    }))}
-                    columns={ATTENDANCE_COLUMNS}
-                    title="Attendance Register"
-                    filename="attendance-register"
-                  />
                   <button
                     type="button"
                     className="erp-btn erp-btn--primary"
@@ -849,6 +849,7 @@ function Attendance() {
               ) : paginatedSessions.length === 0 ? (
                 <EmptyState
                   icon={FiCalendar}
+                  className="attendance-register-empty"
                   title="No Attendance Sessions Found"
                   subtitle="Start by recording daily class attendance using the attendance workspace."
                 />

@@ -170,5 +170,4 @@ test.each(['light', 'dark'])('%s derives distinct layout surfaces and readable t
       const [bright, dim] = [luminance(palette('--' + text)), luminance(palette('--' + background))].sort((a, b) => b - a)
       expect((bright + 0.05) / (dim + 0.05), color + ' ' + text + ' on ' + background).toBeGreaterThanOrEqual(4.5)
     }
-  }
-})
+  }})

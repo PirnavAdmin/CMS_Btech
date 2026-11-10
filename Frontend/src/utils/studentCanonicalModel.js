@@ -4,7 +4,6 @@
  */
 
 export const API_BASE_URL_FALLBACK = 'https://drivable-shaky-ferocious.ngrok-free.dev'
-
 export const apiAssetUrl = (value) => {
   if (!value || ['string', 'null', 'undefined'].includes(String(value).trim().toLowerCase())) return ''
   const str = String(value).trim()

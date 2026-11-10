@@ -487,6 +487,7 @@ function LibraryWorkspace() {
         )}
 
         {/* Top Header & Context */}
+        <div className="adv-library-top-layout">
         <div className="adv-library-header">
           <PageHeader
             breadcrumb={[
@@ -497,33 +498,9 @@ function LibraryWorkspace() {
             subtitle="Centralized catalog, physical copy tracking, circulation desk, borrower records, and analytics."
           />
 
-          <div className="adv-library-header__actions">
-            <ExportMenu
-              rows={currentList}
-              columns={libraryExportColumns[activeTab]}
-              filename={`library_${activeTab}`}
-              title={`Digital Library - ${activeTab.toUpperCase()}`}
-              directDownload
-            />
-
-            {isAdmin && (
-              <button
-                type="button"
-                className="adv-btn adv-btn--primary"
-                onClick={() => {
-                  setEditingBook(null)
-                  setAddBookModal(true)
-                }}
-              >
-                <FiPlus />
-                <span>Add Book to Catalog</span>
-              </button>
-            )}
-          </div>
         </div>
-
         {/* Executive KPI Stat Cards */}
-        <div className="adv-kpi-grid">
+        <div className="adv-kpi-grid adv-kpi-grid--library-summary">
           <div className="adv-kpi-card adv-kpi-card--blue">
             <div className="adv-kpi-card__icon">
               <FiBook />
@@ -587,6 +564,7 @@ function LibraryWorkspace() {
               </div>
             </div>
           </div>
+        </div>
         </div>
 
         {/* Informative Workspace Mode Banner */}
@@ -738,7 +716,41 @@ function LibraryWorkspace() {
           </div>
 
           {activeTab === 'catalog' && (
-            <>
+            <button
+              type="button"
+              className={`adv-btn adv-btn--filter${showFilters ? ' is-active' : ''}`}
+              aria-expanded={showFilters}
+              aria-controls="library-catalog-filters"
+              onClick={() => setShowFilters(value => !value)}
+            >
+              <FiFilter aria-hidden="true" /> Filters{activeLibraryFilterCount > 0 && <span className="adv-filter-count">{activeLibraryFilterCount}</span>}<FiChevronDown className={showFilters ? 'is-open' : ''} aria-hidden="true" />
+            </button>
+          )}
+
+          <ExportMenu
+            rows={currentList}
+            columns={libraryExportColumns[activeTab]}
+            filename={`library_${activeTab}`}
+            title={`Digital Library - ${activeTab.toUpperCase()}`}
+            directDownload
+          />
+
+          {isAdmin && (
+            <button
+              type="button"
+              className="adv-btn adv-btn--primary"
+              onClick={() => {
+                setEditingBook(null)
+                setAddBookModal(true)
+              }}
+            >
+              <FiPlus />
+              <span>Add Book to Catalog</span>
+            </button>
+          )}
+
+          {activeTab === 'catalog' && showFilters && (
+            <div className="adv-control-bar__filters" id="library-catalog-filters">
               <div className="adv-control-bar__select-group">
                 <ProjectSelect
                   value={selectedCategory}
@@ -797,7 +809,7 @@ function LibraryWorkspace() {
                   <FiList />
                 </button>
               </div>
-            </>
+            </div>
           )}
 
           <button
@@ -1864,9 +1876,19 @@ function BookFormModal({ initialData, onClose, onSave, categories = [] }) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit}><label className="adv-field"><span>Accession number *</span><input required value={accessionNo} onChange={e => setAccessionNo(e.target.value)} /></label><label className="adv-field"><span>Language *</span><input required value={language} onChange={e => setLanguage(e.target.value)} /></label>
+        <form onSubmit={handleSubmit}>
           <div className="adv-modal__body adv-form-grid">
             {error && <div className="adv-form-error">{error}</div>}
+
+            <div className="adv-form-field">
+              <label>Accession number *</label>
+              <input required value={accessionNo} onChange={e => setAccessionNo(e.target.value)} />
+            </div>
+
+            <div className="adv-form-field">
+              <label>Language *</label>
+              <input required value={language} onChange={e => setLanguage(e.target.value)} />
+            </div>
 
             <div className="adv-form-field adv-form-field--full">
               <label>Book Title *</label>
@@ -5108,6 +5130,7 @@ function PlacementWorkspace() {
       <div className="plw-workspace">
         {/* Page Header (Stats in compactSummary top-right corner) */}
         <PageHeader
+          className="plw-page-header"
           title="Campus Placements & Corporate Relations"
           subtitle="Coordinate campus recruitment drives, manage partner employers, monitor student applications, and schedule interview rounds."
           breadcrumb={[

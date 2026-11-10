@@ -6,7 +6,6 @@ import { createApiUnavailableError, notifyApiUnavailable } from '../api/apiFailu
 import { selectedCollegeId } from '../utils/collegeScope.js'
 const cleanUrl = (url) => (url || "").replace(/\/+$/, "");
 const DEFAULT_API_BASE_URL = "https://drivable-shaky-ferocious.ngrok-free.dev";
-
 const friendlyValidationMessage = (errors) => {
   if (!errors || typeof errors !== "object") return "";
   const fields = Object.keys(errors);
