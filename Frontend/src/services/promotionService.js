@@ -1,49 +1,20 @@
-import { collegeStorageKey } from '../utils/collegeScope.js'
 import { studentPromotionApi } from '../api/apiEndpoints'
 import eventBus, { ERP_EVENTS } from './eventBus'
 
-const PROMOTION_ELIGIBILITY_KEY = 'pirnav-promotion-eligibility-v1'
 
 const eligibilityKey = (studentId) => String(studentId ?? '').trim()
-const explicitlyIneligible = (student) => ['ineligible', 'not eligible'].includes(
-  String(student?.eligibilityStatus ?? student?.status ?? '').trim().toLowerCase()
-)
+const isEligible = (student) =>
+  String(student?.eligibilityStatus ?? student?.status ?? '').trim().toUpperCase() === 'ELIGIBLE'
 const semesterNumber = (value) => parseInt(String(value ?? '').replace(/\D/g, ''), 10) || 0
 
 class PromotionService {
-  getEligibilityOverrides() {
-    try {
-      const saved = JSON.parse(localStorage.getItem(collegeStorageKey(PROMOTION_ELIGIBILITY_KEY)) || '{}')
-      return saved && typeof saved === 'object' ? saved : {}
-    } catch {
-      return {}
-    }
-  }
-
-  getEligibilityOverride(studentId) {
-    return this.getEligibilityOverrides()[eligibilityKey(studentId)] || null
-  }
-
   async setEligibilityStatus(studentId, eligibilityStatus) {
     const id = eligibilityKey(studentId)
     if (!id) throw new Error('A valid student is required to update promotion eligibility.')
     const normalized = String(eligibilityStatus || '').trim().toUpperCase()
     if (!['ELIGIBLE', 'INELIGIBLE'].includes(normalized)) throw new Error('Invalid promotion eligibility status.')
 
-    // Persist through the API when it is available, while retaining the local
-    // record for offline/demo mode so a reload cannot silently re-qualify them.
-    try {
-      await studentPromotionApi.updateEligibilityStatus(id, normalized)
-    } catch (err) {
-      console.warn('Eligibility status API unavailable; saving local override:', err)
-    }
-
-    try {
-      localStorage.setItem(collegeStorageKey(PROMOTION_ELIGIBILITY_KEY), JSON.stringify({
-        ...this.getEligibilityOverrides(),
-        [id]: normalized,
-      }))
-    } catch { /* local persistence is a best-effort fallback */ }
+    await studentPromotionApi.updateEligibilityStatus(id, normalized)
     return normalized
   }
 
@@ -56,7 +27,18 @@ class PromotionService {
   }
 
   async getHistory(params = {}) {
-    return studentPromotionApi.getHistory(params)
+    const pageSize = 100
+    const history = []
+    for (let pageNumber = 1; ; pageNumber += 1) {
+      const rows = await studentPromotionApi.getHistory({ ...params, pageNumber, pageSize })
+      history.push(...rows.map(row => ({
+        ...row,
+        status: String(row.promotionStatus || row.status).toUpperCase() === 'APPROVED'
+          ? semesterNumber(row.fromSemester) > 0 && semesterNumber(row.fromSemester) === semesterNumber(row.toSemester) ? 'Completed' : 'Promoted'
+          : row.promotionStatus || row.status,
+      })))
+      if (rows.length < pageSize) return history
+    }
   }
 
   async promoteBulk(students, promotionScope) {
@@ -64,16 +46,12 @@ class PromotionService {
       throw new Error('Select at least one valid student for promotion.')
     }
 
-    const ineligibleStudents = students.filter((student) => {
-      const studentId = student.studentId ?? student.id
-      return explicitlyIneligible(student) || this.getEligibilityOverride(studentId) === 'INELIGIBLE'
-    })
-    if (ineligibleStudents.length) {
-      throw new Error('Ineligible students cannot be promoted. Remove them from the promotion selection first.')
+    if (!students.every(isEligible)) {
+      throw new Error('Every selected student must be marked eligible before promotion.')
     }
 
     const currentSemester = semesterNumber(promotionScope.currentSemester)
-    const degreeConferred = currentSemester === 8
+    const degreeConferred = promotionScope.degreeConferred === true
     const studentIds = [...new Set(students.map(student => Number(student.studentId ?? student.id)))]
     const branchId = Number(promotionScope.branchId)
     const academicYearId = Number(promotionScope.currentAcademicYearId)
