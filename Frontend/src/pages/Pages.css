@@ -26,6 +26,8 @@
 }
 
 .pirnav-login__campus {
+  --login-hero-tone: color-mix(in srgb, var(--brand-solid) 65%, black);
+  --login-hero-accent: color-mix(in srgb, var(--brand-solid) 30%, var(--text-on-dark));
   position: relative;
   min-height: 100dvh;
   overflow: hidden;
@@ -47,9 +49,8 @@
 
 .pirnav-login__campus-shade {
   z-index: 1;
-  /* The photo has natural green foliage; a navy-blue overlay keeps it on-brand. */
-  background: linear-gradient(90deg, rgba(8, 34, 62, 0.94), rgba(18, 63, 115, 0.82) 58%, rgba(43, 120, 197, 0.62)),
-              linear-gradient(0deg, rgba(15, 23, 42, 0.75), transparent 58%);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--login-hero-tone) 94%, transparent), color-mix(in srgb, var(--login-hero-tone) 82%, transparent) 58%, color-mix(in srgb, var(--brand-solid) 62%, transparent)),
+              linear-gradient(0deg, color-mix(in srgb, var(--login-hero-tone) 75%, transparent), transparent 58%);
 }
 
 .pirnav-login .login-intro__pattern {
@@ -80,10 +81,10 @@
   width: 58px;
   height: 58px;
   place-items: center;
-  border: 1px solid rgba(169, 211, 247, 0.5);
+  border: 1px solid color-mix(in srgb, var(--login-hero-accent) 50%, transparent);
   border-radius: 14px;
-  color: var(--brand);
-  background: rgba(18, 63, 115, 0.78);
+  color: var(--login-hero-accent);
+  background: color-mix(in srgb, var(--brand-solid) 78%, transparent);
   backdrop-filter: blur(8px);
 }
 
@@ -104,7 +105,7 @@
 }
 
 .pirnav-login .brand__name small {
-  color: #CFDEEF;
+  color: var(--login-hero-accent);
   font-size: 0.65rem;
   letter-spacing: 0.075em;
   text-transform: uppercase;
@@ -117,7 +118,7 @@
 
 .pirnav-login .intro-copy .eyebrow {
   margin-bottom: 16px;
-  color: var(--brand);
+  color: var(--login-hero-accent);
   font-size: 0.73rem;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -153,15 +154,15 @@
   padding: 12px 14px;
   align-items: flex-start;
   gap: 10px;
-  border: 1px solid rgba(169, 211, 247, 0.25);
+  border: 1px solid color-mix(in srgb, var(--login-hero-accent) 25%, transparent);
   border-radius: 10px;
-  background: rgba(18, 63, 115, 0.68);
+  background: color-mix(in srgb, var(--brand-solid) 68%, transparent);
   backdrop-filter: blur(9px);
 }
 
 .pirnav-campus-cards svg {
   flex: 0 0 auto;
-  color: var(--brand);
+  color: var(--login-hero-accent);
   font-size: 1.2rem;
 }
 
@@ -170,7 +171,7 @@
 }
 
 .pirnav-campus-cards small {
-  color: #CFDEEF;
+  color: var(--login-hero-accent);
   font-size: 0.58rem;
   font-weight: 750;
   text-transform: uppercase;
@@ -187,12 +188,12 @@
 .pirnav-login .copyright {
   display: flex;
   gap: 7px;
-  color: var(--text-muted);
+  color: color-mix(in srgb, var(--text-on-dark) 75%, transparent);
   font-size: 0.72rem;
 }
 
 .pirnav-login .copyright span {
-  color: var(--brand);
+  color: var(--login-hero-accent);
 }
 
 /* Right Panel */
@@ -2009,7 +2010,7 @@
   color: var(--ym-ink);
   font-family: var(--font-family);
 }
-.ym-grid-row-1 { grid-template-columns: minmax(0, 1.35fr) minmax(280px, .65fr); gap: 22px; }
+.ym-grid-row-1 { grid-template-columns: minmax(0, 1.35fr) minmax(280px, .65fr); gap: 14px; }
 .ym-welcome-card {
   grid-column: 1 / -1;
   min-height: 245px;
@@ -2048,12 +2049,12 @@
 .ym-card.ym-welcome-card .ym-hero-stat { color: var(--text-on-dark); background: var(--surface); }
 .ym-card.ym-welcome-card .ym-hero-stat strong { color: var(--text-on-dark); }
 .ym-card.ym-welcome-card .ym-hero-stat small { color: var(--text-on-dark); }
-.ym-grid-row-2 { grid-template-columns: minmax(0, 1.05fr) minmax(260px, .85fr) minmax(0, 1.05fr); }
-.ym-card { border: 1px solid var(--ym-line); border-radius: 20px; padding: 23px; background: var(--surface); box-shadow: var(--shadow-sm); transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease; }
+.ym-grid-row-2 { grid-template-columns: minmax(0, 1.05fr) minmax(260px, .85fr) minmax(0, 1.05fr); gap: 14px; }
+.ym-card { border: 1px solid var(--ym-line); border-radius: 14px; padding: 16px; background: var(--surface); box-shadow: var(--shadow-sm); transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease; }
 .ym-card:hover { transform: translateY(-2px); border-color: #d9def0; box-shadow: var(--shadow-sm); }
 .ym-card-title { color: var(--ym-ink); font-size: 1rem; font-weight: 750; letter-spacing: -.025em; }
 .text-indigo-title, .text-cyan-title, .text-emerald-title { color: var(--ym-ink); }
-.ym-card-subtitle { margin-top: 5px; color: var(--ym-muted); font-size: .76rem; font-weight: 500; }
+.ym-card-subtitle { margin: 4px 0 0; color: var(--ym-muted); font-size: .76rem; font-weight: 500; }
 .ym-card-link { color: var(--brand); }
 .link-indigo { color: var(--brand); }
 .link-emerald { color: var(--ym-teal); }
@@ -2065,7 +2066,7 @@
 .ym-bar-track { width: 14px; border-radius: 99px; background: #f0f3fa; }
 .ym-wave-footer-meta { border-color: #eef0f6; }
 .ym-refresh-icon-btn { border-color: var(--ym-line); border-radius: 10px; color: var(--ym-purple); }
-.ym-grid-row-3 { gap: 22px; }
+.ym-grid-row-3 { gap: 14px; }
 .ym-data-table { border-collapse: separate; border-spacing: 0; }
 .ym-data-table thead th { height: 40px; padding: 8px 12px; color: var(--text-secondary) !important; background: var(--table-head) !important; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; border-color: #0f3661; }
 .ym-data-table thead th:first-child { border-radius: 0; }
@@ -2089,20 +2090,25 @@
 .ym-action-icon { border-radius: 12px; }
 .ym-action-body strong { color: var(--ym-ink); font-size: .78rem; }
 .ym-action-body small { color: var(--ym-muted); }
-.ym-grid-row-1 .ym-chart-card, .ym-grid-row-1 .ym-donut-card { min-height: 300px; }
+.ym-grid-row-1 .ym-chart-card, .ym-grid-row-1 .ym-donut-card { min-height: 220px; }
 
-/* Compact the five requested dashboard cards while preserving their contents. */
+/* Consistent compact spacing across dashboard cards. */
 .ym-card.ym-card--donut1,
+.ym-card.ym-card--donut2,
+.ym-card.ym-card--inflow,
 .ym-card.ym-card--bars,
 .ym-card.ym-card--velocity,
 .ym-grid-row-3 > .ym-table-card {
-  padding: 15px 18px;
+  padding: 14px 16px;
 }
-.ym-grid-row-1 .ym-card.ym-card--donut1 { min-height: 240px; }
-.ym-card.ym-card--bars .ym-bar-chart-layout { height: 118px; }
+.ym-grid-row-1 .ym-card.ym-card--donut1 { min-height: 220px; }
+.ym-card.ym-card--bars .ym-bar-chart-layout { height: 104px; }
+.ym-dashboard-wrapper .ym-card-header { margin-bottom: 8px; }
+.ym-dashboard-wrapper .ym-donut-body { gap: 8px; }
+.ym-dashboard-wrapper .ym-donut-graphic { width: 96px; height: 96px; }
 .ym-grid-row-2,
 .ym-grid-row-3 { row-gap: 14px; }
-.ym-dashboard-wrapper { gap: 16px; }
+.ym-dashboard-wrapper { gap: 14px; }
 .ym-grid-row-3 > .ym-table-card .ym-data-table thead th { padding-block: 7px; }
 .ym-grid-row-3 > .ym-table-card .ym-data-table tbody td { padding-block: 8px; }
 
@@ -2169,10 +2175,11 @@
   align-items:center;overflow:hidden;color:var(--text-on-dark);background:var(--brand-solid);
 }
 .lp-page .lp-hero::before{
+  --lp-hero-tone:color-mix(in srgb,var(--brand-solid) 68%,black);
   position:absolute;inset:0;z-index:-2;width:auto;height:auto;border-radius:0;
   content:"";opacity:1;background-image:
-    linear-gradient(90deg,rgba(15,58,106,.99) 0%,rgba(18,63,115,.96) 34%,rgba(23,79,136,.88) 56%,rgba(23,105,194,.66) 80%,rgba(43,120,197,.52) 100%),
-    linear-gradient(0deg,rgba(15,58,106,.74),rgba(18,63,115,.24)),
+    linear-gradient(90deg,color-mix(in srgb,var(--lp-hero-tone) 99%,transparent) 0%,color-mix(in srgb,var(--lp-hero-tone) 96%,transparent) 34%,color-mix(in srgb,var(--lp-hero-tone) 88%,transparent) 56%,color-mix(in srgb,var(--brand-solid) 66%,transparent) 80%,color-mix(in srgb,var(--brand-solid) 52%,transparent) 100%),
+    linear-gradient(0deg,color-mix(in srgb,var(--lp-hero-tone) 74%,transparent),color-mix(in srgb,var(--lp-hero-tone) 24%,transparent)),
     url('../assets/college-campus-hero.png');
   background-repeat:no-repeat;background-size:cover;background-position:right center;
 }
@@ -2181,9 +2188,9 @@
   background:linear-gradient(0deg,var(--brand-dark),transparent);pointer-events:none;
 }
 .lp-hero-content{width:min(54%,650px)}
-.lp-page .lp-hero .lp-eyebrow{margin:0 0 8px;color:var(--brand)!important;line-height:1.35;letter-spacing:.1em}
+.lp-page .lp-hero .lp-eyebrow{margin:0 0 8px;color:color-mix(in srgb,var(--brand-solid) 15%,var(--text-on-dark))!important;line-height:1.35;letter-spacing:.1em}
 .lp-page .lp-hero h1{color:#f8fafc;line-height:1.08;letter-spacing:-.035em;text-shadow:0 2px 24px rgba(0,0,0,.3)}
-.lp-page .lp-hero h1 span{color:var(--brand)!important;line-height:1.12;letter-spacing:-.025em}
+.lp-page .lp-hero h1 span{color:color-mix(in srgb,var(--brand-solid) 15%,var(--text-on-dark))!important;line-height:1.12;letter-spacing:-.025em}
 .lp-page .lp-hero .lp-lead{margin:12px 0;color:var(--border);line-height:1.5;text-shadow:0 1px 14px rgba(0,0,0,.3)}
 .lp-page .lp-hero .lp-trust{margin-top:12px;color:var(--border-strong);line-height:1.4}
 .lp-page .lp-hero .lp-trust svg{color:var(--brand)}
@@ -2193,16 +2200,16 @@
 @media(max-width:900px){
   .lp-page .lp-hero{min-height:0;padding-block:32px}
   .lp-page .lp-hero::before{background-image:
-    linear-gradient(90deg,rgba(15,58,106,.99) 0%,rgba(18,63,115,.95) 48%,rgba(23,79,136,.84) 76%,rgba(43,120,197,.58) 100%),
-    linear-gradient(0deg,rgba(15,58,106,.76),rgba(18,63,115,.26)),
+    linear-gradient(90deg,color-mix(in srgb,var(--lp-hero-tone) 99%,transparent) 0%,color-mix(in srgb,var(--lp-hero-tone) 95%,transparent) 48%,color-mix(in srgb,var(--lp-hero-tone) 84%,transparent) 76%,color-mix(in srgb,var(--brand-solid) 58%,transparent) 100%),
+    linear-gradient(0deg,color-mix(in srgb,var(--lp-hero-tone) 76%,transparent),color-mix(in srgb,var(--lp-hero-tone) 26%,transparent)),
     url('../assets/college-campus-hero.png')}
   .lp-hero-content{width:min(64%,620px)}
 }
 @media(max-width:700px){
   .lp-page .lp-hero{width:100%;min-height:0;padding:32px 24px}
   .lp-page .lp-hero::before{opacity:.78;background-image:
-    linear-gradient(90deg,rgba(15,58,106,.98),rgba(18,63,115,.90)),
-    linear-gradient(0deg,rgba(15,58,106,.82),rgba(18,63,115,.50)),
+    linear-gradient(90deg,color-mix(in srgb,var(--lp-hero-tone) 98%,transparent),color-mix(in srgb,var(--lp-hero-tone) 90%,transparent)),
+    linear-gradient(0deg,color-mix(in srgb,var(--lp-hero-tone) 82%,transparent),color-mix(in srgb,var(--lp-hero-tone) 50%,transparent)),
     url('../assets/college-campus-hero.png');background-position:62% center}
   .lp-page .lp-hero-content{width:100%;max-width:620px;min-width:0}
   .lp-page .lp-hero .lp-trust{align-items:flex-start;flex-direction:row}
@@ -2236,7 +2243,7 @@
 :root:not([data-theme="dark"]) .lp-roles,:root:not([data-theme="dark"]) .lp-preview,:root:not([data-theme="dark"]) .lp-journey{background:var(--surface-soft)}
 :root:not([data-theme="dark"]) .lp-brand,:root:not([data-theme="dark"]) .lp-links a,:root:not([data-theme="dark"]) .lp-actions>a:first-child,:root:not([data-theme="dark"]) .lp-heading h2,:root:not([data-theme="dark"]) .lp-hierarchy h2,:root:not([data-theme="dark"]) .lp-architecture h2,:root:not([data-theme="dark"]) .lp-benefits h2,:root:not([data-theme="dark"]) .lp-footer strong{color:var(--brand-dark)}
 :root:not([data-theme="dark"]) .lp-page :is(.lp-journey h2,.lp-campus h2,.lp-services h2,.lp-preview h2,.lp-dash-title strong,.lp-modules h3,.lp-roles h3,.lp-programmes span,.lp-journey article span){color:var(--brand-dark)}
-:root:not([data-theme="dark"]) .lp-page .lp-hero h1{color:#f8fafc}:root:not([data-theme="dark"]) .lp-page .lp-hero h1 span{color:var(--brand)!important}
+:root:not([data-theme="dark"]) .lp-page .lp-hero h1{color:var(--text-on-dark)}
 :root:not([data-theme="dark"]) .lp-page :is(.lp-lead,.lp-heading>p,.lp-hierarchy>div>p:last-child,.lp-campus>div:last-child>p:not(.lp-eyebrow),.lp-services header>p:last-child,.lp-benefits article p,.lp-campus-list small){color:var(--text-secondary)}
 :root:not([data-theme="dark"]) .lp-links a:hover,:root:not([data-theme="dark"]) .lp-actions>a:first-child:hover{color:var(--brand)}
 :root:not([data-theme="dark"]) .lp-nav summary{color:var(--text-secondary);border-color:var(--border);background:var(--surface)}
@@ -2989,19 +2996,19 @@ html body #root .pirnav-login .login-public-actions > a.login-home-link {
   border: 1px solid var(--brand) !important;
   background: var(--brand-solid) !important;
   color: var(--text-on-dark) !important;
-  box-shadow: 0 3px 9px rgba(18, 90, 168, 0.22) !important;
+  box-shadow: 0 3px 9px color-mix(in srgb, var(--brand-solid) 22%, transparent) !important;
   transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease !important;
 }
 html body #root .pirnav-login .login-public-actions > a.login-home-link:hover {
-  border-color: #0F4F95 !important;
+  border-color: var(--brand-hover) !important;
   background: var(--brand-solid-hover) !important;
   color: var(--text-on-dark) !important;
-  box-shadow: 0 6px 14px rgba(18, 90, 168, 0.3) !important;
+  box-shadow: 0 6px 14px color-mix(in srgb, var(--brand-solid) 30%, transparent) !important;
   transform: translateY(-2px) !important;
 }
 html body #root .pirnav-login .login-public-actions > a.login-home-link:active {
   background: var(--brand-solid-active) !important;
-  box-shadow: 0 2px 5px rgba(18, 90, 168, 0.22) !important;
+  box-shadow: 0 2px 5px color-mix(in srgb, var(--brand-solid) 22%, transparent) !important;
   transform: translateY(0) !important;
 }
 .account-setup .login-panel { overflow-y: auto; align-content: start; }
@@ -3015,6 +3022,6 @@ html body #root .pirnav-login .login-public-actions > a.login-home-link:active {
 .account-setup .account-setup__success > svg { width: 36px; height: 36px; color: var(--brand); }
 .account-setup .form-error p { margin: 0; }
 .account-setup .form-error p + p { margin-top: 8px; }
-.dashboard-curriculum-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; padding:20px; margin:0; }
+.dashboard-curriculum-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; padding:10px 0; margin:0; }
 .dashboard-curriculum-summary dt { color:var(--text-muted); font-size:12px; }
 .dashboard-curriculum-summary dd { margin:4px 0 0; color:var(--text-primary); font-size:24px; font-weight:700; }

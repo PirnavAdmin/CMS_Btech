@@ -258,15 +258,18 @@
 .ac-secondary { color:var(--text-primary); background:var(--surface); }
 .ac-danger-btn { background:var(--danger-solid); border-color:var(--danger); color:var(--text-on-dark); }
 .ac-primary:disabled,.ac-secondary:disabled { opacity:.55; cursor:not-allowed; }
-.ac-review { margin:0 16px 16px; padding:12px; border:1px solid var(--border); border-radius:8px; background:var(--surface-soft); }
-.ac-review h2 { margin:0 0 4px; font-size:14px; }
+.ac-review { margin:0 16px 16px; padding:0; border:0; border-radius:0; background:transparent; }
+.ac-review h2 { margin:0 0 4px; font-size:14px; color:var(--text-primary); }
 .ac-review p { margin:0 0 12px; font-size:12px; color:var(--text-muted); }
-.ac-review-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px 20px; }
-.ac-review h3 { margin:0 0 6px; font-size:12px; }
-.ac-review dl { margin:0; }
-.ac-review dl>div { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.5fr); gap:8px; padding:4px 0; font-size:11px; }
-.ac-review dt { color:var(--text-muted); }
-.ac-review dd { margin:0; overflow-wrap:anywhere; color:var(--text-primary); }
+.ac-review-grid { display:grid; grid-template-columns:minmax(0,1fr); gap:12px; }
+.ac-review-grid>section { min-width:0; padding:0 0 10px; border-bottom:1px solid var(--border); }
+.ac-review-grid>section:last-child { padding-bottom:0; border-bottom:0; }
+.ac-review h3 { margin:0 0 6px; font-size:12px; font-weight:700; color:var(--brand); }
+.ac-review dl { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); column-gap:24px; margin:0; }
+.ac-review dl>div { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.4fr); align-items:baseline; gap:10px; padding:5px 0; font-size:12px; line-height:1.45; }
+.ac-review dt { color:var(--text-secondary); overflow-wrap:anywhere; }
+.ac-review dd { margin:0; font-weight:500; overflow-wrap:anywhere; color:var(--text-primary); }
+@media(max-width:640px) { .ac-review dl { grid-template-columns:minmax(0,1fr); } }
 .ac-submit-error { margin:0 16px 12px; padding:10px; color:var(--danger); background:var(--cms-red-soft); border:1px solid var(--danger); border-radius:8px; font-size:12px; }
 .ac-notice { margin-bottom:12px; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:12px; background:var(--surface); }
 .add-college :is(button,input,select):focus-visible,.college-management :is(button,input,select):focus-visible { outline:2px solid var(--brand); outline-offset:2px; }
@@ -5620,7 +5623,7 @@
   background: var(--surface);
 }
 .college-form-dialog .ac-upload-button { min-height: 44px; }
-.college-form-dialog .ac-review { margin: 16px 0 0; }
+.college-form-dialog .ac-review { margin: 12px 0 0; }
 .college-form-dialog .ac-submit-error { margin: 0 0 12px; }
 .ac-footer-buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-inline-start: auto; }
 .ac-step-count { color: var(--text-secondary); font-size: var(--font-caption); white-space: nowrap; }
