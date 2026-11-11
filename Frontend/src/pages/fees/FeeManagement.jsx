@@ -2018,6 +2018,19 @@ export const FeeStructureModule = (() => {
         ])
       ),
     };
+    const branchMasters = [...masters.branches, ...(masters.allBranches || [])];
+    const planCourseName = row => row.courseName || masters.courses
+      .find(item => String(item.id ?? item.courseId) === String(row.courseId))?.name || '';
+    const planBranchName = row => row.branchName || branchMasters
+      .find(item => String(item.id ?? item.branchId) === String(row.branchId))?.name || '';
+    const planDisplayName = row => {
+      const excluded = new Set([planCourseName(row), planBranchName(row), row.batch]
+        .filter(Boolean).map(value => String(value).trim().toLocaleLowerCase()));
+      const remaining = String(row.name || row.code || '').split(/\s*·\s*/)
+        .map(value => value.trim()).filter(value => value && !excluded.has(value.toLocaleLowerCase()));
+      return remaining.join(' · ') || [row.semesterName, row.academicYearName, row.quota, row.studentCategory]
+        .filter(Boolean).join(' · ') || 'Fee plan';
+    };
 
     useEffect(() => {
       let active = true;
@@ -2541,8 +2554,8 @@ export const FeeStructureModule = (() => {
                       label: "Plan Name",
                       render: (r) => (
                         <div className="fm-plan-identity">
-                          <strong title={r.name}>{r.courseName || r.name}</strong>
-                          {(r.branchName || r.batch) && <span className="fm-plan-context">{[r.branchName, r.batch].filter(Boolean).join(" · ")}</span>}
+                          <strong title={planDisplayName(r)}>{planDisplayName(r)}</strong>
+                          {r.batch && <span className="fm-plan-context">{r.batch}</span>}
                         </div>
                       ),
                     },
@@ -2555,12 +2568,17 @@ export const FeeStructureModule = (() => {
                     },
                     {
                       label: "Course / Branch",
-                      render: (r) => (
-                        <div>
-                          <span>{r.courseName || "—"}</span>
-                          <small className="fm-cell-sub">{r.branchName || "—"}</small>
-                        </div>
-                      ),
+                      render: (r) => {
+                        const courseName = r.courseName || masters.courses.find(item => String(item.id ?? item.courseId) === String(r.courseId))?.name || "—";
+                        const branchName = r.branchName || [...masters.branches, ...(masters.allBranches || [])]
+                          .find(item => String(item.id ?? item.branchId) === String(r.branchId))?.name || "—";
+                        return (
+                          <div>
+                            <span>{courseName}</span>
+                            <small className="fm-cell-sub">{branchName}</small>
+                          </div>
+                        );
+                      },
                     },
                     { label: "Batch", key: "batch" },
                     {

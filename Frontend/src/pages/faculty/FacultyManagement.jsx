@@ -2337,10 +2337,12 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], 
   }))
   const liveErrors = useMemo(() => validateFaculty(clean(data), faculty, basicTeaching), [data, faculty, basicTeaching])
   useEffect(() => {
-    // Recheck only errors already displayed, including dependent date fields.
-    // Do not show untouched required fields merely because another field changed.
+    // Keep displayed errors current, but leave a field cleared while the user
+    // edits it. The next wizard action will validate it again when requested.
     setErrors(previous => {
-      const next = Object.fromEntries(Object.keys(previous).filter(key => liveErrors[key]).map(key => [key, liveErrors[key]]))
+      const next = Object.fromEntries(Object.entries(previous)
+        .filter(([key, message]) => Boolean(message) && Boolean(liveErrors[key]))
+        .map(([key]) => [key, liveErrors[key]]))
       return JSON.stringify(next) === JSON.stringify(previous) ? previous : next
     })
   }, [liveErrors])
@@ -2424,7 +2426,11 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], 
   const isDocumentsStep = step === sections.length
   const isFinalStep = step === totalSteps - 1
   const isStepOptional = (section && !section.fields.some(([, , , required]) => required)) || isDocumentsStep
-  const validationMessage = Object.values(errors).filter(value => typeof value === 'string' && value.trim()).join(' ')
+  const validationMessage = Object.entries(errors)
+    .filter(([key, value]) => !['mobile', 'alternateMobile', 'emergencyMobile', 'email', 'personalEmail'].includes(key)
+      && typeof value === 'string' && value.trim())
+    .map(([, value]) => value)
+    .join(' ')
 
   return (
     <div className="erp-two-column-layout" data-without-live-preview="true">
