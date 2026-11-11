@@ -3682,10 +3682,20 @@ function DepartmentManagement({ inlineCreate = false, onCreated, onDismiss } = {
 
         {screen === 'form' && departmentDialog}
 
-        {screen === 'assign-hod' && <ViewDialog className="department-form-dialog" title="Assign Head / In-Charge" subtitle={form.name} onClose={closeToList} busy={isHodSaving} showExport={false} hideFooter><FormLayout onSubmit={saveHod} busy={isHodSaving} error={error} actions={<><button type="button" className="erp-btn erp-btn--secondary" onClick={closeToList} disabled={isHodSaving}>Cancel</button><button type="submit" className="erp-btn erp-btn--primary" disabled={isHodSaving || isDetailsLoading || !form.hodUserId}>{isHodSaving ? 'Saving Assignment...' : 'Assign Head'}</button></>}><p className="department-assignment-context">College: {form.collegeName || selectedCollege?.name || 'Selected college'} · Current head: {selected?.hod || 'Unassigned'}</p>{isDetailsLoading ? <AsyncState status="loading" title="Loading department leadership…" /> : <>                    <SearchableSelect
+        {screen === 'assign-hod' && <ViewDialog className="department-assign-hod-dialog" title="Assign Head / In-Charge" onClose={closeToList} busy={isHodSaving} showExport={false} maxWidth="500px" footerContent={<><button type="button" className="erp-btn erp-btn--secondary" onClick={closeToList} disabled={isHodSaving}>Cancel</button><button type="submit" form="department-hod-assignment-form" className="erp-btn erp-btn--primary" disabled={isHodSaving || isDetailsLoading || !form.hodUserId}>{isHodSaving ? 'Assigning…' : 'Assign'}</button></>}><FormLayout id="department-hod-assignment-form" className="department-assign-hod-form" onSubmit={saveHod} busy={isHodSaving} error={error}>
+          <section className="department-hod-context" aria-label="Department assignment details">
+            <div><span>Department</span><strong>{form.name || '—'}</strong></div>
+            <div><span>College</span><strong>{form.collegeName || selectedCollege?.name || 'Selected college'}</strong></div>
+            <div><span>Current Head / In-Charge</span><strong>{selected?.hod || 'Unassigned'}</strong></div>
+          </section>
+          {isDetailsLoading ? <AsyncState status="loading" title="Loading department leadership…" /> : <>
+            <div className="department-hod-field">
+              <label htmlFor="hod-faculty-search-select">Faculty Member</label>
+              <SearchableSelect
                       id="hod-faculty-search-select"
-                      label="Select Faculty Member"
+                      label="Faculty Member"
                       value={form.hodUserId ? String(form.hodUserId) : ''}
+                      menuClassName="department-hod-options"
                       options={hodCandidates.map((member) => {
                         const code = member.employeeId ? `[${member.employeeId}]` : '';
                         const subLabel = [member.designation, member.department].filter(Boolean).join('   ');
@@ -3715,8 +3725,12 @@ function DepartmentManagement({ inlineCreate = false, onCreated, onDismiss } = {
                       }}
                       placeholder="-- Select or search faculty member --"
                       searchPlaceholder="Search by name, employee code, or designation..."
-                      noOptionsMessage="No active faculty members found."
-                    />{(() => { const member = hodCandidates.find(m => String(m.hodId) === String(form.hodUserId)); return member ? <InfoCard title="Selected faculty" items={[{label:'Faculty',value:member.fullName},{label:'Employee ID',value:member.employeeId},{label:'Designation',value:member.designation},{label:'Department',value:member.department},{label:'Qualification',value:member.qualification},{label:'Official email',value:member.email}]} /> : null })()}</>}</FormLayout></ViewDialog>}
+                      noOptionsMessage="No active faculty members found"
+              />
+            </div>
+            {(() => { const member = hodCandidates.find(m => String(m.hodId) === String(form.hodUserId)); return member ? <p className="department-hod-selected"><strong>Selected:</strong> {member.fullName}{member.employeeId ? ` · ${member.employeeId}` : ''}{member.designation ? ` · ${member.designation}` : ''}</p> : null })()}
+          </>}
+        </FormLayout></ViewDialog>}
 
         {screen === 'details' && selected && <ViewDialog title="Department Details" onClose={closeToList} exportFilename={`department_${selected.id}`}><h3 className="department-detail-name">{selected.name}</h3>{isDetailsLoading ? <AsyncState status="loading" title="Loading department details…" /> : error ? <AsyncState status="error" message={error} onRetry={() => loadDetail(selected, 'details')} /> : <div className="department-detail-grid"><CompletionSummary completion={selected.completion} name={selected.name} onClick={canEditDepartment ? () => loadDetail(selected, 'form') : undefined} />
                 <InfoCard
