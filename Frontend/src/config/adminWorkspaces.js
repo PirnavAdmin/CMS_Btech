@@ -45,7 +45,5 @@ export function groupAdminWorkspaces(groups) {
     }]
   })
   if (!items.length) return []
-  const certificatesIndex = items.findIndex(item => ['workspace_administration', 'workspace_settings'].includes(item.id))
-  items.splice(certificatesIndex === -1 ? items.length : certificatesIndex, 0, { id: 'workspace_certificates', label: 'Certificates', icon: 'file-check-2', children: [], unavailable: true })
   return [{ id: 'workspaces', label: 'Management', order: 10, items }]
 }

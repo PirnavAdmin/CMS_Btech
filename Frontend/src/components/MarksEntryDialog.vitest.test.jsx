@@ -32,3 +32,26 @@ test('marks submission requires a working academic scope', async () => {
   fireEvent.submit(dialog.querySelector('form'))
   expect(await within(dialog).findByText('Select a working college and academic year before saving marks.')).toBeTruthy()
 })
+
+test('marks workflow exposes four views and opens upload from the entry toolbar', async () => {
+  render(<MemoryRouter initialEntries={['/marks-management/marks-entry']}><MarksEntry /></MemoryRouter>)
+  const navigation = screen.getByRole('navigation', { name: 'Marks management workflows' })
+  expect(within(navigation).getAllByRole('link').map(link => link.textContent)).toEqual([
+    'Marks Entry', 'Submitted Marks', 'Marks Approval', 'Publish Results',
+  ])
+  fireEvent.click(screen.getByRole('button', { name: 'Upload Marks' }))
+  const dialog = screen.getByRole('dialog', { name: 'Upload Marks' })
+  expect(within(dialog).getByRole('button', { name: 'Download CSV template' })).toBeTruthy()
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }))
+  expect(screen.queryByRole('dialog')).toBeNull()
+})
+
+test('section entry waits for the roster and scheduled marks maximum', async () => {
+  render(<MemoryRouter><MarksEntry /></MemoryRouter>)
+  fireEvent.click(await screen.findByRole('button', { name: 'Add Marks' }))
+  const dialog = within(screen.getByRole('dialog', { name: 'Add Marks Assessment' }))
+  fireEvent.click(dialog.getByRole('checkbox', { name: 'Enter marks for a section' }))
+  expect(dialog.getByText(/select a section, examination and scheduled subject/i)).toBeTruthy()
+  expect(dialog.getByRole('button', { name: 'Save Drafts' }).disabled).toBe(true)
+  expect(dialog.getByRole('button', { name: 'Submit Section Marks' }).disabled).toBe(true)
+})

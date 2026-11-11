@@ -126,15 +126,16 @@ export default function DashboardLayout({ children }) {
   const roleLabel = ['admin', 'college_admin', 'super_admin'].includes(String(userRole).toLowerCase())
     ? 'Administrator'
     : userRole.charAt(0).toUpperCase() + userRole.slice(1)
-  const pageName = ({
-    '/dashboard': 'Overview', '/academic-structure': 'Program Configuration', '/my-profile': 'My Profile', '/settings': 'Settings',
+  const isMarksWorkspace = pathname === '/marks-management' || /^\/marks-management\/(marks-entry|bulk-marks-upload|submitted-marks|marks-approval|publish-results)\/?$/.test(pathname)
+  const pageName = isMarksWorkspace ? 'Marks Management' : ({
+    '/library': 'Library Management', '/user-access': 'User Access Management', '/dashboard': 'Overview', '/academic-structure': 'Program Configuration', '/my-profile': 'My Profile', '/settings': 'Settings',
     '/college-institution-management': 'College', '/academic-year-management': 'Academic Years',
     '/student-management/attendance': 'Student Attendance',
     '/department-management': 'Departments', '/semester-management': 'Semesters', '/section-management': 'Sections',
     '/student-management/admissions': 'Student Admissions',
     '/student-management/profiles': 'Student Profiles', '/student-management/promotions': 'Student Promotions',
   })[pathname] || (pathname.startsWith('/semester-management') ? 'Semesters' : pathname.startsWith('/section-management') ? 'Sections' : pathname.startsWith('/student-management/admissions') ? 'Student Admissions' : pathname.startsWith('/student-management/profiles') ? 'Student Profiles' : pathname.startsWith('/student-management/promotions') ? 'Student Promotions' : pathname.startsWith('/faculty/') ? pathname.startsWith('/faculty/attendance') ? 'Faculty Attendance' : 'Faculty Management' : pathname.startsWith('/courses') ? 'Courses' : pathname.startsWith('/branches') ? 'Branches' : 'Digital Campus')
-  const breadcrumbSection = (userRole === 'admin' && adminWorkspaceForModule(findModuleForPath(pathname)?.id)?.label) || (['My Profile', 'Settings'].includes(pageName) ? 'Account' : pageName === 'Overview' ? 'Digital Campus' : pageName.startsWith('Student ') ? 'Student Management' : pageName.startsWith('Faculty ') ? 'Faculty' : 'Academic Configuration')
+  const breadcrumbSection = pathname === '/library' ? 'Campus Services' : pathname === '/user-access' ? 'Administration' : isMarksWorkspace ? 'Exams & Results' : (userRole === 'admin' && adminWorkspaceForModule(findModuleForPath(pathname)?.id)?.label) || (['My Profile', 'Settings'].includes(pageName) ? 'Account' : pageName === 'Overview' ? 'Digital Campus' : pageName.startsWith('Student ') ? 'Student Management' : pageName.startsWith('Faculty ') ? 'Faculty' : 'Academic Configuration')
   const financeBreadcrumbs = feeBreadcrumbs(pathname)?.map(crumb => ({ ...crumb, label: ({ 'Fee Structures': 'Fee Plans', 'Student Accounts': 'Student Fees', 'Create Fee Structure': 'Create Fee Plan', 'Edit Fee Structure': 'Edit Fee Plan', 'Structure Details': 'Fee Plan Details' })[crumb.label] || crumb.label }))
 
   // Logout confirmation state

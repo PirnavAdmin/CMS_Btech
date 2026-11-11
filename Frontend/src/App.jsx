@@ -7,7 +7,7 @@ import { Attendance, AttendanceSessionDetails } from './pages/attendance/Attenda
 import { FacultyManagement, FacultyLeaveManagement, Payroll } from './pages/faculty/FacultyManagement'
 import { ExaminationSetup, ExaminationList, CreateExamination, ExamType } from './pages/examinations/examination-setup/ExaminationSetup'
 import { ExamTimetable, ExamScheduleList, DepartmentExamSchedule, StudentExamSchedule, HallAllocation, ExamConfiguration, CompletedExams } from './pages/examinations/exam-timetable/ExamModule'
-import { MarksManagement, MarksEntry, BulkMarksUpload, EditMarks, StudentMarks, SubjectMarksReport, MarksApproval } from './pages/examinations/marks-management/MarksManagement'
+import { MarksManagement, MarksEntry, EditMarks, StudentMarks, SubjectMarksReport, MarksApproval } from './pages/examinations/marks-management/MarksManagement'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
 import ScreenPermissionBoundary from './auth/ScreenPermissionBoundary.jsx'
@@ -266,11 +266,13 @@ export default function App() {
               <Route path="/marks-management" element={<Navigate to="/marks-management/marks-entry" replace />} />
               <Route path="/marks-management/*" element={<MarksManagement />} />
               <Route path="/marks-management/marks-entry" element={<MarksEntry />} />
-              <Route path="/marks-management/bulk-marks-upload" element={<BulkMarksUpload />} />
+              <Route path="/marks-management/bulk-marks-upload" element={<MarksEntry openUpload />} />
               <Route path="/marks-management/edit-marks" element={<EditMarks />} />
               <Route path="/marks-management/student-marks" element={<StudentMarks />} />
               <Route path="/marks-management/subject-marks-report" element={<SubjectMarksReport />} />
-              <Route path="/marks-management/marks-approval" element={<MarksApproval />} />
+              <Route path="/marks-management/marks-approval" element={<MarksApproval key="approval" />} />
+              <Route path="/marks-management/submitted-marks" element={<MarksApproval key="submitted" mode="submitted" />} />
+              <Route path="/marks-management/publish-results" element={<MarksApproval key="publish" mode="publish" />} />
               <Route path="/grade-result-management" element={<GradeResultManagement />} />
               <Route path="/grade-result-management/grade-configuration" element={<GradeConfiguration />} />
               <Route path="/grade-result-management/cgpa-calculator" element={<CGPACalculatorPage />} />

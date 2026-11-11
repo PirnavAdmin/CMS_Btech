@@ -50,10 +50,9 @@ test('the merged exam workspace stays active on setup and timetable deep links',
   assert.equal(activeSidebarChild(exams, '/results/backlog-report'), 'results')
   assert.equal(activeSidebarChild(exams, '/examination-setup'), 'examinations')
 })
-test('certificates is explicitly unavailable and has no fabricated route', () => {
+test('certificates is excluded from the sidebar', () => {
   const certificates = grouped({ isSuperAdmin: true })[0].items.find(entry => entry.id === 'workspace_certificates')
-  assert.equal(certificates.unavailable, true)
-  assert.equal(certificates.path, undefined)
+  assert.equal(certificates, undefined)
   assert.deepEqual(groupAdminWorkspaces([]), [])
 })
 

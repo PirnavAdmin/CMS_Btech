@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { UserDirectory } from './UserAccessManagement'
 import { canResendInvitation, resolveOnboardingConflict } from './invitationRecovery'
 import { userDirectoryApi } from '../../api/apiEndpoints'
-import { inviteCollegeAccount, readAccountDetails } from '../../services/clientOnboardingService'
+import { inviteCollegeAccount, readAccountDetails, readAccountAccess } from '../../services/clientOnboardingService'
 vi.mock('../../api/apiEndpoints', async original => ({ ...await original(), userDirectoryApi: { getAll: vi.fn(), lookups: vi.fn(), update: vi.fn(), setStatus: vi.fn(), activity: vi.fn(), invitations: vi.fn(), onboardCollege: vi.fn(), resendInvitation: vi.fn(), resetPassword: vi.fn() } }))
 const permissions = vi.hoisted(() => ({ create: true, edit: true, export: true, platform: true }))
 vi.mock('../../auth/ScreenAccess', () => ({ useScreenAccess: () => ({ access: { isSuperAdmin: permissions.platform }, canAction: (_path, action) => permissions[action] ?? true }) }))
@@ -19,7 +19,7 @@ test('a setup email failure preserves the saved account and closes the edit work
  userDirectoryApi.update.mockResolvedValue({ userId: 71 })
  userDirectoryApi.resetPassword.mockRejectedValue(new Error('Provider unavailable'))
  render(<UserDirectory />)
- fireEvent.click(await screen.findByRole('button', { name: 'Edit College Admin' }))
+ fireEvent.change(await screen.findByLabelText('Actions for College Admin'), { target: { value: 'edit' } })
  const dialog = screen.getByRole('dialog', { name: 'Edit College Admin' })
  fireEvent.click(within(dialog).getByRole('button', { name: 'Save and send setup link' }))
  await screen.findByText(/Account details were saved\. The password setup request could not be confirmed/)
@@ -49,12 +49,15 @@ test('backend resend restrictions and cooldowns cannot be overridden by a pendin
  expect(resolveOnboardingConflict([{ ...invitation, canResend: false }], payload).match?.userId).toBe(71)
 })
 async function review() {
- render(<UserDirectory />); await screen.findByRole('heading', { name: 'User Access Management' }); await waitFor(() => expect(userDirectoryApi.getAll).toHaveBeenCalled()); fireEvent.click(screen.getByRole('button', { name: /Invite User/ }));
+ render(<UserDirectory />); await screen.findByRole('heading', { name: 'User Access Management' }); await waitFor(() => expect(userDirectoryApi.getAll).toHaveBeenCalled()); fireEvent.click(screen.getByRole('button', { name: /Add User/ }));
  const change = (label, value) => fireEvent.change(screen.getByLabelText(label), { target: { value } })
  change('Full Name', 'College Admin'); change('Official Email Address', payload.email); change('Mobile Number', payload.mobile);
  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Next' }));
+ change('College setup', 'new');
  for (const [label, value] of [['College Name', 'ABC College'], ['College Code', 'ABC'], ['University Name', 'University'], ['Address', 'College Road'], ['City', 'Hyderabad'], ['State', 'Telangana'], ['Pincode', '500001']]) change(label, value)
- fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Next' })); fireEvent.click(screen.getByRole('button', { name: 'Send Invitation' }));
+ fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Next' }));
+ fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Next' }));
+ fireEvent.click(screen.getByRole('button', { name: 'Send Invitation' }));
 }
 test('first onboarding makes one creation request and uses the server email status message', async () => {
  userDirectoryApi.onboardCollege.mockResolvedValue({ message: 'Provider accepted; delivery unconfirmed.' }); await review();
@@ -73,8 +76,8 @@ test('unrelated college email conflict never exposes recovery or triggers passwo
 })
 test('pending section shows metadata, prevents repeated clicks, and displays provider failure', async () => {
  let reject; userDirectoryApi.resendInvitation.mockImplementation(() => new Promise((_, fail) => { reject = fail }));
- render(<UserDirectory />); await screen.findByRole('heading', { name: 'User Access Management' }); await waitFor(() => expect(userDirectoryApi.getAll).toHaveBeenCalled()); fireEvent.click(screen.getByRole('button', { name: 'Pending Invitations' }));
- expect(screen.getByRole('columnheader', { name: 'Last email attempt' })).toBeTruthy(); const button = screen.getByRole('button', { name: 'Resend Invitation' }); fireEvent.click(button); fireEvent.click(button);
+ render(<UserDirectory />); await screen.findByRole('heading', { name: 'User Access Management' }); await waitFor(() => expect(userDirectoryApi.getAll).toHaveBeenCalled()); fireEvent.click(screen.getByRole('button', { name: 'Invitations' }));
+ expect(await screen.findByRole('columnheader', { name: 'Last email attempt' })).toBeTruthy(); const button = screen.getByRole('button', { name: 'Resend Invitation' }); fireEvent.click(button); fireEvent.click(button);
  expect(userDirectoryApi.resendInvitation).toHaveBeenCalledTimes(1); expect(button.disabled).toBe(true); reject(new Error('Email provider failed'));
  await screen.findByText('Email provider failed'); await waitFor(() => expect(userDirectoryApi.invitations.mock.calls.length).toBeGreaterThan(1))
 })
@@ -96,7 +99,7 @@ test('delivery failure shows saved IDs and blocks repeat onboarding when invitat
 test('existing-college invitation selects verified college and role without creating a college', async () => {
   inviteCollegeAccount.mockResolvedValue({ message: 'Provider accepted the setup request.' })
   render(<UserDirectory />)
-  fireEvent.click(await screen.findByRole('button', { name: /Invite User/ }))
+  fireEvent.click(await screen.findByRole('button', { name: /Add User/ }))
   fireEvent.change(screen.getByLabelText('Full Name'), { target: { value: 'Reviewer' } })
   fireEvent.change(screen.getByLabelText('Official Email Address'), { target: { value: 'reviewer@example.test' } })
   fireEvent.change(screen.getByLabelText('Mobile Number'), { target: { value: '9876543211' } })
@@ -104,6 +107,7 @@ test('existing-college invitation selects verified college and role without crea
   fireEvent.change(screen.getByLabelText('College setup'), { target: { value: 'existing' } })
   await screen.findByRole('option', { name: 'ABC College' })
   fireEvent.change(screen.getByLabelText('Existing College'), { target: { value: '9' } })
+  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Next' }))
   fireEvent.change(screen.getByLabelText('Access Role'), { target: { value: '2' } })
   fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Next' }))
   fireEvent.click(screen.getByRole('button', { name: 'Send Invitation' }))
@@ -119,12 +123,12 @@ test('directory filters and export share all matching account records', async ()
     { userId: 3, collegeId: 9, collegeName: 'ABC College', fullName: 'Faculty Three', roleName: 'Faculty', accountStatus: 'Active' },
   ])
   render(<UserDirectory />)
-  await screen.findByRole('button', { name: 'Edit Reviewer One' })
+  await screen.findByLabelText('Actions for Reviewer One')
   fireEvent.change(screen.getByLabelText('College'), { target: { value: '9' } })
   fireEvent.change(screen.getByLabelText('Role'), { target: { value: 'Reviewer' } })
   expect(screen.getByTestId('export-rows').textContent).toBe('1')
-  expect(screen.queryByRole('button', { name: 'Edit Reviewer Two' })).toBeNull()
-  expect(screen.queryByRole('button', { name: 'Edit Faculty Three' })).toBeNull()
+  expect(screen.queryByLabelText('Actions for Reviewer Two')).toBeNull()
+  expect(screen.queryByLabelText('Actions for Faculty Three')).toBeNull()
 })
 
 test('status changes require confirmation and the numeric backend status contract', async () => {
@@ -132,7 +136,7 @@ test('status changes require confirmation and the numeric backend status contrac
   userDirectoryApi.getAll.mockResolvedValue([account])
   userDirectoryApi.setStatus.mockResolvedValue({ success: true })
   render(<UserDirectory />)
-  const status = await screen.findByLabelText('Change College Admin status')
+  const status = await screen.findByLabelText('Actions for College Admin')
   fireEvent.change(status, { target: { value: 'deactivate' } })
   let dialog = screen.getByRole('dialog', { name: 'Confirm account status' })
   fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
@@ -149,9 +153,10 @@ test('read-only users cannot invite, edit or change account status', async () =>
   Object.assign(permissions, { create: false, edit: false, export: false })
   userDirectoryApi.getAll.mockResolvedValue([{ ...invitation, accountStatus: 'Active' }])
   render(<UserDirectory />)
-  expect((await screen.findByRole('button', { name: 'Edit College Admin' })).disabled).toBe(true)
-  expect(screen.getByRole('button', { name: /Invite User/ }).disabled).toBe(true)
-  expect(screen.getByLabelText('Change College Admin status').disabled).toBe(true)
+  const actions = await screen.findByLabelText('Actions for College Admin')
+  expect(within(actions).getByRole('option', { name: 'Edit' }).disabled).toBe(true)
+  expect(screen.getByRole('button', { name: /Add User/ }).disabled).toBe(true)
+  expect(within(actions).getByRole('option', { name: 'Suspend' }).disabled).toBe(true)
   expect(screen.queryByTestId('export-rows')).toBeNull()
 })
 
@@ -159,7 +164,7 @@ test('invitation history includes consumed records and does not enable resend', 
   userDirectoryApi.invitations.mockResolvedValue([{ ...invitation, invitationStatus: 'Accepted' }])
   render(<UserDirectory />)
   await waitFor(() => expect(userDirectoryApi.invitations).toHaveBeenCalled())
-  fireEvent.click(screen.getByRole('button', { name: 'Invitation History' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Invitations' }))
   expect(await screen.findByRole('cell', { name: 'Accepted' })).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Resend Invitation' }).disabled).toBe(true)
 })
@@ -170,7 +175,7 @@ test('role replacement preserves omitted module grants and does not offer foreig
   userDirectoryApi.update.mockResolvedValue({ userId: 71 })
   userDirectoryApi.resetPassword.mockResolvedValue({ message: 'Setup requested.' })
   render(<UserDirectory />)
-  fireEvent.click(await screen.findByRole('button', { name: 'Edit College Admin' }))
+  fireEvent.change(await screen.findByLabelText('Actions for College Admin'), { target: { value: 'edit' } })
   await screen.findByRole('option', { name: 'Global Reviewer' })
   expect(screen.queryByRole('option', { name: 'Foreign Role' })).toBeNull()
   fireEvent.change(screen.getByLabelText('Replace account role'), { target: { value: '3' } })
@@ -178,4 +183,21 @@ test('role replacement preserves omitted module grants and does not offer foreig
   await waitFor(() => expect(userDirectoryApi.update).toHaveBeenCalledOnce())
   expect(userDirectoryApi.update.mock.calls[0][1].roleIds).toEqual([3])
   expect(userDirectoryApi.update.mock.calls[0][1].permissions).toBeUndefined()
+})
+
+test('unverified access sends no platform directory requests', async () => {
+  permissions.platform = false
+  render(<UserDirectory />)
+  expect(await screen.findByText(/requires a verified Super Admin/)).toBeTruthy()
+  expect(userDirectoryApi.getAll).not.toHaveBeenCalled()
+  expect(userDirectoryApi.invitations).not.toHaveBeenCalled()
+})
+
+test('access control uses the same account directory and opens the permission editor', async () => {
+  userDirectoryApi.getAll.mockResolvedValue([{ ...invitation, accountStatus: 'Active' }])
+  readAccountAccess.mockResolvedValue([])
+  render(<UserDirectory />)
+  fireEvent.click(screen.getByRole('button', { name: 'Access Control' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Manage Access' }))
+  expect(screen.getByRole('dialog', { name: 'Account module access' })).toBeTruthy()
 })

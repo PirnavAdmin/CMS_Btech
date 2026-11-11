@@ -152,7 +152,7 @@ describe('campus screens with institutional data',()=>{
     transport.mockImplementation(url=>urlPath(url)==='/api/v1/students'?Promise.reject(Object.assign(new Error('No student permission'),{status:403})):Promise.resolve(response(urlPath(url)==='/api/v1/library/books'?[{book_id:2,college_id:1,title:'Catalog Book',author:'Author',isbn:null,category_name:'Science',total_copies:2,available_copies:1}]:[])))
     render(<MemoryRouter><LibraryWorkspace /></MemoryRouter>)
     await screen.findAllByText('Catalog Book')
-    fireEvent.change(screen.getByPlaceholderText('Search title, author, ISBN or subject...'),{target:{value:'not matching anything'}})
+    fireEvent.change(screen.getByPlaceholderText('Search title, author, ISBN or accession'),{target:{value:'not matching anything'}})
     expect(screen.queryByRole('alert')).toBeNull()
     expect(screen.getByText('Some related information is unavailable')).toBeTruthy()
   })
@@ -481,5 +481,78 @@ describe('merged grades and results workspace', () => {
     expect(screen.getByRole('cell', { name: '6.25' })).toBeTruthy()
     expect(screen.getByRole('cell', { name: '0', exact: true })).toBeTruthy()
     expect(screen.getByRole('cell', { name: 'Mid Term' })).toBeTruthy()
+  })
+})
+
+describe('library circulation and inventory', () => {
+  const book = { bookId: 2, collegeId: 1, categoryId: 5, categoryName: 'Science', title: 'Circuit Design', author: 'Author', accessionNo: 'ACC-2', totalCopies: 2, availableCopies: 2, status: true }
+  const borrower = { studentId: 7, collegeId: 1, fullName: 'Student Seven', rollNumber: 'R-7' }
+  const category = { categoryId: 5, collegeId: 1, categoryName: 'Science', status: true }
+  const resources = { books: [book], categories: [category], issues: [], fines: [] }
+
+  it('validates duplicate catalog records and updates stock without creating a title', async () => {
+    transport.mockImplementation((url, request) => {
+      const path = urlPath(url)
+      if (request?.method === 'PUT') return Promise.resolve(response(book))
+      return Promise.resolve(response(resources[path.split('/').at(-1)] || []))
+    })
+    render(<MemoryRouter><LibraryWorkspace /></MemoryRouter>)
+    await screen.findByText('Circuit Design')
+    fireEvent.click(screen.getByRole('button', { name: /Add Book/ }))
+    let dialog = within(screen.getByRole('dialog', { name: 'Add Book' }))
+    for (const [label, value] of [['Book Title', 'Circuit Design'], ['Author', 'Author'], ['Accession Number', 'ACC-2'], ['Category', '5'], ['Number of Copies', '3']]) {
+      fireEvent.change(dialog.getByLabelText(label), { target: { value } })
+    }
+    fireEvent.click(dialog.getByRole('button', { name: 'Save Book' }))
+    expect((await dialog.findByRole('alert')).textContent).toContain('A matching catalog record already exists')
+    expect(transport.mock.calls.some(([, request]) => request?.method === 'POST')).toBe(false)
+    fireEvent.click(dialog.getByRole('button', { name: 'Cancel' }))
+    fireEvent.change(screen.getByLabelText('Actions for Circuit Design'), { target: { value: 'copies' } })
+    dialog = within(screen.getByRole('dialog', { name: 'Manage Copies' }))
+    fireEvent.change(dialog.getByLabelText('Number of Copies'), { target: { value: '3' } })
+    fireEvent.click(dialog.getByRole('button', { name: 'Save Stock' }))
+    await screen.findByText('Copy stock updated.')
+    const write = transport.mock.calls.find(([, request]) => request?.method === 'PUT')
+    expect(urlPath(write[0])).toBe('/api/v1/library/books/2')
+    expect(JSON.parse(write[1].body)).toMatchObject({ collegeId: 1, totalCopies: 3 })
+  })
+
+  it('confirms issue and return using server IDs and refreshes the catalog count', async () => {
+    let issued = false
+    const loan = { issueId: 11, collegeId: 1, bookId: 2, studentId: 7, status: 'ISSUED', issueDate: '2020-01-01', dueDate: '2020-01-20' }
+    transport.mockImplementation((url, request) => {
+      const path = urlPath(url)
+      if (request?.method === 'POST') {
+        issued = path.endsWith('/issues')
+        return Promise.resolve(response(loan))
+      }
+      if (path.endsWith('/students')) return Promise.resolve(response([borrower, { ...borrower, studentId: 99, collegeId: 2, fullName: 'Foreign Student' }]))
+      if (path.endsWith('/issues')) return Promise.resolve(response(issued ? [loan] : []))
+      if (path.endsWith('/books')) return Promise.resolve(response([{ ...book, availableCopies: issued ? 1 : 2 }]))
+      return Promise.resolve(response(resources[path.split('/').at(-1)] || []))
+    })
+    render(<MemoryRouter><LibraryWorkspace /></MemoryRouter>)
+    await screen.findByText('Circuit Design')
+    fireEvent.change(screen.getByLabelText('Actions for Circuit Design'), { target: { value: 'issue' } })
+    const issue = within(screen.getByRole('dialog', { name: 'Issue Book' }))
+    expect(issue.queryByRole('option', { name: /Foreign Student/ })).toBeNull()
+    fireEvent.change(issue.getByLabelText('Borrower'), { target: { value: '7' } })
+    fireEvent.change(issue.getByLabelText('Issue Date'), { target: { value: '2020-01-01' } })
+    fireEvent.change(issue.getByLabelText('Due Date'), { target: { value: '2020-01-20' } })
+    fireEvent.click(issue.getByRole('button', { name: 'Review Issue' }))
+    expect(transport.mock.calls.some(([, request]) => request?.method === 'POST')).toBe(false)
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Confirm Issue' })).getByRole('button', { name: 'Confirm Issue' }))
+    await screen.findByText('Book issued.')
+    const issueWrite = transport.mock.calls.find(([url, request]) => urlPath(url).endsWith('/issues') && request?.method === 'POST')
+    expect(JSON.parse(issueWrite[1].body)).toMatchObject({ collegeId: 1, bookId: 2, studentId: 7 })
+    expect(within(screen.getByRole('row', { name: /Circuit Design/ })).getAllByRole('cell')[4].textContent).toBe('1')
+    fireEvent.click(screen.getByRole('button', { name: 'Issue & Return' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Return / Renew' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Return' }))
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Confirm Return' })).getByRole('button', { name: 'Confirm Return' }))
+    await screen.findByText('Book returned.')
+    expect(transport.mock.calls.some(([url, request]) => urlPath(url).endsWith('/issues/11/return') && request?.method === 'POST')).toBe(true)
+    fireEvent.click(screen.getByRole('button', { name: 'Books' }))
+    expect(within(screen.getByRole('row', { name: /Circuit Design/ })).getAllByRole('cell')[4].textContent).toBe('2')
   })
 })

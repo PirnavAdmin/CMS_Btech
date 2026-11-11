@@ -71,25 +71,72 @@ export const statusLabel = value => String(value || '').toLowerCase().replace(/_
 export const statusCode = value => String(value || '').trim().replace(/\s+/g, '_').toUpperCase()
 
 export async function loadLibrary(scope) {
-  requireId(scope.collegeId, 'college')
-  const {values:{books,issues,fines,categories,students},resourceErrors} = await readModuleResources({
-    books:()=>list('library/books', {collegeId:scope.collegeId}), issues:()=>list('library/issues', {collegeId:scope.collegeId}), fines:()=>list('library/fines', {collegeId:scope.collegeId}), categories:()=>list('library/categories', {collegeId:scope.collegeId}), students:()=>list('students', {collegeId:scope.collegeId}),
+  const collegeId = requireId(scope.collegeId, 'college')
+  const { values, resourceErrors } = await readModuleResources({
+    books: () => list('library/books', { collegeId }),
+    issues: () => list('library/issues', { collegeId }),
+    fines: () => list('library/fines', { collegeId }),
+    categories: () => list('library/categories', { collegeId }),
+    students: () => list('students', { collegeId }),
   })
-  const borrowers = students.filter(s => String(s.collegeId) === String(scope.collegeId)).map(s => ({ ...s, id: String(s.studentId ?? s.id), code: s.rollNumber || s.admissionNumber || String(s.studentId ?? s.id), name: s.studentName || s.fullName || s.name, type: 'Student', status: 'Active', activeLoans: issues.filter(i => String(i.studentId) === String(s.studentId ?? s.id) && i.status !== 'RETURNED').length }))
-  return {
-    resourceErrors,
-    categories,
-    books: books.map(b => ({ ...b, id: String(b.bookId), category: b.categoryName, rack: b.shelfLocation || '', availableCopies: Number(b.availableCopies), issuedCopies: Number(b.totalCopies) - Number(b.availableCopies), coverColor: '#1e3a8a', accentColor: '#3b82f6' })),
-    copies: [], reservations: [], reports: [], borrowers,
-    circulation: issues.map(i => ({ ...i, id: String(i.issueId), borrowerId: String(i.studentId), borrowerName: borrowers.find(b => b.id === String(i.studentId))?.name || `Student ${i.studentId}`, borrowerType: 'Student', bookTitle: i.title, accession: i.accessionNo, issueDate: dateOnly(i.issueDate), dueDate: dateOnly(i.dueDate), status: ({ ISSUED: 'Active', OVERDUE: 'Overdue', RETURNED: 'Returned' })[i.effectiveStatus || i.status] || i.status, fineAccrued: fines.filter(f => String(f.issueId) === String(i.issueId)).reduce((sum, f) => sum + Number(f.balance || 0), 0) })),
-    fines: fines.map(f => { const issue = issues.find(i => String(i.issueId) === String(f.issueId)); const paymentStatus = ({ PAID: 'Paid', UNPAID: 'Pending', PARTIALLY_PAID: 'Pending', WAIVED: 'Waived' })[f.status] || f.status; return { ...f, id: String(f.fineId), borrowerName: borrowers.find(b => b.id === String(f.studentId))?.name || `Student ${f.studentId}`, borrowerId: String(f.studentId), accession: issue?.accessionNo || '', bookTitle: issue?.title || '', overdueDays: issue?.overdueDays || 0, calculatedOn: dateOnly(f.assessedDate), amount: Number(f.fineAmount), paidAmount: Number(f.paidAmount), paymentStatus, status: paymentStatus } }),
-  }
+  const belongs = row => Number(row.collegeId) === collegeId
+  const borrowers = values.students.filter(belongs).map(row => ({
+    ...row, id: String(row.studentId ?? row.id),
+    code: row.rollNumber || row.admissionNumber || row.studentCode || String(row.studentId ?? row.id),
+    name: row.studentName || row.fullName || row.name,
+    department: row.departmentName || row.branchName, type: 'Student',
+  }))
+  const books = values.books.filter(belongs).map(row => ({
+    ...row, id: String(row.bookId), category: row.categoryName, rack: row.shelfLocation || '',
+    totalCopies: Number(row.totalCopies), availableCopies: Number(row.availableCopies),
+    issuedCopies: Number(row.totalCopies) - Number(row.availableCopies),
+  }))
+  const bookById = new Map(books.map(book => [String(book.bookId), book]))
+  const borrowerById = new Map(borrowers.map(row => [row.id, row]))
+  const circulation = values.issues.filter(belongs).map(row => {
+    const borrower = borrowerById.get(String(row.studentId))
+    const book = bookById.get(String(row.bookId))
+    return {
+      ...row, id: String(row.issueId), borrowerId: String(row.studentId),
+      borrowerName: borrower?.name || 'Student ' + row.studentId, borrowerCode: borrower?.code || String(row.studentId),
+      department: borrower?.department, borrowerType: 'Student',
+      category: book?.category, bookTitle: row.title || book?.title, accession: row.accessionNo || book?.accessionNo,
+      issueDate: dateOnly(row.issueDate), dueDate: dateOnly(row.dueDate), returnDate: dateOnly(row.returnDate),
+      status: ({ ISSUED: 'Issued', OVERDUE: 'Overdue', RETURNED: 'Returned', LOST: 'Lost', CANCELLED: 'Cancelled' })[row.effectiveStatus || row.status] || row.status,
+    }
+  })
+  const issueById = new Map(circulation.map(row => [row.id, row]))
+  const fines = values.fines.filter(belongs).map(row => {
+    const issue = issueById.get(String(row.issueId))
+    return {
+      ...row, id: String(row.fineId), borrowerId: String(row.studentId),
+      borrowerName: issue?.borrowerName || borrowerById.get(String(row.studentId))?.name || 'Student ' + row.studentId,
+      borrowerCode: issue?.borrowerCode, department: issue?.department, borrowerType: 'Student',
+      accession: issue?.accession, bookTitle: issue?.bookTitle, category: issue?.category,
+      overdueDays: issue?.overdueDays, dueDate: issue?.dueDate,
+      assessedDate: dateOnly(row.assessedDate), amount: Number(row.fineAmount), paidAmount: Number(row.paidAmount),
+      balance: Number(row.balance), status: statusLabel(row.status),
+    }
+  })
+  return { resourceErrors, books, borrowers, circulation, fines, categories: values.categories.filter(belongs) }
 }
+
 export async function saveBook(form, old, scope, categories) {
-  const category = categories.find(c => c.categoryName === form.category || String(c.categoryId) === String(form.categoryId))
-  const body = { ...old, ...form, collegeId: requireId(scope.collegeId, 'college'), categoryId: requireId(category?.categoryId, 'library category'), accessionNo: form.accessionNo || old?.accessionNo, language: form.language || old?.language || 'English', shelfLocation: form.rack, totalCopies: Number(form.totalCopies), status: old?.status !== false && old?.status !== 0 }
+  const category = categories.find(row => String(row.categoryId) === String(form.categoryId) ||
+    (!form.categoryId && form.category && row.categoryName === form.category))
+  const body = {
+    collegeId: requireId(scope.collegeId, 'college'), categoryId: requireId(category?.categoryId, 'library category'),
+    accessionNo: String(form.accessionNo || old?.accessionNo || '').trim(),
+    title: String(form.title || '').trim(), author: String(form.author || '').trim(),
+    isbn: form.isbn?.trim() || null, language: form.language?.trim() || 'English',
+    publisher: form.publisher?.trim() || null, edition: form.edition?.trim() || null,
+    publicationYear: form.publicationYear ? Number(form.publicationYear) : null,
+    shelfLocation: form.rack?.trim() || null, description: form.description?.trim() || null,
+    price: old?.price ?? null, totalCopies: Number(form.totalCopies),
+    status: old?.status !== false && old?.status !== 0,
+  }
   if (!body.accessionNo) throw new Error('Accession number is required.')
-  await call(`library/books${old ? `/${requireId(old.id)}` : ''}`, { method: old ? 'PUT' : 'POST', body })
+  return call('library/books' + (old ? '/' + requireId(old.id) : ''), { method: old ? 'PUT' : 'POST', body })
 }
 
 export async function loadMeetingsEvents(scope) {
