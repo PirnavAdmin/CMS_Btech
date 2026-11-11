@@ -3130,8 +3130,8 @@ function FacultyManagement() {
                             </div>
                           </div>
                         </td>
-                        <td className="fm-department">{departmentOptions.find(d => String(d.value) === String(item.departmentId || item.department))?.label || item.department || '—'}</td>
-                        <td>{item.designation || '—'}</td>
+                        <td className="fm-department" title={departmentOptions.find(d => String(d.value) === String(item.departmentId || item.department))?.label || item.department || ''}>{departmentOptions.find(d => String(d.value) === String(item.departmentId || item.department))?.label || item.department || '—'}</td>
+                        <td className="fm-designation" title={item.designation || ''}>{item.designation || '—'}</td>
                         <td>{years(item.experience)}</td>
                         <td>{item.employmentType || '—'}</td>
                         <td className="table-center"><StatusBadge value={item.employmentStatus} /></td>
