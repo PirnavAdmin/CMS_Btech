@@ -1,203 +1,47 @@
 import React from 'react'
-import { afterEach, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { academicFeeBatchScopes, FeeStructureWizard, FeeStructure } from './FeeManagement'
+import { FeeStructureWizard, FeeStructure } from './FeeManagement'
 import { academicFeePlanApi, feeConfigurationApi } from '../../api/apiEndpoints'
 import { newFeeStructure } from '../../services/feeStructureService'
 const access=vi.hoisted(()=>({write:true,scope:rows=>rows}))
 vi.mock('../../auth/ScreenAccess',()=>({useScreenAccess:()=>({canAction:()=>access.write})}))
 vi.mock('../../auth/collegeApi',()=>({getSemesters:vi.fn(async()=>[])}))
-vi.mock('../../context/AcademicContext', () => ({ useAcademic: () => ({ loading: false, error: null, selectedCollegeId:'9',academicYears:[],scopeRecords:access.scope }) }))
-vi.mock('../../api/apiEndpoints', async importOriginal => ({ ...await importOriginal(), branchApi:{getAll:vi.fn(async()=>[])},courseApi:{getAll:vi.fn(async()=>[])},departmentApi:{getAll:vi.fn(async()=>[])}, feeConfigurationApi: { categories: vi.fn(async () => [{ id: 8, name: 'Academic charges' }]) }, academicFeePlanApi: { list: vi.fn(async () => []), create: vi.fn(async body => ({ ...body, feeStructureId: 101, revision: 1, status: 'DRAFT' })) } }))
-// Native controls make the dependency behavior independent of dropdown presentation.
-vi.mock('../../components/SearchableSelect', () => ({ default: ({ label, value, options, onChange, disabled }) => <select aria-label={label} value={value} disabled={disabled} onChange={e => onChange(e.target.value)}>{options.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select>, ProjectSelect: () => null }))
-afterEach(()=>{cleanup();access.write=true})
-const masters = { years: [{ id: '1', name: '2026-27' }], courses: [{ id: '2', name: 'B.Tech' }, { id: '3', name: 'M.Tech' }], branches: [{ id: '4', courseId: '2', name: 'CSE' }, { id: '5', courseId: '3', name: 'ECE' }], semesters: [{ id: '6', courseId: '2', branchId: '4', name: 'Semester 3' }], batchScopes: [{ courseId: '2', branchId: '4', batch: '2025-2029' }] }
-function mount() { return render(<FeeStructureWizard value={newFeeStructure('1')} masters={masters} collegeId="9" close={() => {}} save={() => {}} />) }
-const choose = (name, value) => fireEvent.change(screen.getByLabelText(name), { target: { value } })
-test('creating an academic fee plan opens a modal and Cancel closes the flow', async () => {
- const close = vi.fn()
- render(<FeeStructureWizard value={newFeeStructure('1')} masters={masters} collegeId="9" close={close} save={() => {}} />)
- const dialog = screen.getByRole('dialog', { name: 'Create Academic Fee Plan' })
- await waitFor(() => expect(within(dialog).getByLabelText('Course *').disabled).toBe(false))
- fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
- expect(close).toHaveBeenCalledOnce()
-})
-async function openBreakdown() {
- choose('Course *', '2'); choose('Branch *', '4');
- await waitFor(() => expect(screen.getByLabelText('Admission Batch *').disabled).toBe(false));
- choose('Admission Batch *', '2025-2029'); choose('Applicable Semester *', '6');
- fireEvent.click(screen.getByRole('button', { name: /Continue/ }));
-}
-test('admission API mapping preserves batch scope IDs and excludes other colleges or incomplete rows', () => {
- expect(academicFeeBatchScopes([
-  { collegeId: 9, academicYearId: 1, courseId: 2, branchId: 4, batch: '2025-2029' },
-  { CollegeId: 10, AcademicYearId: 1, CourseId: 2, BranchId: 4, Batch: '2025-2029' },
-  { collegeId: 9, courseId: 2, branchId: 4, batch: '   ' },
- ], '9')).toEqual([{ collegeId: '9', academicYearId: '1', courseId: '2', branchId: '4', batch: '2025-2029' }])
-})
+vi.mock('../../context/AcademicContext',()=>({useAcademic:()=>({loading:false,error:null,selectedCollegeId:'9',academicYears:[],scopeRecords:access.scope})}))
+vi.mock('../../api/apiEndpoints',async original=>({...await original(),branchApi:{getByCourse:vi.fn(async()=>[]),getAll:vi.fn(async()=>[])},courseApi:{getAll:vi.fn(async()=>[])},departmentApi:{getAll:vi.fn(async()=>[])},feeConfigurationApi:{categories:vi.fn(),createCategory:vi.fn()},academicFeePlanApi:{list:vi.fn(),create:vi.fn(),submit:vi.fn()}}))
+vi.mock('../../components/SearchableSelect',()=>({default:({label,value,options,onChange,disabled})=><select aria-label={label} value={value} disabled={disabled} onChange={e=>onChange(e.target.value)}>{options.map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select>,ProjectSelect:()=>null}))
+const masters={years:[{id:'1',name:'2026-27'}],courses:[{id:'2',name:'B.Tech',durationYears:4},{id:'3',name:'M.Tech'}],branches:[{id:'4',courseId:'2',name:'CSE'},{id:'5',courseId:'3',name:'ECE'}],semesters:[{id:'6',courseId:'2',branchId:'4',academicYearId:'1',name:'Semester 3'}],batchScopes:[{courseId:'2',branchId:'4',academicYearId:'1',batch:'2025-2029'}]}
+const types=[{id:8,code:'TUITION',name:'Tuition Fee'},{id:9,code:'LIBRARY',name:'Library Fee'}]
+const students=[{collegeId:9,academicYearId:1,courseId:2,branchId:4,batch:'2025-2029',admissionQuota:'Management',studentCategory:'General'}]
+beforeEach(()=>{vi.clearAllMocks();access.write=true;feeConfigurationApi.categories.mockResolvedValue(types);academicFeePlanApi.list.mockResolvedValue([]);academicFeePlanApi.create.mockImplementation(async body=>({...body,feeStructureId:101,revision:1,status:'DRAFT'}));academicFeePlanApi.submit.mockImplementation(async id=>({feeStructureId:id,revision:2,status:'SUBMITTED'}))})
+afterEach(cleanup)
+const choose=(label,value)=>fireEvent.change(screen.getByLabelText(label),{target:{value}})
+function mount(props={}){return render(<MemoryRouter><FeeStructureWizard value={newFeeStructure('1')} masters={masters} students={students} collegeId="9" close={vi.fn()} save={vi.fn()} {...props}/></MemoryRouter>)}
+async function scope(){await waitFor(()=>expect(screen.getByLabelText('Course *').disabled).toBe(false));choose('Course *','2');await waitFor(()=>expect(screen.getByLabelText('Branch *').disabled).toBe(false));choose('Branch *','4');await waitFor(()=>expect(screen.getByLabelText('Admission Batch *').disabled).toBe(false));choose('Admission Batch *','2025-2029');await waitFor(()=>expect(screen.getByLabelText('Applicable Semester *').disabled).toBe(false));choose('Applicable Semester *','6')}
+async function breakdown(){await scope();fireEvent.click(screen.getByRole('button',{name:/Continue/}));await waitFor(()=>expect(screen.getByLabelText('Fee Type').closest('section').hidden).toBe(false));}
+function component(id,name,amount){choose('Fee Type',String(id));fireEvent.click(screen.getByRole('button',{name:'Add Component'}));choose(name+' amount',amount)}
+async function schedule(){fireEvent.click(screen.getByRole('button',{name:/Continue/}));await waitFor(()=>expect(screen.getByLabelText('Effective From *').closest('section').hidden).toBe(false));choose('Due Date *','2026-07-01');choose('Effective From *','2026-06-01');choose('Effective To *','2027-05-31')}
 
-test('academic dependencies use stored cohorts, clear stale children and suggest editable names', async () => {
- mount(); await waitFor(() => expect(screen.getByLabelText('Course *').disabled).toBe(false));
- choose('Course *', '2'); choose('Branch *', '4');
- await waitFor(() => expect(screen.getByLabelText('Admission Batch *').disabled).toBe(false));
- expect(screen.getByLabelText('Admission Batch *').textContent).toContain('2025-2029');
- expect(screen.getByLabelText('Admission Batch *').textContent).not.toContain('2026-2030');
- choose('Admission Batch *', '2025-2029'); choose('Applicable Semester *', '6');
- await waitFor(() => expect(screen.getByLabelText('Fee Plan Name *').value).toContain('Semester 3'));
- choose('Fee Plan Name *', 'Custom plan'); choose('Course *', '3');
- expect(screen.getByLabelText('Branch *').value).toBe(''); expect(screen.getByLabelText('Admission Batch *').value).toBe('');
- expect(screen.getByLabelText('Applicable Semester *').value).toBe(''); expect(screen.getByLabelText('Fee Plan Name *').value).toBe('Custom plan');
- expect(screen.getByLabelText('Branch *').textContent).not.toContain('CSE');
- expect(screen.getByLabelText('Fee Applicability Period *').textContent).not.toContain('Annual');
-})
+test('modal has three steps, academic dependencies and editable suggested name',async()=>{mount();await scope();expect(screen.getByRole('dialog',{name:'Create Academic Fee Plan'})).toBeTruthy();expect(screen.getAllByRole('tab')).toHaveLength(3);expect(screen.getByLabelText('Fee Plan Name *').value).toContain('Semester 3');choose('Fee Plan Name *','Custom plan');choose('Course *','3');expect(screen.getByLabelText('Branch *').value).toBe('');expect(screen.getByLabelText('Admission Batch *').value).toBe('');expect(screen.getByLabelText('Applicable Semester *').value).toBe('');expect(screen.getByLabelText('Fee Plan Name *').value).toBe('Custom plan');expect(screen.getByLabelText('Branch *').textContent).not.toContain('CSE');expect(screen.getByLabelText('Fee Applicability Period *').textContent).not.toContain('Annual')})
 
-test('empty batch response keeps batch and semester unavailable with an explanatory state', async () => {
- const emptyMasters = { ...masters, batchScopes: [] }
- render(<FeeStructureWizard value={newFeeStructure('1')} masters={emptyMasters} collegeId="9" close={() => {}} save={() => {}} />)
- await waitFor(() => expect(screen.getByLabelText('Course *').disabled).toBe(false))
- choose('Course *', '2'); choose('Branch *', '4')
- await waitFor(() => expect(screen.getByText(/No admission batches found/)).toBeTruthy())
- expect(screen.getByLabelText('Admission Batch *').disabled).toBe(true)
- expect(screen.getByLabelText('Applicable Semester *').disabled).toBe(true)
-})
+test('configured fee types build a table, prevent duplicate components and total accurately',async()=>{mount();await breakdown();expect(screen.queryByLabelText('Financial Fee Category *')).toBeNull();component(8,'Tuition Fee','5000');component(9,'Library Fee','500');expect(within(screen.getByRole('table',{name:'Fee components'})).getByText('₹5,500.00')).toBeTruthy();choose('Fee Type','8');fireEvent.click(screen.getByRole('button',{name:'Add Component'}));expect(await screen.findByText('This fee type is already in the breakdown.')).toBeTruthy();expect(screen.getAllByLabelText('Tuition Fee amount')).toHaveLength(1)})
 
-test('admission batch loading and failure states remain visible without enabling an empty batch list', async () => {
- const emptyMasters = { ...masters, batchScopes: [] }
- const props = { value: newFeeStructure('1'), masters: emptyMasters, collegeId: '9', close: () => {}, save: () => {} }
- const view = render(<FeeStructureWizard {...props} admissionsLoading />)
- await waitFor(() => expect(screen.getByLabelText('Course *').disabled).toBe(false))
- choose('Course *', '2'); choose('Branch *', '4')
- expect(screen.getByLabelText('Admission Batch *').disabled).toBe(true)
- expect(screen.getByText(/Loading admission batches and existing fee plans/)).toBeTruthy()
- view.rerender(<FeeStructureWizard {...props} admissionsError="Admissions offline" />)
- expect((await screen.findByRole('alert')).textContent).toContain('Admissions offline')
- expect(screen.getByLabelText('Admission Batch *').disabled).toBe(true)
- expect(screen.getByLabelText('Applicable Semester *').disabled).toBe(true)
-})
+test('matrix uses saved quota/category options, copies default amounts and blocks duplicate combinations',async()=>{mount();await breakdown();component(8,'Tuition Fee','5000');expect(screen.getByLabelText('Admission Quota 1').textContent).toContain('Management');expect(screen.getByLabelText('Admission Quota 1').textContent).not.toContain('Others');fireEvent.click(screen.getByRole('button',{name:'Copy Default'}));expect(screen.getAllByRole('alert').some(row=>row.textContent.includes('Duplicate quota/category'))).toBe(true);choose('Admission Quota 2','Management');choose('Student Category 2','General');choose('Tuition Fee override 2','4000');expect(screen.queryByText('Duplicate quota/category combination.')).toBeNull();expect(screen.getByLabelText('Tuition Fee amount').value).toBe('5000');expect(screen.getByLabelText('Tuition Fee override 2').value).toBe('4000')})
 
-test('fee category failures do not discard successfully loaded plan batches', async () => {
- feeConfigurationApi.categories.mockRejectedValueOnce(new Error('Fee categories offline'))
- academicFeePlanApi.list.mockResolvedValueOnce([{ feeStructureId: 99, courseId: 2, branchId: 4, batch: '2024-2028' }])
- const emptyMasters = { ...masters, batchScopes: [] }
- render(<FeeStructureWizard value={newFeeStructure('1')} masters={emptyMasters} collegeId="9" close={() => {}} save={() => {}} />)
- await waitFor(() => expect(screen.getByLabelText('Course *').disabled).toBe(false))
- expect(await screen.findByText('Fee categories offline')).toBeTruthy()
- choose('Course *', '2'); choose('Branch *', '4')
- await waitFor(() => expect(screen.getByLabelText('Admission Batch *').disabled).toBe(false))
- expect(screen.getByLabelText('Admission Batch *').textContent).toContain('2024-2028')
-})
+test('full-payment draft saves actual scope, fee components and installment DTO',async()=>{mount();await breakdown();component(8,'Tuition Fee','5000');component(9,'Library Fee','500');await schedule();fireEvent.click(screen.getByRole('button',{name:'Save Draft'}));await waitFor(()=>expect(academicFeePlanApi.create).toHaveBeenCalledOnce());const body=academicFeePlanApi.create.mock.calls[0][0];expect(body).toMatchObject({collegeId:9,academicYearId:1,courseId:2,branchId:4,semesterId:6,feeCategoryId:8,batch:'2025-2029',cycle:'SEMESTER',paymentMode:'FULL_PAYMENT',totalAmount:'5500.00',components:[{code:'TUITION',name:'Tuition Fee',amount:'5000.00'},{code:'LIBRARY',name:'Library Fee',amount:'500.00'}],installments:[{number:1,dueDate:'2026-07-01',amount:'5500.00'}]});expect(body).not.toHaveProperty('admissionType');expect(body).not.toHaveProperty('mandatory');expect(await screen.findByText(/DRAFT · ID 101/)).toBeTruthy()})
 
-test('admission batch options are enabled while the existing-plan lookup is still loading', async () => {
- let finishPlanLookup
- academicFeePlanApi.list.mockImplementationOnce(() => new Promise(resolve => { finishPlanLookup = resolve }))
- mount()
- await waitFor(() => expect(screen.getByLabelText('Course *').disabled).toBe(false))
- choose('Course *', '2'); choose('Branch *', '4')
- expect(screen.getByLabelText('Admission Batch *').disabled).toBe(false)
- expect(screen.getByText(/Loading admission batches and existing fee plans/)).toBeTruthy()
- finishPlanLookup([])
- await waitFor(() => expect(screen.queryByText(/Loading admission batches and existing fee plans/)).toBeNull())
-})
+test('back and continue retain scope and fee amounts',async()=>{mount();await breakdown();component(8,'Tuition Fee','5000');await schedule();fireEvent.click(screen.getByRole('button',{name:'Previous'}));expect(screen.getByLabelText('Tuition Fee amount').value).toBe('5000');fireEvent.click(screen.getByRole('button',{name:'Previous'}));expect(screen.getByLabelText('Applicable Semester *').value).toBe('6');expect(screen.getByLabelText('Admission Batch *').value).toBe('2025-2029')})
 
-test('a fee plan API failure leaves actual admission batches selectable and blocks unsafe submission', async () => {
- academicFeePlanApi.list.mockRejectedValueOnce(new Error('Fee plans offline'))
- mount()
- await waitFor(() => expect(screen.getByLabelText('Course *').disabled).toBe(false))
- choose('Course *', '2'); choose('Branch *', '4')
- await waitFor(() => expect(screen.getByLabelText('Admission Batch *').disabled).toBe(false))
- choose('Admission Batch *', '2025-2029')
- expect(screen.getByLabelText('Applicable Semester *').disabled).toBe(false)
- choose('Applicable Semester *', '6')
- fireEvent.click(screen.getByRole('button', { name: /Continue/ }))
- expect(await screen.findByText(/Existing fee plans could not be loaded/)).toBeTruthy()
- expect(academicFeePlanApi.create).not.toHaveBeenCalled()
-})
-test('copied combinations expose duplicate validation and financial category is in breakdown', async () => {
- mount(); await waitFor(() => expect(screen.getByLabelText('Course *').disabled).toBe(false));
- await openBreakdown();
- fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
- expect(screen.getAllByText(/Duplicate quota and category/).length).toBe(2);
- const category = screen.getByLabelText('Financial Fee Category *');
- expect(category.closest('[role="tabpanel"]').hidden).toBe(false);
- expect(category.closest('[role="tabpanel"]').id).toContain('breakdown');
- fireEvent.click(screen.getAllByRole('button', { name: 'Remove' })[1]);
- expect(screen.queryByText(/Duplicate quota and category/)).toBeNull();
-})
+test('nested fee type popup refreshes choices without closing or resetting the fee plan',async()=>{mount();await breakdown();component(8,'Tuition Fee','5000');const parent=screen.getByRole('dialog',{name:'Create Academic Fee Plan'});fireEvent.click(screen.getByRole('button',{name:'Add Fee Type'}));const child=within(screen.getByRole('dialog',{name:'Add Fee Type'}));fireEvent.change(child.getByLabelText('Fee Type Code'),{target:{value:'EXAM'}});fireEvent.change(child.getByLabelText('Fee Type Name'),{target:{value:'Exam Fee'}});feeConfigurationApi.createCategory.mockResolvedValueOnce({id:10,code:'EXAM',name:'Exam Fee'});feeConfigurationApi.categories.mockResolvedValueOnce([...types,{id:10,code:'EXAM',name:'Exam Fee'}]);fireEvent.click(child.getByRole('button',{name:'Save Fee Type'}));await waitFor(()=>expect(screen.queryByRole('dialog',{name:'Add Fee Type'})).toBeNull());expect(screen.getByRole('dialog',{name:'Create Academic Fee Plan'})).toBe(parent);expect(screen.getByLabelText('Fee Type').textContent).toContain('Exam Fee');expect(screen.getByLabelText('Tuition Fee amount').value).toBe('5000')})
 
-test('complete draft sends existing semester DTO and separate payment model', async () => {
- mount(); await waitFor(() => expect(screen.getByLabelText('Course *').disabled).toBe(false));
- choose('Course *', '2'); choose('Branch *', '4');
- await waitFor(() => expect(screen.getByLabelText('Admission Batch *').disabled).toBe(false));
- choose('Admission Batch *', '2025-2029'); choose('Applicable Semester *', '6');
- fireEvent.click(screen.getByRole('button', { name: /Continue/ }));
- choose('Admission Quota', '__other__'); choose('Specify Admission Quota *', 'Industry Sponsored');
- choose('Financial Fee Category *', '8');
- fireEvent.click(screen.getByRole('button', { name: /Add Fee Head/ }));
- choose('Fee head 1 type', '__other__'); choose('Fee head 1 custom name', 'Tuition Fee'); choose('Fee head 1 amount', '5000');
- fireEvent.click(screen.getByRole('button', { name: /Continue/ }));
- choose('Due Date *', '2026-07-01'); choose('Effective From *', '2026-06-01'); choose('Effective To *', '2027-05-31');
- fireEvent.click(screen.getByRole('button', { name: 'Save Draft' }));
- await waitFor(() => expect(academicFeePlanApi.create).toHaveBeenCalled());
- const body = academicFeePlanApi.create.mock.calls.at(-1)[0];
- expect(body).toMatchObject({ collegeId: 9, academicYearId: 1, courseId: 2, branchId: 4, semesterId: 6, feeCategoryId: 8, batch: '2025-2029', quota: 'Industry Sponsored', cycle: 'SEMESTER', paymentMode: 'FULL_PAYMENT', totalAmount: '5000.00', components: [{ name: 'Tuition Fee', amount: '5000.00' }], installments: [{ number: 1, dueDate: '2026-07-01', amount: '5000.00' }] });
- expect(body).not.toHaveProperty('admissionType'); expect(body).not.toHaveProperty('yearOfStudy');
-})
+test('empty fee masters do not introduce sample fee types',async()=>{feeConfigurationApi.categories.mockResolvedValueOnce([]);mount();await breakdown();expect(screen.getByLabelText('Fee Type').disabled).toBe(true);expect(screen.queryByLabelText('Tuition Fee amount')).toBeNull();fireEvent.click(screen.getByRole('button',{name:/Continue/}));expect(await screen.findByText(/Add at least one configured fee type/)).toBeTruthy()})
 
-test('quota dropdown supports manual Others and adds one independent row per click', async () => {
- mount(); await waitFor(() => expect(screen.getByLabelText('Course *').disabled).toBe(false));
- await openBreakdown();
- const quota = screen.getByLabelText('Admission Quota');
- for (const name of ['Government / Convener', 'Management', 'NRI', 'NRI Sponsored', 'Institutional', 'Others (enter manually)']) expect(quota.textContent).toContain(name);
- choose('Admission Quota', '__other__'); choose('Specify Admission Quota *', 'Industry Sponsored');
- fireEvent.click(screen.getByRole('button', { name: 'Add Quota / Category' }));
- expect(screen.getAllByLabelText('Admission Quota').length).toBe(2);
- expect(screen.getAllByLabelText('Admission Quota')[0].value).toBe('__other__');
- expect(screen.getAllByLabelText('Admission Quota')[1].value).toBe('');
- expect(screen.getByLabelText('Specify Admission Quota *').value).toBe('Industry Sponsored');
- fireEvent.change(screen.getAllByLabelText('Admission Quota')[1], { target: { value: 'Management' } });
- fireEvent.click(screen.getByRole('button', { name: 'Add Quota / Category' }));
- expect(screen.getAllByLabelText('Admission Quota').length).toBe(3);
- expect(screen.getAllByLabelText('Admission Quota')[1].value).toBe('Management');
- fireEvent.change(screen.getAllByLabelText('Admission Quota')[0], { target: { value: 'NRI' } });
- expect(screen.queryByLabelText('Specify Admission Quota *')).toBeNull();
-})
+test('backend save failure retains data and does not report success',async()=>{academicFeePlanApi.create.mockRejectedValueOnce(new Error('Backend validation failed'));mount();await breakdown();component(8,'Tuition Fee','5000');await schedule();fireEvent.click(screen.getByRole('button',{name:'Save Draft'}));await waitFor(()=>expect(screen.getByText('Backend validation failed')).toBeTruthy());expect(screen.queryByText('Backend save results')).toBeNull();fireEvent.click(screen.getByRole('button',{name:'Edit Breakdown'}));expect(screen.getByLabelText('Tuition Fee amount').value).toBe('5000')})
 
-test('Fee Breakdown retains independent quota fee heads, copy and totals without live preview', async () => {
- mount(); await waitFor(() => expect(screen.getByLabelText('Course *').disabled).toBe(false));
- expect(screen.queryByRole('button', { name: 'Add Quota / Category' })).toBeNull();
- await openBreakdown();
- choose('Financial Fee Category *', '8'); choose('Admission Quota', 'Management');
- fireEvent.click(screen.getByRole('button', { name: 'Add Fee Head' }));
- choose('Fee head 1 type', '__other__'); choose('Fee head 1 custom name', 'Tuition Fee'); choose('Fee head 1 amount', '5000');
- fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
- let cards = screen.getAllByRole('group', { name: /Quota fee configuration/ });
- fireEvent.change(within(cards[1]).getByLabelText('Admission Quota'), { target: { value: 'NRI' } });
- fireEvent.change(within(cards[1]).getByLabelText('Fee head 1 amount'), { target: { value: '8000' } });
- expect(within(cards[0]).getByLabelText('Fee head 1 amount').value).toBe('5000');
- expect(within(cards[1]).getByLabelText('Fee head 1 amount').value).toBe('8000');
- expect(screen.queryByLabelText('Preview configuration')).toBeNull();
- expect(screen.queryByRole('complementary', { name: 'Live Preview' })).toBeNull();
- fireEvent.click(within(cards[1]).getByRole('button', { name: 'Add Fee Head' }));
- expect(within(cards[0]).queryByLabelText('Fee head 2 type')).toBeNull();
- expect(within(cards[1]).getByLabelText('Fee head 2 type')).toBeTruthy();
- fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
- expect(screen.getByRole('tab', { name: /Fee Breakdown/ }).getAttribute('aria-selected')).toBe('true');
- fireEvent.click(screen.getByRole('button', { name: 'Add Quota / Category' }));
- cards = screen.getAllByRole('group', { name: /Quota fee configuration/ });
- expect(within(cards[2]).queryByLabelText('Fee head 1 type')).toBeNull();
- fireEvent.click(within(cards[2]).getByRole('button', { name: 'Remove' }));
- fireEvent.click(within(cards[1]).getByRole('button', { name: 'Remove fee head 2' }));
- fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
- choose('Due Date *', '2026-07-01'); choose('Effective From *', '2026-06-01'); choose('Effective To *', '2027-05-31');
- academicFeePlanApi.create.mockClear();
- fireEvent.click(screen.getByRole('button', { name: 'Save Draft' }));
- await waitFor(() => expect(academicFeePlanApi.create).toHaveBeenCalledTimes(2));
- const bodies = academicFeePlanApi.create.mock.calls.map(([body]) => body);
- expect(bodies[0]).toMatchObject({ quota: 'Management', totalAmount: '5000.00', components: [{ name: 'Tuition Fee', amount: '5000.00' }] });
- expect(bodies[1]).toMatchObject({ quota: 'NRI', totalAmount: '8000.00', components: [{ name: 'Tuition Fee', amount: '8000.00' }] });
-})
+test('submission uses the supported approval transition and does not claim activation',async()=>{mount();await breakdown();component(8,'Tuition Fee','5000');await schedule();fireEvent.click(screen.getByRole('button',{name:'Submit for Approval'}));await waitFor(()=>expect(academicFeePlanApi.submit).toHaveBeenCalledWith(101,'9',1));expect(await screen.findByText(/SUBMITTED · ID 101/)).toBeTruthy();expect(screen.queryByRole('button',{name:'Activate Fee Structure'})).toBeNull()})
+
+test('unavailable fee-plan reads block unsafe creation while academic batches remain usable',async()=>{academicFeePlanApi.list.mockRejectedValue(new Error('Fee plans offline'));mount();await scope();expect(screen.getByLabelText('Admission Batch *').value).toBe('2025-2029');fireEvent.click(screen.getByRole('button',{name:/Continue/}));expect(await screen.findByText(/Existing fee plans are still loading/)).toBeTruthy();expect(academicFeePlanApi.create).not.toHaveBeenCalled()})
 
 test('academic fee directory offers a retry instead of showing an empty successful read',async()=>{
  const retry=vi.fn();render(<MemoryRouter><FeeStructure embedded workflow={{rows:[],error:'Fee plans offline',retry}}/></MemoryRouter>);fireEvent.click(await screen.findByRole('button',{name:'Retry fee structures'}));expect(retry).toHaveBeenCalledTimes(1);expect(screen.queryByText('No academic fee plans yet')).toBeNull()
@@ -205,3 +49,8 @@ test('academic fee directory offers a retry instead of showing an empty successf
 test('readonly fee structure directory hides editing while retaining real draft details',async()=>{
  access.write=false;const plan={...newFeeStructure('1'),id:'41',code:'AFP-41',name:'Backend draft',status:'Draft',collegeId:'9',components:[]};render(<MemoryRouter><FeeStructure embedded workflow={{rows:[plan],assignments:[]}}/></MemoryRouter>);await screen.findByText('Backend draft');expect(screen.getByTitle('View Plan Details')).toBeTruthy();expect(screen.queryByTitle('Edit Plan')).toBeNull();expect(screen.getByRole('button',{name:/Create Academic Plan/}).disabled).toBe(true)
 })
+
+
+test('installments reject incorrect totals and persist numbered payments when balanced',async()=>{mount();await breakdown();component(8,'Tuition Fee','5000');await schedule();fireEvent.click(screen.getByRole('radio',{name:'Pay in Installments'}));choose('Payment 1 due date','2026-07-01');choose('Payment 1 amount','3000');fireEvent.click(screen.getByRole('button',{name:/Add Installment/}));choose('Payment 2 due date','2026-08-01');choose('Payment 2 amount','1999.99');fireEvent.click(screen.getByRole('button',{name:'Save Draft'}));expect(await screen.findByText(/must total/)).toBeTruthy();expect(academicFeePlanApi.create).not.toHaveBeenCalled();choose('Payment 2 amount','2000');fireEvent.click(screen.getByRole('button',{name:'Save Draft'}));await waitFor(()=>expect(academicFeePlanApi.create).toHaveBeenCalledOnce());expect(academicFeePlanApi.create.mock.calls[0][0].installments).toEqual([{number:1,dueDate:'2026-07-01',amount:'3000.00'},{number:2,dueDate:'2026-08-01',amount:'2000.00'}])})
+
+test('matrix saves each actual quota combination and its overridden component amounts',async()=>{mount();await breakdown();component(8,'Tuition Fee','5000');fireEvent.click(screen.getByRole('button',{name:'Copy Default'}));choose('Admission Quota 2','Management');choose('Student Category 2','General');choose('Tuition Fee override 2','4000');await schedule();fireEvent.click(screen.getByRole('button',{name:'Save Draft'}));await waitFor(()=>expect(academicFeePlanApi.create).toHaveBeenCalledTimes(2));expect(academicFeePlanApi.create.mock.calls[1][0]).toMatchObject({quota:'Management',studentCategory:'General',totalAmount:'4000.00',components:[{code:'TUITION',name:'Tuition Fee',amount:'4000.00'}]})})

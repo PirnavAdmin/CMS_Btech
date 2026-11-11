@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
-import { render, screen, fireEvent, cleanup } from '@testing-library/react'
+import { render, screen, fireEvent, cleanup, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import FeeTypesConfiguration from '../pages/fees/FeeTypesConfiguration'
 import { academicFeePlanApi, feeConfigurationApi } from '../api/apiEndpoints'
@@ -7,7 +7,7 @@ import { knownAttendanceRate, attendancePercentage } from '../utils/attendanceMe
 vi.mock('../context/AcademicContext', () => ({ useAcademic: () => ({ selectedCollegeId:'7' }) }))
 vi.mock('../auth/ScreenAccess', () => ({ useScreenAccess: () => ({ canAction: () => true }) }))
 vi.mock('../components/ExportMenu', () => ({ default: () => <button>Export</button> }))
-vi.mock('../api/apiEndpoints', async original => ({ ...await original(), feeConfigurationApi: { categories:vi.fn() }, academicFeePlanApi: { list:vi.fn() } }))
+vi.mock('../api/apiEndpoints', async original => ({ ...await original(), feeConfigurationApi: { categories:vi.fn(), createCategory:vi.fn() }, academicFeePlanApi: { list:vi.fn() } }))
 beforeEach(() => { vi.clearAllMocks(); feeConfigurationApi.categories.mockResolvedValue([{id:1,code:'ACA',name:'Academic'},{id:2,code:'HOST',name:'Hostel'}]); academicFeePlanApi.list.mockResolvedValue([{ feeCategoryId: 1 }, { feeCategoryId: 2 }]) })
 afterEach(cleanup)
 const renderFeeTypes = () => render(<MemoryRouter><FeeTypesConfiguration /></MemoryRouter>)
@@ -25,7 +25,32 @@ test('fee types are visible before a fee structure is saved', async () => {
   await screen.findByText('Academic')
   expect(academicFeePlanApi.list).not.toHaveBeenCalled()
   expect(screen.getByText('Academic')).toBeTruthy()
-  expect(screen.getByRole('button', { name: 'Add Fee Type' }).disabled).toBe(true)
+  expect(screen.getByRole('button', { name: 'Add Fee Type' }).disabled).toBe(false)
+})
+test('Add Fee Type opens the popup, saves to the API and refreshes the directory', async () => {
+  const saved = { id: 9, code: 'LAB', name: 'Laboratory', description: 'Lab fees' }
+  feeConfigurationApi.createCategory.mockResolvedValueOnce(saved)
+  renderFeeTypes(); await screen.findByText('Academic')
+  fireEvent.click(screen.getByRole('button', { name: 'Add Fee Type' }))
+  const dialog = within(screen.getByRole('dialog', { name: 'Add Fee Type' }))
+  fireEvent.change(dialog.getByLabelText('Fee Type Code'), { target: { value: 'lab' } })
+  fireEvent.change(dialog.getByLabelText('Fee Type Name'), { target: { value: 'Laboratory' } })
+  fireEvent.change(dialog.getByLabelText('Description'), { target: { value: 'Lab fees' } })
+  feeConfigurationApi.categories.mockResolvedValueOnce([saved])
+  fireEvent.click(dialog.getByRole('button', { name: 'Save Fee Type' }))
+  await waitFor(() => expect(feeConfigurationApi.createCategory).toHaveBeenCalledWith({ code: 'LAB', name: 'Laboratory', description: 'Lab fees' }))
+  expect(await screen.findByText('Laboratory')).toBeTruthy()
+  expect(screen.queryByRole('dialog', { name: 'Add Fee Type' })).toBeNull()
+})
+test('fee creation failure retains entries and shows the actual error', async () => {
+  feeConfigurationApi.createCategory.mockRejectedValueOnce(new Error('Code already exists'))
+  renderFeeTypes(); await screen.findByText('Academic')
+  fireEvent.click(screen.getByRole('button', { name: 'Add Fee Type' }))
+  fireEvent.change(screen.getByLabelText('Fee Type Code'), { target: { value: 'NEW' } })
+  fireEvent.change(screen.getByLabelText('Fee Type Name'), { target: { value: 'New Fee' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Save Fee Type' }))
+  expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Code already exists')
+  expect(screen.getByLabelText('Fee Type Name').value).toBe('New Fee')
 })
 test('empty fee types retain the table headers', async () => {
   feeConfigurationApi.categories.mockResolvedValueOnce([])

@@ -1500,6 +1500,9 @@ export const academicFeePlanApi = {
 }
 
 export const feeConfigurationApi = {
+  createCategory: async body => dataResponse(await request(API_ENDPOINTS.feeConfiguration.categories, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  })),
   categories: async () => listData(await request(API_ENDPOINTS.feeConfiguration.categories)).filter(row =>
     !/^DEMO_/i.test(String(row?.code ?? '').trim())
     && !/demonstration\s+category/i.test(String(row?.description ?? ''))
