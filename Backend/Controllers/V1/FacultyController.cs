@@ -1,4 +1,5 @@
 ﻿using BTech.DTOs.Faculty;
+using BTech.Services;
 using BTech.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -29,6 +30,7 @@ namespace BTech.Controllers.V1
         {
             try
             {
+                request.CollegeId = CollegeDataScope.Resolve(HttpContext, request.CollegeId);
                 var result =
                     await _service.GetFacultyListAsync(request);
 
@@ -77,6 +79,7 @@ namespace BTech.Controllers.V1
 
             try
             {
+                request.CollegeId = CollegeDataScope.Resolve(HttpContext, request.CollegeId);
                 var result =
                     await _service.GetFacultyListAsync(request);
 
@@ -128,6 +131,10 @@ namespace BTech.Controllers.V1
                         message = "Faculty not found."
                     });
                 }
+
+                var collegeId = CollegeDataScope.Resolve(HttpContext);
+                if (collegeId.HasValue && result.CollegeId != collegeId.Value)
+                    return NotFound(new { success = false, message = "Faculty not found." });
 
                 return Ok(new
                 {

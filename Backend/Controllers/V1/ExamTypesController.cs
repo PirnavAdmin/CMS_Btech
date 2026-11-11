@@ -2,6 +2,7 @@ using System.Security.Claims;
 using BTech.DTOs.Exams;
 using BTech.Exceptions;
 using BTech.Repositories.Implementations;
+using BTech.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MySqlConnector;
@@ -30,6 +31,7 @@ public sealed class ExamTypesController : ControllerBase
     [HttpGet]
     public Task<IActionResult> GetAll([FromQuery] ExamTypeSearchRequest request) => Execute(async () =>
     {
+        request.CollegeId = CollegeDataScope.Resolve(HttpContext, request.CollegeId);
         var rows = await _repository.ListTypesAsync(request, null, Cancellation);
         return Ok(new { success = true, message = "Exam types retrieved successfully.", data = rows, count = rows.Count });
     });
@@ -83,7 +85,18 @@ public sealed class ExamTypesController : ControllerBase
     {
         _logger.LogInformation("ExamType request {Method} {Path}; Actor={Actor}; CorrelationId={CorrelationId}",
             Request.Method, Request.Path, Actor, HttpContext.TraceIdentifier);
-        try { return await action(); }
+        try
+        {
+            if (RouteData.Values.TryGetValue("examTypeId", out var value) && long.TryParse(value?.ToString(), out var id))
+            {
+                var found = await _repository.ListTypesAsync(new ExamTypeSearchRequest {
+                    CollegeId = CollegeDataScope.Resolve(HttpContext)
+                }, id, Cancellation);
+                if (found.Count==0) throw new ExamNotFoundException("examTypeId", "Exam type not found.");
+            }
+            return await action();
+        }
+        catch (ContractException ex) { return Failure(ex.StatusCode, "collegeId", ex.Message); }
         catch (ExamValidationException ex) { return Failure(400, ex.Field, ex.Message); }
         catch (ExamConflictException ex) { return Failure(409, ex.Field, ex.Message); }
         catch (ExamNotFoundException ex) { return Failure(404, ex.Field, ex.Message); }

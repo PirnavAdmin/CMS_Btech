@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MySqlConnector;
+using BTech.Services;
 
 namespace BTech.LibraryManagement;
 
@@ -17,14 +18,8 @@ public sealed class LibraryManagementController : ControllerBase
 
     private long College(long requested)
     {
-        LibraryStore.Require(requested > 0, "collegeId must be positive.");
-        var claim = User.FindFirst("college_id")?.Value ?? User.FindFirst("CollegeId")?.Value ?? User.FindFirst("collegeId")?.Value;
-        var superAdmin = User.Claims.Any(c => (c.Type == ClaimTypes.Role || c.Type == "role")
-            && string.Equals(c.Value, "SuperAdmin", StringComparison.OrdinalIgnoreCase));
-        if (!superAdmin)
-            LibraryStore.Require(long.TryParse(claim, out var assigned) && assigned > 0 && assigned == requested,
-                "Access to this college is forbidden. A matching collegeId claim is required.", 403);
-        return requested;
+        try { return CollegeDataScope.Resolve(HttpContext, requested, required: true)!.Value; }
+        catch (ContractException ex) { throw new LibraryApiException(ex.StatusCode, ex.Message); }
     }
     private long Actor()
     {
@@ -70,7 +65,6 @@ public sealed class LibraryManagementController : ControllerBase
     public Task<IActionResult> Categories([FromQuery] long collegeId, [FromQuery] string? search = null, [FromQuery] bool? status = null, [FromQuery] int page = 1, [FromQuery] int pageSize = 50) => Run("List categories", async () =>
     {
         College(collegeId); Page(page, pageSize);
-        await _store.EnsureDefaultCategories(collegeId);
         return await _store.Query("""
             SELECT * FROM library_categories WHERE college_id=@collegeId AND (@status IS NULL OR status=@status)
             AND (@search IS NULL OR category_name LIKE @term OR category_code LIKE @term)

@@ -614,6 +614,7 @@ builder.Services.AddScoped<
 builder.Services.AddScoped<
     ISemesterService,
     SemesterService>();
+builder.Services.AddScoped<SemesterLookupRepository>();
 
 builder.Services.AddScoped<
     IMeetingEventValidationRepository,

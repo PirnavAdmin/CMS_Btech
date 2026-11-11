@@ -165,14 +165,6 @@ public sealed class ModulePermissionMiddleware
                 return false;
             }
 
-            // College creation and scoped view/edit are explicit College Admin capabilities.
-            // Repository scope filters list/count before pagination and checks individual records.
-            var collegeRecordsPath = path.Equals("/api/v1/colleges", StringComparison.OrdinalIgnoreCase) ||
-                path.StartsWith("/api/v1/colleges/", StringComparison.OrdinalIgnoreCase);
-            if (collegeRecordsPath && roleCodes.Contains("COLLEGE_ADMIN") &&
-                context.Request.Method is "GET" or "POST" or "PUT" or "PATCH")
-                return true;
-
             // Resolve academic setup records and explicit college selections against live ownership.
             // Mapped College Admin access still requires the selected college permission matrix.
             dependency = "academic-record-ownership";
@@ -401,6 +393,8 @@ public sealed class ModulePermissionMiddleware
         if (method.Equals("POST", StringComparison.OrdinalIgnoreCase) && p.StartsWith("/api/v1/student-admissions/", StringComparison.Ordinal) && p.EndsWith("/fee-ledger",StringComparison.Ordinal)) return "edit";
         if (method.Equals("POST", StringComparison.OrdinalIgnoreCase) && p.StartsWith("/api/v1/faculty-leave/policies/", StringComparison.Ordinal) &&
             (p.EndsWith("/activate", StringComparison.Ordinal) || p.EndsWith("/deactivate", StringComparison.Ordinal))) return "edit";
+        if (method.Equals("POST", StringComparison.OrdinalIgnoreCase) && p.StartsWith("/api/v1/faculty-payroll/", StringComparison.Ordinal) &&
+            (p.EndsWith("/process", StringComparison.Ordinal) || p.EndsWith("/confirm-payment", StringComparison.Ordinal))) return "edit";
         if (method.Equals("POST", StringComparison.OrdinalIgnoreCase) &&
             (p.Contains("/search") || p.Contains("/filter") || p.Contains("/summary") || p.Contains("/query") || p.Contains("/list") || p.Contains("/preview") || p.Contains("/validate")))
             return "view";
@@ -417,27 +411,18 @@ public sealed class ModulePermissionMiddleware
     private static async Task<bool> HasCrossCollegeBodyAsync(HttpContext context, long collegeId)
     {
         var request = context.Request;
-        if (request.ContentLength is null or <= 0 or > 1_048_576 ||
+        if (request.ContentLength is 0 ||
             request.ContentType?.Contains("application/json", StringComparison.OrdinalIgnoreCase) != true ||
             request.Method is "GET" or "HEAD") return false;
+        if (request.ContentLength is > 4_194_304)
+            throw new BadHttpRequestException("JSON request exceeds the college-scope validation limit.", StatusCodes.Status413PayloadTooLarge);
 
         request.EnableBuffering();
         try
         {
             using var document = await System.Text.Json.JsonDocument.ParseAsync(request.Body, cancellationToken: context.RequestAborted);
             request.Body.Position = 0;
-            if (document.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object) return false;
-            foreach (var property in document.RootElement.EnumerateObject())
-            {
-                if (!property.Name.Equals("collegeId", StringComparison.OrdinalIgnoreCase) &&
-                    !property.Name.Equals("college_id", StringComparison.OrdinalIgnoreCase)) continue;
-                long supplied;
-                if (property.Value.ValueKind == System.Text.Json.JsonValueKind.Number && property.Value.TryGetInt64(out supplied))
-                    return supplied != collegeId;
-                if (property.Value.ValueKind == System.Text.Json.JsonValueKind.String && long.TryParse(property.Value.GetString(), out supplied))
-                    return supplied != collegeId;
-            }
-            return false;
+            return ContainsDifferentCollege(document.RootElement, collegeId, 0);
         }
         catch (System.Text.Json.JsonException)
         {
@@ -448,6 +433,28 @@ public sealed class ModulePermissionMiddleware
         {
             if (request.Body.CanSeek) request.Body.Position = 0;
         }
+    }
+
+    // Inspect every college reference, including nested rows in bulk requests. A
+    // malformed identifier must not silently turn into an unscoped write.
+    private static bool ContainsDifferentCollege(System.Text.Json.JsonElement element, long collegeId, int depth)
+    {
+        if (depth > 32) return true;
+        if (element.ValueKind == System.Text.Json.JsonValueKind.Array)
+            return element.EnumerateArray().Any(item => ContainsDifferentCollege(item, collegeId, depth + 1));
+        if (element.ValueKind != System.Text.Json.JsonValueKind.Object) return false;
+        foreach (var property in element.EnumerateObject())
+        {
+            if (property.Name.Equals("collegeId", StringComparison.OrdinalIgnoreCase) ||
+                property.Name.Equals("college_id", StringComparison.OrdinalIgnoreCase))
+            {
+                if (property.Value.ValueKind == System.Text.Json.JsonValueKind.Null) continue;
+                if (!long.TryParse(property.Value.ToString(), out var supplied) || supplied != collegeId)
+                    return true;
+            }
+            else if (ContainsDifferentCollege(property.Value, collegeId, depth + 1)) return true;
+        }
+        return false;
     }
 
     private static async Task Deny(HttpContext context, int status, string message)
