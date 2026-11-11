@@ -1140,6 +1140,24 @@
 .faculty-management .fm-department {
   white-space: nowrap;
 }
+.faculty-management--directory .faculty-table-wrap table {
+  min-width: 1360px;
+  table-layout: fixed;
+}
+.faculty-management--directory .faculty-table-wrap th:nth-child(3),
+.faculty-management--directory .faculty-table-wrap td:nth-child(3) {
+  width: 220px;
+}
+.faculty-management--directory .faculty-table-wrap th:nth-child(4),
+.faculty-management--directory .faculty-table-wrap td:nth-child(4) {
+  width: 180px;
+}
+.faculty-management--directory .faculty-table-wrap td:nth-child(3),
+.faculty-management--directory .faculty-table-wrap td:nth-child(4) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .faculty-management .fm-employee-id {
   padding: 4px 6px;
   border-radius: 4px;
