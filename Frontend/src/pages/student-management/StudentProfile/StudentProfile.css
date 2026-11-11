@@ -68,6 +68,25 @@ main.student-profile .sp-tabs button {
 main.student-profile .sp-directory-table thead th{text-align:center!important;vertical-align:middle!important}
 :root:not([data-theme="dark"]) main.student-profile table.sp-directory-table thead th{color:var(--text-secondary)!important;background:var(--table-head)!important;border-bottom:2px solid var(--brand-hover)!important}
 main.student-profile .sp-directory-table thead th:last-child::after{content:none!important;display:none!important}
+/* Keep all six directory headings, including Actions, inside one aligned grid.
+   Older width rules added up to 100% before the final Actions column. */
+main.student-profile .sp-table-wrap{overflow-x:auto;}
+main.student-profile .sp-directory-table{width:100%!important;min-width:0!important;table-layout:fixed!important;border-spacing:0!important;}
+main.student-profile .sp-directory-table :is(th,td){padding:10px 9px!important;}
+main.student-profile .sp-directory-table thead th{height:44px;color:var(--text-secondary)!important;background:var(--table-head)!important;border-bottom:2px solid var(--brand)!important;font-size:10px;font-weight:800;letter-spacing:.045em;white-space:nowrap;}
+main.student-profile .sp-directory-table :is(th,td):nth-child(1){width:22%!important;}
+main.student-profile .sp-directory-table :is(th,td):nth-child(2){width:24%!important;}
+main.student-profile .sp-directory-table :is(th,td):nth-child(3){width:19%!important;}
+main.student-profile .sp-directory-table :is(th,td):nth-child(4){width:11%!important;}
+main.student-profile .sp-directory-table :is(th,td):nth-child(5){width:12%!important;}
+main.student-profile .sp-directory-table :is(th,td):nth-child(6){width:12%!important;}
+main.student-profile .sp-directory-table th:last-child,
+main.student-profile .sp-directory-table td:last-child{white-space:normal!important;text-align:center!important;}
+main.student-profile .sp-directory-table td:last-child>div{justify-content:center!important;}
+@media(max-width:760px){
+  main.student-profile .sp-directory-table{min-width:760px!important;}
+  main.student-profile .sp-directory-table :is(th,td){padding:8px 7px!important;}
+}
 /* Profile editing is an inline professional page, not a modal popup. */
 .student-profile .sp-edit-page{width:100%;min-width:0}
 .student-profile .sp-edit-inline{position:relative;width:100%;max-width:none;max-height:none;min-height:0;overflow:visible;margin:0;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface-raised);box-shadow:var(--shadow-sm)}

@@ -884,13 +884,13 @@ function Attendance() {
                     { value: 'total', label: 'Conducted' }, { value: 'present', label: 'Attended' },
                     { value: row => row.rate.toFixed(2), label: 'Attendance %' }, { value: 'recovery', label: 'Sessions Needed' },
                   ]} title="Attendance Shortage" filename="attendance-shortage-list" loading={reportLoading} />}
-                  <button
+                  {canRecord && activeTab === 'register' && <button
                     type="button"
                     className="erp-btn erp-btn--primary"
-                    hidden={!canRecord || activeTab !== 'register'} onClick={() => setTakeEditorOpen(true)}
+                    onClick={() => setTakeEditorOpen(true)}
                   >
                     <FiPlus /> Record Attendance
-                  </button>
+                  </button>}
                 </div>
               </div>
               {showRegisterFilters && <div id="attendance-register-filters" className="attendance-register-filters">
