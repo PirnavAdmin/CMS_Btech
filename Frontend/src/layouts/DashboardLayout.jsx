@@ -128,7 +128,7 @@ export default function DashboardLayout({ children }) {
     : userRole.charAt(0).toUpperCase() + userRole.slice(1)
   const isMarksWorkspace = pathname === '/marks-management' || /^\/marks-management\/(marks-entry|bulk-marks-upload|submitted-marks|marks-approval|publish-results)\/?$/.test(pathname)
   const pageName = isMarksWorkspace ? 'Marks Management' : ({
-    '/library': 'Library Management', '/user-access': 'User Access Management', '/dashboard': 'Overview', '/academic-structure': 'Program Configuration', '/my-profile': 'My Profile', '/settings': 'Settings',
+    '/library': 'Library Management', '/placement': 'Placements', '/meetings-events': 'Meetings & Events', '/user-access': 'User Access Management', '/dashboard': 'Overview', '/academic-structure': 'Program Configuration', '/my-profile': 'My Profile', '/settings': 'Settings',
     '/college-institution-management': 'College', '/academic-year-management': 'Academic Years',
     '/student-management/attendance': 'Student Attendance',
     '/department-management': 'Departments', '/semester-management': 'Semesters', '/section-management': 'Sections',

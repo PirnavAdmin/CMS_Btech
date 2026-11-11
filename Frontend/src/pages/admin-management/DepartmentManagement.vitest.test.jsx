@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { DepartmentManagement } from './AdminManagement'
+import eventBus, { ERP_EVENTS } from '../../services/eventBus'
 import { createDepartment, deleteDepartment, getDepartments, getDepartmentById, searchDepartments, updateDepartment, updateDepartmentStatus } from '../../auth/collegeApi'
 
 const fixture = vi.hoisted(() => ({ collegeId: '7', rows: [] }))
@@ -38,6 +39,8 @@ const fill = () => {
 
 test('inline mode reuses the department form and returns the persisted ID', async () => {
  const onCreated = vi.fn()
+ const reload = vi.fn()
+ const unsubscribe = eventBus.subscribe(ERP_EVENTS.ACADEMIC_UPDATED, reload)
  render(<MemoryRouter><DepartmentManagement inlineCreate onCreated={onCreated} /></MemoryRouter>)
  await screen.findByRole('dialog', { name: 'Add Department' })
  fill()
@@ -45,6 +48,8 @@ test('inline mode reuses the department form and returns the persisted ID', asyn
  await waitFor(() => expect(onCreated).toHaveBeenCalledWith(90))
  expect(createDepartment).toHaveBeenCalledOnce()
  expect(screen.queryByRole('table')).toBeNull()
+ expect(reload).not.toHaveBeenCalled()
+ unsubscribe()
 })
 
 test('migrated directory keeps college isolation, five-row paging, sorting and row actions', async () => {
@@ -71,11 +76,11 @@ test('empty directory retains Add Department and selected college when opening a
 })
 test('new form retains required controls without a preview, native field transforms and exact create DTO', async () => {
  mount(); await openAdd(); expect(screen.getByLabelText(/Department Name/).required).toBe(true); fill()
- fireEvent.change(screen.getByLabelText('Start Date'), { target: { value: '2026-08-01' } }); fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Configured department' } })
+ expect(screen.queryByLabelText('Start Date')).toBeNull(); fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Configured department' } })
  expect(screen.queryByLabelText('Department preview')).toBeNull(); expect(screen.queryByText('Real-time sync')).toBeNull()
  expect(document.querySelector('.erp-form-page[data-without-live-preview="true"]')).toBeTruthy(); expect(screen.getByLabelText(/Department Code/).value).toBe('CSE')
  fireEvent.click(screen.getByRole('button', { name: 'Create Department' })); await waitFor(() => expect(createDepartment).toHaveBeenCalledTimes(1))
- expect(createDepartment.mock.calls[0][0]).toEqual({ departmentName: 'Computer Science', departmentCode: 'CSE', collegeId: 7, description: 'Configured department', startDate: '2026-08-01', endDate: null, StartDate: '2026-08-01', EndDate: null, start_date: '2026-08-01', end_date: null })
+ expect(createDepartment.mock.calls[0][0]).toEqual({ departmentName: 'Computer Science', departmentCode: 'CSE', collegeId: 7, description: 'Configured department', startDate: null, endDate: null, StartDate: null, EndDate: null, start_date: null, end_date: null })
  await screen.findByRole('heading', { name: 'Departments' })
 })
 test('edit and cancel preserve existing update identifier and avoid unintended saves', async () => {

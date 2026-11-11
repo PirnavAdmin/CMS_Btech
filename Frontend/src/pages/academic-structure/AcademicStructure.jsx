@@ -23,6 +23,8 @@ import {
 } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import ViewDialog from '../../components/ViewDialog'
+import ProgramCreationWizard from './ProgramCreationWizard'
+import { validateSemesterSchedules } from './programCreation'
 import { useAcademic } from '../../context/AcademicContext'
 import { useScreenAccess } from '../../auth/ScreenAccess'
 import StatusBadge from '../../components/StatusBadge'
@@ -46,6 +48,7 @@ import {
   getSemesters,
   createSemester,
   deleteSemester,
+  updateSemester,
 } from '../../auth/collegeApi'
 import { academicYearApi } from '../../api/apiEndpoints'
 import './AcademicStructure.css'
@@ -82,7 +85,7 @@ export default function AcademicStructure() {
   const { state: navigationState } = useLocation()
   const legacyStep = searchParams.get('step')
   const currentStep = legacyStep === STEP_DEPARTMENTS ? STEP_DEPARTMENTS : STEP_PROGRAMS
-  const { selectedCollegeId, selectedCollege } = useAcademic()
+  const { selectedCollegeId, selectedCollege, selectedAcademicYearId } = useAcademic()
   const { canAction } = useScreenAccess()
 
   // Data states
@@ -115,6 +118,8 @@ export default function AcademicStructure() {
   // Modals state
   const [modalType, setModalType] = useState(null) // 'department' | 'course' | 'branch' | 'semester'
   const [inlineDepartmentCollege, setInlineDepartmentCollege] = useState(null)
+  const [creatingProgram, setCreatingProgram] = useState(false)
+  const [semesterSchedule, setSemesterSchedule] = useState(null)
   const setupDrafts = useRef(new Set())
   const setupCourse = useRef(null)
   const generationBusy = useRef(false)
@@ -182,7 +187,10 @@ export default function AcademicStructure() {
 
       if (request !== loadRequest.current || collegeScope.current !== collegeId) return
       loadedCollege.current = collegeId
-      const loadedCourses = extractList(courseRes) || []
+      const loadedCourses = (extractList(courseRes) || []).filter(course => {
+        const owner = course.collegeId ?? course.CollegeId
+        return owner == null || String(owner) === String(collegeId)
+      })
       const loadedBranches = extractList(branchRes)
       const loadedDepartments = extractList(deptRes)?.filter(department => {
         const owner = department.collegeId ?? department.CollegeId
@@ -382,6 +390,7 @@ export default function AcademicStructure() {
 
   // Open Add Modals
   const openAddModal = (type, switchingTab = false) => {
+    if (type === 'course' && !switchingTab) { setCreatingProgram(true); return }
     if (!switchingTab) {
       setSavedCourseChoice('')
       setRepairOnly(false)
@@ -1131,14 +1140,15 @@ export default function AcademicStructure() {
                 } },
                 { key: 'code', label: 'Program Code', className: 'table-center', width: '11%', render: ({ course }) => courseCodeOf(course) || '—' },
                 { key: 'structure', label: 'Academic Structure', className: 'table-left', width: '20%', render: ({ course, branch }) => {
-                  const definitions = branch ? semestersFor(branch).filter(term => String(term.courseId ?? term.CourseId) === courseIdOf(course)) : []
+                  const program = programsById.get(courseIdOf(course))
+                  const definitions = (branch ? [branch] : program.children).flatMap(child => semestersFor(child).filter(term => String(term.courseId ?? term.CourseId) === courseIdOf(course)))
                   const count = new Set(definitions.map(term => term.semesterId ?? term.id).filter(Boolean).map(String)).size
                   const name = branch?.branchName ?? branch?.name
                   const code = branch?.branchCode ?? branch?.code
                   return <div className="as-directory-record">
                     {branch ? <button type="button" className="as-program-link" onClick={() => openSemesterStructure(course, branch)}>
                       <strong>{name || code || 'Unnamed branch'}</strong>{name && code && name.toLowerCase() !== code.toLowerCase() && <small> · {code}</small>}
-                    </button> : <strong>{relationsVerified ? 'No branch configured' : 'Branches unavailable'}</strong>}
+                    </button> : <button type="button" className="as-program-link" onClick={() => setProgramDetailsId(courseIdOf(course))}><strong>{relationsVerified ? `${program.children.length} branches · ${program.linkedDepartments.length} departments` : 'Branches unavailable'}</strong><small>Expand hierarchy</small></button>}
                     <small className="as-program-term-counts">
                       <span>{course.totalSemesters ?? course.TotalSemesters ?? course.semesters ?? '—'} planned per branch</span>
                       <span>{semesterListVerified && relationsVerified ? count + ' configured definitions' : 'Definitions unavailable'}</span>
@@ -1177,7 +1187,8 @@ export default function AcademicStructure() {
                 {check.error && <p>{check.error}</p>}
                 {terms.length ? <ul className="as-program-terms">{terms.map(term => <li key={term.semesterId ?? term.id}>
                   <strong>{term.semesterName ?? 'Semester ' + term.semesterNumber}</strong>
-                  <span>{term.startDate && term.endDate ? (yearMap.get(String(term.academicYearId)) || 'Scheduled') : 'Not Scheduled'}</span>
+                  <span>{term.startDate && term.endDate ? `${String(term.startDate).slice(0, 10)} to ${String(term.endDate).slice(0, 10)}` : 'Schedule Not Configured'}</span>
+                  {canAction('/semester-management', 'edit') && <button type="button" className="erp-btn erp-btn--secondary" onClick={() => { setFormErrors({}); setSemesterSchedule({ ...term, id: term.semesterId ?? term.id, startDate: String(term.startDate || '').slice(0, 10), endDate: String(term.endDate || '').slice(0, 10), status: String(term.status ?? 0) }) }}>Configure dates</button>}
                   {programActions('semester', term)}
                 </li>)}</ul> : <p>{semesterListVerified ? 'No saved definitions.' : 'Definitions unavailable.'}</p>}
               </section>
@@ -1266,8 +1277,8 @@ export default function AcademicStructure() {
                           {id && canAction('/semester-management', 'edit') && <button type="button" className="erp-btn erp-btn--secondary"
                             aria-label={(scheduled ? 'Edit dates for ' : 'Set dates for ') + term.semesterName + (year ? ' ' + year : '')}
                             disabled={isSubmitting} onClick={() => setSemesterSchedule({
-                              row: { ...saved, id, courseId: courseIdOf(generationCourse), branchId: generationBranchId, name: saved.semesterName || term.semesterName },
-                              collegeId: selectedCollegeId,
+                              ...saved, id, courseId: courseIdOf(generationCourse), branchId: generationBranchId,
+                              semesterName: saved.semesterName || term.semesterName, startDate: String(saved.startDate || '').slice(0, 10), endDate: String(saved.endDate || '').slice(0, 10), status: String(saved.status ?? 0),
                             })}>{scheduled ? 'Edit dates' : 'Set dates'}</button>}
                         </div>
                       })}
@@ -1546,6 +1557,43 @@ export default function AcademicStructure() {
             </form>
           </ViewDialog>
         )}
+        {creatingProgram && <ProgramCreationWizard collegeId={selectedCollegeId} currentCollege={collegeScope} departments={departments} courses={courses} academicYears={academicYears} selectedAcademicYearId={selectedAcademicYearId}
+          onClose={() => setCreatingProgram(false)} onComplete={async () => {
+            await loadAcademicData()
+            setCreatingProgram(false)
+            showToast('Program, branches and semester schedules saved successfully.')
+            eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED)
+          }} />}
+        {semesterSchedule && <ViewDialog title="Configure Schedule" className="program-creation-dialog" maxWidth="620px" showExport={false} busy={isSubmitting} onClose={() => setSemesterSchedule(null)}
+          footerContent={<><button type="button" className="erp-btn erp-btn--secondary" disabled={isSubmitting} onClick={() => setSemesterSchedule(null)}>Cancel</button><button type="button" className="erp-btn erp-btn--primary" disabled={isSubmitting} onClick={async () => {
+            if (isSubmitting || !canAction('/semester-management', 'edit')) return
+            setFormErrors({}); setIsSubmitting(true)
+            const collegeAtSave = collegeScope.current
+            try {
+              const rows = semesterRecords(await getSemesters())
+              const saved = rows.find(row => String(row.semesterId ?? row.id) === String(semesterSchedule.id))
+              if (!saved) throw new Error('The saved semester is unavailable. Refresh the program hierarchy.')
+              const error = validateSemesterSchedules([{ id: saved.branchId, name: saved.semesterName, terms: [semesterSchedule] }], academicYears, rows)
+              if (error) throw new Error(error)
+              if ((saved.startDate || saved.endDate) && !window.confirm('Replace this saved semester schedule?')) return
+              if (collegeAtSave !== collegeScope.current) throw new Error('College changed. Reopen the schedule.')
+              const payload = { courseId: Number(saved.courseId), branchId: Number(saved.branchId), academicYearId: Number(semesterSchedule.academicYearId), semesterName: saved.semesterName,
+                semesterNumber: Number(saved.semesterNumber), yearNumber: Number(saved.yearNumber), startDate: semesterSchedule.startDate || null, endDate: semesterSchedule.endDate || null, status: Number(semesterSchedule.status) }
+              await updateSemester(semesterSchedule.id, payload)
+              const verified = semesterRecords(await getSemesters()).find(row => String(row.semesterId ?? row.id) === String(semesterSchedule.id))
+              if (String(verified?.startDate || '').slice(0, 10) !== (payload.startDate || '') || String(verified?.endDate || '').slice(0, 10) !== (payload.endDate || '')) throw new Error('Saved dates could not be verified. Retry after checking the record.')
+              if (collegeAtSave !== collegeScope.current) return
+              await loadAcademicData(); setSemesterSchedule(null); showToast('Semester schedule saved.')
+            } catch (reason) { setFormErrors({ schedule: reason?.response?.data?.message || reason.message }) } finally { setIsSubmitting(false) }
+          }}>Save Schedule</button></>}>
+          {formErrors.schedule && <p role="alert">{formErrors.schedule}</p>}
+          <div className="program-creation-grid">
+            <label>Academic year<select value={semesterSchedule.academicYearId || ''} onChange={event => setSemesterSchedule({ ...semesterSchedule, academicYearId: event.target.value })}><option value="">Select year</option>{academicYears.map(year => <option key={year.academicYearId ?? year.id} value={year.academicYearId ?? year.id}>{year.academicYearName ?? year.name}</option>)}</select></label>
+            <label>Schedule status<select value={semesterSchedule.status} onChange={event => setSemesterSchedule({ ...semesterSchedule, status: event.target.value })}><option value="0">Inactive / Draft</option><option value="1">Enabled</option></select></label>
+            <label>Semester start date<input type="date" value={semesterSchedule.startDate} onChange={event => setSemesterSchedule({ ...semesterSchedule, startDate: event.target.value })} /></label>
+            <label>Semester end date<input type="date" value={semesterSchedule.endDate} onChange={event => setSemesterSchedule({ ...semesterSchedule, endDate: event.target.value })} /></label>
+          </div>
+        </ViewDialog>}
         {modalType === 'branch' && inlineDepartmentCollege === String(selectedCollegeId) && <DepartmentManagement
           inlineCreate
           onDismiss={() => setInlineDepartmentCollege(null)}

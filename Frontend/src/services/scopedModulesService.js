@@ -151,7 +151,9 @@ export async function loadMeetingsEvents(scope) {
   })
   if (resourceErrors.events) nested.resourceErrors.registrations = resourceErrors.events
   if (resourceErrors.meetings) { nested.resourceErrors.attendance = resourceErrors.meetings; nested.resourceErrors.minutes = resourceErrors.meetings }
-  return { meetings, events, registrations: nested.values.registrations.flat(), attendance: nested.values.attendance.flat(), minutes: nested.values.minutes.flat(), resourceErrors:{...resourceErrors,...nested.resourceErrors} }
+  const registrations = nested.values.registrations.flat()
+  const countedEvents = events.map(event => ({ ...event, registeredCount: nested.resourceErrors.registrations ? null : registrations.filter(row => String(row.eventId) === String(event.id) && ['REGISTERED', 'CONFIRMED'].includes(statusCode(row.status))).length }))
+  return { meetings, events: countedEvents, registrations, attendance: nested.values.attendance.flat(), minutes: nested.values.minutes.flat(), resourceErrors:{...resourceErrors,...nested.resourceErrors} }
 }
 export async function saveMeetingEvent(type, form, old, scope) {
   const assignedCollege = getUserCollegeId()
@@ -161,14 +163,14 @@ export async function saveMeetingEvent(type, form, old, scope) {
   if (type === 'meeting') {
     if (dateOnly(form.start) !== dateOnly(form.end)) throw new Error('Meetings must start and end on the same date.')
     path = `meetings${old ? `/${requireId(old.meetingId || old.id)}` : ''}`
-    body = { meetingCode: old?.meetingCode || `MTG-${Date.now()}`, title: form.title, meetingType: form.category, description: form.agenda || form.description, meetingDate: dateOnly(form.start), startTime: `${form.start.slice(11, 16)}:00`, endTime: `${form.end.slice(11, 16)}:00`, venue: form.venue, organizerId: old?.organizerId || null, status: ({ Upcoming: 'SCHEDULED', 'In Progress': 'ONGOING' })[form.status] || statusCode(form.status || 'Scheduled') }
+    body = { meetingCode: old?.meetingCode || `MTG-${Date.now()}`, title: form.title, meetingType: form.category, description: form.agenda ?? form.description, meetingDate: dateOnly(form.start), startTime: `${form.start.slice(11, 16)}:00`, endTime: `${form.end.slice(11, 16)}:00`, venue: form.venue, organizerId: form.organizerId ? requireId(form.organizerId, 'organizer') : null, remarks: old?.remarks || null, status: ({ Upcoming: 'SCHEDULED', 'In Progress': 'ONGOING' })[form.status] || statusCode(form.status || 'Scheduled') }
   } else if (type === 'event') {
     path = `events${old ? `/${requireId(old.eventId || old.id)}` : ''}`
-    body = { collegeId: query.collegeId, academicYearId: requireId(scope.academicYearId, 'academic year'), eventCode: old?.eventCode || `EVT-${Date.now()}`, eventName: form.title, eventType: form.category, startAt: dateTime(form.start), endAt: dateTime(form.end), venue: form.venue, description: form.description, maxParticipants: Number(form.capacity) || null, registrationClosesAt: dateTime(form.deadline), registrationFee: Number(form.registrationFee) || 0, certificateEnabled: Boolean(form.certificateEnabled), status: form.status === 'Upcoming' ? 'PUBLISHED' : form.status || 'Draft' }
+    body = { collegeId: query.collegeId, academicYearId: requireId(scope.academicYearId, 'academic year'), departmentId: form.departmentId ? requireId(form.departmentId, 'department') : null, organizerUserId: form.organizerUserId ? requireId(form.organizerUserId, 'organizer') : null, eventCode: old?.eventCode || `EVT-${Date.now()}`, eventName: form.title, eventType: statusCode(form.category || 'OTHER'), startAt: dateTime(form.start), endAt: dateTime(form.end), venue: form.venue, description: form.description, maxParticipants: Number(form.capacity) || null, registrationOpensAt: old?.registrationOpensAt || null, registrationClosesAt: dateTime(form.deadline), registrationFee: Number(form.registrationFee) || 0, certificateEnabled: Boolean(form.certificateEnabled), bannerPath: old?.bannerPath || null, status: form.status === 'Upcoming' ? 'PUBLISHED' : statusCode(form.status || 'Draft') }
   } else if (type === 'registration') {
     path = `events/${requireId(form.eventId, 'event')}/registrations${old ? `/${requireId(old.apiId)}/status` : ''}`
     method = old ? 'PATCH' : 'POST'
-    body = old ? { status: form.status } : { participantType: 'STUDENT', studentId: requireId(form.studentId, 'student'), participantName: form.studentName, email: form.email || null, mobile: form.phone || null }
+    body = old ? { status: statusCode(form.status) } : { participantType: form.participantType || 'STUDENT', studentId: form.participantType === 'STAFF' ? null : requireId(form.studentId, 'student'), userId: form.participantType === 'STAFF' ? requireId(form.userId, 'faculty / staff user') : null, participantName: form.studentName, email: form.email || null, mobile: form.phone || null }
   } else if (type === 'minute') {
     path = `meetings/${requireId(form.meetingId, 'meeting')}/minutes${old ? `/${requireId(old.apiId)}` : ''}`
     body = { minutesTitle: form.title || form.meetingTitle, minutesText: form.minutes || form.actionItem, approvalStatus: statusCode(form.approvalStatus || 'Draft') }
@@ -177,76 +179,148 @@ export async function saveMeetingEvent(type, form, old, scope) {
 }
 
 export async function loadPlacements(scope) {
-  requireId(scope.collegeId, 'college')
-  const {values:{companies,drives,applications,interviews,offers,students},resourceErrors} = await readModuleResources({...Object.fromEntries(['companies','drives','applications','interviews'].map(key=>[key,()=>list(`placements/${key}`,{collegeId:scope.collegeId})])),offers:()=>list('placements/selections',{collegeId:scope.collegeId}),students:()=>list('students',{collegeId:scope.collegeId})})
-  const scopedCompanies = companies.filter(c => String(c.collegeId) === String(scope.collegeId))
-  const scopedDrives = drives.filter(d => String(d.collegeId) === String(scope.collegeId) && (!scope.academicYearId || String(d.academicYearId) === String(scope.academicYearId)))
-  const driveIds = new Set(scopedDrives.map(d => String(d.driveId)))
-  const appRows = applications.filter(a => driveIds.has(String(a.driveId)))
-  const appIds = new Set(appRows.map(a => String(a.applicationId)))
+  const collegeId = requireId(scope.collegeId, 'college')
+  const resources = await readModuleResources({
+    companies: () => list('placements/companies', { collegeId }),
+    drives: () => list('placements/drives', { collegeId, academicYearId: scope.academicYearId }),
+    applications: () => list('placements/applications', { collegeId }),
+    interviews: () => list('placements/interviews', { collegeId }),
+    offers: () => list('placements/selections', { collegeId }),
+    students: () => list('students', { collegeId }),
+  })
+  const { resourceErrors, values } = resources
+  const companies = values.companies.filter(row => String(row.collegeId) === String(collegeId))
+  const drives = values.drives.filter(row => String(row.collegeId) === String(collegeId) &&
+    (!scope.academicYearId || String(row.academicYearId) === String(scope.academicYearId)))
+  const driveIds = new Set(drives.map(row => String(row.driveId)))
+  const applications = values.applications.filter(row => driveIds.has(String(row.driveId)))
+  const applicationIds = new Set(applications.map(row => String(row.applicationId)))
+  const students = values.students.filter(row => row.collegeId == null || String(row.collegeId) === String(collegeId))
   if (resourceErrors.drives) resourceErrors.applications = resourceErrors.drives
-  if (resourceErrors.applications) { resourceErrors.interviews = resourceErrors.applications; resourceErrors.offers = resourceErrors.applications }
-  const enrich = row => { const application = appRows.find(a => String(a.applicationId) === String(row.applicationId)) || row; const drive = scopedDrives.find(d => String(d.driveId) === String(application.driveId)); const student = students.find(s => String(s.studentId ?? s.id) === String(application.studentId)); return { studentName: student?.studentName || student?.fullName || student?.name || `Student ${application.studentId}`, rollNumber: student?.rollNumber || student?.admissionNumber || String(application.studentId), jobTitle: drive?.jobTitle || '', companyName: scopedCompanies.find(c => String(c.companyId) === String(drive?.companyId))?.companyName || '' } }
-  const companyName = row => row.companyName || scopedCompanies.find(c => String(c.companyId) === String(row.companyId))?.companyName || enrich(row).companyName
+  if (resourceErrors.applications) {
+    resourceErrors.interviews = resourceErrors.applications
+    resourceErrors.offers = resourceErrors.applications
+  }
+  const related = await readModuleResources(Object.fromEntries(drives.flatMap(drive => [
+    ['rules-' + drive.driveId, () => list('placements/drives/' + drive.driveId + '/eligibility-rules', { collegeId })],
+    ['eligibility-' + drive.driveId, () => list('placements/drives/' + drive.driveId + '/eligibility', { collegeId })],
+  ])))
+  const rules = drives.flatMap(drive => (related.values['rules-' + drive.driveId] || []).map(row => ({ ...row, driveId: drive.driveId })))
+  const eligibility = drives.flatMap(drive => (related.values['eligibility-' + drive.driveId] || []).map(row => ({ ...row, driveId: drive.driveId })))
+  const enrich = row => {
+    const application = applications.find(item => String(item.applicationId) === String(row.applicationId)) || row
+    const drive = drives.find(item => String(item.driveId) === String(application.driveId))
+    const student = students.find(item => String(item.studentId ?? item.id) === String(application.studentId))
+    const company = companies.find(item => String(item.companyId) === String(drive?.companyId || row.companyId))
+    const evaluation = eligibility.find(item => String(item.driveId) === String(application.driveId) && String(item.studentId) === String(application.studentId))
+    return {
+      studentId: application.studentId,
+      studentName: student?.studentName || student?.fullName || student?.name || '',
+      rollNumber: student?.rollNumber || student?.admissionNumber || student?.studentCode || '',
+      branchId: student?.branchId,
+      courseId: student?.courseId,
+      semesterId: student?.semesterId || student?.currentSemesterId,
+      batch: student?.graduationYear || student?.batchName || student?.admissionYear || '',
+      companyId: drive?.companyId || row.companyId,
+      companyName: row.companyName || company?.companyName || '',
+      jobTitle: drive?.jobTitle || '',
+      driveId: application.driveId,
+      eligibilityStatus: evaluation?.eligibilityStatus || '',
+      eligibilityReason: evaluation?.reason || '',
+    }
+  }
   return {
     resourceErrors,
-    companies: scopedCompanies.map(c => ({ ...c, id: String(c.companyId), name: c.companyName, contactEmail: c.email || '', contactPhone: c.phone || '', hq: c.address || '', status: c.status === 'Active' ? 'Active Partner' : c.status })),
-    drives: scopedDrives.map(d => ({ ...d, id: String(d.driveId), status: statusLabel(d.driveStatus), eligibility: d.remarks || '', title: d.driveName, company: companyName(d), role: d.jobTitle, driveDate: dateOnly(d.driveStartAt), deadline: dateOnly(d.applicationCloseAt), ctcNum: Number(d.ctcMax || d.ctcMin || 0) / 100000, ctc: d.ctcMax ? `₹ ${(Number(d.ctcMax) / 100000).toFixed(1)} LPA` : '—', eligibleBranches: [], description: d.jobDescription || '', applicantsCount: d.applicationCount || 0, shortlistedCount: 0, selectedCount: d.selectionCount || 0 })),
-    applications: appRows.map(a => ({ ...a, ...enrich(a), status: statusLabel(a.applicationStatus), id: String(a.applicationId), driveId: String(a.driveId), company: companyName(a), role: enrich(a).jobTitle, rollNo: enrich(a).rollNumber, appliedDate: dateOnly(a.appliedAt), resumeUrl: a.resumePath || '' })),
-    interviews: interviews.filter(i => appIds.has(String(i.applicationId))).map(i => ({ ...i, ...enrich(i), id: String(i.interviewId), company: companyName(i), candidateName: enrich(i).studentName, rollNo: enrich(i).rollNumber, roundType: i.roundName, start: dateTime(i.scheduledAt), end: dateTime(i.scheduledAt), interviewer: i.interviewerName, meetLink: i.meetingUrl || '', status: i.interviewResult === 'PASSED' ? 'Cleared' : i.interviewResult === 'FAILED' ? 'Eliminated' : statusLabel(i.interviewStatus) })),
-    offers: offers.filter(o => appIds.has(String(o.applicationId))).map(o => ({ ...o, ...enrich(o), id: String(o.selectionId), company: companyName(o), role: o.offeredJobTitle, rollNo: enrich(o).rollNumber, ctcNum: Number(o.offeredCtc || 0) / 100000, ctc: o.offeredCtc ? `₹ ${(Number(o.offeredCtc) / 100000).toFixed(1)} LPA` : '—', status: o.offerStatus === 'NOT_ISSUED' ? 'Pending' : statusLabel(o.offerStatus || o.selectionStatus), deadline: dateOnly(o.offerExpiresAt), offerDate: dateOnly(o.selectedAt), location: o.jobLocation })),
+    relatedErrors: related.resourceErrors,
+    rules,
+    eligibility,
+    students,
+    companies: companies.map(row => ({ ...row, id: String(row.companyId), name: row.companyName,
+      contactEmail: row.email || '', contactPhone: row.phone || '', hq: row.address || '' })),
+    drives: drives.map(row => ({ ...row, id: String(row.driveId), title: row.driveName, role: row.jobTitle,
+      company: companies.find(item => String(item.companyId) === String(row.companyId))?.companyName || '',
+      status: statusLabel(row.driveStatus), description: row.jobDescription || '',
+      driveDate: dateOnly(row.driveStartAt), deadline: dateOnly(row.applicationCloseAt),
+      ctcNum: row.ctcMax == null ? null : Number(row.ctcMax) / 100000,
+      eligibleBranches: rules.filter(rule => String(rule.driveId) === String(row.driveId) && rule.status !== 0 && rule.status !== false).map(rule => rule.branchId).filter(Boolean),
+      applicantsCount: resourceErrors.applications ? null : applications.filter(item => String(item.driveId) === String(row.driveId)).length,
+    })),
+    applications: applications.map(row => ({ ...row, ...enrich(row), id: String(row.applicationId),
+      status: statusLabel(row.applicationStatus), driveId: String(row.driveId),
+      role: enrich(row).jobTitle, rollNo: enrich(row).rollNumber, resumeUrl: row.resumePath || '' })),
+    interviews: values.interviews.filter(row => applicationIds.has(String(row.applicationId))).map(row => ({ ...row, ...enrich(row),
+      id: String(row.interviewId), status: statusLabel(row.interviewStatus), role: enrich(row).jobTitle,
+      start: row.scheduledAt, interviewer: row.interviewerName, meetLink: row.meetingUrl || '' })),
+    offers: values.offers.filter(row => applicationIds.has(String(row.applicationId))).map(row => ({ ...row, ...enrich(row),
+      id: String(row.selectionId), role: row.offeredJobTitle, status: statusLabel(row.offerStatus || row.selectionStatus),
+      ctcNum: row.offeredCtc == null ? null : Number(row.offeredCtc) / 100000,
+      offerDate: row.offerIssuedAt, deadline: row.offerExpiresAt, location: row.jobLocation })),
   }
 }
+
 export async function savePlacement(type, form, edit, scope, data) {
   const query = { collegeId: requireId(scope.collegeId, 'college') }
-  let path, body
-  const suffix = edit ? `/${requireId(form.id)}` : ''
+  const suffix = edit ? '/' + requireId(form.id) : ''
+  const optionalNumber = value => value === '' || value == null ? null : Number(value)
   if (type === 'company') {
-    if (!edit) {
-      // This API assigns new companies to its first college and has no collegeId input.
-      const colleges = await list('colleges')
-      const firstCollegeId = Math.min(...colleges.map(c => Number(c.collegeId ?? c.id)).filter(id => id > 0))
-      if (Number(scope.collegeId) !== firstCollegeId) throw new Error('The company creation API does not support this selected college. Select the institution’s primary college to create a company.')
+    return unwrap(await call('placements/companies' + suffix, {
+      method: edit ? 'PUT' : 'POST', query,
+      body: { collegeId: query.collegeId, companyName: form.name, industry: form.industry || null,
+        website: form.website || null, contactPerson: form.contactPerson || null,
+        email: form.contactEmail || null, phone: form.contactPhone || null, address: form.hq || null,
+        status: form.status === 'Inactive' ? 'Inactive' : 'Active' },
+    }))
+  }
+  if (type === 'drive') {
+    const company = data.companies.find(row => String(row.id) === String(form.companyId) || row.name === form.company)
+    const body = {
+      companyId: requireId(company?.id, 'company'), academicYearId: requireId(form.academicYearId || scope.academicYearId, 'academic year'),
+      driveCode: form.driveCode || 'DRV-' + crypto.randomUUID().slice(0, 12).toUpperCase(),
+      driveName: form.title, jobTitle: form.role, jobDescription: form.description || null,
+      employmentType: form.employmentType || 'FULL_TIME', driveType: form.driveType || 'ON_CAMPUS',
+      jobLocation: form.jobLocation || null, ctcMin: optionalNumber(form.ctcMin),
+      ctcMax: form.ctcMax !== undefined ? optionalNumber(form.ctcMax) : form.ctcNum == null ? null : Number(form.ctcNum) * 100000,
+      monthlyStipend: optionalNumber(form.monthlyStipend), currencyCode: form.currencyCode || 'INR', vacancies: optionalNumber(form.vacancies),
+      driveStartAt: form.driveStartAt || form.driveDate, driveEndAt: form.driveEndAt || null,
+      applicationOpenAt: form.applicationOpenAt || null, applicationCloseAt: form.applicationCloseAt || form.deadline || null,
+      venue: form.venue || null, meetingUrl: form.meetingUrl || null,
+      coordinatorUserId: optionalNumber(form.coordinatorUserId), remarks: form.remarks ?? form.eligibility ?? null,
     }
-    path = `placements/companies${suffix}`
-    body = { companyName: form.name, industry: form.industry, website: form.website, contactPerson: form.contactPerson, email: form.contactEmail, phone: form.contactPhone, address: form.hq, status: form.status === 'Inactive' ? 'Inactive' : 'Active' }
-  } else if (type === 'drive') {
-    const company = data.companies.find(c => c.name === form.company || c.id === String(form.companyId))
-    path = `placements/drives${suffix}`
-    body = { ...form, companyId: requireId(company?.id, 'company'), academicYearId: requireId(scope.academicYearId, 'academic year'), driveCode: form.driveCode || `DRV-${Date.now()}`, driveName: form.title, jobTitle: form.role, jobDescription: form.description, remarks: form.eligibility || null, driveStartAt: form.driveDate, applicationCloseAt: form.deadline || null, employmentType: form.employmentType || 'FULL_TIME', driveType: form.driveType || 'ON_CAMPUS', currencyCode: 'INR', ctcMax: Number(form.ctcNum || 0) * 100000 }
-    if (!edit && form.status && form.status !== 'Draft') throw new Error('New drives must be saved as drafts before publishing.')
+    return unwrap(await call('placements/drives' + suffix, { method: edit ? 'PUT' : 'POST', query, body }))
+  }
+  if (type === 'application') {
+    const body = { resumePath: form.resumeUrl || null, coverLetter: form.coverLetter || null, remarks: form.remarks || null }
+    if (!edit) body.studentId = requireId(form.studentId, 'student')
+    const path = edit ? 'placements/applications' + suffix : 'placements/drives/' + requireId(form.driveId, 'drive') + '/applications'
+    return unwrap(await call(path, { method: edit ? 'PUT' : 'POST', query, body }))
+  }
+  const application = data.applications?.find(row => String(row.applicationId || row.id) === String(form.applicationId))
+  if (type === 'interview') {
+    const path = edit ? 'placements/interviews' + suffix : 'placements/applications/' + requireId(application?.applicationId || application?.id, 'application') + '/interviews'
+    return unwrap(await call(path, { method: edit ? 'PUT' : 'POST', query, body: {
+      roundNumber: Number(form.roundNumber), roundName: form.roundName || form.roundType,
+      roundType: form.interviewRoundType || 'TECHNICAL', interviewMode: form.interviewMode || (form.meetLink ? 'ONLINE' : 'OFFLINE'),
+      scheduledAt: form.scheduledAt || form.start, venue: form.venue || null, meetingUrl: form.meetingUrl || form.meetLink || null,
+      interviewerUserId: optionalNumber(form.interviewerUserId), interviewerName: form.interviewerName || form.interviewer || null,
+    } }))
+  }
+  if (type === 'offer') {
     if (edit) {
-      const old = data.drives.find(d => d.id === form.id)
-      const detailsChanged = ['title','company','role','description','eligibility','driveDate','deadline','venue','ctcNum'].some(key => String(old?.[key] ?? '') !== String(form[key] ?? ''))
-      if (detailsChanged) await call(path, {method:'PUT',body,query})
-      if (old?.status !== form.status) await call(`placements/drives/${requireId(form.id)}/status`,{method:'PATCH',query,body:{status:statusCode(form.status)}})
-      return
+      const old = data.offers?.find(row => String(row.id) === String(form.id))
+      const status = statusCode(form.offerStatus || form.status)
+      if (old && statusCode(old.offerStatus || old.status) === status) return old
+      const body = { offerStatus: status, expectedJoiningDate: form.expectedJoiningDate || null }
+      if (status === 'ISSUED') { body.offerLetterPath = form.offerLetterPath || null; body.offerExpiresAt = form.offerExpiresAt || form.deadline || null }
+      return unwrap(await call('placements/selections/' + requireId(form.id) + '/offer', { method: 'PATCH', query, body }))
     }
-  } else {
-    const application = data.applications.find(a => String(a.applicationId) === String(form.applicationId) || (a.rollNo === form.rollNo && a.company === form.company))
-    if (type === 'application') {
-      path = edit ? `placements/applications${suffix}` : `placements/drives/${requireId(form.driveId, 'drive')}/applications`
-      body = { studentId: requireId(form.studentId, 'student'), resumePath: form.resumeUrl || null, remarks: form.remarks || null }
-    } else if (type === 'interview') {
-      path = edit ? `placements/interviews${suffix}` : `placements/applications/${requireId(application?.applicationId, 'application')}/interviews`
-      body = { roundNumber: Number(form.roundNumber) || 1, roundName: form.roundType, roundType: 'TECHNICAL', interviewMode: form.meetLink ? 'ONLINE' : 'OFFLINE', scheduledAt: dateTime(form.start), venue: form.venue, meetingUrl: form.meetLink || null, interviewerName: form.interviewer || null }
-    } else if (type === 'offer') {
-      if (edit) {
-        const old = data.offers?.find(o => o.id === form.id)
-        if (old && ['role','ctcNum','location'].some(key => String(old[key] ?? '') !== String(form[key] ?? ''))) throw new Error('Issued selection details cannot be changed. This screen can update the offer status.')
-        if (old?.status === form.status) return
-        await call(`placements/selections/${requireId(form.id)}/offer`, {method:'PATCH',query,body:{offerStatus:statusCode(form.status),offerExpiresAt:form.deadline || null}})
-        return
-      }
-      path = `placements/applications/${requireId(application?.applicationId, 'application')}/selection`
-      body = { selectionStatus: form.selectionStatus || 'SELECTED', offeredJobTitle: form.role, offeredCtc: Number(form.ctcNum || 0) * 100000, currencyCode: 'INR', jobLocation: form.location }
-    } else throw new Error('This action is not supported by the matching API.')
+    return unwrap(await call('placements/applications/' + requireId(application?.applicationId || application?.id, 'application') + '/selection', {
+      method: 'PUT', query, body: { selectionStatus: form.selectionStatus || 'SELECTED', offeredJobTitle: form.role || null,
+        offeredCtc: form.offeredCtc !== undefined ? optionalNumber(form.offeredCtc) : form.ctcNum == null ? null : Number(form.ctcNum) * 100000,
+        monthlyStipend: optionalNumber(form.monthlyStipend), currencyCode: form.currencyCode || 'INR',
+        jobLocation: form.location || null, expectedJoiningDate: form.expectedJoiningDate || null, remarks: form.remarks || null },
+    }))
   }
-  await call(path, { method: edit && type !== 'offer' ? 'PUT' : 'POST', body, query })
-  if (edit && type === 'application') {
-    const old = data.applications.find(a => a.id === form.id)
-    if (old && old.status !== form.status) await call(`placements/applications/${requireId(form.id)}/status`, { method:'PATCH', query, body:{status:statusCode(form.status)} })
-  }
+  throw new Error('This operation is unavailable.')
 }
 
 export async function loadOfficialResults(scope) {

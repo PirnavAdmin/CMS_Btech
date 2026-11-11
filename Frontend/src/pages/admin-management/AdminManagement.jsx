@@ -3235,7 +3235,7 @@ function DepartmentManagement({ inlineCreate = false, onCreated, onDismiss } = {
   };
 
   useEffect(() => {
-    if (isLoading) return;
+    if (inlineCreate || isLoading) return;
     const id = departmentParams.get('assignHod') || departmentParams.get('departmentId');
     const action = departmentParams.get('assignHod') ? 'assign-hod' : departmentParams.get('departmentAction');
     if (!id) {
@@ -3251,7 +3251,7 @@ function DepartmentManagement({ inlineCreate = false, onCreated, onDismiss } = {
     next.delete('departmentId');
     next.delete('departmentAction');
     setDepartmentParams(next, { replace: true, state: navigationState });
-  }, [departmentParams, navigationState, isLoading, canCreateDepartment, canEditDepartment, scopedAllDepartments]);
+  }, [inlineCreate, departmentParams, navigationState, isLoading, canCreateDepartment, canEditDepartment, scopedAllDepartments]);
 
   const hodCandidates = useMemo(() => {
     if (!faculty || !faculty.length) return [];
@@ -3438,16 +3438,17 @@ function DepartmentManagement({ inlineCreate = false, onCreated, onDismiss } = {
       const result = recordFrom(response);
       if (!form.id) { rememberCreated('departments', result); setQuery(''); setStatusFilter(''); setCurrentPage(1); }
       const id = result?.id ?? result?.departmentId ?? form.id;
+      if (inlineCreate && id) setForm(current => ({ ...current, id }));
       if (id) {
         cacheDeptDates(id, form.code, { startDate: form.startDate, endDate: form.endDate });
       }
       if (form.status === 'Inactive' && id) await updateDepartmentStatus(id, 0);
       showSuccess(`Department ${form.id ? 'updated' : 'created'} successfully.`);
-      eventBusImports_default.emit(eventBusImports_ERP_EVENTS.ACADEMIC_UPDATED);
       if (inlineCreate) {
         onCreated?.(id);
         return;
       }
+      eventBusImports_default.emit(eventBusImports_ERP_EVENTS.ACADEMIC_UPDATED);
       await loadDepartments('');
       closeToList();
     } catch (requestError) {
@@ -3551,6 +3552,7 @@ function DepartmentManagement({ inlineCreate = false, onCreated, onDismiss } = {
                       </ProjectSelect>
                     </FormField>
                     <FormField label="Description" className="erp-form-field--full"><textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Describe this organizational department..." rows={2} /></FormField>
+                    {inlineCreate && <FormField label="Head / In-Charge (optional)"><ProjectSelect value={form.hodUserId || ''} onChange={event => setForm({ ...form, hodUserId: event.target.value })}><option value="">Not assigned</option>{hodCandidates.map(member => <option key={member.hodId} value={member.hodId}>{member.fullName}</option>)}</ProjectSelect></FormField>}
                   </FormGroup>
                   {isDetailsLoading && <AsyncState status="loading" title="Loading department details..." />}
                 </FormLayout></div></ViewDialog>;

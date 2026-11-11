@@ -239,51 +239,32 @@ test('More Actions uses the selected program for edit, status, and confirmed del
   await waitFor(() => expect(deleteCourse).toHaveBeenCalledWith(10))
 })
 
-test('branches get separate rows and dates can be set on a saved semester from that row', async () => {
-  const extra = { ...fixture.branches[0], branchId: 101, branchName: 'Electrical Engineering', branchCode: 'EEE' }
-  getBranches.mockResolvedValue({ data: [...fixture.branches, extra] })
-  let term = { ...fixture.semesters[0] }
-  getSemesterById.mockImplementation(async () => ({ data: term }))
-  updateSemester.mockImplementationOnce(async (id, payload) => { term = { ...term, ...payload } })
-  renderPage()
-  const cse = await screen.findByRole('button', { name: /Artificial Intelligence/ })
-  const eee = screen.getByRole('button', { name: /Electrical Engineering/ })
-  expect(cse.closest('tr')).not.toBe(eee.closest('tr'))
-  expect(within(eee.closest('tr')).getByText('0 configured definitions')).toBeTruthy()
-  fireEvent.click(cse)
-  fireEvent.click(screen.getByRole('button', { name: /Set dates for Semester 1/ }))
-  const schedule = screen.getByRole('dialog', { name: 'Configure Schedule' })
-  fireEvent.change(await within(schedule).findByLabelText(/start date/), { target: { value: '2026-08-01' } })
-  fireEvent.change(within(schedule).getByLabelText(/end date/), { target: { value: '2026-11-01' } })
-  fireEvent.click(within(schedule).getByRole('button', { name: 'Save Schedule' }))
-  await waitFor(() => expect(updateSemester).toHaveBeenCalledWith('1000', expect.objectContaining({
-    branchId: 100, startDate: '2026-08-01', endDate: '2026-11-01',
-  })))
-  expect(await screen.findByText(/2026-08-01 to 2026-11-01/)).toBeTruthy()
-  expect(createSemester).not.toHaveBeenCalled()
-})
-
-test('Add Program can select a saved course and continue without creating it again', async () => {
-  renderPage()
-  await screen.findByText('B.Tech Computer Science')
-  fireEvent.click(screen.getByRole('button', { name: 'Add Program' }))
-  const picker = screen.getByRole('button', { name: 'Use an existing course' })
-  const options = document.getElementById(picker.getAttribute('popovertarget'))
-  fireEvent.click(within(options).getByText('B.Tech Computer Science (BTECH-CSE)', { selector: 'button' }))
-  expect(screen.getByRole('dialog', { name: 'Add Program' })).toBeTruthy()
-  fireEvent.click(screen.getByRole('button', { name: 'Next: Branch' }))
-  const dialog = screen.getByRole('dialog', { name: 'Add Branch' })
-  expect(within(dialog).getByLabelText(/^Select Course/).value).toBe('10')
-  expect(createCourse).not.toHaveBeenCalled()
+test('branches remain separate rows and reopen saved semester dates', async () => {
+ const extra = { ...fixture.branches[0], branchId: 101, branchName: 'Electrical Engineering', branchCode: 'EEE' }
+ getBranches.mockResolvedValue({ data: [...fixture.branches, extra] })
+ let terms = fixture.semesters.map(row => ({ ...row }))
+ getSemesters.mockImplementation(async () => ({ data: terms }))
+ updateSemester.mockImplementation(async (id, payload) => { terms = terms.map(row => String(row.semesterId) === String(id) ? { ...row, ...payload } : row) })
+ renderPage()
+ const cse = await screen.findByRole('button', { name: /Artificial Intelligence/ })
+ const eee = screen.getByRole('button', { name: /Electrical Engineering/ })
+ expect(cse.closest('tr')).not.toBe(eee.closest('tr'))
+ fireEvent.click(cse)
+ fireEvent.click(screen.getByRole('button', { name: /Set dates for Semester 1/ }))
+ const schedule = screen.getByRole('dialog', { name: 'Configure Schedule' })
+ fireEvent.change(within(schedule).getByLabelText('Semester start date'), { target: { value: '2026-08-01' } })
+ fireEvent.change(within(schedule).getByLabelText('Semester end date'), { target: { value: '2026-11-01' } })
+ fireEvent.click(within(schedule).getByRole('button', { name: 'Save Schedule' }))
+ await waitFor(() => expect(updateSemester).toHaveBeenCalledWith(1000, expect.objectContaining({ startDate: '2026-08-01', endDate: '2026-11-01', academicYearId: 5 })))
+ expect(await screen.findByText('2026-2027 · 2026-08-01 to 2026-11-01')).toBeTruthy()
+ expect(createSemester).not.toHaveBeenCalled()
 })
 
 test('inline department creation selects the saved department and preserves branch details', async () => {
   renderPage()
   await screen.findByText('B.Tech Computer Science')
-  fireEvent.click(screen.getByRole('button', { name: 'Add Program' }))
-  const picker = screen.getByRole('button', { name: 'Use an existing course' })
-  fireEvent.click(within(document.getElementById(picker.getAttribute('popovertarget'))).getByText('B.Tech Computer Science (BTECH-CSE)', { selector: 'button' }))
-  fireEvent.click(screen.getByRole('button', { name: 'Next: Branch' }))
+  fireEvent.click(screen.getByRole('button', { name: 'View B.Tech Computer Science' }))
+  fireEvent.click(within(screen.getByRole('dialog', { name: 'B.Tech Computer Science' })).getByRole('button', { name: 'Add Branch' }))
   const branch = within(screen.getByRole('dialog', { name: 'Add Branch' }))
   fireEvent.change(branch.getByLabelText(/^Branch Name/), { target: { value: 'Data Engineering' } })
   fireEvent.click(branch.getByRole('button', { name: '+ Add Department' }))
@@ -294,38 +275,6 @@ test('inline department creation selects the saved department and preserves bran
   await waitFor(() => expect(branch.getByLabelText(/^Select Department/).value).toBe('3'))
   expect(branch.getByLabelText(/^Branch Name/).value).toBe('Data Engineering')
   expect(screen.queryByRole('dialog', { name: 'Add Department' })).toBeNull()
-})
-
-test('opens Add Program modal without a department selector and submits an unassigned course', async () => {
-  renderPage('/academic-structure?step=courses')
-  expect(await screen.findByText('B.Tech Computer Science')).toBeTruthy()
-
-  // Click Add Program
-  fireEvent.click(screen.getByRole('button', { name: /Add Program/i }))
-  expect(await screen.findByRole('heading', { level: 2, name: 'Add Program' })).toBeTruthy()
-  expect(screen.queryByLabelText(/Select Department/i)).toBeNull()
-
-  // Fill in form
-  fireEvent.change(screen.getByLabelText(/Course Name/i), { target: { value: 'M.Tech Data Science' } })
-  fireEvent.change(screen.getByLabelText(/Course Code/i), { target: { value: 'MTECH-DS' } })
-
-  // Submit form
-  for (const [label, value] of [['Course Type', 'Undergraduate'], ['Duration (Years)', '4'], ['Total Semesters', '8'], ['Status', 'Active']]) {
-    const field = within(screen.getByRole('dialog', { name: 'Add Program' })).getByLabelText(label)
-    expect(field.value).toBe('')
-    fireEvent.change(field, { target: { value } })
-  }
-  fireEvent.click(screen.getByRole('button', { name: /Create Program/i }))
-
-  await waitFor(() => {
-    expect(createCourse).toHaveBeenCalledWith(
-      expect.objectContaining({
-        courseName: 'M.Tech Data Science',
-        courseCode: 'MTECH-DS',
-        departmentId: null,
-      })
-    )
-  })
 })
 
 test('opens Add Branch modal with cascading selectors and submits new branch', async () => {
@@ -398,16 +347,11 @@ test('review generates only missing semester definitions', async () => {
   const term = await screen.findByText('1st Semester')
   fireEvent.click(within(term.closest('.as-directory-branch')).getByRole('button', { name: 'Repair 6 missing semesters' }))
   expect(createSemester).not.toHaveBeenCalled()
-  fireEvent.change(screen.getByLabelText('Semester 2 start date'), { target: { value: '2026-08-01' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Generate Missing Semesters' }))
-  expect(await screen.findByText(/provide both start and end dates/)).toBeTruthy()
-  expect(createSemester).not.toHaveBeenCalled()
-  fireEvent.change(screen.getByLabelText('Semester 2 end date'), { target: { value: '2026-11-01' } })
   fireEvent.click(screen.getByRole('button', { name: 'Generate Missing Semesters' }))
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   expect(createSemester.mock.calls.map(([payload]) => payload.semesterNumber)).toEqual([2, 4, 5, 6, 7, 8])
   expect(createSemester).toHaveBeenCalledWith(expect.objectContaining({
-    semesterNumber: 2, startDate: '2026-08-01', endDate: '2026-11-01',
+    semesterNumber: 2, startDate: null, endDate: null,
   }))
   expect(createSemester).toHaveBeenCalledWith(expect.objectContaining({ courseId: 10, branchId: 100, academicYearId: 5, startDate: null }))
 })
@@ -469,65 +413,4 @@ test('Filters button dropdown renders and search works dynamically for Programs'
   const resetBtn = within(dropdownMenu).getByRole('button', { name: /Reset Filters/i })
   fireEvent.click(resetBtn)
   expect(await screen.findByText('B.Tech Computer Science')).toBeTruthy()
-})
-
-
-test('academic setup tabs share one dialog and retain entered values', async () => {
-  renderPage()
-  fireEvent.click(await screen.findByRole('button', { name: 'Add Program' }))
-  const dialog = screen.getByRole('dialog', { name: 'Add Program' })
-  fireEvent.change(screen.getByLabelText(/Course Name/), { target: { value: 'Draft course' } })
-  fireEvent.click(screen.getByRole('tab', { name: 'Branch' }))
-  expect(screen.getByRole('dialog', { name: 'Add Branch' })).toBe(dialog)
-  fireEvent.click(screen.getByRole('tab', { name: 'Semester Structure' }))
-  expect(screen.getByRole('dialog', { name: 'Semester Structure' })).toBe(dialog)
-  fireEvent.click(screen.getByRole('tab', { name: 'Course' }))
-  expect(screen.getByLabelText(/Course Name/).value).toBe('Draft course')
-})
-
-test('one saved course can receive two branches through the unified setup', async () => {
-  const savedCourses = [...fixture.courses]
-  const savedBranches = [...fixture.branches]
-  const savedSemesters = [...fixture.semesters]
-  getSemesters.mockImplementation(async () => ({ data: savedSemesters }))
-  createSemester.mockImplementation(async payload => {
-    const row = { ...payload, academicYearId: 5, semesterId: 3000 + savedSemesters.length }
-    savedSemesters.push(row)
-    return { data: row }
-  })
-  getCourses.mockImplementation(async () => ({ data: savedCourses }))
-  getBranches.mockImplementation(async () => ({ data: savedBranches }))
-  createCourse.mockImplementation(async payload => {
-    savedCourses.push({ ...payload, courseId: 30 })
-    return { data: savedCourses.at(-1) }
-  })
-  createBranch.mockImplementation(async payload => {
-    savedBranches.push({ ...payload, branchId: 300 + savedBranches.length })
-    return { data: savedBranches.at(-1) }
-  })
-  renderPage()
-  fireEvent.click(await screen.findByRole('button', { name: 'Add Program' }))
-  fireEvent.change(screen.getByLabelText(/Course Name/), { target: { value: 'Engineering Design' } })
-  fireEvent.change(screen.getByLabelText(/Course Code/), { target: { value: 'ED' } })
-  for (const [label, value] of [['Course Type', 'Undergraduate'], ['Duration (Years)', '4'], ['Total Semesters', '8'], ['Status', 'Active']]) {
-    const field = within(screen.getByRole('dialog', { name: 'Add Program' })).getByLabelText(label)
-    expect(field.value).toBe('')
-    fireEvent.change(field, { target: { value } })
-  }
-  fireEvent.click(screen.getByRole('button', { name: 'Create Program' }))
-  for (const [name, code] of [['Engineering Systems', 'ES'], ['Product Design', 'PD']]) {
-    await screen.findByRole('dialog', { name: 'Add Branch' })
-    expect(screen.getByLabelText(/^Select Course/).value).toBe('30')
-    fireEvent.change(screen.getByLabelText(/^Select Department/), { target: { value: '1' } })
-    expect(screen.getByLabelText(/^Select Course/).value).toBe('30')
-    fireEvent.change(screen.getByLabelText(/Branch Name/), { target: { value: name } })
-    fireEvent.change(screen.getByLabelText(/Branch Code/), { target: { value: code } })
-    fireEvent.click(screen.getByRole('button', { name: 'Create Branch' }))
-    const structure = await screen.findByRole('dialog', { name: 'Semester Structure' })
-    await within(structure).findByText('8 of 8 saved · 0 to add')
-    if (code === 'ES') fireEvent.click(screen.getByRole('tab', { name: 'Branch' }))
-  }
-  expect(createCourse).toHaveBeenCalledTimes(1)
-  expect(createBranch.mock.calls.map(([branch]) => branch.courseId)).toEqual([30, 30])
-  expect(createSemester).toHaveBeenCalledTimes(16)
 })

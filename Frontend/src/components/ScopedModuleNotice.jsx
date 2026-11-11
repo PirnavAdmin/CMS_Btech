@@ -6,14 +6,14 @@ import { GENERIC_ERROR_MESSAGE } from '../utils/userError'
 import './ToastProvider.css'
 import './ScopedModuleNotice.css'
 
-export default function ScopedModuleNotice({ state, data = {}, resource, onRetry }) {
+export default function ScopedModuleNotice({ state, data = {}, resource, onRetry, showRelated = true }) {
   const academic = useAcademic()
   const currentError = data.resourceErrors?.[resource]
   const message = state.error || currentError?.message || ''
   const assignedCollege = getUserCollegeId()
   const collegeName = academic.selectedCollege?.name || academic.selectedCollege?.collegeName || 'the selected college'
   const assignmentError = /cross.college|college assignment|college.scoped|signed.in college/i.test(message)
-  const related = Object.entries(data.resourceErrors || {}).filter(([key]) => key !== resource)
+  const related = showRelated ? Object.entries(data.resourceErrors || {}).filter(([key]) => key !== resource) : []
   if (!message && !state.saveError && !state.waitingForContext && !state.loading && !state.saving && !related.length) return null
   const failed = Boolean(message || state.saveError)
   const Icon = failed ? FiAlertCircle : FiInfo
