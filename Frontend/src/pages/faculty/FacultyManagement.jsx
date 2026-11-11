@@ -350,11 +350,21 @@ function ApiAssignmentDialog({ faculty, onClose, onChanged }) {
   }
 
   return (
-<ReferenceViewDialog title={faculty.fullName + ' - Subject Allocations'} onClose={onClose} busy={busy} showExport={false} maxWidth="1000px"><section className="fm-assignment-modal">
+<ReferenceViewDialog
+      title={`${faculty.fullName} · Subject Allocations`}
+      subtitle="Configure academic scope and weekly teaching load."
+      icon={FiBriefcase}
+      onClose={onClose}
+      busy={busy}
+      showExport={false}
+      maxWidth="920px"
+      className="fm-allocation-dialog shared-view-dialog--form"
+    >
+      <section className="fm-assignment-modal">
         {error && <p role="alert" className="fm-error">{error} {!masters && <button type="button" onClick={() => setAttempt(value => value + 1)}>Retry options</button>}</p>}
         {masters ? (
-          <form hidden={!canManage} onSubmit={save}>
-            <div className="fm-form-grid">
+          <form hidden={!canManage} className="fm-allocation-form" onSubmit={save}>
+            <div className="fm-form-grid fm-allocation-grid">
               {[
                 ['academicYearId', 'Academic Year', 'years', 'academicYearId', 'academicYearName'],
                 ['courseId', 'Course', 'courses', 'courseId', 'courseName'],
@@ -363,7 +373,7 @@ function ApiAssignmentDialog({ faculty, onClose, onChanged }) {
                 ['sectionId', 'Section', 'sections', 'sectionId', 'sectionName'],
                 ['subjectId', 'Subject', 'subjects', 'subjectId', 'subjectName'],
               ].map(([key, label, collection, idKey, nameKey]) => (
-                <label key={key}>
+                <label key={key} className="fm-field fm-allocation-field">
                   <span>{label}</span>
                   <ProjectSelect
                     required={['academicYearId','courseId','branchId','semesterId'].includes(key)}
@@ -381,7 +391,7 @@ function ApiAssignmentDialog({ faculty, onClose, onChanged }) {
                   </ProjectSelect>
                 </label>
               ))}
-              <label>
+              <label className="fm-field fm-allocation-field">
                 <span>Assignment Type</span>
                 <ProjectSelect value={form.assignmentType} onChange={e => setForm({ ...form, assignmentType: e.target.value })}>
                   {['Subject Faculty', 'Lab Faculty', 'Class Advisor', 'Mentor', 'Project Guide'].map(value => (
@@ -389,16 +399,16 @@ function ApiAssignmentDialog({ faculty, onClose, onChanged }) {
                   ))}
                 </ProjectSelect>
               </label>
-              <label>
+              <label className="fm-field fm-allocation-field">
                 <span>Periods Per Week</span>
                 <input type="number" min="0" max="60" value={form.weeklyHours} onChange={e => setForm({ ...form, weeklyHours: e.target.value })} />
               </label>
-              <label className="fm-wide">
+              <label className="fm-field fm-wide fm-allocation-field">
                 <span>Remarks</span>
                 <input placeholder="Optional allocation notes" value={form.remarks} onChange={e => setForm({ ...form, remarks: e.target.value })} />
               </label>
             </div>
-            <div className="fm-assignment-submit" style={{ marginTop: '12px' }}>
+            <div className="fm-assignment-submit">
               <button type="submit" className="fm-button" disabled={busy}>
                 <FiPlus /> {busy ? 'Saving...' : editing ? 'Update Assignment' : 'Add Allocation'}
               </button>
@@ -408,8 +418,14 @@ function ApiAssignmentDialog({ faculty, onClose, onChanged }) {
           <p className="fm-muted">Loading academic options...</p>
         )}
 
-        <div className="fm-current-assignments" style={{ marginTop: '18px' }}>
-          <h2>Allocated Responsibilities <span className="fm-muted">({faculty?.assignments?.length || 0})</span></h2>
+        <div className="fm-current-assignments">
+          <div className="fm-allocation-heading">
+            <div>
+              <h2>Allocated Responsibilities</h2>
+              <p>Current subjects, sections and weekly teaching load.</p>
+            </div>
+            <span className="fm-allocation-count">{faculty?.assignments?.length || 0}</span>
+          </div>
           {(faculty?.assignments || []).length ? (
             <div className="fm-assignment-list">
               {faculty.assignments.map(row => (
@@ -442,7 +458,7 @@ function ApiAssignmentDialog({ faculty, onClose, onChanged }) {
               ))}
             </div>
           ) : (
-            <p className="fm-muted">No subject allocations found.</p>
+            <div className="fm-allocation-empty"><FiBriefcase /><span>No subject allocations found.</span></div>
           )}
         </div>
       </section>
