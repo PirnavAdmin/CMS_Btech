@@ -43,7 +43,10 @@ export default function ProgramCreationWizard({ collegeId, departments: initialD
   const run = async action => {
     if (lock.current) return
     lock.current = true; setBusy(true); setError('')
-    try { assertScope(); await action() } catch (reason) { setError(message(reason)) } finally { lock.current = false; setBusy(false) }
+    try { assertScope(); await action() } catch (reason) {
+      setError(message(reason))
+      if (body.current) body.current.scrollTop = 0
+    } finally { lock.current = false; setBusy(false) }
   }
   const go = value => { setStep(value); setError(''); if (body.current) body.current.scrollTop = 0 }
   const validateProgram = () => {
@@ -179,7 +182,7 @@ export default function ProgramCreationWizard({ collegeId, departments: initialD
   return <>
     <ViewDialog title="Add Program" subtitle="Configure the program, departments, branches and semester dates." className="program-creation-dialog" maxWidth="940px" showExport={false} busy={busy} bodyRef={body}
       onClose={() => { if (!busy && (!courseId.current || window.confirm('Leave this setup? Saved program and branch records will remain available in Programs.'))) onClose() }}
-      footerContent={<><span>Step {step + 1} of 5</span><div className="shared-view-dialog__footer-actions"><button className="erp-btn erp-btn--secondary" disabled={busy || step === 0} onClick={() => go(step - 1)}>Back</button><button className="erp-btn erp-btn--primary" disabled={busy} onClick={next}>{busy ? 'Saving…' : step === 4 ? 'Submit Program' : 'Save & Continue'}</button></div></>}>
+      footerContent={<><span>{busy && step === 4 ? 'Saving semester schedules…' : `Step ${step + 1} of 5`}</span><div className="shared-view-dialog__footer-actions"><button type="button" className="erp-btn erp-btn--secondary" disabled={busy || step === 0} onClick={() => go(step - 1)}>Back</button><button type="button" className="erp-btn erp-btn--primary" disabled={busy} onClick={next}>{busy ? 'Saving…' : step === 4 ? 'Submit Program' : 'Save & Continue'}</button></div></>}>
       <ol className="program-creation-steps" aria-label="Program setup steps">{steps.map((label, index) => <li key={label} aria-current={index === step ? 'step' : undefined}><span>{index + 1}</span>{label}</li>)}</ol>
       {error && <p role="alert" className="program-creation-error">{error}</p>}
       <fieldset disabled={busy} className="program-creation-fields">

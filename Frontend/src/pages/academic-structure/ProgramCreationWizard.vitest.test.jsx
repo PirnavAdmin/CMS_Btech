@@ -136,3 +136,33 @@ test('year mapping uses saved calendar dates, then selected context, and never i
   expect(scheduleYear({}, calendars, 5)).toBe('5')
   expect(scheduleYear({}, calendars)).toBe('')
 })
+test('submission completes with one scheduled semester and remaining semesters left blank', async () => {
+  await start(); await addBranches()
+  fireEvent.change(screen.getAllByLabelText('Start Date')[0], { target: { value: '2026-11-11' } })
+  fireEvent.change(screen.getAllByLabelText('End Date')[0], { target: { value: '2027-03-11' } })
+  await next('Review & Submit')
+  fireEvent.click(screen.getByRole('button', { name: 'Submit Program' }))
+  await waitFor(() => expect(complete).toHaveBeenCalledOnce())
+  expect(terms).toHaveLength(4)
+  expect(terms.filter(row => !row.startDate && !row.endDate)).toHaveLength(3)
+  expect(api.getSemesters.mock.calls.length).toBeLessThanOrEqual(5)
+})
+test('idempotent POST returning an unscheduled definition is updated using its saved ID', async () => {
+  const term = { semesterNumber: 1, yearNumber: 1, semesterName: 'Semester 1', academicYearId: 5, startDate: '2026-11-11', endDate: '2027-03-11', status: '1' }
+  api.createSemester.mockImplementationOnce(async data => {
+    const existing = { ...data, semesterId: 91, startDate: null, endDate: null, status: 0 }
+    terms.push(existing)
+    return { data: { data: existing } }
+  })
+  await saveSemesterSchedules({ courseId: 10, branches: [{ id: 100, terms: [term] }], list: api.getSemesters, create: api.createSemester, update: api.updateSemester, assertScope: () => {}, confirmOverwrite: () => true })
+  expect(api.createSemester).toHaveBeenCalledOnce()
+  expect(api.updateSemester).toHaveBeenCalledWith(91, expect.objectContaining({ startDate: term.startDate, endDate: term.endDate, status: 1 }))
+  expect(terms).toHaveLength(1)
+})
+test('verification accepts equivalent API status and field casing while preserving date checks', async () => {
+  const term = { semesterNumber: 1, semesterName: 'Semester 1', academicYearId: 5, startDate: '2026-11-11', endDate: '2027-03-11', status: '1' }
+  const list = vi.fn(async () => ({ data: [{ SemesterId: 91, CourseId: 10, BranchId: 100, AcademicYearId: 5, SemesterNumber: 1, SemesterName: 'Semester 1 ', StartDate: '2026-11-11T00:00:00', EndDate: '2027-03-11T00:00:00', Status: true }] }))
+  await saveSemesterSchedules({ courseId: 10, branches: [{ id: 100, terms: [term] }], list, create: api.createSemester, update: api.updateSemester, assertScope: () => {}, confirmOverwrite: () => true })
+  expect(api.createSemester).not.toHaveBeenCalled()
+  expect(api.updateSemester).not.toHaveBeenCalled()
+})

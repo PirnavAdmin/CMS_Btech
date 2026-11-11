@@ -42,28 +42,66 @@ export function validateSemesterSchedules(branches, years, existing = []) {
 // The caller retains branch/program IDs. Each retry reads the server first, so
 // an interrupted POST cannot cause duplicate semester instances.
 export async function saveSemesterSchedules({ courseId, branches, list, create, update, assertScope, confirmOverwrite }) {
+  const normalize = row => {
+    if (!row || typeof row !== 'object') return row
+    const result = { ...row }
+    for (const key of ['semesterId', 'courseId', 'branchId', 'academicYearId', 'semesterNumber', 'semesterName', 'startDate', 'endDate', 'status']) {
+      if (result[key] === undefined) result[key] = row[key[0].toUpperCase() + key.slice(1)]
+    }
+    return result
+  }
+  const read = async () => records(await list()).map(normalize)
+  const statusValue = value => value === true || String(value).toLowerCase() === 'active' ? '1' : value === false || String(value).toLowerCase() === 'inactive' ? '0' : String(value)
+  assertScope()
+  let rows = await read()
+  const expected = []
   for (const branch of branches) for (const term of branch.terms) {
-    assertScope()
-    const rows = records(await list())
     assertScope()
     const saved = rows.find(row => String(row.courseId) === String(courseId) && String(row.branchId) === String(branch.id) &&
       String(row.academicYearId) === String(term.academicYearId) && Number(row.semesterNumber) === term.semesterNumber)
     const payload = { courseId: Number(courseId), branchId: Number(branch.id), academicYearId: Number(term.academicYearId),
       semesterNumber: term.semesterNumber, yearNumber: term.yearNumber, semesterName: term.semesterName.trim(),
       startDate: term.startDate || null, endDate: term.endDate || null, status: Number(term.status) }
-    const equal = row => row && ['semesterName', 'status'].every(key => String(row[key]) === String(payload[key])) &&
+    const equal = row => row && String(row.semesterName ?? '').trim() === payload.semesterName && statusValue(row.status) === statusValue(payload.status) &&
       dateOnly(row.startDate) === (payload.startDate || '') && dateOnly(row.endDate) === (payload.endDate || '')
+    const matches = row => String(row.courseId) === String(courseId) && String(row.branchId) === String(branch.id) && String(row.academicYearId) === String(term.academicYearId) && Number(row.semesterNumber) === term.semesterNumber
+    expected.push(row => matches(row) && entityId(row, 'semester') && equal(row))
     if (equal(saved)) continue
     if (saved && (saved.startDate || saved.endDate) && !confirmOverwrite(saved)) throw new Error('Saved schedule retained. Review the dates before submitting again.')
     try {
-      if (saved) await update(entityId(saved, 'semester'), payload)
-      else await create(payload)
+      const response = saved ? await update(entityId(saved, 'semester'), payload) : await create(payload)
+      let result = response
+      for (let depth = 0; depth < 5 && result && !entityId(normalize(result), 'semester'); depth++) result = result.data
+      result = normalize(result)
+      if (result && entityId(result, 'semester') && matches(result)) rows = [...rows.filter(row => !matches(row)), result]
+      else rows = await read()
     } catch (reason) {
-      const refreshed = records(await list())
-      if (!refreshed.some(row => String(row.branchId) === String(branch.id) && String(row.academicYearId) === String(term.academicYearId) && Number(row.semesterNumber) === term.semesterNumber && equal(row))) throw reason
+      rows = await read()
+      if (!rows.some(row => matches(row) && equal(row))) throw reason
     }
     assertScope()
-    const verified = records(await list()).find(row => String(row.branchId) === String(branch.id) && String(row.academicYearId) === String(term.academicYearId) && Number(row.semesterNumber) === term.semesterNumber)
-    if (!entityId(verified, 'semester') || !equal(verified)) throw new Error('The saved semester dates could not be verified. Your entries are retained; retry to check the saved records.')
+    let verified = rows.find(matches)
+    // POST can idempotently return an existing definition without applying the
+    // requested dates. Reuse that ID through the existing update endpoint.
+    if (!saved && entityId(verified, 'semester') && !equal(verified)) {
+      if ((verified.startDate || verified.endDate) && !confirmOverwrite(verified)) throw new Error('Saved schedule retained. Review the dates before submitting again.')
+      assertScope()
+      await update(entityId(verified, 'semester'), payload)
+      rows = await read()
+      assertScope()
+      verified = rows.find(matches)
+    }
+    if (!entityId(verified, 'semester') || !equal(verified)) {
+      const differences = !verified ? ['record missing from saved list'] : [
+        dateOnly(verified.startDate) !== (payload.startDate || '') && 'start date',
+        dateOnly(verified.endDate) !== (payload.endDate || '') && 'end date',
+        statusValue(verified.status) !== statusValue(payload.status) && 'status',
+        String(verified.semesterName ?? '').trim() !== payload.semesterName && 'semester name',
+      ].filter(Boolean)
+      throw new Error(`${term.semesterName}: saved ${differences.join(', ') || 'record ID'} did not match. Your entries are retained.`)
+    }
   }
+  const persisted = await read()
+  assertScope()
+  if (expected.some(matches => !persisted.some(matches))) throw new Error('Some saved schedules could not be verified. Your entries are retained; retry to check the saved records.')
 }

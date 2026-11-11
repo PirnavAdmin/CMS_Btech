@@ -1559,9 +1559,11 @@ export default function AcademicStructure() {
         )}
         {creatingProgram && <ProgramCreationWizard collegeId={selectedCollegeId} currentCollege={collegeScope} departments={departments} courses={courses} academicYears={academicYears} selectedAcademicYearId={selectedAcademicYearId}
           onClose={() => setCreatingProgram(false)} onComplete={async () => {
-            await loadAcademicData()
             setCreatingProgram(false)
             showToast('Program, branches and semester schedules saved successfully.')
+            // Saved schedules are already verified. Return to the directory
+            // immediately; unrelated hierarchy reads must not hold the modal open.
+            void loadAcademicData()
             eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED)
           }} />}
         {semesterSchedule && <ViewDialog title="Configure Schedule" className="program-creation-dialog" maxWidth="620px" showExport={false} busy={isSubmitting} onClose={() => setSemesterSchedule(null)}
