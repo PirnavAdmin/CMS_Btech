@@ -297,6 +297,75 @@
   .uem-confirm-summary > div:last-child { border-bottom: 0; }
 }
 
+/* Examination directory follows the compact Sections & Rooms page pattern. */
+.uem-page > .erp-page-header { align-items: center; gap: 18px; margin: 0; }
+.uem-page > .erp-page-header > .erp-page-header__right { justify-content: flex-end; align-self: center; min-width: 0; max-width: 100%; }
+.uem-page > .erp-page-header .compact-summary { justify-self: end; }
+.uem-directory-card { display: grid; gap: 0; min-width: 0; overflow: hidden; border: 1px solid #dce8f2; border-radius: 15px; background: var(--surface, #fff); box-shadow: var(--shadow-sm); }
+.uem-directory-header { display: flex; min-height: 68px; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 16px; border-bottom: 1px solid #e3edf5; background: var(--surface, #fff); }
+.uem-directory-header h2, .uem-directory-header p { margin: 0; }
+.uem-directory-header h2 { color: var(--text-primary); font-size: 1rem; font-weight: 760; }
+.uem-directory-header p { margin-top: 4px; color: var(--text-muted); font-size: .75rem; }
+.uem-directory-actions { display: flex; flex: 0 0 auto; align-items: center; justify-content: flex-end; gap: 8px; }
+.uem-directory-actions .export-button { min-height: 40px; border-radius: 8px; font-size: .8rem; }
+.uem-directory-actions .uem-header-create { min-height: 40px; white-space: nowrap; }
+.uem-directory-filter-panel { border-bottom: 1px solid #e3edf5; background: #fbfdff; }
+.uem-directory-filter-panel .filter-disclosure__bar { gap: 8px; padding: 10px 12px; }
+.uem-directory-filter-panel .filter-disclosure__search { flex: 1 1 270px; max-width: none; }
+.uem-directory-filter-panel .uem-search { width: 100%; height: 40px; min-height: 40px; border-color: var(--border); border-radius: 8px; background: var(--surface, #fff); }
+.uem-directory-filter-panel .filter-disclosure__toggle { min-height: 40px; border-radius: 8px; }
+.uem-directory-filter-panel .filter-disclosure__content { padding: 12px; background: var(--surface-soft); }
+.uem-directory-filter-panel .filter-disclosure__content-inner { display: block; width: 100%; }
+.uem-filter-fields { display: grid; grid-template-columns: repeat(3, minmax(150px, 1fr)) auto; align-items: end; gap: 10px; }
+.uem-filter-fields > label { display: grid; gap: 5px; min-width: 0; color: var(--text-secondary); font-size: .74rem; font-weight: 700; }
+.uem-filter-fields select { width: 100%; height: 38px; min-height: 38px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface, #fff); color: var(--text-primary); font: inherit; font-size: .78rem; }
+.uem-filter-actions { display: flex; gap: 7px; }
+.uem-filter-actions .uem-primary, .uem-filter-actions .uem-secondary { min-height: 38px; padding-inline: 11px; font-size: .75rem; white-space: nowrap; }
+.uem-directory-card > .uem-table-wrap { border: 0; border-radius: 0; }
+.uem-directory-card > .uem-pagination { min-height: 52px; padding: 9px 16px; border-top: 1px solid #e5edf4; background: var(--surface-soft); }
+.uem-load-error { display: flex; min-height: 56px; align-items: center; gap: 10px; margin: 10px 12px; padding: 9px 11px; border: 1px solid #f0d3d0; border-radius: 9px; background: #fff8f7; color: #733b37; }
+.uem-load-error__icon { width: 17px; height: 17px; flex: 0 0 17px; color: #b34d47; }
+.uem-load-error__copy { min-width: 0; flex: 1 1 auto; }
+.uem-load-error__copy strong { display: block; color: #633a37; font-size: .78rem; font-weight: 750; line-height: 1.35; }
+.uem-load-error__copy p { margin: 2px 0 0; color: #805753; font-size: .72rem; line-height: 1.4; }
+.uem-load-error__retry { display: inline-flex; min-height: 30px; flex: 0 0 auto; align-items: center; justify-content: center; padding: 0 11px; border: 1px solid #e7c2be; border-radius: 7px; background: #fff; color: #8b403b; font: inherit; font-size: .72rem; font-weight: 700; cursor: pointer; transition: background .15s ease, border-color .15s ease; }
+.uem-load-error__retry:hover:not(:disabled) { border-color: #dba6a1; background: #fff1ef; }
+.uem-load-error__retry:focus-visible { outline: 2px solid #c16a64; outline-offset: 2px; }
+.uem-load-error__retry:disabled { cursor: progress; opacity: .65; }
+@media (max-width: 820px) {
+  .uem-page > .erp-page-header { align-items: flex-start; }
+  .uem-page > .erp-page-header > .erp-page-header__right { width: 100%; justify-content: flex-start; }
+  .uem-page > .erp-page-header .compact-summary { justify-self: start; }
+  .uem-filter-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .uem-filter-actions { grid-column: 1 / -1; }
+}
+@media (max-width: 640px) {
+  .uem-directory-header { align-items: flex-start; flex-direction: column; padding: 14px; }
+  .uem-directory-actions { width: 100%; justify-content: flex-start; }
+  .uem-directory-actions .uem-header-create { flex: 1; }
+  .uem-directory-filter-panel .filter-disclosure__search { flex-basis: 100%; }
+  .uem-filter-fields { grid-template-columns: 1fr; }
+  .uem-filter-actions { grid-column: auto; }
+  .uem-filter-actions > button { flex: 1; }
+  .uem-load-error { gap: 8px; margin: 8px; padding: 9px; }
+  .uem-load-error__copy p { font-size: .69rem; }
+  .uem-load-error__retry { min-height: 30px; padding-inline: 9px; }
+}
+
+@media (max-width: 760px) {
+  .uem-directory-card > .uem-exam-table-wrap { overflow-x: auto; overflow-y: hidden; border: 0; border-radius: 0; }
+  .uem-directory-card .uem-exam-table-wrap table { display: table; width: 100%; min-width: 980px; table-layout: auto; }
+  .uem-directory-card .uem-exam-table-wrap thead { position: static; width: auto; height: auto; overflow: visible; clip: auto; white-space: normal; }
+  .uem-directory-card .uem-exam-table-wrap tbody { display: table-row-group; }
+  .uem-directory-card .uem-exam-table-wrap tr { display: table-row; width: auto; padding: 0; border: 0; border-radius: 0; background: transparent; }
+  .uem-directory-card .uem-exam-table-wrap th,
+  .uem-directory-card .uem-exam-table-wrap td { display: table-cell; width: auto; padding: 10px 11px; text-align: left; }
+  .uem-directory-card .uem-exam-table-wrap td::before { content: none; }
+  .uem-directory-card .uem-exam-table-wrap td:last-child { display: table-cell; text-align: left; }
+  .uem-directory-card .uem-exam-table-wrap td:last-child::before { display: none; }
+  .uem-directory-card .uem-exam-table-wrap td.uem-empty { display: table-cell; text-align: center !important; }
+}
+
 @media (max-width: 760px) {
   .uem-summary-row { gap: 7px 10px; }
   .uem-summary-row i { display: none; }

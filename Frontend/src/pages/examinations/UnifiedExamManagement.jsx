@@ -3,7 +3,10 @@ import DashboardLayout from '../../layouts/DashboardLayout'
 import PageHeader from '../../components/PageHeader'
 import { ProjectSelect } from '../../components/SearchableSelect'
 import ViewDialog from '../../components/ViewDialog'
-import { FiBookOpen, FiChevronLeft, FiChevronRight, FiClipboard, FiEdit2, FiEye, FiMapPin, FiPlus, FiSearch, FiTrash2 } from 'react-icons/fi'
+import CompactSummary from '../../components/CompactSummary'
+import FilterPanel from '../../components/FilterPanel'
+import ExportMenu from '../../components/ExportMenu'
+import { FiAlertCircle, FiBookOpen, FiChevronLeft, FiChevronRight, FiClipboard, FiEdit2, FiEye, FiMapPin, FiPlus, FiSearch, FiTrash2 } from 'react-icons/fi'
 import { useAcademic } from '../../context/AcademicContext'
 import { useScreenAccess } from '../../auth/ScreenAccess'
 import { call, list, record, requireId, rows, unwrap, dateOnly } from '../../services/scopedModulesService'
@@ -47,11 +50,13 @@ export default function UnifiedExamManagement() {
   const [confirmError, setConfirmError] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
   const [error, setError] = useState('')
+  const [loadError, setLoadError] = useState('')
   const [notice, setNotice] = useState('')
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [examTypeFilter, setExamTypeFilter] = useState('all')
   const [academicYearFilter, setAcademicYearFilter] = useState('all')
+  const [filterDraft, setFilterDraft] = useState({ examType: 'all', academicYear: 'all', status: 'all' })
   const [examPage, setExamPage] = useState(1)
   const [draft, setDraft] = useState(() => initialDraft(academic))
   const [subjects, setSubjects] = useState([])
@@ -64,11 +69,14 @@ export default function UnifiedExamManagement() {
   const [roomSaving, setRoomSaving] = useState(false)
 
   const reload = useCallback(async () => {
-    if (!academic.selectedCollegeId) return
-    setLoading(true); setError('')
+    if (!academic.selectedCollegeId) { setLoading(false); setLoadError('Select a college to load examination records.'); return }
+    setLoading(true)
+    let requestStage = 'examination lookups, examinations, and examination types'
+    let collegeId = academic.selectedCollegeId
+    let academicYearId = academic.selectedAcademicYearId || undefined
     try {
-      const collegeId = requireId(academic.selectedCollegeId, 'college')
-      const academicYearId = academic.selectedAcademicYearId ? requireId(academic.selectedAcademicYearId, 'academic year') : undefined
+      collegeId = requireId(academic.selectedCollegeId, 'college')
+      academicYearId = academic.selectedAcademicYearId ? requireId(academic.selectedAcademicYearId, 'academic year') : undefined
       const [lookupResponse, examRows, typeRows] = await Promise.all([
         call('exams/lookups', { query: { collegeId, academicYearId } }),
         list('exams', { collegeId, academicYearId }),
@@ -84,6 +92,7 @@ export default function UnifiedExamManagement() {
       // does not consistently include the parent exam ID, so filtering it by
       // examId could hide valid subjects and disable the Allocate Rooms action.
       const subjectLookup = (lookupData.subjects || []).map(record)
+      requestStage = 'saved subject timetables'
       const scheduleGroups = await Promise.all(normalizedExams.map(async exam => {
         const examId = exam.examId ?? exam.id
         if (!examId) return []
@@ -106,20 +115,27 @@ export default function UnifiedExamManagement() {
         })
       }))
       setSchedules(scheduleGroups.flat())
+      requestStage = 'room allocation records'
       const hallRows = await list('exam-schedules/hall-allocations', { collegeId })
       setAllocations(hallRows.map(record))
       const facultyRows = []
       let facultyPage = 1
       let facultyPageCount = 1
       do {
+        requestStage = `faculty directory (page ${facultyPage})`
         const facultyResponse = await call('faculty', { query: { collegeId, status: 1, pageNumber: facultyPage, pageSize: 100 } })
         facultyRows.push(...(unwrap(facultyResponse) || []).map(record))
         facultyPageCount = Number(facultyResponse?.pagination?.totalPages || 1)
         facultyPage += 1
       } while (facultyPage <= facultyPageCount)
       setFaculty(facultyRows.map(record))
+      setLoadError('')
       if (!draft.academicYearId && academicYearId) setDraft(value => ({ ...value, academicYearId: String(academicYearId) }))
-    } catch (requestError) { setError(requestError.message || 'Unable to load examination data.') }
+    } catch (requestError) {
+      const message = requestError?.backendMessage || requestError?.message || String(requestError || 'Unknown request error')
+      console.error('[Exam Management] Data request failed', { stage: requestStage, requestPath: requestError?.requestPath || null, collegeId, academicYearId, status: requestError?.status ?? requestError?.response?.status, backendMessage: requestError?.backendMessage || null, correlationId: requestError?.correlationId || null, validationErrors: requestError?.validationErrors || null, response: requestError?.response?.data ?? requestError?.data ?? null, error: requestError })
+      setLoadError(`${requestError?.requestPath ? `${requestError.requestPath} failed. ` : `Unable to load ${requestStage}. `}${message}`)
+    }
     finally { setLoading(false) }
   }, [academic.selectedCollegeId, academic.selectedAcademicYearId])
 
@@ -208,6 +224,24 @@ export default function UnifiedExamManagement() {
   const visibleExams = filteredExams.slice((examPage - 1) * examPageSize, examPage * examPageSize)
   const upcoming = exams.filter(exam => dateOnly(exam.startDate) >= day()).length
   const roomCount = allocations.filter(row => row.status !== false && row.status !== 0).length
+  const appliedFilterCount = [statusFilter, examTypeFilter, academicYearFilter].filter(value => value !== 'all').length
+  const summaryValue = value => loadError ? '—' : loading ? '…' : value
+  const examExportColumns = [
+    { label: 'Exam Name', value: row => row.examName },
+    { label: 'Exam Code', value: row => row.examCode },
+    { label: 'Department', value: row => row.branchName || '' },
+    { label: 'Semester', value: row => row.semesterName || '' },
+    { label: 'Subjects', value: row => schedules.filter(schedule => String(schedule.examId) === String(row.examId)).length },
+    { label: 'Start Date', value: row => dateOnly(row.startDate) },
+    { label: 'End Date', value: row => dateOnly(row.endDate) },
+    { label: 'Status', value: row => examStatusLabel(row) },
+  ]
+  const examinationSummary = [
+    { label: 'Total Examinations', value: summaryValue(exams.length) },
+    { label: 'Upcoming Examinations', value: summaryValue(upcoming), tone: 'upcoming' },
+    { label: 'Subjects Scheduled', value: summaryValue(schedules.length) },
+    { label: 'Rooms Allocated', value: summaryValue(roomCount), tone: 'active' },
+  ]
   const examSubjects = schedules.filter(row => String(row.examId ?? row.examinationId) === String(roomExam?.examId ?? roomExam?.id))
   const selectedRoomSchedule = examSubjects.find(row => String(row.scheduleId ?? row.examScheduleId) === String(roomForm.scheduleId))
   const roomAllocations = roomExamAllocations
@@ -227,6 +261,21 @@ export default function UnifiedExamManagement() {
   ]
 
   useEffect(() => { setExamPage(1) }, [query, statusFilter, examTypeFilter, academicYearFilter])
+
+  function applyFilters() {
+    setStatusFilter(filterDraft.status)
+    setExamTypeFilter(filterDraft.examType)
+    setAcademicYearFilter(filterDraft.academicYear)
+  }
+
+  function clearFilters() {
+    const cleared = { status: 'all', examType: 'all', academicYear: 'all' }
+    setQuery('')
+    setFilterDraft(cleared)
+    setStatusFilter(cleared.status)
+    setExamTypeFilter(cleared.examType)
+    setAcademicYearFilter(cleared.academicYear)
+  }
 
   function openNewExam() {
     setEditingExam(null)
@@ -446,8 +495,7 @@ export default function UnifiedExamManagement() {
   }
 
   return <DashboardLayout><main className="uem-page">
-    <PageHeader title="Exam Management" subtitle="Search and manage examination schedules and room allocations." primaryAction={canCreate ? <button type="button" className="uem-primary uem-header-create" onClick={openNewExam}><FiPlus aria-hidden="true" />Create Examination</button> : null} />
-    <div className="uem-summary-row" aria-label="Examination summary"><span><strong>{exams.length}</strong> examinations</span><i aria-hidden="true" /><span><strong>{upcoming}</strong> upcoming</span><i aria-hidden="true" /><span><strong>{schedules.length}</strong> subjects scheduled</span><i aria-hidden="true" /><span><strong>{roomCount}</strong> rooms allocated</span></div>
+    <PageHeader title="Exam Management" subtitle="Search and manage examination schedules and room allocations." compactSummary={<CompactSummary label="Examination summary" items={examinationSummary} />} />
     {error && <p className="uem-alert" role="alert">{error}</p>}{notice && <p className="uem-success" role="status">{notice}</p>}
     {showExamForm && <ViewDialog title={editingExam ? 'Edit Examination' : 'Create Examination'} icon={FiClipboard} subtitle="Enter examination information and schedule its subjects." onClose={() => { if (!saving && !confirmCreate) setShowExamForm(false) }} showExport={false} busy={saving} maxWidth="1040px" className="uem-exam-dialog" footerContent={<><button type="button" className="uem-secondary" onClick={() => { setConfirmCreate(false); setShowExamForm(false) }} disabled={saving}>Cancel</button><button type="button" className="uem-secondary" disabled={saving} onClick={event => saveExam(event, false)}>Save as Draft</button><button type="submit" form="uem-exam-form" className="uem-primary" disabled={saving || !(editingExam ? canEdit : canCreate)}>{editingExam ? 'Save Changes' : 'Create Examination'}</button></>}>
     <form id="uem-exam-form" className="uem-card uem-exam-form" noValidate onSubmit={openCreateConfirmation}>
@@ -502,8 +550,15 @@ export default function UnifiedExamManagement() {
         </dl>
       </form>
     </ViewDialog>}
-    <section className="uem-card uem-list">
-      <div className="uem-section-heading uem-list-heading"><div><h2>All Examinations</h2><p>Search and filter examination records.</p></div><div className="uem-list-controls"><label className="uem-search"><FiSearch aria-hidden="true" /><input aria-label="Search examinations" placeholder="Search by name, code, department" value={query} onChange={e => setQuery(e.target.value)} /></label><select aria-label="Filter by exam type" value={examTypeFilter} onChange={e => setExamTypeFilter(e.target.value)}><option value="all">All exam types</option>{lookups.examTypes.map(type => <option key={type.examTypeId ?? type.id} value={type.examTypeId ?? type.id}>{type.name}</option>)}</select><select aria-label="Filter by academic year" value={academicYearFilter} onChange={e => setAcademicYearFilter(e.target.value)}><option value="all">All academic years</option>{lookups.academicYears.map(year => <option key={year.id ?? year.academicYearId} value={year.id ?? year.academicYearId}>{year.name || year.academicYearName}</option>)}</select><select aria-label="Filter by status" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}><option value="all">All statuses</option><option value="active">Active</option><option value="scheduled">Scheduled</option><option value="draft">Draft</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option><option value="published">Published</option></select></div></div>
+    <section className="uem-directory-card uem-list">
+      <header className="uem-directory-header"><div><h2>All Examinations</h2><p>{loadError ? 'Records unavailable' : loading ? 'Loading examination records…' : `${filteredExams.length} records`}</p></div><div className="uem-directory-actions"><ExportMenu rows={filteredExams} columns={examExportColumns} title="Examinations" filename="examinations" loading={loading || Boolean(loadError)} /><button type="button" className="uem-primary uem-header-create" onClick={openNewExam} disabled={!canCreate}><FiPlus aria-hidden="true" />Create Examination</button></div></header>
+      <FilterPanel className="uem-directory-filter-panel" active={appliedFilterCount > 0} activeCount={appliedFilterCount} hideClear search={<label className="uem-search"><FiSearch aria-hidden="true" /><input aria-label="Search examinations" placeholder="Search by name, code, department" value={query} onChange={e => setQuery(e.target.value)} /></label>} filters={<div className="uem-filter-fields">
+        <label>Examination Type<select aria-label="Filter by exam type" value={filterDraft.examType} onChange={e => setFilterDraft(value => ({ ...value, examType: e.target.value }))}><option value="all">All examination types</option>{lookups.examTypes.map(type => <option key={type.examTypeId ?? type.id} value={type.examTypeId ?? type.id}>{type.name}</option>)}</select></label>
+        <label>Academic Year<select aria-label="Filter by academic year" value={filterDraft.academicYear} onChange={e => setFilterDraft(value => ({ ...value, academicYear: e.target.value }))}><option value="all">All academic years</option>{lookups.academicYears.map(year => <option key={year.id ?? year.academicYearId} value={year.id ?? year.academicYearId}>{year.name || year.academicYearName}</option>)}</select></label>
+        <label>Status<select aria-label="Filter by status" value={filterDraft.status} onChange={e => setFilterDraft(value => ({ ...value, status: e.target.value }))}><option value="all">All statuses</option><option value="active">Active</option><option value="scheduled">Scheduled</option><option value="draft">Draft</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option><option value="published">Published</option></select></label>
+        <div className="uem-filter-actions"><button type="button" className="uem-primary" onClick={applyFilters}>Apply Filters</button><button type="button" className="uem-secondary" onClick={clearFilters}>Clear Filters</button></div>
+      </div>} />
+      {loadError ? <div className="uem-load-error" role="alert"><FiAlertCircle className="uem-load-error__icon" aria-hidden="true" /><div className="uem-load-error__copy"><strong>Unable to load examinations</strong><p>We couldn't fetch examination records. Please try again.</p></div><button type="button" className="uem-load-error__retry" onClick={reload} disabled={loading}>{loading ? 'Retrying…' : 'Retry'}</button></div> : <>
       <div className="uem-table-wrap uem-exam-table-wrap"><table><thead><tr><th>Exam Name</th><th>Department</th><th>Semester</th><th>Subjects</th><th>Start Date</th><th>End Date</th><th>Room Allocation</th><th>Status</th><th>Actions</th></tr></thead><tbody>{loading ? <tr><td colSpan="9" className="uem-empty">Loading examinations…</td></tr> : visibleExams.map(exam => {
         const examSchedules = schedules.filter(row => String(row.examId) === String(exam.examId))
         const examAllocations = allocations.filter(allocation => examSchedules.some(schedule => String(schedule.scheduleId ?? schedule.examScheduleId) === String(allocation.examScheduleId)) && allocation.status !== false && allocation.status !== 0)
@@ -518,6 +573,7 @@ export default function UnifiedExamManagement() {
         return <tr key={exam.examId}><td data-label="Exam Name" className="uem-exam-name-cell"><strong>{exam.examName}</strong><small>{exam.examCode}</small></td><td data-label="Department">{exam.branchName || '—'}</td><td data-label="Semester">{exam.semesterName || '—'}</td><td data-label="Subjects"><span className="uem-count-chip">{examSchedules.length}</span></td><td data-label="Start Date">{dateOnly(exam.startDate)}</td><td data-label="End Date">{dateOnly(exam.endDate)}</td><td data-label="Room Allocation"><span className={`uem-status ${roomStatus.toLowerCase().replaceAll(' ', '-')}`}>{roomStatus}</span></td><td data-label="Status"><span className={`uem-status ${['active', 'scheduled'].includes(statusLabel.toLowerCase()) ? 'uem-status--active' : statusLabel.toLowerCase() === 'draft' ? 'uem-status--draft' : ''}`}>{statusLabel}</span></td><td data-label="Actions"><div className="uem-row-actions"><button className="uem-icon-button" type="button" title="View examination" aria-label="View examination" onClick={() => setViewingExam(exam)}><FiEye /></button><button className="uem-icon-button" type="button" title="Edit examination" aria-label="Edit examination" onClick={() => openEditExam(exam)} disabled={!canEdit}><FiEdit2 /></button><button className="uem-icon-button uem-icon-button--allocate" type="button" title={!examSchedules.length ? 'Add and save a subject timetable before allocating rooms' : 'Allocate rooms'} aria-label="Allocate rooms" onClick={() => { setRoomExam(exam); setEditingAllocation(null); setRoomError(''); setRoomNotice(''); setRoomForm({ scheduleId: '', buildingId: '', classroomId: '', students: '', invigilatorFacultyId: '' }) }} disabled={!examSchedules.length}><FiMapPin /></button><button className="uem-icon-button uem-icon-button--danger" type="button" title="Delete examination" aria-label="Delete examination" onClick={() => deleteExam(exam)} disabled={!canDelete}><FiTrash2 /></button></div></td></tr>
       })}{!loading && !filteredExams.length && <tr><td colSpan="9" className="uem-empty"><span className="uem-empty-icon"><FiClipboard /></span><strong>No matching examinations</strong><span>Adjust your filters or create an examination.</span></td></tr>}</tbody></table></div>
       <div className="uem-pagination"><span>Showing {filteredExams.length ? (examPage - 1) * examPageSize + 1 : 0}–{Math.min(examPage * examPageSize, filteredExams.length)} of {filteredExams.length} examinations</span><div><button type="button" aria-label="Previous page" onClick={() => setExamPage(page => Math.max(1, page - 1))} disabled={examPage <= 1}><FiChevronLeft />Previous</button><span>Page <strong>{examPage}</strong> of <strong>{examPageCount}</strong></span><button type="button" aria-label="Next page" onClick={() => setExamPage(page => Math.min(examPageCount, page + 1))} disabled={examPage >= examPageCount}>Next<FiChevronRight /></button></div></div>
+      </>}
     </section>
     {editingSubject && <ViewDialog title="Subject & Timetable" subtitle="Set subject and session details" onClose={()=>setEditingSubject(null)} hideFooter showExport={false}><form className="uem-grid uem-subject-form" onSubmit={saveSubject}>
       <label>Subject Name<select required value={editingSubject.subjectId} onChange={e=>{const found=filteredSubjects.find(row=>String(row.id ?? row.subjectId)===e.target.value);setEditingSubject(v=>({...v,subjectId:e.target.value,subjectName:found?.name,subjectCode:found?.code}))}}><option value="">Select subject</option>{filteredSubjects.map(row=><option key={row.id ?? row.subjectId} value={row.id ?? row.subjectId}>{row.name || row.subjectName}</option>)}</select></label>
