@@ -14,7 +14,7 @@ import { call, loadLibrary, requireId, saveBook } from '../../services/scopedMod
 import './LibraryWorkspace.css'
 
 const tabs = ['Books', 'Issue & Return', 'Borrowers', 'Reports']
-const reports = ['Circulation', 'Overdue Books', 'Fine Collection', 'Inventory', 'Borrower History']
+const reports = ['Circulation', 'Overdue Books', 'Fine Collection', 'Inventory', 'Borrower History', 'Lost Book Fines']
 const empty = { books: [], circulation: [], borrowers: [], fines: [], categories: [] }
 const activeLoan = row => ['Issued', 'Overdue'].includes(row.status)
 const activeBook = row => ![false, 0, '0'].includes(row.status)
@@ -33,6 +33,7 @@ const bookColumns = [['title', 'Book Title / Author'], ['isbn', 'ISBN'], ['categ
 const loanColumns = [['id', 'Issue Ref.'], ['borrowerName', 'Borrower'], ['bookTitle', 'Book'], ['accession', 'Accession'], ['issueDate', 'Issued'], ['dueDate', 'Due'], ['returnDate', 'Returned'], ['overdueDays', 'Overdue Days'], ['fineLabel', 'Fine Balance'], ['status', 'Status']]
 const borrowerColumns = [['name', 'Borrower'], ['code', 'Borrower ID'], ['type', 'Type'], ['department', 'Department / Branch'], ['issued', 'Books Issued'], ['overdue', 'Overdue'], ['accountStatus', 'Status']]
 const fineColumns = [['borrowerName', 'Borrower'], ['bookTitle', 'Book'], ['dueDate', 'Due'], ['overdueDays', 'Overdue Days'], ['assessedDate', 'Assessed'], ['fineLabel', 'Fine'], ['paidLabel', 'Paid'], ['balanceLabel', 'Balance'], ['status', 'Payment Status']]
+const lostFineColumns = [['borrowerName', 'Student'], ['borrowerCode', 'Student ID'], ['bookTitle', 'Book'], ['accession', 'Accession'], ['fineLabel', 'Fine Amount'], ['status', 'Payment Status']]
 const button = 'erp-btn erp-btn--secondary'
 const primary = 'erp-btn erp-btn--primary'
 
@@ -203,6 +204,41 @@ function RecordOperation({ kind, row, onSave, ...dialog }) {
   </LibraryForm>
 }
 
+function LostBookDialog({ row, onSave, ...dialog }) {
+  const [amount, setAmount] = useState(String(row.replacementCost ?? ''))
+  const [reason, setReason] = useState('')
+  const [validation, setValidation] = useState('')
+  const submit = event => {
+    event.preventDefault()
+    const value = Number(amount)
+    if (!Number.isFinite(value) || value < 0) { setValidation('Enter a valid replacement fine amount.'); return }
+    if (!reason.trim()) { setValidation('Enter a reason for marking this book as lost.'); return }
+    onSave({ amount: Math.round(value * 100) / 100, reason: reason.trim() })
+  }
+  return <LibraryForm {...dialog} title="Confirm Book Lost" action="Confirm" error={validation || dialog.error} onSubmit={submit}>
+    <p className="library-hint">This temporary frontend record will not update the library service.</p>
+    <div className="library-full-field"><Details fields={[[ 'Student', row.borrowerName ], [ 'Student ID', row.borrowerCode ], [ 'Book', row.bookTitle ], [ 'Accession', row.accession ]]} /></div>
+    <label>Lost Book Fine Amount<input className="erp-input" type="number" min="0" step="0.01" required value={amount} onChange={event => setAmount(event.target.value)} /></label>
+    <label className="library-full-field">Reason<textarea className="erp-input" required maxLength={500} value={reason} onChange={event => setReason(event.target.value)} /></label>
+  </LibraryForm>
+}
+
+function LostFineEditor({ row, onSave, ...dialog }) {
+  const [amount, setAmount] = useState(String(row.amount ?? ''))
+  const [status, setStatus] = useState(row.status || 'Pending')
+  const submit = event => {
+    event.preventDefault()
+    const value = Number(amount)
+    if (!Number.isFinite(value) || value < 0) return
+    onSave({ amount: Math.round(value * 100) / 100, status })
+  }
+  return <LibraryForm {...dialog} title="Edit Lost Book Fine" action="Save Fine" onSubmit={submit}>
+    <div className="library-full-field"><Details fields={[[ 'Student', row.borrowerName ], [ 'Book', row.bookTitle ], [ 'Current Fine', money(row.amount) ]]} /></div>
+    <label>Fine Amount<input className="erp-input" type="number" min="0" step="0.01" required value={amount} onChange={event => setAmount(event.target.value)} /></label>
+    <label>Payment Status<select className="erp-select" value={status} onChange={event => setStatus(event.target.value)}>{['Pending', 'Partially Paid', 'Paid'].map(value => <option key={value}>{value}</option>)}</select></label>
+  </LibraryForm>
+}
+
 function LibraryScreen({ collegeId }) {
   const { canAction } = useScreenAccess()
   const canCreate = canAction('/library', 'create')
@@ -220,12 +256,15 @@ function LibraryScreen({ collegeId }) {
   const [modal, setModal] = useState(null)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  // Temporary frontend-only lost-book records; these are intentionally not part of loadLibrary/API data.
+  const [lostBookFines, setLostBookFines] = useState([])
   const errors = data.resourceErrors || {}
   const ready = key => !state.loading && !state.error && !state.waitingForContext && !errors[key]
   const writable = key => ready(key) && !state.saving
   const catalog = data.books.map(book => ({ ...book, displayStatus: activeBook(book) ? 'Active' : 'Archived' }))
   const finesByIssue = new Map(data.fines.map(row => [String(row.issueId), row]))
-  const loans = data.circulation.map(row => ({ ...row, fineLabel: ready('fines') ? money(finesByIssue.get(row.id)?.balance) : 'Unavailable' }))
+  const loans = data.circulation.map(row => ({ ...row, status: lostBookFines.some(item => same(item.issueId, row.id)) ? 'Lost' : row.status,
+    fineLabel: ready('fines') ? money(finesByIssue.get(row.id)?.balance) : 'Unavailable' }))
   const borrowers = data.borrowers.map(row => {
     const current = loans.filter(loan => same(loan.borrowerId, row.id) && activeLoan(loan))
     return { ...row, issued: ready('issues') ? current.length : 'Unavailable', overdue: ready('issues') ? current.filter(loan => loan.status === 'Overdue').length : 'Unavailable',
@@ -237,11 +276,12 @@ function LibraryScreen({ collegeId }) {
     data.categories.some(category => same(category.categoryId, row.categoryId) && activeBook(category)))
   const canIssue = canCreate && ['books', 'issues', 'students', 'categories'].every(writable) && eligibleBorrowers.length > 0
   const isBooks = tab === 'Books' || (tab === 'Reports' && report === 'Inventory')
+  const isLostFineView = (tab === 'Issue & Return' && mode === 'Lost Book Fines') || (tab === 'Reports' && report === 'Lost Book Fines')
   const isFines = tab === 'Reports' && report === 'Fine Collection'
   const isBorrowers = tab === 'Borrowers'
-  const resource = isBooks ? 'books' : isFines ? 'fines' : isBorrowers ? 'students' : 'issues'
-  const records = isBooks ? catalog : isFines ? fines : isBorrowers ? borrowers : loans
-  const columns = isBooks ? bookColumns : isFines ? fineColumns : isBorrowers ? borrowerColumns : loanColumns
+  const resource = isBooks ? 'books' : isLostFineView ? 'issues' : isFines ? 'fines' : isBorrowers ? 'students' : 'issues'
+  const records = isBooks ? catalog : isLostFineView ? lostBookFines : isFines ? fines : isBorrowers ? borrowers : loans
+  const columns = isBooks ? bookColumns : isLostFineView ? lostFineColumns : isFines ? fineColumns : isBorrowers ? borrowerColumns : loanColumns
   const filtered = records.filter(row => {
     const date = row.issueDate || row.assessedDate
     return matches(filters.query, row.title, row.author, row.isbn, row.bookTitle, row.accessionNo, row.accession,
@@ -252,9 +292,10 @@ function LibraryScreen({ collegeId }) {
       (!filters.status || (row.displayStatus || row.accountStatus || row.status) === filters.status) &&
       (!filters.availability || (filters.availability === 'available' ? row.availableCopies > 0 : row.availableCopies === 0)) &&
       (!filters.from || date >= filters.from) && (!filters.to || date <= filters.to) &&
-      (tab !== 'Issue & Return' || activeLoan(row)) &&
+      (tab !== 'Issue & Return' || mode === 'Lost Book Fines' || activeLoan(row)) &&
       (tab !== 'Reports' || report !== 'Overdue Books' || row.status === 'Overdue') &&
-      (tab !== 'Reports' || report !== 'Borrower History' || !filters.borrower || same(row.borrowerId, filters.borrower))
+      (tab !== 'Reports' || report !== 'Borrower History' || !filters.borrower || same(row.borrowerId, filters.borrower)) &&
+      (!isLostFineView || !filters.status || row.status === filters.status)
   })
   const totalPages = Math.max(1, Math.ceil(filtered.length / size))
   const currentPage = Math.min(totalPages, page)
@@ -283,6 +324,18 @@ function LibraryScreen({ collegeId }) {
     return commit(kind === 'delete' ? canDelete : canEdit, 'books', () => call('library/books/' + requireId(row.id) + (kind === 'delete' ? '' : '/status'),
       { method: kind === 'delete' ? 'DELETE' : 'PATCH', query, ...(kind !== 'delete' && { body: { status: kind === 'restore' } }) }), kind === 'delete' ? 'Book deleted.' : kind === 'restore' ? 'Book restored.' : 'Book archived.')
   }
+  const saveLostBook = ({ amount, reason }) => {
+    const row = modal.row
+    const fine = { id: `lost-${row.id}`, issueId: row.id, borrowerId: row.borrowerId, borrowerName: row.borrowerName, borrowerCode: row.borrowerCode,
+      bookTitle: row.bookTitle, accession: row.accession, department: row.department, category: row.category, assessedDate: today(), amount,
+      paidAmount: 0, balance: amount, fineLabel: money(amount), status: 'Pending', reason, source: 'Temporary frontend record' }
+    setLostBookFines(current => [fine, ...current.filter(item => item.id !== fine.id)])
+    setModal(null); setNotice('Book marked lost in temporary frontend state. No API data was changed.')
+  }
+  const saveLostFine = ({ amount, status }) => {
+    setLostBookFines(current => current.map(item => item.id !== modal.row.id ? item : ({ ...item, amount, status, paidAmount: status === 'Paid' ? amount : status === 'Pending' ? 0 : Math.min(item.paidAmount || 0, amount), balance: status === 'Paid' ? 0 : status === 'Pending' ? amount : Math.max(0, amount - Math.min(item.paidAmount || 0, amount)), fineLabel: money(amount) })))
+    setModal(null); setNotice('Temporary lost-book fine updated.')
+  }
   const dialog = { busy: state.saving, error, onClose: close }
   const options = (label, key, values) => <label>{label}<select className="erp-select" value={filters[key] || ''} onChange={event => filter(key, event.target.value)}>
     <option value="">All</option>{[...new Set(values.filter(Boolean))].sort().map(value => <option key={value}>{value}</option>)}
@@ -295,7 +348,8 @@ function LibraryScreen({ collegeId }) {
     {canEdit && <option value={activeBook(row) ? 'archive' : 'restore'} disabled={!writable('books')}>{activeBook(row) ? 'Archive' : 'Restore'}</option>}
     {canDelete && <option value="delete" disabled={!writable('books')}>Delete</option>}
   </select> : isBorrowers ? row => <button className={button} onClick={() => open('borrower', row)}>View</button>
-    : tab === 'Issue & Return' && mode === 'Return / Renew' && canCreate ? row => <button className={button} disabled={!writable('issues')} onClick={() => open('return', row)}>Return</button>
+    : tab === 'Issue & Return' && mode === 'Return / Renew' && canCreate ? row => <div className="library-row-actions"><button className={button} disabled={!writable('issues')} onClick={() => open('return', row)}>Return</button>{!lostBookFines.some(item => same(item.issueId, row.id)) && <button className={button} disabled={!writable('issues')} onClick={() => open('mark-lost', row)}>Mark as Lost</button>}</div>
+    : isLostFineView && canEdit ? row => <button className={button} onClick={() => open('edit-lost-fine', row)}>Edit Fine</button>
     : isFines && (canCreate || canEdit) ? row => <div className="library-row-actions">
       {canCreate && <button className={button} disabled={!writable('fines') || !(row.balance > 0)} onClick={() => open('payment', row)}>Pay</button>}
       {canEdit && <button className={button} disabled={!writable('fines') || !(row.balance > 0)} onClick={() => open('waive', row)}>Waive</button>}
@@ -313,12 +367,12 @@ function LibraryScreen({ collegeId }) {
       onClick={() => choose(setTab, item)}>{item}</button>)}</nav>
     <section className="library-panel" aria-label={tab}>
       {tab === 'Issue & Return' && <div className="library-mode-bar">
-        <div className="library-tabs" role="group" aria-label="Circulation mode">{['Issue Book', 'Return / Renew'].map(item =>
+        <div className="library-tabs" role="group" aria-label="Circulation mode">{['Issue Book', 'Return / Renew', 'Lost Book Fines'].map(item =>
           <button key={item} type="button" aria-pressed={mode === item} onClick={() => choose(setMode, item)}>{item}</button>)}</div>
         {mode === 'Issue Book' && canCreate && <button type="button" className={primary} disabled={!canIssue || !availableBooks.length || !eligibleBorrowers.length} onClick={() => open('issue')}>Start Issue</button>}
       </div>}
       {isFines && <p className="library-hint">Date filters apply to assessment dates. Paid amounts and balances come from the library service.</p>}
-      {tab === 'Issue & Return' && <p className="library-hint">{mode === 'Issue Book' ? 'Select a student and an available catalog title to issue a book.' : 'Find an active loan to record its return. Renewal is unavailable in the current library service.'}</p>}
+      {tab === 'Issue & Return' && <p className="library-hint">{mode === 'Issue Book' ? 'Select a student and an available catalog title to issue a book.' : mode === 'Return / Renew' ? 'Find an active loan to record its return. Renewal is unavailable in the current library service.' : 'Lost-book fines shown here are temporary frontend records and are not saved to the library service.'}</p>}
       <div className="library-toolbar">
         {tab === 'Reports' && <label>Report Type<select className="erp-select" value={report} onChange={event => choose(setReport, event.target.value)}>{reports.map(item => <option key={item}>{item}</option>)}</select></label>}
         <label className="library-search">Search
@@ -356,6 +410,8 @@ function LibraryScreen({ collegeId }) {
     {modal?.kind === 'issue' && <IssueEditor {...dialog} books={availableBooks} borrowers={eligibleBorrowers} loans={loans} initialBook={modal.row}
       onSave={body => commit(canIssue, 'issues', () => call('library/issues', { method: 'POST', body: { collegeId: college(), ...body } }), 'Book issued.')} />}
     {modal && ['return', 'payment', 'waive', 'archive', 'restore', 'delete'].includes(modal.kind) && <RecordOperation {...dialog} kind={modal.kind} row={modal.row} onSave={saveRecordOperation} />}
+    {modal?.kind === 'mark-lost' && <LostBookDialog {...dialog} row={{ ...modal.row, replacementCost: catalog.find(book => same(book.id, modal.row.bookId))?.price }} onSave={saveLostBook} />}
+    {modal?.kind === 'edit-lost-fine' && <LostFineEditor {...dialog} row={modal.row} onSave={saveLostFine} />}
     {modal?.kind === 'book' && <ViewDialog title="Book Details" subtitle={modal.row.title} onClose={close} showExport={false} maxWidth="1000px">
       <Details fields={[[ 'Author', modal.row.author ], [ 'ISBN', modal.row.isbn ], [ 'Category', modal.row.category ], [ 'Accession', modal.row.accessionNo ],
         [ 'Shelf / Rack', modal.row.rack ], [ 'Publisher', modal.row.publisher ], [ 'Edition', modal.row.edition ], [ 'Publication Year', modal.row.publicationYear ],
