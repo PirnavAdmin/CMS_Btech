@@ -415,7 +415,7 @@ namespace BTech.Repositories.Implementations
             var scope = Scope;
             AddParameter(command, "p_actor_user_id", scope.UserId);
             AddParameter(command, "p_assigned_college_id", scope.AssignedCollegeId);
-            AddParameter(command, "p_allow_creator", scope.IsCollegeAdmin);
+            AddParameter(command, "p_allow_creator", false);
             AddParameter(command, "p_unrestricted", scope.IsSuperAdmin);
         }
 
