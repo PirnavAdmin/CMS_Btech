@@ -8,7 +8,7 @@ public static class CanonicalRoleCode
         while (code.Contains("__", StringComparison.Ordinal)) code = code.Replace("__", "_", StringComparison.Ordinal);
         return code switch
         {
-            "ADMIN" or "COLLEGEADMIN" or "COLLEGE_ADMINISTRATOR" => "COLLEGE_ADMIN",
+            "ADMIN" or "ADMINISTRATOR" or "COLLEGEADMIN" or "COLLEGE_ADMINISTRATOR" => "COLLEGE_ADMIN",
             "SUPERADMIN" or "SUPER_ADMINISTRATOR" => "SUPER_ADMIN",
             _ => code
         };
