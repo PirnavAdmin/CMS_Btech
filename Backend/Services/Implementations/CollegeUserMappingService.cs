@@ -1,4 +1,8 @@
-﻿using BTech.Data;
+using Dapper;
+using System.Data;
+using Microsoft.EntityFrameworkCore.Storage;
+using MySqlConnector;
+using BTech.Data;
 using BTech.DTOs;
 using BTech.Models;
 using BTech.Services.Interfaces;
@@ -161,127 +165,24 @@ namespace BTech.Services.Implementations
         // ASSIGN COLLEGE TO USER
         // =====================================================
 
-        public async Task<(bool Success, string Message)>
-            AssignAsync(
-                long userId,
-                long collegeSettingId,
-                long assignedBy)
+        public async Task<(bool Success, string Message)> AssignAsync(long userId, long collegeSettingId, long assignedBy)
         {
-            var userExists =
-                await _context.Users
-                    .AnyAsync(x =>
-                        x.user_id == userId &&
-                        x.Status == 1 &&
-                        x.DeletedAt == null);
-
-            if (!userExists)
+            // The procedure locks the target account and enforces one live
+            // college mapping for College Admin, including concurrent requests.
+            await using var tx = await _context.Database.BeginTransactionAsync();
+            try
             {
-                return (
-                    false,
-                    "User not found or inactive.");
+                var message = await _context.Database.GetDbConnection().QuerySingleAsync<string>(
+                    "sp_cms_assign_college_user", new { p_user_id = userId,
+                        p_college_setting_id = collegeSettingId, p_actor = assignedBy },
+                    tx.GetDbTransaction(), commandType: CommandType.StoredProcedure);
+                await tx.CommitAsync();
+                return (true, message);
             }
-
-            // Validate both the Settings record and its
-            // connected College/Institution master record.
-            var collegeExists =
-                await
-                (
-                    from setting
-                        in _context.CollegeSettings
-
-                    join college
-                        in _context.Colleges
-                        on setting.CollegeId
-                        equals college.CollegeId
-
-                    where setting.Id ==
-                              collegeSettingId
-
-                       && setting.Status == 1
-
-                       && college.Status == 1
-
-                       && college.DeletedAt == null
-
-                    select setting.Id
-                )
-                .AnyAsync();
-
-            if (!collegeExists)
+            catch (MySqlException ex) when (ex.SqlState == "45000" || ex.Number == 1062)
             {
-                return (
-                    false,
-                    "College not found or inactive.");
+                return (false, ex.Number == 1062 ? "This college assignment already exists." : ex.Message);
             }
-
-            var mapping =
-                await _context.CollegeUserMappings
-                    .FirstOrDefaultAsync(x =>
-                        x.UserId == userId &&
-                        x.CollegeSettingId ==
-                            collegeSettingId);
-
-            if (mapping != null &&
-                mapping.Status == 1)
-            {
-                return (
-                    false,
-                    "User is already mapped to this college.");
-            }
-
-            if (mapping != null)
-            {
-                mapping.Status = 1;
-
-                mapping.AssignedAt =
-                    DateTime.UtcNow;
-
-                mapping.AssignedBy =
-                    assignedBy;
-
-                mapping.UpdatedAt =
-                    DateTime.UtcNow;
-
-                mapping.UpdatedBy =
-                    assignedBy;
-
-                mapping.RemovedAt =
-                    null;
-
-                mapping.RemovedBy =
-                    null;
-            }
-            else
-            {
-                mapping =
-                    new CollegeUserMapping
-                    {
-                        UserId =
-                            userId,
-
-                        CollegeSettingId =
-                            collegeSettingId,
-
-                        Status =
-                            1,
-
-                        AssignedAt =
-                            DateTime.UtcNow,
-
-                        AssignedBy =
-                            assignedBy
-                    };
-
-                await _context
-                    .CollegeUserMappings
-                    .AddAsync(mapping);
-            }
-
-            await _context.SaveChangesAsync();
-
-            return (
-                true,
-                "College mapped to user successfully.");
         }
 
         // =====================================================
