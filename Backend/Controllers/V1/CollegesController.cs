@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using BTech.DTOs.College;
 using BTech.Services.Interfaces;
+using BTech.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,6 +19,17 @@ namespace BTech.Controllers.V1
             ICollegeService collegeService)
         {
             _collegeService = collegeService;
+        }
+
+        [HttpGet("my-college")]
+        public async Task<IActionResult> MyCollege()
+        {
+            var scope = CollegeManagementScope.From(HttpContext);
+            if (!scope.IsCollegeAdmin || scope.IsSuperAdmin || scope.AssignedCollegeId is not long collegeId || scope.SelectedCollegeId != collegeId)
+                return StatusCode(403, new { success = false, message = "An active College Admin assignment is required." });
+            var college = await _collegeService.GetCollegeByIdAsync(collegeId);
+            return college == null ? NotFound(new { success = false, message = "Assigned college is unavailable." })
+                : Ok(new { success = true, data = college });
         }
 
         // =====================================================

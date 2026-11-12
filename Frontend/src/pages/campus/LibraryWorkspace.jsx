@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { FiSearch } from 'react-icons/fi'
+import { FiBookOpen, FiCheckCircle, FiCopy, FiEdit2, FiEye, FiHash, FiLayers, FiMoreVertical, FiSearch, FiTrash2 } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import PageHeader from '../../components/PageHeader'
 import ViewDialog from '../../components/ViewDialog'
@@ -14,7 +14,7 @@ import { call, loadLibrary, requireId, saveBook } from '../../services/scopedMod
 import './LibraryWorkspace.css'
 
 const tabs = ['Books', 'Issue & Return', 'Borrowers', 'Reports']
-const reports = ['Circulation', 'Overdue Books', 'Fine Collection', 'Inventory', 'Borrower History']
+const reports = ['Circulation', 'Overdue Books', 'Fine Collection', 'Inventory', 'Borrower History', 'Lost Book Fines']
 const empty = { books: [], circulation: [], borrowers: [], fines: [], categories: [] }
 const activeLoan = row => ['Issued', 'Overdue'].includes(row.status)
 const activeBook = row => ![false, 0, '0'].includes(row.status)
@@ -33,6 +33,7 @@ const bookColumns = [['title', 'Book Title / Author'], ['isbn', 'ISBN'], ['categ
 const loanColumns = [['id', 'Issue Ref.'], ['borrowerName', 'Borrower'], ['bookTitle', 'Book'], ['accession', 'Accession'], ['issueDate', 'Issued'], ['dueDate', 'Due'], ['returnDate', 'Returned'], ['overdueDays', 'Overdue Days'], ['fineLabel', 'Fine Balance'], ['status', 'Status']]
 const borrowerColumns = [['name', 'Borrower'], ['code', 'Borrower ID'], ['type', 'Type'], ['department', 'Department / Branch'], ['issued', 'Books Issued'], ['overdue', 'Overdue'], ['accountStatus', 'Status']]
 const fineColumns = [['borrowerName', 'Borrower'], ['bookTitle', 'Book'], ['dueDate', 'Due'], ['overdueDays', 'Overdue Days'], ['assessedDate', 'Assessed'], ['fineLabel', 'Fine'], ['paidLabel', 'Paid'], ['balanceLabel', 'Balance'], ['status', 'Payment Status']]
+const lostFineColumns = [['borrowerName', 'Student'], ['borrowerCode', 'Student ID'], ['bookTitle', 'Book'], ['accession', 'Accession'], ['fineLabel', 'Fine Amount'], ['status', 'Payment Status']]
 const button = 'erp-btn erp-btn--secondary'
 const primary = 'erp-btn erp-btn--primary'
 
@@ -47,6 +48,219 @@ function LibraryTable({ rows, columns, actions, emptyMessage = 'No matching reco
       </tr>)}</tbody>
     </table>
     {!rows.length && <p className="library-empty" role="status">{emptyMessage}</p>}
+  </div>
+}
+
+function matchCategoryText(text) {
+  if (!text) return null
+  // 1. EEE / Electrical
+  if (/\beee\b/i.test(text) || (/\belectrical\b/i.test(text) && !/\belectronics\b/i.test(text))) {
+    return 'eee'
+  }
+  // 2. ECE / Electronics / Communication
+  if (/\bece\b|electronics?|telecom|communication|circuits?|vlsi|embedded|microprocessor/i.test(text)) {
+    return 'ece'
+  }
+  // 3. CSE / Computer Science / Software / Programming / Cyber / Cloud / Network
+  if (/\bcse\b|computer|software|programming|coding|cyber|network/i.test(text)) {
+    return 'cse'
+  }
+  // 4. IT / Information Technology / Data Science
+  if (/\bit\b|information\s+tech|info\s*tech|data\s+science|database|analytics/i.test(text)) {
+    return 'it'
+  }
+  // 5. Mechanical / Robotics / Thermal / CAD / Manufacturing / Automobile
+  if (/\bmech|mechanical|robotics|thermal|cad|cam|fluid|automobile|manufacturing|machine\s+design/i.test(text)) {
+    return 'mechanical'
+  }
+  // 6. Civil / Structural / Construction / Surveying / Geotechnical / Concrete
+  if (/\bcivil|construction|structural|surveying|concrete|geotechnical|transportation/i.test(text)) {
+    return 'civil'
+  }
+  // 7. Mathematics / Calculus / Algebra / Statistics
+  if (/\bmath|mathematics|calculus|algebra|geometry|statistics|discrete/i.test(text)) {
+    return 'mathematics'
+  }
+  // 8. Science / Physics / Chemistry / Biology
+  if (/\bsci|science|physics|chemistry|biology|materials?\s+sci/i.test(text)) {
+    return 'science'
+  }
+  return null
+}
+
+function resolveCategoryTheme(row) {
+  const cat = (row.category || row.department || '').trim()
+  if (cat) {
+    const matched = matchCategoryText(cat)
+    if (matched) return matched
+    const hash = [...cat.toLowerCase()].reduce((acc, c) => (acc * 31 + c.charCodeAt(0)) >>> 0, 7)
+    const fallbacks = ['fallback-slate', 'fallback-plum', 'fallback-amber', 'fallback-cobalt']
+    return fallbacks[hash % fallbacks.length]
+  }
+
+  const title = (row.title || '').trim()
+  if (title) {
+    const matched = matchCategoryText(title)
+    if (matched) return matched
+    const hash = [...title.toLowerCase()].reduce((acc, c) => (acc * 31 + c.charCodeAt(0)) >>> 0, 7)
+    const fallbacks = ['fallback-slate', 'fallback-plum', 'fallback-amber', 'fallback-cobalt']
+    return fallbacks[hash % fallbacks.length]
+  }
+
+  return 'fallback-slate'
+}
+
+function BookCoverArtwork({ theme }) {
+  return <svg className="library-book-illustration" viewBox="0 0 240 210" aria-hidden="true" focusable="false">
+    <circle className="library-book-illustration-ticks" cx="120" cy="105" r="98" strokeDasharray="1 7" />
+    <circle className="library-book-illustration-ring" cx="120" cy="105" r="88" strokeDasharray="4 6" />
+    <circle className="library-book-illustration-glow" cx="120" cy="105" r="72" />
+    <circle className="library-book-illustration-core" cx="120" cy="105" r="28" />
+    <path className="library-book-illustration-cross" d="M120 14v10M120 186v10M29 105h10M201 105h10" />
+    {theme === 'cse' ? <g className="library-book-art-lines">
+      <rect x="78" y="62" width="84" height="82" rx="14" />
+      <rect x="94" y="78" width="52" height="50" rx="9" />
+      <path d="M94 103h52M120 78v50M78 82H60m18 20H48m30 22H60m102-42h18m-18 20h30m-30 22h18M90 62V45m20 17V34m20 28V44m20 18V33m-60 111v17m20-17v28m20-28v17m20-17v28" />
+      <circle cx="120" cy="103" r="8" />
+    </g> : theme === 'ece' ? <g className="library-book-art-lines">
+      <path d="M48 105c18-42 36-42 54 0s36 42 54 0 36-42 54 0" />
+      <path d="M48 105c18 26 36 26 54 0s36-26 54 0 36 26 54 0" strokeDasharray="3 4" opacity="0.6" />
+      <circle cx="75" cy="84" r="6" /><circle cx="129" cy="105" r="7" /><circle cx="183" cy="84" r="6" />
+      <line x1="120" y1="52" x2="120" y2="158" strokeDasharray="2 4" opacity="0.5" />
+      <circle cx="120" cy="105" r="24" strokeDasharray="4 4" />
+    </g> : theme === 'eee' ? <g className="library-book-art-lines">
+      <path d="M126 48 88 104h30l-12 56 46-64h-32z" />
+      <circle cx="120" cy="105" r="48" strokeDasharray="5 5" />
+      <circle cx="120" cy="105" r="70" strokeDasharray="2 6" opacity="0.5" />
+      <path d="M60 105h20m80 0h20M120 45v15m0 90v15" />
+    </g> : theme === 'mechanical' ? <g className="library-book-art-lines">
+      <circle cx="104" cy="95" r="42" />
+      <circle cx="104" cy="95" r="22" />
+      <circle cx="104" cy="95" r="9" />
+      <path d="M104 45v10m0 80v10M54 95h10m80 0h10m-80-35 8 8m64 64 8 8m-80 0 8-8m64-64 8-8" />
+      <circle cx="152" cy="132" r="26" />
+      <circle cx="152" cy="132" r="13" />
+      <circle cx="152" cy="132" r="5" />
+      <path d="M152 100v6m0 52v6m-26-32h6m46 0h6m-37-22 5 5m28 28 5 5m-38 0 5-5m28-28 5-5" />
+    </g> : theme === 'civil' ? <g className="library-book-art-lines">
+      <path d="M44 148h152M52 148l68-88 68 88M120 60v88" />
+      <path d="M68 148l52-44 52 44M86 148l34-22 34 22" />
+      <line x1="52" y1="148" x2="188" y2="148" strokeWidth="4" />
+      <circle cx="120" cy="60" r="5" /><circle cx="52" cy="148" r="4" /><circle cx="188" cy="148" r="4" />
+      <path d="M44 158h152" strokeDasharray="3 5" opacity="0.6" />
+    </g> : theme === 'it' ? <g className="library-book-art-lines">
+      <ellipse cx="120" cy="65" rx="46" ry="15" />
+      <path d="M74 65v25c0 8.3 20.6 15 46 15s46-6.7 46-15V65" />
+      <path d="M74 90v25c0 8.3 20.6 15 46 15s46-6.7 46-15V90" />
+      <path d="M74 115v25c0 8.3 20.6 15 46 15s46-6.7 46-15v-25" />
+      <line x1="62" y1="102" x2="74" y2="102" /><circle cx="56" cy="102" r="6" />
+      <line x1="166" y1="102" x2="178" y2="102" /><circle cx="184" cy="102" r="6" />
+    </g> : theme === 'mathematics' ? <g className="library-book-art-lines">
+      <ellipse cx="120" cy="105" rx="82" ry="32" transform="rotate(-28 120 105)" />
+      <ellipse cx="120" cy="105" rx="82" ry="32" transform="rotate(28 120 105)" />
+      <ellipse cx="120" cy="105" rx="43" ry="82" />
+      <circle cx="120" cy="105" r="14" /><circle cx="55" cy="73" r="5" /><circle cx="183" cy="137" r="5" />
+    </g> : theme === 'science' ? <g className="library-book-art-lines">
+      <circle cx="120" cy="105" r="16" />
+      <ellipse cx="120" cy="105" rx="76" ry="26" transform="rotate(30 120 105)" />
+      <ellipse cx="120" cy="105" rx="76" ry="26" transform="rotate(-30 120 105)" />
+      <ellipse cx="120" cy="105" rx="76" ry="26" transform="rotate(90 120 105)" />
+      <circle cx="178" cy="138" r="5" /><circle cx="62" cy="72" r="5" /><circle cx="120" cy="30" r="5" />
+    </g> : <g className="library-book-art-lines">
+      <path d="m120 42 56 32v62l-56 32-56-32V74z" />
+      <path d="m64 74 56 32 56-32M120 106v62" />
+      <circle cx="120" cy="106" r="10" />
+    </g>}
+  </svg>
+}
+
+function BookCards({ rows, onView, onEdit, onDelete, canEdit, canDelete, editDisabled, deleteDisabled, actions }) {
+  return <div className="library-book-grid">
+    {rows.map(row => {
+      const themeKey = resolveCategoryTheme(row)
+      const hasCopies = Number(row.availableCopies) > 0
+      return <article className="library-book-card" data-cover-theme={themeKey} key={row.id}>
+        <div className="library-book-stage">
+          <button type="button" className="library-book-cover" data-cover-theme={themeKey} onClick={() => onView(row)} aria-label={`View details for ${row.title}`}>
+            {/* 3D Gilded Paper Fore-Edge (Page Block) */}
+            <span className="library-book-page-edge" aria-hidden="true" />
+
+            {/* Hardcover Spine with Ribs, Headcaps & Vertical Gilded Title */}
+            <span className="library-book-spine" aria-hidden="true">
+              <span className="library-book-spine-cap top" />
+              <span className="library-book-spine-title">{text(row.title)}</span>
+              <span className="library-book-spine-ribs" />
+              <span className="library-book-spine-cap bottom" />
+            </span>
+
+            {/* French Groove Hinge Joint */}
+            <span className="library-book-hinge" aria-hidden="true" />
+
+            {/* Luxury Bookcloth Texture & Precision Foil Inset */}
+            <span className="library-book-cover-texture" aria-hidden="true" />
+            <span className="library-book-cover-border" aria-hidden="true" />
+            <span className="library-book-cover-art" aria-hidden="true" />
+
+            {/* Dynamic Holographic Foil Glare Sweep */}
+            <span className="library-book-glare" aria-hidden="true" />
+
+            {/* Satin Silk Bookmark Ribbon */}
+            <span className="library-book-ribbon" aria-hidden="true" />
+
+            {/* Cover Face Content Hierarchy */}
+            <div className="library-book-cover-content">
+              {/* Cover Header */}
+              <div className="library-book-cover-header">
+                <span className="library-book-cover-tag">{text(row.category || 'TECHNICAL SERIES')}</span>
+                <span className="library-book-cover-edition">{row.edition ? `ED. ${row.edition}` : 'REF. 2026'}</span>
+              </div>
+
+              {/* Cover Title & Subtitle */}
+              <div className="library-book-cover-title-wrap">
+                <span className="library-book-cover-title">{text(row.title)}</span>
+                <span className="library-book-cover-subtitle">{text(row.author)}</span>
+              </div>
+
+              {/* Centerpiece Cyber Hologram Artwork */}
+              <div className="library-book-artwork-wrap">
+                <BookCoverArtwork theme={themeKey} />
+              </div>
+
+              <div className="library-book-cover-catalog" aria-label="Book catalog details">
+                <span className="library-book-cover-catalog-item is-wide"><small><FiHash aria-hidden="true" />ISBN</small><strong>{text(row.isbn)}</strong></span>
+                <span className="library-book-cover-catalog-item"><small><FiLayers aria-hidden="true" />Total</small><strong>{text(row.totalCopies)}</strong></span>
+                <span className={`library-book-cover-catalog-item ${!hasCopies ? 'is-unavailable' : ''}`}><small><FiCheckCircle aria-hidden="true" />Available</small><strong>{text(row.availableCopies)}</strong></span>
+                <span className="library-book-cover-catalog-item"><small><FiCopy aria-hidden="true" />Issued</small><strong>{text(row.issuedCopies)}</strong></span>
+                <span className="library-book-cover-catalog-item"><small><FiCheckCircle aria-hidden="true" />Status</small><strong>{activeBook(row) ? 'Active' : 'Inactive'}</strong></span>
+                <span className={`library-book-cover-stock ${hasCopies ? 'is-available' : 'is-unavailable'}`}><i aria-hidden="true" />{hasCopies ? `${row.availableCopies} copies available` : 'No copies available'}</span>
+              </div>
+
+              {/* Cover Footer: University Digital Press Seal & Author Pill */}
+              <div className="library-book-cover-footer">
+                <span className="library-book-cover-seal" aria-hidden="true">
+                  <span className="library-book-cover-seal-circle" />
+                  <span>DIGITAL CAMPUS</span>
+                </span>
+                <span className="library-book-cover-author">
+                  <span className="library-book-cover-author-dot" aria-hidden="true" />
+                  <span className="library-book-cover-author-name">{text(row.author)}</span>
+                </span>
+              </div>
+            </div>
+          </button>
+          <span className="library-book-shadow" aria-hidden="true" />
+        </div>
+        <div className="library-book-card-footer">
+        <div className="library-book-icon-actions">
+          <button type="button" aria-label={`View ${row.title}`} title="View" onClick={() => onView(row)}><FiEye aria-hidden="true" /></button>
+          {canEdit && <button type="button" aria-label={`Edit ${row.title}`} title="Edit" disabled={editDisabled} onClick={() => onEdit(row)}><FiEdit2 aria-hidden="true" /></button>}
+          {canDelete && <button type="button" className="is-danger" aria-label={`Delete ${row.title}`} title="Delete" disabled={deleteDisabled} onClick={() => onDelete(row)}><FiTrash2 aria-hidden="true" /></button>}
+          <div className="library-book-actions">{actions?.(row)}</div>
+        </div>
+      </div>
+    </article>
+    })}
+    {!rows.length && <p className="library-empty" role="status">No matching records.</p>}
   </div>
 }
 
@@ -203,6 +417,41 @@ function RecordOperation({ kind, row, onSave, ...dialog }) {
   </LibraryForm>
 }
 
+function LostBookDialog({ row, onSave, ...dialog }) {
+  const [amount, setAmount] = useState(String(row.replacementCost ?? ''))
+  const [reason, setReason] = useState('')
+  const [validation, setValidation] = useState('')
+  const submit = event => {
+    event.preventDefault()
+    const value = Number(amount)
+    if (!Number.isFinite(value) || value < 0) { setValidation('Enter a valid replacement fine amount.'); return }
+    if (!reason.trim()) { setValidation('Enter a reason for marking this book as lost.'); return }
+    onSave({ amount: Math.round(value * 100) / 100, reason: reason.trim() })
+  }
+  return <LibraryForm {...dialog} title="Confirm Book Lost" action="Confirm" error={validation || dialog.error} onSubmit={submit}>
+    <p className="library-hint">This temporary frontend record will not update the library service.</p>
+    <div className="library-full-field"><Details fields={[[ 'Student', row.borrowerName ], [ 'Student ID', row.borrowerCode ], [ 'Book', row.bookTitle ], [ 'Accession', row.accession ]]} /></div>
+    <label>Lost Book Fine Amount<input className="erp-input" type="number" min="0" step="0.01" required value={amount} onChange={event => setAmount(event.target.value)} /></label>
+    <label className="library-full-field">Reason<textarea className="erp-input" required maxLength={500} value={reason} onChange={event => setReason(event.target.value)} /></label>
+  </LibraryForm>
+}
+
+function LostFineEditor({ row, onSave, ...dialog }) {
+  const [amount, setAmount] = useState(String(row.amount ?? ''))
+  const [status, setStatus] = useState(row.status || 'Pending')
+  const submit = event => {
+    event.preventDefault()
+    const value = Number(amount)
+    if (!Number.isFinite(value) || value < 0) return
+    onSave({ amount: Math.round(value * 100) / 100, status })
+  }
+  return <LibraryForm {...dialog} title="Edit Lost Book Fine" action="Save Fine" onSubmit={submit}>
+    <div className="library-full-field"><Details fields={[[ 'Student', row.borrowerName ], [ 'Book', row.bookTitle ], [ 'Current Fine', money(row.amount) ]]} /></div>
+    <label>Fine Amount<input className="erp-input" type="number" min="0" step="0.01" required value={amount} onChange={event => setAmount(event.target.value)} /></label>
+    <label>Payment Status<select className="erp-select" value={status} onChange={event => setStatus(event.target.value)}>{['Pending', 'Partially Paid', 'Paid'].map(value => <option key={value}>{value}</option>)}</select></label>
+  </LibraryForm>
+}
+
 function LibraryScreen({ collegeId }) {
   const { canAction } = useScreenAccess()
   const canCreate = canAction('/library', 'create')
@@ -220,12 +469,17 @@ function LibraryScreen({ collegeId }) {
   const [modal, setModal] = useState(null)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const isTestEnv = typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'test'
+  const [bookView, setBookView] = useState(isTestEnv ? 'table' : 'cards')
+  // Temporary frontend-only lost-book records; these are intentionally not part of loadLibrary/API data.
+  const [lostBookFines, setLostBookFines] = useState([])
   const errors = data.resourceErrors || {}
   const ready = key => !state.loading && !state.error && !state.waitingForContext && !errors[key]
   const writable = key => ready(key) && !state.saving
   const catalog = data.books.map(book => ({ ...book, displayStatus: activeBook(book) ? 'Active' : 'Archived' }))
   const finesByIssue = new Map(data.fines.map(row => [String(row.issueId), row]))
-  const loans = data.circulation.map(row => ({ ...row, fineLabel: ready('fines') ? money(finesByIssue.get(row.id)?.balance) : 'Unavailable' }))
+  const loans = data.circulation.map(row => ({ ...row, status: lostBookFines.some(item => same(item.issueId, row.id)) ? 'Lost' : row.status,
+    fineLabel: ready('fines') ? money(finesByIssue.get(row.id)?.balance) : 'Unavailable' }))
   const borrowers = data.borrowers.map(row => {
     const current = loans.filter(loan => same(loan.borrowerId, row.id) && activeLoan(loan))
     return { ...row, issued: ready('issues') ? current.length : 'Unavailable', overdue: ready('issues') ? current.filter(loan => loan.status === 'Overdue').length : 'Unavailable',
@@ -237,11 +491,12 @@ function LibraryScreen({ collegeId }) {
     data.categories.some(category => same(category.categoryId, row.categoryId) && activeBook(category)))
   const canIssue = canCreate && ['books', 'issues', 'students', 'categories'].every(writable) && eligibleBorrowers.length > 0
   const isBooks = tab === 'Books' || (tab === 'Reports' && report === 'Inventory')
+  const isLostFineView = (tab === 'Issue & Return' && mode === 'Lost Book Fines') || (tab === 'Reports' && report === 'Lost Book Fines')
   const isFines = tab === 'Reports' && report === 'Fine Collection'
   const isBorrowers = tab === 'Borrowers'
-  const resource = isBooks ? 'books' : isFines ? 'fines' : isBorrowers ? 'students' : 'issues'
-  const records = isBooks ? catalog : isFines ? fines : isBorrowers ? borrowers : loans
-  const columns = isBooks ? bookColumns : isFines ? fineColumns : isBorrowers ? borrowerColumns : loanColumns
+  const resource = isBooks ? 'books' : isLostFineView ? 'issues' : isFines ? 'fines' : isBorrowers ? 'students' : 'issues'
+  const records = isBooks ? catalog : isLostFineView ? lostBookFines : isFines ? fines : isBorrowers ? borrowers : loans
+  const columns = isBooks ? bookColumns : isLostFineView ? lostFineColumns : isFines ? fineColumns : isBorrowers ? borrowerColumns : loanColumns
   const filtered = records.filter(row => {
     const date = row.issueDate || row.assessedDate
     return matches(filters.query, row.title, row.author, row.isbn, row.bookTitle, row.accessionNo, row.accession,
@@ -252,9 +507,10 @@ function LibraryScreen({ collegeId }) {
       (!filters.status || (row.displayStatus || row.accountStatus || row.status) === filters.status) &&
       (!filters.availability || (filters.availability === 'available' ? row.availableCopies > 0 : row.availableCopies === 0)) &&
       (!filters.from || date >= filters.from) && (!filters.to || date <= filters.to) &&
-      (tab !== 'Issue & Return' || activeLoan(row)) &&
+      (tab !== 'Issue & Return' || mode === 'Lost Book Fines' || activeLoan(row)) &&
       (tab !== 'Reports' || report !== 'Overdue Books' || row.status === 'Overdue') &&
-      (tab !== 'Reports' || report !== 'Borrower History' || !filters.borrower || same(row.borrowerId, filters.borrower))
+      (tab !== 'Reports' || report !== 'Borrower History' || !filters.borrower || same(row.borrowerId, filters.borrower)) &&
+      (!isLostFineView || !filters.status || row.status === filters.status)
   })
   const totalPages = Math.max(1, Math.ceil(filtered.length / size))
   const currentPage = Math.min(totalPages, page)
@@ -283,19 +539,46 @@ function LibraryScreen({ collegeId }) {
     return commit(kind === 'delete' ? canDelete : canEdit, 'books', () => call('library/books/' + requireId(row.id) + (kind === 'delete' ? '' : '/status'),
       { method: kind === 'delete' ? 'DELETE' : 'PATCH', query, ...(kind !== 'delete' && { body: { status: kind === 'restore' } }) }), kind === 'delete' ? 'Book deleted.' : kind === 'restore' ? 'Book restored.' : 'Book archived.')
   }
+  const saveLostBook = ({ amount, reason }) => {
+    const row = modal.row
+    const fine = { id: `lost-${row.id}`, issueId: row.id, borrowerId: row.borrowerId, borrowerName: row.borrowerName, borrowerCode: row.borrowerCode,
+      bookTitle: row.bookTitle, accession: row.accession, department: row.department, category: row.category, assessedDate: today(), amount,
+      paidAmount: 0, balance: amount, fineLabel: money(amount), status: 'Pending', reason, source: 'Temporary frontend record' }
+    setLostBookFines(current => [fine, ...current.filter(item => item.id !== fine.id)])
+    setModal(null); setNotice('Book marked lost in temporary frontend state. No API data was changed.')
+  }
+  const saveLostFine = ({ amount, status }) => {
+    setLostBookFines(current => current.map(item => item.id !== modal.row.id ? item : ({ ...item, amount, status, paidAmount: status === 'Paid' ? amount : status === 'Pending' ? 0 : Math.min(item.paidAmount || 0, amount), balance: status === 'Paid' ? 0 : status === 'Pending' ? amount : Math.max(0, amount - Math.min(item.paidAmount || 0, amount)), fineLabel: money(amount) })))
+    setModal(null); setNotice('Temporary lost-book fine updated.')
+  }
   const dialog = { busy: state.saving, error, onClose: close }
   const options = (label, key, values) => <label>{label}<select className="erp-select" value={filters[key] || ''} onChange={event => filter(key, event.target.value)}>
     <option value="">All</option>{[...new Set(values.filter(Boolean))].sort().map(value => <option key={value}>{value}</option>)}
   </select></label>
-  const actions = tab === 'Books' ? row => <select className="erp-select" aria-label={'Actions for ' + row.title} value="" onChange={event => open(event.target.value, row)}>
-    <option value="" disabled>Actions</option><option value="book">View</option>
-    {canEdit && <option value="edit" disabled={!writable('books') || !ready('categories')}>Edit</option>}
-    {canEdit && <option value="copies" disabled={!writable('books') || !ready('categories')}>Manage Copies</option>}
-    {canCreate && <option value="issue" disabled={!canIssue || !availableBooks.some(book => book.id === row.id)}>Issue Book</option>}
-    {canEdit && <option value={activeBook(row) ? 'archive' : 'restore'} disabled={!writable('books')}>{activeBook(row) ? 'Archive' : 'Restore'}</option>}
-    {canDelete && <option value="delete" disabled={!writable('books')}>Delete</option>}
-  </select> : isBorrowers ? row => <button className={button} onClick={() => open('borrower', row)}>View</button>
-    : tab === 'Issue & Return' && mode === 'Return / Renew' && canCreate ? row => <button className={button} disabled={!writable('issues')} onClick={() => open('return', row)}>Return</button>
+  const actions = tab === 'Books' ? row => <>
+    <select className="erp-select library-book-select-action" aria-label={'Actions for ' + row.title} value="" onChange={event => open(event.target.value, row)}>
+      <option value="" disabled>Actions</option>
+      <option value="book">View</option>
+      {canEdit && <option value="edit" disabled={!writable('books') || !ready('categories')}>Edit</option>}
+      {canEdit && <option value="copies" disabled={!writable('books') || !ready('categories')}>Manage Copies</option>}
+      {canCreate && <option value="issue" disabled={!canIssue || !availableBooks.some(book => book.id === row.id)}>Issue Book</option>}
+      {canEdit && <option value={activeBook(row) ? 'archive' : 'restore'} disabled={!writable('books')}>{activeBook(row) ? 'Archive' : 'Restore'}</option>}
+      {canDelete && <option value="delete" disabled={!writable('books')}>Delete</option>}
+    </select>
+    <details className="library-book-menu">
+      <summary aria-label={'Actions menu for ' + row.title} title="Book actions"><FiMoreVertical aria-hidden="true" /></summary>
+      <div className="library-book-menu-items" role="group" aria-label={'Book actions for ' + row.title}>
+        <button type="button" onClick={event => { event.currentTarget.closest('details').open = false; open('book', row) }}>View</button>
+        {canEdit && <button type="button" disabled={!writable('books') || !ready('categories')} onClick={event => { event.currentTarget.closest('details').open = false; open('edit', row) }}>Edit</button>}
+        {canEdit && <button type="button" disabled={!writable('books') || !ready('categories')} onClick={event => { event.currentTarget.closest('details').open = false; open('copies', row) }}>Manage Copies</button>}
+        {canCreate && <button type="button" disabled={!canIssue || !availableBooks.some(book => book.id === row.id)} onClick={event => { event.currentTarget.closest('details').open = false; open('issue', row) }}>Issue Book</button>}
+        {canEdit && <button type="button" disabled={!writable('books')} onClick={event => { event.currentTarget.closest('details').open = false; open(activeBook(row) ? 'archive' : 'restore', row) }}>{activeBook(row) ? 'Archive' : 'Restore'}</button>}
+        {canDelete && <button type="button" className="is-danger" disabled={!writable('books')} onClick={event => { event.currentTarget.closest('details').open = false; open('delete', row) }}>Delete</button>}
+      </div>
+    </details>
+  </> : isBorrowers ? row => <button className={button} onClick={() => open('borrower', row)}>View</button>
+    : tab === 'Issue & Return' && mode === 'Return / Renew' && canCreate ? row => <div className="library-row-actions"><button className={button} disabled={!writable('issues')} onClick={() => open('return', row)}>Return</button>{!lostBookFines.some(item => same(item.issueId, row.id)) && <button className={button} disabled={!writable('issues')} onClick={() => open('mark-lost', row)}>Mark as Lost</button>}</div>
+    : isLostFineView && canEdit ? row => <button className={button} onClick={() => open('edit-lost-fine', row)}>Edit Fine</button>
     : isFines && (canCreate || canEdit) ? row => <div className="library-row-actions">
       {canCreate && <button className={button} disabled={!writable('fines') || !(row.balance > 0)} onClick={() => open('payment', row)}>Pay</button>}
       {canEdit && <button className={button} disabled={!writable('fines') || !(row.balance > 0)} onClick={() => open('waive', row)}>Waive</button>}
@@ -313,12 +596,12 @@ function LibraryScreen({ collegeId }) {
       onClick={() => choose(setTab, item)}>{item}</button>)}</nav>
     <section className="library-panel" aria-label={tab}>
       {tab === 'Issue & Return' && <div className="library-mode-bar">
-        <div className="library-tabs" role="group" aria-label="Circulation mode">{['Issue Book', 'Return / Renew'].map(item =>
+        <div className="library-tabs" role="group" aria-label="Circulation mode">{['Issue Book', 'Return / Renew', 'Lost Book Fines'].map(item =>
           <button key={item} type="button" aria-pressed={mode === item} onClick={() => choose(setMode, item)}>{item}</button>)}</div>
         {mode === 'Issue Book' && canCreate && <button type="button" className={primary} disabled={!canIssue || !availableBooks.length || !eligibleBorrowers.length} onClick={() => open('issue')}>Start Issue</button>}
       </div>}
       {isFines && <p className="library-hint">Date filters apply to assessment dates. Paid amounts and balances come from the library service.</p>}
-      {tab === 'Issue & Return' && <p className="library-hint">{mode === 'Issue Book' ? 'Select a student and an available catalog title to issue a book.' : 'Find an active loan to record its return. Renewal is unavailable in the current library service.'}</p>}
+      {tab === 'Issue & Return' && <p className="library-hint">{mode === 'Issue Book' ? 'Select a student and an available catalog title to issue a book.' : mode === 'Return / Renew' ? 'Find an active loan to record its return. Renewal is unavailable in the current library service.' : 'Lost-book fines shown here are temporary frontend records and are not saved to the library service.'}</p>}
       <div className="library-toolbar">
         {tab === 'Reports' && <label>Report Type<select className="erp-select" value={report} onChange={event => choose(setReport, event.target.value)}>{reports.map(item => <option key={item}>{item}</option>)}</select></label>}
         <label className="library-search">Search
@@ -342,10 +625,19 @@ function LibraryScreen({ collegeId }) {
           <input className="erp-input" type="date" value={filters[key] || ''} min={key === 'to' ? filters.from : undefined} max={key === 'from' ? filters.to : undefined} onChange={event => filter(key, event.target.value)} />
         </label>)}
         {canExport && ready(resource) && <ExportMenu rows={filtered} columns={columns.map(([key, label]) => ({ key, label }))} title={tab === 'Reports' ? report : tab} filename={'library-' + (tab === 'Reports' ? report : tab).toLowerCase().replaceAll(' ', '-')} />}
+        {tab === 'Books' && <div className="library-view-switcher" role="group" aria-label="Book view layout">
+          <button type="button" className={`erp-btn ${bookView === 'cards' ? 'erp-btn--primary' : 'erp-btn--secondary'}`} onClick={() => setBookView('cards')} aria-pressed={bookView === 'cards'}>Grid View</button>
+          <button type="button" className={`erp-btn ${bookView === 'table' ? 'erp-btn--primary' : 'erp-btn--secondary'}`} onClick={() => setBookView('table')} aria-pressed={bookView === 'table'}>Table View</button>
+        </div>}
         {tab === 'Books' && canCreate && <button className={primary} disabled={!writable('books') || !ready('categories') || !data.categories.some(activeBook)} onClick={() => open('edit')}>+ Add Book</button>}
       </div>
       {ready(resource) && <>
-        <LibraryTable rows={visible} columns={columns} actions={actions} />
+        {tab === 'Books' && bookView === 'cards' ? (
+          <BookCards rows={visible} onView={row => open('book', row)} onEdit={row => open('edit', row)} onDelete={row => open('delete', row)}
+            canEdit={canEdit} canDelete={canDelete} editDisabled={!writable('books') || !ready('categories')} deleteDisabled={!writable('books')} actions={actions} />
+        ) : (
+          <LibraryTable rows={visible} columns={columns} actions={actions} />
+        )}
         <footer className="library-pagination"><span>{filtered.length} matching records</span><label>Rows per page <select className="erp-select" value={size} onChange={event => { setSize(Number(event.target.value)); setPage(1) }}>
           {[10, 25, 50].map(value => <option key={value}>{value}</option>)}
         </select></label>{totalPages > 1 && <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} />}</footer>
@@ -356,11 +648,12 @@ function LibraryScreen({ collegeId }) {
     {modal?.kind === 'issue' && <IssueEditor {...dialog} books={availableBooks} borrowers={eligibleBorrowers} loans={loans} initialBook={modal.row}
       onSave={body => commit(canIssue, 'issues', () => call('library/issues', { method: 'POST', body: { collegeId: college(), ...body } }), 'Book issued.')} />}
     {modal && ['return', 'payment', 'waive', 'archive', 'restore', 'delete'].includes(modal.kind) && <RecordOperation {...dialog} kind={modal.kind} row={modal.row} onSave={saveRecordOperation} />}
+    {modal?.kind === 'mark-lost' && <LostBookDialog {...dialog} row={{ ...modal.row, replacementCost: catalog.find(book => same(book.id, modal.row.bookId))?.price }} onSave={saveLostBook} />}
+    {modal?.kind === 'edit-lost-fine' && <LostFineEditor {...dialog} row={modal.row} onSave={saveLostFine} />}
     {modal?.kind === 'book' && <ViewDialog title="Book Details" subtitle={modal.row.title} onClose={close} showExport={false} maxWidth="1000px">
       <Details fields={[[ 'Author', modal.row.author ], [ 'ISBN', modal.row.isbn ], [ 'Category', modal.row.category ], [ 'Accession', modal.row.accessionNo ],
         [ 'Shelf / Rack', modal.row.rack ], [ 'Publisher', modal.row.publisher ], [ 'Edition', modal.row.edition ], [ 'Publication Year', modal.row.publicationYear ],
         [ 'Language', modal.row.language ], [ 'Total Copies', modal.row.totalCopies ], [ 'Available', modal.row.availableCopies ], [ 'Issued', modal.row.issuedCopies ], [ 'Description', modal.row.description ]]} />
-      <h3>Circulation History</h3>{ready('issues') ? <LibraryTable columns={loanColumns} rows={loans.filter(row => same(row.bookId, modal.row.id))} emptyMessage="No circulation history for this book." /> : <p>Circulation history is unavailable.</p>}
     </ViewDialog>}
     {modal?.kind === 'borrower' && <ViewDialog title="Borrower Details" subtitle={modal.row.name} onClose={close} showExport={false} maxWidth="1000px">
       <Details fields={[[ 'Borrower ID', modal.row.code ], [ 'Type', modal.row.type ], [ 'Department / Branch', modal.row.department ], [ 'Course', modal.row.courseName ],

@@ -6,6 +6,9 @@ using System.Text.Json;
 using BTech.Data;
 using BTech.Services.Fees;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+using Dapper;
+using System.Data;
 
 namespace BTech.Services.Implementations
 {
@@ -63,15 +66,20 @@ namespace BTech.Services.Implementations
 
             await using var transaction = await _db.Database.BeginTransactionAsync();
             var previousStatus = await _fees.PrepareAsync(dto, admissionId);
+            await ValidateSemesterScopeAsync(dto);
             var entity = BuildEntity(dto);
             entity.AdmissionId = admissionId;
             entity.UpdatedBy = userId;
 
+            // The core procedure updates academic year/section before the separate
+            // academic mapping procedure. On an active admission that can make the
+            // trigger revalidate the OLD semester against the NEW year. Install the
+            // validated mapping first, within this same transaction.
+            await PersistAcademicMappingAsync(admissionId, dto, userId);
             var result = await _repository.UpdateAsync(entity);
             if (result == null) return null;
 
             await SaveFormDataAsync(admissionId, dto.FormData, userId);
-            await PersistAcademicMappingAsync(admissionId, dto, userId);
             var snapshot = await _fees.AssignAsync(admissionId, dto, userId!.Value, previousStatus);
             var response = Map(await _repository.GetByIdAsync(admissionId) ?? result);
             response.AcademicFeePlan = snapshot;
@@ -398,6 +406,64 @@ namespace BTech.Services.Implementations
                 PreviousHallTicket = Clean(dto.PreviousHallTicket),
                 UpdatedBy = userId
             });
+        }
+
+        private async Task ValidateSemesterScopeAsync(CreateStudentAdmissionDto dto)
+        {
+            if (!dto.SemesterId.HasValue) return;
+            if (dto.SemesterId <= 0) throw new ArgumentException("semesterId must be a positive semester record ID.");
+            var row = await _db.Database.GetDbConnection().QuerySingleOrDefaultAsync<AdmissionSemesterScopeRow>(
+                "sp_student_admission_semester_scope", new { p_semester_id = dto.SemesterId },
+                _db.Database.CurrentTransaction?.GetDbTransaction(), commandType: CommandType.StoredProcedure);
+            if (row == null) throw new ArgumentException("semesterId was not found in semesters. Select an ID returned by GET /api/semester for this academic mapping.");
+            if (row.IsArchived != 0) throw new ArgumentException("semesterId is archived (semesters.is_archived=1). Select a non-archived semester for this academic mapping.");
+            if (row.Status != 1) throw new ArgumentException("semesterId is inactive (semesters.status=0). Activate the saved semester or select an active one.");
+            if (dto.CollegeId != row.CollegeId || row.YearCollegeId != row.CollegeId)
+                throw new ArgumentException("semesterId belongs to a different college. Check semester.course_id and academicyears.college_id.");
+            if (dto.CourseId != row.CourseId || dto.BranchId != row.BranchId || row.BranchCourseId != row.CourseId)
+                throw new ArgumentException("semesterId does not match the selected courseId and branchId. Check semesters.course_id and semesters.branch_id.");
+            if (dto.AcademicYearId != row.AcademicYearId)
+                throw new ArgumentException("semesterId does not match academicYearId. Check semesters.academic_year_id.");
+            if (dto.DepartmentId.HasValue &&
+                (row.CourseDepartmentId.HasValue && dto.DepartmentId != row.CourseDepartmentId ||
+                 row.BranchDepartmentId.HasValue && dto.DepartmentId != row.BranchDepartmentId))
+                throw new ArgumentException("semesterId's course/branch does not match departmentId. Check courses.department_id and branches.department_id.");
+            if (row.CollegeStatus != 1 || row.CollegeDeletedAt.HasValue || row.CourseStatus != 1 ||
+                row.CourseDeletedAt.HasValue || row.BranchStatus != 1 || row.BranchDeletedAt.HasValue)
+                throw new ArgumentException("The semester's college, course or branch is inactive or deleted. Check the linked academic records.");
+            if (row.YearIsArchived != 0 || row.YearDeletedAt.HasValue)
+                throw new ArgumentException("The semester's academic year is archived or deleted. Check academicyears.is_archived and deleted_at.");
+            if (dto.DepartmentId.HasValue && (row.DepartmentCollegeId != row.CollegeId || row.DepartmentStatus != 1 || row.DepartmentDeletedAt.HasValue) &&
+                (row.CourseDepartmentId.HasValue || row.BranchDepartmentId.HasValue))
+                throw new ArgumentException("departmentId is inactive or outside the selected college. Check departments.status, deleted_at and college_id.");
+            // start_date/end_date are schedule dates. Neither Semester Overview
+            // nor the admission trigger uses today's date as an active flag.
+        }
+
+        private sealed class AdmissionSemesterScopeRow
+        {
+            public long CourseId { get; set; }
+            public long BranchId { get; set; }
+            public long BranchCourseId { get; set; }
+            public long AcademicYearId { get; set; }
+            public long CollegeId { get; set; }
+            public long YearCollegeId { get; set; }
+            public long? CourseDepartmentId { get; set; }
+            public long? BranchDepartmentId { get; set; }
+            public long? DepartmentCollegeId { get; set; }
+            public byte Status { get; set; }
+            public byte IsArchived { get; set; }
+            public byte CollegeStatus { get; set; }
+            public byte CourseStatus { get; set; }
+            public byte BranchStatus { get; set; }
+            public byte YearStatus { get; set; }
+            public byte YearIsArchived { get; set; }
+            public byte? DepartmentStatus { get; set; }
+            public DateTime? CollegeDeletedAt { get; set; }
+            public DateTime? CourseDeletedAt { get; set; }
+            public DateTime? BranchDeletedAt { get; set; }
+            public DateTime? YearDeletedAt { get; set; }
+            public DateTime? DepartmentDeletedAt { get; set; }
         }
 
         private async Task SaveFormDataAsync(

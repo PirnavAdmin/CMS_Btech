@@ -8,6 +8,7 @@ using BTech.Repositories.Interfaces;
 using BTech.Services;
 using BTech.Services.Implementations;
 using BTech.Services.Interfaces;
+using BTech.CampusManagement;
 
 using BTech.Models;
 using UserRoleManagement.API.Data;
@@ -20,6 +21,7 @@ using Microsoft.OpenApi.Models;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddScoped<CampusService>();
 
 
 // ============================================================
