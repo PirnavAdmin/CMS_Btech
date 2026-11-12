@@ -59,21 +59,12 @@ ORDER BY attendance_date DESC, attendance_id DESC;";
     public async Task<IActionResult> GetById(long attendanceId)
     {
         if (attendanceId <= 0) return BadRequest(new { success = false, message = "Invalid attendance ID." });
-        const string sql = @"
-SELECT * FROM faculty_attendance
-WHERE attendance_id = @attendanceId
-  AND EXISTS (
-      SELECT 1 FROM faculty scope_f
-      WHERE scope_f.faculty_id = faculty_attendance.faculty_id
-        AND (@collegeScope IS NULL OR scope_f.college_id = @collegeScope)
-        AND (@ownUser IS NULL OR scope_f.user_id = @ownUser)
-  )
-LIMIT 1;";
+        const string sql = "SELECT * FROM faculty_attendance WHERE attendance_id = @attendanceId LIMIT 1;";
         try
         {
             await using var connection = Connection();
             await connection.OpenAsync();
-            var row = await connection.QueryFirstOrDefaultAsync(sql, new { attendanceId, collegeScope = Scope(), ownUser = OwnUser() });
+            var row = await connection.QueryFirstOrDefaultAsync(sql, new { attendanceId });
             return row == null
                 ? NotFound(new { success = false, message = "Attendance record not found." })
                 : Ok(new { success = true, message = "Faculty attendance retrieved successfully.", data = row });
@@ -85,17 +76,10 @@ LIMIT 1;";
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] FacultyAttendanceCreateRequest request)
     {
-        var collegeScope = Scope();
-        var ownUser = OwnUser();
-        if (!await _context.Faculties.AnyAsync(x => x.FacultyId == request.FacultyId && x.DeletedAt == null && (!collegeScope.HasValue || x.CollegeId == collegeScope.Value) && (!ownUser.HasValue || x.UserId == ownUser.Value)))
+        if (!await _context.Faculties.AnyAsync(x => x.FacultyId == request.FacultyId && x.DeletedAt == null))
             return BadRequest(new { success = false, message = "Faculty not found." });
 
-        var date = (request.AttendanceDate ?? DateTime.Today).Date;
-        if (date > DateTime.Today)
-            return BadRequest(new { success = false, message = "Attendance cannot be recorded for a future date." });
-        var status = NormalizeAttendanceStatus(request.Status);
-        if (status is null || status == "NOT_MARKED")
-            return BadRequest(new { success = false, message = "Select a valid attendance status." });
+        var date = (request.AttendanceDate ?? DateTime.Now).Date;
         const string duplicateSql = "SELECT COUNT(*) FROM faculty_attendance WHERE faculty_id = @facultyId AND attendance_date = @date;";
         const string insertSql = @"
 INSERT INTO faculty_attendance
@@ -108,7 +92,7 @@ SELECT LAST_INSERT_ID();";
             await connection.OpenAsync();
             var exists = await connection.ExecuteScalarAsync<long>(duplicateSql, new { facultyId = request.FacultyId, date });
             if (exists > 0) return Conflict(new { success = false, message = "Attendance already exists for this faculty and date." });
-            var id = await connection.ExecuteScalarAsync<long>(insertSql, new { facultyId = request.FacultyId, date, status, request.Remarks, createdBy = CurrentUserId() });
+            var id = await connection.ExecuteScalarAsync<long>(insertSql, new { facultyId = request.FacultyId, date, status = request.Status, request.Remarks, createdBy = CurrentUserId() });
             return CreatedAtAction(nameof(GetById), new { attendanceId = id }, new { success = true, message = "Faculty attendance created successfully.", data = new { attendanceId = id } });
         }
         catch (MySqlException) { return DbError(); }
@@ -128,13 +112,13 @@ SELECT LAST_INSERT_ID();";
     {
         if (attendanceId <= 0) return BadRequest(new { success = false, message = "Invalid attendance ID." });
         var sql = checkIn
-            ? @"UPDATE faculty_attendance SET check_in = @value, status = CASE WHEN status IS NULL OR status = '' THEN 'PRESENT' ELSE status END, updated_at = UTC_TIMESTAMP(), updated_by = @updatedBy WHERE attendance_id = @attendanceId AND EXISTS (SELECT 1 FROM faculty scope_f WHERE scope_f.faculty_id = faculty_attendance.faculty_id AND (@collegeScope IS NULL OR scope_f.college_id = @collegeScope) AND (@ownUser IS NULL OR scope_f.user_id = @ownUser));"
-            : @"UPDATE faculty_attendance SET check_out = @value, updated_at = UTC_TIMESTAMP(), updated_by = @updatedBy WHERE attendance_id = @attendanceId AND EXISTS (SELECT 1 FROM faculty scope_f WHERE scope_f.faculty_id = faculty_attendance.faculty_id AND (@collegeScope IS NULL OR scope_f.college_id = @collegeScope) AND (@ownUser IS NULL OR scope_f.user_id = @ownUser));";
+            ? "UPDATE faculty_attendance SET check_in = @value, status = CASE WHEN status IS NULL OR status = '' THEN 'PRESENT' ELSE status END, updated_at = UTC_TIMESTAMP(), updated_by = @updatedBy WHERE attendance_id = @attendanceId;"
+            : "UPDATE faculty_attendance SET check_out = @value, updated_at = UTC_TIMESTAMP(), updated_by = @updatedBy WHERE attendance_id = @attendanceId;";
         try
         {
             await using var connection = Connection();
             await connection.OpenAsync();
-            var affected = await connection.ExecuteAsync(sql, new { attendanceId, value, updatedBy = CurrentUserId(), collegeScope = Scope(), ownUser = OwnUser() });
+            var affected = await connection.ExecuteAsync(sql, new { attendanceId, value, updatedBy = CurrentUserId() });
             if (affected == 0) return NotFound(new { success = false, message = "Attendance record not found." });
             return Ok(new { success = true, message = checkIn ? "Faculty check-in recorded successfully." : "Faculty check-out recorded successfully." });
         }
@@ -155,12 +139,6 @@ SELECT LAST_INSERT_ID();";
             });
         }
 
-        if (request.AttendanceDate?.Date > DateTime.Today)
-            return BadRequest(new { success = false, message = "Attendance cannot be recorded for a future date." });
-        var status = request.Status == null ? null : NormalizeAttendanceStatus(request.Status);
-        if (request.Status != null && status == null)
-            return BadRequest(new { success = false, message = "Select a valid attendance status." });
-
         try
         {
             await using var connection = Connection();
@@ -171,21 +149,13 @@ SELECT LAST_INSERT_ID();";
 SELECT attendance_id
 FROM faculty_attendance
 WHERE attendance_id = @AttendanceId
-  AND EXISTS (
-      SELECT 1 FROM faculty scope_f
-      WHERE scope_f.faculty_id = faculty_attendance.faculty_id
-        AND (@collegeScope IS NULL OR scope_f.college_id = @collegeScope)
-        AND (@ownUser IS NULL OR scope_f.user_id = @ownUser)
-  )
 LIMIT 1;";
 
             var existingId = await connection.QueryFirstOrDefaultAsync<long?>(
                 checkSql,
                 new
                 {
-                    AttendanceId = attendanceId,
-                    collegeScope = Scope(),
-                    ownUser = OwnUser()
+                    AttendanceId = attendanceId
                 });
 
             if (existingId == null)
@@ -203,30 +173,22 @@ UPDATE faculty_attendance
 SET
     attendance_date = COALESCE(@AttendanceDate, attendance_date),
     status = COALESCE(@Status, status),
-    check_in = @CheckIn,
-    check_out = @CheckOut,
-    remarks = @Remarks,
+    check_in = COALESCE(@CheckIn, check_in),
+    check_out = COALESCE(@CheckOut, check_out),
+    remarks = COALESCE(@Remarks, remarks),
     updated_at = UTC_TIMESTAMP(),
     updated_by = @UpdatedBy
-WHERE attendance_id = @AttendanceId
-  AND EXISTS (
-      SELECT 1 FROM faculty scope_f
-      WHERE scope_f.faculty_id = faculty_attendance.faculty_id
-        AND (@collegeScope IS NULL OR scope_f.college_id = @collegeScope)
-        AND (@ownUser IS NULL OR scope_f.user_id = @ownUser)
-  );";
+WHERE attendance_id = @AttendanceId;";
 
             var parameters = new
             {
                 AttendanceId = attendanceId,
                 AttendanceDate = request.AttendanceDate,
-                Status = status,
+                Status = request.Status,
                 CheckIn = request.CheckIn,
                 CheckOut = request.CheckOut,
                 Remarks = request.Remarks,
-                UpdatedBy = CurrentUserId(),
-                collegeScope = Scope(),
-                ownUser = OwnUser()
+                UpdatedBy = CurrentUserId()
             };
 
             var affected = await connection.ExecuteAsync(
@@ -476,12 +438,6 @@ SELECT
     ) AS AttendancePercentage
 FROM faculty_attendance
 WHERE faculty_id = @facultyId
-  AND EXISTS (
-      SELECT 1 FROM faculty scope_f
-      WHERE scope_f.faculty_id = faculty_attendance.faculty_id
-        AND (@collegeScope IS NULL OR scope_f.college_id = @collegeScope)
-        AND (@ownUser IS NULL OR scope_f.user_id = @ownUser)
-  )
   AND YEAR(attendance_date) = @year
   AND MONTH(attendance_date) = @month
 GROUP BY
@@ -500,9 +456,7 @@ GROUP BY
                 {
                     facultyId,
                     year,
-                    month,
-                    collegeScope = Scope(),
-                    ownUser = OwnUser()
+                    month
                 });
 
             if (result == null)
@@ -554,22 +508,6 @@ GROUP BY
         public DateTime? CheckIn { get; set; }
         public DateTime? CheckOut { get; set; }
         public string? Remarks { get; set; }
-    }
-
-    private static string? NormalizeAttendanceStatus(string? status)
-    {
-        var value = (status ?? string.Empty).Trim().Replace('-', '_').Replace(' ', '_').ToUpperInvariant();
-        return value switch
-        {
-            "P" or "PRESENT" => "PRESENT",
-            "A" or "ABSENT" => "ABSENT",
-            "L" or "LATE" => "LATE",
-            "HD" or "HALF_DAY" => "HALF_DAY",
-            "OL" or "LEAVE" or "ON_LEAVE" => "LEAVE",
-            "LOP" => "LOP",
-            "NOT_MARKED" or "PENDING" => "NOT_MARKED",
-            _ => null
-        };
     }
 
     private long? CurrentUserId()

@@ -23,17 +23,18 @@ public static class FeePlanRules
         amount >= (positive ? 0.01m : 0m) && amount <= MaximumAmount && decimal.Round(amount, 2) == amount,
         $"{field} must be {(positive ? "positive" : "nonnegative")}, at most {MaximumAmount}, with at most two decimal places.");
 
-    public static void ValidateScope(AdmissionFeePlanQuery q)
+    public static void ValidateScope(AdmissionFeePlanQuery q, bool requireSemester = false)
     {
-        Require(q.CollegeId > 0 && q.AcademicYearId > 0 && q.CourseId > 0 && q.BranchId > 0 && q.SemesterId > 0,
-            "collegeId, academicYearId, courseId, branchId and semesterId must be positive server IDs.");
+        Require(q.CollegeId > 0 && q.AcademicYearId > 0 && q.CourseId > 0 && q.BranchId > 0 &&
+            (!q.SemesterId.HasValue || q.SemesterId > 0) && (!requireSemester || q.SemesterId > 0),
+            "collegeId, academicYearId, courseId and branchId must be positive server IDs; semesterId, when required or supplied, must be positive.");
         Require(Clean(q.Batch) is { Length: <= 50 }, "batch is required and must be at most 50 characters.");
         Require(q.Quota?.Length is not > 100 && q.StudentCategory?.Length is not > 100, "quota and studentCategory must be at most 100 characters.");
     }
 
     public static void Validate(AcademicFeePlanRequest p)
     {
-        ValidateScope(Scope(p));
+        ValidateScope(Scope(p), !string.Equals(p.Cycle?.Trim(), "ANNUAL", StringComparison.OrdinalIgnoreCase));
         Require(Clean(p.Code) is { Length: <= 80 } && Clean(p.Name) is { Length: <= 150 }, "Plan code and name are required (80/150 characters maximum).");
         Require(p.FeeCategoryId > 0, "feeCategoryId must identify an existing fee category.");
         p.Code = p.Code.Trim(); p.Name = p.Name.Trim(); p.Batch = p.Batch.Trim();
@@ -102,7 +103,7 @@ public static class FeePlanRules
 
     public static bool Matches(AcademicFeePlanRequest p, AdmissionFeePlanQuery q) =>
         p.CollegeId == q.CollegeId && p.AcademicYearId == q.AcademicYearId && p.CourseId == q.CourseId &&
-        p.BranchId == q.BranchId && p.SemesterId == q.SemesterId && Same(p.Batch, q.Batch) &&
+        p.BranchId == q.BranchId && (!p.SemesterId.HasValue || p.SemesterId == q.SemesterId) && Same(p.Batch, q.Batch) &&
         (Clean(p.Quota) == null || Same(p.Quota, q.Quota)) &&
         (Clean(p.StudentCategory) == null || Same(p.StudentCategory, q.StudentCategory));
 

@@ -131,24 +131,16 @@ ORDER BY f.faculty_id;";
         }
 
         var status = NormalizeStatus(request.Status);
-        if (status is not ("PRESENT" or "ABSENT" or "LATE" or "HALF_DAY" or "LEAVE" or "LOP"))
+        if (status == "NOT_MARKED")
         {
             return BadRequest(new
             {
                 success = false,
-                message = "Select a valid attendance status."
+                message = "Not Marked cannot be saved as an attendance status."
             });
         }
 
         var attendanceDate = (request.AttendanceDate ?? DateTime.Today).Date;
-        if (attendanceDate > DateTime.Today)
-        {
-            return BadRequest(new
-            {
-                success = false,
-                message = "Attendance cannot be recorded for a future date."
-            });
-        }
 
         try
         {
@@ -211,8 +203,6 @@ VALUES
 ON DUPLICATE KEY UPDATE
     status = @Status,
     remarks = @Remarks,
-    check_in = NULL,
-    check_out = NULL,
     updated_at = UTC_TIMESTAMP(),
     updated_by = @UserId;";
 

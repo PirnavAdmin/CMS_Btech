@@ -1,12 +1,14 @@
 using BTech.Services;
 using BTech.Data;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using System.Data.Common;
 
 namespace BTech.Controllers.V1;
 
 [ApiController]
+[Authorize]
 [Tags("PlacementCompanies")]
 [Route("api/v1/placements/companies")]
 public sealed class PlacementCompaniesController : ControllerBase

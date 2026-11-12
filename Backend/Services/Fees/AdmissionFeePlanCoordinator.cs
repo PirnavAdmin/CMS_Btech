@@ -149,7 +149,7 @@ public sealed class AdmissionFeePlanCoordinator(ApplicationDbContext db, FeePlan
     private sealed class AdmissionRow : AdmissionFeePlanQuery { public string AdmissionStatus { get; set; } = ""; }
     private static AdmissionFeePlanQuery Scope(CreateStudentAdmissionDto dto) => new()
     { CollegeId = dto.CollegeId ?? 0, AcademicYearId = dto.AcademicYearId ?? 0, CourseId = dto.CourseId ?? 0,
-      BranchId = dto.BranchId ?? 0, SemesterId = dto.SemesterId ?? 0, Batch = dto.Batch ?? "", Quota = dto.AdmissionQuota,
+      BranchId = dto.BranchId ?? 0, SemesterId = dto.SemesterId, Batch = dto.Batch ?? "", Quota = dto.AdmissionQuota,
       StudentCategory = dto.StudentCategory };
 
     public static long? ReadSelectedId(CreateStudentAdmissionDto dto)

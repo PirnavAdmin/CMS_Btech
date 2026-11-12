@@ -331,7 +331,14 @@ export function ProjectSelect({ children, forceCustom = false, menuPlacement = '
       onChange={value => {
         const native = nativeRef.current
         if (!native) return
-        native.value = value
+        // Use the prototype setter so React's per-element value tracker sees
+        // the change event as a real user selection on the mirrored select.
+        const valueSetter = Object.getOwnPropertyDescriptor(
+          window.HTMLSelectElement.prototype,
+          'value',
+        )?.set
+        if (valueSetter) valueSetter.call(native, value)
+        else native.value = value
         native.dispatchEvent(new Event('change', { bubbles: true }))
       }}
     />

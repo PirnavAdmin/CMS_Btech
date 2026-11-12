@@ -1644,7 +1644,10 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  box-sizing: border-box;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   color: var(--text-primary, var(--text-primary));
 }
 
@@ -1737,6 +1740,10 @@
    Main Directory Card & Tabs Navigation
    ========================================== */
 .rbac-main-card {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   border: 1px solid var(--border, var(--border));
   border-radius: var(--radius-md, 12px);
   background: var(--surface, var(--surface));
@@ -1928,14 +1935,51 @@
    Data Tables
    ========================================== */
 .rbac-table-wrap {
+  box-sizing: border-box;
   width: 100%;
-  overflow-x: auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: scroll;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: auto;
+  scrollbar-color: var(--brand-hover) var(--surface-soft);
+  -ms-overflow-style: auto;
+}
+
+.rbac-table-wrap::-webkit-scrollbar {
+  display: block;
+  height: 12px;
+}
+
+.rbac-table-wrap::-webkit-scrollbar-track {
+  background: var(--surface-soft);
+}
+
+.rbac-table-wrap::-webkit-scrollbar-thumb {
+  border: 2px solid var(--surface-soft);
+  border-radius: 8px;
+  background: var(--brand-hover);
+}
+
+.rbac-table-wrap::-webkit-scrollbar-thumb:hover {
+  background: var(--brand-solid);
+}
+
+.rbac-table-wrap:focus-visible {
+  outline: 2px solid var(--brand-hover);
+  outline-offset: -2px;
 }
 
 .rbac-data-table {
-  width: 100%;
+  width: max-content;
+  min-width: 100%;
   border-collapse: collapse;
   text-align: left;
+}
+
+.rbac-data-table .rbac-table-row-actions {
+  min-width: max-content;
+  justify-content: flex-end;
 }
 
 .rbac-data-table th {

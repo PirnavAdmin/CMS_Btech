@@ -1,5 +1,7 @@
 import ViewDialog from '../../components/ViewDialog'
 import { useEffect, useState } from 'react'
+import FeeTypeCreateDialog from './FeeTypeCreateDialog'
+import { useScreenAccess } from '../../auth/ScreenAccess'
 import { FiSearch } from 'react-icons/fi'
 import { feeConfigurationApi } from '../../api/apiEndpoints'
 import PageHeader from '../../components/PageHeader'
@@ -9,6 +11,9 @@ import FilterPanel from '../../components/FilterPanel'
 import DirectoryEmptyState from '../../components/DirectoryEmptyState'
 
 export default function FeeTypesConfiguration() {
+  const { canAction } = useScreenAccess()
+  const canCreate = canAction('/fees/types', 'create')
+  const [adding, setAdding] = useState(false), [notice, setNotice] = useState('')
   const [rows, setRows] = useState([]), [loading, setLoading] = useState(true), [error, setError] = useState('')
   const [query, setQuery] = useState(''), [page, setPage] = useState(1), [attempt, setAttempt] = useState(0)
   useEffect(() => {
@@ -23,14 +28,14 @@ export default function FeeTypesConfiguration() {
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)), current = Math.min(page, pages)
   return <section className="fm-fee-types">
     <PageHeader title="Fee Types" subtitle="Active fee types shared across colleges and available for fee structures." />
-    <p id="fee-type-create-availability">Adding fee types requires backend support for saving to the shared fee type catalog.</p>
+    {notice && <p role="status">{notice}</p>}
     <FilterPanel
       className="fm-fee-types-filters"
       active={Boolean(code)}
       onClear={() => { setCode(''); setQuery(''); setPage(1) }}
       actions={<div className="fm-list-toolbar-actions">
         <ExportMenu rows={filtered} columns={[{label:'Code',value:'code'},{label:'Name',value:'name'},{label:'Description',value:'description'}]} title="Fee Types" filename="fee-types" loading={loading || Boolean(error)} />
-        <button type="button" className="fm-btn-context-primary" disabled aria-describedby="fee-type-create-availability">Add Fee Type</button>
+        {canCreate && <button type="button" className="fm-btn-context-primary" onClick={() => { setNotice(''); setAdding(true) }}>Add Fee Type</button>}
       </div>}
     >
       <label className="course-search fm-fee-types-search"><FiSearch aria-hidden="true" /><input aria-label="Search fee types" value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} placeholder="Search fee type, code or description..." /></label>
@@ -54,5 +59,7 @@ export default function FeeTypesConfiguration() {
     </div>
     {!loading && !error && filtered.length > 0 && <TablePagination page={current} totalPages={pages} onPageChange={setPage} />}
     {detail && <ViewDialog title={detail.name} onClose={()=>setDetail(null)} showExport={false}><dl><dt>Code</dt><dd>{detail.code || '—'}</dd><dt>Description</dt><dd>{detail.description || '—'}</dd></dl></ViewDialog>}
+    {adding && <FeeTypeCreateDialog rows={rows} onClose={() => setAdding(false)} onSaved={() => { setAdding(false); setNotice('Fee type saved successfully.'); setCode(''); setQuery(''); setPage(1); setAttempt(value => value + 1) }} />}
+
   </section>
 }

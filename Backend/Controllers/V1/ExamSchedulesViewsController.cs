@@ -2,6 +2,7 @@ using System.Security.Claims;
 using BTech.DTOs.Exams;
 using BTech.Exceptions;
 using BTech.Repositories.Implementations;
+using BTech.Services;
 using Dapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -34,14 +35,7 @@ public sealed class ExamSchedulesViewsController : ControllerBase
 
     private long CollegeId
     {
-        get
-        {
-            var value = User.FindFirstValue("collegeId")
-                        ?? User.FindFirstValue("college_id");
-            if (!long.TryParse(value, out var collegeId) || collegeId <= 0)
-                throw new InvalidOperationException("A valid collegeId claim is required.");
-            return collegeId;
-        }
+        get => CollegeDataScope.Resolve(HttpContext, required: true)!.Value;
     }
 
     private long? ActorId

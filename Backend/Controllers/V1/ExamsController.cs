@@ -2,6 +2,7 @@ using System.Security.Claims;
 using BTech.DTOs.Exams;
 using BTech.Exceptions;
 using BTech.Repositories.Implementations;
+using BTech.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MySqlConnector;
@@ -33,6 +34,7 @@ public sealed class ExamsController : ControllerBase
     [HttpGet]
     public Task<IActionResult> GetAll([FromQuery] ExamSearchRequest request) => Execute(async () =>
     {
+        request.CollegeId = CollegeDataScope.Resolve(HttpContext, request.CollegeId);
         var all = await _repository.ListExamsAsync(request, null, Cancellation);
         var total = all.Count;
         var page = request.Page ?? 1;
@@ -200,6 +202,7 @@ public sealed class ExamsController : ControllerBase
         [FromQuery] long? branchId,
         [FromQuery] long? semesterId) => Execute(async () =>
     {
+        collegeId = CollegeDataScope.Resolve(HttpContext, collegeId);
         return Ok(new
         {
             success = true,
@@ -211,7 +214,9 @@ public sealed class ExamsController : ControllerBase
     private async Task<Dictionary<string, object?>> FindExam(long examId)
     {
         RequirePositive(examId, "examId");
-        return (await _repository.ListExamsAsync(new ExamSearchRequest(), examId, Cancellation)).FirstOrDefault()
+        return (await _repository.ListExamsAsync(new ExamSearchRequest {
+                CollegeId = CollegeDataScope.Resolve(HttpContext)
+            }, examId, Cancellation)).FirstOrDefault()
             ?? throw new ExamNotFoundException("examId", "Exam not found.");
     }
 
@@ -224,7 +229,13 @@ public sealed class ExamsController : ControllerBase
     {
         _logger.LogInformation("Exam request {Method} {Path}; Actor={Actor}; CorrelationId={CorrelationId}",
             Request.Method, Request.Path, Actor, HttpContext.TraceIdentifier);
-        try { return await action(); }
+        try
+        {
+            if (RouteData.Values.TryGetValue("examId", out var value) && long.TryParse(value?.ToString(), out var id))
+                await FindExam(id);
+            return await action();
+        }
+        catch (ContractException ex) { return Failure(ex.StatusCode, "collegeId", ex.Message); }
         catch (ExamValidationException ex)
         {
             _logger.LogWarning("Exam validation failed. Field={Field}, Message={Message}, CorrelationId={CorrelationId}",

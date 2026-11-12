@@ -59,9 +59,28 @@ public sealed class EventStore
         if (!super && !roles.Any(r=>r is "ADMIN" or "COLLEGEADMIN" or "PRINCIPAL" or "HOD"))
             throw new EventApiException(403,"Event management requires Admin, Principal, HOD or SuperAdmin access.");
         long? home = u.college_id is null ? null : (long)u.college_id;
-        if (!super && (home is null || (actor.TokenCollegeId.HasValue && actor.TokenCollegeId!=home) || (selected.HasValue && selected!=home)))
-            throw new EventApiException(403,"The selected college is not authorized for this user.");
-        s.CollegeId = super ? selected ?? throw new EventApiException(400,"SuperAdmin must supply collegeId.") : home!.Value;
+        var effective = selected ?? actor.TokenCollegeId ?? home;
+        if (super)
+            effective = selected ?? throw new EventApiException(400,"SuperAdmin must supply collegeId.");
+        if (!super)
+        {
+            if (!effective.HasValue || actor.TokenCollegeId.HasValue && actor.TokenCollegeId!=effective)
+                throw new EventApiException(403,"The selected college is not authorized for this user.");
+            if (home != effective)
+            {
+                var mapped = await s.Scalar<int>("""
+                    SELECT COUNT(*) FROM college_user_mappings m
+                    JOIN college_settings cs ON cs.college_setting_id=m.college_setting_id
+                    JOIN colleges c ON c.college_id=cs.college_id
+                    WHERE m.user_id=@userId AND m.status=1 AND m.removed_at IS NULL
+                      AND cs.college_id=@collegeId AND cs.status=1
+                      AND c.status=1 AND c.deleted_at IS NULL
+                    """, new {userId=actor.UserId,collegeId=effective});
+                if (mapped==0)
+                    throw new EventApiException(403,"The selected college is not assigned to this user.");
+            }
+        }
+        s.CollegeId=effective!.Value;
         var college = await s.One("SELECT timezone FROM colleges WHERE college_id=@id AND status=1 AND deleted_at IS NULL",new {id=s.CollegeId});
         if (college is null) throw new EventApiException(404,"Active college not found.");
         try { s.Now=DateTime.SpecifyKind(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,TimeZoneInfo.FindSystemTimeZoneById((string?)college.timezone ?? "Asia/Kolkata")),DateTimeKind.Unspecified); }

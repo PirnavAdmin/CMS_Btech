@@ -769,7 +769,21 @@ const WEBSITE_VALIDATION_MESSAGE = collegeApiImports_WEBSITE_VALIDATION_MESSAGE
 const hasValue = (value) => value !== null && value !== undefined && String(value).trim() !== ''
 const dateInputValue = (value) => value ? String(value).slice(0, 10) : ''
 
-const TYPES = ['Engineering College', 'University', 'Autonomous College', 'Affiliated College', 'Deemed University', 'Other']
+const TYPES = ['Engineering College', 'Degree College', 'University', 'Autonomous College', 'Affiliated College', 'Deemed University', 'Others']
+const isOtherType = (type) => ['Other', 'Others'].includes(type)
+const normalizeCollegeType = (rawType) => {
+  if (!rawType) return { collegeType: '', collegeTypeOther: '' }
+  if (rawType === 'Engineering') return { collegeType: 'Engineering College', collegeTypeOther: '' }
+  if (rawType === 'Degree') return { collegeType: 'Degree College', collegeTypeOther: '' }
+  const matchedPredefined = TYPES.find((t) => !isOtherType(t) && t.toLowerCase() === String(rawType).trim().toLowerCase())
+  if (matchedPredefined) {
+    return { collegeType: matchedPredefined, collegeTypeOther: '' }
+  }
+  if (isOtherType(rawType)) {
+    return { collegeType: 'Others', collegeTypeOther: '' }
+  }
+  return { collegeType: 'Others', collegeTypeOther: String(rawType).trim() }
+}
 const ACCREDITATION_STATUSES = ['Accredited', 'Not Accredited', 'Under Review', 'Expired']
 const FORM_TABS = [
   { id: 'college', label: 'College Information', shortLabel: 'College' },
@@ -836,7 +850,7 @@ function validate(values) {
   else if (name.length < 3 || name.length > 120) errors.collegeName = 'Use between 3 and 120 characters.'
   if (!values.collegeCode) errors.collegeCode = 'College code is required.'
   else if (!codePattern.test(values.collegeCode)) errors.collegeCode = 'Use 2-12 uppercase letters and numbers only.'
-  if (values.collegeType === 'Other' && !values.collegeTypeOther.trim()) errors.collegeTypeOther = 'Enter the college type.'
+  if (isOtherType(values.collegeType) && !values.collegeTypeOther.trim()) errors.collegeTypeOther = 'Enter the college type.'
   const university = values.universityName.trim()
   if (university && (/\d/.test(university) || !institutionNamePattern.test(university))) errors.universityName = 'University name cannot contain numbers.'
   else if (university && (university.length < 3 || university.length > 120)) errors.universityName = 'Use between 3 and 120 characters.'
@@ -994,7 +1008,13 @@ function CollegeForm({ editId, onDismiss, onSaved, resumeDraft = false }) {
       loadedFormScope.current = formScope
       originalEditValues.current = null
       const draft = resumeDraft ? readNewCollegeDraft() : null
-      setValues({ ...initialValues, ...draft?.values })
+      const draftValues = draft?.values ? { ...draft.values } : {}
+      if (isOtherType(draftValues.collegeType)) {
+        draftValues.collegeType = 'Others'
+      } else if (draftValues.collegeType && !isOtherType(draftValues.collegeType)) {
+        draftValues.collegeTypeOther = ''
+      }
+      setValues({ ...initialValues, ...draftValues })
       const draftStep = FORM_TABS.findIndex(tab => tab.id === draft?.activeTab)
       if (draftStep > 0) {
         setActiveTab(FORM_TABS[draftStep].id)
@@ -1030,7 +1050,9 @@ function CollegeForm({ editId, onDismiss, onSaved, resumeDraft = false }) {
       const extended = readCollegeExtendedDetails(record)
       const addressParts = String(record.address ?? '').split(',').map((part) => part.trim())
       const rawType = record.type ?? record.collegeType ?? record.institutionType ?? ''
-      const isKnownType = TYPES.includes(rawType)
+      const normalizedType = normalizeCollegeType(rawType)
+      const loadedCollegeType = normalizedType.collegeType
+      const loadedCollegeTypeOther = normalizedType.collegeTypeOther || (isOtherType(rawType) ? (record.collegeTypeOther ?? '') : '')
       const loadedLogo = collegeLogoValue(record) || readCachedCollegeLogo(editId) || (record.code ? readCachedCollegeLogo(record.code) : '') || (record.collegeCode ? readCachedCollegeLogo(record.collegeCode) : '') || (record.name ? readCachedCollegeLogo(record.name) : '') || (record.collegeName ? readCachedCollegeLogo(record.collegeName) : '') || ''
       const logoUrl = getCollegeLogoUrl(editId, loadedLogo)
       // Backend logo URLs need an authorization header, which an <img> element
@@ -1043,7 +1065,7 @@ function CollegeForm({ editId, onDismiss, onSaved, resumeDraft = false }) {
         (record.collegeName ? readCachedCollegeDates(record.collegeName) : null) || {}
       const loadedStartDate = dateInputValue(record.startDate ?? record.StartDate ?? record.start_date ?? extended.startDate ?? cachedDates?.startDate)
       const loadedEndDate = dateInputValue(record.endDate ?? record.EndDate ?? record.end_date ?? extended.endDate ?? cachedDates?.endDate)
-      const loadedValues = { ...initialValues, collegeName: record.name ?? record.collegeName ?? record.CollegeName ?? '', collegeCode: record.code ?? record.collegeCode ?? record.CollegeCode ?? '', collegeType: rawType && !isKnownType ? 'Other' : rawType, collegeTypeOther: rawType && !isKnownType ? rawType : '', universityName: record.university ?? record.universityName ?? record.UniversityName ?? '', startDate: loadedStartDate, endDate: loadedEndDate, addressLine1: record.addressLine1 ?? addressRecord.addressLine1 ?? addressParts[0] ?? '', addressLine2: record.addressLine2 ?? addressRecord.addressLine2 ?? addressParts.slice(1).join(', '), area: record.area ?? addressRecord.area ?? extended.area ?? '', district: record.district ?? addressRecord.district ?? extended.district ?? '', city: record.city ?? addressRecord.city ?? record.City ?? '', state: record.state ?? addressRecord.state ?? record.State ?? '', pincode: String(record.pincode ?? addressRecord.pincode ?? record.Pincode ?? ''), country: record.country ?? addressRecord.country ?? '', contactNumber: String(record.contact ?? record.contactNumber ?? record.phoneNumber ?? record.mobile ?? record.phone ?? contactRecord.contactNumber ?? contactRecord.phoneNumber ?? contactRecord.mobile ?? contactRecord.phone ?? record.Contact ?? ''), alternateContactNumber: String(record.alternateContact ?? record.alternateContactNumber ?? record.alternatePhoneNumber ?? contactRecord.alternateContactNumber ?? extended.alternateContactNumber ?? ''), email: record.email ?? record.collegeEmail ?? contactRecord.email ?? record.Email ?? '', website: record.website ?? record.Website ?? contactRecord.website ?? contactRecord.Website ?? '', principalName: record.principal ?? record.principalName ?? principalRecord.principalName ?? record.PrincipalName ?? '', principalEmail: record.principalEmail ?? principalRecord.principalEmail ?? extended.principalEmail ?? '', principalContact: String(record.principalContact ?? record.principalPhone ?? principalRecord.principalContact ?? extended.principalContact ?? ''), accreditationBody: record.accreditationBody ?? accreditationRecord.body ?? accreditationRecord.accreditationBody ?? extended.accreditationBody ?? '', accreditationStatus: record.accreditationStatus ?? accreditationRecord.status ?? '', accreditationGrade: record.accreditationGrade ?? accreditationRecord.grade ?? extended.accreditationGrade ?? '', accreditationNumber: record.accreditationNumber ?? accreditationRecord.number ?? extended.accreditationNumber ?? '', validFrom: dateInputValue(record.validFrom ?? record.accreditationValidFrom ?? accreditationRecord.validFrom ?? extended.validFrom), validUntil: dateInputValue(record.validUntil ?? record.accreditationValidUntil ?? accreditationRecord.validUntil ?? extended.validUntil), logo: resolvedLogo, logoName: record.logoName ?? extended.logoName ?? '' }
+      const loadedValues = { ...initialValues, collegeName: record.name ?? record.collegeName ?? record.CollegeName ?? '', collegeCode: record.code ?? record.collegeCode ?? record.CollegeCode ?? '', collegeType: loadedCollegeType, collegeTypeOther: loadedCollegeTypeOther, universityName: record.university ?? record.universityName ?? record.UniversityName ?? '', startDate: loadedStartDate, endDate: loadedEndDate, addressLine1: record.addressLine1 ?? addressRecord.addressLine1 ?? addressParts[0] ?? '', addressLine2: record.addressLine2 ?? addressRecord.addressLine2 ?? addressParts.slice(1).join(', '), area: record.area ?? addressRecord.area ?? extended.area ?? '', district: record.district ?? addressRecord.district ?? extended.district ?? '', city: record.city ?? addressRecord.city ?? record.City ?? '', state: record.state ?? addressRecord.state ?? record.State ?? '', pincode: String(record.pincode ?? addressRecord.pincode ?? record.Pincode ?? ''), country: record.country ?? addressRecord.country ?? '', contactNumber: String(record.contact ?? record.contactNumber ?? record.phoneNumber ?? record.mobile ?? record.phone ?? contactRecord.contactNumber ?? contactRecord.phoneNumber ?? contactRecord.mobile ?? contactRecord.phone ?? record.Contact ?? ''), alternateContactNumber: String(record.alternateContact ?? record.alternateContactNumber ?? record.alternatePhoneNumber ?? contactRecord.alternateContactNumber ?? extended.alternateContactNumber ?? ''), email: record.email ?? record.collegeEmail ?? contactRecord.email ?? record.Email ?? '', website: record.website ?? record.Website ?? contactRecord.website ?? contactRecord.Website ?? '', principalName: record.principal ?? record.principalName ?? principalRecord.principalName ?? record.PrincipalName ?? '', principalEmail: record.principalEmail ?? principalRecord.principalEmail ?? extended.principalEmail ?? '', principalContact: String(record.principalContact ?? record.principalPhone ?? principalRecord.principalContact ?? extended.principalContact ?? ''), accreditationBody: record.accreditationBody ?? accreditationRecord.body ?? accreditationRecord.accreditationBody ?? extended.accreditationBody ?? '', accreditationStatus: record.accreditationStatus ?? accreditationRecord.status ?? '', accreditationGrade: record.accreditationGrade ?? accreditationRecord.grade ?? extended.accreditationGrade ?? '', accreditationNumber: record.accreditationNumber ?? accreditationRecord.number ?? extended.accreditationNumber ?? '', validFrom: dateInputValue(record.validFrom ?? record.accreditationValidFrom ?? accreditationRecord.validFrom ?? extended.validFrom), validUntil: dateInputValue(record.validUntil ?? record.accreditationValidUntil ?? accreditationRecord.validUntil ?? extended.validUntil), logo: resolvedLogo, logoName: record.logoName ?? extended.logoName ?? '' }
       setValues(loadedValues)
       originalEditValues.current = loadedValues
       if (logoUrl && isBackendCollegeLogo(logoUrl)) {
@@ -1120,9 +1142,24 @@ function CollegeForm({ editId, onDismiss, onSaved, resumeDraft = false }) {
     if (['contactNumber', 'alternateContactNumber'].includes(name)) next = value.replace(/\D/g, '').slice(0, 12)
     if (['principalName', 'city', 'state', 'district'].includes(name)) next = value.replace(/[^a-zA-Z\s.'-]/g, '')
     if (['collegeName', 'universityName'].includes(name)) next = value.replace(/[0-9]/g, '')
-    setValues((current) => name === 'pincode' ? { ...current, pincode: next, area: '', district: '', city: '', state: '' } : { ...current, [name]: next })
+    setValues((current) => {
+      if (name === 'pincode') return { ...current, pincode: next, area: '', district: '', city: '', state: '' }
+      if (name === 'collegeType') {
+        const isSwitchingToPredefined = !isOtherType(next)
+        return {
+          ...current,
+          collegeType: next,
+          ...(isSwitchingToPredefined ? { collegeTypeOther: '' } : {}),
+        }
+      }
+      return { ...current, [name]: next }
+    })
     if (name === 'pincode') { setPostOffices([]); setPincodeStatus('') }
-    setTouched((current) => ({ ...current, [name]: true }))
+    setTouched((current) => ({
+      ...current,
+      [name]: true,
+      ...(name === 'collegeType' && !isOtherType(next) ? { collegeTypeOther: false } : {}),
+    }))
     setDirty(true); setNotice(''); setSaved(false)
   }
 
@@ -1270,7 +1307,7 @@ function CollegeForm({ editId, onDismiss, onSaved, resumeDraft = false }) {
       if (duplicate) throw new Error('A college with the same name, code, email, or contact number already exists.')
       const website = normalizeWebsite(values.website)
       const college = {
-        name: values.collegeName.trim(), code: values.collegeCode, type: values.collegeType === 'Other' ? values.collegeTypeOther.trim() : values.collegeType,
+        name: values.collegeName.trim(), code: values.collegeCode, type: isOtherType(values.collegeType) ? (values.collegeTypeOther.trim() || values.collegeType) : values.collegeType,
         university: values.universityName.trim(), address: [values.addressLine1, values.addressLine2].map(part => part.trim()).filter(Boolean).join(', '),
         addressLine1: values.addressLine1.trim(), addressLine2: values.addressLine2.trim(),
         area: values.area.trim(), district: values.district.trim(), country: values.country.trim(),
@@ -1415,8 +1452,8 @@ function CollegeForm({ editId, onDismiss, onSaved, resumeDraft = false }) {
         {section('College Information', 'Core identity and affiliation details.', <>
           <Field label="College Name" name="collegeName" values={values} errors={{ ...errors, ...(duplicateName ? { collegeName: 'A college with this name already exists.' } : {}) }} touched={touched} onChange={update} required maxLength={120} placeholder="e.g. Crescent Institute of Technology" />
           <Field label="College Code" name="collegeCode" values={values} errors={{ ...errors, ...(duplicateCode ? { collegeCode: 'This college code already exists.' } : {}) }} touched={touched} onChange={update} required maxLength={12} placeholder="e.g. CIT2026" />
-          <label className="ac-field" htmlFor="ac-collegeType"><span>College Type</span><ProjectSelect id="ac-collegeType" name="collegeType" value={values.collegeType} onChange={update} onBlur={() => setTouched((current) => ({ ...current, collegeType: true }))} aria-invalid={Boolean((touched.collegeType || Boolean(values.collegeType)) && errors.collegeType)}><option value="">Select type</option>{TYPES.map((type) => <option key={type}>{type}</option>)}</ProjectSelect>{(touched.collegeType || Boolean(values.collegeType)) && errors.collegeType && <small className="ac-error" role="alert">{errors.collegeType}</small>}</label>
-          {values.collegeType === 'Other' && <Field label="Specify College Type" name="collegeTypeOther" values={values} errors={errors} touched={touched} onChange={update} required maxLength={60} placeholder="e.g. Community College" />}
+          <label className="ac-field" htmlFor="ac-collegeType"><span>College Type</span><ProjectSelect id="ac-collegeType" name="collegeType" value={values.collegeType} onChange={update} onBlur={() => setTouched((current) => ({ ...current, collegeType: true }))} aria-invalid={Boolean((touched.collegeType || Boolean(values.collegeType)) && errors.collegeType)}><option value="">Select type</option>{TYPES.map((type) => <option key={type}>{type}</option>)}{values.collegeType === 'Other' && <option value="Other">Other</option>}</ProjectSelect>{(touched.collegeType || Boolean(values.collegeType)) && errors.collegeType && <small className="ac-error" role="alert">{errors.collegeType}</small>}</label>
+          {isOtherType(values.collegeType) && <Field label="Specify College Type" name="collegeTypeOther" values={values} errors={errors} touched={touched} onChange={update} required maxLength={60} placeholder="e.g. Community College" />}
           <Field label="University Name" name="universityName" values={values} errors={errors} touched={touched} onChange={update} maxLength={120} placeholder="Affiliated university" readOnly={values.collegeType === 'Deemed University'} />
           <div className="ac-upload ac-span-2" role="group" aria-label="College logo" aria-busy={readingLogo} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); selectLogo(e.dataTransfer.files[0]) }}>
             <input ref={fileRef} type="file" aria-label="Choose college logo" accept=".png,.jpg,.jpeg,.webp" onChange={(e) => selectLogo(e.target.files?.[0])} hidden />
@@ -1475,7 +1512,7 @@ function CollegeForm({ editId, onDismiss, onSaved, resumeDraft = false }) {
           <Field label="Valid Until" name="validUntil" type="date" values={values} errors={errors} touched={touched} onChange={update} />
           {values.accreditationStatus === 'Accredited' && <p className="ac-hint ac-span-2">Complete the accreditation grade, number, and validity dates for a comprehensive record.</p>}
         </>)}
-        {activeTab === 'review' && <section className="ac-review" aria-labelledby="college-review-title"><h2 id="college-review-title">Review college details</h2><p>Check the information below before submitting. Return to any section to make changes.</p><div className="ac-review-grid">{FORM_TABS.filter(tab => tab.id !== 'review').map(tab => <section key={tab.id}><h3>{tab.label}</h3><dl>{TAB_FIELDS[tab.id].filter(name => !['startDate', 'endDate'].includes(name)).map(name => <div key={name}><dt>{name.replace(/([A-Z])/g, ' $1').replace(/^./, letter => letter.toUpperCase())}</dt><dd>{values[name] || 'Not provided'}</dd></div>)}</dl></section>)}</div>{values.logo && <p>Logo: {values.logoName || 'Existing college logo'}</p>}</section>}
+        {activeTab === 'review' && <section className="ac-review" aria-labelledby="college-review-title"><h2 id="college-review-title">Review college details</h2><p>Check the information below before submitting. Return to any section to make changes.</p><div className="ac-review-grid">{FORM_TABS.filter(tab => tab.id !== 'review').map(tab => <section key={tab.id}><h3>{tab.label}</h3><dl>{TAB_FIELDS[tab.id].filter(name => !['startDate', 'endDate'].includes(name) && (name !== 'collegeTypeOther' || isOtherType(values.collegeType))).map(name => <div key={name}><dt>{name.replace(/([A-Z])/g, ' $1').replace(/^./, letter => letter.toUpperCase())}</dt><dd>{values[name] || 'Not provided'}</dd></div>)}</dl></section>)}</div>{values.logo && <p>Logo: {values.logoName || 'Existing college logo'}</p>}</section>}
         </fieldset>
         {!inModal && <footer className="ac-actions">{footer}</footer>}
       </form>
@@ -5153,7 +5190,7 @@ function RolesAndDesignationsWorkspace() {
           {/* TAB 1: ROLES & PERMISSIONS TABLE */}
           {/* ============================================================== */}
           {activeTab === 'roles' && (
-            <div className="sa-table-wrap rbac-table-wrap">
+            <div className="sa-table-wrap rbac-table-wrap" role="region" aria-label="Roles and permissions table" tabIndex={0}>
               <table className="rbac-data-table">
                 <thead>
                   <tr>
@@ -5260,7 +5297,7 @@ function RolesAndDesignationsWorkspace() {
           {/* TAB 2: DESIGNATIONS TABLE */}
           {/* ============================================================== */}
           {activeTab === 'designations' && (
-            <div className="sa-table-wrap rbac-table-wrap">
+            <div className="sa-table-wrap rbac-table-wrap" role="region" aria-label="Designations table" tabIndex={0}>
               <table className="rbac-data-table">
                 <thead>
                   <tr>
@@ -5360,7 +5397,7 @@ function RolesAndDesignationsWorkspace() {
           {/* TAB 3: STAFF ACCESS ASSIGNMENTS TABLE */}
           {/* ============================================================== */}
           {activeTab === 'assignments' && (
-            <div className="sa-table-wrap rbac-table-wrap">
+            <div className="sa-table-wrap rbac-table-wrap" role="region" aria-label="Staff access table" tabIndex={0}>
               <table className="rbac-data-table">
                 <thead>
                   <tr>

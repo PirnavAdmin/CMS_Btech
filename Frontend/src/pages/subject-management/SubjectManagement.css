@@ -648,6 +648,34 @@
 .sm-reference-details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}.sm-screen .shared-view-dialog .erp-card-main{border:0;box-shadow:none}.sm-screen .shared-view-dialog .sm-editor-layout{margin:0}.sm-screen .sm-field>span{font-size:12px;font-weight:600;color:var(--text-secondary)}
 @media(max-width:640px){.sm-reference-details{grid-template-columns:1fr}}
 
+/* Keep every subject row action compact and on one line. */
+.sm-screen .sm-actions-cell {
+  white-space: nowrap;
+}
+.sm-screen .sm-row-actions {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  gap: 4px;
+  width: max-content;
+  max-width: 100%;
+  margin-inline: auto;
+  vertical-align: middle;
+}
+.sm-screen .sm-row-actions > .table-action-btn {
+  box-sizing: border-box;
+  flex: 0 0 30px;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 8px;
+}
+.sm-screen .sm-row-actions > .table-action-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
 /* Add/Edit subject wizard: clear step hierarchy, focused fields, and a stable action bar. */
 .sm-screen .shared-view-dialog:has(.sm-editor-layout) {
   width: min(760px, calc(100vw - 24px));

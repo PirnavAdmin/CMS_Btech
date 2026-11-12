@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using BTech.Filters;
+using BTech.Repositories.Implementations;
 
 namespace BTech.Controllers
 {
@@ -14,10 +15,12 @@ namespace BTech.Controllers
     public class SemesterController : ControllerBase
     {
         private readonly ISemesterService _service;
+        private readonly SemesterLookupRepository _lookup;
 
-        public SemesterController(ISemesterService service)
+        public SemesterController(ISemesterService service, SemesterLookupRepository lookup)
         {
             _service = service;
+            _lookup = lookup;
         }
 
 
@@ -62,13 +65,35 @@ namespace BTech.Controllers
             [FromQuery] long? courseId, [FromQuery] long? branchId, [FromQuery] long? academicYearId,
             [FromQuery] byte? status)
         {
-            if (courseId is <= 0 || branchId is <= 0 || academicYearId is <= 0 || status is > 1)
+            if (collegeId is <= 0 || courseId is <= 0 || branchId is <= 0 || academicYearId is <= 0 || status is > 1)
                 return BadRequest(new { success = false, message = "Use positive identifiers and status 0 or 1." });
-            var result = await _service.GetAllAsync();
-            result = result.Where(x => (!courseId.HasValue || x.CourseId == courseId)
-                && (!branchId.HasValue || x.BranchId == branchId)
-                && (!academicYearId.HasValue || x.AcademicYearId == academicYearId)
-                && (!status.HasValue || x.Status == status)).ToList();
+            // The service applies the authenticated college scope for non-super-admin users.
+            // Apply the requested collegeId as an additional filter, especially for Super Admin
+            // users who can switch between colleges.
+            if (HttpContext.Items[BTech.Middleware.ModulePermissionMiddleware.SuperAdminItem] is not bool isSuperAdmin)
+                return Forbid();
+
+            var authenticatedCollegeId =
+                BTech.Services.CollegeRequestScope.GetCollegeId(HttpContext) ??
+                HttpContext.Items[BTech.Services.AcademicYearScopeRequest.ItemKey] as long?;
+
+            if (!isSuperAdmin && !authenticatedCollegeId.HasValue)
+                return Forbid();
+
+            if (!isSuperAdmin && collegeId.HasValue &&
+                collegeId.Value != authenticatedCollegeId!.Value)
+                return Forbid();
+
+            var effectiveCollegeId = collegeId ?? authenticatedCollegeId;
+
+            // The procedure checks all academic links and the live year before
+            // returning a row. Filtering in SQL also keeps large lists scoped.
+            // Exact academic mapping requests feed active-semester dropdowns;
+            // an unfiltered management list retains legacy active/inactive rows.
+            if (courseId.HasValue && branchId.HasValue && academicYearId.HasValue)
+                status ??= 1;
+            var result = await _lookup.ListAsync(effectiveCollegeId, courseId, branchId,
+                academicYearId, status, HttpContext.RequestAborted);
 
             return Ok(new
             {
