@@ -5190,7 +5190,7 @@ function RolesAndDesignationsWorkspace() {
           {/* TAB 1: ROLES & PERMISSIONS TABLE */}
           {/* ============================================================== */}
           {activeTab === 'roles' && (
-            <div className="sa-table-wrap rbac-table-wrap">
+            <div className="sa-table-wrap rbac-table-wrap" role="region" aria-label="Roles and permissions table" tabIndex={0}>
               <table className="rbac-data-table">
                 <thead>
                   <tr>
@@ -5297,7 +5297,7 @@ function RolesAndDesignationsWorkspace() {
           {/* TAB 2: DESIGNATIONS TABLE */}
           {/* ============================================================== */}
           {activeTab === 'designations' && (
-            <div className="sa-table-wrap rbac-table-wrap">
+            <div className="sa-table-wrap rbac-table-wrap" role="region" aria-label="Designations table" tabIndex={0}>
               <table className="rbac-data-table">
                 <thead>
                   <tr>
@@ -5397,7 +5397,7 @@ function RolesAndDesignationsWorkspace() {
           {/* TAB 3: STAFF ACCESS ASSIGNMENTS TABLE */}
           {/* ============================================================== */}
           {activeTab === 'assignments' && (
-            <div className="sa-table-wrap rbac-table-wrap">
+            <div className="sa-table-wrap rbac-table-wrap" role="region" aria-label="Staff access table" tabIndex={0}>
               <table className="rbac-data-table">
                 <thead>
                   <tr>

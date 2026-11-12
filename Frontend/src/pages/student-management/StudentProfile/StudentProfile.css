@@ -89,10 +89,19 @@ main.student-profile .sp-directory-table td:last-child>div{justify-content:cente
 }
 /* Profile editing is an inline professional page, not a modal popup. */
 .student-profile .sp-edit-page{width:100%;min-width:0}
+.student-profile .sp-edit-page.erp-two-column-layout[data-without-live-preview]{grid-template-columns:minmax(0,1fr)!important}
+.student-profile .sp-edit-page.erp-two-column-layout[data-without-live-preview]>.erp-card-main{grid-column:1/-1;width:100%;min-width:0}
 .student-profile .sp-edit-inline{position:relative;width:100%;max-width:none;max-height:none;min-height:0;overflow:visible;margin:0;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface-raised);box-shadow:var(--shadow-sm)}
 .student-profile .sp-edit-inline>header{position:relative;top:auto;padding:20px 56px 17px 24px}
 .student-profile .sp-edit-inline .sp-edit-tabs{position:sticky;top:0;z-index:2;background:var(--surface-raised)}
 .student-profile .sp-edit-inline form{padding:14px 24px 20px}
+.student-profile .sp-edit-inline form>fieldset{padding:12px 0}
+.student-profile .sp-edit-inline form>fieldset>legend{margin-bottom:8px}
+.student-profile .sp-edit-inline .sp-edit-grid{gap:10px 16px;margin-top:10px}
+.student-profile .sp-edit-inline .sp-photo-field{display:flex;align-items:center;gap:12px;width:100%;max-width:none;margin:0 0 12px;padding:10px 12px;box-sizing:border-box}
+.student-profile .sp-edit-inline .sp-photo-field>span{flex:0 0 auto;margin:0}
+.student-profile .sp-edit-inline .sp-photo-picker{flex:1 1 300px;min-width:0;min-height:40px}
+.student-profile .sp-edit-inline .sp-photo-field img{flex:0 0 56px;width:56px;height:56px;margin:0;border-radius:8px}
 .student-profile .sp-edit-inline .sp-close{top:18px;right:18px}
 .student-profile .sp-edit-inline .sp-edit-tabs{scrollbar-width:none;overflow-x:auto}
 .student-profile .sp-edit-inline .sp-edit-tabs::-webkit-scrollbar{display:none}
@@ -103,6 +112,10 @@ main.student-profile .sp-directory-table td:last-child>div{justify-content:cente
 .student-profile .sp-edit-page .sp-edit-inline{display:flex;flex:1 1 auto;flex-direction:column;height:100%;min-height:0;overflow:hidden}
 .student-profile .sp-edit-page .sp-edit-inline form{display:flex;flex:1 1 auto;flex-direction:column;min-height:0;overflow-y:auto;overflow-x:hidden;padding:8px 16px 0}
 .student-profile .sp-edit-page .sp-edit-inline form>footer{position:sticky;bottom:0;z-index:3;flex-shrink:0;align-items:center;margin-top:auto;padding:10px 0;background:var(--surface-raised);border-top:1px solid var(--border)}
+
+@media(min-width:1200px){
+  .student-profile .sp-edit-inline .sp-edit-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
 
 @media(max-width:900px){
   .student-profile .sp-edit-page .sp-edit-inline{height:auto;overflow:visible}

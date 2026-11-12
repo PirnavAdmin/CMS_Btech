@@ -4339,6 +4339,12 @@
 #root .fm-page .fm-student-fees-page > .fm-workspace { grid-column: 1 / -1; grid-row: 4; width: 100%; }
 #root .fm-page .fm-student-fees-page .filter-disclosure__bar { display: flex; flex-wrap: nowrap; }
 #root .fm-page .fm-student-fees-page .filter-disclosure__search { flex: 1 1 auto; min-width: 220px; }
+#root .fm-page .fm-student-fees-page .filter-disclosure__content-inner { display: block; }
+#root .fm-page .fm-student-fees-page .filter-disclosure__content-inner > .course-toolbar { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 8px; width: 100%; }
+#root .fm-page .fm-student-fees-page .filter-disclosure__content-inner > .course-toolbar > .project-select { width: 100%; min-width: 0; max-width: none; }
+#root .fm-page .fm-transaction-filter-panel .filter-disclosure__content-inner { display: block; }
+#root .fm-page .fm-transaction-filter-panel .filter-disclosure__content-inner > .course-toolbar { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; width: min(100%,460px); }
+#root .fm-page .fm-transaction-filter-panel .filter-disclosure__content-inner > .course-toolbar > :is(.project-select,input[type="date"]) { width: 100%; min-width: 0; max-width: none; }
 #root .fm-page .fm-fee-types-filters .filter-disclosure__search { flex-basis: 360px; }
 #root .fm-page .fm-fee-types-search { min-width: 0; width: 100%; }
 #root .fm-page .fm-fee-types-search input { border: 0; background: transparent; box-shadow: none; }
@@ -4488,9 +4494,16 @@
   #root .fm-page .fm-list-toolbar-actions { width: 100%; justify-content: flex-end; }
   #root .fm-page .fm-student-fees-page .filter-disclosure__bar { flex-wrap: wrap; }
   #root .fm-page .fm-student-fees-page .filter-disclosure__search { flex-basis: 100%; }
+  #root .fm-page .fm-student-fees-page .filter-disclosure__content-inner > .course-toolbar { grid-template-columns: repeat(2,minmax(0,1fr)); }
   #root .fm-page .fm-student-fee-summary-strip { grid-template-columns: repeat(2,minmax(0,1fr)); }
   #root .fm-page .fm-student-fee-summary-strip > .fm-summary-card:nth-child(2) { border-right: 0; }
   #root .fm-page .fm-student-fee-summary-strip > .fm-summary-card:nth-child(-n+2) { border-bottom: 1px solid var(--fm-border); }
+}
+@media (max-width: 420px) {
+  #root .fm-page .fm-student-fees-page .filter-disclosure__content-inner > .course-toolbar { grid-template-columns: minmax(0,1fr); }
+}
+@media (max-width: 560px) {
+  #root .fm-page .fm-transaction-filter-panel .filter-disclosure__content-inner > .course-toolbar { grid-template-columns: minmax(0,1fr); }
 }
 
 /* Keep Finance Overview metrics in the page heading, aligned to the upper right. */
