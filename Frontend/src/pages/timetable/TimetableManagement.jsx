@@ -436,18 +436,48 @@ export function WeeklyRequirement({ allocation, refresh, disabled }) {
 function SubjectCoverage({ sources, scope, selected, config, setConfig, refresh, faculty, disabled }) {
   const subjects = eligibleSubjects(sources.subjects, scope)
   const sections = sources.sections.filter(row => selected.some(id => same(id, row.id)))
+  const [query, setQuery] = useState('')
+  const [showSelectedOnly, setShowSelectedOnly] = useState(false)
   const change = (id, field, value) => setConfig(old => ({ ...old, requirements: { ...old.requirements, [id]: { ...old.requirements[id], [field]: value } } }))
+  const selectedSubjects = subjects.filter(subject => config.requirements[key(subject.id)]?.selected !== false)
+  const perSectionRequirements = sections.map(section => ({
+    section,
+    requirements: subjectRequirements(sources, { ...scope, sectionId: section.id }, config.requirements),
+  }))
+  const requirementFor = (sectionId, subjectId) => perSectionRequirements.find(row => same(row.section.id, sectionId))?.requirements.find(row => same(row.subject.id, subjectId))
+  const selectedCoverage = perSectionRequirements.flatMap(({ section, requirements }) => requirements.filter(item => config.requirements[key(item.subject.id)]?.selected !== false).map(item => ({ section, ...item })))
+  const weeklyPeriods = selectedCoverage.reduce((sum, item) => sum + (Number.isInteger(item.periodsPerWeek) && item.periodsPerWeek > 0 ? item.periodsPerWeek : 0), 0)
+  const missingTargets = selectedCoverage.filter(item => !Number.isInteger(item.periodsPerWeek) || item.periodsPerWeek < 1).length
+  const facultyGaps = selectedCoverage.filter(item => !item.faculty.length).length
+  const visibleSubjects = subjects.filter(subject => (!showSelectedOnly || config.requirements[key(subject.id)]?.selected !== false) && `${subject.subjectCode || ''} ${subject.name || ''} ${subject.subjectType || ''}`.toLowerCase().includes(query.trim().toLowerCase()))
   return <section className="tt-card tt-clean-step"><h2>Subjects & faculty coverage</h2><p>Select existing semester subjects. Weekly periods are saved to the existing faculty allocation.</p>
-    {!subjects.length ? <p>No active subjects are mapped to this semester.</p> : <div className="tt-coverage-scroll"><table className="tt-coverage"><thead><tr><th>Subject</th><th>Periods per session</th>{sections.map(section => <th key={section.id}>{section.name}</th>)}</tr></thead><tbody>{subjects.map(subject => <tr key={subject.id}>
-      <th><label><input type="checkbox" disabled={disabled} checked={config.requirements[key(subject.id)]?.selected !== false} onChange={event => change(key(subject.id), 'selected', event.target.checked)} /> {subject.name}</label></th>
-      <td><input aria-label={`Consecutive periods for ${subject.name}`} type="number" min="1" step="1" disabled={disabled} value={config.requirements[key(subject.id)]?.blockSize || 1} onChange={event => change(key(subject.id), 'blockSize', event.target.value)} /></td>
+    {!subjects.length ? <p>No active subjects are mapped to this semester.</p> : <>
+      <div className="tt-coverage-summary" aria-label="Subject coverage readiness">
+        <article><strong>{selectedSubjects.length}<small> / {subjects.length}</small></strong><span>Subjects selected</span></article>
+        <article><strong>{weeklyPeriods}</strong><span>Weekly periods targeted</span></article>
+        <article className={missingTargets ? 'is-warning' : 'is-ready'}><strong>{missingTargets}</strong><span>Missing weekly targets</span></article>
+        <article className={facultyGaps ? 'is-warning' : 'is-ready'}><strong>{facultyGaps}</strong><span>Section faculty gaps</span></article>
+      </div>
+      <div className="tt-coverage-controls">
+        <label className="tt-coverage-search"><span className="tt-sr-only">Search subjects</span><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search subjects or codes" /></label>
+        <label className="tt-coverage-selected"><input type="checkbox" checked={showSelectedOnly} onChange={event => setShowSelectedOnly(event.target.checked)} />Show selected only</label>
+      </div>
+      <div className="tt-coverage-scroll"><table className="tt-coverage"><thead><tr><th scope="col">Subject</th><th scope="col">Periods per session</th><th scope="col">Weekly target override</th>{sections.map(section => <th scope="col" key={section.id}>{section.name}<small>Faculty and effective weekly target</small></th>)}</tr></thead><tbody>{visibleSubjects.map(subject => <tr key={subject.id}>
+      <th scope="row"><label className="tt-coverage-subject"><input type="checkbox" disabled={disabled} checked={config.requirements[key(subject.id)]?.selected !== false} onChange={event => change(key(subject.id), 'selected', event.target.checked)} /><span><strong>{subject.subjectCode ? `${subject.subjectCode} · ` : ''}{subject.name}</strong><small>{subject.subjectType || subject.type || 'Subject'}{subject.credits ? ` · ${subject.credits} credits` : ''}</small></span></label></th>
+      <td><label className="tt-coverage-block"><span className="tt-sr-only">Consecutive periods per session for {subject.name}</span><input aria-label={`Consecutive periods for ${subject.name}`} type="number" min="1" step="1" disabled={disabled || config.requirements[key(subject.id)]?.selected === false} value={config.requirements[key(subject.id)]?.blockSize || 1} onChange={event => change(key(subject.id), 'blockSize', event.target.value)} /><small>periods per session</small></label></td>
+      <td><label className="tt-coverage-block"><span className="tt-sr-only">Weekly target override for {subject.name}</span><input aria-label={`Weekly target override for ${subject.name}`} type="number" min="1" step="1" disabled={disabled || config.requirements[key(subject.id)]?.selected === false} value={config.requirements[key(subject.id)]?.periodsPerWeek ?? ''} placeholder={(() => { const targets = [...new Set(perSectionRequirements.map(({ requirements }) => requirements.find(item => same(item.subject.id, subject.id))?.periodsPerWeek).filter(value => Number.isInteger(value) && value > 0))]; return targets.length === 1 ? String(targets[0]) : targets.length > 1 ? 'Different' : 'Set target' })()} onChange={event => change(key(subject.id), 'periodsPerWeek', event.target.value)} /><small>blank uses allocation</small></label></td>
       {sections.map(section => {
-        const sectionScope = { ...scope, sectionId: section.id }
-        const requirement = subjectRequirements(sources, sectionScope, {}) .find(item => same(item.subject.id, subject.id))
-        const allocations = sources.allocations.filter(row => same(row.sectionId, section.id) && same(row.subjectId, subject.id) && (!row.academicYearId || same(row.academicYearId, scope.academicYearId)) && same(row.branchId, scope.branchId) && same(row.semesterId, scope.semesterId))
-        return <td key={section.id}>{!requirement?.faculty.length ? <span className="tt-error">Faculty not assigned</span> : allocations.map(allocation => <div key={allocation.allocationId ?? allocation.id ?? allocation.facultyId}><button className="tt-text-button" onClick={() => faculty(allocation.facultyId)}>{sources.faculty.find(row => same(row.id, allocation.facultyId))?.name || 'Inactive faculty'}</button><WeeklyRequirement allocation={allocation} refresh={refresh} disabled={disabled} /></div>)}{requirement?.source === 'Not configured' && requirement?.faculty.length > 0 && <small>Set a consistent weekly requirement for this section.</small>}</td>
+        const requirement = requirementFor(section.id, subject.id)
+        const allocations = sources.allocations.filter(row => active(row) && same(row.sectionId, section.id) && same(row.subjectId, subject.id) && (!row.academicYearId || same(row.academicYearId, scope.academicYearId)) && same(row.branchId, scope.branchId) && same(row.semesterId, scope.semesterId))
+        const chosen = config.requirements[key(subject.id)]?.selected !== false
+        return <td key={section.id}><div className="tt-coverage-cell">
+          <strong className={`tt-coverage-target ${requirement?.periodsPerWeek > 0 ? 'is-ready' : 'is-warning'}`}>{!chosen ? 'Excluded from generation' : requirement?.periodsPerWeek > 0 ? `${requirement.periodsPerWeek} periods / week` : 'Weekly target not set'}</strong>
+          {chosen && !requirement?.faculty.length ? <span className="tt-coverage-gap">Faculty not assigned</span> : allocations.map(allocation => <div className="tt-coverage-allocation" key={allocation.allocationId ?? allocation.id ?? allocation.facultyId}><button className="tt-text-button" onClick={() => faculty(allocation.facultyId)}>{sources.faculty.find(row => same(row.id, allocation.facultyId))?.name || 'Inactive faculty'}</button><WeeklyRequirement allocation={allocation} refresh={refresh} disabled={disabled || !chosen} /></div>)}
+          {requirement?.source === 'Not configured' && requirement?.faculty.length > 0 && <small>Set a consistent weekly requirement for this section.</small>}
+        </div></td>
       })}
-    </tr>)}</tbody></table></div>}
+    </tr>)}{!visibleSubjects.length && <tr><td className="tt-coverage-empty" colSpan={sections.length + 3}>No subjects match this view.</td></tr>}</tbody></table></div>
+    </>}
     <p className="tt-hint">Consecutive periods apply only when explicitly configured here; a session cannot cross Break or Lunch.</p>
   </section>
 }
@@ -463,7 +493,24 @@ export function TimetableWorkspace({ canManage = true, mockMode = false, table, 
   const canPublish = local && draft && validationCurrent && blockingIssues.length === 0
   const unscheduled = schedulingIssues(sources, table, table.planning, table.entries)
   const coverage = scheduleCoverage(table, sources, entries)
+  const teachingSlots = table.planning.periods.filter(isTeachingPeriod)
+  const subjectProgress = subjectRequirements(sources, table, table.planning.requirements).map(item => {
+    const subjectRows = rows.filter(row => same(row.subjectId, item.subject.id) && active(row))
+    const validRows = subjectRows.filter(row => !conflictsFor(row, entries).length && !entryPlanningErrors(row, table.planning, sources, table, entries).length)
+    const periodCount = row => teachingSlots.filter(period => timeMinutes(period.startTime) >= timeMinutes(row.startTime) && timeMinutes(period.endTime) <= timeMinutes(row.endTime)).length
+    const scheduled = validRows.reduce((sum, row) => sum + periodCount(row), 0)
+    const target = Number.isInteger(item.periodsPerWeek) && item.periodsPerWeek > 0 ? item.periodsPerWeek : null
+    return { ...item, target, scheduled, sessions: validRows.length, remaining: target == null ? null : Math.max(0, target - scheduled), state: !target ? 'missing' : !item.faculty.length ? 'faculty' : scheduled >= target ? 'complete' : 'incomplete' }
+  })
+  const knownTargets = subjectProgress.filter(item => item.target != null)
+  const weeklyTarget = knownTargets.length === subjectProgress.length ? knownTargets.reduce((sum, item) => sum + item.target, 0) : null
+  const scheduledPeriods = subjectProgress.reduce((sum, item) => sum + item.scheduled, 0)
+  const remainingPeriods = subjectProgress.reduce((sum, item) => sum + (item.remaining || 0), 0)
+  const completeSubjects = subjectProgress.filter(item => item.state === 'complete').length
+  const dailyLoad = (table.planning.calendar.workingDays || []).map(day => ({ day, count: rows.filter(row => row.dayOfWeek === day && active(row)).length }))
+  const maxDailyLoad = Math.max(1, ...dailyLoad.map(item => item.count))
   const conflicts = rows.flatMap(row => conflictsFor(row, entries).map(item => ({ ...item, reason: item.message, sectionId: table.sectionId, entryId: row.id })))
+  const scheduleNeedsAttention = !subjectProgress.length || remainingPeriods > 0 || subjectProgress.some(item => item.state === 'missing' || item.state === 'faculty') || conflicts.length > 0 || unscheduled.length > 0
   const review = async () => {
     setValidatedRevision('')
     const result = await validate(tables)
@@ -502,6 +549,24 @@ export function TimetableWorkspace({ canManage = true, mockMode = false, table, 
     <p className="tt-workspace-coverage">Weekly coverage: {coverage == null ? 'Unavailable' : `${coverage}%`}</p>
     {!local && <p className="tt-notice">Backend entries use existing timetable and slot IDs. Publication status is not supplied by the entry API; publish and generation require a timetable lifecycle API.</p>}
     <p>Timetable Validity Period: {table.planning.calendar.startDate || 'Not configured'} – {table.planning.calendar.endDate || 'Not configured'}</p>
+    <section className="tt-review-analytics" aria-label="Timetable schedule analysis">
+      <header><div><h3>Schedule analysis</h3><p>Weekly subject targets are checked against valid, conflict-free periods.</p></div><span className={`tt-review-health ${scheduleNeedsAttention ? 'is-warning' : 'is-ready'}`}>{scheduleNeedsAttention ? 'Needs attention' : 'Targets met'}</span></header>
+      <div className="tt-review-metrics">
+        <article><strong>{weeklyTarget == null ? 'Set targets' : weeklyTarget}</strong><span>Required periods / week</span></article>
+        <article><strong>{scheduledPeriods}</strong><span>Valid periods scheduled</span></article>
+        <article className={remainingPeriods ? 'is-warning' : 'is-ready'}><strong>{remainingPeriods}{subjectProgress.some(item => item.target == null) ? ' +' : ''}</strong><span>Periods still needed</span></article>
+        <article><strong>{completeSubjects} / {subjectProgress.length}</strong><span>Subjects meeting target</span></article>
+      </div>
+      <div className="tt-review-detail-grid">
+        <section className="tt-review-subjects" aria-label="Weekly subject coverage"><h4>Subject coverage</h4>
+          {!subjectProgress.length ? <p>No active subject requirements were found for this timetable.</p> : <div className="tt-review-subject-list">{subjectProgress.map(item => <article key={item.subject.id} data-state={item.state}>
+            <div className="tt-review-subject-heading"><div><strong>{item.subject.subjectCode ? `${item.subject.subjectCode} · ` : ''}{item.subject.name}</strong><small>{item.faculty.length ? `${item.faculty.length} faculty allocation${item.faculty.length === 1 ? '' : 's'}` : 'No active faculty allocation'}</small></div><span>{item.target == null ? 'Target missing' : item.state === 'complete' ? 'Complete' : item.state === 'faculty' ? 'Faculty missing' : `${item.remaining} remaining`}</span></div>
+            {item.target != null && <><progress max={item.target} value={Math.min(item.scheduled, item.target)} aria-label={`${item.subject.name}: ${Math.min(item.scheduled, item.target)} of ${item.target} periods scheduled`} /><small>{item.scheduled} / {item.target} periods per week · {item.sessions} session{item.sessions === 1 ? '' : 's'}</small></>}
+          </article>)}</div>}
+        </section>
+        <section className="tt-review-days" aria-label="Weekly section load"><h4>Weekly section load</h4>{dailyLoad.map(item => <div className="tt-review-day" key={item.day}><span>{item.day.slice(0, 3)}</span><div><i style={{ width: `${item.count / maxDailyLoad * 100}%` }} /></div><strong>{item.count}</strong></div>)}</section>
+      </div>
+    </section>
     <TimetableGrid rows={rows} periods={table.planning.periods} workingDays={table.planning.calendar.workingDays} editable={draft || (!local && table.publicationStatus === 'unavailable')} add={row => setDrawer({ kind: 'entry', initial: row })} inspect={row => setDrawer({ kind: 'entry', initial: row })} faculty={faculty} highlight={highlight} clearHighlight={() => setHighlight('')} />
     {drawer?.kind === 'entry' && <ScheduleDialog key={`${table.id}-${drawer.initial.id || 'new'}`} initial={drawer.initial} table={table} sources={sources} entries={entries} save={form => save(table, form)} remove={id => remove(table, id)} close={() => setDrawer(null)} readOnly={!canManage || table.publicationStatus === 'published'} />}
     {['validation', 'unscheduled', 'conflicts'].includes(drawer?.kind) && <WorkspaceDrawer title={drawer.kind === 'validation' ? 'Validation result' : drawer.kind === 'unscheduled' ? 'Unscheduled requirements' : 'Conflicts'} close={() => setDrawer(null)}><div className="tt-clean-step">{drawer.kind === 'validation' && <><h3>{blockingIssues.length ? 'VALIDATION FAILED' : 'READY TO PUBLISH'}</h3><div className="tt-validation-summary">{categoryCounts.map(([label, count]) => <div key={label}><span>{label}</span><strong>{count}</strong></div>)}</div><p>{validationCurrent ? 'Checked against the current timetable revision and loaded campus schedule.' : 'Timetable changed after validation. Validate again before publishing.'}</p></>}{!drawerIssues.length ? <p>No issues found.</p> : drawerIssues.map((issue, index) => <button className="tt-issue" key={`${issue.tableId || ''}-${issue.entryId || ''}-${index}`} onClick={() => focus(issue)}><strong>{issue.blocking === false ? 'Warning · ' : ''}{sources.sections.find(row => same(row.id, issue.sectionId || table.sectionId))?.name || `Section ${issue.sectionId || table.sectionId}`} · {issue.subjectName || ''}</strong><span>{issue.reason}</span>{issue.entryId && <small>View Issue</small>}</button>)}</div></WorkspaceDrawer>}
