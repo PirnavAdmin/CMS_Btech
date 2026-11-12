@@ -5738,7 +5738,6 @@ export const FeeManagementModule = (() => {
     const [txQuery, setTxQuery] = useState("");
     const [txMode, setTxMode] = useState("");
     const [txFromDate, setTxFromDate] = useState("");
-    const [txToDate, setTxToDate] = useState("");
     const [txPage, setTxPage] = useState(1);
     const [txData, setTxData] = useState({ items: [], total: 0, totalPages: 1 });
     const [txLoading, setTxLoading] = useState(false);
@@ -6112,7 +6111,6 @@ export const FeeManagementModule = (() => {
           search: txQuery,
           paymentMode: txMode,
           fromDate: txFromDate,
-          toDate: txToDate,
         })
         .then((res) => {
           if (active) {
@@ -6139,7 +6137,7 @@ export const FeeManagementModule = (() => {
       if (activeView === "transactions") {
         return fetchTransactions();
       }
-    }, [activeView, txPage, txQuery, txMode, txFromDate, txToDate, academic.selectedCollegeId]);
+    }, [activeView, txPage, txQuery, txMode, txFromDate, academic.selectedCollegeId]);
 
     const handleOpenTxReceipt = payment => handleOpenReceipt(
       { name: payment.studentName, roll: payment.studentCode, ...payment }, payment
@@ -6476,13 +6474,13 @@ export const FeeManagementModule = (() => {
 
             {/* Filter Toolbar for Transactions */}
             <FilterPanel
-              active={Boolean(txQuery || txMode || txFromDate || txToDate)}
+              className="fm-transaction-filter-panel"
+              active={Boolean(txQuery || txMode || txFromDate)}
               actions={<button type="button" className="erp-btn erp-btn--primary" onClick={() => navigate("/fees/collection")}><FiPlus /> Collect Payment</button>}
               onClear={() => {
                 setTxQuery("");
                 setTxMode("");
                 setTxFromDate("");
-                setTxToDate("");
                 setTxPage(1);
               }}
             >
@@ -6527,16 +6525,6 @@ export const FeeManagementModule = (() => {
                   title="From Date"
                 />
 
-                <input
-                  type="date"
-                  aria-label="To Date"
-                  value={txToDate}
-                  onChange={(e) => {
-                    setTxToDate(e.target.value);
-                    setTxPage(1);
-                  }}
-                  title="To Date"
-                />
               </div>
             </FilterPanel>
 
