@@ -3,6 +3,8 @@ import { MeetingsEventsWorkspace, LibraryWorkspace, PlacementWorkspace } from '.
 import { Dashboard, LandingPage, Login, ActivateAccount, Register, Unauthorized } from './pages/Pages'
 import { CollegeInstitutionManagement, AddCollege, AcademicYearManagement, RolesAndDesignations, RoomsManagement } from './pages/admin-management/AdminManagement'
 import { MyProfile, Settings } from './pages/profile/MyProfile'
+import { SettingsConfiguration } from './pages/settings/SettingsConfiguration.jsx'
+import { NumberSeriesManagement, NumberSeriesEdit } from './pages/settings/NumberSeriesManagement.jsx'
 import { Attendance, AttendanceSessionDetails } from './pages/attendance/Attendance'
 import { FacultyManagement, FacultyLeaveManagement, Payroll } from './pages/faculty/FacultyManagement'
 import { ExaminationSetup, ExaminationList, CreateExamination, ExamType } from './pages/examinations/examination-setup/ExaminationSetup'
@@ -227,6 +229,9 @@ export default function App() {
               <Route path="/settings" element={<Settings />} />
               <Route path="/global-settings" element={<Settings />} />
               <Route path="/settings/academic-context" element={<Settings />} />
+              <Route path="/settings/configuration" element={<SettingsConfiguration />} />
+              <Route path="/settings/number-series" element={<NumberSeriesManagement />} />
+              <Route path="/settings/number-series/:seriesId/edit" element={<NumberSeriesEdit />} />
 
               {/* Faculty demo module */}
               <Route path="/faculty/*" element={<FacultyManagement />} />

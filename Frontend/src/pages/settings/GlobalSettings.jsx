@@ -1,7 +1,7 @@
 import collegeImage from '../../assets/inter-reference/college-configuration.png'
 import yearImage from '../../assets/inter-reference/academic-year-configuration.png'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Settings2 } from 'lucide-react'
+import { ArrowRight, Hash, Settings2 } from 'lucide-react'
 import DashboardLayout from '../../layouts/DashboardLayout.jsx'
 import AcademicContextSelect from '../../components/AcademicContextSelect.jsx'
 import PageHeader from '../../components/PageHeader.jsx'
@@ -27,6 +27,7 @@ export default function GlobalSettings() {
     <div className="configuration-grid">
       {canView('/college-institution-management') && <section className="configuration-card" aria-labelledby="college-configuration-heading"><header><img src={collegeImage} alt="" /><h2 id="college-configuration-heading">College Configuration</h2></header><p>View and edit college details, affiliation, contact information, branding and status.</p><footer><Link className="erp-btn erp-btn--primary" to="/college-institution-management">Configure colleges <ArrowRight aria-hidden="true" /></Link>{canAction('/college-institution-management', 'create') && <Link className="erp-btn erp-btn--secondary" to="/college-institution-management/add">Add college</Link>}</footer></section>}
       {canView('/academic-year-management') && <section className="configuration-card" aria-labelledby="year-configuration-heading"><header><img src={yearImage} alt="" /><h2 id="year-configuration-heading">Academic Year Configuration</h2></header><p>View, edit and manage dates and activation for the selected college’s academic years.</p>{!loading && !selectedCollegeId && <small>Select a working college to configure academic years.</small>}<footer><Link className="erp-btn erp-btn--primary" to="/academic-year-management">Configure academic years <ArrowRight aria-hidden="true" /></Link>{selectedCollegeId && !loading && !error && canAction('/academic-year-management', 'create') && <Link className="erp-btn erp-btn--secondary" to="/academic-year-management?action=add">Add academic year</Link>}</footer></section>}
+      {canView('/settings') && <section className="configuration-card" aria-labelledby="number-series-heading"><header><Hash aria-hidden="true" /><h2 id="number-series-heading">ID &amp; Number Series</h2></header><p>Configure automatic student admission numbers, teaching staff IDs, non-teaching staff IDs, examination codes, and other institutional numbering formats.</p><footer><Link className="erp-btn erp-btn--primary" to="/settings/number-series">Manage Number Series <ArrowRight aria-hidden="true" /></Link></footer></section>}
     </div>
   </main></DashboardLayout>
 }

@@ -64,6 +64,10 @@ test('three configuration areas reuse existing management routes and require a c
   expect(screen.getByRole('link', { name: 'Configure academic years' }).getAttribute('href')).toBe('/academic-year-management')
   expect(screen.queryByRole('link', { name: 'Add academic year' })).toBeNull()
 })
+test('Global Settings links to the number-series configuration journey', () => {
+  render(<Harness />)
+  expect(screen.getByRole('link', { name: 'Manage Number Series' }).getAttribute('href')).toBe('/settings/number-series')
+})
 test('loading, empty and failed context are distinct and failed context can retry', () => {
   const { rerender } = render(<Harness overrides={{ loading: true }} />)
   expect(screen.getByText('Loading authorized academic context…')).toBeTruthy()
