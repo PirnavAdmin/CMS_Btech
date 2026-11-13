@@ -1,10 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
 using UserRoleManagement.API.DTOs;
 using UserRoleManagement.API.Services;
+using BTech.Services;
+using Microsoft.AspNetCore.Authorization;
 
 namespace UserRoleManagement.API.Controllers
 {
     [ApiController]
+    [Authorize]
     [Route("api/[controller]")]
     public class CollegeController : ControllerBase
     {
@@ -19,6 +22,8 @@ namespace UserRoleManagement.API.Controllers
         public async Task<IActionResult> UploadLogo(
             [FromForm] CollegeLogoUploadDto dto)
         {
+            var scope = CollegeManagementScope.From(HttpContext);
+            if (!scope.IsSuperAdmin && (scope.AssignedCollegeId != dto.CollegeId || scope.SelectedCollegeId != dto.CollegeId)) return Forbid();
             try
             {
                 var fileName =
@@ -45,6 +50,8 @@ namespace UserRoleManagement.API.Controllers
         public async Task<IActionResult> GetCollegeLogo(
             long collegeId)
         {
+            var scope = CollegeManagementScope.From(HttpContext);
+            if (!scope.IsSuperAdmin && (scope.AssignedCollegeId != collegeId || scope.SelectedCollegeId != collegeId)) return Forbid();
             try
             {
                 var result =

@@ -100,8 +100,8 @@ namespace BTech.Services.Implementations
                 long? userId = null)
         {
             var scope = CollegeManagementScope.From(_http.HttpContext);
-            if (!scope.IsSuperAdmin && !scope.IsCollegeAdmin)
-                throw new BTech.Exceptions.ForbiddenException("Only College Admin and Super Admin can create colleges.");
+            if (!scope.IsSuperAdmin)
+                throw new BTech.Exceptions.ForbiddenException("Only Super Admin can create colleges.");
             userId = scope.UserId;
             var codeExists =
                 await _collegeRepository.ExistsCodeAsync(
@@ -240,6 +240,14 @@ namespace BTech.Services.Implementations
                 UpdateCollegeDto dto,
                 long? userId = null)
         {
+            var scope = CollegeManagementScope.From(_http.HttpContext);
+            if (!scope.IsSuperAdmin && (!scope.IsCollegeAdmin || scope.SelectedCollegeId != collegeId || scope.AssignedCollegeId != collegeId))
+                throw new BTech.Exceptions.ForbiddenException("Only the assigned college's administrator may edit its profile.");
+            if (!scope.IsSuperAdmin &&
+                (dto.CollegeCode != null || dto.Code != null || dto.CollegeType != null || dto.Type != null ||
+                 dto.UniversityName != null || dto.University != null || dto.AcademicYearId.HasValue || dto.Timezone != null ||
+                 dto.CurrencyCode != null))
+                throw new BTech.Exceptions.ForbiddenException("College code, type, university, academic scope, timezone, currency and status are managed by Super Admin.");
             var college =
                 await _collegeRepository.GetByIdAsync(
                     collegeId);
@@ -372,6 +380,8 @@ namespace BTech.Services.Implementations
                 UpdateCollegeStatusDto dto,
                 long? userId = null)
         {
+            if (!CollegeManagementScope.From(_http.HttpContext).IsSuperAdmin)
+                throw new BTech.Exceptions.ForbiddenException("Only Super Admin can change college status.");
             var college =
                 await _collegeRepository.UpdateStatusAsync(
                     collegeId,
@@ -391,6 +401,8 @@ namespace BTech.Services.Implementations
             long collegeId,
             long? userId = null)
         {
+            if (!CollegeManagementScope.From(_http.HttpContext).IsSuperAdmin)
+                throw new BTech.Exceptions.ForbiddenException("Only Super Admin can delete a college.");
             if (collegeId <= 0)
             {
                 return false;
