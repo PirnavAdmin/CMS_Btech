@@ -1,9 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { assignedPermissions, canViewScreen, requireAssignedPermissions } from './screenPermissions.js'
+import { assignedPermissions, canViewScreen, requireAssignedPermissions, requiredActionForScreen } from './screenPermissions.js'
 
 test('settings container accepts existing configuration access without granting other configuration routes', () => {
-  for (const path of ['/settings', '/settings/', '/global-settings', '/settings/academic-context']) {
+  for (const path of ['/settings', '/settings/', '/global-settings', '/settings/academic-context', '/settings/configuration', '/settings/number-series', '/settings/number-series/student-admission/edit']) {
     assert.equal(canViewScreen(path, 'admin', { colleges: { view: true } }), true)
     assert.equal(canViewScreen(path, 'admin', { academic_years: { view: true } }), true)
     assert.equal(canViewScreen(path, 'admin', { academic_settings: { view: true } }), true)
@@ -11,6 +11,8 @@ test('settings container accepts existing configuration access without granting 
   }
   assert.equal(canViewScreen('/academic-year-management', 'admin', { colleges: { view: true } }), false)
   assert.equal(canViewScreen('/college-institution-management', 'admin', { academic_years: { view: true } }), false)
+  assert.equal(requiredActionForScreen('/settings/number-series/student-admission/edit'), 'view')
+  assert.equal(requiredActionForScreen('/student-management/admissions/7/edit'), 'edit')
 })
 
 test('employees can open only their own known workspace screens without admin permissions', () => {
