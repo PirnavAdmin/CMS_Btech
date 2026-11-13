@@ -28,3 +28,35 @@ export const admissionSemesterError = (academic, options) => {
   }
   return ''
 }
+
+export function currentAdmissionSemester(rows, academic, collegeId, today = new Date().toLocaleDateString('en-CA')) {
+  const options = admissionSemesterOptions(rows, academic, collegeId)
+  const candidates = rows.filter(row => options.some(option => sameId(option.id, row.semesterId ?? row.id))).filter(row => {
+    const status = String(row.status ?? row.isActive ?? '').toLowerCase()
+    const start = String(row.startDate ?? row.semesterStartDate ?? '').slice(0, 10)
+    const end = String(row.endDate ?? row.semesterEndDate ?? '').slice(0, 10)
+    if (start && end) return start <= today && today <= end && !['inactive','0','false','completed'].includes(status)
+    return row.isCurrent === true || row.isCurrentSemester === true || ['active','1','true','current'].includes(status)
+  })
+  return candidates.length === 1 ? options.find(option => sameId(option.id, candidates[0].semesterId ?? candidates[0].id)) : null
+}
+
+export function resolveAdmissionAcademicIds(academic, courses = [], branches = [], collegeId) {
+  const name = value => String(value ?? '').trim().toLowerCase().replace(/\s+/g, ' ')
+  const id = value => Number.isInteger(Number(value)) && Number(value) > 0
+  const result = {...academic}
+  const programs = courses.filter(row => !row.collegeId || sameId(row.collegeId, collegeId))
+  const matchingPrograms = programs.filter(row => id(academic.courseId) ? sameId(row.courseId ?? row.id, academic.courseId) :
+    Boolean(name(academic.course)) && [row.courseName, row.name, row.courseCode, row.code].some(value => name(value) === name(academic.course)))
+  if (matchingPrograms.length !== 1) return academic
+  const program = matchingPrograms[0]
+  if (!id(result.courseId)) result.courseId = String(program.courseId ?? program.id)
+  const matchingBranches = [...new Map(branches.map(row => [String(row.branchId ?? row.id), row])).values()].filter(row => sameId(row.courseId ?? row.course?.courseId ?? row.course?.id, result.courseId) && (!row.collegeId || sameId(row.collegeId, collegeId))).filter(row => id(academic.branchId) ? sameId(row.branchId ?? row.id, academic.branchId) :
+    Boolean(name(academic.branch)) && [row.branchName, row.name, row.branchCode, row.code].some(value => name(value) === name(academic.branch)))
+  if (matchingBranches.length === 1) {
+    const branch = matchingBranches[0]
+    if (!id(result.branchId)) result.branchId = String(branch.branchId ?? branch.id)
+    if (!id(result.departmentId) && id(branch.departmentId ?? program.departmentId)) result.departmentId = String(branch.departmentId ?? program.departmentId)
+  }
+  return result
+}

@@ -15,7 +15,7 @@ vi.mock('../api/apiEndpoints', () => ({ authAccessApi: { get: vi.fn() } }))
 vi.mock('../auth/collegeApi', () => ({ collegeLogoValue: () => '', cacheCollegeLogo: vi.fn(), fetchCollegeLogo: vi.fn(), getCollegeById: vi.fn(async () => ({})), getCollegeLogoEndpoint: () => '', getCollegeLogoUrl: () => '', getColleges: vi.fn(async () => []), isBackendCollegeLogo: () => false, readCachedCollegeLogo: () => '', unwrapCollegeRecord: value => value }))
 afterEach(() => { cleanup(); document.documentElement.removeAttribute('data-theme') })
 let generation = 0
-beforeEach(() => { vi.clearAllMocks(); session.role = 'admin'; session.token = 'test-token-' + (++generation); session.academic = { selectedCollege: { id: '7', name: 'Test College' }, selectedCollegeId: '7', colleges: [], loading: false }; authAccessApi.get.mockReset().mockResolvedValue({ isSuperAdmin: true, collegeId: 7, permissions: {} }); sessionStorage.clear() })
+beforeEach(() => { vi.clearAllMocks(); session.role = 'admin'; session.token = 'test-token-' + (++generation); session.academic = { selectedCollege: { id: '7', name: 'Test College' }, selectedCollegeId: '7', colleges: [], loading: false }; authAccessApi.get.mockReset().mockResolvedValue({ isSuperAdmin: false, collegeId: 7, permissions: Object.fromEntries(MODULE_REGISTRY.filter(row=>row.permission?.module).map(row=>[row.permission.module,{view:true}])) }); sessionStorage.clear() })
 async function settings() { return screen.findByRole('link', { name: 'Global Settings' }) }
 function mount(props = {}, path = '/fees/structures/create') {
  return render(<MemoryRouter initialEntries={[path]}><Sidebar {...props} /></MemoryRouter>)
@@ -43,9 +43,9 @@ test.each(['light', 'dark'])('sidebar keeps links, fee active states and consist
  await waitFor(() => expect(authAccessApi.get).toHaveBeenCalled())
  const colleges = await settings()
  expect(colleges.getAttribute('href')).toBe('/settings'); expect(screen.queryByRole('button', { name: 'Global Settings' })).toBeNull(); for (const name of ['Working Context', 'Colleges', 'Academic Years']) expect(screen.queryByRole('link', { name })).toBeNull()
- expect(colleges.querySelector('svg').classList.contains('lucide-settings')).toBe(true)
+ expect(Boolean(colleges.querySelector('svg, .reference-nav-icon'))).toBe(true)
  expect(screen.getByRole('link', { name: 'Fee Structure' }).classList.contains('active')).toBe(true)
- expect(screen.getByRole('link', { name: 'Fee Management' }).classList.contains('active')).toBe(false)
+ expect(screen.getByRole('button', { name: 'Fee Management' }).classList.contains('active')).toBe(false)
  for (const link of container.querySelectorAll('.sidebar-link')) {
   expect(link.querySelector('svg, .reference-nav-icon')).toBeTruthy()
  }
@@ -55,9 +55,9 @@ test.each(['light', 'dark'])('sidebar keeps links, fee active states and consist
 test('existing access matrix still filters modules and does not grant denied subjects', async () => {
  authAccessApi.get.mockResolvedValue({ isSuperAdmin: false, permissions: { fees: { view: true }, subjects: { view: false } } })
  mount({}, '/fees/collection')
- await screen.findByRole('link', { name: 'Fee Management' });
+ await screen.findByRole('button', { name: 'Fee Management' });
  expect(screen.queryByRole('link', { name: 'Subject Management' })).toBeNull()
- expect(screen.getByRole('link', { name: 'Fee Management' }).classList.contains('active')).toBe(true)
+ expect(screen.getByRole('button', { name: 'Fee Management' }).classList.contains('is-module-active')).toBe(true)
  expect(screen.getByRole('link', { name: 'Fee Structure' }).classList.contains('active')).toBe(false)
 })
 test('existing disclosure, collapse and mobile close callbacks survive icon changes', async () => {
@@ -83,7 +83,7 @@ test('pending permissions keep the role navigation visible until scoped links ar
  mount(); expect(screen.getByText('Loading navigation…')).toBeTruthy(); expect(screen.getByRole('link', { name: 'Global Settings' })).toBeTruthy();
  expect(document.querySelectorAll('.sidebar-section-label').length).toBeGreaterThan(0);
  await act(async () => request.resolve({ collegeId: 7, permissions: { fees: { view: true } } }));
- expect(screen.getByRole('link', { name: 'Fee Management' })).toBeTruthy();
+ expect(screen.getByRole('button', { name: 'Fee Management' })).toBeTruthy();
  expect([...document.querySelectorAll('.sidebar-section-label')].map(node => node.textContent)).toEqual(['Management']);
 })
 test('failed access preserves navigation without a sidebar error or retry button', async () => {
@@ -95,13 +95,13 @@ test('failed access preserves navigation without a sidebar error or retry button
 })
 test('college changes immediately hide the old permission matrix and reload the selected scope', async () => {
  authAccessApi.get.mockResolvedValueOnce({ collegeId: 7, permissions: { fees: { view: true } } });
- const { rerender } = render(sidebarTree()); await screen.findByRole('link', { name: 'Fee Management' });
+ const { rerender } = render(sidebarTree()); await screen.findByRole('button', { name: 'Fee Management' });
  const next = deferred(); authAccessApi.get.mockReturnValueOnce(next.promise);
  session.academic = { ...session.academic, selectedCollege: { id: '8', name: 'Next College' }, selectedCollegeId: '8' };
- rerender(sidebarTree()); expect(screen.getByRole('link', { name: 'Fee Management' })).toBeTruthy(); expect(screen.getByText('Loading navigation…')).toBeTruthy();
+ rerender(sidebarTree()); expect(screen.getByRole('button', { name: 'Fee Management' })).toBeTruthy(); expect(screen.getByText('Loading navigation…')).toBeTruthy();
  await waitFor(() => expect(authAccessApi.get).toHaveBeenLastCalledWith('8'));
  await act(async () => next.resolve({ collegeId: 8, permissions: { rooms: { view: true } } }));
- expect(screen.getByRole('link', { name: 'Academic Configuration' })).toBeTruthy(); expect(screen.queryByRole('link', { name: 'Fee Management' })).toBeNull();
+ expect(screen.getByRole('link', { name: 'Academic Configuration' })).toBeTruthy(); expect(screen.queryByRole('button', { name: 'Fee Management' })).toBeNull();
 })
 test('late responses from a previous college cannot overwrite the current navigation', async () => {
  const old = deferred(), next = deferred(); authAccessApi.get.mockReturnValueOnce(old.promise).mockReturnValueOnce(next.promise);
@@ -162,3 +162,5 @@ test('sidebar scroll position is restored and saved through registry rendering',
 })
 
  test.each(['/settings', '/global-settings', '/settings/academic-context', '/college-institution-management/add', '/academic-year-management'])('settings stays directly active on %s', async path => { mount({}, path); const link = await settings(); expect(link.getAttribute('href')).toBe('/settings'); expect(link.getAttribute('aria-current')).toBe('page'); expect(link.hasAttribute('aria-expanded')).toBe(false) })
+
+test('server-confirmed platform owner receives consolidated onboarding navigation',async()=>{authAccessApi.get.mockResolvedValue({isSuperAdmin:true,collegeId:7,permissions:{}});mount({},'/client-onboarding');await screen.findByRole('link',{name:'Client Onboarding'});for(const name of ['Dashboard','Colleges','User Access Management','Module Access Configuration','Platform Settings']) expect(screen.getByRole('link',{name})).toBeTruthy();expect(screen.queryByRole('button',{name:'Fee Management'})).toBeNull();});

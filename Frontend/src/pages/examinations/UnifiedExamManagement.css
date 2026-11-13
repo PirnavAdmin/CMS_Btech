@@ -324,20 +324,20 @@
 .uem-page > .erp-page-header { align-items: center; gap: 18px; margin: 0; }
 .uem-page > .erp-page-header > .erp-page-header__right { justify-content: flex-end; align-self: center; min-width: 0; max-width: 100%; }
 .uem-page > .erp-page-header .compact-summary { justify-self: end; }
-.uem-directory-card { display: grid; gap: 0; min-width: 0; overflow: hidden; border: 1px solid #dce8f2; border-radius: 15px; background: var(--surface, #fff); box-shadow: var(--shadow-sm); }
-.uem-directory-header { display: flex; min-height: 68px; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 16px; border-bottom: 1px solid #e3edf5; background: var(--surface, #fff); }
+.uem-directory-card { display: grid; gap: 0; min-width: 0; overflow: hidden; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-sm); }
+.uem-directory-header { display: flex; min-height: 68px; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--surface); }
 .uem-directory-header h2, .uem-directory-header p { margin: 0; }
 .uem-directory-header h2 { color: var(--text-primary); font-size: 1rem; font-weight: 760; }
 .uem-directory-header p { margin-top: 4px; color: var(--text-muted); font-size: .75rem; }
 .uem-directory-actions { display: flex; flex: 0 0 auto; align-items: center; justify-content: flex-end; gap: 8px; }
 .uem-directory-actions .export-button { min-height: 40px; border-radius: 8px; font-size: .8rem; }
 .uem-directory-actions .uem-header-create { min-height: 40px; white-space: nowrap; }
-.uem-directory-filter-panel { border-bottom: 1px solid #e3edf5; background: #fbfdff; }
-.uem-directory-filter-panel .filter-disclosure__bar { gap: 8px; padding: 10px 12px; }
+.uem-directory-filter-panel { border-bottom: 1px solid var(--border); background: var(--surface); }
+.uem-directory-filter-panel .filter-disclosure__bar { gap: 8px; padding: 10px 12px; background: transparent; }
 .uem-directory-filter-panel .filter-disclosure__search { flex: 1 1 270px; max-width: none; }
-.uem-directory-filter-panel .uem-search { width: 100%; height: 40px; min-height: 40px; border-color: var(--border); border-radius: 8px; background: var(--surface, #fff); }
+.uem-page .uem-directory-filter-panel .uem-search { width: 100%; height: 40px; min-height: 40px; padding: 0 11px; box-sizing: border-box; border-color: var(--border); border-radius: 8px; background: var(--surface); }
 .uem-directory-filter-panel .filter-disclosure__toggle { min-height: 40px; border-radius: 8px; }
-.uem-directory-filter-panel .filter-disclosure__content { padding: 12px; background: var(--surface-soft); }
+.uem-directory-filter-panel .filter-disclosure__content { padding: 12px; background: var(--surface); }
 .uem-directory-filter-panel .filter-disclosure__content-inner { display: block; width: 100%; }
 .uem-filter-fields { display: grid; grid-template-columns: repeat(3, minmax(150px, 1fr)) auto; align-items: end; gap: 10px; }
 .uem-filter-fields > label { display: grid; gap: 5px; min-width: 0; color: var(--text-secondary); font-size: .74rem; font-weight: 700; }
@@ -345,7 +345,7 @@
 .uem-filter-actions { display: flex; gap: 7px; }
 .uem-filter-actions .uem-primary, .uem-filter-actions .uem-secondary { min-height: 38px; padding-inline: 11px; font-size: .75rem; white-space: nowrap; }
 .uem-directory-card > .uem-table-wrap { border: 0; border-radius: 0; }
-.uem-directory-card > .uem-pagination { min-height: 52px; padding: 9px 16px; border-top: 1px solid #e5edf4; background: var(--surface-soft); }
+.uem-directory-card > .uem-pagination { min-height: 52px; padding: 9px 16px; border-top: 1px solid var(--border); background: var(--surface); }
 .uem-load-error { display: flex; min-height: 56px; align-items: center; gap: 10px; margin: 10px 12px; padding: 9px 11px; border: 1px solid #f0d3d0; border-radius: 9px; background: #fff8f7; color: #733b37; }
 .uem-load-error__icon { width: 17px; height: 17px; flex: 0 0 17px; color: #b34d47; }
 .uem-load-error__copy { min-width: 0; flex: 1 1 auto; }

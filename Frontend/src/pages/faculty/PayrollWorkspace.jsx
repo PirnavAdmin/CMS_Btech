@@ -15,10 +15,17 @@ import facultyService from '../../services/facultyService'
 const amount = value => value == null || value === '' || !Number.isFinite(Number(value)) ? 'Unavailable' : new Intl.NumberFormat('en-IN', { style:'currency', currency:'INR' }).format(Number(value))
 const display = value => value == null || value === '' ? 'Unavailable' : String(value)
 const monthNow = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}` }
+export function payslipReleased(row, now = new Date()) {
+  if (String(row.status || '').trim().toLowerCase() !== 'paid') return false
+  const value = row.payDate ?? row.paymentDate ?? row.paidAt
+  if (!value) return false
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(String(value)) ? new Date(String(value) + 'T00:00:00') : new Date(value)
+  return Number.isFinite(date.getTime()) && date <= now
+}
 const tabs = ['Payroll Processing','Salary Records','Payslips']
 export default function PayrollWorkspace() {
   const { selectedCollegeId, scopeRecords } = useAcademic(), { canAction } = useScreenAccess()
-  const [tab,setTab] = useState(tabs[0]), [month] = useState(monthNow)
+  const [tab,setTab] = useState(tabs[0]), [month,setMonth] = useState(monthNow)
   const [records,setRecords] = useState([]), [loading,setLoading] = useState(false), [error,setError] = useState('')
   const [query,setQuery] = useState(''), [type,setType] = useState(''), [status,setStatus] = useState(''), [page,setPage] = useState(1)
   const [selected,setSelected] = useState(null), [hold,setHold] = useState(null), [reason,setReason] = useState(''), [busy,setBusy] = useState(false), [notice,setNotice] = useState('')
@@ -30,11 +37,14 @@ export default function PayrollWorkspace() {
     try {
       if (!selectedCollegeId) return
       const fetchRows = tab === 'Salary Records' ? facultyPayrollApi.getSalaryRecords : tab === 'Payslips' ? facultyPayrollApi.getPayslips : facultyPayrollApi.getAll
-      const [rows,members] = await Promise.all([fetchRows({month}), facultyService.list()])
+      const [rows,members] = await Promise.all([fetchRows({month,collegeId:selectedCollegeId}), facultyService.list()])
       // Payroll feeds omit college IDs. Associate only by actual faculty identity/code.
       const scopedMembers = scopeRecords(members)
       const scoped = rows.filter(row => scopedMembers.some(member => row.facultyId != null ? String(member.facultyId || member.id) === String(row.facultyId) : row.employeeId && String(member.facultyCode || member.employeeId) === String(row.employeeId)))
-      if (version === generation.current) setRecords(scoped.map(row => ({...row, payrollRecordId:tab === 'Payroll Processing' ? row.payrollId : row.payrollId ?? row.id})))
+      if (version === generation.current) setRecords(scoped
+        .filter(row => tab !== 'Payroll Processing' || row.payrollId != null)
+        .filter(row => tab !== 'Payslips' || payslipReleased(row))
+        .map(row => ({...row, payrollRecordId:tab === 'Payroll Processing' ? row.payrollId : row.payrollId ?? row.id})))
     } catch (failure) { if (version === generation.current) setError(failure.message || 'Payroll could not be loaded.') }
     finally { if (version === generation.current) setLoading(false) }
   }, [selectedCollegeId, scopeRecords, month, tab])
@@ -52,7 +62,7 @@ export default function PayrollWorkspace() {
   const exportColumns = [{label:'Employee',value:'fullName'},{label:'Employee code',value:'employeeId'},{label:'Department',value:'department'},{label:'Status',value:'status'},...['grossSalary','deductions','netSalary'].map(key=>({label:key,value:row=>row[key] == null ? 'Unavailable' : row[key]}))]
   const details=[['Employee',selected?.fullName],['Employee code',selected?.employeeId],['Department',selected?.department],['Payroll month',selected?.payrollMonth || month],['Status',selected?.status],['Working days',selected?.working],['Present',selected?.present],['Paid leave',selected?.paidLeave],['LOP',selected?.lop],['Gross salary',amount(selected?.grossSalary)],['Deductions',amount(selected?.deductions)],['Net salary',amount(selected?.netSalary)],['Hold reason',selected?.holdReason]]
   return <DashboardLayout><main className="faculty-payroll">
-    <PageHeader title="Faculty Payroll" subtitle="Review payroll, salary records and payslips." compactSummary={[{label:'Records',value:loading?'—':rows.length}]} />
+    <PageHeader title="Faculty Payroll" subtitle="Review payroll, salary records and payslips." compactSummary={[{label:'Records',value:loading || error?'—':rows.length}]} />
     <nav className="payroll-navigation" aria-label="Payroll sections">
       {tabs.map((value, index) => {
         const Icon = [FiCreditCard, FiUsers, FiFileText][index]
@@ -63,7 +73,7 @@ export default function PayrollWorkspace() {
     </nav>
     <p className="payroll-notice" role="status">
       <FiFileText aria-hidden="true" />
-      <span>Salary configuration, processing and marking payments are unavailable on this screen.</span>
+      <span>{tab === 'Salary Records' ? 'Salary creation requires a backend save API. Existing salary records are shown below.' : tab === 'Payslips' ? 'Payslips are released only for paid records with a confirmed payment date that has arrived.' : 'Only saved payroll records are shown. Processing and payment actions require backend support.'}</span>
     </p>
 
     <section className="payroll-directory" aria-labelledby="payroll-directory-title">
@@ -71,6 +81,7 @@ export default function PayrollWorkspace() {
         <h2 id="payroll-directory-title">{tab === 'Payroll Processing' ? 'Payroll Directory' : tab}</h2>
       </header>
 
+      <label className="payroll-month">Payroll month<input type="month" aria-label="Payroll month" value={month} onChange={event=>{ if (event.target.value) { setMonth(event.target.value);setPage(1) } }} /></label>
       <FilterPanel
         className="payroll-filters"
         active={Boolean(type || status)}
@@ -109,7 +120,7 @@ export default function PayrollWorkspace() {
                 <td><span className="payroll-status">{display(row.status)}</span></td>
                 <td><div className="payroll-row-actions">
                   <button type="button" className="erp-btn erp-btn--secondary" onClick={() => setSelected(row)}>View payroll</button>
-                  {canHold && row.payrollRecordId && <button type="button" className="erp-btn erp-btn--secondary" disabled={busy || row.status === 'Paid'} onClick={() => { setHold(row); setReason(row.holdReason || '') }}>Place hold</button>}
+                  {tab === 'Payroll Processing' && canHold && row.payrollRecordId && <button type="button" className="erp-btn erp-btn--secondary" disabled={busy || row.status === 'Paid'} onClick={() => { setHold(row); setReason(row.holdReason || '') }}>Place hold</button>}
                 </div></td>
               </tr>)}</tbody>
             </table>
@@ -118,7 +129,7 @@ export default function PayrollWorkspace() {
         </> : !error && <div className="payroll-empty">
           <FiUsers aria-hidden="true" />
           <h3>{query || type || status ? 'No matching records' : 'No payroll records'}</h3>
-          <p>{query || type || status ? 'Try a different search or filter.' : 'No payroll records returned for this college and month.'}</p>
+          <p>{query || type || status ? 'Try a different search or filter.' : tab === 'Payslips' ? 'No released payslips for this college and month. Payment must be confirmed and its date must have arrived.' : 'No payroll records returned for this college and month.'}</p>
         </div>}
     </section>
     {selected && <ViewDialog title="Payroll details" subtitle={selected.fullName} onClose={()=>setSelected(null)} showExport={false} footerActions={<button onClick={()=>window.print()}>Print / Save PDF</button>}><dl className="view-modal-fields">{details.map(([label,value])=><div className="view-modal-field" key={label}><dt className="view-modal-label">{label}</dt><dd className="view-modal-value">{display(value)}</dd></div>)}</dl></ViewDialog>}

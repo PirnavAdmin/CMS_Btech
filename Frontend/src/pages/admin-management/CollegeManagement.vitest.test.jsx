@@ -337,6 +337,8 @@ test('minimum college setup skips optional sections, persists, and recalculates 
   await waitFor(() => expect(score()).toBe(initial), { timeout: 3500 })
 }, 20000)
 
+test('college account cannot open creation despite a create permission grant',async()=>{fixture.access={isSuperAdmin:false,isCollegeAdmin:true,primaryCollegeId:7,collegeId:7,permissions:{colleges:{view:true,create:true,edit:true}}};mount('/college-institution-management/add');expect(await screen.findByText(/Only the platform Super Admin/)).toBeTruthy();expect(createCollege).not.toHaveBeenCalled();expect(screen.queryByLabelText(/^College Name/)).toBeNull();});
+
 test('conditional rendering of college type other in add, edit and review forms', async () => {
   mount('/college-institution-management/add')
   const nameInput = screen.getByLabelText(/^College Name/)

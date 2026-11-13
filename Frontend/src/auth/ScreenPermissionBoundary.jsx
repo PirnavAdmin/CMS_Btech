@@ -21,12 +21,13 @@ export default function ScreenPermissionBoundary({ children }) {
       <p role="status">Loading page data…</p>
     </section>
   </main>)
-  if (error) return (
+  const settingsContextError = pathname.replace(/\/$/, '') === '/settings' ? academic?.error : null
+  if (error || settingsContextError) return (
     shell(<main className="workspace-unavailable">
       <h1>{page?.label || 'Workspace'}</h1>
       <section className="workspace-unavailable__data" aria-label="Page data">
-        <p role="status">Data is temporarily unavailable. Please try again.</p>
-        <button type="button" aria-label={academic ? undefined : 'Retry account access'} onClick={retry}>Retry</button>
+        <p role="status">{settingsContextError || 'Data is temporarily unavailable. Please try again.'}</p>
+        <button type="button" aria-label={academic ? undefined : 'Retry account access'} onClick={settingsContextError ? academic.refreshHierarchy : retry}>Retry</button>
       </section>
     </main>)
   )

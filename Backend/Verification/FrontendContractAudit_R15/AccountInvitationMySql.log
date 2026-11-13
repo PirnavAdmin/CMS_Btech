@@ -1,1 +1,0 @@
-PASS: real MySQL onboarding transactions, shared setup service, exact recipient, password/replay checks, failed-token invalidation, resend and inactive rejection. Existing/pending reset-password action and college scope are checked. SMTP delivery was mocked; no inbox acceptance is claimed.

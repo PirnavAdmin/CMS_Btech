@@ -10,9 +10,10 @@ test('only backend-confirmed Super Admin has platform college scope', () => {
  assert.equal(canSelectCollege({ isSuperAdmin: true }, 'invalid'), false)
  assert.equal(canSelectCollege(null, '7'), false)
 })
-test('College Admin mappings are explicit and other roles remain at their primary college', () => {
+test('college accounts remain at their authoritative primary college', () => {
  const account = { primaryCollegeId: 7, mappedCollegeIds: [8, '8', 9, 0], isCollegeAdmin: true }
- assert.deepEqual(authorizedCollegeIds(account), ['7', '8', '9'])
+ assert.deepEqual(authorizedCollegeIds(account), ['7'])
+ assert.equal(canSelectCollege(account, '8'), false)
  assert.equal(canSelectCollege(account, '10'), false)
  assert.deepEqual(authorizedCollegeIds({ ...account, isCollegeAdmin: false }), ['7'])
  assert.deepEqual(authorizedCollegeIds({ primaryCollegeId: null, collegeId: null }, '7'), [])
@@ -47,3 +48,5 @@ test('obvious create/edit deep links use existing action permissions without cha
  assert.equal(requiredActionForScreen('/marks-management/edit-marks'), 'edit')
  assert.equal(requiredActionForScreen('/fees/structures/7/view'), 'view')
 })
+
+test('college creation and onboarding deep links require server-confirmed platform access',()=>{ const permissions={colleges:{view:true,create:true},roles_permissions:{view:true,create:true}}; assert.equal(canViewScreen('/college-institution-management/add','admin',permissions,{isCollegeAdmin:true}),false); assert.equal(canViewScreen('/client-onboarding','admin',permissions,{isCollegeAdmin:true}),false); assert.equal(canViewScreen('/college-institution-management/add','admin',permissions,{isSuperAdmin:true}),true); assert.equal(canViewScreen('/college-profile','admin',permissions,{isCollegeAdmin:true}),true); });

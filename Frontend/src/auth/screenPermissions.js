@@ -67,10 +67,12 @@ export function permissionModuleForScreen(path) {
 }
 export function canViewScreen(path, role, permissions = {}, access = {}) {
   if (!['admin', 'faculty', 'student', 'staff'].includes(role)) return false
+  if (/^\/college-institution-management\/add\/?$/.test(String(path).split(/[?#]/)[0]) && access.isSuperAdmin !== true) return false
+  if (path.startsWith('/client-onboarding') && access.isSuperAdmin !== true) return false
   if (isPersonalWorkspace(path, role)) return true
   // Own-profile access is necessary for the existing first-login completion flow.
   if (path === '/my-profile') return true
-  if (role === 'admin' && /^\/(?:settings(?:\/academic-context)?|global-settings)\/?$/.test(path)) {
+  if (role === 'admin' && /^\/(?:settings(?:\/.*)?|global-settings)\/?$/.test(path)) {
     return ['academic_settings', 'colleges', 'academic_years'].some(module => hasModuleAction({ ...access, permissions }, module))
   }
   const portal = path.match(/^\/(faculty|student|staff)-portal(?:\/([^/]+))?\/?$/)
@@ -82,6 +84,8 @@ export function canViewScreen(path, role, permissions = {}, access = {}) {
 
 export function requiredActionForScreen(path) {
   const pathname = String(path || '').split(/[?#]/)[0]
+  // The number-series edit route is read-only until a supported configuration API exists.
+  if (/^\/settings\/number-series\/[^/]+\/edit\/?$/.test(pathname)) return 'view'
   if (/\/(?:create(?:-[^/]+)?|add|new)(?:\/|$)/.test(pathname)) return 'create'
   if (/\/(?:edit(?:-[^/]+)?)(?:\/|$)/.test(pathname)) return 'edit'
   return 'view'

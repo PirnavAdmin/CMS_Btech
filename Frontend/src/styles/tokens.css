@@ -6,8 +6,8 @@
   --tint: color-mix(in srgb, var(--theme-color) 78%, #667386);
   --cms-bg: color-mix(in srgb, var(--tint) 10%, #F8F9FC);
   --cms-main: color-mix(in srgb, var(--tint) 17%, #F4F6F9);
-  --cms-header: color-mix(in srgb, var(--tint) 24%, #F1F4F8);
-  --cms-sidebar: color-mix(in srgb, var(--tint) 31%, #EFF2F6);
+  --cms-header: color-mix(in srgb, var(--cms-main) 88%, var(--cms-text));
+  --cms-sidebar: color-mix(in srgb, var(--cms-main) 82%, var(--cms-text));
   --cms-surface: color-mix(in srgb, var(--tint) 8%, #FFFFFF);
   --cms-secondary: color-mix(in srgb, var(--tint) 13%, #FAFBFD);
   --cms-subtle: color-mix(in srgb, var(--tint) 19%, #F5F7FA);
@@ -44,8 +44,8 @@
   color-scheme: dark;
   --cms-bg: color-mix(in srgb, var(--tint) 7%, #0D1018);
   --cms-main: color-mix(in srgb, var(--tint) 11%, #111621);
-  --cms-header: color-mix(in srgb, var(--tint) 19%, #151B27);
-  --cms-sidebar: color-mix(in srgb, var(--tint) 15%, #101623);
+  --cms-header: color-mix(in srgb, var(--cms-main) 78%, #000000);
+  --cms-sidebar: color-mix(in srgb, var(--cms-main) 68%, #000000);
   --cms-surface: color-mix(in srgb, var(--tint) 15%, #141B28);
   --cms-secondary: color-mix(in srgb, var(--tint) 18%, #181F2E);
   --cms-subtle: color-mix(in srgb, var(--tint) 21%, #1A2231);

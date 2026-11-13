@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
-import PayrollWorkspace from '../pages/faculty/PayrollWorkspace'
+import PayrollWorkspace, { payslipReleased } from '../pages/faculty/PayrollWorkspace'
 import { facultyPayrollApi } from '../api/apiEndpoints'
 const scope=vi.hoisted(()=>({selectedCollegeId:'7',scopeRecords:rows=>rows.filter(row=>row.collegeId===7)}))
 vi.mock('../layouts/DashboardLayout',()=>({default:({children})=>children}))
@@ -11,7 +11,7 @@ vi.mock('../api/apiEndpoints',()=>({facultyPayrollApi:{getAll:vi.fn(),getSalaryR
 beforeEach(()=>{vi.clearAllMocks();facultyPayrollApi.getAll.mockResolvedValue([{id:9,payrollId:21,employeeId:'FAC009',fullName:'Faculty One',grossSalary:null,netSalary:null,status:'Draft'},{id:10,payrollId:22,employeeId:'FAC010',fullName:'Other College',netSalary:50000}])})
 afterEach(cleanup)
 test('payroll uses server values and excludes other college records without invented salary',async()=>{
- render(<PayrollWorkspace/>);await screen.findByText('Faculty One');expect(screen.queryByText('Other College')).toBeNull();expect(screen.getAllByText('Unavailable').length).toBeGreaterThan(1);expect(screen.getByText(/Salary configuration, processing/)).toBeTruthy();expect(screen.queryByRole('button',{name:/Process payroll/})).toBeNull()
+ render(<PayrollWorkspace/>);await screen.findByText('Faculty One');expect(screen.queryByText('Other College')).toBeNull();expect(screen.getAllByText('Unavailable').length).toBeGreaterThan(1);expect(screen.getByText(/Only saved payroll records/)).toBeTruthy();expect(screen.queryByRole('button',{name:/Process payroll/})).toBeNull()
 })
 test('failed hold retains dialog and reason; retry uses actual payroll identity',async()=>{
  facultyPayrollApi.hold.mockRejectedValueOnce(new Error('Hold denied')).mockResolvedValue({})
@@ -20,3 +20,23 @@ test('failed hold retains dialog and reason; retry uses actual payroll identity'
 test('payroll failure provides retry without fallback records',async()=>{
  facultyPayrollApi.getAll.mockRejectedValueOnce(new Error('Payroll offline'));render(<PayrollWorkspace/>);await screen.findByRole('alert');expect(screen.queryByText('Faculty One')).toBeNull();fireEvent.click(screen.getByRole('button',{name:'Retry payroll'}));await screen.findByText('Faculty One')
 })
+
+
+test('payslip release requires payment, a valid payment date and arrival of payday',()=>{
+ const now=new Date('2026-11-11T12:00:00');
+ expect(payslipReleased({status:'Draft',payDate:'2026-11-01'},now)).toBe(false);
+ expect(payslipReleased({status:'Processed',payDate:'2026-11-01'},now)).toBe(false);
+ expect(payslipReleased({status:'Paid'},now)).toBe(false);
+ expect(payslipReleased({status:'Paid',payDate:'invalid'},now)).toBe(false);
+ expect(payslipReleased({status:'Paid',payDate:'2026-11-12'},now)).toBe(false);
+ expect(payslipReleased({status:'Paid',payDate:'2026-11-11'},now)).toBe(true);
+});
+
+test('payslips exclude unpaid records and records without confirmed payment dates',async()=>{
+ facultyPayrollApi.getPayslips.mockResolvedValue([{id:21,employeeId:'FAC009',fullName:'Unpaid salary',status:'Draft'},{id:22,employeeId:'FAC009',fullName:'Missing date',status:'Paid'},{id:23,employeeId:'FAC009',fullName:'Released salary',status:'Paid',paymentDate:'2020-01-01'}]);
+ render(<PayrollWorkspace/>);await screen.findByText('Faculty One');fireEvent.click(screen.getByRole('button',{name:'Payslips'}));await screen.findByText('Released salary');expect(screen.queryByText('Unpaid salary')).toBeNull();expect(screen.queryByText('Missing date')).toBeNull();expect(screen.queryByRole('button',{name:'Place hold'})).toBeNull();
+});
+
+test('processing excludes directory members without a saved payroll ID',async()=>{
+ facultyPayrollApi.getAll.mockResolvedValue([{id:9,employeeId:'FAC009',fullName:'Not created',status:null}]);render(<PayrollWorkspace/>);await screen.findByText('No payroll records');expect(screen.queryByText('Not created')).toBeNull();
+});

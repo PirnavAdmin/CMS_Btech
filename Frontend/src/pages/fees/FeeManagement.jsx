@@ -1,3 +1,4 @@
+import { studentFeeAccounts, semesterFeeGroups, sumFeeRows, feePrincipalBalance } from '../../utils/studentFeeAccounts'
 import { calculateCompletion, completionSchemas } from '../../utils/recordCompletion'
 import { CompletionIndicator, CompletionSummary, ResumeSetupAction } from '../../components/RecordCompletion'
 import { updateAcademicFeeDraft } from '../../services/academicFeeDraftUpdate'
@@ -142,7 +143,7 @@ function FeeBreakdownEditor({ category, rows, onChange, total, frequency = "Year
   const academic = category === 'Academic';
   const academicHeads = [...new Set([...(academicSuggestionsOnly ? [] : ['Tuition Fee', 'Admission Fee', 'Examination Fee', 'Library Fee', 'Laboratory Fee', 'Development Fee', 'Registration Fee', 'Sports Fee', 'Student Activity Fee', 'Caution Deposit']), ...rows.map(head => head.name), ...suggestions.map(head => head.name)].filter(Boolean))];
   const hostel = category === 'Hostel';
-  const hostelHeads = [...new Set(['Hostel Accommodation Fee', 'Mess Fee', 'Hostel Admission Fee', 'Security Deposit', 'Laundry Fee', 'Electricity Charges', 'Water Charges', ...rows.map(head => head.name).filter(Boolean), ...suggestions.map(head => head.name).filter(Boolean)])];
+  const hostelHeads = [...new Set(['Hostel Accommodation Fee', 'Hostel Admission Fee', 'Security Deposit', 'Laundry Fee', 'Electricity Charges', 'Water Charges', ...rows.map(head => head.name).filter(Boolean), ...suggestions.map(head => head.name).filter(Boolean)])];
   const feeHeadOptions = hostel ? hostelHeads : academicHeads;
   const transport = category === 'Transport';
   const itemLabel = transport ? 'Transport charge' : hostel ? 'Hostel charge' : 'Fee head';
@@ -450,6 +451,7 @@ export const FeeStructureWizardModule = (() => {
     totalRow,
     className = "",
     wrapClassName = "",
+    keepTable = false,
   }) {
     const [page, setPage] = useState(1);
     const signature = rows.map(rowKey).join("|");
@@ -458,7 +460,7 @@ export const FeeStructureWizardModule = (() => {
       current = Math.min(page, pages);
     return (
       <FeeRequestState loading={loading} error={error}>
-        {rows.length ? (
+        {rows.length || keepTable ? (
           <>
             <div className={`fm-table-wrap ${wrapClassName}`.trim()}>
               <table className={`fm-table ${className}`.trim()}>
@@ -478,6 +480,7 @@ export const FeeStructureWizardModule = (() => {
                   </tr>
                 </thead>
                 <tbody>
+                  {!rows.length && <tr><td colSpan={columns.length}>{empty}</td></tr>}
                   {rows
                     .slice((current - 1) * pageSize, current * pageSize)
                     .map((row, n) => (
@@ -485,6 +488,7 @@ export const FeeStructureWizardModule = (() => {
                         {columns.map((c, i) => (
                           <td
                             key={i}
+                            data-label={typeof c.label === "string" ? c.label : undefined}
                             className={c.align === "right" ? "fm-text-right" : undefined}
                           >
                             {c.render
@@ -746,7 +750,7 @@ export const FeeStructureWizardModule = (() => {
     const [courseBranchLookup, setCourseBranchLookup] = useState({ courseId: "", rows: [], loading: false });
     const [semesterLookup, setSemesterLookup] = useState({ scope: "", rows: [], loading: false });
     const formTabId = useId();
-    const formTabs = [["applicability", "Academic Scope"], ["breakdown", "Fee Breakdown & Applicability"], ["schedule", "Payment Schedule, Review & Save"]];
+    const formTabs = [["applicability", "Academic Configuration"], ["breakdown", "Quota Fees"], ["schedule", "Payment Schedule"], ["review", "Review & Save"]];
 
     useEffect(() => {
       if (legacyLocalEdit) { setPlansLoaded(true); return undefined; }
@@ -759,7 +763,7 @@ export const FeeStructureWizardModule = (() => {
         collegeId ? loadAcademicPlans(collegeId) : Promise.resolve([]),
       ]).then(([categories, plans]) => {
         if (!active) return;
-        setFeeCategories(categories.status === 'fulfilled' && Array.isArray(categories.value) ? categories.value : []);
+        setFeeCategories(categories.status === 'fulfilled' && Array.isArray(categories.value) ? categories.value.filter(academicFeeComponent) : []);
         setServerPlans(plans.status === 'fulfilled' && Array.isArray(plans.value) ? plans.value : []);
         setPlansLoaded(plans.status === 'fulfilled');
         const failures = [categories, plans].filter(result => result.status === 'rejected');
@@ -888,10 +892,12 @@ export const FeeStructureWizardModule = (() => {
     const quotaValues = [...new Set([...serverPlans.map(row => row.quota), ...scopedStudents.map(row => row.admissionQuota ?? row.quota ?? row.academic?.quota ?? row.admission?.quota)]
       .filter(value => value && !["other", "others"].includes(String(value).trim().toLowerCase())))];
     const studentCategoryValues = [...new Set([...serverPlans.map(row => row.studentCategory), ...scopedStudents.map(row => row.studentCategory ?? row.academic?.studentCategory ?? row.admission?.studentCategory)].filter(Boolean))];
-    const defaultHeads = headsFor(configurations[0]);
+    const editingConfig = configurations.find(row => row.id === previewConfigId) || configurations[0];
+    const defaultHeads = headsFor(editingConfig);
+    
     const setDefaultHeads = rows => {
       const keys = new Set(rows.map(row => String(row.masterId || row.id || row.name)));
-      setConfigurations(current => current.map((config, index) => ({ ...config, components: structuredClone(rows), overrides: index ? Object.fromEntries(Object.entries(config.overrides || {}).filter(([key]) => keys.has(key))) : {} })));
+      setConfigurations(current => current.map(config => config.id === editingConfig.id ? { ...config, components: structuredClone(rows), overrides: Object.fromEntries(Object.entries(config.overrides || {}).filter(([key]) => keys.has(key))) } : config));
       const primary = rows[0];
       set(current => ({ ...current, feeCategoryId: primary?.masterId || current.feeCategoryId || "" }));
       setError("");
@@ -947,6 +953,29 @@ export const FeeStructureWizardModule = (() => {
           (!semesterYearId || String(semesterYearId) === String(s.academicYearId));
       }
     );
+    // Derive the API mapping from saved cohort records or the current schedule.
+    useEffect(() => {
+      if (!legacyLocalEdit || !s.branchId || !s.batch || semesterLookup.loading) return;
+      const read = (row, ...keys) => Object.entries(row || {}).find(([key, value]) => value != null && keys.some(name => key.replaceAll('_', '').toLowerCase() === name.toLowerCase()))?.[1];
+      const cohort = (students || []).filter(row =>
+        String(collegeScopeModule.collegeField(row, 'course')) === String(s.courseId) &&
+        String(collegeScopeModule.collegeField(row, 'branch')) === String(s.branchId) &&
+        String(row.batch ?? row.admissionBatch ?? row.batchName ?? row.admission?.batch ?? '') === String(s.batch));
+      const ids = [...new Set(cohort.map(row => read(row, 'currentSemesterId', 'semesterId')).filter(Boolean).map(String))];
+      const today = new Date();
+      const date = [today.getFullYear(), String(today.getMonth() + 1).padStart(2, '0'), String(today.getDate()).padStart(2, '0')].join('-');
+      const dated = semesters.filter(row => {
+        const from = String(read(row, 'startDate', 'semesterStartDate') || '').slice(0, 10);
+        const to = String(read(row, 'endDate', 'semesterEndDate') || '').slice(0, 10);
+        return from && to && from <= date && date <= to;
+      });
+      const marked = semesters.filter(row => read(row, 'isCurrent', 'isCurrentSemester') === true);
+      const semesterId = ids.length === 1 && semesters.some(row => String(row.id) === ids[0]) ? ids[0]
+        : dated.length === 1 ? String(dated[0].id)
+        : marked.length === 1 ? String(marked[0].id)
+        : semesters.length === 1 ? String(semesters[0].id) : '';
+      if (semesterId) set(current => String(current.semesterId) === semesterId ? current : { ...current, semesterId });
+    }, [s.courseId, s.branchId, s.batch, semesterLookup.loading, students, semesters]);
     // Admissions creates a batch from the selected academic year and course,
     // so a new cohort must be selectable before students or fee plans exist.
     // Keep persisted batches for legacy cohorts, but scope them to this year.
@@ -1031,14 +1060,15 @@ export const FeeStructureWizardModule = (() => {
         }
         return "";
       }
-      if (s.cycle !== "Semester-wise") return "Annual applicability cannot be represented without a semester-specific record by the current API.";
-      if (!semesters.some(row => String(row.id) === String(s.semesterId))) return "Select a valid applicable semester in Academic Scope.";
+      
+      
       if (!plansLoaded) return "Existing fee plans are still loading. Wait a moment and retry.";
 
       if (step === "applicability") return "";
-      if (!configurations.length) return "Add at least one quota / category configuration.";
+      if (!configurations.length) return "Add at least one quota fee.";
       const keys = new Set();
       for (const config of configurations) {
+        if (quotaValues.length && !quotaValues.includes(config.quota)) return "Select an existing admission quota for each fee breakdown.";
         if (config.quota.length > 100 || config.studentCategory.length > 100) return "Quota and category must be at most 100 characters.";
         const key = `${config.quota.trim().toLocaleLowerCase()}|${config.studentCategory.trim().toLocaleLowerCase()}`;
         if (keys.has(key)) return `Duplicate quota / category combination: ${config.quota} + ${config.studentCategory}.`;
@@ -1059,7 +1089,7 @@ export const FeeStructureWizardModule = (() => {
       if (Number(s.discount || 0) > 0) return "The current academic fee-plan API does not support concession amounts. Remove the concession before saving.";
       for (const config of configurations) {
         if (!headsFor(config).length) return "Add at least one fee head for every quota / category configuration.";
-        const headError = feeHeadsError(headsFor(config));
+        const headError = headsFor(config).some(head => head.amount === "" || head.amount == null || !Number.isFinite(Number(head.amount)) || Number(head.amount) < 0 || Number(head.amount) > 100000000 || Math.abs(Number(head.amount) * 100 - cents(head.amount)) > 0.00001) ? "Enter nonnegative fee amounts with at most two decimal places." : "";
         if (headError) return headError;
         const amount = totalFor(config);
         if (!Number.isFinite(amount) || amount <= 0) return `Enter a positive total fee for ${config.quota} + ${config.studentCategory}.`;
@@ -1156,8 +1186,8 @@ export const FeeStructureWizardModule = (() => {
                 : schedule.installments.map((row, installmentIndex) => ({ number: installmentIndex + 1, dueDate: row.dueDate, amount: Number(row.amount) }));
               const body = {
                 collegeId: Number(collegeId), code, name: `${planNameBase} · ${config.quota} · ${config.studentCategory}`.slice(0, 150),
-                academicYearId: Number(s.academicYearId), courseId: Number(s.courseId), branchId: Number(s.branchId), semesterId: Number(s.semesterId),
-                feeCategoryId: Number(s.feeCategoryId), batch: s.batch.trim(), quota: config.quota.trim(), studentCategory: config.studentCategory.trim(),
+                academicYearId: Number(s.academicYearId), courseId: Number(s.courseId), branchId: Number(s.branchId), semesterId: null,
+                feeCategoryId: Number(headsFor(config)[0]?.masterId || s.feeCategoryId), batch: s.batch.trim(), quota: config.quota.trim(), studentCategory: config.studentCategory.trim(),
                 cycle: s.cycle === "Semester-wise" ? "SEMESTER" : "ANNUAL", paymentMode: schedule.plan === "Installment Plan" ? "INSTALLMENTS" : "FULL_PAYMENT", currencyCode: "INR",
                 effectiveFrom: s.effectiveFrom, effectiveTo: s.effectiveTo, dueDate: schedule.plan === "Full Payment" ? schedule.dueDate : installmentRows.at(-1)?.dueDate,
                 totalAmount: configTotal.toFixed(2),
@@ -1190,6 +1220,7 @@ export const FeeStructureWizardModule = (() => {
         if (failed.length) { const reason = new Error(`${failed.length} of ${configurations.length} fee configurations failed. Successful records are listed below; retry to continue without recreating them.`); reason.saveResults = results; throw reason; }
         setPendingStatus(targetStatus);
         setSubmissionComplete(true);
+        await save({ ...s, ...payloadNames() }, targetStatus, configurations, configurations.map(config => completedSavesRef.current[config.id]).filter(Boolean));
       }
       catch (reason) {
         if (reason.saveResults) setSaveResults(reason.saveResults);
@@ -1216,11 +1247,11 @@ export const FeeStructureWizardModule = (() => {
       <SharedFeeDialog
         title={s.id ? "Edit Academic Fee Plan" : "Create Academic Fee Plan"}
         subtitle="Set charges and payment dates for a course, branch and batch."
-        onClose={close}
+        onClose={() => { if (submissionComplete || window.confirm('Discard unsaved fee plan changes?')) close(); }}
         busy={saving}
         showExport={false}
         hideFooter
-        maxWidth="1000px"
+        maxWidth="1200px"
         className="fm-plan-editor-dialog fm-academic-plan-editor"
       >
         <div className="fm-create-layout" data-without-live-preview="true">
@@ -1247,7 +1278,7 @@ export const FeeStructureWizardModule = (() => {
         <div className="fm-create-form-body" ref={formBodyRef}>
           {/* SECTION 1: Who should pay this fee? */}
           <section className="fm-form-section" hidden={formTab !== "applicability"} role="tabpanel" id={formTabId + "-panel-applicability"} aria-labelledby={formTabId + "-tab-applicability"} tabIndex={0}>
-            <FeeSectionHeading number="01" title="Academic Scope" description="Choose the program, branch, batch and semester." />
+            <FeeSectionHeading number="01" title="Academic Scope" description="Choose the program, branch and admission batch." />
 
             <div className="fm-form-grid fm-applicability-grid">
               <FeeSelect
@@ -1278,12 +1309,11 @@ export const FeeStructureWizardModule = (() => {
                 onChange={(batch) => patch({ batch })}
               />
 
-              <FeeSelect label="Applicable Semester *" disabled={!s.branchId || !s.batch || semesterLookup.loading || !semesters.length} value={s.semesterId || ""} options={[{ id: "", name: "Select Semester" }, ...semesters]} onChange={semesterId => patch({ semesterId })} />
-              <FeeSelect label="Fee Applicability Period *" value={s.cycle} options={legacyLocalEdit ? [{ id: "Yearly", name: "Annual" }, { id: "Semester-wise", name: "Semester" }] : [{ id: "Semester-wise", name: "Semester" }]} onChange={cycle => patch({ cycle })} />
+              <FeeSelect label="Fee Applicability Period *" value={s.cycle} options={legacyLocalEdit ? [{ id: "Yearly", name: "Annual" }, { id: "Semester-wise", name: "Semester" }] : [{ id: "Yearly", name: "Annual" }, { id: "Semester-wise", name: "Semester" }]} onChange={cycle => patch({ cycle })} />
               <FeeInput label="Fee Plan Name *" value={s.name || ""} maxLength={100} placeholder="Suggested from academic details" onChange={name => { setNameEdited(Boolean(name)); patch({ name }); }} />
 
             </div>
-            <p className="fm-contract-note" role="note">Annual applicability and year-of-study scope are unavailable: the fee-plan API matches a single semester. Configure payment installments in Step 3.</p>
+            <p className="fm-contract-note" role="note">The fee plan applies to the selected program, branch and admission batch. Configure payment installments in Step 3.</p>
             {academicContext.loading && <p role="status">Loading academic options…</p>}
             {academicContext.error && <p role="alert" className="fm-error-banner">{academicContext.error}</p>}
             {!academicContext.loading && <p className="fm-scope-status" role="status">{!masters.years.length ? "No active academic years for this college." : s.academicYearId && !masters.courses.length ? "No courses available." : s.courseId && !courseBranchLookup.loading && !branches.length ? "No branches found for this course in the selected college." : s.branchId && plansLoaded && !batches.length ? "No admission batch is available for this course and branch yet." : s.branchId && !semesterLookup.loading && !semesters.length ? "No semester is configured for this course, branch, and academic year." : ""}</p>}
@@ -1292,8 +1322,15 @@ export const FeeStructureWizardModule = (() => {
 
           {/* SECTION 2: What should they pay? */}
           <section className="fm-form-section" hidden={formTab !== "breakdown"} role="tabpanel" id={formTabId + "-panel-breakdown"} aria-labelledby={formTabId + "-tab-breakdown"} tabIndex={0}>
-            <FeeSectionHeading number="02" title="Academic Fee Breakdown" description="Configure fee components and amounts separately from student eligibility." />
+            <FeeSectionHeading number="02" title="Academic Fee Breakdown" description="Select an admission quota and category, then set its academic fees." />
             {legacyLocalEdit ? <FeeBreakdownEditor academicSuggestionsOnly category="Academic" frequency={s.cycle} rows={s.components} onChange={components => patch({ components })} total={total} suggestions={components.filter(head => head.status === "Active" && academicFeeComponent(head))} /> : <>
+              <div className="fm-form-grid">
+                <FeeSelect label="Admission Quota" value={editingConfig?.quota || ''} options={[{id:'',name:quotaValues.length ? 'Select admission quota' : 'No quotas configured'}, ...quotaValues.map(quota => ({id:quota,name:quota}))]} onChange={quota => configPatch(editingConfig.id,{quota})} />
+                <FeeSelect label="Student Category" value={editingConfig?.studentCategory || ''} options={[{id:'',name:'Not specified'}, ...studentCategoryValues.map(category => ({id:category,name:category}))]} onChange={studentCategory => configPatch(editingConfig.id,{studentCategory})} />
+              </div>
+              {duplicateConfig(editingConfig) && <p role="alert" className="fm-config-validation">This quota and category already has a fee breakdown.</p>}
+              {!quotaValues.length && <p role="status">No admission quotas are available yet. Add admission quota data before configuring quota-specific fees.</p>}
+
               <div className="fm-component-toolbar">
                 <FeeSelect label="Fee Type" value={selectedFeeType} options={[{ id: "", name: "Select configured fee type" }, ...feeCategories.map(row => ({ id: String(row.id), name: row.name }))]} onChange={setSelectedFeeType} disabled={!plansLoaded || !feeCategories.length} />
                 <button type="button" className="erp-btn erp-btn--secondary" disabled={!selectedFeeType} onClick={addFeeComponent}><FiPlus /> Add Component</button>
@@ -1301,21 +1338,14 @@ export const FeeStructureWizardModule = (() => {
               </div>
               {!feeCategories.length && plansLoaded && <p role="status">No configured fee types. Add a fee type before creating a plan.</p>}
               <div className="fm-matrix-scroll"><table className="fm-table" aria-label="Fee components"><thead><tr><th>Fee Type</th><th>Fee Amount</th><th>Actions</th></tr></thead><tbody>
-                {defaultHeads.length ? defaultHeads.map((head, index) => <tr key={head.masterId || index}><td>{head.name}</td><td><input aria-label={head.name + ' amount'} type="number" min="0.01" step="0.01" value={head.amount} onChange={event => setDefaultHeads(defaultHeads.map((row, i) => i === index ? { ...row, amount: event.target.value } : row))} /></td><td><button type="button" className="erp-btn erp-btn--secondary" aria-label={'Remove ' + head.name} onClick={() => setDefaultHeads(defaultHeads.filter((_, i) => i !== index))}>Remove</button></td></tr>) : <tr><td colSpan={3}>Add configured fee types to build the breakdown.</td></tr>}
-              </tbody><tfoot><tr><th scope="row">Default Total</th><td colSpan={2}><strong>{feeMoney(total)}</strong></td></tr></tfoot></table></div>
-              <h3 className="fm-matrix-title">Quota &amp; Category Applicability</h3>
-              <p className="fm-contract-note">Copy default amounts for a saved quota/category combination, then edit its amounts. Each combination is saved as a separate fee plan.</p>
-              <div className="fm-matrix-scroll"><table className="fm-table" aria-label="Quota and category applicability"><thead><tr><th>Admission Quota</th><th>Student Category</th>{defaultHeads.map((head, index) => <th key={head.masterId || index}>{head.name}</th>)}<th>Total</th><th>Actions</th></tr></thead><tbody>
-                {configurations.map((config, index) => <tr key={config.id}>
-                  <td><FeeSelect label={'Admission Quota ' + (index + 1)} value={config.quota} options={[{ id: '', name: 'All quotas' }, ...[...new Set([...quotaValues, config.quota].filter(Boolean))].map(quota => ({ id: quota, name: quota }))]} onChange={quota => configPatch(config.id, { quota })} /></td>
-                  <td><FeeSelect label={'Student Category ' + (index + 1)} value={config.studentCategory} options={[{ id: '', name: 'All categories' }, ...[...new Set([...studentCategoryValues, config.studentCategory].filter(Boolean))].map(category => ({ id: category, name: category }))]} onChange={studentCategory => configPatch(config.id, { studentCategory })} /></td>
-                  {defaultHeads.map((head, i) => <td key={head.masterId || i}>{index === 0 ? feeMoney(configAmount(config, head)) : <input aria-label={head.name + ' override ' + (index + 1)} type="number" min="0.01" step="0.01" value={config.overrides?.[head.masterId || head.id || head.name] ?? head.amount} onChange={event => configPatch(config.id, { overrides: { ...config.overrides, [head.masterId || head.id || head.name]: event.target.value } })} />}</td>)}
-                  <td><strong>{feeMoney(totalFor(config))}</strong>{duplicateConfig(config) && <span className="fm-config-validation" role="alert">Duplicate quota/category combination.</span>}</td>
-                  <td><div className="fm-matrix-actions"><button type="button" className="erp-btn erp-btn--secondary" onClick={() => setConfigurations(current => [...current, { ...configurations[0], id: uid('CFG'), components: structuredClone(defaultHeads), overrides: {}, schedule: null }])}>Copy Default</button>{index > 0 && <button type="button" className="erp-btn erp-btn--secondary" onClick={() => setConfigurations(current => current.filter(row => row.id !== config.id))}>Remove</button>}</div></td>
-                </tr>)}
+                {defaultHeads.length ? defaultHeads.map((head, index) => <tr key={head.masterId || index}><td>{head.name}</td><td><input aria-label={head.name + ' amount'} type="number" min="0" step="0.01" value={head.amount} onChange={event => setDefaultHeads(defaultHeads.map((row, i) => i === index ? { ...row, amount: event.target.value } : row))} /></td><td><button type="button" className="erp-btn erp-btn--secondary" aria-label={'Remove ' + head.name} onClick={() => setDefaultHeads(defaultHeads.filter((_, i) => i !== index))}>Remove</button></td></tr>) : <tr><td colSpan={3}>Add configured fee types to build the breakdown.</td></tr>}
+              </tbody><tfoot><tr><th scope="row">Academic Fee Total</th><td colSpan={2}><strong>{feeMoney(totalFor(editingConfig))}</strong></td></tr></tfoot></table></div>
+              <h3 className="fm-matrix-title">Quota Fee Summary</h3>
+              <div className="fm-matrix-scroll"><table className="fm-table" aria-label="Quota fee summary"><thead><tr><th>Admission Quota</th><th>Student Category</th><th>Academic Fee</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+                {configurations.map(config => <tr key={config.id}><td>{config.quota || 'Not selected'}</td><td>{config.studentCategory || 'Not specified'}</td><td>{feeMoney(totalFor(config))}</td><td>{duplicateConfig(config) ? 'Duplicate combination' : headsFor(config).length ? 'Configured' : 'Incomplete'}</td><td><div className="fm-matrix-actions"><button type="button" className="erp-btn erp-btn--secondary" onClick={() => { setPreviewConfigId(config.id); formBodyRef.current?.scrollTo({top:0,behavior:'smooth'}); }}>View Breakdown / Edit</button>{configurations.length > 1 && <button type="button" className="erp-btn erp-btn--secondary" onClick={() => setConfigurations(current => current.filter(row => row.id !== config.id))}>Remove</button>}</div></td></tr>)}
               </tbody></table></div>
-              {!quotaValues.length && !studentCategoryValues.length && <p className="fm-contract-note">No saved quota/category options were returned by admissions or fee plans. All students is available; this API has no dedicated quota/category master endpoint.</p>}
-              <p className="fm-contract-note">Optional fee flags and admission-type matching are unsupported. The first fee type supplies the required ledger category; all fee types and amounts are saved as components.</p>
+              <button type="button" className="erp-btn erp-btn--secondary" onClick={() => { const id = uid('CFG'); setConfigurations(current => [...current, { id, quota: '', studentCategory: '', components: [], overrides: {}, schedule: null }]); setPreviewConfigId(id); formBodyRef.current?.scrollTo({top:0,behavior:'smooth'}); }}>Add Quota Fee</button>
+
             </>}
           </section>
 
@@ -1342,7 +1372,7 @@ export const FeeStructureWizardModule = (() => {
               {advancedOpen ? <FiChevronDown /> : <FiChevronRight />}
             </button>
 
-            {(!legacyLocalEdit || value.workflowStructure) && <p className="fm-contract-note">Set the validity period for all payment due dates. Grace periods and late-fee rules are not supported by this API.</p>}
+            {(!legacyLocalEdit || value.workflowStructure) && <p className="fm-contract-note">Set the validity period for payment due dates.</p>}
             {advancedOpen && (
               <div className="fm-form-grid fm-advanced-content">
                 {legacyLocalEdit && !value.workflowStructure && <>
@@ -1404,11 +1434,11 @@ export const FeeStructureWizardModule = (() => {
               </div>
             )}
           </section>
-          <section className="fm-form-section fm-plan-final-review" hidden={formTab !== 'schedule'} aria-label="Fee plan review">
+          <section className="fm-form-section fm-plan-final-review" hidden={formTab !== 'review'} role="tabpanel" id={formTabId + "-panel-review"} aria-labelledby={formTabId + "-tab-review"} tabIndex={0} aria-label="Fee plan review">
             <div className="fm-review-heading"><h3>Review Fee Plan</h3><button type="button" className="erp-btn erp-btn--secondary" onClick={() => setFormTab('applicability')}>Edit Scope</button><button type="button" className="erp-btn erp-btn--secondary" onClick={() => setFormTab('breakdown')}>Edit Breakdown</button></div>
-            <dl className="fm-review-scope">{[['Academic Year', selectedYear?.name], ['Program', course?.name], ['Branch', selectedBranch?.name], ['Batch', s.batch], ['Semester', semesters.find(row => String(row.id) === String(s.semesterId))?.name], ['Status', submissionComplete ? saveResults.map(row => row.status).filter(Boolean).join(', ') : 'Draft until saved and submitted']].map(([label, text]) => <div key={label}><dt>{label}</dt><dd>{text || '—'}</dd></div>)}</dl>
+            <dl className="fm-review-scope">{[['Academic Year', selectedYear?.name], ['Program', course?.name], ['Branch', selectedBranch?.name], ['Batch', s.batch], ['Status', submissionComplete ? saveResults.map(row => row.status).filter(Boolean).join(', ') : 'Draft until saved and submitted']].map(([label, text]) => <div key={label}><dt>{label}</dt><dd>{text || '—'}</dd></div>)}</dl>
             {configurations.map((config, index) => { const schedule = config.schedule || s; const installments = schedule.plan === 'Full Payment' ? [{ number: 1, dueDate: schedule.dueDate, amount: totalFor(config) }] : schedule.installments.map((row, i) => ({ ...row, number: i + 1 })); return <div className="fm-review-combination" key={config.id}><h4>{config.quota || 'All quotas'} / {config.studentCategory || 'All categories'} — {feeMoney(totalFor(config))}</h4><p>{headsFor(config).map(head => head.name + ': ' + feeMoney(configAmount(config, head))).join(' · ')}</p><ol>{installments.map((row, i) => <li key={i}>Installment {row.number || i + 1} · {row.dueDate || 'Choose due date'} · {feeMoney(row.amount)}</li>)}</ol></div> })}
-            <p className="fm-contract-note">Installments are saved by number, due date and amount. Custom installment names and component-level allocation are not supported. Only published plans are available during Student Admission.</p>
+            <p className="fm-contract-note">Published plans are available for matching student admissions.</p>
           </section>
         </div>
 
@@ -1418,13 +1448,13 @@ export const FeeStructureWizardModule = (() => {
             type="button"
             className="erp-btn erp-btn--secondary"
             disabled={saving}
-            onClick={close}
+            onClick={() => { if (submissionComplete || window.confirm('Discard unsaved fee plan changes?')) close(); }}
           >
             Cancel
           </button>
           <div className="fm-footer-right">
-            {formTab !== 'applicability' && <button type="button" className="erp-btn erp-btn--secondary" onClick={() => setFormTab(formTab === 'schedule' ? 'breakdown' : 'applicability')}>Previous</button>}
-            {formTab !== 'schedule' && <button type="button" className="erp-btn erp-btn--primary" onClick={() => changeFormTab(formTab === 'applicability' ? 'breakdown' : 'schedule')}>Continue <FiChevronRight /></button>}
+            {formTab !== 'applicability' && <button type="button" className="erp-btn erp-btn--secondary" onClick={() => setFormTab(formTabs[Math.max(0, formTabs.findIndex(([key]) => key === formTab) - 1)][0])}>Previous</button>}
+            {formTab !== 'review' && <button type="button" className="erp-btn erp-btn--primary" onClick={() => changeFormTab(formTabs[Math.min(formTabs.length - 1, formTabs.findIndex(([key]) => key === formTab) + 1)][0])}>Continue <FiChevronRight /></button>}
             <button
               type="button"
               className="erp-btn erp-btn--secondary"
@@ -1434,7 +1464,7 @@ export const FeeStructureWizardModule = (() => {
               {saving ? "Saving configurations…" : "Save Draft"}
             </button>
             {submissionComplete && <button type="button" className="erp-btn erp-btn--primary" onClick={finishSubmission} disabled={saving}>{saving ? "Refreshing list…" : "Return to Fee Structure List"}</button>}
-            {formTab === 'schedule' && !submissionComplete && !value.workflowStructure && <button
+            {formTab === 'review' && !submissionComplete && !value.workflowStructure && <button
               type="button"
               className="erp-btn erp-btn--primary"
               disabled={saving}
@@ -1446,7 +1476,7 @@ export const FeeStructureWizardModule = (() => {
         </footer>
         </div>
         </div>
-        {addingFeeType && <FeeTypeCreateDialog rows={feeCategories} onClose={() => setAddingFeeType(false)} onSaved={async () => { const categories = await apiEndpointsModule.feeConfigurationApi.categories(); setFeeCategories(categories); setAddingFeeType(false); }} />}
+        {addingFeeType && <FeeTypeCreateDialog rows={feeCategories} onClose={() => setAddingFeeType(false)} onSaved={async () => { const categories = await apiEndpointsModule.feeConfigurationApi.categories(); setFeeCategories(categories.filter(academicFeeComponent)); setAddingFeeType(false); }} />}
       </SharedFeeDialog>
     );
   }
@@ -1603,6 +1633,7 @@ export const FeeStructureModule = (() => {
     const [manualRoomIndexes, setManualRoomIndexes] = useState([]);
     const total = hostel ? activeRoom ? hostelRoomTotal(activeRoom) : 0 : feeStructureServiceModule.rupees(form.components.reduce((sum, row) => sum + feeStructureServiceModule.cents(row.amount), 0));
     const [error, setError] = useState("");
+    const [saving, setSaving] = useState(false);
     const [previewStarted, setPreviewStarted] = useState(Boolean(value.id));
 
     const patch = (change) => {
@@ -1616,7 +1647,7 @@ export const FeeStructureModule = (() => {
     const addRoom = () => {
       const nextIndex = form.roomPricing.length;
       setRoomIndex(nextIndex);
-      patch({ roomPricing: [...form.roomPricing, { roomType: "", occupancy: "", acType: "", plan: "", dueDate: "", installments: [], components: ["Hostel Accommodation Fee", "Mess Fee"].map(name => ({ masterId: "", name, amount: "", category: "Hostel", frequency: form.frequency || "Annual", mandatory: true, refundable: false, recurring: true })) }] });
+      patch({ roomPricing: [...form.roomPricing, { roomType: "", occupancy: "", acType: "", plan: "", dueDate: "", installments: [], components: ["Hostel Accommodation Fee"].map(name => ({ masterId: "", name, amount: "", category: "Hostel", frequency: form.frequency || "Annual", mandatory: true, refundable: false, recurring: true })) }] });
     };
     const removeRoom = targetIndex => {
       const nextRooms = form.roomPricing.filter((_, index) => index !== targetIndex);
@@ -1636,13 +1667,15 @@ export const FeeStructureModule = (() => {
       ? !validateFacilityPlan(form, type, masters.years, "Draft", "breakdown")
       : !validateFacilityPlan(form, type, masters.years, "Active", "schedule");
     const submit = async (status = "Active") => {
+      if (saving) return;
       const err = validateFacilityPlan(form, type, masters.years, status);
       if (err) {
         setError(err.message);
         setFormTab(err.tab);
         return;
       }
-      try { await save(type, facilityPlanPayload(form, type, masters.years, status)); } catch (reason) { setError(reason.message || "Unable to save this fee plan."); }
+      setSaving(true);
+      try { await save(type, facilityPlanPayload(form, type, masters.years, status)); } catch (reason) { setError(reason.message || "Unable to save this fee plan."); } finally { setSaving(false); }
     };
 
     return (
@@ -1694,12 +1727,6 @@ export const FeeStructureModule = (() => {
                       { id: "Co-ed Residence", name: "Co-ed Residence" },
                     ]}
                     onChange={(hostelType) => patch({ hostelType })}
-                  />
-                  <FeeInput
-                    label="Mess Plan"
-                    placeholder="e.g. Standard Veg & Non-Veg"
-                    value={form.messPlan || ""}
-                    onChange={(messPlan) => patch({ messPlan })}
                   />
                 </>
               ) : (
@@ -1759,7 +1786,6 @@ export const FeeStructureModule = (() => {
           <section className="fm-form-section" hidden={formTab !== "schedule"} role="tabpanel" id={tabId + "-panel-schedule"} aria-labelledby={tabId + "-tab-schedule"} tabIndex={0}>
             <FeeSectionHeading number="03" title="Payment Schedule" description="Configure full payment or installments and service validity." />
             {hostel ? activeRoom ? <><FeeSelect label="Room Category" value={String(roomIndex)} options={form.roomPricing.map((room,index) => ({id:String(index),name:room.roomType || "Room Category " + (index + 1)}))} onChange={index => setRoomIndex(Number(index))} /><FeePaymentScheduleEditor value={activeRoom} onChange={updateRoom} total={total} /></> : <p className="fm-empty-text">Add a room category in Fee Breakdown first.</p> : <FeePaymentScheduleEditor value={form} onChange={patch} total={total} />}
-            <div className="fm-form-grid"><FeeInput label="Effective From" type="date" value={form.effectiveFrom || ""} onChange={effectiveFrom => patch({ effectiveFrom })} /><FeeInput label="Effective To" type="date" value={form.effectiveTo || ""} onChange={effectiveTo => patch({ effectiveTo })} /></div>
           </section>
         </div>
 
@@ -1775,7 +1801,7 @@ export const FeeStructureModule = (() => {
             <button
               type="button"
               className="erp-btn erp-btn--secondary"
-              disabled
+              disabled={saving}
               onClick={() => submit("Draft")}
             >
               Save Draft
@@ -1783,7 +1809,6 @@ export const FeeStructureModule = (() => {
             <button
               type="button"
               className="erp-btn erp-btn--primary"
-              disabled
               onClick={() => submit("Active")}
             >
               Activate Fee Plan
@@ -1957,13 +1982,25 @@ export const FeeStructureModule = (() => {
       navigate('/fees/structures' + (category === 'academic' ? '' : '?category=' + category), { replace: true });
     };
 
-    const [hostels, setHostels] = useState(readHostelStructures);
-    const [transports, setTransports] = useState(readTransportStructures);
+    const [hostels, setHostels] = useState([]);
+    const [transports, setTransports] = useState([]);
+    const [facilityLoad, setFacilityLoad] = useState({});
+    const [facilityAttempt, setFacilityAttempt] = useState(0);
     useEffect(() => {
-      setHostels(readHostelStructures());
-      setTransports(readTransportStructures());
+      let active = true;
+      setHostels([]); setTransports([]);
+      setFacilityLoad({});
+      if (Number(selectedCollegeId)) ['hostel', 'transport'].forEach(type => {
+        apiEndpointsModule.facilityFeePlanApi.list(type, selectedCollegeId).then(rows => {
+          if (active) {
+            (type === 'hostel' ? setHostels : setTransports)(rows.filter(row => String(row.collegeId) === String(selectedCollegeId)));
+            setFacilityLoad(current => ({ ...current, [type]: { collegeId: String(selectedCollegeId), loaded: true } }));
+          }
+        }).catch(reason => { if (active) setFacilityLoad(current => ({ ...current, [type]: { collegeId: String(selectedCollegeId), error: reason.message || 'Unable to load facility fees.' } })); });
+      });
       setQuery('');
-    }, [selectedCollegeId]);
+      return () => { active = false; };
+    }, [selectedCollegeId, facilityAttempt]);
     const [allMasters, setMasters] = useState({
       years: [],
       departments: [],
@@ -1979,7 +2016,7 @@ export const FeeStructureModule = (() => {
       academicYearId: "",
       courseId: "",
       branchId: "",
-      batch: "",
+      batch: "", quota: "",
       status: "All",
     });
     const [hostelFilters, setHostelFilters] = useState({
@@ -2100,7 +2137,7 @@ export const FeeStructureModule = (() => {
           !filters.courseId || String(row.courseId) === String(filters.courseId);
         const matchesBranch =
           !filters.branchId || String(row.branchId) === String(filters.branchId);
-        const matchesBatch = !filters.batch || row.batch === filters.batch;
+        const matchesBatch = (!filters.batch || row.batch === filters.batch) && (!filters.quota || (row.quota || row.category) === filters.quota);
         const matchesStatus =
           filters.status === "All" || row.status === filters.status;
         return (
@@ -2165,7 +2202,7 @@ export const FeeStructureModule = (() => {
       Boolean(filters.academicYearId) ||
       Boolean(filters.courseId) ||
       Boolean(filters.branchId) ||
-      Boolean(filters.batch) ||
+      Boolean(filters.batch) || Boolean(filters.quota) ||
       filters.status !== "All";
 
     const clearAcademicFilters = () => {
@@ -2174,7 +2211,7 @@ export const FeeStructureModule = (() => {
         academicYearId: "",
         courseId: "",
         branchId: "",
-        batch: "",
+        batch: "", quota: "",
         status: "All",
       });
     };
@@ -2229,9 +2266,22 @@ export const FeeStructureModule = (() => {
       }
     };
 
-    const saveFacility = () => {
-      throw new Error('Facility fee writes require a college-scoped backend configuration API.');
+    const saveFacility = async (type, payload) => {
+      if (!(payload.id ? canEditPlan : canCreatePlan)) throw new Error('You do not have permission to save this fee plan.');
+      if (!Number(selectedCollegeId)) throw new Error('Select a college before saving.');
+      await apiEndpointsModule.facilityFeePlanApi.save(type, { ...payload, collegeId: Number(selectedCollegeId) });
+      const rows = await apiEndpointsModule.facilityFeePlanApi.list(type, selectedCollegeId);
+      (type === 'hostel' ? setHostels : setTransports)(rows.filter(row => String(row.collegeId) === String(selectedCollegeId)));
+      backToPlans(type);
     };
+
+    if (facilityType && facilityId) {
+      const state = facilityLoad[facilityType];
+      if (!state || state.collegeId !== String(selectedCollegeId) || (!state.loaded && !state.error)) return <p role="status">Loading saved fee plan...</p>;
+      if (state.error) return <div role="alert" className="fm-error-banner">{state.error} <button type="button" onClick={() => setFacilityAttempt(value => value + 1)}>Retry fee plan</button></div>;
+      const found = (facilityType === 'hostel' ? hostels : transports).some(row => String(row.id) === String(facilityId));
+      if (!found) return <div role="alert">This fee plan is unavailable in the selected college. <button type="button" onClick={() => backToPlans()}>Back to Fee Plans</button></div>;
+    }
 
     if (viewPlan) {
       const category = facilityType === "hostel" ? "Hostel" : facilityType === "transport" ? "Transport" : "Academic";
@@ -2245,7 +2295,7 @@ export const FeeStructureModule = (() => {
     if (facilityType) {
       const existing = facilityId
         ? (facilityType === "hostel" ? hostels : transports).find(
-            (r) => r.id === facilityId
+            (r) => String(r.id) === String(facilityId)
           )
         : null;
       const initial =
@@ -2257,14 +2307,15 @@ export const FeeStructureModule = (() => {
         };
 
       return (
-        <> <p role="status">Facility configuration is read-only until college-scoped writes are available.</p><FacilityEditor
+        <FacilityEditor
+          key={`${selectedCollegeId}:${facilityType}:${facilityId || "new"}`}
           type={facilityType}
           value={initial}
           masters={masters}
           close={() => backToPlans()}
           save={saveFacility}
           existingHostels={hostels}
-        /></>
+        />
       );
     }
 
@@ -2325,8 +2376,8 @@ export const FeeStructureModule = (() => {
                 {tab === "academic"
                   ? "Set course and batch fees."
                   : tab === "hostel"
-                  ? "View saved hostel and room fees. Creating plans requires college-scoped backend support."
-                  : "View saved route and boarding stop fees. Creating plans requires college-scoped backend support."}
+                  ? "Configure hostel and room fees."
+                  : "Configure route and boarding stop fees."}
               </p>
             </div>
           </div>
@@ -2382,6 +2433,7 @@ export const FeeStructureModule = (() => {
                     ))}
                 </select>
 
+                <select aria-label="Filter by Quota" value={filters.quota || ''} onChange={event => setFilters(current => ({...current,quota:event.target.value}))}><option value="">All quotas</option>{[...new Set(academicRows.map(row => row.quota || row.category).filter(Boolean))].map(quota => <option key={quota} value={quota}>{quota}</option>)}</select>
                 <select
                   aria-label="Filter by Batch"
                   value={filters.batch}
@@ -2411,7 +2463,7 @@ export const FeeStructureModule = (() => {
           )}
 
           {tab === "hostel" && (
-            <FilterPanel active={isHostelFiltered} onClear={clearHostelFilters} actions={<button type="button" className="fm-btn-context-primary" disabled onClick={handleCreate}><FiPlus /><span>Create Hostel Plan</span></button>}>
+            <FilterPanel active={isHostelFiltered} onClear={clearHostelFilters} actions={<button type="button" className="fm-btn-context-primary" disabled={!canCreatePlan} onClick={handleCreate}><FiPlus /><span>Create Hostel Plan</span></button>}>
               <div className="course-toolbar">
                 <label className="course-search">
                   <FiSearch />
@@ -2472,7 +2524,7 @@ export const FeeStructureModule = (() => {
           )}
 
           {tab === "transport" && (
-            <FilterPanel active={isTransportFiltered} onClear={clearTransportFilters} actions={<button type="button" className="fm-btn-context-primary" disabled onClick={handleCreate}><FiPlus /><span>Create Transport Plan</span></button>}>
+            <FilterPanel active={isTransportFiltered} onClear={clearTransportFilters} actions={<button type="button" className="fm-btn-context-primary" disabled={!canCreatePlan} onClick={handleCreate}><FiPlus /><span>Create Transport Plan</span></button>}>
               <div className="course-toolbar">
                 <label className="course-search">
                   <FiSearch />
@@ -2580,11 +2632,7 @@ export const FeeStructureModule = (() => {
                         );
                       },
                     },
-                    { label: "Batch", key: "batch" },
-                    {
-                      label: "Category",
-                      render: (r) => r.category || "All Students",
-                    },
+                    { label: "Quota / Category", render: row => <div>{row.quota || row.category || 'Not specified'}<small className="fm-cell-sub">{row.studentCategory || 'Not specified'}</small></div> },
                     {
                       label: "Total Fee",
                       align: "right",
@@ -2594,17 +2642,10 @@ export const FeeStructureModule = (() => {
                       },
                     },
                     {
-                      label: "Payment",
-                      render: (r) =>
-                        r.paymentPlan?.mode === "Full Payment" || r.plan === "Full Payment"
-                          ? "Pay in Full"
-                          : `${r.paymentPlan?.installments?.length || r.installments?.length || 0} Installments`,
-                    },
-                    {
                       label: "Status",
                       render: (r) => <FeeBadge value={r.status} />,
                     },
-                    { label: "Completion", render: row => <CompletionIndicator completion={row.completion} /> },
+
                     {
                       label: "Actions",
                       align: "right",
@@ -2706,34 +2747,10 @@ export const FeeStructureModule = (() => {
                       label: "Actions",
                       align: "right",
                       render: (h) => (
-                        <FeeRowActions>
-                          <button
-                            type="button"
-                            className="fm-icon-btn"
-                            title="View Details"
-                            onClick={() => navigate(`/fees/structures/hostel/${h.id}/view`)}
-                          >
-                            <FiEye />
-                          </button>
-                          <button
-                            type="button"
-                            className="fm-icon-btn"
-                            title="Edit"
-                            disabled
-                          >
-                            <FiEdit2 />
-                          </button>
-                          {h.status === "Draft" && (
-                            <button
-                              type="button"
-                              className="fm-icon-btn fm-icon-btn--danger"
-                              title="Delete"
-                              disabled
-                            >
-                              <FiTrash2 />
-                            </button>
-                          )}
-                        </FeeRowActions>
+                        <div className="fm-facility-row-actions">
+                          <button type="button" className="fm-icon-btn" title="View Details" aria-label="View fee plan" onClick={() => navigate(`/fees/structures/hostel/${h.id}/view`)}><FiEye /></button>
+                          {canEditPlan && <button type="button" className="fm-icon-btn" title="Edit" aria-label="Edit fee plan" onClick={() => navigate(`/fees/structures/hostel/${h.id}/edit`)}><FiEdit2 /></button>}
+                        </div>
                       ),
                     },
                   ]}
@@ -2795,34 +2812,10 @@ export const FeeStructureModule = (() => {
                       label: "Actions",
                       align: "right",
                       render: (t) => (
-                        <FeeRowActions>
-                          <button
-                            type="button"
-                            className="fm-icon-btn"
-                            title="View Details"
-                            onClick={() => navigate(`/fees/structures/transport/${t.id}/view`)}
-                          >
-                            <FiEye />
-                          </button>
-                          <button
-                            type="button"
-                            className="fm-icon-btn"
-                            title="Edit"
-                            disabled
-                          >
-                            <FiEdit2 />
-                          </button>
-                          {t.status === "Draft" && (
-                            <button
-                              type="button"
-                              className="fm-icon-btn fm-icon-btn--danger"
-                              title="Delete"
-                              disabled
-                            >
-                              <FiTrash2 />
-                            </button>
-                          )}
-                        </FeeRowActions>
+                        <div className="fm-facility-row-actions">
+                          <button type="button" className="fm-icon-btn" title="View Details" aria-label="View fee plan" onClick={() => navigate(`/fees/structures/transport/${t.id}/view`)}><FiEye /></button>
+                          {canEditPlan && <button type="button" className="fm-icon-btn" title="Edit" aria-label="Edit fee plan" onClick={() => navigate(`/fees/structures/transport/${t.id}/edit`)}><FiEdit2 /></button>}
+                        </div>
                       ),
                     },
                   ]}
@@ -4925,18 +4918,23 @@ export const FeeManagementModule = (() => {
     const merged = { ...r, ...admission, ...academic };
     const text = (...vals) => vals.find((v) => v != null && String(v).trim()) || "";
     return {
-      id: String(r.id || r.studentId || ""),
+      id: String(r.studentId || r.id || ""),
+      admissionId: r.admissionId || admission.admissionId,
       name: text(
         r.studentName,
         r.fullName,
         r.name,
+        [r.firstName, r.lastName].filter(Boolean).join(" "),
         personal.fullName,
         [personal.firstName, personal.lastName].filter(Boolean).join(" ")
       ),
       code: text(r.studentCode, r.rollNumber, r.rollNo, String(r.id || "")),
       roll: text(r.rollNumber, r.rollNo, academic.rollNumber),
       application: text(
+        r.admissionNo,
+        r.admissionNumber,
         r.applicationNumber,
+        r.registrationNumber,
         admission.applicationNumber,
         r.admissionNumber
       ),
@@ -5186,7 +5184,7 @@ export const FeeManagementModule = (() => {
             setStudentDues(items);
             if (items.length > 0) {
               setSelectedDueId(items[0].studentFeeId);
-              const defaultBal = Number(items[0].balanceAmount ?? 0);
+              const defaultBal = feePrincipalBalance(items[0]);
               setAmount(String(defaultBal));
             }
           })
@@ -5201,7 +5199,7 @@ export const FeeManagementModule = (() => {
     }, [student.id, student.balance]);
 
     const activeDue = studentDues.find((d) => String(d.studentFeeId) === String(selectedDueId));
-    const maxBalance = activeDue ? Number(activeDue.balanceAmount ?? 0) : 0;
+    const maxBalance = activeDue ? feePrincipalBalance(activeDue) : 0;
     const numAmount = Number(amount) || 0;
     const balanceAfter = Math.max(0, maxBalance - numAmount);
 
@@ -5279,7 +5277,7 @@ export const FeeManagementModule = (() => {
             </button>
             <button
               type="button"
-              className="erp-btn erp-btn--primary"
+              className="erp-btn fm-collect-action"
               onClick={handleSubmit}
               disabled={submitting || loadingDues || !activeDue || !Number.isFinite(numAmount) || numAmount <= 0 || numAmount > maxBalance || maxBalance <= 0}
             >
@@ -5301,12 +5299,12 @@ export const FeeManagementModule = (() => {
             </div>
             <div className="fm-collect-student-kpis">
               <div className="fm-collect-student-kpi">
-                <small>Total Fee</small>
-                <strong>{feeMoney(student.totalFee)}</strong>
+                <small>Total Assigned</small>
+                <strong>{reportedMoney(student.totalFee)}</strong>
               </div>
               <div className="fm-collect-student-kpi">
                 <small>Paid So Far</small>
-                <strong style={{ color: "#059669" }}>{feeMoney(student.paid)}</strong>
+                <strong style={{ color: "#059669" }}>{reportedMoney(student.paid)}</strong>
               </div>
               <div className="fm-collect-student-kpi fm-highlight-balance">
                 <small>Current Outstanding</small>
@@ -5324,12 +5322,12 @@ export const FeeManagementModule = (() => {
                 onChange={(e) => {
                   setSelectedDueId(e.target.value);
                   const selected = studentDues.find((d) => String(d.studentFeeId) === String(e.target.value));
-                  if (selected) setAmount(String(selected.balanceAmount || ""));
+                  if (selected) setAmount(String(feePrincipalBalance(selected)));
                 }}
               >
                 {studentDues.map((d) => (
                   <option key={d.studentFeeId} value={d.studentFeeId}>
-                    {d.feePlanName || d.feeCategory || "Installment"} — Due: {reportedMoney(d.balanceAmount)} (Due Date: {date(d.dueDate)})
+                    {academic.semesters?.find(s => String(s.semesterId || s.id) === String(d.semesterId))?.semesterName || d.semesterName || "Semester not reported"} · {d.feeCategory || "Academic"} · Installment {d.installmentNumber || "—"} — Due: {reportedMoney(d.balanceAmount)} (Due Date: {date(d.dueDate)})
                   </option>
                 ))}
               </ProjectSelect>
@@ -5447,272 +5445,58 @@ export const FeeManagementModule = (() => {
   // ==========================================================================
   // STUDENT FEE DETAILS MODAL
   // ==========================================================================
-  function StudentFeeDetailsModal({ student, academic, onClose, onCollect, onOpenReceipt }) {
+  function StudentFeeDetailsModal({ student, academic, onClose, onCollect, onOpenReceipt, keepOpenForCollection = false }) {
+    const { canAction } = useScreenAccess();
     const [loading, setLoading] = useState(true);
-    const [details, setDetails] = useState({ dues: [], payments: [] });
-    const [error, setError] = useState("");
-
+    const [details, setDetails] = useState({ dues: [], payments: [], structure: null });
+    const [error, setError] = useState('');
+    const [attempt, setAttempt] = useState(0);
     useEffect(() => {
       let active = true;
-      setLoading(true);
-      setError("");
+      setLoading(true); setError('');
       Promise.allSettled([
         feeCollectionApi.allPending({ studentId: student.id }),
         feeCollectionApi.allHistory({ studentId: student.id }),
-      ])
-        .then(([pRes, hRes]) => {
-          if (!active) return;
-          const failure = [pRes,hRes].find(result => result.status === 'rejected');
-          if (failure) setError(failure.reason?.message || 'Some fee records could not be loaded. Retry by reopening this profile.');
-          const dues = pRes.status === "fulfilled" ? pRes.value || [] : [];
-          const payments = (hRes.status === "fulfilled" ? hRes.value || [] : (student.paymentHistory || []))
-            .filter(row => !isDemoFeeRecord(row));
-          setDetails({ dues, payments });
-        })
-        .catch((err) => {
-          if (active) setError(err.message || "Unable to load student history.");
-        })
-        .finally(() => {
-          if (active) setLoading(false);
-        });
-
-      return () => {
-        active = false;
-      };
-    }, [student.id]);
-
-    const dues = details.dues;
-    const payments = (details.payments.length > 0 ? details.payments : (student.paymentHistory || []))
-      .filter(row => !isDemoFeeRecord(row));
-
-    const categorySummary = useMemo(() => {
-      const cats = {
-        academic: { label: "Academic Fees", payable: 0, paid: 0, balance: 0, count: 0 },
-        hostel: { label: "Hostel Fees", payable: 0, paid: 0, balance: 0, count: 0 },
-        transport: { label: "Transport Fees", payable: 0, paid: 0, balance: 0, count: 0 },
-      };
-      if (dues && dues.length > 0) {
-        dues.forEach((d) => {
-          const catName = String(d.feeCategory || d.category || d.feePlanName || "").toLowerCase();
-          let target = cats.academic;
-          if (catName.includes("hostel")) target = cats.hostel;
-          else if (catName.includes("transport")) target = cats.transport;
-          target.payable += Number(d.payableAmount || 0);
-          target.paid += Number(d.paidAmount || 0);
-          target.balance += Number(d.balanceAmount || 0);
-          target.count += 1;
-        });
-      }
-      return [cats.academic, cats.hostel, cats.transport];
-    }, [dues, student]);
-
-    return (
-      <FeeDialog
-        title={`Student Fee Profile — ${student.name}`}
-        close={onClose}
-        wide
-        footer={
-          <>
-            <button type="button" className="erp-btn erp-btn--secondary" onClick={onClose}>
-              Close
-            </button>
-            {student.balance > 0 && student.status !== "Fee Not Assigned" && (
-              <button
-                type="button"
-                className="erp-btn erp-btn--primary"
-                onClick={() => {
-                  onClose();
-                  onCollect(student);
-                }}
-              >
-                <FiDollarSign /> Collect Payment
-              </button>
-            )}
-          </>
-        }
-      >
-        <div className="fm-student-detail-modal">
-          {error && <div className="fm-error-banner" role="alert">{error}</div>}
-
-          {/* Profile Card */}
-          <div className="fm-student-detail-profile">
-            <div className="fm-avatar">
-              {String(student.name || "?").trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join("")}
-            </div>
-            <div>
-              <h3>{student.name}</h3>
-              <p>
-                Roll / ID: <strong>{student.roll}</strong> · Course: <strong>{student.courseName || "—"}</strong> · Branch: <strong>{student.branchName || "—"}</strong> · Batch: <strong>{student.batch || "—"}</strong>
-              </p>
-            </div>
-          </div>
-
-          {/* 4 KPIs */}
-          <div className="fm-detail-kpis">
-            <div className="fm-detail-kpi-box">
-              <small>Total Demand</small>
-              <strong style={{ color: "#1d4ed8" }}>{(student.totalFee == null ? "Unavailable" : feeMoney(student.totalFee))}</strong>
-            </div>
-            <div className="fm-detail-kpi-box">
-              <small>Discount / Concession</small>
-              <strong style={{ color: "#475569" }}>{student.discount > 0 ? `-${feeMoney(student.discount)}` : "—"}</strong>
-            </div>
-            <div className="fm-detail-kpi-box">
-              <small>Total Paid</small>
-              <strong style={{ color: "#059669" }}>{(student.paid == null ? "Unavailable" : feeMoney(student.paid))}</strong>
-            </div>
-            <div className="fm-detail-kpi-box">
-              <small>Outstanding Balance</small>
-              <strong style={{ color: student.balance > 0 ? "#b45309" : "#059669" }}>
-                {(student.balance == null ? "Unavailable" : feeMoney(student.balance))}
-              </strong>
-            </div>
-          </div>
-
-          {/* Category Breakdown Cards */}
-          <div>
-            <div className="fm-detail-section-title">
-              <span>Category-Wise Distribution</span>
-            </div>
-            <div className="fm-detail-categories-grid">
-              {categorySummary.map((cat) => (
-                <div key={cat.label} className="fm-detail-category-card">
-                  <div className="fm-detail-category-header">
-                    <h4>{cat.label}</h4>
-                    <span className="fm-count-chip">{cat.count > 0 ? `${cat.count} schedule${cat.count > 1 ? "s" : ""}` : "Not Enrolled"}</span>
-                  </div>
-                  <div className="fm-detail-category-body">
-                    <div className="fm-detail-category-row">
-                      <span>Payable</span>
-                      <strong>{feeMoney(cat.payable)}</strong>
-                    </div>
-                    <div className="fm-detail-category-row">
-                      <span>Paid</span>
-                      <strong style={{ color: "#059669" }}>{feeMoney(cat.paid)}</strong>
-                    </div>
-                    <div className="fm-detail-category-row">
-                      <span>Balance</span>
-                      <strong style={{ color: cat.balance > 0 ? "#b45309" : "#059669" }}>
-                        {feeMoney(cat.balance)}
-                      </strong>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Dues Schedule */}
-          <div>
-            <div className="fm-detail-section-title">
-              <span>Installment & Due Schedule</span>
-              <span className="fm-count-chip">{dues.length || 1} records</span>
-            </div>
-            <div className="fm-table-wrap" style={{ maxHeight: 200, overflow: "auto" }}>
-              <table className="fm-table">
-                <thead>
-                  <tr>
-                    <th>Fee Item / Plan</th>
-                    <th>Due Date</th>
-                    <th className="text-right">Payable</th>
-                    <th className="text-right">Paid</th>
-                    <th className="text-right">Balance</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dues.length > 0 ? (
-                    dues.map((d, idx) => (
-                      <tr key={d.studentFeeId || idx}>
-                        <td><strong>{d.feePlanName || d.feeCategory || "Academic Fee"}</strong></td>
-                        <td>{date(d.dueDate)}</td>
-                        <td className="text-right">{reportedMoney(d.payableAmount)}</td>
-                        <td className="text-right">{reportedMoney(d.paidAmount)}</td>
-                        <td className="text-right">
-                          <strong style={{ color: d.balanceAmount > 0 ? "#b45309" : "#059669" }}>
-                            {reportedMoney(d.balanceAmount)}
-                          </strong>
-                        </td>
-                        <td>
-                          <FeeBadge value={d.overdue ? "Overdue" : Number(d.balanceAmount) === 0 ? "Paid" : Number(d.paidAmount) > 0 ? "Partially Paid" : "Pending"} />
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td><strong>{student.planName || "Academic Fee Plan"}</strong></td>
-                      <td>{student.nextDue || "—"}</td>
-                      <td className="text-right">{(student.totalFee == null ? "Unavailable" : feeMoney(student.totalFee))}</td>
-                      <td className="text-right">{(student.paid == null ? "Unavailable" : feeMoney(student.paid))}</td>
-                      <td className="text-right">
-                        <strong style={{ color: student.balance > 0 ? "#b45309" : "#059669" }}>
-                          {(student.balance == null ? "Unavailable" : feeMoney(student.balance))}
-                        </strong>
-                      </td>
-                      <td><FeeBadge value={student.status} /></td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Payment & Receipt History */}
-          <div>
-            <div className="fm-detail-section-title">
-              <span>Payment & Receipt History</span>
-              <span className="fm-count-chip">{payments.length} transactions</span>
-            </div>
-            {payments.length > 0 ? (
-              <div className="fm-table-wrap" style={{ maxHeight: 200, overflow: "auto" }}>
-                <table className="fm-table">
-                  <thead>
-                    <tr>
-                      <th>Receipt #</th>
-                      <th>Date</th>
-                      <th>Mode</th>
-                      <th>Reference</th>
-                      <th className="text-right">Amount Paid</th>
-                      <th className="text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {payments.map((p, idx) => (
-                      <tr key={p.paymentId || p.receiptId || idx}>
-                        <td><strong>{p.receiptNumber || "Number unavailable"}</strong></td>
-                        <td>{date(p.issuedAt || p.paymentDate)}</td>
-                        <td>{p.paymentMode || "CASH"}</td>
-                        <td>{p.transactionReference || "—"}</td>
-                        <td className="text-right" style={{ color: "#059669", fontWeight: 700 }}>
-                          {feeMoney(p.feeAmount || p.totalAmount)}
-                        </td>
-                        <td className="text-right">
-                          <button
-                            type="button"
-                            className="erp-btn erp-btn--secondary erp-btn--sm"
-                            onClick={() => onOpenReceipt(p, student)}
-                          >
-                            <FiPrinter /> Receipt
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="fm-breakdown-empty">No payments recorded yet for this student.</div>
-            )}
-          </div>
-        </div>
-      </FeeDialog>
-    );
+        student.admissionId ? apiEndpointsModule.studentFeeApi.getStructure(student.admissionId) : Promise.resolve(null),
+      ]).then(([pending, history, structure]) => {
+        if (!active) return;
+        const failures = [pending, history].filter(result => result.status === 'rejected');
+        if (failures.length) setError(failures.map(result => result.reason?.message || 'Unable to load fee records.').join(' '));
+        setDetails({ dues: pending.status === 'fulfilled' ? pending.value : [], payments: history.status === 'fulfilled' ? history.value.filter(row => !isDemoFeeRecord(row)) : [],
+          structure: structure.status === 'fulfilled' ? structure.value : null, integrationUnavailable: structure.status === 'rejected' });
+      }).finally(() => { if (active) setLoading(false); });
+      return () => { active = false; };
+    }, [student.id, student.admissionId, attempt, academic.selectedCollegeId]);
+    const groups = semesterFeeGroups(details.dues);
+    const outstanding = sumFeeRows(details.dues, 'balanceAmount');
+    const collected = sumFeeRows(details.payments, 'feeAmount');
+    const overdue = groups.reduce((sum, group) => sum + group.overdue, 0);
+    const semesterName = group => group.semesterName || academic.semesters?.find(row => String(row.semesterId || row.id) === String(group.semesterId))?.semesterName || academic.semesters?.find(row => String(row.semesterId || row.id) === String(group.semesterId))?.name || (group.semesterId ? 'Semester reference ' + group.semesterId : 'Semester not reported');
+    const structure = details.structure;
+    const components = structure?.feeComponents || structure?.academicFeePlan?.components || [];
+    const installments = structure?.paymentSchedule || [];
+    return <SharedFeeDialog title={'Student Fee Profile — ' + student.name} onClose={onClose} maxWidth="1100px" className="fm-student-profile-dialog" showExport={false}
+      footerActions={<><button type="button" className="erp-btn erp-btn--secondary" onClick={onClose}>Close</button>{!loading && !error && outstanding > 0 && (canAction("/fees", "create") || canAction("/fees", "edit")) && <button type="button" className="erp-btn fm-collect-action" onClick={() => { if (!keepOpenForCollection) onClose(); onCollect({ ...student, balance: outstanding }); }}>Collect Payment</button>}</>}>
+      <div className="fm-student-profile">
+        <dl className="fm-student-facts">{[['Admission Number', student.admissionNumber || student.application], ['Student', student.name], ['Course / Branch', [student.courseName, student.branchName].filter(Boolean).join(' / ')], ['Admission Quota', structure?.quota || student.quota], ['Student Category', structure?.studentCategory || student.studentCategory], ['Batch', student.batch]].map(([label,value]) => <div key={label}><dt>{label}</dt><dd>{value || 'Not reported'}</dd></div>)}</dl>
+        {loading ? <p role="status">Loading student fee records…</p> : error ? <div role="alert" className="fm-error-banner">{error}<button type="button" className="erp-btn erp-btn--secondary" onClick={() => setAttempt(value => value + 1)}>Retry</button></div> : <>
+          <div className="fm-profile-totals">{[['Total Assigned', null], ['Total Collected', collected], ['Outstanding', outstanding], ['Overdue', details.dues.length ? overdue : null]].map(([label,value]) => <div key={label}><small>{label}</small><strong>{reportedMoney(value)}</strong></div>)}</div>
+          <p className="fm-data-note">Complete assigned totals and settled semester details are currently unavailable. Outstanding covers pending obligations only. Confirmed student payments are listed below; semester references appear where recorded.</p>
+          <h3>Semester Fees</h3>
+          <table className="fm-profile-table"><thead><tr>{['Semester / Fee', 'Fee Amount', 'Paid', 'Balance', 'Due Date', 'Status'].map(label => <th key={label} scope="col">{label}</th>)}</tr></thead><tbody>
+            {groups.map(group => <external0.Fragment key={group.key}><tr><th scope="row">{semesterName(group)}<small>{group.category}</small></th><td>{reportedMoney(group.amount)}</td><td>{reportedMoney(group.paid)}</td><td>{reportedMoney(group.balance)}</td><td>{date(group.dueDate)}</td><td>{group.status}</td></tr><tr><td colSpan={6}><details><summary>Installments and fee items ({group.rows.length})</summary><ul className="fm-obligation-list">{group.rows.map(row => <li key={row.studentFeeId}><strong>{row.feeCategory || 'Academic'} · {row.feeCode || 'Fee item'}</strong><span>Installment {row.installmentNumber || '—'} · Due {date(row.dueDate)}</span><span>Assigned {reportedMoney(row.payableAmount)} · Paid {reportedMoney(row.paidAmount)} · Balance {reportedMoney(row.balanceAmount)}</span></li>)}</ul></details></td></tr></external0.Fragment>)}
+            {!groups.length && <tr><td colSpan={6}>No pending obligations returned. This does not confirm that no fees were assigned.</td></tr>}
+          </tbody></table>
+          {structure && <details className="fm-assignment-snapshot"><summary>Admission fee assignment — saved configuration</summary><p>Quota: {structure.quota || 'Not reported'} · Category: {structure.studentCategory || 'Not reported'}. This snapshot is shown separately from collection balances.</p>{components.length ? <ul>{components.map((row,index) => <li key={row.code || index}>{row.name || row.componentName || row.code}: {reportedMoney(row.amount)}</li>)}</ul> : <p>No component details returned.</p>}{installments.length > 0 && <ul>{installments.map((row,index) => <li key={row.number || index}>Installment {row.number || index + 1}: {reportedMoney(row.amount)} · {date(row.dueDate)}</li>)}</ul>}</details>}
+          {details.integrationUnavailable && <p role="status">The admission fee configuration could not be loaded. Collection balances above are from the fee collection service.</p>}
+          <div className="fm-profile-section-heading"><h3>Payment History & Receipts</h3><ExportMenu title="Student payment history" filename={'student-payments-' + student.id} rows={details.payments} columns={[{label:'Receipt Number',value:'receiptNumber'},{label:'Date',value:'paymentDate'},{label:'Method',value:'paymentMode'},{label:'Fee',value:'feeAmount'},{label:'Fine',value:'fineAmount'},{label:'Total',value:'totalAmount'},{label:'Reference',value:'transactionReference'}]} /></div>
+          <table className="fm-profile-table"><thead><tr>{['Receipt Number','Payment Date','Method / Reference','Semester','Amount','Receipt'].map(label => <th key={label} scope="col">{label}</th>)}</tr></thead><tbody>{details.payments.map(payment => <tr key={payment.paymentId}><td>{payment.receiptNumber || 'Unavailable'}</td><td>{date(payment.paymentDate)}</td><td>{payment.paymentMode}<small>{payment.transactionReference || '—'}</small></td><td>{payment.semesterName || (payment.semesterId ? semesterName(payment) : 'Not reported')}</td><td>{reportedMoney(payment.totalAmount)}</td><td><button type="button" className="erp-btn erp-btn--secondary" disabled={!payment.receiptId} onClick={() => onOpenReceipt(payment, student)}>Receipt</button></td></tr>)}{!details.payments.length && <tr><td colSpan={6}>No confirmed payments returned.</td></tr>}</tbody></table>
+        </>}
+      </div>
+    </SharedFeeDialog>;
   }
 
-  // ==========================================================================
-  // STUDENT FEES MAIN DIRECTORY PAGE (`/fees/students`)
-  // ==========================================================================
-  function StudentFees({ academic, ledgers, assignments, masters, students = [], structures = [], view = "directory", feeManagementTabs = [] }) {
+  function StudentFees({ academic, ledgers, assignments, masters, students = [], structures = [], view = "directory", feeManagementTabs = [], rosterLoading = false, rosterError = "" }) {
     const navigate = useNavigate();
     const location = useLocation();
     const activeView = view;
@@ -5753,26 +5537,22 @@ export const FeeManagementModule = (() => {
       setLoading(true);
       setError("");
       Promise.allSettled([
-        feeCollectionApi.allPending({
-          academicYearId,
-          courseId,
-          branchId,
-          semesterId,
-          search: query,
-        }),
-        feeCollectionApi.allHistory({
-          search: query,
-        }),
+        feeCollectionApi.allPending({}),
+        feeCollectionApi.allHistory({}),
       ])
         .then(([pendingRes, historyRes]) => {
           if (!active) return;
           if (pendingRes.status === "fulfilled") {
             setServerRows(pendingRes.value || []);
-          } else if (historyRes.status !== "fulfilled") {
+          } else {
+            setServerRows([]);
             setError(pendingRes.reason?.message || "Unable to load fee records. Please try again.");
           }
           if (historyRes.status === "fulfilled") {
             setServerHistory((historyRes.value || []).filter(row => !isDemoFeeRecord(row)));
+          } else {
+            setServerHistory([]);
+            setError(historyRes.reason?.message || "Unable to load payment history.");
           }
         })
         .catch((reason) => {
@@ -5789,263 +5569,13 @@ export const FeeManagementModule = (() => {
     useEffect(() => {
       if (activeView !== "directory") return;
       return fetchRecords();
-    }, [activeView, academicYearId, courseId, branchId, semesterId, query, academic.selectedCollegeId]);
+    }, [activeView, academic.selectedCollegeId]);
 
-    // Unified student rows merging live server fee records, payment history, student profiles, and fee plans
+    // Aggregate only students in the selected college roster. Payment history never reconstructs semester liabilities.
     const studentRows = useMemo(() => {
-      // 1. Group server fee pending items by studentId and studentCode
-      const serverMap = new Map();
-      const serverCodeMap = new Map();
-      serverRows.forEach((r) => {
-        const sid = String(r.studentId || "");
-        if (sid) {
-          if (!serverMap.has(sid)) serverMap.set(sid, []);
-          serverMap.get(sid).push(r);
-        }
-        const code = String(r.studentCode || "").trim().toLowerCase();
-        if (code) {
-          if (!serverCodeMap.has(code)) serverCodeMap.set(code, []);
-          serverCodeMap.get(code).push(r);
-        }
-      });
-
-      // 2. Group confirmed server payments by studentId and studentCode
-      const historyMap = new Map();
-      const historyCodeMap = new Map();
-      const scopedHistory = academicYearId || courseId || branchId || semesterId ? [] : serverHistory;
-      scopedHistory.forEach((h) => {
-        const sid = String(h.studentId || "");
-        if (sid) {
-          if (!historyMap.has(sid)) historyMap.set(sid, []);
-          historyMap.get(sid).push(h);
-        }
-        const code = String(h.studentCode || "").trim().toLowerCase();
-        if (code) {
-          if (!historyCodeMap.has(code)) historyCodeMap.set(code, []);
-          historyCodeMap.get(code).push(h);
-        }
-      });
-
-      // 3. Map workspace assignment ledgers by student id
-      const ledgerMap = new Map();
-      (ledgers || []).forEach((a) => {
-        const sid = String(a.student?.id || a.student?.studentId || "");
-        if (sid) ledgerMap.set(sid, a);
-      });
-
-      const rows = [];
-      const handledStudentIds = new Set();
-      const handledCodes = new Set();
-
-      const buildServerRow = (rList, baseStudent = null, studentHistory = []) => {
-        const r = rList[0];
-        const payable = reportedTotal(rList, "payableAmount");
-        const serverPaid = reportedTotal(rList, "paidAmount");
-        const histPaid = studentHistory.reduce((sum, item) => sum + Number(item.feeAmount || item.totalAmount || 0), 0);
-        const paid = serverPaid;
-        const balance = reportedTotal(rList, "balanceAmount");
-        const isOverdue = rList.some((item) =>
-          Boolean(item.overdue || (item.dueDate && new Date(item.dueDate) < new Date() && Number(item.balanceAmount || 0) > 0))
-        );
-        const status = balance === null ? "Balance Unavailable" : isOverdue
-          ? "Overdue"
-          : balance === 0 && payable > 0
-          ? "Paid"
-          : paid > 0
-          ? "Partially Paid"
-          : "Pending";
-        const statusSlug = status.toLowerCase().replace(/\s+/g, "-");
-
-        return {
-          id: r.studentId || baseStudent?.id,
-          studentFeeId: r.studentFeeId,
-          planName: r.feePlanName || r.structureName || r.feeCategory || "Academic Fee",
-          feeCategory: r.feeCategory || "Academic",
-          name: baseStudent?.name || r.studentName,
-          roll: baseStudent?.roll || r.studentCode,
-          admissionNumber: baseStudent?.application || r.studentCode,
-          application: baseStudent?.application || r.studentCode,
-          courseId: String(baseStudent?.courseId || r.courseId || ""),
-          courseName: baseStudent?.courseName || r.courseName,
-          branchId: String(baseStudent?.branchId || r.branchId || ""),
-          branchName: baseStudent?.branchName || r.branchName,
-          semesterId: String(baseStudent?.semesterId || r.semesterId || ""),
-          semesterName: baseStudent?.semesterName || r.semesterName,
-          batch: baseStudent?.batch || r.batch || "—",
-          totalFee: payable,
-          discount: rList.reduce((sum, item) => sum + Number(item.concessionAmount || 0), 0),
-          paid,
-          balance,
-          nextDue: date(r.dueDate),
-          overdue: isOverdue,
-          status,
-          statusSlug,
-          receiptId: r.receiptId || r.lastReceiptId || studentHistory[0]?.receiptId,
-          paymentHistory: studentHistory,
-        };
-      };
-
-      const buildSettledHistoryRow = (hList, baseStudent = null) => {
-        const first = hList[0];
-        const totalPaid = hList.reduce((sum, item) => sum + Number(item.feeAmount || item.totalAmount || 0), 0);
-        return {
-          id: first.studentId || baseStudent?.id,
-          studentFeeId: first.studentFeeId || baseStudent?.studentFeeId || null,
-          planName: first.feeCategory || "Academic Tuition Fee",
-          feeCategory: first.feeCategory || "Academic",
-          name: baseStudent?.name || first.studentName,
-          roll: baseStudent?.roll || first.studentCode,
-          admissionNumber: baseStudent?.application || first.studentCode,
-          application: baseStudent?.application || first.studentCode,
-          courseId: String(baseStudent?.courseId || first.courseId || ""),
-          courseName: baseStudent?.courseName || first.courseName,
-          branchId: String(baseStudent?.branchId || first.branchId || ""),
-          branchName: baseStudent?.branchName || first.branchName,
-          semesterId: String(baseStudent?.semesterId || first.semesterId || ""),
-          semesterName: baseStudent?.semesterName || first.semesterName,
-          batch: baseStudent?.batch || first.batch || "—",
-          totalFee: null,
-          discount: 0,
-          paid: totalPaid,
-          balance: null,
-          nextDue: "—",
-          overdue: false,
-          status: "Balance Unavailable",
-          statusSlug: "unavailable",
-          receiptId: first.receiptId,
-          paymentHistory: hList,
-        };
-      };
-
-      // 4. Process admitted students from institution profiles
-      if (Array.isArray(students) && students.length > 0) {
-        students.forEach((st) => {
-          const sid = String(st.id || "");
-          const code = String(st.code || st.roll || st.application || "").trim().toLowerCase();
-          if (sid) handledStudentIds.add(sid);
-          if (code) handledCodes.add(code);
-
-          const studentHistory = (sid && historyMap.get(sid)) || (code && historyCodeMap.get(code)) || [];
-
-          // Priority 1: Live server fee pending records
-          const serverItems = (sid && serverMap.get(sid)) || (code && serverCodeMap.get(code)) || null;
-          if (serverItems && serverItems.length > 0) {
-            rows.push(buildServerRow(serverItems, st, studentHistory));
-            return;
-          }
-
-          // Priority 2: Confirmed payments from history (Fully Paid settled student)
-          if (studentHistory.length > 0) {
-            rows.push(buildSettledHistoryRow(studentHistory, st));
-            return;
-          }
-
-          // Priority 5: Unassigned student (Fee Not Assigned with zero liability)
-          rows.push({
-            id: st.id,
-            planName: "Fee information unavailable",
-            feeCategory: "Academic",
-            name: st.name,
-            roll: st.roll || st.code,
-            admissionNumber: st.application || st.roll || st.code,
-            application: st.application || st.code,
-            courseId: String(st.courseId || ""),
-            courseName: st.courseName,
-            branchId: String(st.branchId || ""),
-            branchName: st.branchName,
-            semesterId: String(st.semesterId || ""),
-            semesterName: st.semesterName,
-            batch: st.batch,
-            totalFee: null,
-            discount: 0,
-            paid: null,
-            balance: null,
-            nextDue: "—",
-            overdue: false,
-            status: "Fee Not Assigned",
-            statusSlug: "unassigned",
-            receiptId: null,
-            paymentHistory: [],
-          });
-        });
-      }
-
-      // 5. Any serverRows that were not covered by students list
-      serverMap.forEach((rList, sid) => {
-        if (!handledStudentIds.has(sid)) {
-          const first = rList[0];
-          const code = String(first.studentCode || "").trim().toLowerCase();
-          if (!code || !handledCodes.has(code)) {
-            const studentHistory = historyMap.get(sid) || (code && historyCodeMap.get(code)) || [];
-            rows.push(buildServerRow(rList, null, studentHistory));
-            handledStudentIds.add(sid);
-            if (code) handledCodes.add(code);
-          }
-        }
-      });
-
-      // 6. Any historyMap settled payments not yet covered
-      historyMap.forEach((hList, sid) => {
-        if (!handledStudentIds.has(sid)) {
-          const first = hList[0];
-          const code = String(first.studentCode || "").trim().toLowerCase();
-          if (!code || !handledCodes.has(code)) {
-            rows.push(buildSettledHistoryRow(hList));
-            handledStudentIds.add(sid);
-            if (code) handledCodes.add(code);
-          }
-        }
-      });
-
-      // 7. If both serverRows, history, and students were empty, fallback to workspace ledgers
-      if (rows.length === 0 && Array.isArray(ledgers)) {
-        ledgers.forEach((a) => {
-          const bal = rupees(a.ledger.outstanding);
-          const isOverdue = Boolean(a.ledger.overdue);
-          const total = rupees(a.ledger.total);
-          const paid = rupees(a.ledger.paid);
-          const status = isOverdue
-            ? "Overdue"
-            : bal === 0 && total > 0
-            ? "Paid"
-            : paid > 0
-            ? "Partially Paid"
-            : total > 0
-            ? "Pending"
-            : "Fee Not Assigned";
-          const statusSlug = status.toLowerCase().replace(/\s+/g, "-");
-          rows.push({
-            id: a.student.id,
-            assignmentId: a.id,
-            planName: a.structure.name,
-            feeCategory: a.structure.category || "Academic",
-            name: a.student.name,
-            roll: a.student.roll || a.student.code,
-            admissionNumber: a.student.application || a.student.code,
-            application: a.student.application || a.student.code,
-            courseId: String(a.student.courseId || a.structure.courseId || ""),
-            courseName: a.structure.courseName || a.student.courseName,
-            branchId: String(a.student.branchId || a.structure.branchId || ""),
-            branchName: a.structure.branchName || a.student.branchName,
-            semesterId: String(a.student.semesterId || ""),
-            semesterName: a.student.semesterName,
-            batch: a.structure.batch || a.student.batch,
-            totalFee: total,
-            discount: rupees(a.ledger.concession),
-            paid,
-            balance: bal,
-            nextDue: "—",
-            overdue: isOverdue,
-            status,
-            statusSlug,
-            receiptId: a.ledger.payments?.[0]?.receiptId,
-            paymentHistory: a.ledger.payments || [],
-          });
-        });
-      }
-
-      return rows;
-    }, [serverRows, serverHistory, students, ledgers, academicYearId, courseId, branchId, semesterId]);
+      const ids = new Set(students.map(row => String(row.id)));
+      return studentFeeAccounts(students, serverRows.filter(row => ids.has(String(row.studentId))), serverHistory.filter(row => ids.has(String(row.studentId))));
+    }, [students, serverRows, serverHistory]);
 
     const filteredStudents = useMemo(() => {
       return studentRows.filter((st) => {
@@ -6060,28 +5590,26 @@ export const FeeManagementModule = (() => {
           String(st.branchId) === String(branchId) ||
           (st.branchName && masters.branches.find((b) => b.id === branchId)?.name === st.branchName);
         const matchesSemester =
-          !semesterId || String(st.semesterId) === String(semesterId);
-        const matchesCategory =
-          !categoryFilter ||
-          categoryFilter === "All" ||
-          (st.feeCategory && st.feeCategory.toLowerCase() === categoryFilter.toLowerCase()) ||
-          (st.planName && st.planName.toLowerCase().includes(categoryFilter.toLowerCase()));
+          !semesterId || st.semesterIds?.includes(String(semesterId));
+        const matchesCategory = !categoryFilter || categoryFilter === "All" || st.rows.some(row => { const domain = /hostel/i.test(row.feeCategory || "") ? "Hostel" : /transport/i.test(row.feeCategory || "") ? "Transport" : "Academic"; return domain === categoryFilter; });
         const matchesStatus =
           !statusFilter || statusFilter === "All"
             ? true
             : st.status === statusFilter;
-        return matchesQuery && matchesCourse && matchesBranch && matchesSemester && matchesCategory && matchesStatus;
+        const matchesYear = !academicYearId || String(st.academicYearId || "") === String(academicYearId) || st.rows.some(row => String(row.academicYearId || "") === String(academicYearId));
+        return matchesQuery && matchesYear && matchesCourse && matchesBranch && matchesSemester && matchesCategory && matchesStatus;
       });
-    }, [studentRows, query, courseId, branchId, semesterId, categoryFilter, statusFilter, masters]);
+    }, [studentRows, query, academicYearId, courseId, branchId, semesterId, categoryFilter, statusFilter, masters]);
 
     // Financial Summary KPI metrics calculated from active filtered student records
     const summaryMetrics = useMemo(() => {
-      const payable = filteredStudents.reduce((sum, s) => sum + (s.totalFee || 0), 0);
-      const collected = filteredStudents.reduce((sum, s) => sum + (s.paid || 0), 0);
-      const balance = filteredStudents.reduce((sum, s) => sum + (s.balance || 0), 0);
+      if (error || rosterError || loading || rosterLoading) return { payable: null, collected: null, balance: null, overdue: null };
+      const payable = filteredStudents.length && filteredStudents.every(s => s.totalFee != null) ? filteredStudents.reduce((sum, s) => sum + s.totalFee, 0) : null;
+      const collected = filteredStudents.length && filteredStudents.every(s => s.paid != null) ? filteredStudents.reduce((sum, s) => sum + s.paid, 0) : null;
+      const balance = filteredStudents.length && filteredStudents.every(s => s.balance != null) ? filteredStudents.reduce((sum, s) => sum + s.balance, 0) : null;
       const overdue = filteredStudents.reduce((sum, s) => sum + (s.overdue ? s.balance : 0), 0);
-      return { payable, collected, balance, overdue };
-    }, [filteredStudents]);
+      return { payable, collected, balance, overdue: filteredStudents.length ? overdue : null };
+    }, [filteredStudents, error, rosterError, loading, rosterLoading]);
 
     // Open receipt modal for a student
     const handleOpenReceipt = async (student, payment = null) => {
@@ -6177,7 +5705,7 @@ export const FeeManagementModule = (() => {
         {/* DIRECTORY VIEW: SUMMARY CARDS + STUDENT TABLE */}
         {activeView === "directory" && (
           <>
-            <p role="status">Totals include only confirmed fee records. Unavailable student liabilities are excluded.</p>
+            <p className="fm-data-note" role="status">One account per student. Outstanding covers pending obligations. Complete assigned totals and settled semester details are currently unavailable.</p>
             {/* Financial Summary Cards */}
             <div className="fm-summary-cards-grid fm-student-fee-summary-strip">
               {/* 1. Total Payable - Royal Blue */}
@@ -6189,7 +5717,7 @@ export const FeeManagementModule = (() => {
                   </span>
                 </div>
                 <strong className="fm-summary-card__value">
-                  {feeMoney(summaryMetrics.payable)}
+                  {reportedMoney(summaryMetrics.payable)}
                 </strong>
                 <span className="fm-summary-card__meta">Total student fee demand</span>
               </div>
@@ -6203,7 +5731,7 @@ export const FeeManagementModule = (() => {
                   </span>
                 </div>
                 <strong className="fm-summary-card__value">
-                  {feeMoney(summaryMetrics.collected)}
+                  {reportedMoney(summaryMetrics.collected)}
                 </strong>
                 <span className="fm-summary-card__meta">Total payments received</span>
               </div>
@@ -6217,7 +5745,7 @@ export const FeeManagementModule = (() => {
                   </span>
                 </div>
                 <strong className="fm-summary-card__value">
-                  {feeMoney(summaryMetrics.balance)}
+                  {reportedMoney(summaryMetrics.balance)}
                 </strong>
                 <span className="fm-summary-card__meta">Remaining student fee balance</span>
               </div>
@@ -6231,7 +5759,7 @@ export const FeeManagementModule = (() => {
                   </span>
                 </div>
                 <strong className="fm-summary-card__value">
-                  {feeMoney(summaryMetrics.overdue)}
+                  {reportedMoney(summaryMetrics.overdue)}
                 </strong>
                 <span className="fm-summary-card__meta">Total overdue amount</span>
               </div>
@@ -6352,7 +5880,7 @@ export const FeeManagementModule = (() => {
                     <option value="Partially Paid">Partially Paid</option>
                     <option value="Pending">Pending</option>
                     <option value="Overdue">Overdue</option>
-                    <option value="Fee Not Assigned">Fee Not Assigned</option>
+                    <option value="Balance Unavailable">Balance Unavailable</option>
                   </ProjectSelect>
                 </div>
               </FilterPanel>
@@ -6360,12 +5888,14 @@ export const FeeManagementModule = (() => {
               {/* Student Fees Table */}
               <FeeTable
                 wrapClassName="fm-student-accounts-table"
-                loading={loading}
-                error={error}
+                keepTable
+                loading={loading || rosterLoading}
+                error={rosterError || error}
                 rows={filteredStudents}
-                rowKey={(st) => st.studentFeeId || st.assignmentId || st.id}
+                rowKey={(st) => st.id}
                 pageSize={10}
                 columns={[
+                  { label: "Admission Number", render: st => st.admissionNumber || "—" },
                   {
                     label: "Student Name",
                     render: (st) => (
@@ -6375,7 +5905,6 @@ export const FeeManagementModule = (() => {
                       />
                     ),
                   },
-                  { label: "Academic Year", render: st => st.academicYearName || masters.years.find(year => String(year.id) === String(st.academicYearId))?.name || 'Not specified' },
                   {
                     label: "Course / Branch",
                     render: (st) => (
@@ -6387,13 +5916,15 @@ export const FeeManagementModule = (() => {
                       </div>
                     ),
                   },
+                  { label: "Admission Quota", render: st => st.quota || "—" },
+                  { label: "Student Category", render: st => st.studentCategory || "—" },
                   {
-                    label: "Total Fee",
+                    label: "Total Assigned Fee",
                     align: "right",
                     render: (st) => st.totalFee == null ? "Unavailable" : feeMoney(st.totalFee),
                   },
                   {
-                    label: "Paid Amount",
+                    label: "Total Paid",
                     align: "right",
                     render: (st) => (
                       <span style={{ color: "#059669", fontWeight: 700 }}>
@@ -6402,7 +5933,7 @@ export const FeeManagementModule = (() => {
                     ),
                   },
                   {
-                    label: "Pending Balance",
+                    label: "Outstanding",
                     align: "right",
                     render: (st) => (
                       <strong
@@ -6416,7 +5947,7 @@ export const FeeManagementModule = (() => {
                     ),
                   },
                   {
-                    label: "Fee Status",
+                    label: "Payment Status",
                     render: (st) => (
                       <span className={`fm-badge fm-badge--${st.statusSlug}`}>
                         {st.status}
@@ -6643,268 +6174,25 @@ export const FeeManagementModule = (() => {
   // ==========================================================================
   // STUDENT FEE DETAILS (`/fees/accounts/:studentId` & `/fees/ledger/:id`)
   // ==========================================================================
-  function StudentFeeDetails({ academic, state, ledgers }) {
+  function StudentFeeDetails({ academic, state, students = [] }) {
     const { studentId, assignmentId } = useParams();
     const navigate = useNavigate();
-
-    const [tab, setTab] = useState("summary");
-    const [studentData, setStudentData] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
-
-    const assignment = state.assignments.find((a) => a.id === assignmentId);
-    const resolvedStudentId = studentId || assignment?.student?.id;
-
-    useEffect(() => {
-      let active = true;
-      if (resolvedStudentId) {
-        setLoading(true);
-        setStudentData(null);
-        setError("");
-        Promise.allSettled([
-          feeCollectionApi.allPending({ studentId:resolvedStudentId }),
-          feeCollectionApi.allHistory({ studentId:resolvedStudentId }),
-        ])
-          .then(([pRes, hRes]) => {
-            if (!active) return;
-            const failed = [pRes, hRes].find(res => res.status === "rejected");
-            if (failed) { setError(failed.reason?.message || "Unable to load student fees."); return; }
-            const dues = pRes.status === "fulfilled" ? pRes.value || [] : [];
-            const hist = hRes.status === "fulfilled" ? (hRes.value || []).filter(row => !isDemoFeeRecord(row)) : [];
-            setStudentData({ dues, payments: hist });
-          })
-          .catch(() => {})
-          .finally(() => {
-            if (active) setLoading(false);
-          });
-      } else {
-        setLoading(false);
-      }
-      return () => {
-        active = false;
-      };
-    }, [resolvedStudentId, academic.selectedCollegeId]);
-
-    const s = assignment?.student || studentData?.dues?.[0] || studentData?.payments?.[0];
-    const dues = studentData?.dues || [];
-    const payments = studentData?.payments || [];
-
-    // Pending installment records are authoritative only when the API returns them.
-    // Payment history alone cannot establish a student's total liability or balance.
-    const sumDue = key => dues.length ? dues.reduce((sum, row) => sum + Number(row[key] || 0), 0) : null;
-    const totalFee = sumDue('payableAmount');
-    const discount = sumDue('concessionAmount');
-    const paid = sumDue('paidAmount');
-    const balance = sumDue('balanceAmount');
-    const overdue = dues.length ? dues.reduce((sum, row) => sum + (row.overdue ? Number(row.balanceAmount || 0) : 0), 0) : null;
-    const displayAmount = value => value == null ? 'Unavailable' : feeMoney(value);
-
-    return (
-      <div className="fm-page-container">
-        {/* Header */}
-        <header className="fm-page-header">
-          <div>
-            <button
-              type="button"
-              className="fm-back-btn"
-              onClick={() => navigate("/fees/students")}
-            >
-              <FiArrowLeft /> Back to Student Fees
-            </button>
-            <h1>{s?.name || s?.studentName || "Student Fee Details"}</h1>
-            <p>
-              {s?.code || s?.studentCode || studentId} · {s?.courseName || "Program"}{" "}
-              {s?.branchName || "Branch"} · {s?.batch || "—"}
-            </p>
-          </div>
-          <div className="fm-header-actions">
-            <Link
-              to="/fees/students"
-              state={{ studentSearch: s?.code || s?.studentCode }}
-              className="erp-btn erp-btn--primary"
-            >
-              <FiPlus /> Collect Payment
-            </Link>
-          </div>
-        </header>
-
-        <FeeRequestState loading={loading} error={error}>
-        {!dues.length && <p className="fm-info-banner" role="status">No fee installment configuration was returned. Total liability and outstanding balance are unavailable. Recorded payments remain available below.</p>}
-        <div className="fm-kpis-grid">
-          <FeeMetric label="Total Fee" value={displayAmount(totalFee)} icon={external3.FiLayers} />
-          <FeeMetric label="Discount" value={displayAmount(discount)} tone="lavender" icon={external3.FiTag} />
-          <FeeMetric label="Paid" value={displayAmount(paid)} tone="green" icon={external3.FiCheckCircle} />
-          <FeeMetric label="Balance" value={displayAmount(balance)} tone="amber" icon={external3.FiClock} />
-        </div>
-
-        {/* Main Content Surface with Underline Tabs */}
-        <div className="fm-workspace">
-          <div className="fm-tabs-bar" role="tablist">
-            <button
-              type="button"
-              className={`fm-tab-btn ${tab === "summary" ? "active" : ""}`}
-              onClick={() => setTab("summary")}
-            >
-              Summary
-            </button>
-            <button
-              type="button"
-              className={`fm-tab-btn ${tab === "payments" ? "active" : ""}`}
-              onClick={() => setTab("payments")}
-            >
-              Payments
-            </button>
-            <button
-              type="button"
-              className={`fm-tab-btn ${tab === "installments" ? "active" : ""}`}
-              onClick={() => setTab("installments")}
-            >
-              Installments
-            </button>
-            <button
-              type="button"
-              className={`fm-tab-btn ${tab === "ledger" ? "active" : ""}`}
-              onClick={() => setTab("ledger")}
-            >
-              Ledger
-            </button>
-          </div>
-
-          {/* Tab 1: Summary Calculation */}
-          {tab === "summary" && (
-            <div className="fm-tab-body">
-              <div className="fm-summary-calculation">
-                <div className="fm-calc-row">
-                  <span>Academic Fee</span>
-                  <strong>{displayAmount(totalFee)}</strong>
-                </div>
-                {discount > 0 && (
-                  <div className="fm-calc-row">
-                    <span>Scholarship / Concession</span>
-                    <strong style={{ color: "var(--success)" }}>-{displayAmount(discount)}</strong>
-                  </div>
-                )}
-                {paid > 0 && (
-                  <div className="fm-calc-row">
-                    <span>Payments Recorded</span>
-                    <strong style={{ color: "var(--brand)" }}>-{displayAmount(paid)}</strong>
-                  </div>
-                )}
-                <div className="fm-calc-total-row">
-                  <span>Remaining Balance</span>
-                  <strong>{displayAmount(balance)}</strong>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Tab 2: Payments History */}
-          {tab === "payments" && (
-            <div className="fm-tab-body">
-              <FeeTable
-                rows={payments}
-                empty="No payments recorded yet for this student."
-                columns={[
-                  { label: "Receipt No", key: "receiptNumber" },
-                  { label: "Date", render: (p) => date(p.paymentDate || p.date) },
-                  { label: "Payment Method", render: (p) => p.paymentMode || p.mode },
-                  {
-                    label: "Amount",
-                    align: "right",
-                    render: (p) => <strong>{feeMoney(p.totalAmount || p.amount)}</strong>,
-                  },
-                  { label: "Status", render: () => <FeeBadge value="Confirmed" /> },
-                ]}
-              />
-            </div>
-          )}
-
-          {/* Tab 3: Installments */}
-          {tab === "installments" && (
-            <div className="fm-tab-body">
-              <FeeTable
-                rows={dues}
-                empty="No scheduled installments found."
-                columns={[
-                  {
-                    label: "Installment",
-                    render: (d) => d.feeCategory || d.name || `Payment Tranche`,
-                  },
-                  { label: "Due Date", render: (d) => date(d.dueDate) },
-                  {
-                    label: "Amount",
-                    align: "right",
-                    render: (d) => feeMoney(d.payableAmount || d.amount),
-                  },
-                  {
-                    label: "Paid",
-                    align: "right",
-                    render: (d) => reportedMoney(d.paidAmount ?? d.paid),
-                  },
-                  {
-                    label: "Balance",
-                    align: "right",
-                    render: (d) => <strong>{reportedMoney(d.balanceAmount ?? d.balance)}</strong>,
-                  },
-                  {
-                    label: "Status",
-                    render: (d) => (
-                      <FeeBadge
-                        value={
-                          d.overdue
-                            ? "Overdue"
-                            : (d.balanceAmount || d.balance) === 0
-                            ? "Paid"
-                            : "Due"
-                        }
-                      />
-                    ),
-                  },
-                ]}
-              />
-            </div>
-          )}
-
-          {/* Tab 4: Ledger */}
-          {tab === "ledger" && (
-            <div className="fm-tab-body">
-              <FeeTable
-                rows={
-                  payments.map(row => ({ date:row.paymentDate, reference:row.receiptNumber || row.transactionReference || "—", description:row.feeCategory || "Payment", debit:0, credit:Math.round(Number(row.totalAmount) * 100) }))
-                }
-                empty="Chronological financial transactions will appear here as fees and payments are posted."
-                columns={[
-                  { label: "Date", render: (r) => date(r.date) },
-                  { label: "Reference", key: "reference" },
-                  { label: "Description", key: "description" },
-                  {
-                    label: "Debit (₹)",
-                    align: "right",
-                    render: (r) => (r.debit ? feeMoney(rupees(r.debit)) : "—"),
-                  },
-                  {
-                    label: "Credit (₹)",
-                    align: "right",
-                    render: (r) => (r.credit ? feeMoney(rupees(r.credit)) : "—"),
-                  },
-                  {
-                    label: "Balance (₹)",
-                    align: "right",
-                    render: (r) => <strong>{feeMoney(rupees(r.balance))}</strong>,
-                  },
-                ]}
-              />
-            </div>
-          )}
-        </div>
-        </FeeRequestState>
-      </div>
-    );
+    const resolvedId = studentId || state.assignments.find(row => row.id === assignmentId)?.student?.id;
+    const student = students.find(row => String(row.id) === String(resolvedId)) || { id: resolvedId, name: 'Student ' + resolvedId };
+    const [collect, setCollect] = useState(null);
+    const [receipt, setReceipt] = useState(null);
+    const [revision, setRevision] = useState(0);
+    if (!resolvedId) return <p role="alert">The saved student reference is unavailable. <Link to="/fees/students">Back to Student Fees</Link></p>;
+    const close = () => navigate('/fees/students');
+    const openReceipt = async payment => {
+      try { setReceipt(await feeCollectionApi.receipt(payment.receiptId)); }
+      catch (reason) { showError(reason.message || 'Unable to load official receipt.'); }
+    };
+    return <>{!collect && !receipt && <StudentFeeDetailsModal key={revision} student={student} academic={academic} onClose={close} onCollect={setCollect} onOpenReceipt={openReceipt} keepOpenForCollection />}
+      {collect && <CollectPaymentModal student={collect} academic={academic} onClose={() => setCollect(null)} onSuccess={saved => { setCollect(null); setRevision(value => value + 1); if (saved) setReceipt(saved); }} />}
+      {receipt && <StudentReceiptModal receipt={receipt} student={student} academic={academic} onClose={() => setReceipt(null)} />}</>;
   }
 
-  // ==========================================================================
-  // ASSIGN FEE PLAN (`/fees/assignments`)
-  // ==========================================================================
   function AssignFeePlan({
     state,
     students,
@@ -7153,6 +6441,7 @@ export const FeeManagementModule = (() => {
     },[isStructureWorkspace,feeCollege,planAttempt]);
     const [workspaceReady, setWorkspaceReady] = useState(false);
     const [students, setStudents] = useState([]);
+    const [rosterError, setRosterError] = useState("");
     const [loading, setLoading] = useState(true);
 
     const [filter, setFilter] = useState({
@@ -7173,12 +6462,13 @@ export const FeeManagementModule = (() => {
 
     useEffect(() => {
       let active = true;
-      studentProfilesApi
+      setStudents([]); setLoading(true); setRosterError("");
+      apiEndpointsModule.studentAdmissionApi
         .getAll({ collegeId: academic.selectedCollegeId })
         .then((rows) => {
-          if (active) setStudents((rows || []).map(studentRecord));
+          if (active) setStudents((rows || []).filter(row => row.studentId && String(row.collegeId) === String(academic.selectedCollegeId)).map(row => studentRecord({ ...row, admissionId: row.admissionId || row.id })));
         })
-        .catch(() => {})
+        .catch(reason => { if (active) setRosterError(reason.message || "Unable to load student admissions."); })
         .finally(() => {
           if (active) setLoading(false);
         });
@@ -7356,6 +6646,8 @@ export const FeeManagementModule = (() => {
                   assignments={state.assignments}
                   masters={masters}
                   students={students}
+                  rosterLoading={loading}
+                  rosterError={rosterError}
                   structures={state.structures}
                   feeManagementTabs={feeManagementTabs}
                 />
@@ -7368,6 +6660,7 @@ export const FeeManagementModule = (() => {
                   academic={academic}
                   state={state}
                   ledgers={ledgers}
+                  students={students}
                 />
               }
             />
@@ -7378,6 +6671,7 @@ export const FeeManagementModule = (() => {
                   academic={academic}
                   state={state}
                   ledgers={ledgers}
+                  students={students}
                 />
               }
             />

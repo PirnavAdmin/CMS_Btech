@@ -15,7 +15,7 @@ import StatusBadgeImports_default from '../../../components/StatusBadge'
 import ViewDialogImports_default from '../../../components/ViewDialog'
 import { useAcademic as AcademicContextImports_useAcademic } from '../../../context/AcademicContext'
 import { getAccessToken, getUserRole as authImports_getUserRole } from '../../../auth/auth'
-import { createOrVerifyMark, importVerifiedMarks, marksWorkflowPayload as marksWorkflowImports_marksWorkflowPayload } from '../../../utils/marksWorkflow'
+import { createOrVerifyMark, importVerifiedMarks, marksWorkflowPayload as marksWorkflowImports_marksWorkflowPayload, marksSaveErrorMessage, resolveAuthorizedMarksExam, scopeMarksExams, clearMarksAssessmentDependents } from '../../../utils/marksWorkflow'
 import { list as listScopedRecords } from '../../../services/scopedModulesService'
 import { showError as toastImports_showError, showSuccess as toastImports_showSuccess } from '../../../utils/toast'
 import eventBusImports_default, { ERP_EVENTS as eventBusImports_ERP_EVENTS } from '../../../services/eventBus'
@@ -29,6 +29,8 @@ import { fetchExamTypes as collegeApiImports_fetchExamTypes } from '../../../aut
 import './MarksManagement.css'
 
 const UploadMarksIcon = fiImports_FiUploadCloud
+const EMPTY_EXAM_LIST = Object.freeze([])
+const OUTSIDE_SCOPE_EXAM_MESSAGE = 'The selected examination is not valid for your authorized college. Please select a valid examination.'
 
 function marksHandoffPath(path, examId, studentId) {
   if (!/^[1-9]\d*$/.test(String(examId))) return null
@@ -273,9 +275,12 @@ function BulkMarksWorkspace({ academic, pendingImports, onClose, onImported }) {
     const request = academic.selectedCollegeId && academic.selectedAcademicYearId
       ? listScopedRecords('exams', { collegeId: academic.selectedCollegeId, academicYearId: academic.selectedAcademicYearId })
       : Promise.reject(new Error('Select a working college and academic year to load examinations.'))
+    setExams([])
+    setExamLoading(true)
+    setExamLoadError('')
     request
       .then(result => {
-        if (active) setExams(result.filter(exam => String(exam.collegeId) === String(academic.selectedCollegeId) && String(exam.academicYearId) === String(academic.selectedAcademicYearId)))
+        if (active) setExams(scopeMarksExams(result, { collegeId: academic.selectedCollegeId, academicYearId: academic.selectedAcademicYearId }))
       })
       .catch(error => {
         if (active) setExamLoadError(error.message || 'Examinations could not be loaded.')
@@ -484,7 +489,7 @@ function BulkMarksWorkspace({ academic, pendingImports, onClose, onImported }) {
       const result = await importVerifiedMarks(marksApi, selectedFile, {
         ...uploadScope,
         upsertDrafts: canUpdate,
-      }, pendingImports.current)
+      }, pendingImports.current, { exams, collegeId: academic.selectedCollegeId, academicYearId: academic.selectedAcademicYearId })
       showSuccess(`Marks upload completed: ${result.insertedRows || 0} inserted, ${result.updatedRows || 0} updated, ${result.rejectedRows || 0} rejected.`)
       setUploadPreview(result)
       setUploadComplete(true)
@@ -2027,12 +2032,19 @@ function MarksEntryWorkspace({ pendingMarks, pendingImports, openUpload }) {
   const [submittingMarkId, setSubmittingMarkId] = useState('')
   const [examsList, setExamsList] = useState([])
   const [examDirectoryStatus, setExamDirectoryStatus] = useState('loading')
+  const [examDirectoryScope, setExamDirectoryScope] = useState('')
+  const [examDirectoryRetry, setExamDirectoryRetry] = useState(0)
   const [examTypesList, setExamTypesList] = useState([])
   const [modalError, setModalError] = useState('')
+  const [canRetrySave, setCanRetrySave] = useState(false)
   const [fieldErrors, setFieldErrors] = useState({})
   const formRef = useRef(null)
   const [assessment, setAssessment] =
     useState(initialAssessment)
+  const examAcademicYearId = assessment.academicYearId || selectedAcademicYearId || ''
+  const examScopeKey = `${String(selectedCollegeId || '')}:${String(examAcademicYearId || '')}`
+  const currentExamsList = examDirectoryScope === examScopeKey ? examsList : EMPTY_EXAM_LIST
+  const currentExamDirectoryStatus = examDirectoryScope === examScopeKey ? examDirectoryStatus : 'loading'
 
   const toEntryRow = mark => ({
     ...mark,
@@ -2057,7 +2069,7 @@ function MarksEntryWorkspace({ pendingMarks, pendingImports, openUpload }) {
         ? await listScopedRecords('exams', { collegeId: selectedCollegeId, academicYearId: selectedAcademicYearId })
         : null
       const examRows = Array.isArray(scopedExams) ? scopedExams : scopedExams?.items ?? scopedExams?.data ?? []
-      const examIds = new Set(examRows.filter(exam => String(exam.collegeId) === String(selectedCollegeId) && String(exam.academicYearId) === String(selectedAcademicYearId)).map(exam => String(exam.examId ?? exam.id)))
+      const examIds = new Set(scopeMarksExams(examRows, { collegeId: selectedCollegeId, academicYearId: selectedAcademicYearId }).map(exam => String(exam.examId)))
       const scopedRecords = selectedCollegeId && selectedAcademicYearId
         ? records.filter(mark => String(mark.collegeId) === String(selectedCollegeId) && examIds.has(String(mark.examId)) && (!ownMarksOnly || (ownerId && String(mark.enteredBy) === ownerId)))
         : []
@@ -2136,17 +2148,29 @@ function MarksEntryWorkspace({ pendingMarks, pendingImports, openUpload }) {
 
   useEffect(() => {
     let current = true
-    const request = selectedCollegeId && selectedAcademicYearId
-      ? listScopedRecords('exams', { collegeId: selectedCollegeId, academicYearId: selectedAcademicYearId })
-      : Promise.resolve([])
-    request.then(rows => {
-      if (current) {
-        setExamsList(rows.filter(exam => String(exam.collegeId) === String(selectedCollegeId) && String(exam.academicYearId) === String(selectedAcademicYearId)))
-        setExamDirectoryStatus('ready')
-      }
-    }).catch(() => { if (current) setExamDirectoryStatus('error') })
+    const scope = { collegeId: selectedCollegeId, academicYearId: examAcademicYearId }
+    const scopeKey = `${String(scope.collegeId || '')}:${String(scope.academicYearId || '')}`
+    setExamsList([])
+    setExamDirectoryScope('')
+    if (!scope.collegeId || !scope.academicYearId) {
+      setExamDirectoryStatus('ready')
+      setExamDirectoryScope(scopeKey)
+      return () => { current = false }
+    }
+    setExamDirectoryStatus('loading')
+    listScopedRecords('exams', scope).then(rows => {
+      if (!current) return
+      setExamsList(scopeMarksExams(rows, scope))
+      setExamDirectoryScope(scopeKey)
+      setExamDirectoryStatus('ready')
+    }).catch(() => {
+      if (!current) return
+      setExamsList([])
+      setExamDirectoryScope(scopeKey)
+      setExamDirectoryStatus('error')
+    })
     return () => { current = false }
-  }, [selectedCollegeId, selectedAcademicYearId])
+  }, [selectedCollegeId, examAcademicYearId, examDirectoryRetry])
 
   useEffect(() => {
     fetchExamTypes({ Status: true })
@@ -2867,11 +2891,12 @@ function MarksEntryWorkspace({ pendingMarks, pendingImports, openUpload }) {
       subjectCode: mergeOptions(optionsFor(eligibleSubjects, ['subjectCode', 'code'], [], ['subjectCode', 'code']), savedOptions('subjectCode')),
       facultyName: mergeOptions(optionsFor(facultyMembers, ['fullName', 'facultyName', 'name']), savedOptions('facultyName')),
       examType: (() => {
-        const examOptions = examsList
+        const examOptions = currentExamsList
           .filter(exam => Number(exam.examId) > 0 &&
             inScope(exam, 'course', selectedCourse) && inScope(exam, 'branch', selectedBranch) &&
             inScope(exam, 'semester', selectedSemester) &&
             (!exam.sectionId || !assessment.sectionId || String(exam.sectionId) === String(assessment.sectionId)) &&
+            (!exam.subjectId || (assessment.subjectId && String(exam.subjectId) === String(assessment.subjectId))) &&
             (!ownMarksOnly || facultyAllocations.some(row =>
               (!assessment.sectionId || String(row.sectionId) === String(assessment.sectionId)) &&
               ['branchId', 'semesterId', 'sectionId'].every(key => !exam[key] || !row[key] || String(exam[key]) === String(row[key])),
@@ -2890,7 +2915,7 @@ function MarksEntryWorkspace({ pendingMarks, pendingImports, openUpload }) {
           ...savedAssessmentOptions.examType,
         ])
         const unconfiguredTypeOptions = registeredTypes
-          .filter(typeName => !examsList.some(exam =>
+          .filter(typeName => !currentExamsList.some(exam =>
             sameExamType(exam.examTypeName || exam.examType, typeName)
             || normalized(exam.examTypeCode) === normalized(typeName)
             || normalized(exam.examCode) === normalized(typeName),
@@ -2905,7 +2930,7 @@ function MarksEntryWorkspace({ pendingMarks, pendingImports, openUpload }) {
         ...fieldOptions.assessmentType,
         ...subjects.map(item => item.assessmentType),
         ...savedAssessmentOptions.assessmentType,
-        ...examsList.flatMap(exam => {
+        ...currentExamsList.flatMap(exam => {
           const directTypes = [exam.assessmentType, exam.assessmentTypeName, exam.defaultAssessmentType, exam.assessmentName]
             .map(type => typeof type === 'string' ? type : entityLabel(type, ['assessmentTypeName', 'typeName', 'name', 'label']))
           const nestedTypes = Array.isArray(exam.assessmentTypes)
@@ -2915,7 +2940,7 @@ function MarksEntryWorkspace({ pendingMarks, pendingImports, openUpload }) {
         }),
       ]).map(value => option(value)),
     }
-  }, [academicYears, academicCourses, branches, semesters, sections, sectionEligibleStudents, eligibleSubjects, facultyMembers, subjects, assessment, savedAssessmentOptions, examsList, examTypesList, ownMarksOnly, facultyAllocations])
+  }, [academicYears, academicCourses, branches, semesters, sections, sectionEligibleStudents, eligibleSubjects, facultyMembers, subjects, assessment, savedAssessmentOptions, currentExamsList, examTypesList, ownMarksOnly, facultyAllocations])
   const selectedCourse = academicCourses.find(item =>
     normalized(entityLabel(item, ['courseName', 'name', 'course', 'programName', 'title'])) === normalized(assessment.course)
     || (assessment.courseId && normalized(item.courseId ?? item.id) === normalized(assessment.courseId)),
@@ -3012,15 +3037,9 @@ function MarksEntryWorkspace({ pendingMarks, pendingImports, openUpload }) {
       : null
 
     const matchedExam = (key === 'examType' || key === 'examId')
-      ? examsList.find(e =>
+      ? currentExamsList.find(e =>
           (key === 'examId' && String(e.examId) === String(value))
           || (key === 'examType' && (String(e.examId) === String(value) || normalized(e.examName) === normalized(value) || normalized(e.examTypeName) === normalized(value) || normalized(e.examCode) === normalized(value))),
-        )
-      : null
-    const matchedSavedExam = (key === 'examType' || key === 'examId')
-      ? allRows.find(r =>
-          (key === 'examId' && String(r.examId) === String(value))
-          || (key === 'examType' && (normalized(r.examType) === normalized(value) || normalized(r.examName) === normalized(value))),
         )
       : null
 
@@ -3045,6 +3064,13 @@ function MarksEntryWorkspace({ pendingMarks, pendingImports, openUpload }) {
       ? facultyMembers.find(item => normalized(entityLabel(item, ['fullName', 'facultyName', 'name'])) === normalized(value))
       : null
 
+    if (['academicYear', 'course', 'branch', 'semester', 'section', 'subject', 'subjectCode', 'examType', 'examId'].includes(key)) {
+      setExamSchedule({ examId: '', rows: [], error: '', scopeKey: '' })
+      setRosterMarks({})
+      setRosterErrors({})
+      setCanRetrySave(false)
+    }
+
     setAssessment(current => ({
       ...current,
 
@@ -3053,6 +3079,8 @@ function MarksEntryWorkspace({ pendingMarks, pendingImports, openUpload }) {
         : key === 'branch' && matchedBranch
           ? entityLabel(matchedBranch, ['branchName', 'name', 'branch', 'title'])
           : value,
+
+      ...clearMarksAssessmentDependents(key),
 
       ...(key === 'academicYear'
         ? {
@@ -3132,7 +3160,7 @@ function MarksEntryWorkspace({ pendingMarks, pendingImports, openUpload }) {
             matchedSavedSubject?.subjectCode ||
             matchedSavedSubject?.code ||
             '',
-          subjectId: matchedSubject?.subjectId || matchedSubject?.id || matchedSavedSubject?.subjectId || current.subjectId || '',
+          subjectId: matchedSubject?.subjectId || matchedSubject?.id || matchedSavedSubject?.subjectId || '',
         }
         : {}),
 
@@ -3147,24 +3175,12 @@ function MarksEntryWorkspace({ pendingMarks, pendingImports, openUpload }) {
       ...(key === 'examType' && matchedExam
         ? {
           examId: String(matchedExam.examId),
-          examType: matchedExam.examTypeName || matchedExam.examName || value,
+          examType: matchedExam.examTypeName || matchedExam.examName || '',
           assessmentType: assessmentTypeForExam(matchedExam, current.assessmentType),
-          ...(matchedExam.academicYear ? { academicYear: matchedExam.academicYear, academicYearId: matchedExam.academicYearId || current.academicYearId } : {}),
-          ...(matchedExam.courseName ? { course: matchedExam.courseName, courseId: matchedExam.courseId || current.courseId } : {}),
-          ...(matchedExam.branchName ? { branch: matchedExam.branchName, branchId: matchedExam.branchId || current.branchId } : {}),
-          ...(matchedExam.semesterName ? { semester: matchedExam.semesterName, semesterId: matchedExam.semesterId || current.semesterId } : {}),
         }
-        : key === 'examType' && matchedSavedExam
-          ? {
-            examId: String(matchedSavedExam.examId || current.examId),
-            assessmentType: assessmentTypeForExam(matchedSavedExam, current.assessmentType),
-          }
-          : key === 'examType'
-            ? {
-              examId: '',
-              assessmentType: value ? assessmentTypeForExam({ examTypeName: value }, current.assessmentType) : '',
-            }
-            : {}),
+        : key === 'examType'
+          ? { examId: '', examType: '', assessmentType: '' }
+          : {}),
 
       ...(key === 'examId' && matchedExam
         ? {
@@ -3172,10 +3188,8 @@ function MarksEntryWorkspace({ pendingMarks, pendingImports, openUpload }) {
           examType: matchedExam.examTypeName || matchedExam.examName || current.examType,
           assessmentType: assessmentTypeForExam(matchedExam, current.assessmentType),
         }
-        : key === 'examId' && matchedSavedExam
-          ? {
-            examType: matchedSavedExam.examType || current.examType,
-          }
+        : key === 'examId'
+          ? { examId: '', examType: '', assessmentType: '' }
           : {}),
 
       ...(key ===
@@ -3232,19 +3246,48 @@ function MarksEntryWorkspace({ pendingMarks, pendingImports, openUpload }) {
     }))
   }
 
-  useEffect(() => {
-    if (!showAddForm || !assessment.examId || !selectedCollegeId) return
-    let active = true
-    const examId = String(assessment.examId)
-    listScopedRecords(`exams/${examId}/schedules`, { collegeId: selectedCollegeId })
-      .then(rows => { if (active) setExamSchedule({ examId, rows, error: '' }) })
-      .catch(error => { if (active) setExamSchedule({ examId, rows: [], error: error.message || 'Examination schedule could not be loaded.' }) })
-    return () => { active = false }
-  }, [showAddForm, assessment.examId, selectedCollegeId])
+  const examAuthorizationFor = reactImports_useCallback((examId, subjectId = assessment.subjectId) => ({
+    exams: currentExamsList,
+    examId,
+    collegeId: selectedCollegeId,
+    academicYearId: assessment.academicYearId || selectedAcademicYearId,
+    courseId: assessment.courseId,
+    courseName: assessment.course,
+    branchId: assessment.branchId,
+    branchName: assessment.branch,
+    semesterId: assessment.semesterId,
+    semesterName: assessment.semester,
+    sectionId: assessment.sectionId,
+    sectionName: assessment.section,
+    subjectId,
+    subjectName: assessment.subject || assessment.subjectName,
+  }), [currentExamsList, selectedCollegeId, selectedAcademicYearId, assessment.academicYearId, assessment.courseId, assessment.course, assessment.branchId, assessment.branch, assessment.semesterId, assessment.semester, assessment.sectionId, assessment.section, assessment.subjectId, assessment.subject])
+  const clearInvalidExamSelection = message => {
+    setAssessment(current => ({ ...current, examId: '', examType: '', assessmentType: '', registrationNumber: '', studentName: '', studentId: '' }))
+    setExamSchedule({ examId: '', rows: [], error: '', scopeKey: '' })
+    setRosterMarks({})
+    setRosterErrors({})
+    setCanRetrySave(false)
+    if (message) setModalError(message)
+  }
 
-  const rosterScope = [assessment.examId, assessment.subjectId, assessment.sectionId].join(':')
+  useEffect(() => {
+    const authorizedExam = resolveAuthorizedMarksExam(currentExamsList, examAuthorizationFor(assessment.examId))
+    if (!showAddForm || !authorizedExam || !selectedCollegeId) {
+      setExamSchedule({ examId: '', rows: [], error: '', scopeKey: '' })
+      return
+    }
+    let active = true
+    const examId = String(authorizedExam.examId)
+    listScopedRecords(`exams/${examId}/schedules`, { collegeId: selectedCollegeId })
+      .then(rows => { if (active) setExamSchedule({ examId, rows, error: '', scopeKey: examScopeKey }) })
+      .catch(error => { if (active) setExamSchedule({ examId, rows: [], error: error.message || 'Examination schedule could not be loaded.', scopeKey: examScopeKey }) })
+    return () => { active = false }
+  }, [showAddForm, assessment.examId, selectedCollegeId, examScopeKey, currentExamsList, examAuthorizationFor])
+
+  const rosterScope = [examScopeKey, assessment.examId, assessment.subjectId, assessment.sectionId].join(':')
   const rosterValues = rosterMarks[rosterScope] || {}
-  const currentSchedules = examSchedule.examId === String(assessment.examId) ? examSchedule.rows : []
+  const currentSchedules = examSchedule.examId === String(assessment.examId) && examSchedule.scopeKey === examScopeKey ? examSchedule.rows : []
   const selectedSchedules = currentSchedules.filter(row =>
     String(row.subjectId) === String(assessment.subjectId) &&
     (!row.sectionId || String(row.sectionId) === String(assessment.sectionId)),
@@ -3284,6 +3327,11 @@ function MarksEntryWorkspace({ pendingMarks, pendingImports, openUpload }) {
     }
     setRosterErrors({ ...errors })
     if (!entries.length || Object.keys(errors).length) return
+    const authorizedExam = resolveAuthorizedMarksExam(currentExamsList, examAuthorizationFor(assessment.examId))
+    if (!authorizedExam) {
+      setModalError('Please select an examination returned for the current authorized college and academic year.')
+      return
+    }
     saveLock.current = true
     setSaving(true)
     try {
@@ -3297,11 +3345,22 @@ function MarksEntryWorkspace({ pendingMarks, pendingImports, openUpload }) {
             await marksApi.update(existing.markId, { ...payload, grade: existing.grade ?? null, remarks: existing.remarks ?? null })
           } else {
             await createOrVerifyMark(marksApi, { ...payload, studentId, examId: Number(assessment.examId),
-              subjectId: Number(assessment.subjectId), sectionId: Number(assessment.sectionId) }, pendingMarks.current)
+              subjectId: Number(assessment.subjectId), sectionId: Number(assessment.sectionId) }, pendingMarks.current, examAuthorizationFor(authorizedExam.examId))
           }
           completed.push(String(studentId))
         } catch (error) {
-          errors[studentId] = error.message || 'Unable to save this mark.'
+          const errorMessage = marksSaveErrorMessage(error)
+          errors[studentId] = errorMessage
+          if (String(error?.code || '').toUpperCase() === 'RECORD_OUTSIDE_SCOPE') {
+            clearInvalidExamSelection(OUTSIDE_SCOPE_EXAM_MESSAGE)
+            errors[studentId] = OUTSIDE_SCOPE_EXAM_MESSAGE
+            break
+          }
+          if (Number(error?.status) >= 500) {
+            setCanRetrySave(true)
+            setModalError(errorMessage)
+            break
+          }
         }
       }
       setRosterErrors(errors)
@@ -3323,6 +3382,7 @@ function MarksEntryWorkspace({ pendingMarks, pendingImports, openUpload }) {
     if (sectionEntry && !editingId) return saveRosterDraft()
     if (saveLock.current || !(editingId ? canEdit : canCreate)) return
     setModalError('')
+    setCanRetrySave(false)
     setFieldErrors({})
 
     if (!selectedCollegeId || !selectedAcademicYearId) {
@@ -3367,25 +3427,9 @@ function MarksEntryWorkspace({ pendingMarks, pendingImports, openUpload }) {
       return
     }
 
-    let examId = Number(assessment.examId)
-    if (!Number.isSafeInteger(examId) || examId <= 0) {
-      const matchedExam = examsList.find(e =>
-        normalized(e.examName) === normalized(assessment.examType)
-        || normalized(e.examTypeName) === normalized(assessment.examType)
-        || normalized(e.examCode) === normalized(assessment.examType),
-      )
-      if (matchedExam && Number.isSafeInteger(Number(matchedExam.examId)) && Number(matchedExam.examId) > 0) {
-        examId = Number(matchedExam.examId)
-      } else {
-        const matchedRow = draftRows.find(r =>
-          normalized(r.examType) === normalized(assessment.examType)
-          || normalized(r.examName) === normalized(assessment.examType),
-        )
-        if (matchedRow && Number.isSafeInteger(Number(matchedRow.examId)) && Number(matchedRow.examId) > 0) {
-          examId = Number(matchedRow.examId)
-        }
-      }
-    }
+    const examAuthorization = examAuthorizationFor(assessment.examId, subjectId)
+    const authorizedExam = resolveAuthorizedMarksExam(currentExamsList, examAuthorization)
+    const examId = Number(authorizedExam?.examId)
 
     if (!editingId && !hasAssignedAssessment) {
       setModalError('Select a subject and section assigned to your faculty account.')
@@ -3398,9 +3442,9 @@ function MarksEntryWorkspace({ pendingMarks, pendingImports, openUpload }) {
     const errors = {}
     const errorMessages = []
 
-    if (!editingId && (!Number.isSafeInteger(examId) || examId <= 0)) {
+    if (!authorizedExam || !Number.isSafeInteger(examId) || examId <= 0) {
       errors.examType = true
-      errorMessages.push('Please select a valid Exam Type from the list.')
+      errorMessages.push('Please select an examination returned for the current authorized college, academic year and academic selections.')
     }
     if (!editingId && (!Number.isSafeInteger(studentId) || studentId <= 0)) {
       errors.registrationNumber = true
@@ -3449,7 +3493,7 @@ function MarksEntryWorkspace({ pendingMarks, pendingImports, openUpload }) {
           subjectId,
           sectionId: Number.isSafeInteger(sectionId) && sectionId > 0 ? sectionId : null,
           ...payload,
-        }, pendingMarks.current)
+        }, pendingMarks.current, examAuthorization)
       const record = toEntryRow(saved)
       setHandoff({ row: record, submitted: false })
       setDraftRows(current => editingId
@@ -3462,8 +3506,13 @@ function MarksEntryWorkspace({ pendingMarks, pendingImports, openUpload }) {
       setPage(1)
       await loadMarks()
     } catch (error) {
-      const errorMsg = error?.backendMessage || error?.message || 'Marks entry failed.'
-      setModalError(errorMsg)
+      const errorMsg = marksSaveErrorMessage(error)
+      if (String(error?.code || error?.response?.data?.code || '').toUpperCase() === 'RECORD_OUTSIDE_SCOPE') {
+        clearInvalidExamSelection(OUTSIDE_SCOPE_EXAM_MESSAGE)
+      } else {
+        setModalError(errorMsg)
+        setCanRetrySave(Number(error?.status ?? error?.response?.status) >= 500)
+      }
       showError(error)
       if (formRef.current) {
         formRef.current.scrollTop = 0
@@ -3582,10 +3631,10 @@ function MarksEntryWorkspace({ pendingMarks, pendingImports, openUpload }) {
           </header>
           {loadError && <div className="marks-approval-error" role="alert"><span>{loadError}</span><button type="button" className="erp-btn erp-btn--secondary" onClick={loadMarks} disabled={loading}>Retry</button></div>}
           {loading && <p className="marks-approval-loading" role="status">Loading marks from the server…</p>}
-          {selectedCollegeId && selectedAcademicYearId && examDirectoryStatus === 'ready' && examsList.length === 0 &&
+          {selectedCollegeId && selectedAcademicYearId && currentExamDirectoryStatus === 'ready' && currentExamsList.length === 0 &&
             <p className="marks-publication-note">No examinations configured. <react_router_domImports_Link to="/examination-setup">Open Exam Management</react_router_domImports_Link></p>}
           {allocationError && <p className="marks-publication-note" role="alert">{allocationError}</p>}
-          {examDirectoryStatus === 'error' && <p className="marks-publication-note" role="alert">Examinations could not be loaded.</p>}
+          {currentExamDirectoryStatus === 'error' && <p className="marks-publication-note" role="alert">Examinations could not be loaded.</p>}
 
           <FilterPanel
             active={hasFilters}
@@ -3754,8 +3803,12 @@ function MarksEntryWorkspace({ pendingMarks, pendingImports, openUpload }) {
                     <div className="marks-modal-error-banner" role="alert">
                       <FiAlertCircle className="marks-modal-error-icon" />
                       <span>{modalError}</span>
+                      {canRetrySave && <button type="button" className="erp-btn erp-btn--secondary" disabled={saving} onClick={() => formRef.current?.querySelector('form#marks-assessment-form')?.requestSubmit()}>Retry save</button>}
                     </div>
                   )}
+                  {currentExamDirectoryStatus === 'loading' && <p className="marks-section-student-message" role="status">Loading examinations for the selected college and academic yearâ€¦</p>}
+                  {currentExamDirectoryStatus === 'ready' && currentExamsList.length === 0 && <p className="marks-section-student-message" role="status">No examinations are configured for this college and academic year. Create an examination before entering marks.</p>}
+                  {currentExamDirectoryStatus === 'error' && <p className="marks-section-student-message marks-section-student-message--error" role="alert">Examinations could not be loaded. <button type="button" onClick={() => setExamDirectoryRetry(value => value + 1)}>Retry examination list</button></p>}
                   {sectionStudentsError && (
                     <div className="marks-section-student-message marks-section-student-message--error" role="alert">
                       <FiAlertCircle aria-hidden="true" />
@@ -3972,11 +4025,7 @@ function MarksEntryWorkspace({ pendingMarks, pendingImports, openUpload }) {
                                         : key === 'branch'
                                           ? assessment.branchId || selectedBranch?.branchId || selectedBranch?.id || fieldValue || ''
                                           : key === 'examType'
-                                            ? assessment.examId || examsList.find(exam =>
-                                              normalized(exam.examName) === normalized(fieldValue)
-                                              || normalized(exam.examTypeName) === normalized(fieldValue)
-                                              || normalized(exam.examCode) === normalized(fieldValue),
-                                            )?.examId || ''
+                                            ? currentExamsList.find(exam => String(exam.examId) === String(assessment.examId))?.examId || ''
                                           : fieldValue ?? ''
                                     }
                                     onChange={event => updateAssessment(key, event.target.value)}
@@ -4199,7 +4248,7 @@ function MarksEntryWorkspace({ pendingMarks, pendingImports, openUpload }) {
                             </table>
                           </div>
                           </>
-                        ) : <p role="status">{examSchedule.examId === String(assessment.examId) && examSchedule.error
+                        ) : <p role="status">{examSchedule.examId === String(assessment.examId) && examSchedule.scopeKey === examScopeKey && examSchedule.error
                           ? examSchedule.error : 'Select a section, examination and scheduled subject with a configured maximum.'}</p>}
                       </section>
                     )}

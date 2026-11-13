@@ -1,8 +1,11 @@
+import { CampusManagement } from './pages/settings/CollegeProfile.jsx'
 import { Component, Suspense, lazy, useEffect } from 'react'
 import { MeetingsEventsWorkspace, LibraryWorkspace, PlacementWorkspace } from './pages/campus/CampusWorkspace'
 import { Dashboard, LandingPage, Login, ActivateAccount, Register, Unauthorized } from './pages/Pages'
 import { CollegeInstitutionManagement, AddCollege, AcademicYearManagement, RolesAndDesignations, RoomsManagement } from './pages/admin-management/AdminManagement'
 import { MyProfile, Settings } from './pages/profile/MyProfile'
+import { SettingsConfiguration } from './pages/settings/SettingsConfiguration.jsx'
+import { NumberSeriesManagement, NumberSeriesEdit } from './pages/settings/NumberSeriesManagement.jsx'
 import { Attendance, AttendanceSessionDetails } from './pages/attendance/Attendance'
 import { FacultyManagement, FacultyLeaveManagement, Payroll } from './pages/faculty/FacultyManagement'
 import { ExaminationSetup, ExaminationList, CreateExamination, ExamType } from './pages/examinations/examination-setup/ExaminationSetup'
@@ -200,6 +203,7 @@ export default function App() {
           </Route>
           <Route element={<AcademicProvider><PortalRoute roles={[ROLES.ADMIN]} /></AcademicProvider>}>
             <Route path="/user-access" element={<UserAccessManagement />} />
+            <Route path="/client-onboarding" element={<UserAccessManagement initialOnboarding />} />
           </Route>
           {/* Existing administrator screens retain their URLs and components. */}
           <Route element={<PortalRoute roles={[ROLES.ADMIN]} permissionCheckedByChild />}>
@@ -227,6 +231,9 @@ export default function App() {
               <Route path="/settings" element={<Settings />} />
               <Route path="/global-settings" element={<Settings />} />
               <Route path="/settings/academic-context" element={<Settings />} />
+              <Route path="/settings/configuration" element={<SettingsConfiguration />} />
+              <Route path="/settings/number-series" element={<NumberSeriesManagement />} />
+              <Route path="/settings/number-series/:seriesId/edit" element={<NumberSeriesEdit />} />
 
               {/* Faculty demo module */}
               <Route path="/faculty/*" element={<FacultyManagement />} />
@@ -287,6 +294,8 @@ export default function App() {
 
               {/* Administration - Admin Only */}
               <Route path="/college-institution-management" element={<CollegeInstitutionManagement />} />
+              <Route path="/college-profile" element={<CollegeInstitutionManagement />} />
+              <Route path="/campus-management" element={<CampusManagement />} />
               <Route path="/college-institution-management/add" element={<AddCollege />} />
               <Route path="/academic-year-management" element={<AcademicProvider><AcademicYearManagement /></AcademicProvider>} />
               <Route path="/academic-year-management/:id" element={<AcademicProvider><AcademicYearManagement /></AcademicProvider>} />

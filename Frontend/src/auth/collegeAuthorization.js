@@ -14,8 +14,8 @@ export function hasModuleAction(access, module, action = 'view') {
 export function authorizedCollegeIds(access, assignedCollegeId = '') {
   if (!access) return []
   if (access.isSuperAdmin === true) return null // Explicit server-confirmed platform scope, not a role-label bypass.
-  const primary = Object.hasOwn(access, 'primaryCollegeId') ? access.primaryCollegeId : Object.hasOwn(access, 'collegeId') ? access.collegeId : assignedCollegeId
-  return [...new Set([primary, ...(access.isCollegeAdmin === true && Array.isArray(access.mappedCollegeIds) ? access.mappedCollegeIds : [])].filter(validId).map(id))]
+  const primary = Object.hasOwn(access, 'primaryCollegeId') ? access.primaryCollegeId : access.collegeId
+  return [primary].filter(validId).map(id)
 }
 export function canSelectCollege(access, collegeId, assignedCollegeId = '') {
   if (!validId(collegeId)) return false

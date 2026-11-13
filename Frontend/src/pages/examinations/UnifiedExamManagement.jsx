@@ -72,6 +72,7 @@ export default function UnifiedExamManagement() {
   const [fieldErrors, setFieldErrors] = useState({})
   const [error, setError] = useState('')
   const [loadError, setLoadError] = useState('')
+  const [relatedLoadErrors, setRelatedLoadErrors] = useState([])
   const [notice, setNotice] = useState('')
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -92,6 +93,15 @@ export default function UnifiedExamManagement() {
   const reload = useCallback(async () => {
     if (!academic.selectedCollegeId) { setLoading(false); setLoadError('Select a college to load examination records.'); return }
     setLoading(true)
+    setRelatedLoadErrors([])
+    const relatedFailures = []
+    const related = async (label, load, fallback) => {
+      try { return await load() } catch (error) {
+        console.error('[Exam Management] Related request failed', { resource: label, requestPath: error.requestPath, status: error.status, message: error.message })
+        relatedFailures.push(label)
+        return fallback
+      }
+    }
     let requestStage = 'examination lookups, examinations, and examination types'
     let collegeId = academic.selectedCollegeId
     let academicYearId = academic.selectedAcademicYearId || undefined
@@ -99,9 +109,9 @@ export default function UnifiedExamManagement() {
       collegeId = requireId(academic.selectedCollegeId, 'college')
       academicYearId = academic.selectedAcademicYearId ? requireId(academic.selectedAcademicYearId, 'academic year') : undefined
       const [lookupResponse, examRows, typeRows] = await Promise.all([
-        call('exams/lookups', { query: { collegeId, academicYearId } }),
+        related('Academic lookups', () => call('exams/lookups', { query: { collegeId, academicYearId } }), { data: {} }),
         list('exams', { collegeId, academicYearId }),
-        list('exam-types', { collegeId }),
+        related('Examination types', () => list('exam-types', { collegeId }), []),
       ])
       const lookupData = record(unwrap(lookupResponse) || {})
       const examTypes = typeRows.map(record)
@@ -117,7 +127,7 @@ export default function UnifiedExamManagement() {
       const scheduleGroups = await Promise.all(normalizedExams.map(async exam => {
         const examId = exam.examId ?? exam.id
         if (!examId) return []
-        const examSchedules = await list(`exams/${requireId(examId, 'examination')}/schedules`, { collegeId })
+        const examSchedules = await related('Subject timetable for ' + (exam.examName || examId), () => list(`exams/${requireId(examId, 'examination')}/schedules`, { collegeId }), [])
         return examSchedules.map(schedule => {
           const scheduleId = schedule.scheduleId ?? schedule.examScheduleId ?? schedule.id
           const subjectId = schedule.subjectId ?? schedule.subject?.subjectId ?? schedule.subject?.id
@@ -137,19 +147,23 @@ export default function UnifiedExamManagement() {
       }))
       setSchedules(scheduleGroups.flat())
       requestStage = 'room allocation records'
-      const hallRows = await list('exam-schedules/hall-allocations', { collegeId })
+      const hallRows = await related('Room allocations', () => list('exam-schedules/hall-allocations', { collegeId }), [])
       setAllocations(hallRows.map(record))
-      const facultyRows = []
-      let facultyPage = 1
-      let facultyPageCount = 1
-      do {
-        requestStage = `faculty directory (page ${facultyPage})`
-        const facultyResponse = await call('faculty', { query: { collegeId, status: 1, pageNumber: facultyPage, pageSize: 100 } })
-        facultyRows.push(...(unwrap(facultyResponse) || []).map(record))
-        facultyPageCount = Number(facultyResponse?.pagination?.totalPages || 1)
-        facultyPage += 1
-      } while (facultyPage <= facultyPageCount)
+      const facultyRows = await related('Faculty directory', async () => {
+        const facultyRows = []
+        let facultyPage = 1
+        let facultyPageCount = 1
+        do {
+          requestStage = `faculty directory (page ${facultyPage})`
+          const facultyResponse = await call('faculty', { query: { collegeId, status: 1, pageNumber: facultyPage, pageSize: 100 } })
+          facultyRows.push(...rows(facultyResponse))
+          facultyPageCount = Number(facultyResponse?.pagination?.totalPages || 1)
+          facultyPage += 1
+        } while (facultyPage <= facultyPageCount)
+        return facultyRows
+        }, [])
       setFaculty(facultyRows.map(record))
+      setRelatedLoadErrors(relatedFailures)
       setLoadError('')
       if (!draft.academicYearId && academicYearId) setDraft(value => ({ ...value, academicYearId: String(academicYearId) }))
     } catch (requestError) {
@@ -582,6 +596,7 @@ export default function UnifiedExamManagement() {
         <label>Status<select aria-label="Filter by status" value={filterDraft.status} onChange={e => setFilterDraft(value => ({ ...value, status: e.target.value }))}><option value="all">All statuses</option><option value="active">Active</option><option value="scheduled">Scheduled</option><option value="draft">Draft</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option><option value="published">Published</option></select></label>
         <div className="uem-filter-actions"><button type="button" className="uem-primary" onClick={applyFilters}>Apply Filters</button><button type="button" className="uem-secondary" onClick={clearFilters}>Clear Filters</button></div>
       </div>} />
+      {!loadError && relatedLoadErrors.length > 0 && <div className="uem-load-error" role="alert"><div><strong>Some examination information could not be loaded</strong><p>{relatedLoadErrors.join(', ')}. Saved examinations remain available; retry before editing these details.</p></div><button type="button" className="uem-load-error__retry" disabled={loading} onClick={reload}>Retry related information</button></div>}
       {loadError ? <div className="uem-load-error" role="alert"><FiAlertCircle className="uem-load-error__icon" aria-hidden="true" /><div className="uem-load-error__copy"><strong>Unable to load examinations</strong><p>We couldn't fetch examination records. Please try again.</p></div><button type="button" className="uem-load-error__retry" onClick={reload} disabled={loading}>{loading ? 'Retrying…' : 'Retry'}</button></div> : <>
       <div className="uem-table-wrap uem-exam-table-wrap"><table><thead><tr><th>Exam Name</th><th>Department</th><th>Semester</th><th>Subjects</th><th>Start Date</th><th>End Date</th><th>Room Allocation</th><th>Status</th><th>Actions</th></tr></thead><tbody>{loading ? <tr><td colSpan="9" className="uem-empty">Loading examinations…</td></tr> : visibleExams.map(exam => {
         const examSchedules = schedules.filter(row => String(row.examId) === String(exam.examId))
