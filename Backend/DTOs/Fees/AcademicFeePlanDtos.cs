@@ -11,7 +11,8 @@ public class AcademicFeePlanRequest
     public long AcademicYearId { get; set; }
     public long CourseId { get; set; }
     public long BranchId { get; set; }
-    public long SemesterId { get; set; }
+    // null means a batch-level annual plan covering every semester in this academic year.
+    public long? SemesterId { get; set; }
     public long FeeCategoryId { get; set; }
     [Required, StringLength(50)] public string Batch { get; set; } = "";
     [StringLength(100)] public string? Quota { get; set; }
@@ -73,7 +74,8 @@ public class AdmissionFeePlanQuery
     public long AcademicYearId { get; set; }
     public long CourseId { get; set; }
     public long BranchId { get; set; }
-    public long SemesterId { get; set; }
+    // Optional for the picker; without a semester it returns batch-level plans only.
+    public long? SemesterId { get; set; }
     public string Batch { get; set; } = "";
     public string? Quota { get; set; }
     public string? StudentCategory { get; set; }

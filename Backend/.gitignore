@@ -5,3 +5,4 @@ Logs/*.log
 Uploads/*
 !Uploads/.gitkeep
 appsettings.Local.json
+wwwroot/uploads/

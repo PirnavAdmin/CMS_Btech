@@ -239,6 +239,18 @@ class RoomService {
     return createdRoom
   }
 
+  async createRoomPersisted(data) {
+    const collegeId = selectedCollegeId()
+    if (!collegeId) throw new Error('Select a college before creating rooms.')
+    const payload = roomPayload(data, collegeId)
+    const apiRes = await roomApi.create(payload)
+    if (!apiRes) throw new Error(`The server did not confirm creation of room ${payload.roomNumber}.`)
+    const createdRoom = normalizeRoom({ ...payload, ...apiRes, collegeId })
+    const rooms = this.getStoredRooms(collegeId)
+    this.saveRooms([createdRoom, ...rooms.filter((room) => room.id !== createdRoom.id && room.roomNumber !== createdRoom.roomNumber)], collegeId)
+    return createdRoom
+  }
+
   async updateRoom(id, data) {
     const collegeId = selectedCollegeId()
     const payload = roomPayload(data, collegeId)
