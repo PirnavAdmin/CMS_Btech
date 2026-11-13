@@ -9,12 +9,12 @@ import HeaderAcademicYear from './HeaderAcademicYear.jsx'
 const access = vi.hoisted(() => ({ view: true, create: false, apply: vi.fn(), retry: vi.fn() }))
 vi.mock('../layouts/DashboardLayout', () => ({ default: ({ children }) => children }))
 vi.mock('../context/AcademicContext', async () => { const { createContext, useContext } = await import('react'); const context = createContext(null); return { default: context, useAcademic: () => useContext(context) } })
-vi.mock('../auth/ScreenAccess', () => ({ useScreenAccess: () => ({ canView: () => access.view, canAction: () => access.create }) }))
+vi.mock('../auth/ScreenAccess', () => ({ useScreenAccess: () => ({ canView: () => access.view, canAction: () => access.create, access: {isSuperAdmin:true} }) }))
 const colleges = [{ id: '7', name: 'College A' }, { id: '8', name: 'College B' }]
 const years = [{ id: '9', name: 'Configured year A' }, { id: '10', name: 'Configured year B' }]
 function Harness({ overrides = {}, withHeader = false }) {
   const [selection, setSelection] = useState({ selectedCollegeId: '7', selectedAcademicYearId: '9' })
-  const value = { ...selection, activeColleges: colleges, academicYears: years, selectedCollege: colleges.find(row => row.id === selection.selectedCollegeId), selectedAcademicYear: years.find(row => row.id === selection.selectedAcademicYearId), loading: false, error: '', refreshHierarchy: access.retry,
+  const value = { isSuperAdmin: true, ...selection, activeColleges: colleges, academicYears: years, selectedCollege: colleges.find(row => row.id === selection.selectedCollegeId), selectedAcademicYear: years.find(row => row.id === selection.selectedAcademicYearId), loading: false, error: '', refreshHierarchy: access.retry,
     applyAcademicContext: async (collegeId, yearId) => { access.apply(collegeId, yearId); setSelection({ selectedCollegeId: collegeId, selectedAcademicYearId: collegeId === selection.selectedCollegeId ? yearId : '' }) }, ...overrides }
   return <MemoryRouter><AcademicContext.Provider value={value}>{withHeader && <header aria-label="Application context"><AcademicContextSelect kind="college" compact /><HeaderAcademicYear /></header>}<GlobalSettings /></AcademicContext.Provider></MemoryRouter>
 }
@@ -46,11 +46,11 @@ test('working selectors update without reload and stay separate from backend act
 })
 test('configuration links and create actions respect supplied permissions', () => {
   const { rerender } = render(<Harness />)
-  expect(screen.getByRole('link', { name: 'Configure colleges' }).getAttribute('href')).toBe('/college-institution-management')
+  expect(screen.getByRole('link', { name: 'View college profile' }).getAttribute('href')).toBe('/college-profile')
   expect(screen.queryByRole('link', { name: 'Add college' })).toBeNull()
   expect(screen.queryByRole('link', { name: 'Add academic year' })).toBeNull()
   access.create = true; rerender(<Harness />)
-  expect(screen.getByRole('link', { name: 'Add college' }).getAttribute('href')).toBe('/college-institution-management/add')
+  expect(screen.queryByRole('link', { name: 'Add college' })).toBeNull()
   expect(screen.getByRole('link', { name: 'Add academic year' }).getAttribute('href')).toBe('/academic-year-management?action=add')
   access.view = false; rerender(<Harness />)
   expect(screen.queryByRole('link')).toBeNull()
@@ -60,7 +60,7 @@ test('configuration links and create actions respect supplied permissions', () =
 test('three configuration areas reuse existing management routes and require a college for year creation', () => {
   access.create = true
   render(<Harness overrides={{ selectedCollegeId: '', selectedCollege: null }} />)
-  for (const name of ['Working Context', 'College Configuration', 'Academic Year Configuration']) expect(screen.getByRole('region', { name })).toBeTruthy()
+  for (const name of ['Working Context', 'College Profile', 'Academic Year Configuration']) expect(screen.getByRole('region', { name })).toBeTruthy()
   expect(screen.getByRole('link', { name: 'Configure academic years' }).getAttribute('href')).toBe('/academic-year-management')
   expect(screen.queryByRole('link', { name: 'Add academic year' })).toBeNull()
 })

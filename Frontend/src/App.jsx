@@ -1,3 +1,4 @@
+import { CampusManagement } from './pages/settings/CollegeProfile.jsx'
 import { Component, Suspense, lazy, useEffect } from 'react'
 import { MeetingsEventsWorkspace, LibraryWorkspace, PlacementWorkspace } from './pages/campus/CampusWorkspace'
 import { Dashboard, LandingPage, Login, ActivateAccount, Register, Unauthorized } from './pages/Pages'
@@ -200,6 +201,7 @@ export default function App() {
           </Route>
           <Route element={<AcademicProvider><PortalRoute roles={[ROLES.ADMIN]} /></AcademicProvider>}>
             <Route path="/user-access" element={<UserAccessManagement />} />
+            <Route path="/client-onboarding" element={<UserAccessManagement initialOnboarding />} />
           </Route>
           {/* Existing administrator screens retain their URLs and components. */}
           <Route element={<PortalRoute roles={[ROLES.ADMIN]} permissionCheckedByChild />}>
@@ -287,6 +289,8 @@ export default function App() {
 
               {/* Administration - Admin Only */}
               <Route path="/college-institution-management" element={<CollegeInstitutionManagement />} />
+              <Route path="/college-profile" element={<CollegeInstitutionManagement />} />
+              <Route path="/campus-management" element={<CampusManagement />} />
               <Route path="/college-institution-management/add" element={<AddCollege />} />
               <Route path="/academic-year-management" element={<AcademicProvider><AcademicYearManagement /></AcademicProvider>} />
               <Route path="/academic-year-management/:id" element={<AcademicProvider><AcademicYearManagement /></AcademicProvider>} />

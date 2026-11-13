@@ -17,7 +17,7 @@ const entries = [
     permission: {"module":"colleges","action":"view","source":"existing access matrix"}, authorization: "existing-guards-and-permissions",
     roles: ["admin"], scope: "platform", navigation: true,
     component: "src/pages/admin-management/AdminManagement.jsx", exportName: "CollegeInstitutionManagement",
-    aliases: [], children: [], prerequisites: [],
+    aliases: ["/college-profile", "/campus-management"], children: [], prerequisites: [],
   },
   {
     id: "academic_years", label: "Academic Years", icon: "calendar-range",
@@ -255,7 +255,7 @@ const entries = [
     permission: {"module":"roles_permissions","action":"view","source":"existing access matrix"}, authorization: "existing-guards-and-permissions",
     roles: ["admin"], scope: "platform-and-college", navigation: true,
     component: "src/pages/admin-management/UserAccessManagement.jsx", exportName: "UserAccessManagement",
-    aliases: [], children: [], prerequisites: [],
+    aliases: ["/client-onboarding"], children: [], prerequisites: [],
   },
   {
     id: "roles_permissions", label: "Roles & Designations", icon: "key-round",

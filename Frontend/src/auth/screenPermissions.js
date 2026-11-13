@@ -67,6 +67,8 @@ export function permissionModuleForScreen(path) {
 }
 export function canViewScreen(path, role, permissions = {}, access = {}) {
   if (!['admin', 'faculty', 'student', 'staff'].includes(role)) return false
+  if (/^\/college-institution-management\/add\/?$/.test(String(path).split(/[?#]/)[0]) && access.isSuperAdmin !== true) return false
+  if (path.startsWith('/client-onboarding') && access.isSuperAdmin !== true) return false
   if (isPersonalWorkspace(path, role)) return true
   // Own-profile access is necessary for the existing first-login completion flow.
   if (path === '/my-profile') return true

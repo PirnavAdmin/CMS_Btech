@@ -114,7 +114,7 @@ export default function DashboardLayout({ children }) {
     name: localStorage.getItem('btech-user-name') || sessionStorage.getItem('btech-user-name') || '',
     identifier: localStorage.getItem('btech-user-id') || sessionStorage.getItem('btech-user-id') || '',
   }))
-  const { canView } = useScreenAccess()
+  const { canView, access: accountAccess } = useScreenAccess()
 
   const userRole = getUserRole() || 'user'
   const mustChangePassword = localStorage.getItem('btech-must-change-password') === 'true' || sessionStorage.getItem('btech-must-change-password') === 'true'
@@ -129,7 +129,7 @@ export default function DashboardLayout({ children }) {
   const isMarksWorkspace = pathname === '/marks-management' || /^\/marks-management\/(marks-entry|bulk-marks-upload|submitted-marks|marks-approval|publish-results)\/?$/.test(pathname)
   const pageName = isMarksWorkspace ? 'Marks Management' : ({
     '/library': 'Library Management', '/placement': 'Placements', '/meetings-events': 'Meetings & Events', '/user-access': 'User Access Management', '/dashboard': 'Overview', '/academic-structure': 'Program Configuration', '/my-profile': 'My Profile', '/settings': 'Settings',
-    '/college-institution-management': 'College', '/academic-year-management': 'Academic Years',
+    '/college-institution-management': accountAccess?.isSuperAdmin === true ? 'Colleges' : 'College Profile', '/college-profile': 'College Profile', '/campus-management': 'Campus Management', '/client-onboarding': 'Client Onboarding', '/academic-year-management': 'Academic Years',
     '/student-management/attendance': 'Student Attendance',
     '/department-management': 'Departments', '/semester-management': 'Semesters', '/section-management': 'Sections',
     '/student-management/admissions': 'Student Admissions',

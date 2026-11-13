@@ -1245,70 +1245,55 @@
   box-shadow: none !important;
   color: var(--text-primary);
 }
-#root .fm-page .fm-student-accounts-table :is(th, td):nth-child(3) {
-  min-width: 170px;
-  max-width: 240px;
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
 :root[data-theme="dark"] #root .fm-page :is(.fm-badge--unassigned, .fm-badge--fee-not-assigned) {
   background: var(--surface-soft) !important;
   border-color: var(--border-strong) !important;
   color: var(--border-strong) !important;
 }
 
-/* Student account directory: balanced columns and one consistent action treatment. */
-#root .fm-page .fm-student-accounts-table .fm-table {
-  width: 100%;
-  min-width: 1040px;
-  table-layout: fixed;
+/* Student account directory uses one row for each student. */
+#root .fm-page .fm-student-accounts-table .fm-table { width: 100%; min-width: 0; table-layout: fixed; }
+#root .fm-page .fm-student-accounts-table .fm-table :is(th,td) { width: auto; min-width: 0; height: auto !important; padding: 9px 6px !important; font-size: 11px; line-height: 1.4; white-space: normal; overflow-wrap: anywhere; vertical-align: middle; text-align: left; }
+#root .fm-page .fm-student-accounts-table .fm-table th { font-size: 10px; }
+#root .fm-page .fm-student-accounts-table .fm-table :is(th,td):nth-child(2),
+#root .fm-page .fm-student-accounts-table .fm-table :is(th,td):nth-child(3) { width: 14%; }
+#root .fm-page .fm-student-accounts-table .fm-table :is(th,td):last-child { width: 100px; position: static; text-align: center; }
+#root .fm-page .fm-student-accounts-table .fm-badge { white-space: normal; font-size: 10px; padding: 3px 5px; }
+#root .fm-page .fm-account-actions { display: flex; flex-wrap: nowrap; align-items: center; justify-content: center; gap: 5px; }
+#root .fm-page .fm-account-actions button { flex: 0 0 26px; width: 26px; min-width: 26px; height: 28px; min-height: 28px; padding: 4px; }
+#root .fm-page .fm-account-actions svg { width: 14px; height: 14px; }
+.fm-student-profile { color: var(--text-primary); background: var(--surface); display: grid; gap: 12px; }
+.fm-student-profile h3, .fm-student-profile p { margin: 0; }
+.fm-student-facts { margin: 0; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px 16px; }
+.fm-student-facts dt, .fm-profile-totals small { font-size: 11px; color: var(--text-secondary); }
+.fm-student-facts dd { margin: 3px 0 0; font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.fm-profile-totals { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); border: 1px solid var(--border); border-radius: 8px; }
+.fm-profile-totals > div { padding: 10px; display: grid; gap: 4px; }
+.fm-profile-totals > div + div { border-left: 1px solid var(--border); }
+.fm-profile-totals strong { font-size: 17px; }
+.fm-data-note { color: var(--text-secondary); font-size: 12px; line-height: 1.5; }
+.fm-profile-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12px; }
+.fm-profile-table :is(th,td) { padding: 8px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+.fm-profile-table thead { background: var(--surface-soft); }
+.fm-profile-table small { display: block; color: var(--text-secondary); margin-top: 3px; }
+.fm-profile-table details summary, .fm-assignment-snapshot summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+.fm-obligation-list { padding-left: 18px; margin: 6px 0; }
+.fm-obligation-list li { margin-block: 7px; }
+.fm-obligation-list span { display: block; margin-top: 3px; }
+.fm-profile-section-heading { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.shared-view-dialog .fm-collect-action { background: var(--success, #15803d); color: var(--on-success, #fff); border-color: var(--success, #15803d); }
+.shared-view-dialog .fm-collect-action:hover { background: var(--success, #15803d); color: var(--on-success, #fff); filter: brightness(.92); }
+@media (max-width: 1000px) {
+ .fm-student-facts { grid-template-columns: repeat(2,minmax(0,1fr)); }
+ .fm-profile-totals { grid-template-columns: repeat(2,minmax(0,1fr)); }
+ .fm-profile-table :is(th,td) { padding: 6px 3px; font-size: 10px; }
+ #root .fm-page .fm-student-accounts-table .fm-table thead { display: none; }
+ #root .fm-page .fm-student-accounts-table .fm-table :is(tbody,tr) { display: block; width: 100%; }
+ #root .fm-page .fm-student-accounts-table .fm-table tr { border-bottom: 1px solid var(--border); }
+ #root .fm-page .fm-student-accounts-table .fm-table td:nth-child(n) { display: grid; grid-template-columns: minmax(110px,40%) minmax(0,1fr); width: auto; padding: 6px 9px !important; font-size: 12px; text-align: left !important; }
+ #root .fm-page .fm-student-accounts-table .fm-table td::before { content: attr(data-label); font-weight: 600; color: var(--text-secondary); }
+ #root .fm-page .fm-student-accounts-table .fm-account-actions { justify-content: flex-start; }
 }
-#root .fm-page .fm-student-accounts-table .fm-table th {
-  height: 42px !important;
-  padding: 10px 12px !important;
-  font-size: 10px !important;
-  letter-spacing: .035em;
-}
-#root .fm-page .fm-student-accounts-table .fm-table td {
-  height: 64px !important;
-  padding: 12px !important;
-  line-height: 1.5;
-}
-#root .fm-page .fm-student-accounts-table :is(th, td):nth-child(1) { width: 17%; }
-#root .fm-page .fm-student-accounts-table :is(th, td):nth-child(2) { width: 14%; overflow-wrap: anywhere; }
-#root .fm-page .fm-student-accounts-table :is(th, td):nth-child(3) { width: 18%; min-width: 0; }
-#root .fm-page .fm-student-accounts-table :is(th, td):nth-child(4), #root .fm-page .fm-student-accounts-table :is(th, td):nth-child(5), #root .fm-page .fm-student-accounts-table :is(th, td):nth-child(6) { width: 10%; text-align: right !important; font-variant-numeric: tabular-nums; }
-#root .fm-page .fm-student-accounts-table :is(th, td):nth-child(7) { width: 11%; text-align: center !important; }
-#root .fm-page .fm-student-accounts-table :is(th, td):last-child {
-  position: static;
-  width: 96px;
-  min-width: 96px;
-  z-index: 1;
-  text-align: center !important;
-  box-shadow: none;
-}
-#root .fm-page .fm-student-accounts-table .fm-badge {
-  max-width: 100%;
-  padding: 5px 8px;
-  border-radius: 6px;
-  font-size: 10px;
-  line-height: 1.4;
-  white-space: normal;
-}
-#root .fm-page .fm-account-actions {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 30px;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: max-content;
-  max-width: 100%;
-  margin-inline: auto;
-}
-#root .fm-page .fm-account-actions svg { width: 15px !important; height: 15px !important; }
-:root[data-theme="dark"] #root .fm-page .fm-student-accounts-table td:nth-child(5) span { color: #6ee7b7 !important; }
-:root[data-theme="dark"] #root .fm-page .fm-student-accounts-table td:nth-child(6) strong { color: #f1f5f9 !important; }
 
 /* FeeStructure.css */
 /* Fee Management presentation. Reuses ERP theme tokens and DashboardLayout. */
@@ -4022,7 +4007,7 @@
 #root .fm-page .fm-person strong { font-size: 12px; color: var(--fm-text); }
 #root .fm-page .fm-cell-sub { margin-top: 3px; font-size: 10px; color: var(--fm-muted); }
 #root .fm-page .fm-account-actions { display: flex; align-items: center; justify-content: flex-end; gap: 5px; }
-#root .fm-page .fm-account-actions button { min-width: 30px; min-height: 30px; border-radius: 7px; }
+#root .fm-page .fm-account-actions button { border-radius: 7px; }
 #root .fm-page .fm-badge { display: inline-flex; align-items: center; gap: 5px; border: 1px solid transparent; border-radius: 5px; padding: 4px 7px; font-size: 10px; font-weight: 700; line-height: 1.3; white-space: nowrap; }
 #root .fm-page .fm-badge--paid, #root .fm-page .fm-badge--approved, #root .fm-page .fm-badge--active, #root .fm-page .fm-badge--published { color: var(--success); background: var(--success-soft); border-color: var(--success-border); }
 #root .fm-page .fm-badge--partially-paid { color: var(--info); background: #f0f9ff; border-color: var(--info-border); }
@@ -4246,7 +4231,7 @@
 #root .fm-page .fm-report-context > strong { font-size: 13px; }
 #root .fm-page .fm-report-context > span { font-size: 10px; }
 #root .fm-page .fm-report-table .fm-table-wrap, #root .fm-page .fm-reports-table-wrap { max-height: min(58vh,620px); overflow: auto; }
-#root .fm-page .fm-student-accounts-table .fm-table { min-width: 900px; }
+
 #root .fm-page .fm-payment-success-card { margin: 0 auto; padding: 20px; }
 #root .fm-page .fm-receipt-content { gap: 12px; }
 #root .fm-page .fm-dialog__header { padding: 14px 17px; }
@@ -4454,14 +4439,14 @@
 
 #root .fm-page .fm-academic-plan-editor .fm-form-section { padding: 0; border: 0; border-radius: 0; box-shadow: none; gap: 12px; background: var(--surface); }
 #root .fm-page .fm-academic-plan-editor .fm-form-section + .fm-form-section:not([hidden]) { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); }
-#root .fm-page .fm-academic-plan-editor .fm-plan-form-tabs { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); padding: 8px 12px; background: var(--surface); }
+#root .fm-page .fm-academic-plan-editor .fm-plan-form-tabs { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); padding: 8px 12px; background: var(--surface); }
 #root .fm-page .fm-academic-plan-editor .fm-tab-btn { min-height: 40px; margin: 0; }
 #root .fm-page .fm-academic-plan-editor .fs-field :is(input,select), #root .fm-page .fm-academic-plan-editor .fm-matrix-scroll input { height: 40px; min-height: 40px; }
 #root .fm-page .fm-academic-plan-editor .fm-component-toolbar { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; }
 #root .fm-page .fm-academic-plan-editor .fm-component-toolbar > .fs-field { flex: 1 1 240px; }
 #root .fm-page .fm-academic-plan-editor .fm-matrix-scroll { overflow-x: auto; min-width: 0; border: 1px solid var(--border); border-radius: 8px; }
-#root .fm-page .fm-academic-plan-editor .fm-matrix-scroll table { width: 100%; border: 0; margin: 0; }
-#root .fm-page .fm-academic-plan-editor .fm-matrix-scroll :is(th,td) { padding: 8px 10px; vertical-align: middle; }
+#root .fm-page .fm-academic-plan-editor .fm-matrix-scroll table { width: 100%; min-width: 0; table-layout: fixed; border: 0; margin: 0; }
+#root .fm-page .fm-academic-plan-editor .fm-matrix-scroll :is(th,td) { padding: 8px 10px; vertical-align: middle; white-space: normal; overflow-wrap: anywhere; }
 #root .fm-page .fm-academic-plan-editor .fm-matrix-scroll :is(input,.fs-field) { min-width: 130px; width: 100%; margin: 0; }
 #root .fm-page .fm-academic-plan-editor .fm-matrix-scroll input { padding: 8px 10px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--text-primary); }
 #root .fm-page .fm-academic-plan-editor .fm-matrix-actions { display: flex; gap: 8px; flex-wrap: nowrap; }
@@ -4475,7 +4460,7 @@
 #root .fm-page .fm-academic-plan-editor .fm-review-scope dd { margin: 3px 0 0; font-size: 12px; overflow-wrap: anywhere; }
 #root .fm-page .fm-academic-plan-editor .fm-review-combination { padding-top: 10px; border-top: 1px solid var(--border); font-size: 12px; }
 #root .fm-page .fm-academic-plan-editor .fm-review-combination :is(h4,p,ol) { margin: 0 0 6px; }
-@media(max-width:650px) { #root .fm-page .fm-academic-plan-editor .fm-review-scope { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media(max-width:650px) { #root .fm-page .fm-academic-plan-editor .fm-plan-form-tabs { grid-template-columns: repeat(2,minmax(0,1fr)); } #root .fm-page .fm-academic-plan-editor .fm-matrix-actions { flex-wrap: wrap; } #root .fm-page .fm-academic-plan-editor .fm-review-scope { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media (max-width: 1050px) {
   #root .fm-page .fm-student-fees-page:has(.fm-student-fee-summary-strip) { grid-template-columns: minmax(0,1fr); }
   #root .fm-page .fm-student-fees-page > .erp-page-header { grid-column: 1; grid-row: 1; }
@@ -4509,3 +4494,45 @@
   #root .fm-page .fm-overview-page > .erp-page-header .compact-summary > .compact-summary__item { flex: 1 1 calc(50% - 1px); }
   #root .fm-page .fm-overview-page > .erp-page-header .fm-header-year-select { align-items: flex-start; flex-direction: column; }
 }
+/* Fee type directory and its shared add/edit/details dialog. */
+.fm-fee-types-directory { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface); }
+#root .fm-page .fm-fee-types-directory .filter-disclosure { margin: 0; border: 0; border-radius: 0; background: var(--surface); box-shadow: none; }
+#root .fm-page .fm-fee-types-directory .fm-table-wrap { border: 0; border-radius: 0; }
+#root .fm-page .fm-fee-types-directory .fm-table { table-layout: fixed; min-width: 650px; }
+#root .fm-page .fm-fee-types-directory .fm-table th:nth-child(1) { width: 20%; }
+#root .fm-page .fm-fee-types-directory .fm-table th:nth-child(2) { width: 25%; }
+#root .fm-page .fm-fee-types-directory .fm-table th:last-child { width: 110px; text-align: center !important; }
+#root .fm-page .fm-fee-types-directory .fm-table td { height: 44px; padding: 8px 14px !important; overflow-wrap: anywhere; background: var(--surface) !important; }
+#root .fm-page .fm-fee-types-directory .fm-table td:nth-child(2) { font-weight: 600; }
+.fm-fee-type-actions { display: flex; align-items: center; justify-content: center; flex-wrap: nowrap; gap: 8px; }
+#root .fm-page .fm-fee-type-actions button { width: 30px; height: 30px; min-height: 30px; padding: 0; flex-shrink: 0; border: 1px solid var(--border); background: var(--surface); border-radius: 6px; color: var(--text-secondary); }
+#root .fm-page .fm-fee-type-actions button:hover { background: var(--surface-soft); color: var(--brand); border-color: var(--brand); }
+.fm-fee-type-actions button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.fm-fee-type-dialog .shared-view-dialog__body, .fm-fee-type-dialog .shared-view-dialog__footer { background: var(--surface); }
+.fm-fee-type-details { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 12px 16px; margin: 0; font-size: 13px; }
+.fm-fee-type-details dt { color: var(--text-secondary); }
+.fm-fee-type-details dd { margin: 0; color: var(--text); overflow-wrap: anywhere; }
+.fm-fee-type-dialog .fm-form-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.fm-fee-type-dialog .fs-field { display: grid; gap: 5px; font-size: 12px; color: var(--text-secondary); }
+.fm-fee-type-dialog .fs-field:last-child { grid-column: 1 / -1; }
+.fm-fee-type-dialog .fs-field :is(input,textarea) { box-sizing: border-box; width: 100%; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); padding: 8px 10px; font: inherit; }
+.fm-fee-type-dialog .fs-field input { height: 36px; }
+.fm-fee-type-dialog .fs-field :is(input,textarea):focus { outline: 2px solid var(--brand); outline-offset: 1px; }
+@media(max-width: 520px) { .fm-fee-type-dialog .fm-form-grid { grid-template-columns: 1fr; } }
+
+/* Compact facility directories use the existing themed fee table. */
+#root .fm-page :is(.fm-category--hostel,.fm-category--transport) { padding: 12px; }
+#root .fm-page :is(.fm-category--hostel,.fm-category--transport) .fm-plan-workspace-header { padding: 0; margin-bottom: 10px; }
+#root .fm-page :is(.fm-category--hostel,.fm-category--transport) .fm-plan-context p { margin: 4px 0 0; }
+#root .fm-page :is(.fm-category--hostel,.fm-category--transport) .fm-plan-table :is(th,td) { padding: 8px 12px !important; font-size: 12px; }
+#root .fm-page :is(.fm-category--hostel,.fm-category--transport) .fm-plan-table td { height: 46px; }
+#root .fm-page :is(.fm-category--hostel,.fm-category--transport) .fm-plan-table :is(th,td):first-child { min-width: 160px; width: 20%; }
+#root .fm-page :is(.fm-category--hostel,.fm-category--transport) .fm-plan-table :is(th,td):last-child { width: 92px; min-width: 92px; text-align: center !important; }
+.fm-facility-row-actions { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: nowrap; }
+#root .fm-page .fm-facility-row-actions .fm-icon-btn { width: 30px; height: 30px; min-height: 30px; padding: 0; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; }
+
+/* Keep form action text paired with its themed background in every state. */
+.fm-plan-editor-dialog .erp-btn--primary { background: var(--brand-solid); border-color: var(--brand-solid); color: var(--text-on-brand); }
+.fm-plan-editor-dialog .erp-btn--primary:hover:not(:disabled), .fm-plan-editor-dialog .erp-btn--primary:focus-visible { background: var(--brand-solid-hover); border-color: var(--brand-solid-hover); color: var(--text-on-brand); }
+.fm-plan-editor-dialog .erp-btn--secondary { background: var(--surface); color: var(--text-primary); border-color: var(--border); }
+.fm-plan-editor-dialog .erp-btn--secondary:hover:not(:disabled), .fm-plan-editor-dialog .erp-btn--secondary:focus-visible { background: var(--brand-soft); color: var(--text-primary); border-color: var(--brand); }

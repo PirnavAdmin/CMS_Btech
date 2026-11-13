@@ -1586,7 +1586,7 @@
 /* ==========================================================================
    Student Admission Wizard Two-Column Layout & Smooth Live Preview Scroll
    ========================================================================== */
-.student-admission {
+.student-admission:not(dialog) {
   width: 100% !important;
   max-width: 100% !important;
   overflow-x: hidden !important;
@@ -2658,3 +2658,37 @@
   .student-admission .sa-reference-stepper button,
   .student-admission .sa-field :is(input, select, textarea, .searchable-select__trigger) { transition: none; }
 }
+
+/* Admission uses a bounded modal with one scrolling form region. */
+dialog.student-admission.sa-admission-dialog { width: min(940px, calc(100vw - 32px)); height: min(680px, calc(100dvh - 40px)); max-height: calc(100dvh - 40px); margin: auto; padding: 0; overflow: hidden; font-size: 13px; }
+.sa-admission-dialog > .shared-view-dialog__header { padding: 14px 20px; min-height: 64px; }
+.sa-admission-dialog > .shared-view-dialog__header .shared-view-dialog__title { font-size: 18px; }
+.sa-admission-dialog > .shared-view-dialog__header .shared-view-dialog__subtitle { font-size: 12px; }
+.sa-admission-dialog > .shared-view-dialog__body { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 0; overflow: hidden; gap: 0; background: var(--surface); }
+.student-admission.sa-admission-dialog .sa-admission-layout { flex: 1; display: flex; flex-direction: column; align-items: stretch; gap: 0; min-height: 0; margin: 0; overflow: hidden; }
+.student-admission.sa-admission-dialog .sa-reference-stepper { position: static; z-index: auto; flex: 0 0 auto; display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); margin: 0; padding: 8px 12px; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; background: var(--surface); box-shadow: none; }
+.student-admission.sa-admission-dialog .sa-reference-stepper button { min-width: 0; min-height: 38px; padding: 6px 4px; gap: 5px; font-size: 11px; white-space: normal; }
+.student-admission.sa-admission-dialog .sa-reference-stepper button span { width: 21px; height: 21px; flex-basis: 21px; }
+.student-admission.sa-admission-dialog .sa-wizard-card { display: flex; flex-direction: column; flex: 1 1 0 !important; min-height: 0 !important; margin: 0; border: 0 !important; border-radius: 0; background: var(--surface) !important; box-shadow: none !important; overflow: hidden !important; }
+.student-admission.sa-admission-dialog .sa-wizard-content { flex: 1 1 0; min-height: 0; overflow-y: auto; scrollbar-gutter: stable; padding: 16px 20px; scroll-padding-block: 16px; }
+.student-admission.sa-admission-dialog .sa-wizard-content > :is(.sa-form-section,.sa-documents,.sa-review) { margin: 0; border: 0; border-radius: 0; padding: 0; background: var(--surface); box-shadow: none; }
+.student-admission.sa-admission-dialog .sa-form-grid { gap: 10px 14px; align-items: start; }
+.student-admission.sa-admission-dialog .sa-form-section + .sa-form-section { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
+.student-admission.sa-admission-dialog .sa-form-section > header { margin: 0 0 12px; }
+.student-admission.sa-admission-dialog .sa-form-section > header h2 { margin: 0; font-size: 14px; }
+.student-admission.sa-admission-dialog .sa-form-section > header p { margin: 3px 0 0; font-size: 11px; }
+.student-admission.sa-admission-dialog .sa-field { margin: 0; gap: 5px; }
+.student-admission.sa-admission-dialog .sa-field .searchable-select__trigger { box-sizing: border-box; height: 36px; min-height: 36px; padding: 7px 10px; font-size: 13px; border-radius: 7px; background: var(--surface); color: var(--text-primary); box-shadow: none; }
+.student-admission.sa-admission-dialog .sa-field .searchable-select__trigger-text { font-size: inherit; font-weight: 400; }
+.student-admission.sa-admission-dialog .sa-field input { border-radius: 7px; background: var(--surface); box-shadow: none; }
+.student-admission.sa-admission-dialog .sa-field input:focus { border-color: var(--brand); outline: 2px solid var(--brand-soft); }
+.student-admission.sa-admission-dialog .sa-wizard-actions { border-radius: 0; box-shadow: none; }
+.student-admission.sa-admission-dialog .sa-photo-upload { border-color: var(--border); }
+
+.student-admission.sa-admission-dialog .sa-form-grid :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),select) { height: 36px; min-height: 36px; padding: 7px 10px; font-size: 13px; }
+.student-admission.sa-admission-dialog .sa-photo-upload { padding: 10px 12px; margin-bottom: 12px; background: var(--surface); }
+.student-admission.sa-admission-dialog .sa-photo-preview { width: 48px; height: 48px; min-width: 48px; }
+.student-admission.sa-admission-dialog .sa-photo-meta p { margin: 3px 0; font-size: 11px; }
+.student-admission.sa-admission-dialog .sa-wizard-actions { position: static; flex: 0 0 auto; margin: 0; padding: 10px 20px; border-top: 1px solid var(--border); background: var(--surface); }
+.student-admission.sa-admission-dialog .sa-wizard-actions button { min-height: 34px; font-size: 12px; }
+@media(max-width:700px) { .student-admission.sa-admission-dialog .sa-reference-stepper { grid-template-columns: repeat(3,minmax(0,1fr)); } .student-admission.sa-admission-dialog .sa-wizard-content { padding: 12px; } .student-admission.sa-admission-dialog .sa-wizard-actions { padding: 10px 12px; flex-wrap: wrap; } }

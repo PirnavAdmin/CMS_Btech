@@ -8,12 +8,14 @@ import ProtectedRoute from '../components/ProtectedRoute.jsx'
 import PortalRoute from '../components/portals/PortalRoute.jsx'
 import { authAccessApi, roleApi } from '../api/apiEndpoints.js'
 import academicService from '../services/academicService.js'
+import { getCollegeById } from './collegeApi.js'
 import eventBus, { ERP_EVENTS } from '../services/eventBus.js'
 
 const session = vi.hoisted(() => ({ role: 'admin', token: 'account-1', assigned: '7', authenticated: true }))
 vi.mock('./auth.js', async original => ({ ...await original(), getAccessToken: () => session.token, getUserRole: () => session.role, getUserCollegeId: () => session.assigned, isAuthenticated: () => session.authenticated }))
 vi.mock('../api/apiEndpoints.js', async original => ({ ...await original(), authAccessApi: { get: vi.fn() }, roleApi: { getAll: vi.fn() } }))
 vi.mock('../services/academicService.js', () => ({ filterActiveOnly: rows => (rows || []).filter(row => row.status !== 'Inactive'), default: { getColleges: vi.fn(), getAcademicYears: vi.fn(), getDepartments: vi.fn(), getCourses: vi.fn(), getBranches: vi.fn(), getSemesters: vi.fn(), getSections: vi.fn(), clearCache: vi.fn(), resolveHierarchyNames: vi.fn() } }))
+vi.mock('./collegeApi.js', async original => ({ ...await original(), getCollegeById: vi.fn() }))
 afterEach(cleanup)
 let generation = 0
 const college = () => JSON.parse(localStorage.getItem('pirnav_academic_context') || '{}').collegeId || '7'
@@ -22,6 +24,7 @@ const access = (collegeId = 7, permissions = { fees: { view: true, create: false
 beforeEach(() => {
  vi.clearAllMocks(); localStorage.clear(); sessionStorage.clear(); session.role = 'admin'; session.assigned = '7'; session.authenticated = true; session.token = 'account-' + (++generation)
  authAccessApi.get.mockReset().mockImplementation(async id => access(id || 7))
+ getCollegeById.mockReset().mockImplementation(async id => ({ data: { collegeId: id, collegeName: 'College ' + id, status: 'Active' } }))
  academicService.getColleges.mockReset().mockResolvedValue(['7','8','9'].map(id => ({ id, name: 'College ' + id, status: 'Active' })))
  academicService.getAcademicYears.mockReset().mockImplementation(async () => [{ id: college() + '1', collegeId: college(), name: 'Year ' + college(), status: 'Active', isCurrent: true }])
  academicService.getDepartments.mockReset().mockImplementation(async () => [{ id: college() + '2', collegeId: college(), name: 'Department ' + college() }])
@@ -36,10 +39,19 @@ const scope = () => JSON.parse(screen.getByTestId('scope').textContent)
 const mountContext = () => render(<AcademicProvider><ContextProbe /></AcademicProvider>)
 const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done }); return { promise, resolve } }
 
-test('College Admin options contain only server-confirmed primary and mapped colleges', async () => {
+test('503 college failure is service unavailable, without trying the platform college directory', async () => {
+ getCollegeById.mockRejectedValueOnce(Object.assign(new Error('Service unavailable'), { response: { status: 503 } }))
  write('7'); mountContext(); await waitFor(() => expect(scope().loading).toBe(false))
- expect(scope().options).toEqual(['7','8']); expect(scope().selected).toBe('7'); expect(scope().departments).toEqual(['72'])
+ expect(scope().error).toContain('temporarily unavailable (503)')
+ expect(scope().error).not.toContain('not assigned')
+ expect(academicService.getColleges).not.toHaveBeenCalled()
+})
+
+test('College Admin options contain only the server-confirmed assigned college', async () => {
+ write('7'); mountContext(); await waitFor(() => expect(scope().loading).toBe(false))
+ expect(scope().options).toEqual(['7']); expect(scope().selected).toBe('7'); expect(scope().departments).toEqual(['72'])
  expect(scope().years).toEqual(['71'])
+ expect(getCollegeById).toHaveBeenCalledWith('7'); expect(academicService.getColleges).not.toHaveBeenCalled()
  fireEvent.click(screen.getByRole('button', { name: 'Choose unrelated college' }));
  await screen.findByRole('alert'); expect(scope().college).toBe('7'); expect(authAccessApi.get).not.toHaveBeenCalledWith('9')
 })
@@ -57,7 +69,8 @@ test('only a server-confirmed Super Admin can select all available colleges', as
  authAccessApi.get.mockImplementation(async id => ({ ...access(id || 7), isSuperAdmin: true }))
  write('9'); mountContext(); await waitFor(() => expect(scope().loading).toBe(false)); expect(scope().options).toEqual(['7','8','9']); expect(scope().college).toBe('9')
 })
-test('mapped college switching clears stale records immediately and loads its own year/options', async () => {
+test('Super Admin college switching clears stale records immediately and loads its own year/options', async () => {
+ authAccessApi.get.mockImplementation(async id => ({...access(id || 7),isSuperAdmin:true}));
  write('7'); mountContext(); await waitFor(() => expect(scope().loading).toBe(false))
  const years = deferred(); academicService.getAcademicYears.mockImplementationOnce(() => years.promise)
  fireEvent.click(screen.getByRole('button', { name: 'Choose mapped college' }));

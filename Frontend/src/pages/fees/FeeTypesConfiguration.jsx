@@ -2,7 +2,7 @@ import ViewDialog from '../../components/ViewDialog'
 import { useEffect, useState } from 'react'
 import FeeTypeCreateDialog from './FeeTypeCreateDialog'
 import { useScreenAccess } from '../../auth/ScreenAccess'
-import { FiSearch } from 'react-icons/fi'
+import { FiSearch, FiEye, FiEdit2 } from 'react-icons/fi'
 import { feeConfigurationApi } from '../../api/apiEndpoints'
 import PageHeader from '../../components/PageHeader'
 import ExportMenu from '../../components/ExportMenu'
@@ -12,6 +12,8 @@ import DirectoryEmptyState from '../../components/DirectoryEmptyState'
 
 export default function FeeTypesConfiguration() {
   const { canAction } = useScreenAccess()
+  const canEdit = canAction('/fees/types', 'edit')
+  const [editing, setEditing] = useState(null)
   const canCreate = canAction('/fees/types', 'create')
   const [adding, setAdding] = useState(false), [notice, setNotice] = useState('')
   const [rows, setRows] = useState([]), [loading, setLoading] = useState(true), [error, setError] = useState('')
@@ -29,6 +31,7 @@ export default function FeeTypesConfiguration() {
   return <section className="fm-fee-types">
     <PageHeader title="Fee Types" subtitle="Active fee types shared across colleges and available for fee structures." />
     {notice && <p role="status">{notice}</p>}
+    <div className="fm-fee-types-directory">
     <FilterPanel
       className="fm-fee-types-filters"
       active={Boolean(code)}
@@ -43,7 +46,7 @@ export default function FeeTypesConfiguration() {
     </FilterPanel>
     <div className="fm-table-wrap">
       <table className="fm-table" aria-label="Fee types">
-        <thead><tr><th>Code</th><th>Fee Type</th><th>Description</th><th>Details</th></tr></thead>
+        <thead><tr><th>Code</th><th>Fee Type</th><th>Description</th><th>Actions</th></tr></thead>
         <tbody>
           {loading ? <tr><td colSpan={4}><span role="status">Loading fee types...</span></td></tr>
             : error ? <tr><td colSpan={4}><div role="alert"><p>{error}</p><button type="button" onClick={() => setAttempt(value => value + 1)}>Retry fee types</button></div></td></tr>
@@ -51,14 +54,16 @@ export default function FeeTypesConfiguration() {
             : filtered.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE).map(row => (
               <tr key={row.id}>
                 <td>{row.code}</td><td>{row.name}</td><td>{row.description || '—'}</td>
-                <td><button type="button" aria-label={`View ${row.name}`} onClick={() => setDetail(row)}>View</button></td>
+                <td><div className="fm-fee-type-actions"><button type="button" title="View fee type" aria-label={`View ${row.name}`} onClick={() => setDetail(row)}><FiEye /></button>{canEdit && <button type="button" title="Edit fee type" aria-label={`Edit ${row.name}`} onClick={() => setEditing(row)}><FiEdit2 /></button>}</div></td>
               </tr>
             ))}
         </tbody>
       </table>
     </div>
     {!loading && !error && filtered.length > 0 && <TablePagination page={current} totalPages={pages} onPageChange={setPage} />}
-    {detail && <ViewDialog title={detail.name} onClose={()=>setDetail(null)} showExport={false}><dl><dt>Code</dt><dd>{detail.code || '—'}</dd><dt>Description</dt><dd>{detail.description || '—'}</dd></dl></ViewDialog>}
+    </div>
+    {detail && <ViewDialog className="fm-fee-type-dialog" maxWidth="520px" title={detail.name} onClose={()=>setDetail(null)} showExport={false}><dl className="fm-fee-type-details"><dt>Code</dt><dd>{detail.code || '—'}</dd><dt>Description</dt><dd>{detail.description || '—'}</dd></dl></ViewDialog>}
+    {editing && <FeeTypeCreateDialog rows={rows} initialRecord={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); setNotice('Fee type updated successfully.'); setAttempt(value => value + 1) }} />}
     {adding && <FeeTypeCreateDialog rows={rows} onClose={() => setAdding(false)} onSaved={() => { setAdding(false); setNotice('Fee type saved successfully.'); setCode(''); setQuery(''); setPage(1); setAttempt(value => value + 1) }} />}
 
   </section>

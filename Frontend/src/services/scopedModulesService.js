@@ -53,14 +53,15 @@ export async function list(path, query = {}) {
   const all = [], size = 100
   let firstBatch
   for (let page = 1; page <= 1000; page++) {
-    const body = await call(path, { query: { ...query, page, pageSize: size } })
+    const body = await call(path, { query: { ...query, ...(path === 'faculty' ? { pageNumber: page } : { page }), pageSize: size } })
     const batch = rows(body)
     if (page > 1 && JSON.stringify(batch) === firstBatch) return all
     if (page === 1) firstBatch = JSON.stringify(batch)
     all.push(...batch)
-    const pages = body?.totalPages ?? body?.data?.totalPages
-    const total = body?.totalCount ?? body?.data?.totalCount
-    if ((pages != null && page >= pages) || (total != null && all.length >= total) || batch.length < size) return all
+    const pagination = body?.pagination ?? body?.data?.pagination
+    const pages = body?.totalPages ?? body?.data?.totalPages ?? pagination?.totalPages
+    const total = body?.totalCount ?? body?.data?.totalCount ?? pagination?.totalRecords ?? pagination?.totalCount
+    if ((pages != null && page >= pages) || (total != null && all.length >= total) || (pages == null && total == null && batch.length < size)) return all
     // Several unpaginated endpoints ignore page. Never repeat their records.
   }
   throw new Error('Too many records. Narrow the selection and retry.')

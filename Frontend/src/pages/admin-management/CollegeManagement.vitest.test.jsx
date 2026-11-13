@@ -336,3 +336,5 @@ test('minimum college setup skips optional sections, persists, and recalculates 
   fireEvent.click(clear.getByRole('button', { name: 'Save & Continue Later' }))
   await waitFor(() => expect(score()).toBe(initial), { timeout: 3500 })
 }, 20000)
+
+test('college account cannot open creation despite a create permission grant',async()=>{fixture.access={isSuperAdmin:false,isCollegeAdmin:true,primaryCollegeId:7,collegeId:7,permissions:{colleges:{view:true,create:true,edit:true}}};mount('/college-institution-management/add');expect(await screen.findByText(/Only the platform Super Admin/)).toBeTruthy();expect(createCollege).not.toHaveBeenCalled();expect(screen.queryByLabelText(/^College Name/)).toBeNull();});

@@ -33,6 +33,6 @@ export function useScreenAccess() {
     return result.status === 'ready' && canViewScreen(path, role, permissions, access)
   }, [role, preview, result.status, permissions, access])
   const canAction = useCallback((path, action = 'view') => action === 'view' ? canView(path) :
-    !preview && result.status === 'ready' && canView(path) && hasModuleAction(access, permissionModuleForScreen(path), action), [canView, preview, result.status, access])
+    !(permissionModuleForScreen(path) === 'colleges' && ['create', 'delete'].includes(action) && access?.isSuperAdmin !== true) && !preview && result.status === 'ready' && canView(path) && hasModuleAction(access, permissionModuleForScreen(path), action), [canView, preview, result.status, access])
   return { ...result, canView, canAction, permissions, collegeId, loading: result.status === 'loading', error: result.status === 'error' ? new Error('Account access could not be loaded.') : null }
 }

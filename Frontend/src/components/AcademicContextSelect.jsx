@@ -26,7 +26,7 @@ export default function AcademicContextSelect({ kind, compact = false }) {
 
   const value = isCollege ? context.selectedCollegeId : context.selectedAcademicYearId
   const selected = items.find(item => idOf(item) === String(value))
-  const disabled = context.loading || applying || !items.length
+  const disabled = context.loading || applying || !items.length || (isCollege && context.isSuperAdmin !== true)
   const selectedLabel = selected ? nameOf(selected) : context.loading ? 'Loading...' : context.error ? `${label} unavailable` : `Select ${label.toLowerCase()}`
 
   const change = async event => {

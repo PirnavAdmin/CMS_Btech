@@ -8,6 +8,10 @@ import './ContextGuard.css'
 
 const SETUP_ROUTES = [
   '/college-institution-management',
+  '/college-profile',
+  '/campus-management',
+  '/client-onboarding',
+  '/user-access',
   '/academic-year-management',
   '/department-management',
   '/settings',

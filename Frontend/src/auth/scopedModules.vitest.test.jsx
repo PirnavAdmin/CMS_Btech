@@ -605,3 +605,18 @@ describe('library circulation and inventory', () => {
     expect(within(screen.getByRole('row', { name: /Circuit Design/ })).getAllByRole('cell')[4].textContent).toBe('2')
   })
 })
+
+
+describe('actual directory pagination envelopes',()=>{
+ it('fetches every faculty page using pageNumber and pagination metadata',async()=>{
+  transport.mockResolvedValueOnce({data:[{facultyId:1}],pagination:{pageNumber:1,totalPages:2,totalRecords:2}}).mockResolvedValueOnce({data:[{facultyId:2}],pagination:{pageNumber:2,totalPages:2,totalRecords:2}});
+  expect(await api.list('faculty',{collegeId:1})).toHaveLength(2);
+  expect(transport.mock.calls[1][0]).toContain('pageNumber=2');
+  expect(transport).toHaveBeenCalledTimes(2);
+ });
+ it('continues a short page when the backend explicitly reports more pages',async()=>{
+  transport.mockResolvedValueOnce({data:[{id:1}],totalPages:2,totalCount:2}).mockResolvedValueOnce({data:[{id:2}],totalPages:2,totalCount:2});
+  expect(await api.list('placements/drives',{collegeId:1})).toHaveLength(2);
+  expect(transport.mock.calls[1][0]).toContain('page=2');
+ });
+});

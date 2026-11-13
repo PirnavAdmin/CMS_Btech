@@ -12,7 +12,7 @@ import './GlobalSettings.css'
 
 export default function GlobalSettings() {
   const { selectedCollegeId, selectedCollege, selectedAcademicYear, loading, error, refreshHierarchy } = useAcademic()
-  const { canView, canAction } = useScreenAccess()
+  const { canView, canAction, loading: accessLoading, error: accessError } = useScreenAccess()
   return <DashboardLayout><main className="configuration-workspace">
     <PageHeader title="Global Settings" subtitle="College configuration and the working academic context." />
     <section className="configuration-context-card" aria-labelledby="working-context-heading">
@@ -23,9 +23,10 @@ export default function GlobalSettings() {
         <small>Your working selection is saved in this browser. Changing it does not activate or deactivate an academic year.</small>
       </>}
     </section>
-    {!canView('/college-institution-management') && !canView('/academic-year-management') && <AsyncState status="empty" title="No configuration access" message="Your current permissions allow working-context selection only." />}
+    {!loading && !error && !accessLoading && !accessError && !canView('/college-institution-management') && !canView('/academic-year-management') && <AsyncState status="empty" title="No configuration access" message="Your current permissions allow working-context selection only." />}
     <div className="configuration-grid">
-      {canView('/college-institution-management') && <section className="configuration-card" aria-labelledby="college-configuration-heading"><header><img src={collegeImage} alt="" /><h2 id="college-configuration-heading">College Configuration</h2></header><p>View and edit college details, affiliation, contact information, branding and status.</p><footer><Link className="erp-btn erp-btn--primary" to="/college-institution-management">Configure colleges <ArrowRight aria-hidden="true" /></Link>{canAction('/college-institution-management', 'create') && <Link className="erp-btn erp-btn--secondary" to="/college-institution-management/add">Add college</Link>}</footer></section>}
+      {canView('/college-institution-management') && <section className="configuration-card" aria-labelledby="college-configuration-heading"><header><img src={collegeImage} alt="" /><h2 id="college-configuration-heading">College Profile</h2></header><p>View and edit college details, affiliation, contact information, branding and status.</p><footer><Link className="erp-btn erp-btn--primary" to="/college-profile">View college profile <ArrowRight aria-hidden="true" /></Link></footer></section>}
+      {canView('/college-institution-management') && <section className="configuration-card"><header><Settings2 aria-hidden="true" /><h2>Campus Management</h2></header><p>View campus availability for your assigned college.</p><footer><Link className="erp-btn erp-btn--primary" to="/campus-management">Manage campuses <ArrowRight aria-hidden="true" /></Link></footer></section>}
       {canView('/academic-year-management') && <section className="configuration-card" aria-labelledby="year-configuration-heading"><header><img src={yearImage} alt="" /><h2 id="year-configuration-heading">Academic Year Configuration</h2></header><p>View, edit and manage dates and activation for the selected college’s academic years.</p>{!loading && !selectedCollegeId && <small>Select a working college to configure academic years.</small>}<footer><Link className="erp-btn erp-btn--primary" to="/academic-year-management">Configure academic years <ArrowRight aria-hidden="true" /></Link>{selectedCollegeId && !loading && !error && canAction('/academic-year-management', 'create') && <Link className="erp-btn erp-btn--secondary" to="/academic-year-management?action=add">Add academic year</Link>}</footer></section>}
     </div>
   </main></DashboardLayout>

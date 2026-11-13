@@ -447,6 +447,19 @@ const request = async (url, options = {}, retried = false, bypassDedupe = false,
     error.status = response.status
     error.validationErrors = body?.errors && typeof body.errors === 'object' ? body.errors : undefined
     error.code = typeof body?.code === 'string' ? body.code : undefined
+    error.correlationId = typeof body?.correlationId === 'string' ? body.correlationId : undefined
+    if (import.meta.env.DEV && /\/student-admissions\//.test(url)) {
+      let submitted = {}
+      try { submitted = JSON.parse(options.body || '{}') } catch { /* no JSON body */ }
+      error.admissionDiagnostic = { path: url.split('?')[0], method, status: response.status,
+        ...Object.fromEntries(['collegeId','academicYearId','departmentId','courseId','branchId','semesterId'].map(key => [key, submitted[key] ?? null])) }
+    }
+    if (import.meta.env.DEV && error.admissionDiagnostic) {
+      let submitted = {}
+      try { submitted = JSON.parse(options.body || '{}') } catch { /* non-JSON body */ }
+      const academic = submitted.formData?.academic || {}
+      void fetch('/__dev/admission-save-diagnostic', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({...error.admissionDiagnostic, formCourseId: academic.courseId, formBranchId: academic.branchId, formSemesterId: academic.semesterId}) }).catch(() => {})
+    }
     error.backendMessage = backendMessage
     error.correlationId = typeof body?.correlationId === 'string' ? body.correlationId : undefined
     throw error
@@ -466,6 +479,37 @@ const withQuery = (url, params = {}) => {
 export { request as authenticatedRequest }
 const dataResponse = (response) => response?.data?.data ?? response?.data ?? response ?? null
 const listData = (response) => listResponse(response)
+
+export const campusApi = {
+  async list({ collegeId, isSuperAdmin, pageNumber }) {
+    const scope = requiredId(collegeId, 'College ID')
+    const params = { pageNumber, pageSize: 25 }
+    const readCollegeDirectory = () => request(withQuery(endpoint('/api/v1/campuses'), { ...params, collegeId: scope }))
+    let response
+    if (isSuperAdmin) {
+      response = await readCollegeDirectory()
+    } else {
+      try {
+        response = await request(withQuery(endpoint('/api/v1/campuses/my-college'), params), { silentStatuses: [404] })
+      } catch (error) {
+        if (error.status !== 404) throw error
+        response = await readCollegeDirectory()
+      }
+    }
+    const data = response?.data ?? response
+    const items = Array.isArray(data?.campuses) ? data.campuses : extractListResponse(response)
+    if (!items) throw new Error('The campus service returned an unreadable list.')
+    if (items.some(item => item?.collegeId != null && String(item.collegeId) !== String(scope))) {
+      throw new Error('The campus service returned records outside the selected college.')
+    }
+    return { items, hasNext: data.totalPages != null ? pageNumber < data.totalPages : items.length === params.pageSize }
+  },
+  create: campus => request(endpoint('/api/v1/campuses'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(campus),
+  }),
+}
 
 const blobRequest = async (url, options = {}, retried = false) => {
   const token = getAccessToken()
@@ -1200,12 +1244,12 @@ const studentAdmissionPayload = (form = {}, { feePlanChangeReason } = {}) => {
     pincode: form.pincode ?? currentAddress?.pincode ?? currentAddress?.postalCode,
     admissionType: form.admissionType ?? academic.admissionType,
     admissionQuota: form.admissionQuota ?? form.quota ?? academic.quota,
-    academicYearId: nullableNumericId(form.academicYearId ?? academic.academicYearId),
-    departmentId: nullableNumericId(form.departmentId ?? academic.departmentId),
-    courseId: nullableNumericId(form.courseId ?? academic.courseId),
-    branchId: nullableNumericId(form.branchId ?? academic.branchId),
-    semesterId: nullableNumericId(form.semesterId ?? academic.semesterId),
-    sectionId: nullableNumericId(form.sectionId ?? academic.sectionId),
+    academicYearId: nullableNumericId(academic.academicYearId ?? form.academicYearId),
+    departmentId: nullableNumericId(academic.departmentId ?? form.departmentId),
+    courseId: nullableNumericId(academic.courseId ?? form.courseId),
+    branchId: nullableNumericId(academic.branchId ?? form.branchId),
+    semesterId: nullableNumericId(academic.semesterId ?? form.semesterId),
+    sectionId: nullableNumericId(academic.sectionId ?? form.sectionId),
     quota: form.quota ?? academic.quota,
     quotaOther: form.quotaOther ?? academic.quotaOther,
     courseCode: form.courseCode ?? academic.courseCode,
@@ -1213,7 +1257,7 @@ const studentAdmissionPayload = (form = {}, { feePlanChangeReason } = {}) => {
     entryType: form.entryType ?? academic.entryType,
     regulation: form.regulation ?? academic.regulation,
     studentCategory: form.studentCategory ?? academic.studentCategory,
-    collegeId: nullableNumericId(form.collegeId ?? admission.collegeId),
+    collegeId: nullableNumericId(admission.collegeId ?? form.collegeId),
     college: form.college ?? admission.college,
     batch: form.batch ?? admission.batch,
     fatherName: form.fatherName ?? parents.father?.name ?? form.father?.name,
@@ -1334,18 +1378,29 @@ export const studentAdmissionApi = {
   update: async (id, form, { preserveAcademicMapping = false, feePlanChangeReason } = {}) => {
     const admissionId = requiredId(id, 'Admission ID')
     if (preserveAcademicMapping) {
-      // Personal/contact saves must not reassign enrollment from a browser draft.
-      // Read failures stop the save instead of falling back to potentially stale IDs.
-      const saved = normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.detail(admissionId)))
+      // Preserve saved enrollment when supplied; empty legacy columns must not
+      // erase academic selections already present in the admission form.
+      const [savedAdmission, savedAcademic] = await Promise.all([
+        request(API_ENDPOINTS.studentAdmissions.detail(admissionId)),
+        request(API_ENDPOINTS.studentAdmissions.academicDetails(admissionId)),
+      ])
+      const saved = normalizeAdmission(savedAdmission)
+      const details = normalizeAcademicDetails(savedAcademic)
       const snapshot = typeof saved.formData === 'string' ? JSON.parse(saved.formData) : saved.formData
-      const academic = { ...form.academic, ...snapshot?.academic }
-      for (const key of ['academicYearId', 'departmentId', 'courseId', 'branchId', 'semesterId', 'sectionId', 'admissionType', 'entryType', 'regulation']) {
-        if (Object.hasOwn(saved, key)) academic[key] = saved[key] ?? ''
+      const filled = value => value !== undefined && value !== null && String(value).trim() !== ''
+      const academic = { ...form.academic }
+      const idKeys = ['academicYearId', 'departmentId', 'courseId', 'branchId', 'semesterId', 'sectionId']
+      for (const key of [...idKeys, 'admissionType', 'entryType', 'regulation']) {
+        const candidates = [details[key], saved[key], snapshot?.academic?.[key], form.academic?.[key]]
+        const value = candidates.find(value => idKeys.includes(key) ? nullableNumericId(value) !== undefined : filled(value))
+        if (value !== undefined) academic[key] = value
       }
       for (const [label, key] of [['academicYear', 'academicYearName'], ['course', 'courseName'], ['branch', 'branchName'], ['semester', 'semesterName'], ['section', 'sectionName']]) {
-        if (Object.hasOwn(saved, key)) academic[label] = saved[key] ?? ''
+        const value = [details[key], saved[key], snapshot?.academic?.[label], form.academic?.[label]].find(filled)
+        if (value !== undefined) academic[label] = value
       }
-      form = { ...form, academic, admission: { ...form.admission, collegeId: saved.collegeId ?? form.admission?.collegeId } }
+      const collegeId = [details.collegeId, saved.collegeId, snapshot?.admission?.collegeId, form.admission?.collegeId].find(value => nullableNumericId(value) !== undefined)
+      form = { ...form, academic, admission: { ...form.admission, collegeId } }
     }
     return normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.update(admissionId), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(studentAdmissionPayload(form, { feePlanChangeReason })) }))
   },
@@ -1500,6 +1555,7 @@ export const academicFeePlanApi = {
 }
 
 export const feeConfigurationApi = {
+  updateCategory: async (id, body) => dataResponse(await request(endpoint('/api/v1/fee-categories/' + encodeURIComponent(id)), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })),
   createCategory: async body => dataResponse(await request(API_ENDPOINTS.feeConfiguration.categories, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
   })),
@@ -1942,3 +1998,19 @@ export const marksApi = {
     return preview ? marksApi.bulkFilePreview(file, scope) : marksApi.bulkUpload(file, scope)
   },
 }
+
+export const facilityFeePlanApi = {
+  list: async (type, collegeId) => {
+    if (!['hostel', 'transport'].includes(type)) throw new Error('Invalid facility type.');
+    const rows = dataResponse(await request(withQuery(endpoint('/api/v1/' + type + '-fees'), { collegeId })));
+    if (!Array.isArray(rows)) throw new Error('Unable to read saved facility fee plans.');
+    return rows.map(row => ({ ...row.data, id: row.id, collegeId: row.collegeId, status: row.status || row.data?.status }));
+  },
+  save: async (type, body) => {
+    if (!['hostel', 'transport'].includes(type)) throw new Error('Invalid facility type.');
+    const response = await request(withQuery(endpoint('/api/v1/' + type + '-fees' + (body.id ? '/' + encodeURIComponent(body.id) : '')), { collegeId: body.collegeId }), { method: body.id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const saved = response?.data ?? response;
+    if (!saved?.id) throw new Error('The server did not return a saved fee plan ID.');
+    return { ...saved.data, id: saved.id, collegeId: saved.collegeId, status: saved.status || saved.data?.status };
+  },
+};

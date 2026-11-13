@@ -1,3 +1,4 @@
+import CollegeProfileView from '../settings/CollegeProfile.jsx'
 import { calculateCompletion, completionSchemas, departmentDirectoryCompletion } from '../../utils/recordCompletion'
 import { CompletionSummary, ProgressiveFormFooter, ResumeSetupAction, completionColumn } from '../../components/RecordCompletion'
 import SectionsRoomsHeader from '../../components/SectionsRoomsHeader'
@@ -879,6 +880,9 @@ function AddCollege() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const editId = searchParams.get('edit')
+  const { access, loading: accessLoading } = screenAccessImports_useScreenAccess()
+  if (accessLoading) return <DashboardLayout><AsyncState status="loading" title="Loading account access…" /></DashboardLayout>
+  if (access?.isSuperAdmin !== true) return <DashboardLayout><AsyncState status="error" message="Only the platform Super Admin can access college creation. Use College Profile to edit your assigned college." /></DashboardLayout>
   // Direct add/edit URLs use the same dialog as the College Configuration
   // directory, so navigation context never changes the form presentation.
   return <DashboardLayout><CollegeForm key={editId || 'new'} editId={editId} onDismiss={() => navigate('/college-institution-management')} /></DashboardLayout>
@@ -893,9 +897,9 @@ function CollegeForm({ editId, onDismiss, onSaved, resumeDraft = false }) {
   reactImports_useLayoutEffect(() => {
     if (!inModal) window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
   }, [editId, inModal])
-  const assignedCollegeId = getUserCollegeId()
   const isSuperAdmin = collegeAccess?.isSuperAdmin === true || effectiveAccess?.isSuperAdmin === true
-  const isOutsideAssignedCollege = !isSuperAdmin && Boolean(assignedCollegeId && editId && String(editId) !== String(assignedCollegeId))
+  const assignedCollegeId = String(effectiveAccess?.primaryCollegeId ?? collegeAccess?.primaryCollegeId ?? effectiveAccess?.collegeId ?? collegeAccess?.collegeId ?? '')
+  const isOutsideAssignedCollege = !isSuperAdmin && (!editId || !assignedCollegeId || String(editId) !== assignedCollegeId)
   const fileRef = useRef(null)
   const logoObjectUrlRef = useRef('')
   const tabsNavRef = useRef(null)
@@ -967,6 +971,7 @@ function CollegeForm({ editId, onDismiss, onSaved, resumeDraft = false }) {
 
   useEffect(() => {
     if (contextLoading || accessLoading || !accessReady) return undefined
+    if (isOutsideAssignedCollege) { setCollegeLoadError('You can edit only your assigned college profile.'); return undefined }
     const formScope = `${editId || 'new'}:${formUserId}:${isOutsideAssignedCollege}:${loadAttempt}`
     if (loadedFormScope.current === formScope) return undefined
     setCollegeLoadError('')
@@ -1239,6 +1244,7 @@ function CollegeForm({ editId, onDismiss, onSaved, resumeDraft = false }) {
   const submit = async () => {
     touchAll()
     if (readingLogo || submitting || saved || submitLock.current) return
+    if (isOutsideAssignedCollege) { setSubmitError('You can edit only your assigned college profile.'); return }
     if (!isValid) {
       setSubmitError(invalidMessage)
       if (firstInvalidTab) {
@@ -2892,7 +2898,14 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
   )
 }
 
-return { default: CollegeInstitutionManagement }
+function CollegeOwnershipWorkspace(props) {
+  const { access, loading } = screenAccessImports_useScreenAccess()
+  const { collegeAccess, loading: contextLoading } = AcademicContextImports_useAcademic()
+  if (loading || contextLoading) return <DashboardLayout><AsyncState status="loading" title="Loading college access…" /></DashboardLayout>
+  if ((access || collegeAccess)?.isSuperAdmin !== true) return <CollegeProfileView EditForm={AddCollegeScreen.CollegeForm} />
+  return <CollegeInstitutionManagement {...props} />
+}
+return { default: CollegeOwnershipWorkspace }
 })()
 
 // DepartmentManagement screen and private helpers.

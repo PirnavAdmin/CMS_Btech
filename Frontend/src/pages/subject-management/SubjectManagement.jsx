@@ -277,7 +277,7 @@ export default function SubjectManagement() {
               />
             ) : (
               <table className="sm-table">
-                <colgroup>{[8, 13, 14, 7, 7, 7, 6, 10, 8, 7, 13].map((width, index) => <col key={index} style={{ width: `${width}%` }} />)}</colgroup>
+                <colgroup>{[80, 130, 140, 70, 70, 70, 60, 100, 80, 70, 210].map((width, index) => <col key={index} style={{ width: `${width}px` }} />)}</colgroup>
                 <thead>
                   <tr>
                     <th className="table-center">Subject Code</th>

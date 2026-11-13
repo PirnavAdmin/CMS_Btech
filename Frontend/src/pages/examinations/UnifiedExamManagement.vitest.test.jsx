@@ -164,3 +164,17 @@ test('shows the failed endpoint and a retry action instead of an empty list', as
   expect(await screen.findByText('No matching examinations')).toBeTruthy()
   log.mockRestore()
 })
+
+
+test('a denied faculty lookup does not discard fetched examinations', async () => {
+  list.mockImplementation(async path => path === 'exams' ? [{examId:7,examName:'Saved examination',academicYearId:1,status:true}] : []);
+  const original = call.getMockImplementation();
+  call.mockImplementation(async (path, options) => { if (path === 'faculty') throw Object.assign(new Error('Forbidden'),{status:403,requestPath:'/api/v1/faculty'}); return original(path,options) });
+  const log=vi.spyOn(console,'error').mockImplementation(()=>{});
+  render(<UnifiedExamManagement/>);
+  expect(await screen.findByText('Saved examination')).toBeTruthy();
+  expect(await screen.findByText(/Faculty directory. Saved examinations remain available/)).toBeTruthy();
+  expect(screen.queryByText('Unable to load examinations')).toBeNull();
+  expect(screen.getByRole('button',{name:'Retry related information'})).toBeTruthy();
+  log.mockRestore();
+});

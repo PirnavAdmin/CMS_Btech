@@ -1,5 +1,6 @@
 import { requestEffectiveAccess } from '../auth/accessRequests.js'
 import { canSelectCollege } from '../auth/collegeAuthorization.js'
+import { getCollegeById, unwrapCollegeRecord } from '../auth/collegeApi.js'
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import academicService, { filterActiveOnly } from '../services/academicService'
 import eventBus, { ERP_EVENTS } from '../services/eventBus'
@@ -74,6 +75,7 @@ export const AcademicProvider = ({ children }) => {
 
   const loadHierarchy = useCallback(async () => {
     let requestedCollegeId = storedCollegeId()
+    let loadingResource = 'account access (GET /api/auth/me/access)'
     const requestId = ++hierarchyRequest.current
     const requestToken = getAccessToken()
     try {
@@ -86,11 +88,22 @@ export const AcademicProvider = ({ children }) => {
       if (requestId !== hierarchyRequest.current || getAccessToken() !== requestToken) return
       setCollegeAuthorization(authorization)
       // Resolve the college before requesting any college-scoped resources.
-      const cols = await academicService.getColleges(false)
+      const assignedCollege = authorization.isSuperAdmin === true ? '' : String(authorization.primaryCollegeId ?? authorization.collegeId ?? '')
+      let cols
+      if (authorization.isSuperAdmin === true) {
+        loadingResource = 'college directory (GET /api/v1/colleges)'
+        cols = await academicService.getColleges(false)
+      } else {
+        if (!/^[1-9]\d*$/.test(assignedCollege)) throw new Error('Your account has no assigned college. Contact your administrator.')
+        loadingResource = `assigned college profile (GET /api/v1/colleges/${assignedCollege})`
+        const response = await getCollegeById(assignedCollege)
+        const row = unwrapCollegeRecord(response?.data ?? response)
+        const id = String(row?.collegeId ?? row?.id ?? row?.CollegeId ?? '')
+        if (id !== assignedCollege) throw new Error('The returned college does not match your assigned college.')
+        cols = [{ ...row, id, collegeId: id, name: row.collegeName ?? row.name ?? row.CollegeName ?? '', status: row.status ?? row.collegeStatus ?? row.isActive }]
+      }
       if (requestId !== hierarchyRequest.current || storedCollegeId() !== requestedCollegeId || getAccessToken() !== requestToken) return
       if (cols?.loadError) throw new Error('College details could not be loaded. Please retry.')
-      const isAdmin = getUserRole() === 'admin'
-      const assignedCollege = isAdmin ? '' : getUserCollegeId()
       const safeColleges = (cols || []).filter(row => canSelectCollege(authorization, row.id ?? row.collegeId, getUserCollegeId()) && (!assignedCollege || String(row.id ?? row.collegeId) === assignedCollege))
       setColleges(safeColleges)
       const available = filterActiveOnly(safeColleges)
@@ -115,6 +128,7 @@ export const AcademicProvider = ({ children }) => {
         setSelectedAcademicYearId('')
       }
       setSelectedCollegeId(initialCollegeId)
+      loadingResource = 'college account access (GET /api/auth/me/access)'
       const scopedAccess = initialCollegeId && String(authorization.collegeId ?? '') !== initialCollegeId ? await requestEffectiveAccess(initialCollegeId) : authorization
       if (requestId !== hierarchyRequest.current || storedCollegeId() !== requestedCollegeId || getAccessToken() !== requestToken) return
       setCollegeAccessSnapshot({ token: requestToken, collegeId: initialCollegeId, value: scopedAccess })
@@ -180,7 +194,17 @@ export const AcademicProvider = ({ children }) => {
       if (getAccessToken() !== requestToken) return
       if (storedCollegeId() !== requestedCollegeId) return
       if (requestId !== hierarchyRequest.current) return
-      setError('Academic configuration could not be loaded. Please retry.')
+      const status = Number(err.status ?? err.response?.status)
+      const denialReason = [
+        'No active role is assigned.',
+        'An active college assignment is required.',
+      ].find(message => err.message === message)
+      const reference = /^[a-z0-9:_-]{1,100}$/i.test(err.correlationId || '') ? ` Reference: ${err.correlationId}.` : ''
+      setError(status === 503 ? `The backend service is temporarily unavailable (503) while loading ${loadingResource}. Please retry.${reference}`
+        : status === 401 ? 'Your session has expired. Sign in again.'
+        : status === 403 ? `Access denied (403) while loading ${loadingResource}. ${denialReason || 'Ask your administrator to check this request.'}${reference}`
+        : status >= 500 ? `Could not load ${loadingResource} (HTTP ${status}). Please retry.${reference}`
+        : err.message || 'Academic configuration could not be loaded. Please retry.')
       console.warn('Error loading academic hierarchy context:', err)
     } finally {
       if (requestId === hierarchyRequest.current) setLoading(false)
@@ -245,8 +269,7 @@ export const AcademicProvider = ({ children }) => {
 
   // Atomically apply a new Global Academic Context
   const applyAcademicContext = useCallback(async (newCollegeId, newAcademicYearId) => {
-    const isAdmin = getUserRole() === 'admin'
-    const assignedCollege = isAdmin ? '' : getUserCollegeId()
+    const assignedCollege = collegeAuthorization?.isSuperAdmin === true ? '' : String(collegeAuthorization?.primaryCollegeId ?? collegeAuthorization?.collegeId ?? '')
     if (assignedCollege && String(newCollegeId) !== assignedCollege) throw new Error('Select the college assigned to your account.')
     const colId = String(newCollegeId ?? '')
     if (!collegeAuthorization || !canSelectCollege(collegeAuthorization, colId, getUserCollegeId()) || !filterActiveOnly(colleges).some(row => String(row.id ?? row.collegeId) === colId)) throw new Error('An active authorized college assignment is required.')
@@ -333,6 +356,8 @@ export const AcademicProvider = ({ children }) => {
 
   const value = {
     scopeRecords,
+    isSuperAdmin: collegeAuthorization?.isSuperAdmin === true,
+    assignedCollegeId: collegeAuthorization?.isSuperAdmin === true ? null : String(collegeAuthorization?.primaryCollegeId ?? collegeAuthorization?.collegeId ?? ''),
     collegeAccess: collegeAccessSnapshot?.token === getAccessToken() && collegeAccessSnapshot?.collegeId === selectedCollegeId ? collegeAccessSnapshot.value : null,
     loading,
     error,

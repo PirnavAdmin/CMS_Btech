@@ -333,8 +333,13 @@
   display: flex;
   gap: 6px;
   align-items: center;
-  flex-wrap: wrap;
+  justify-content: center;
+  flex-wrap: nowrap;
+  width: max-content;
+  margin-inline: auto;
 }
+
+.sm-row-actions > button { flex-shrink: 0; }
 
 .sm-elective-toggle {
   display: inline-flex;
