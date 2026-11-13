@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Temporary subject layout browser tests
+/.subject-layout-cOgHfu/
+/.subject-layout-dmJPq0/
+/.subject-layout-check.mjs
