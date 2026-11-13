@@ -105,9 +105,9 @@ public sealed class CampusService(IConfiguration config, IHttpContextAccessor ac
             p_page = page, p_size = pageSize
         }, commandType: CommandType.StoredProcedure);
         var rows = (await result.ReadAsync<CampusRecord>()).ToArray();
-        var count = await result.ReadSingleAsync<int>();
+        var count = await result.ReadSingleAsync<long>();
         return new { items = rows, pageNumber = page, pageSize, totalRecords = count,
-            totalPages = (int)Math.Ceiling(count / (double)pageSize) };
+            totalPages = (long)Math.Ceiling(count / (double)pageSize) };
     }
     public async Task<CampusRecord> GetAsync(long id)
     {
@@ -141,6 +141,8 @@ public sealed class CampusService(IConfiguration config, IHttpContextAccessor ac
             var savedId = await c.ExecuteScalarAsync<long>("sp_campus_save", Parameters(request, college!.Value, id, Scope.UserId),
                 tx, commandType: CommandType.StoredProcedure);
             var saved = await c.QuerySingleAsync<CampusRecord>("sp_campus_get", new { p_id = savedId }, tx, commandType: CommandType.StoredProcedure);
+            if (saved.CollegeId != college || saved.CampusId != savedId)
+                throw new InvalidOperationException("sp_campus_get returned a different campus after sp_campus_save.");
             await tx.CommitAsync();
             return saved;
         }
@@ -176,7 +178,11 @@ public sealed class CampusesController(CampusService service) : ControllerBase
     private async Task<IActionResult> Run(Func<Task<IActionResult>> action)
     {
         try { return await action(); }
-        catch (CampusProblem ex) { return StatusCode(ex.Status, new { success = false, message = ex.Message }); }
+        catch (CampusProblem ex)
+        {
+            return StatusCode(ex.Status, new { success = false, message = ex.Message,
+                statusCode = ex.Status, correlationId = HttpContext.TraceIdentifier });
+        }
     }
     [HttpGet]
     public Task<IActionResult> List([FromQuery] long? collegeId, [FromQuery] string? search,

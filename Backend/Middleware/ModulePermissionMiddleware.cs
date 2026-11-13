@@ -181,6 +181,8 @@ public sealed class ModulePermissionMiddleware
             {
                 // Fail closed for unclassified API endpoints. Explicit exemptions above
                 // are limited to authentication and infrastructure endpoints.
+                _logger.LogWarning("API permission mapping missing. UserId={UserId}, Method={Method}, Path={Path}, CorrelationId={CorrelationId}",
+                    userId, context.Request.Method, path, context.TraceIdentifier);
                 await Deny(context, StatusCodes.Status403Forbidden, "No permission mapping exists for this API endpoint.");
                 return false;
             }
@@ -274,7 +276,8 @@ public sealed class ModulePermissionMiddleware
                 granted = 1;
             if (granted != 1)
             {
-                _logger.LogWarning("Module permission denied. UserId={UserId}, Module={Module}, Action={Action}, Path={Path}", userId, module, action, path);
+                _logger.LogWarning("Module permission denied. UserId={UserId}, CollegeId={CollegeId}, Module={Module}, Action={Action}, Method={Method}, Path={Path}, CorrelationId={CorrelationId}",
+                    userId, collegeId, module, action, context.Request.Method, path, context.TraceIdentifier);
                 await Deny(context, StatusCodes.Status403Forbidden, "You do not have permission to perform this action.");
                 return false;
             }
@@ -334,6 +337,7 @@ public sealed class ModulePermissionMiddleware
         var resource=parts.Length>index?parts[index]:"";
         var mapped=resource switch
         {
+            "campuses" => "colleges",
             "results" or "grades" or "grade-policies" => "results",
             "marks" => "marks",
             "exams" or "exam-types" or "exam-schedules" => "examinations",
