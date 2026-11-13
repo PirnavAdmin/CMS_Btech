@@ -2354,7 +2354,7 @@
 
 .student-admission .sa-admission-filterbar .sa-search input { font-size: 11px; }
 .student-admission .sa-clear-filters { min-height: 32px; padding: 0 9px; border-radius: 7px; font-size: 10px; }
-.student-admission .sa-admission-filters .sa-filter-grid { gap: 8px; }
+.student-admission .sa-admission-filters .sa-filter-grid { width: 100%; box-sizing: border-box; gap: 8px; }
 .student-admission .sa-admission-filters .sa-filter-grid label { gap: 4px; }
 .student-admission .sa-admission-filters .sa-filter-grid label > span { font-size: 10px; line-height: 1.2; }
 .student-admission .sa-admission-filters .sa-filter-grid select { height: 34px; padding: 0 9px; border-radius: 7px; font-size: 11px; }

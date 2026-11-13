@@ -338,3 +338,122 @@ test('minimum college setup skips optional sections, persists, and recalculates 
 }, 20000)
 
 test('college account cannot open creation despite a create permission grant',async()=>{fixture.access={isSuperAdmin:false,isCollegeAdmin:true,primaryCollegeId:7,collegeId:7,permissions:{colleges:{view:true,create:true,edit:true}}};mount('/college-institution-management/add');expect(await screen.findByText(/Only the platform Super Admin/)).toBeTruthy();expect(createCollege).not.toHaveBeenCalled();expect(screen.queryByLabelText(/^College Name/)).toBeNull();});
+
+test('conditional rendering of college type other in add, edit and review forms', async () => {
+  mount('/college-institution-management/add')
+  const nameInput = screen.getByLabelText(/^College Name/)
+  const codeInput = screen.getByLabelText(/^College Code/)
+  const typeSelect = screen.getByLabelText(/^College Type/)
+
+  fireEvent.change(nameInput, { target: { value: 'Horizon Engineering College' } })
+  fireEvent.change(codeInput, { target: { value: 'HEC' } })
+  fireEvent.change(typeSelect, { target: { value: 'Engineering College' } })
+
+  // "Specify College Type" should not appear for predefined college type
+  expect(screen.queryByLabelText(/Specify College Type/i)).toBeNull()
+
+  // Advance through steps to Review
+  fireEvent.click(screen.getByRole('button', { name: /^Next/ })) // Step 1 -> Step 2
+  fireEvent.click(screen.getByRole('button', { name: /^Next/ })) // Step 2 -> Step 3
+  fireEvent.click(screen.getByRole('button', { name: /^Next/ })) // Step 3 -> Step 4
+  fireEvent.click(screen.getByRole('button', { name: /^Next/ })) // Step 4 -> Step 5
+  fireEvent.click(screen.getByRole('button', { name: /^Next/ })) // Step 5 -> Step 6 (Review)
+
+  const review = screen.getByRole('region', { name: 'Review college details' })
+  const collegeSection = within(review).getByRole('heading', { name: 'College Information' }).closest('section')
+
+  // Predefined College Type displayed
+  expect(within(collegeSection).getByText('Engineering College')).toBeTruthy()
+  // "College Type Other: Not provided" must NOT appear
+  expect(within(collegeSection).queryByText(/College Type Other/i)).toBeNull()
+  expect(within(collegeSection).getAllByRole('term').map(dt => dt.textContent)).toEqual([
+    'College Name', 'College Code', 'College Type', 'University Name'
+  ])
+
+  // Go back to College Information tab
+  fireEvent.click(screen.getByRole('tab', { name: 'College Information' }))
+
+  // Select "Others" -> dynamically displays required "Specify College Type"
+  fireEvent.change(screen.getByLabelText(/^College Type/), { target: { value: 'Others' } })
+
+  const customTypeInput = screen.getByLabelText(/Specify College Type/i)
+  expect(customTypeInput).toBeTruthy()
+  expect(customTypeInput.required).toBe(true)
+
+  // Validate that empty custom type shows error when attempting to advance
+  fireEvent.click(screen.getByRole('button', { name: /^Next/ }))
+  expect(screen.getByText('Enter the college type.')).toBeTruthy()
+
+  // Enter custom type
+  fireEvent.change(customTypeInput, { target: { value: 'Community College' } })
+
+  // Navigate between steps using Next and Previous -> preserves values
+  fireEvent.click(screen.getByRole('button', { name: /^Next/ }))
+  expect(screen.getByRole('tab', { name: 'Address' }).getAttribute('aria-selected')).toBe('true')
+  fireEvent.click(screen.getByRole('button', { name: /Previous/ }))
+  expect(screen.getByLabelText(/^College Type/).value).toBe('Others')
+  expect(screen.getByLabelText(/Specify College Type/i).value).toBe('Community College')
+
+  // Advance to Review step
+  fireEvent.click(screen.getByRole('tab', { name: 'Review & Submit' }))
+  const reviewOthers = screen.getByRole('region', { name: 'Review college details' })
+  const collegeSectionOthers = within(reviewOthers).getByRole('heading', { name: 'College Information' }).closest('section')
+  expect(within(collegeSectionOthers).getByText('Others')).toBeTruthy()
+  expect(within(collegeSectionOthers).getByText('Community College')).toBeTruthy()
+
+  // Switching from "Others" to predefined clears custom college type value
+  fireEvent.click(screen.getByRole('tab', { name: 'College Information' }))
+  fireEvent.change(screen.getByLabelText(/^College Type/), { target: { value: 'Degree College' } })
+  expect(screen.queryByLabelText(/Specify College Type/i)).toBeNull()
+
+  fireEvent.click(screen.getByRole('tab', { name: 'Review & Submit' }))
+  const reviewDegree = screen.getByRole('region', { name: 'Review college details' })
+  const collegeSectionDegree = within(reviewDegree).getByRole('heading', { name: 'College Information' }).closest('section')
+  expect(within(collegeSectionDegree).getByText('Degree College')).toBeTruthy()
+  expect(within(collegeSectionDegree).queryByText('Community College')).toBeNull()
+  expect(within(collegeSectionDegree).queryByText(/College Type Other/i)).toBeNull()
+  expect(within(collegeSectionDegree).getAllByRole('term').map(dt => dt.textContent)).toEqual([
+    'College Name', 'College Code', 'College Type', 'University Name'
+  ])
+})
+
+test('edit college correctly populates predefined and custom college types and payloads', async () => {
+  const predefinedCollege = { ...college(10), type: 'Degree College', collegeTypeOther: '' }
+  fixture.rows = [predefinedCollege]
+
+  mount('/college-institution-management/add?edit=10')
+  await waitFor(() => expect(screen.getByLabelText(/^College Name/).value).toBe(predefinedCollege.name))
+
+  expect(screen.getByLabelText(/^College Type/).value).toBe('Degree College')
+  expect(screen.queryByLabelText(/Specify College Type/i)).toBeNull()
+
+  fireEvent.click(screen.getByRole('tab', { name: 'Review & Submit' }))
+  const review = screen.getByRole('region', { name: 'Review college details' })
+  const collegeSection = within(review).getByRole('heading', { name: 'College Information' }).closest('section')
+  expect(within(collegeSection).getByText('Degree College')).toBeTruthy()
+  expect(within(collegeSection).queryByText(/College Type Other/i)).toBeNull()
+  expect(within(collegeSection).queryByText('Not provided')).toBeNull()
+
+  cleanup()
+  const customCollege = { ...college(11), type: 'Vocational Training Institute' }
+  fixture.rows = [customCollege]
+
+  mount('/college-institution-management/add?edit=11')
+  await waitFor(() => expect(screen.getByLabelText(/^College Name/).value).toBe(customCollege.name))
+
+  expect(screen.getByLabelText(/^College Type/).value).toBe('Others')
+  const customInput = screen.getByLabelText(/Specify College Type/i)
+  expect(customInput.value).toBe('Vocational Training Institute')
+
+  fireEvent.click(screen.getByRole('tab', { name: 'Review & Submit' }))
+  const reviewCustom = screen.getByRole('region', { name: 'Review college details' })
+  const collegeSectionCustom = within(reviewCustom).getByRole('heading', { name: 'College Information' }).closest('section')
+  expect(within(collegeSectionCustom).getByText('Others')).toBeTruthy()
+  expect(within(collegeSectionCustom).getByText('Vocational Training Institute')).toBeTruthy()
+
+  fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }))
+  await waitFor(() => expect(updateCollege).toHaveBeenCalledWith(
+    '11',
+    expect.objectContaining({ type: 'Vocational Training Institute' })
+  ))
+})

@@ -2055,6 +2055,19 @@ export const FeeStructureModule = (() => {
         ])
       ),
     };
+    const branchMasters = [...masters.branches, ...(masters.allBranches || [])];
+    const planCourseName = row => row.courseName || masters.courses
+      .find(item => String(item.id ?? item.courseId) === String(row.courseId))?.name || '';
+    const planBranchName = row => row.branchName || branchMasters
+      .find(item => String(item.id ?? item.branchId) === String(row.branchId))?.name || '';
+    const planDisplayName = row => {
+      const excluded = new Set([planCourseName(row), planBranchName(row), row.batch]
+        .filter(Boolean).map(value => String(value).trim().toLocaleLowerCase()));
+      const remaining = String(row.name || row.code || '').split(/\s*·\s*/)
+        .map(value => value.trim()).filter(value => value && !excluded.has(value.toLocaleLowerCase()));
+      return remaining.join(' · ') || [row.semesterName, row.academicYearName, row.quota, row.studentCategory]
+        .filter(Boolean).join(' · ') || 'Fee plan';
+    };
 
     useEffect(() => {
       let active = true;
@@ -2590,6 +2603,15 @@ export const FeeStructureModule = (() => {
                   className="fm-plan-table"
                   columns={[
                     {
+                      label: "Plan Name",
+                      render: (r) => (
+                        <div className="fm-plan-identity">
+                          <strong title={planDisplayName(r)}>{planDisplayName(r)}</strong>
+                          {r.batch && <span className="fm-plan-context">{r.batch}</span>}
+                        </div>
+                      ),
+                    },
+                    {
                       label: "Academic Year",
                       render: (r) =>
                         r.academicYearName ||
@@ -2598,12 +2620,17 @@ export const FeeStructureModule = (() => {
                     },
                     {
                       label: "Course / Branch",
-                      render: (r) => (
-                        <div>
-                          <span>{r.courseName || "—"}</span>
-                          <small className="fm-cell-sub">{r.branchName || "—"}</small>
-                        </div>
-                      ),
+                      render: (r) => {
+                        const courseName = r.courseName || masters.courses.find(item => String(item.id ?? item.courseId) === String(r.courseId))?.name || "—";
+                        const branchName = r.branchName || [...masters.branches, ...(masters.allBranches || [])]
+                          .find(item => String(item.id ?? item.branchId) === String(r.branchId))?.name || "—";
+                        return (
+                          <div>
+                            <span>{courseName}</span>
+                            <small className="fm-cell-sub">{branchName}</small>
+                          </div>
+                        );
+                      },
                     },
                     { label: "Quota / Category", render: row => <div>{row.quota || row.category || 'Not specified'}<small className="fm-cell-sub">{row.studentCategory || 'Not specified'}</small></div> },
                     {
@@ -5495,7 +5522,6 @@ export const FeeManagementModule = (() => {
     const [txQuery, setTxQuery] = useState("");
     const [txMode, setTxMode] = useState("");
     const [txFromDate, setTxFromDate] = useState("");
-    const [txToDate, setTxToDate] = useState("");
     const [txPage, setTxPage] = useState(1);
     const [txData, setTxData] = useState({ items: [], total: 0, totalPages: 1 });
     const [txLoading, setTxLoading] = useState(false);
@@ -5613,7 +5639,6 @@ export const FeeManagementModule = (() => {
           search: txQuery,
           paymentMode: txMode,
           fromDate: txFromDate,
-          toDate: txToDate,
         })
         .then((res) => {
           if (active) {
@@ -5640,7 +5665,7 @@ export const FeeManagementModule = (() => {
       if (activeView === "transactions") {
         return fetchTransactions();
       }
-    }, [activeView, txPage, txQuery, txMode, txFromDate, txToDate, academic.selectedCollegeId]);
+    }, [activeView, txPage, txQuery, txMode, txFromDate, academic.selectedCollegeId]);
 
     const handleOpenTxReceipt = payment => handleOpenReceipt(
       { name: payment.studentName, roll: payment.studentCode, ...payment }, payment
@@ -5980,13 +6005,13 @@ export const FeeManagementModule = (() => {
 
             {/* Filter Toolbar for Transactions */}
             <FilterPanel
-              active={Boolean(txQuery || txMode || txFromDate || txToDate)}
+              className="fm-transaction-filter-panel"
+              active={Boolean(txQuery || txMode || txFromDate)}
               actions={<button type="button" className="erp-btn erp-btn--primary" onClick={() => navigate("/fees/collection")}><FiPlus /> Collect Payment</button>}
               onClear={() => {
                 setTxQuery("");
                 setTxMode("");
                 setTxFromDate("");
-                setTxToDate("");
                 setTxPage(1);
               }}
             >
@@ -6031,16 +6056,6 @@ export const FeeManagementModule = (() => {
                   title="From Date"
                 />
 
-                <input
-                  type="date"
-                  aria-label="To Date"
-                  value={txToDate}
-                  onChange={(e) => {
-                    setTxToDate(e.target.value);
-                    setTxPage(1);
-                  }}
-                  title="To Date"
-                />
               </div>
             </FilterPanel>
 

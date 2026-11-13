@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Dapper;
 using MySqlConnector;
 using BTech.Services;
+using System.Data;
 
 namespace BTech.Middleware;
 
@@ -13,6 +14,11 @@ namespace BTech.Middleware;
 /// </summary>
 public sealed class ModulePermissionMiddleware
 {
+    private sealed class CollegeAdminAssignment
+    {
+        public long? CollegeId { get; set; }
+        public int ActiveAssignments { get; set; }
+    }
     public const string CurrentCollegeItem = "AcademicYearAuthorization.CollegeId";
     public const string ActiveRolesItem = "Authorization.ActiveRoles";
     public const string AssignedCollegeItem = "Authorization.AssignedCollegeId";
@@ -131,15 +137,37 @@ public sealed class ModulePermissionMiddleware
             dependency = "active-roles/user_roles+roles";
             var rawRoleCodes = await connection.QueryAsync<string>(new CommandDefinition(rolesSql, new { userId }, cancellationToken: context.RequestAborted));
             var roleCodes = rawRoleCodes.Select(CanonicalRoleCode.Normalize).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            // Pass the same live, verified authorization snapshot to academic-year scope resolution.
-            context.Items[CurrentCollegeItem] = collegeId;
-            context.Items[AssignedCollegeItem] = collegeId;
             context.Items[ActiveRolesItem] = roleCodes;
             context.Items[SuperAdminItem] = roleCodes.Contains("SUPER_ADMIN");
             if (roleCodes.Contains("SUPER_ADMIN"))
             {
+                context.Items[CurrentCollegeItem] = collegeId;
+                context.Items[AssignedCollegeItem] = collegeId;
                 return true;
             }
+
+            if (roleCodes.Contains("COLLEGE_ADMIN"))
+            {
+                var assignment = await connection.QuerySingleAsync<CollegeAdminAssignment>(new CommandDefinition(
+                    "sp_cms_college_admin_assignment", new { p_user_id = userId },
+                    commandType: CommandType.StoredProcedure, cancellationToken: context.RequestAborted));
+                if (assignment.ActiveAssignments != 1 || !assignment.CollegeId.HasValue)
+                {
+                    _logger.LogWarning("College Admin assignment denied. UserId={UserId}, PrimaryCollegeId={PrimaryCollegeId}, ActiveAssignments={ActiveAssignments}, TraceId={TraceId}",
+                        userId, collegeId, assignment.ActiveAssignments, context.TraceIdentifier);
+                    await Deny(context, StatusCodes.Status403Forbidden,
+                        "College Admin requires exactly one active college assignment. Ask Super Admin to review college assignments.");
+                    return false;
+                }
+                if (collegeId != assignment.CollegeId)
+                    _logger.LogWarning("Account primary college differs from active assignment. UserId={UserId}, PrimaryCollegeId={PrimaryCollegeId}, AssignedCollegeId={AssignedCollegeId}, TraceId={TraceId}",
+                        userId, collegeId, assignment.CollegeId, context.TraceIdentifier);
+                // The active mapping, not a stale users.college_id or JWT claim,
+                // is authoritative for a College Admin's selected tenant.
+                collegeId = assignment.CollegeId;
+            }
+            context.Items[CurrentCollegeItem] = collegeId;
+            context.Items[AssignedCollegeItem] = collegeId;
 
             if (path.Equals("/api/v1/account/profile", StringComparison.OrdinalIgnoreCase) ||
                 path.Equals("/api/v1/profile/photo", StringComparison.OrdinalIgnoreCase) ||
@@ -165,14 +193,6 @@ public sealed class ModulePermissionMiddleware
                 return false;
             }
 
-            // College creation and scoped view/edit are explicit College Admin capabilities.
-            // Repository scope filters list/count before pagination and checks individual records.
-            var collegeRecordsPath = path.Equals("/api/v1/colleges", StringComparison.OrdinalIgnoreCase) ||
-                path.StartsWith("/api/v1/colleges/", StringComparison.OrdinalIgnoreCase);
-            if (collegeRecordsPath && roleCodes.Contains("COLLEGE_ADMIN") &&
-                context.Request.Method is "GET" or "POST" or "PUT" or "PATCH")
-                return true;
-
             // Resolve academic setup records and explicit college selections against live ownership.
             // Mapped College Admin access still requires the selected college permission matrix.
             dependency = "academic-record-ownership";
@@ -189,30 +209,13 @@ public sealed class ModulePermissionMiddleware
                 return false;
             }
             selectedAcademicCollege ??= referenceScope.CollegeId;
-            if (AcademicSetupCollegeScope.Supports(module) && roleCodes.Contains("COLLEGE_ADMIN"))
-            {
-                var selected = selectedAcademicCollege;
-                if (selected is > 0 && selected != collegeId)
-                {
-                    const string mappingSql = """
-                        SELECT COUNT(*) FROM college_user_mappings m
-                        INNER JOIN college_settings cs ON cs.college_setting_id=m.college_setting_id
-                        INNER JOIN colleges c ON c.college_id=cs.college_id
-                        WHERE m.user_id=@userId AND m.status=1 AND m.removed_at IS NULL
-                          AND cs.status=1 AND c.status=1 AND c.deleted_at IS NULL
-                          AND cs.college_id=@selected;
-                        """;
-                    dependency = "college-mapping/college_user_mappings+college_settings+colleges";
-                    var mapped = await connection.ExecuteScalarAsync<int>(new CommandDefinition(
-                        mappingSql, new { userId, selected }, cancellationToken: context.RequestAborted));
-                    if (mapped > 0) collegeId = selected;
-                    else _logger.LogWarning("Academic-year mapping denied. UserId={UserId}, AssignedCollegeId={AssignedCollegeId}, RequestedCollegeId={RequestedCollegeId}, RoleCodes={RoleCodes}, TraceId={TraceId}", userId, collegeId, selected, string.Join(",", roleCodes), context.TraceIdentifier);
-                }
-                context.Items[CurrentCollegeItem] = collegeId;
-            }
+            // A College Admin has one verified tenant; a selected academic
+            // college may never switch the request into another tenant.
 
             if (selectedAcademicCollege.HasValue && selectedAcademicCollege != collegeId)
             {
+                _logger.LogWarning("College ownership denied. UserId={UserId}, PrimaryCollegeId={PrimaryCollegeId}, RequestedCollegeId={RequestedCollegeId}, TraceId={TraceId}",
+                    userId, collegeId, selectedAcademicCollege, context.TraceIdentifier);
                 await Deny(context, StatusCodes.Status403Forbidden, "Cross-college access is not permitted. An active college assignment is required.");
                 return false;
             }
@@ -261,6 +264,14 @@ public sealed class ModulePermissionMiddleware
                 new { userId, collegeId, module }, cancellationToken: context.RequestAborted));
             // User settings can narrow the live role ceiling, never elevate it.
             if (userOverride.HasValue && userOverride != 1) granted = 0;
+            // A verified College Admin may read the assigned college's own
+            // metadata even when no role_permissions(colleges, can_view) row
+            // exists. Scope/ownership checks above run first. Other college
+            // module resources, edits, exports and creations retain grants.
+            if (roleCodes.Contains("COLLEGE_ADMIN") && !roleCodes.Contains("STUDENT") &&
+                module == "colleges" && action == "view" &&
+                IsCollegeMetadataRead(context.Request.Method, path))
+                granted = 1;
             if (granted != 1)
             {
                 _logger.LogWarning("Module permission denied. UserId={UserId}, Module={Module}, Action={Action}, Path={Path}", userId, module, action, path);
@@ -301,6 +312,17 @@ public sealed class ModulePermissionMiddleware
         path.Equals("/api/v1/auth", StringComparison.OrdinalIgnoreCase) ||
         path.StartsWith("/api/health", StringComparison.OrdinalIgnoreCase) ||
         path.StartsWith("/api/swagger", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsCollegeMetadataRead(string method, string path)
+    {
+        if (!HttpMethods.IsGet(method) && !HttpMethods.IsHead(method)) return false;
+        if (path.Equals("/api/v1/colleges", StringComparison.OrdinalIgnoreCase) ||
+            path.Equals("/api/v1/colleges/search", StringComparison.OrdinalIgnoreCase) ||
+            path.Equals("/api/v1/colleges/my-college", StringComparison.OrdinalIgnoreCase)) return true;
+        const string prefix = "/api/v1/colleges/";
+        return path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) &&
+            long.TryParse(path[prefix.Length..], out var id) && id > 0;
+    }
 
     private static string? ResolveModule(string path)
     {
@@ -343,7 +365,7 @@ public sealed class ModulePermissionMiddleware
         if (p.Contains("credential")) return "roles_permissions";
         if (p.Contains("demo-request")) return "colleges";
         if (p.Contains("college-user") || p.Contains("college-user-mapping")) return "colleges";
-        if (p.Contains("college")) return "colleges";
+        if (p.Contains("college") || p.Contains("campus")) return "colleges";
         if (p.Contains("department")) return "departments";
         if (p.Contains("course-semester") || p.Contains("course-semester-mapping")) return "courses";
         if (p.Contains("course-structure")) return "courses";
@@ -417,27 +439,18 @@ public sealed class ModulePermissionMiddleware
     private static async Task<bool> HasCrossCollegeBodyAsync(HttpContext context, long collegeId)
     {
         var request = context.Request;
-        if (request.ContentLength is null or <= 0 or > 1_048_576 ||
+        if (request.ContentLength is 0 ||
             request.ContentType?.Contains("application/json", StringComparison.OrdinalIgnoreCase) != true ||
             request.Method is "GET" or "HEAD") return false;
+        if (request.ContentLength is > 4_194_304)
+            throw new BadHttpRequestException("JSON request exceeds the college-scope validation limit.", StatusCodes.Status413PayloadTooLarge);
 
         request.EnableBuffering();
         try
         {
             using var document = await System.Text.Json.JsonDocument.ParseAsync(request.Body, cancellationToken: context.RequestAborted);
             request.Body.Position = 0;
-            if (document.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object) return false;
-            foreach (var property in document.RootElement.EnumerateObject())
-            {
-                if (!property.Name.Equals("collegeId", StringComparison.OrdinalIgnoreCase) &&
-                    !property.Name.Equals("college_id", StringComparison.OrdinalIgnoreCase)) continue;
-                long supplied;
-                if (property.Value.ValueKind == System.Text.Json.JsonValueKind.Number && property.Value.TryGetInt64(out supplied))
-                    return supplied != collegeId;
-                if (property.Value.ValueKind == System.Text.Json.JsonValueKind.String && long.TryParse(property.Value.GetString(), out supplied))
-                    return supplied != collegeId;
-            }
-            return false;
+            return ContainsDifferentCollege(document.RootElement, collegeId, 0);
         }
         catch (System.Text.Json.JsonException)
         {
@@ -448,6 +461,28 @@ public sealed class ModulePermissionMiddleware
         {
             if (request.Body.CanSeek) request.Body.Position = 0;
         }
+    }
+
+    // Inspect every college reference, including nested rows in bulk requests. A
+    // malformed identifier must not silently turn into an unscoped write.
+    private static bool ContainsDifferentCollege(System.Text.Json.JsonElement element, long collegeId, int depth)
+    {
+        if (depth > 32) return true;
+        if (element.ValueKind == System.Text.Json.JsonValueKind.Array)
+            return element.EnumerateArray().Any(item => ContainsDifferentCollege(item, collegeId, depth + 1));
+        if (element.ValueKind != System.Text.Json.JsonValueKind.Object) return false;
+        foreach (var property in element.EnumerateObject())
+        {
+            if (property.Name.Equals("collegeId", StringComparison.OrdinalIgnoreCase) ||
+                property.Name.Equals("college_id", StringComparison.OrdinalIgnoreCase))
+            {
+                if (property.Value.ValueKind == System.Text.Json.JsonValueKind.Null) continue;
+                if (!long.TryParse(property.Value.ToString(), out var supplied) || supplied != collegeId)
+                    return true;
+            }
+            else if (ContainsDifferentCollege(property.Value, collegeId, depth + 1)) return true;
+        }
+        return false;
     }
 
     private static async Task Deny(HttpContext context, int status, string message)

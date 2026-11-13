@@ -75,8 +75,36 @@ public sealed class AcademicFeePlanService(IConfiguration config, FeePlanAccess 
                     ?? throw new FeePlanException(404, "Previous fee plan not found in this college.");
                 FeePlanRules.Require(previous.Status is "PUBLISHED" or "ARCHIVED", "New versions must reference a published or archived plan.", 409);
                 FeePlanRules.Require(FeePlanRules.Same(previous.Code, p.Code), "New versions must retain the plan code.");
+                var nextVersion = await c.ExecuteScalarAsync<long?>("""
+                    SELECT fee_structure_id FROM academic_fee_plans
+                    WHERE previous_fee_structure_id=@previousId LIMIT 1 FOR UPDATE
+                    """, new { previousId = previous.FeeStructureId }, tx);
+                FeePlanRules.Require(!nextVersion.HasValue,
+                    $"Fee plan {nextVersion} is already the next version of this plan.", 409);
                 version = previous.Version + 1;
             }
+            else
+            {
+                var duplicateCode = await c.ExecuteScalarAsync<long?>("""
+                    SELECT fee_structure_id FROM academic_fee_plans
+                    WHERE college_id=@CollegeId AND plan_code=@Code LIMIT 1 FOR UPDATE
+                    """, new { p.CollegeId, p.Code }, tx);
+                FeePlanRules.Require(!duplicateCode.HasValue,
+                    $"Plan code is already used by fee plan {duplicateCode}. Create a new version or choose another code.", 409);
+            }
+        }
+        // A NULL semester covers all semesters; reject overlapping plans for the same
+        // audience/category before saving, so the picker cannot offer two charges.
+        var duplicate = await c.ExecuteScalarAsync<long?>("sp_afp_scope_conflict", new
+        {
+            p.CollegeId, p.AcademicYearId, p.CourseId, p.BranchId, p.SemesterId,
+            p.FeeCategoryId, p.Batch, p.Quota, p.StudentCategory, p.EffectiveFrom, p.EffectiveTo,
+            ExcludeId = id, PreviousId = p.PreviousFeeStructureId, TargetStatus = "DRAFT"
+        }, tx, commandType: System.Data.CommandType.StoredProcedure);
+        FeePlanRules.Require(!duplicate.HasValue,
+            $"Fee plan {duplicate} already covers this category, audience, academic scope and effective period.", 409);
+        if (!id.HasValue)
+        {
             id = await c.ExecuteScalarAsync<long>("""
                 INSERT INTO fee_structures(structure_code,structure_group_code,structure_name,college_id,academic_year_id,
                   course_id,branch_id,semester_id,fee_category_id,amount,currency_code,effective_from,effective_to,status,created_by)
@@ -147,11 +175,21 @@ public sealed class AcademicFeePlanService(IConfiguration config, FeePlanAccess 
         if (target == "PUBLISHED")
         {
             FeePlanRules.Require(p.EffectiveTo.Date >= DateTime.UtcNow.Date, "An expired plan cannot be published.", 409);
-            var conflict = await c.ExecuteScalarAsync<long?>("""
+            var conflict = await c.ExecuteScalarAsync<long?>("sp_afp_scope_conflict", new
+            {
+                p.CollegeId, p.AcademicYearId, p.CourseId, p.BranchId, p.SemesterId,
+                p.FeeCategoryId, p.Batch, p.Quota, p.StudentCategory, p.EffectiveFrom, p.EffectiveTo,
+                ExcludeId = (long?)id, PreviousId = (long?)null, TargetStatus = "PUBLISHED"
+            }, tx, commandType: System.Data.CommandType.StoredProcedure);
+            FeePlanRules.Require(!conflict.HasValue,
+                $"Published fee plan {conflict} overlaps this category, audience, academic scope and effective period. Archive it before publishing.", 409);
+            var versionConflict = await c.ExecuteScalarAsync<long?>("""
                 SELECT fee_structure_id FROM academic_fee_plans WHERE college_id=@collegeId AND plan_code=@Code
-                  AND fee_structure_id<>@id AND status='PUBLISHED' AND effective_from<=@EffectiveTo AND effective_to>=@EffectiveFrom LIMIT 1 FOR UPDATE
+                  AND fee_structure_id<>@id AND status='PUBLISHED' AND effective_from<=@EffectiveTo AND effective_to>=@EffectiveFrom
+                LIMIT 1 FOR UPDATE
                 """, new { collegeId, p.Code, id, p.EffectiveFrom, p.EffectiveTo }, tx);
-            FeePlanRules.Require(!conflict.HasValue, $"Published version {conflict} overlaps this plan. Archive that version before publishing.", 409);
+            FeePlanRules.Require(!versionConflict.HasValue,
+                $"Published version {versionConflict} overlaps this plan. Archive that version before publishing.", 409);
         }
         p.Status = target; p.Revision++; p.UpdatedBy = actor; p.UpdatedAt = DateTime.UtcNow;
         await c.ExecuteAsync("""
@@ -172,11 +210,10 @@ public sealed class AcademicFeePlanService(IConfiguration config, FeePlanAccess 
         await access.AuthorizeAsync(c, q.CollegeId, "student_admissions", "view");
         await using var tx = await c.BeginTransactionAsync();
         await ValidateAcademicScopeAsync(c, tx, q, null);
-        var candidates = (await c.QueryAsync<AcademicFeePlanDto>(AcademicFeePlanStore.Select + """
-             WHERE college_id=@CollegeId AND academic_year_id=@AcademicYearId AND course_id=@CourseId AND branch_id=@BranchId
-               AND semester_id=@SemesterId AND status='PUBLISHED' AND effective_from<=UTC_DATE() AND effective_to>=UTC_DATE()
-             ORDER BY fee_structure_id DESC
-            """, q, tx)).Select(AcademicFeePlanStore.Hydrate);
+        var candidates = (await c.QueryAsync<AcademicFeePlanDto>("sp_afp_pick", new
+        {
+            q.CollegeId, q.AcademicYearId, q.CourseId, q.BranchId, q.SemesterId
+        }, tx, commandType: System.Data.CommandType.StoredProcedure)).Select(AcademicFeePlanStore.Hydrate);
         var result = candidates.Where(p => FeePlanRules.Available(p, q, DateTime.UtcNow)).ToArray();
         await tx.CommitAsync();
         return result;
@@ -184,17 +221,11 @@ public sealed class AcademicFeePlanService(IConfiguration config, FeePlanAccess 
 
     public static async Task ValidateAcademicScopeAsync(MySqlConnection c, MySqlTransaction tx, AdmissionFeePlanQuery q, long? category)
     {
-        var valid = await c.ExecuteScalarAsync<int>("""
-            SELECT COUNT(*) FROM colleges col
-            JOIN academicyears ay ON ay.college_id=col.college_id AND ay.academic_year_id=@AcademicYearId
-            JOIN courses co ON co.college_id=col.college_id AND co.course_id=@CourseId
-            JOIN branches b ON b.course_id=co.course_id AND b.branch_id=@BranchId
-            JOIN semesters s ON s.course_id=co.course_id AND s.branch_id=b.branch_id AND s.semester_id=@SemesterId AND s.academic_year_id=ay.academic_year_id
-            WHERE col.college_id=@CollegeId AND col.status=1 AND col.deleted_at IS NULL
-              AND ay.status=1 AND ay.is_archived=0 AND ay.deleted_at IS NULL
-              AND co.status=1 AND co.deleted_at IS NULL AND b.status=1 AND b.deleted_at IS NULL AND s.status=1 AND s.is_archived=0
-            """, q, tx);
-        FeePlanRules.Require(valid == 1, "Academic year, course, branch and semester must form an active academic scope in the selected college.");
+        var valid = await c.ExecuteScalarAsync<int>("sp_afp_validate_scope", new
+        {
+            q.CollegeId, q.AcademicYearId, q.CourseId, q.BranchId, q.SemesterId
+        }, tx, commandType: System.Data.CommandType.StoredProcedure);
+        FeePlanRules.Require(valid == 1, "Academic year, course, branch and any supplied semester must form an active academic scope in the selected college.");
         if (category.HasValue)
             FeePlanRules.Require(await c.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM fee_categories WHERE fee_category_id=@category AND status=1", new { category }, tx) == 1,
                 "Fee category does not exist or is inactive.");

@@ -1,4 +1,4 @@
-﻿import SectionsRoomsHeader from '../../components/SectionsRoomsHeader'
+import SectionsRoomsHeader from '../../components/SectionsRoomsHeader'
 import PageHeader from '../../components/PageHeader'
 import ViewDialog from '../../components/ViewDialog'
 import SharedInfoCard from '../../components/InfoCard'
@@ -367,6 +367,8 @@ function SectionForm({ editMode = false }) {
   const { id } = useParams(), navigate = useNavigate()
   const { scopeRecords, selectedCollegeId, selectedCollege, selectedAcademicYearId, selectedAcademicYear } = useAcademic()
   const [form, setForm] = useState(emptyForm)
+  const [roomBuilding, setRoomBuilding] = useState('')
+  const [roomFloor, setRoomFloor] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState({})
@@ -421,6 +423,14 @@ function SectionForm({ editMode = false }) {
   const load = useCallback(async () => { setLoading(true); setErrors({}); try { const [data, roomRows] = await Promise.all([loadSources(), typeof roomService.getRooms === 'function' ? roomService.getRooms().catch(() => []) : Promise.resolve([])]); setMasters({ courses: data.courses, branches: data.branches, years: data.years, semesters: [] }); setSections(newestFirst('sections', data.sections)); setAssignments(data.assignments); setFaculty(data.faculty); setRooms(Array.isArray(roomRows) ? roomRows : []); if (editMode && id) { const detail = normalizeSection({ ...(data.sections.find((item) => String(item.id) === String(id)) || {}), ...responseRecord(await sectionApi.getById(id)) }, makeLookups(data.courses, data.branches, [], data.years)); originalRoom.current = detail.room || ''; legacy.current = { sectionType: detail.sectionType ?? detail.type, shift: detail.shift }; const editable = { ...detail }; delete editable.type; delete editable.sectionType; delete editable.shift; setForm({ ...emptyForm, ...editable, courseId: String(detail.courseId || ''), branchId: String(detail.branchId || ''), semesterId: String(detail.semesterId || ''), academicYearId: String(detail.academicYearId || ''), facultyAdvisorEmployeeProfileId: detail.facultyAdvisorEmployeeProfileId || '' }); await fetchSemesters(detail.branchId, detail.academicYearId, detail.courseId) } else { originalRoom.current = ''; const initialYearId = selectedAcademicYearId || (getActiveAcademicYears(data.years)[0]?.id) || ''; setForm(() => ({ ...emptyForm, academicYearId: initialYearId, collegeId: selectedCollegeId || '' })); setErrors({}) } } catch (error) { setErrors({ form: apiError(error, 'Unable to load section form.') }) } finally { setLoading(false) } }, [id, editMode, fetchSemesters, selectedAcademicYearId, selectedCollegeId, setErrors])
   useEffect(() => { load() }, [load])
   const prevCollegeIdRef = useRef(selectedCollegeId)
+  const roomValue = (room) => room.buildingBlock && room.floor ? [room.buildingBlock, room.floor, room.roomNumber || room.roomName || room.id].join(' / ') : String(room.roomNumber || room.roomName || room.id)
+  useEffect(() => {
+    if (!form.room) return
+    const selectedRoom = rooms.find((room) => String(roomValue(room)) === String(form.room) || String(room.roomNumber || room.roomName || room.id) === String(form.room))
+    if (!selectedRoom) return
+    setRoomBuilding(selectedRoom.buildingBlock || '')
+    setRoomFloor(selectedRoom.floor || '')
+  }, [form.room, rooms])
   useEffect(() => {
     if (editMode) return
     const prev = prevCollegeIdRef.current
@@ -548,12 +558,19 @@ function SectionForm({ editMode = false }) {
   const mappingReady = canOpenDetailsTab
 
   const roomLabel = (room) => [room.roomNumber || room.roomName, room.roomName && room.roomName !== room.roomNumber ? room.roomName : '', room.capacity ? `${room.capacity} seats` : ''].filter(Boolean).join(' · ')
+  const roomBuildings = [...new Set(rooms.map((room) => room.buildingBlock).filter(Boolean))].sort((a, b) => a.localeCompare(b))
+  const roomFloors = [...new Set(rooms.filter((room) => room.buildingBlock === roomBuilding).map((room) => room.floor).filter(Boolean))].sort((a, b) => a.localeCompare(b))
+  const hasLegacyUnmappedRooms = rooms.some((room) => !room.buildingBlock || !room.floor)
   const availableRooms = rooms.filter((room) => {
     const label = room.roomNumber || room.roomName || room.id
     const status = String(room.status || '').toLowerCase()
     const alreadyAssigned = room.assignedSection && String(room.assignedSection) !== String(form.name)
+    const assignedToAnotherSection = sections.some((section) => String(section.id) !== String(id) && String(section.status || '').toLowerCase() !== 'inactive' && String(section.room || '') === String(roomValue(room)))
     const fitsCapacity = !form.capacity || !room.capacity || Number(room.capacity) >= Number(form.capacity)
-    return (String(label) === String(form.room) || (!alreadyAssigned && !['inactive', 'maintenance', 'unavailable'].includes(status))) && fitsCapacity
+    const mappedToSelection = room.buildingBlock === roomBuilding && room.floor === roomFloor
+    const legacyUnmapped = (!room.buildingBlock || !room.floor) && !roomBuilding && !roomFloor
+    const selectedByCurrentSection = String(roomValue(room)) === String(form.room) || String(label) === String(form.room)
+    return (mappedToSelection || legacyUnmapped) && (selectedByCurrentSection || (!alreadyAssigned && !assignedToAnotherSection && !['inactive', 'maintenance', 'unavailable', 'occupied'].includes(status))) && fitsCapacity
   })
 
   return (
@@ -583,7 +600,9 @@ function SectionForm({ editMode = false }) {
               <Field label="Section Code *" error={errors.code}><input value={form.code} onChange={(event) => setField('code', event.target.value)} placeholder="e.g. CSE-S1-A" /></Field>
               <Field label="Capacity *" error={errors.capacity}><input type="number" min="1" max="120" value={form.capacity} onChange={(event) => setField('capacity', event.target.value)} placeholder="e.g. 60" /></Field>
               <Field label="Status *" error={errors.status}><ProjectSelect value={form.status} onChange={(event) => setField('status', event.target.value)}><option value="" disabled>Select status</option><option value="Active">Active</option><option value="Inactive">Inactive</option></ProjectSelect></Field>
-              <Field label={editMode ? 'Room / Classroom' : 'Room / Classroom *'} error={errors.room}><ProjectSelect value={form.room} onChange={(event) => setField('room', event.target.value)}><option value="">{editMode ? 'Assign later' : 'Select a room'}</option>{availableRooms.map(room => <option key={room.id} value={room.roomNumber || room.roomName || room.id}>{roomLabel(room)}</option>)}</ProjectSelect>{!rooms.length && <small>No rooms configured. <Link to="/rooms-management/add">Add a room first</Link></small>}</Field>
+              <Field label="Academic Block"><ProjectSelect aria-label="Academic block" value={roomBuilding} onChange={(event) => { setRoomBuilding(event.target.value); setRoomFloor(''); setField('room', '') }}><option value="">Select block</option>{roomBuildings.map((building) => <option key={building} value={building}>{building}</option>)}</ProjectSelect></Field>
+              <Field label="Floor"><ProjectSelect aria-label="Room floor" value={roomFloor} onChange={(event) => { setRoomFloor(event.target.value); setField('room', '') }} disabled={!roomBuilding}><option value="">{roomBuilding ? 'Select floor' : 'Select block first'}</option>{roomFloors.map((floor) => <option key={floor} value={floor}>{floor}</option>)}</ProjectSelect></Field>
+              <Field label={editMode ? 'Room / Classroom' : 'Room / Classroom *'} error={errors.room}><ProjectSelect aria-label="Room / classroom" value={form.room} onChange={(event) => setField('room', event.target.value)} disabled={!((roomBuilding && roomFloor) || hasLegacyUnmappedRooms)}><option value="">{editMode ? 'Assign later' : roomFloor ? 'Select an available room' : hasLegacyUnmappedRooms && !roomBuilding ? 'Select a room' : 'Select floor first'}</option>{availableRooms.map(room => <option key={room.id} value={roomValue(room)}>{roomLabel(room)}</option>)}</ProjectSelect>{!rooms.length && <small>No rooms configured. <Link to="/rooms-management/add">Add a room first</Link></small>}{((roomBuilding && roomFloor) || hasLegacyUnmappedRooms) && availableRooms.length === 0 && <small>No suitable available rooms for this section capacity.</small>}</Field>
               <Field label="Faculty Advisor" error={errors.facultyAdvisorEmployeeProfileId}><SearchableSelect label="Faculty advisor" value={form.facultyAdvisorEmployeeProfileId} options={teacherCandidates.map(item => ({ id: item.employeeProfileId, value: item.employeeProfileId, name: item.fullName, code: [item.employeeCode, item.designation].filter(clean).join(' / ') }))} onChange={(value) => { const teacher = teacherCandidates.find(item => String(item.employeeProfileId) === String(value)); setForm(current => ({ ...current, facultyAdvisorEmployeeProfileId: value, advisor: teacher?.fullName || '' })) }} placeholder="Assign later" noOptionsMessage="No eligible faculty found." /></Field>
             </div>
           </section>
@@ -802,7 +821,8 @@ function SectionDetails({ sectionId, onClose }) {
   return <ViewDialog title="Section Details" subtitle={section?.name} onClose={onClose} maxWidth="900px" showExport={Boolean(section) && !error} exportFilename={`section_${id}`}>{loading || error || !section ? <AsyncState status={loading ? 'loading' : 'error'} message={error || undefined} onRetry={() => setAttempt(value => value + 1)} /> : <div className="section-reference-detail-grid">
               <InfoCard icon={FiGrid} title="Basic Information" rows={[["Section Name", section.name], ["Section Code", section.code], ["Type", section.sectionType || section.type], ["Capacity", section.capacity], ["Current Strength", assigned], ["Available Seats", available], ["Status", section.status]]} />
               <InfoCard icon={FiBookOpen} title="Academic Mapping" rows={[["Course Name", section.course], ["Course Code", section.courseCode], ["Branch Name", section.branch], ["Branch Code", section.branchCode], ["Academic Level", section.academicLevel || (["1st Year", "2nd Year", "3rd Year", "4th Year"][Math.ceil(Number(section.semesterNumber) / 2) - 1])], ["Semester", section.semester], ["Academic Year", section.academicYear]]} />
-              <InfoCard icon={FiUser} title="Section Allocation" rows={[["Faculty Advisor", section.advisor], ["Room / Classroom", section.room], ["Assigned Students", assigned], ["Available Seats", available]]} /></div>}</ViewDialog>
+              <InfoCard icon={FiUser} title="Section Allocation" rows={[["Faculty Advisor", section.advisor], ["Room / Classroom", section.room], ["Assigned Students", assigned], ["Available Seats", available]]} />
+</div>}</ViewDialog>
 }
 
 function Select({ label, value, change, first, values }) { return <SearchableSelect label={'Filter by ' + label} value={value} onChange={(next) => change(label, next)} placeholder={first} options={[{ value: '', name: first }, ...values.map((item) => ({ value: item, name: item }))]} searchPlaceholder={'Search ' + label + '...'} /> }

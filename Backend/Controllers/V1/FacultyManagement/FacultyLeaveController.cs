@@ -69,11 +69,13 @@ JOIN faculty f ON f.faculty_id=r.faculty_id
 JOIN departments d ON d.department_id=f.department_id
 LEFT JOIN faculty_leave_types t ON t.leave_type_id=r.leave_type_id
 LEFT JOIN faculty_leave_policies p ON p.policy_id=r.policy_id
-WHERE r.leave_request_id=@id LIMIT 1;";
+WHERE r.leave_request_id=@id AND (@collegeScope IS NULL OR f.college_id=@collegeScope)
+  AND (@ownUser IS NULL OR f.user_id=@ownUser) AND f.deleted_at IS NULL LIMIT 1;";
         try
         {
             await using var c=Connection(); await c.OpenAsync();
-            var row=await c.QueryFirstOrDefaultAsync(sql,new {id});
+            var row=await c.QueryFirstOrDefaultAsync(sql,new {id,collegeScope=CollegeDataScope.Resolve(HttpContext),
+                ownUser=CanManageLeaves() ? null : CurrentUserId()});
             return row is null ? NotFound(new {success=false,message="Leave request not found."}) : Ok(new {success=true,message="Leave request retrieved successfully.",data=row});
         }
         catch(MySqlException ex){return DbError(ex);}
@@ -88,7 +90,12 @@ WHERE r.leave_request_id=@id LIMIT 1;";
         try
         {
             await using var c=Connection(); await c.OpenAsync();
-            var faculty=await c.ExecuteScalarAsync<long?>("SELECT college_id FROM faculty WHERE faculty_id=@FacultyId AND deleted_at IS NULL LIMIT 1",new {request.FacultyId});
+            var faculty=await c.ExecuteScalarAsync<long?>(@"SELECT college_id FROM faculty
+                WHERE faculty_id=@FacultyId AND deleted_at IS NULL
+                  AND (@collegeScope IS NULL OR college_id=@collegeScope)
+                  AND (@ownUser IS NULL OR user_id=@ownUser) LIMIT 1",
+                new {request.FacultyId,collegeScope=CollegeDataScope.Resolve(HttpContext),
+                    ownUser=CanManageLeaves() ? null : CurrentUserId()});
             if(faculty is null) return BadRequest(new {success=false,message="Faculty not found."});
             var type=await c.ExecuteScalarAsync<string?>("SELECT leave_type_id FROM faculty_leave_types WHERE leave_type_id=@LeaveTypeId AND status='Active' AND (college_id IS NULL OR college_id=@CollegeId) LIMIT 1",new {request.LeaveTypeId, CollegeId=faculty});
             if(type is null) return BadRequest(new {success=false,message="Active leave type not found."});
@@ -116,12 +123,16 @@ WHERE r.leave_request_id=@id LIMIT 1;";
 
     private async Task<IActionResult> Decide(long id,string status,string? rejectionReason)
     {
+        if(!CanManageLeaves()) return Forbid();
         if(id<=0)return BadRequest(new {success=false,message="Invalid leave request ID."});
         if(status=="Rejected" && string.IsNullOrWhiteSpace(rejectionReason))return BadRequest(new {success=false,message="Rejection reason is required."});
         try
         {
             await using var c=Connection(); await c.OpenAsync();
-            var row=await c.QueryFirstOrDefaultAsync<dynamic>("SELECT * FROM faculty_leave_requests WHERE leave_request_id=@id LIMIT 1",new{id});
+            var row=await c.QueryFirstOrDefaultAsync<dynamic>(@"SELECT r.* FROM faculty_leave_requests r
+                JOIN faculty f ON f.faculty_id=r.faculty_id AND f.deleted_at IS NULL
+                WHERE r.leave_request_id=@id AND (@collegeScope IS NULL OR f.college_id=@collegeScope) LIMIT 1",
+                new{id,collegeScope=CollegeDataScope.Resolve(HttpContext)});
             if(row is null)return NotFound(new {success=false,message="Leave request not found."});
             if((string)row.status!="Pending")return Conflict(new {success=false,message="Only Pending leave requests can be decided."});
             if(status=="Approved")
@@ -194,14 +205,16 @@ ORDER BY f.faculty_name,t.name;";
     {
         if (collegeId is <= 0)
             return BadRequest(new { success = false, message = "CollegeId must be a positive number." });
-        // No college filter preserves the existing administrative list, including legacy shared types.
+        var selected=CollegeDataScope.Resolve(HttpContext,collegeId);
+        // Shared types remain available to every assigned college; Super Admin may
+        // still retrieve the complete catalogue when no college is selected.
         return await Query(@"SELECT leave_type_id AS id, college_id AS collegeId, name, code,
             category, pay_category AS payCategory, description, status
             FROM faculty_leave_types
-            WHERE (@collegeId IS NULL OR college_id=@collegeId)
+            WHERE (@collegeId IS NULL OR college_id=@collegeId OR college_id IS NULL)
               AND ((CAST(@status AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci) IS NULL OR status=(CAST(@status AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci))
               AND ((CAST(@search AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci) IS NULL OR name LIKE CONCAT('%',(CAST(@search AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci),'%') OR code LIKE CONCAT('%',(CAST(@search AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci),'%'))
-            ORDER BY name", new { collegeId, status=Null(status), search=Null(search) },
+            ORDER BY name", new { collegeId=selected, status=Null(status), search=Null(search) },
             "Leave types retrieved successfully.");
     }
 
@@ -215,6 +228,7 @@ ORDER BY f.faculty_name,t.name;";
 
     private async Task<IActionResult> SaveType(string? id, FacultyLeaveTypeRequest request, long? queryCollegeId)
     {
+        if (!CanManageLeaves()) return Forbid();
         var name=request.Name?.Trim() ?? "";
         var code=request.Code?.Trim().ToUpperInvariant() ?? "";
         if (name.Length == 0 || code.Length == 0)
@@ -226,14 +240,15 @@ ORDER BY f.faculty_name,t.name;";
         long? collegeId = null;
         try
         {
-            collegeId=CollegeSelection.Resolve(queryCollegeId, request.CollegeId);
+            collegeId=CollegeDataScope.Resolve(HttpContext,CollegeSelection.Resolve(queryCollegeId, request.CollegeId));
             await using var c=Connection();
             await c.OpenAsync();
             if (id is not null)
             {
                 var existing=await c.QuerySingleOrDefaultAsync<TypeScope>(
                     "SELECT college_id AS CollegeId FROM faculty_leave_types WHERE leave_type_id=@id", new { id });
-                if (existing is null || (collegeId.HasValue && existing.CollegeId != collegeId))
+                if (existing is null || (collegeId.HasValue && existing.CollegeId != collegeId)
+                    || (existing.CollegeId is null && !CollegeDataScope.IsSuper(HttpContext)))
                     return NotFound(new { success=false, message="Leave type not found in the selected college." });
                 collegeId=existing.CollegeId;
             }
@@ -320,7 +335,7 @@ ORDER BY f.faculty_name,t.name;";
                   AND ((CAST(@status AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci) IS NULL OR p.status=(CAST(@status AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci))
                   AND ((CAST(@search AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci) IS NULL OR p.name LIKE CONCAT('%',(CAST(@search AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci),'%'))
                 ORDER BY p.from_date DESC,p.name", new {collegeId,year,employeeType,departmentId,branchId,status=Null(status),search=Null(search)},
-                "Leave policies retrieved successfully.");
+                "Leave policies retrieved successfully.", includePolicyEntitlements:true);
         }
         catch (ArgumentException ex) { return BadRequest(new {success=false,message=ex.Message}); }
     }
@@ -335,6 +350,7 @@ ORDER BY f.faculty_name,t.name;";
 
     private async Task<IActionResult> SavePolicy(string? id,FacultyLeavePolicyRequest request,long? queryCollegeId)
     {
+        if (!CanManageLeaves()) return Forbid();
         try
         {
             if (string.IsNullOrWhiteSpace(request.Name) || request.Entitlements is null || request.Entitlements.Count==0)
@@ -343,14 +359,17 @@ ORDER BY f.faculty_name,t.name;";
             var employeeType=NormalizePolicyType(request.ApplicableTo);
             ValidatePolicyDates(request.FromDate,request.ToDate);
             var requestedCollege=CollegeSelection.Resolve(queryCollegeId,request.CollegeId);
+            var authorizedCollege=CollegeDataScope.Resolve(HttpContext,requestedCollege);
             await using var c=Connection(); await c.OpenAsync();
             var before=id is null ? null : await ReadPolicy(c,id);
             if (id is not null && before is null) return NotFound(new {success=false,message="Leave policy not found."});
             if (before is not null && requestedCollege.HasValue && before.CollegeId!=requestedCollege)
                 return NotFound(new {success=false,message="Leave policy not found in the selected college."});
-            var collegeId=before?.CollegeId ?? requestedCollege ?? await c.ExecuteScalarAsync<long?>(
+            var collegeId=before?.CollegeId ?? authorizedCollege ?? await c.ExecuteScalarAsync<long?>(
                 "SELECT college_id FROM users WHERE user_id=@userId AND deleted_at IS NULL",new {userId=CurrentUserId()});
             if (collegeId is null or <=0) throw new ArgumentException("CollegeId is required to create a leave policy.");
+            if (authorizedCollege.HasValue && authorizedCollege!=collegeId)
+                return NotFound(new {success=false,message="Leave policy not found in the selected college."});
 
             // Every activation and active edit uses the same college lock. ReadCommitted ensures a
             // waiter sees the preceding transaction's activation instead of an older snapshot.
@@ -363,17 +382,18 @@ ORDER BY f.faculty_name,t.name;";
                 AcademicYear=year,ApplicableTo=employeeType,DepartmentId=request.DepartmentId,BranchId=request.BranchId,
                 FromDate=request.FromDate.Date,ToDate=request.ToDate.Date,Status=existing?.Status??"Draft" };
             await ValidatePolicyScope(c,tx,scope);
+            await ValidatePolicyYear(c,tx,scope);
             var uniqueTypes=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var e in request.Entitlements)
             {
                 if (e is null || string.IsNullOrWhiteSpace(e.LeaveTypeId) || !uniqueTypes.Add(e.LeaveTypeId.Trim()))
                     throw new ArgumentException("Each entitlement must have a distinct leave type ID.");
-                if (e.Entitlement<0 || e.MaxDays<0 || e.MaxCarryForward<0)
-                    throw new ArgumentException("Leave entitlements and limits cannot be negative.");
+                if (!ValidLeaveDays(e.Entitlement) || !ValidLeaveDays(e.MaxDays) || !ValidLeaveDays(e.MaxCarryForward))
+                    throw new ArgumentException("Leave entitlements and limits must be non-negative values with at most two decimal places and no more than 999999.99.");
                 if (!await c.ExecuteScalarAsync<bool>(@"SELECT EXISTS(SELECT 1 FROM faculty_leave_types
-                    WHERE leave_type_id=@id AND (college_id IS NULL OR college_id=@collegeId))",
+                    WHERE leave_type_id=@id AND status='Active' AND (college_id IS NULL OR college_id=@collegeId))",
                     new {id=e.LeaveTypeId.Trim(),collegeId},tx))
-                    throw new ArgumentException($"Leave type '{e.LeaveTypeId}' is not available to this college.");
+                    throw new ArgumentException($"An active leave type is required for every entitlement in this college.");
             }
             if (scope.Status.Equals("Active",StringComparison.OrdinalIgnoreCase))
             {
@@ -402,7 +422,9 @@ ORDER BY f.faculty_name,t.name;";
             _logger.LogInformation("Leave policy saved. PolicyId={PolicyId}, CollegeId={CollegeId}, Status={Status}",scope.Id,scope.CollegeId,scope.Status);
             return Ok(new {success=true,message=id is null?"Leave policy created successfully.":"Leave policy updated successfully.",
                 data=new {id=scope.Id,collegeId=scope.CollegeId,status=scope.Status,academicYear=scope.AcademicYear,
-                    applicableTo=scope.ApplicableTo,departmentId=scope.DepartmentId,branchId=scope.BranchId}});
+                    applicableTo=scope.ApplicableTo,departmentId=scope.DepartmentId,branchId=scope.BranchId,
+                    name=scope.Name,fromDate=scope.FromDate.ToString("yyyy-MM-dd"),toDate=scope.ToDate.ToString("yyyy-MM-dd"),
+                    entitlements=request.Entitlements}});
         }
         catch (ArgumentException ex) { return BadRequest(new {success=false,message=ex.Message}); }
         catch (MySqlException ex) when (ex.Number is 1205 or 1213)
@@ -413,29 +435,40 @@ ORDER BY f.faculty_name,t.name;";
     [HttpGet("policies/{id}")]
     public async Task<IActionResult> GetPolicy(string id)
     {
-        var scope=CollegeDataScope.Resolve(HttpContext);
-        await using var c=Connection();
-        var policy=await c.QuerySingleOrDefaultAsync(@"SELECT policy_id AS id,college_id AS collegeId,name,
+        try
+        {
+            var scope=CollegeDataScope.Resolve(HttpContext);
+            await using var c=Connection(); await c.OpenAsync();
+            var policy=await c.QuerySingleOrDefaultAsync(@"SELECT policy_id AS id,college_id AS collegeId,name,
             academic_year AS academicYear,applicable_to AS applicableTo,department_id AS departmentId,
             branch_id AS branchId,from_date AS `from`,to_date AS `to`,status
             FROM faculty_leave_policies WHERE policy_id=@id AND (@scope IS NULL OR college_id=@scope)",new{id,scope});
-        if(policy is null)return NotFound(new{success=false,message="Leave policy not found."});
-        var data=(IDictionary<string,object>)policy;
-        data["entitlements"]=(await c.QueryAsync(@"SELECT leave_type_id AS typeId,entitlement,max_days AS maxDays,
-            carry_forward AS carryForward,max_carry_forward AS maxCarryForward,document_required AS documentRequired
-            FROM faculty_leave_policy_entitlements WHERE policy_id=@id ORDER BY leave_type_id",new{id})).ToList();
-        return Ok(new{success=true,data});
+            if(policy is null)return NotFound(new{success=false,message="Leave policy not found."});
+            var data=new Dictionary<string,object>((IDictionary<string,object>)policy,StringComparer.OrdinalIgnoreCase);
+            data["entitlements"]=(await c.QueryAsync<PolicyEntitlementView>("sp_flp_policy_entitlements",
+                new {p_college_id=scope,p_policy_id=id},commandType:System.Data.CommandType.StoredProcedure)).ToList();
+            return Ok(new{success=true,data});
+        }
+        catch(MySqlException ex){return DbError(ex);}
     }
 
     [HttpPost("policies/{id}/deactivate")]
     public async Task<IActionResult> DeactivatePolicy(string id)
     {
+        if (!CanManageLeaves()) return Forbid();
         var scope=CollegeDataScope.Resolve(HttpContext);
         await using var c=Connection();await c.OpenAsync();
         var policy=await ReadPolicy(c,id);
         if(policy is null||scope.HasValue&&policy.CollegeId!=scope)return NotFound(new{success=false,message="Leave policy not found."});
         await using var tx=await c.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted);
         await LockPolicyCollege(c,tx,policy.CollegeId);
+        policy=await ReadPolicy(c,id,tx,true);
+        if (policy is null || scope.HasValue && policy.CollegeId!=scope)
+            return NotFound(new {success=false,message="Leave policy not found."});
+        if (policy.Status=="Inactive")
+            return Ok(new{success=true,data=new{id,status="Inactive",collegeId=policy.CollegeId}});
+        if (policy.Status!="Active")
+            return Conflict(new {success=false,code="INVALID_POLICY_TRANSITION",message="Only an Active policy can be deactivated."});
         await c.ExecuteAsync("UPDATE faculty_leave_policies SET status='Inactive',updated_by=@actor,updated_at=UTC_TIMESTAMP() WHERE policy_id=@id AND college_id=@college",new{id,actor=CurrentUserId(),college=policy.CollegeId},tx);
         await tx.CommitAsync();
         _logger.LogInformation("Leave policy deactivated. PolicyId={PolicyId}, CollegeId={CollegeId}, UserId={UserId}, CorrelationId={CorrelationId}",id,policy.CollegeId,CurrentUserId(),HttpContext.TraceIdentifier);
@@ -445,12 +478,13 @@ ORDER BY f.faculty_name,t.name;";
     [HttpPost("policies/{id}/activate")]
     public async Task<IActionResult> ActivatePolicy(string id,[FromQuery] long? collegeId)
     {
+        if (!CanManageLeaves()) return Forbid();
         try
         {
-            CollegeSelection.Resolve(collegeId,null);
+            var selectedCollege=CollegeDataScope.Resolve(HttpContext,CollegeSelection.Resolve(collegeId,null));
             await using var c=Connection(); await c.OpenAsync();
             var initial=await ReadPolicy(c,id);
-            if (initial is null || (collegeId.HasValue && initial.CollegeId!=collegeId))
+            if (initial is null || (selectedCollege.HasValue && initial.CollegeId!=selectedCollege))
                 return NotFound(new {success=false,message="Leave policy not found in the selected college."});
             await using var tx=await c.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted);
             await LockPolicyCollege(c,tx,initial.CollegeId);
@@ -461,20 +495,30 @@ ORDER BY f.faculty_name,t.name;";
             policy.ApplicableTo=NormalizePolicyType(policy.ApplicableTo);
             ValidatePolicyDates(policy.FromDate,policy.ToDate);
             await ValidatePolicyScope(c,tx,policy);
-            if (!await c.ExecuteScalarAsync<bool>("SELECT EXISTS(SELECT 1 FROM faculty_leave_policy_entitlements WHERE policy_id=@id)",new{id},tx))
+            await ValidatePolicyYear(c,tx,policy);
+            if (policy.Status is not ("Draft" or "Inactive" or "Active"))
+                return Conflict(new {success=false,code="INVALID_POLICY_TRANSITION",message="This policy status cannot be activated."});
+            var issues=await c.QuerySingleAsync<PolicyEntitlementIssues>("sp_flp_entitlement_issues",
+                new {p_policy_id=id,p_college_id=policy.CollegeId},tx,commandType:System.Data.CommandType.StoredProcedure);
+            if (issues.ConfiguredCount==0)
                 throw new ArgumentException("The leave policy needs at least one entitlement before activation.");
-            if (await c.ExecuteScalarAsync<bool>(@"SELECT EXISTS(SELECT 1 FROM faculty_leave_policy_entitlements e
-                JOIN faculty_leave_types t ON t.leave_type_id=e.leave_type_id
-                WHERE e.policy_id=@id AND t.college_id IS NOT NULL AND t.college_id<>@CollegeId)",new{id,policy.CollegeId},tx))
-                throw new ArgumentException("A leave policy entitlement belongs to another college.");
+            if (issues.InvalidCount>0)
+                throw new ArgumentException("Every configured entitlement must have valid limits and an active leave type available to this college.");
             var conflicts=await PolicyConflicts(c,tx,policy);
             if (conflicts.Count>0) return PolicyConflict(policy,conflicts);
             if (!policy.Status.Equals("Active",StringComparison.OrdinalIgnoreCase))
                 await c.ExecuteAsync(@"UPDATE faculty_leave_policies SET status='Active',updated_at=UTC_TIMESTAMP(),updated_by=@By
                     WHERE policy_id=@id AND college_id=@CollegeId",new{id,policy.CollegeId,By=CurrentUserId()},tx);
+            var entitlements=(await c.QueryAsync<PolicyEntitlementView>("sp_flp_policy_entitlements",
+                new {p_college_id=policy.CollegeId,p_policy_id=id},tx,
+                commandType:System.Data.CommandType.StoredProcedure)).ToList();
             await tx.CommitAsync();
             _logger.LogInformation("Leave policy activated. PolicyId={PolicyId}, CollegeId={CollegeId}, AcademicYear={AcademicYear}",id,policy.CollegeId,policy.AcademicYear);
-            return Ok(new {success=true,message="Leave policy activated successfully.",data=new{id,status="Active",collegeId=policy.CollegeId}});
+            return Ok(new {success=true,message="Leave policy activated successfully.",
+                data=new{id,status="Active",collegeId=policy.CollegeId,name=policy.Name,
+                    academicYear=policy.AcademicYear,applicableTo=policy.ApplicableTo,
+                    fromDate=policy.FromDate.ToString("yyyy-MM-dd"),toDate=policy.ToDate.ToString("yyyy-MM-dd"),
+                    entitlements}});
         }
         catch (ArgumentException ex) { return BadRequest(new {success=false,message=ex.Message}); }
         catch (MySqlException ex) when (ex.Number is 1205 or 1213)
@@ -508,6 +552,20 @@ ORDER BY f.faculty_name,t.name;";
     {
         if (from.Year<1000 || to.Year<1000 || from.Date>to.Date)
             throw new ArgumentException("Valid effective dates are required; FromDate must be on or before ToDate.");
+    }
+
+    private static bool ValidLeaveDays(decimal? days) => !days.HasValue ||
+        (days.Value>=0 && days.Value<=999999.99m && decimal.Round(days.Value,2)==days.Value);
+
+    private static async Task ValidatePolicyYear(MySqlConnection c,MySqlTransaction tx,LeavePolicyState policy)
+    {
+        var years=(await c.QueryAsync<PolicyYear>("sp_flp_policy_year",
+            new {p_college_id=policy.CollegeId,p_year=policy.AcademicYear},tx,
+            commandType:System.Data.CommandType.StoredProcedure)).ToList();
+        if (years.Count!=1)
+            throw new ArgumentException("Select an active academic year in the policy's college.");
+        if (policy.FromDate.Date<years[0].StartDate.Date || policy.ToDate.Date>years[0].EndDate.Date)
+            throw new ArgumentException("The policy effective dates must fall within the selected academic year.");
     }
 
     private static async Task LockPolicyCollege(MySqlConnection c,MySqlTransaction tx,long collegeId)
@@ -580,6 +638,21 @@ ORDER BY f.faculty_name,t.name;";
         public string? BranchName {get;set;}
     }
     private sealed class PolicyBranch {public long? DepartmentId {get;set;}}
+    private sealed class PolicyYear {public DateTime StartDate {get;set;} public DateTime EndDate {get;set;}}
+    private sealed class PolicyEntitlementIssues {public int ConfiguredCount {get;set;} public int InvalidCount {get;set;}}
+    private sealed class PolicyEntitlementView
+    {
+        public string PolicyId {get;set;}="";
+        public string TypeId {get;set;}="";
+        public string? Name {get;set;}
+        public string? Code {get;set;}
+        public string? PayCategory {get;set;}
+        public decimal? Entitlement {get;set;}
+        public decimal? MaxDays {get;set;}
+        public bool CarryForward {get;set;}
+        public decimal? MaxCarryForward {get;set;}
+        public bool DocumentRequired {get;set;}
+    }
 
     // Faculty has a home department; branch membership comes from its active teaching allocations.
     // A legacy allocation without an academic year applies across years.
@@ -595,11 +668,67 @@ ORDER BY f.faculty_name,t.name;";
               AND (a.academic_year_id IS NULL OR fn_flp_academic_year_key(ay.academic_year_name)=fn_flp_academic_year_key(p.academic_year))))";
 
     private static string? Null(string? value)=>string.IsNullOrWhiteSpace(value)?null:value.Trim();
-    private async Task<IActionResult> Query(string sql,object args,string message){try{await using var c=Connection();await c.OpenAsync();var parameters=new DynamicParameters(args);parameters.Add("collegeScope",CollegeDataScope.Resolve(HttpContext)); parameters.Add("ownUser", CanManageLeaves() ? null : CurrentUserId()); var rows=(await c.QueryAsync(sql,parameters)).ToList();return Ok(new{success=true,message,data=rows});}catch(MySqlException ex){return DbError(ex);}}
-    private async Task<IActionResult> Query(string sql,object args,string message, bool unused=false)=>await Query(sql,args,message);
+    private async Task<IActionResult> Query(string sql,object args,string message,bool includePolicyEntitlements=false)
+    {
+        try
+        {
+            await using var c=Connection(); await c.OpenAsync();
+            var collegeScope=CollegeDataScope.Resolve(HttpContext);
+            var parameters=new DynamicParameters(args);
+            parameters.Add("collegeScope",collegeScope);
+            parameters.Add("ownUser",CanManageLeaves() ? null : CurrentUserId());
+            var rows=(await c.QueryAsync(sql,parameters)).ToList();
+            object resultRows=rows;
+            if (includePolicyEntitlements && rows.Count>0)
+            {
+                var policyRows=rows.Select(row=>new Dictionary<string,object>(
+                    (IDictionary<string,object>)row,StringComparer.OrdinalIgnoreCase)).ToList();
+                var children=(await c.QueryAsync<PolicyEntitlementView>("sp_flp_policy_entitlements",
+                    new {p_college_id=collegeScope,p_policy_id=(string?)null},
+                    commandType:System.Data.CommandType.StoredProcedure)).ToList();
+                var byPolicy=children.GroupBy(x=>x.PolicyId,StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(x=>x.Key,x=>x.ToList(),StringComparer.OrdinalIgnoreCase);
+                foreach(var fields in policyRows)
+                {
+                    var key=fields["id"]?.ToString() ?? "";
+                    fields["entitlements"]=byPolicy.TryGetValue(key,out var entitlements)
+                        ? entitlements : new List<PolicyEntitlementView>();
+                }
+                resultRows=policyRows;
+            }
+            return Ok(new{success=true,message,data=resultRows});
+        }
+        catch(MySqlException ex){return DbError(ex);}
+    }
     private IActionResult DbError(MySqlException ex)
     {
-        _logger.LogError(ex, "Faculty leave database error. CorrelationId={CorrelationId}", HttpContext.TraceIdentifier);
-        return StatusCode(500, new { success=false, message="Unable to process faculty leave request.", correlationId=HttpContext.TraceIdentifier });
+        if (ex.Number is 1062 or 1452 or 3819 or 1264 or 1265 or 1048 or 1644)
+        {
+            _logger.LogWarning("Faculty leave constraint rejected. CorrelationId={CorrelationId}, MySqlErrorNumber={MySqlErrorNumber}, Method={Method}, Path={Path}",
+                HttpContext.TraceIdentifier,ex.Number,Request.Method,Request.Path.Value);
+            var duplicate=ex.Number==1062;
+            return StatusCode(duplicate ? 409 : 400,new {
+                success=false,code=duplicate ? "LEAVE_DUPLICATE" : "INVALID_LEAVE_CONFIGURATION",
+                message=duplicate ? "This leave policy or leave type is already configured." :
+                    "The leave configuration has an invalid value or reference. Check the college, academic year and leave types.",
+                correlationId=HttpContext.TraceIdentifier
+            });
+        }
+        // Keep the HTTP contract generic, but record the provider error details so the
+        // exact MySQL failure can be traced from the request correlation ID.
+        _logger.LogError(ex,
+            "Faculty leave database error. CorrelationId={CorrelationId}, MySqlErrorNumber={MySqlErrorNumber}, SqlState={SqlState}, Method={Method}, Path={Path}",
+            HttpContext.TraceIdentifier,
+            ex.Number,
+            ex.SqlState,
+            Request.Method,
+            Request.Path.Value);
+
+        return StatusCode(500, new
+        {
+            success = false,
+            message = "Unable to process faculty leave request.",
+            correlationId = HttpContext.TraceIdentifier
+        });
     }
 }

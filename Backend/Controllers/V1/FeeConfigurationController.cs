@@ -4,6 +4,7 @@ using Dapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MySqlConnector;
+using System.Data;
 
 namespace BTech.Controllers.V1;
 
@@ -27,6 +28,12 @@ public sealed class FeeConfigurationController : ControllerBase
             ?? throw new InvalidOperationException("DefaultConnection is missing.");
         _logger = logger;
     }
+
+    // ModulePermissionMiddleware checks live fees can_view/can_create/can_edit
+    // before these actions. The catalog is global, so only administrative roles
+    // may manage it; College Admin is included when their fee grant permits it.
+    private bool IsFeeCatalogAdministrator() =>
+        CollegeDataScope.IsSuper(HttpContext) || CollegeDataScope.HasRole(HttpContext, "COLLEGE_ADMIN");
 
     [HttpGet("fee-categories")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -61,6 +68,195 @@ public sealed class FeeConfigurationController : ControllerBase
             data,
             count = data.Count
         });
+    }
+
+    /// <summary>
+    /// Admin management view. Unlike the directory endpoint, this can include inactive categories.
+    /// The regular GET /fee-categories remains active-only for existing consumers.
+    /// </summary>
+    [HttpGet("fee-categories/manage")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetFeeCategoriesForManagement(
+        [FromQuery] bool includeInactive = true,
+        [FromQuery] string? search = null)
+    {
+        if (!IsFeeCatalogAdministrator())
+            return StatusCode(StatusCodes.Status403Forbidden, new
+            {
+                success = false,
+                code = "FEE_CATEGORY_ADMIN_REQUIRED",
+                message = "Super Admin or College Admin access is required to manage Fee Types."
+            });
+
+        await using var connection = await OpenConnectionAsync();
+        if (!await RequiredTableExistsAsync(connection, "fee_categories"))
+            return FeeTablesNotInstalled();
+
+        const string sql = """
+            SELECT fee_category_id AS Id,
+                   category_code AS Code,
+                   category_name AS Name,
+                   description AS Description,
+                   status AS Status
+            FROM fee_categories
+            WHERE (@includeInactive = 1 OR status = 1)
+              AND (@search IS NULL OR @search = ''
+                   OR category_code LIKE CONCAT('%', @search, '%')
+                   OR category_name LIKE CONCAT('%', @search, '%'))
+            ORDER BY status DESC, category_name, fee_category_id;
+            """;
+
+        var data = (await connection.QueryAsync(sql, new
+        {
+            includeInactive,
+            search = Clean(search)
+        })).AsList();
+
+        return Ok(new
+        {
+            success = true,
+            message = "Fee categories retrieved successfully.",
+            data,
+            count = data.Count
+        });
+    }
+
+    /// <summary>Creates a shared Fee Type directly in fee_categories.</summary>
+    [HttpPost("fee-categories")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> CreateFeeCategory([FromBody] FeeCategoryWriteRequest? request)
+    {
+        if (!IsFeeCatalogAdministrator())
+            return StatusCode(StatusCodes.Status403Forbidden, new
+            {
+                success = false,
+                code = "FEE_CATEGORY_ADMIN_REQUIRED",
+                message = "Super Admin or College Admin access is required to create Fee Types."
+            });
+
+        var validation = ValidateFeeCategoryRequest(request);
+        if (validation is not null)
+            return BadRequest(new { success = false, code = "INVALID_FEE_CATEGORY", message = validation });
+
+        await using var connection = await OpenConnectionAsync();
+        if (!await RequiredTableExistsAsync(connection, "fee_categories"))
+            return FeeTablesNotInstalled();
+
+        var code = request!.Code!.Trim();
+        var name = request.Name!.Trim();
+        var description = Clean(request.Description);
+        var actor = CollegeDataScope.Actor(HttpContext);
+
+        try
+        {
+            var saved = await connection.QuerySingleAsync<FeeCategoryCreateResult>(
+                "sp_fee_category_create",
+                new { p_code = code, p_name = name, p_description = description, p_actor = actor },
+                commandType: CommandType.StoredProcedure);
+
+            _logger.LogInformation("Shared fee category created. FeeCategoryId={FeeCategoryId}, ActorId={ActorId}", saved.Id, actor);
+
+            return StatusCode(StatusCodes.Status201Created, new
+            {
+                success = true,
+                message = "Fee Type created successfully.",
+                id = saved.Id,
+                feeCategoryId = saved.Id,
+                data = new { id = saved.Id, code = saved.Code, name = saved.Name, description = saved.Description, status = saved.Status }
+            });
+        }
+        catch (MySqlException ex) when (ex.Number == 1062 ||
+            (ex.Number == 1644 && ex.Message.Contains("DUPLICATE_FEE_CATEGORY_CODE", StringComparison.Ordinal)))
+        {
+            return Conflict(new { success = false, code = "DUPLICATE_FEE_CATEGORY_CODE", message = "A Fee Type with this code already exists." });
+        }
+    }
+
+    /// <summary>Edits catalog fields without changing the category primary key or references.</summary>
+    [HttpPut("fee-categories/{id:long}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> UpdateFeeCategory(long id, [FromBody] FeeCategoryWriteRequest request)
+    {
+        if (!IsFeeCatalogAdministrator())
+            return StatusCode(StatusCodes.Status403Forbidden, new
+            {
+                success = false,
+                code = "FEE_CATEGORY_ADMIN_REQUIRED",
+                message = "Super Admin or College Admin access is required to edit Fee Types."
+            });
+
+        if (id <= 0)
+            return BadRequest(new { success = false, code = "INVALID_FEE_CATEGORY_ID", message = "A valid Fee Type ID is required." });
+
+        var validation = ValidateFeeCategoryRequest(request);
+        if (validation is not null)
+            return BadRequest(new { success = false, code = "INVALID_FEE_CATEGORY", message = validation });
+
+        await using var connection = await OpenConnectionAsync();
+        if (!await RequiredTableExistsAsync(connection, "fee_categories"))
+            return FeeTablesNotInstalled();
+
+        var code = request.Code!.Trim();
+        var name = request.Name!.Trim();
+        var description = Clean(request.Description);
+        var actor = CollegeDataScope.Actor(HttpContext);
+
+        var exists = await connection.ExecuteScalarAsync<bool>("""
+            SELECT EXISTS(SELECT 1 FROM fee_categories WHERE fee_category_id = @Id);
+            """, new { Id = id });
+        if (!exists)
+            return NotFound(new { success = false, code = "FEE_CATEGORY_NOT_FOUND", message = "Fee Type not found." });
+
+        var duplicate = await connection.ExecuteScalarAsync<bool>("""
+            SELECT EXISTS(
+                SELECT 1 FROM fee_categories
+                WHERE LOWER(TRIM(category_code)) = LOWER(@Code)
+                  AND fee_category_id <> @Id
+            );
+            """, new { Code = code, Id = id });
+        if (duplicate)
+            return Conflict(new { success = false, code = "DUPLICATE_FEE_CATEGORY_CODE", message = "A different Fee Type already uses this code." });
+
+        try
+        {
+            await connection.ExecuteAsync("""
+                UPDATE fee_categories
+                SET category_code = @Code,
+                    category_name = @Name,
+                    description = @Description,
+                    updated_by = @Actor
+                WHERE fee_category_id = @Id;
+                """, new { Id = id, Code = code, Name = name, Description = description, Actor = actor });
+
+            var saved = await connection.QuerySingleAsync<FeeCategoryDto>("""
+                SELECT fee_category_id AS Id, category_code AS Code,
+                       category_name AS Name, description AS Description
+                FROM fee_categories WHERE fee_category_id = @Id;
+                """, new { Id = id });
+            var savedStatus = await connection.ExecuteScalarAsync<int>(
+                "SELECT status FROM fee_categories WHERE fee_category_id = @Id;", new { Id = id });
+
+            return Ok(new
+            {
+                success = true,
+                message = "Fee Type updated successfully.",
+                id = saved.Id,
+                feeCategoryId = saved.Id,
+                data = new { id = saved.Id, code = saved.Code, name = saved.Name, description = saved.Description, status = savedStatus }
+            });
+        }
+        catch (MySqlException ex) when (ex.Number == 1062)
+        {
+            return Conflict(new { success = false, code = "DUPLICATE_FEE_CATEGORY_CODE", message = "A Fee Type with this code already exists." });
+        }
     }
 
     [HttpGet("fee-structures")]
@@ -547,6 +743,33 @@ public sealed class FeeConfigurationController : ControllerBase
         if (request.BranchId <= 0) return "A valid branchId is required.";
         if (request.SemesterId <= 0) return "A valid semesterId is required.";
         return null;
+    }
+
+    private static string? ValidateFeeCategoryRequest(FeeCategoryWriteRequest? request)
+    {
+        if (request is null) return "A Fee Type object is required.";
+        if (string.IsNullOrWhiteSpace(request.Code)) return "code is required.";
+        if (request.Code.Trim().Length > 50) return "code cannot exceed 50 characters.";
+        if (string.IsNullOrWhiteSpace(request.Name)) return "name is required.";
+        if (request.Name.Trim().Length > 150) return "name cannot exceed 150 characters.";
+        if (request.Description?.Trim().Length > 500) return "description cannot exceed 500 characters.";
+        return null;
+    }
+
+    public sealed class FeeCategoryWriteRequest
+    {
+        public string? Code { get; init; }
+        public string? Name { get; init; }
+        public string? Description { get; init; }
+    }
+
+    private sealed class FeeCategoryCreateResult
+    {
+        public long Id { get; init; }
+        public string Code { get; init; } = string.Empty;
+        public string Name { get; init; } = string.Empty;
+        public string? Description { get; init; }
+        public int Status { get; init; }
     }
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

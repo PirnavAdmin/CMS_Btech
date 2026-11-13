@@ -140,9 +140,12 @@ public sealed class MeetingManagementRepository : IMeetingManagementRepository
               AND EXISTS (SELECT 1 FROM users WHERE user_id=@UserId AND (college_id=@collegeId OR college_id IS NULL) AND status=1 AND deleted_at IS NULL);
             """;
         await using var c = CreateConnection();
+        await c.OpenAsync();
         var affected = await c.ExecuteAsync(sql, new { meetingId, collegeId, r.UserId, r.ParticipantRole, r.InvitationStatus, IsRequired = r.IsRequired ? 1 : 0, r.Remarks, actorUserId });
         if (affected == 0) throw new ArgumentException("The selected user does not exist, is inactive, or does not belong to this college.");
-        return await c.ExecuteScalarAsync<long>("SELECT LAST_INSERT_ID();");
+        var id = await c.ExecuteScalarAsync<long>("SELECT LAST_INSERT_ID();");
+        if (id <= 0) throw new InvalidOperationException("Participant insert did not return an ID.");
+        return id;
     }
 
     public async Task<bool> UpdateParticipantAsync(long meetingId, long participantId, long collegeId, SaveMeetingParticipantRequest r, long? actorUserId)
@@ -238,9 +241,12 @@ public sealed class MeetingManagementRepository : IMeetingManagementRepository
             WHERE EXISTS (SELECT 1 FROM meetings WHERE meeting_id=@meetingId AND college_id=@collegeId AND deleted_at IS NULL);
             """;
         await using var c = CreateConnection();
+        await c.OpenAsync();
         var affected = await c.ExecuteAsync(sql, new { meetingId, collegeId, r.MinutesTitle, r.MinutesText, r.PreparedBy, r.ApprovedBy, r.ApprovalStatus, r.Remarks, actorUserId });
         if (affected == 0) throw new KeyNotFoundException("Meeting not found.");
-        return await c.ExecuteScalarAsync<long>("SELECT LAST_INSERT_ID();");
+        var id = await c.ExecuteScalarAsync<long>("SELECT LAST_INSERT_ID();");
+        if (id <= 0) throw new InvalidOperationException("Meeting minutes insert did not return an ID.");
+        return id;
     }
 
     public async Task<bool> UpdateMinutesAsync(long meetingId, long minutesId, long collegeId, SaveMeetingMinutesRequest r, long? actorUserId)
@@ -300,9 +306,12 @@ public sealed class MeetingManagementRepository : IMeetingManagementRepository
             WHERE EXISTS (SELECT 1 FROM meetings WHERE meeting_id=@meetingId AND college_id=@collegeId AND deleted_at IS NULL);
             """;
         await using var c = CreateConnection();
+        await c.OpenAsync();
         var affected = await c.ExecuteAsync(sql, new { meetingId, collegeId, r.DocumentId, r.DocumentTitle, r.DocumentType, r.FileName, r.FilePath, r.FileUrl, r.MimeType, r.FileSize, actorUserId, r.Remarks });
         if (affected == 0) throw new KeyNotFoundException("Meeting not found.");
-        return await c.ExecuteScalarAsync<long>("SELECT LAST_INSERT_ID();");
+        var id = await c.ExecuteScalarAsync<long>("SELECT LAST_INSERT_ID();");
+        if (id <= 0) throw new InvalidOperationException("Meeting document insert did not return an ID.");
+        return id;
     }
 
     public async Task<bool> UpdateDocumentAsync(long meetingId, long meetingDocumentId, long collegeId, SaveMeetingDocumentRequest r)

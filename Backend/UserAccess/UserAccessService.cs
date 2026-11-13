@@ -55,6 +55,26 @@ public sealed partial class UserAccessService
     }
     private static async Task EnsureMapping(MySqlConnection c,MySqlTransaction tx,long userId,long collegeId,long actor)
     {
+        // Serialize all onboarding/role-edit mapping changes for this account.
+        // When a user becomes College Admin, old mappings must be reviewed;
+        // never reactivate a second college as a side effect of an invitation.
+        var primary = await c.ExecuteScalarAsync<long?>(
+            "SELECT college_id FROM users WHERE user_id=@userId AND status=1 AND deleted_at IS NULL FOR UPDATE",new{userId},tx);
+        var isCollegeAdmin = await c.ExecuteScalarAsync<int>("""
+            SELECT COUNT(*) FROM user_roles ur JOIN roles r ON r.role_id=ur.role_id
+            WHERE ur.user_id=@userId AND ur.status=1 AND ur.removed_at IS NULL
+              AND UPPER(r.role_code)='COLLEGE_ADMIN' AND r.status=1 AND r.deleted_at IS NULL
+            """,new{userId},tx)>0;
+        if(isCollegeAdmin)
+        {
+            if(primary!=collegeId) throw new InvalidOperationException("College Admin account college differs from the requested assignment.");
+            var other = await c.ExecuteScalarAsync<int>("""
+                SELECT COUNT(*) FROM college_user_mappings m
+                JOIN college_settings cs ON cs.college_setting_id=m.college_setting_id
+                WHERE m.user_id=@userId AND m.status=1 AND m.removed_at IS NULL AND cs.college_id<>@collegeId
+                """,new{userId,collegeId},tx);
+            if(other>0) throw new InvalidOperationException("College Admin already has a different active college assignment. Resolve it before continuing.");
+        }
         // Lock the college so concurrent invitations cannot create duplicate settings.
         if(await c.ExecuteScalarAsync<long?>("SELECT college_id FROM colleges WHERE college_id=@collegeId AND status=1 AND deleted_at IS NULL FOR UPDATE",new{collegeId},tx) is null)
             throw new ArgumentException("Choose an active college.");

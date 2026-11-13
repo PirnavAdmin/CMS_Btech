@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using BTech.DTOs.Meetings;
 using BTech.Services.Interfaces;
+using BTech.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -37,7 +38,7 @@ public sealed class MeetingsController : ControllerBase
         var collegeId = ResolveCollegeId(null);
         var data = await _service.CreateMeetingAsync(collegeId, request, GetUserId());
         _logger.LogInformation("Meeting created via API. MeetingId={MeetingId}, CollegeId={CollegeId}", data.MeetingId, collegeId);
-        return CreatedAtAction(nameof(GetMeeting), new { meetingId = data.MeetingId }, new { success = true, message = "Meeting created successfully.", data });
+        return CreatedAtAction(nameof(GetMeeting), new { meetingId = data.MeetingId, collegeId }, new { success = true, message = "Meeting created successfully.", data });
     }
 
     [HttpPut("{meetingId:long}")]
@@ -60,7 +61,7 @@ public sealed class MeetingsController : ControllerBase
     public async Task<IActionResult> AddParticipant(long meetingId, [FromBody] SaveMeetingParticipantRequest request)
     {
         var data = await _service.CreateParticipantAsync(meetingId, ResolveCollegeId(null), request, GetUserId());
-        return CreatedAtAction(nameof(GetParticipant), new { meetingId, participantId = data.ParticipantId }, new { success = true, message = "Participant added successfully.", data });
+        return CreatedAtAction(nameof(GetParticipant), new { meetingId, participantId = data.ParticipantId, collegeId = ResolveCollegeId(null) }, new { success = true, message = "Participant added successfully.", data });
     }
 
     [HttpPut("{meetingId:long}/participants/{participantId:long}")]
@@ -93,7 +94,7 @@ public sealed class MeetingsController : ControllerBase
     public async Task<IActionResult> CreateMinutes(long meetingId, [FromBody] SaveMeetingMinutesRequest request)
     {
         var data = await _service.CreateMinutesAsync(meetingId, ResolveCollegeId(null), request, GetUserId());
-        return CreatedAtAction(nameof(GetMinutes), new { meetingId }, new { success = true, message = "Meeting minutes created successfully.", data });
+        return CreatedAtAction(nameof(GetMinutes), new { meetingId, collegeId = ResolveCollegeId(null) }, new { success = true, message = "Meeting minutes created successfully.", data });
     }
 
     [HttpPut("{meetingId:long}/minutes/{minutesId:long}")]
@@ -116,7 +117,7 @@ public sealed class MeetingsController : ControllerBase
     public async Task<IActionResult> AddDocument(long meetingId, [FromBody] SaveMeetingDocumentRequest request)
     {
         var data = await _service.CreateDocumentAsync(meetingId, ResolveCollegeId(null), request, GetUserId());
-        return CreatedAtAction(nameof(GetDocument), new { meetingId, meetingDocumentId = data.MeetingDocumentId }, new { success = true, message = "Meeting document added successfully.", data });
+        return CreatedAtAction(nameof(GetDocument), new { meetingId, meetingDocumentId = data.MeetingDocumentId, collegeId = ResolveCollegeId(null) }, new { success = true, message = "Meeting document added successfully.", data });
     }
 
     [HttpPut("{meetingId:long}/documents/{meetingDocumentId:long}")]
@@ -131,12 +132,10 @@ public sealed class MeetingsController : ControllerBase
 
     private long ResolveCollegeId(long? requested)
     {
-        if (requested.HasValue && requested.Value > 0) return requested.Value;
-        var claim = User.FindFirstValue("collegeId") ?? User.FindFirstValue("college_id");
-        if (long.TryParse(claim, out var collegeId) && collegeId > 0) return collegeId;
-        // SuperAdmin tokens intentionally have no fixed college claim; allow explicit query scope for them.
-        if (long.TryParse(Request.Query["collegeId"].FirstOrDefault(), out var queryCollegeId) && queryCollegeId > 0) return queryCollegeId;
-        throw new ArgumentException("The authenticated user's collegeId claim is missing. SuperAdmin requests must provide ?collegeId=.");
+        // The permission middleware verifies live college assignments and selects an
+        // effective college for every authorized request, including multi-college admins.
+        // A token's primary-college claim is not the selected college.
+        return CollegeDataScope.Resolve(HttpContext, requested, required: true)!.Value;
     }
 
     private long? GetUserId()

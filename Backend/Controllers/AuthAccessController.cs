@@ -1,5 +1,7 @@
 using System.Security.Claims;
+using System.Data;
 using BTech.DTOs.AdminGovernance;
+using BTech.Middleware;
 using BTech.Services;
 using Dapper;
 using Microsoft.AspNetCore.Authorization;
@@ -73,12 +75,45 @@ public sealed class AuthAccessController : ControllerBase
                 """, new { userId }, cancellationToken: cancellationToken))).ToArray();
             var isCollegeAdmin = roleCodes.Contains("COLLEGE_ADMIN", StringComparer.OrdinalIgnoreCase);
             var isSuperAdmin = roleCodes.Contains("SUPER_ADMIN", StringComparer.OrdinalIgnoreCase);
+            long? assignedCollegeId = account.CollegeId;
+            // This is the same active-assignment check used by module authorization.
+            // Do not advertise users.college_id as an accessible college when its
+            // college_user_mappings entry has been removed or made inactive.
+            if (isCollegeAdmin && !isSuperAdmin)
+            {
+                dependency = "access-snapshot/active-college-assignment";
+                var assignment = await connection.QuerySingleAsync<CollegeAdminAssignment>(new CommandDefinition(
+                    "sp_cms_college_admin_assignment", new { p_user_id = userId },
+                    commandType: CommandType.StoredProcedure, cancellationToken: cancellationToken));
+                if (assignment.ActiveAssignments != 1 || !assignment.CollegeId.HasValue ||
+                    mappedCollegeIds.Length != 1 || mappedCollegeIds[0] != assignment.CollegeId)
+                {
+                    _logger.LogWarning("Effective college assignment denied. UserId={UserId}, PrimaryCollegeId={PrimaryCollegeId}, ActiveAssignments={ActiveAssignments}, TraceId={TraceId}",
+                        userId, account.CollegeId, assignment.ActiveAssignments, HttpContext.TraceIdentifier);
+                    Response.Headers[RequestLoggingMiddleware.CorrelationHeader] = HttpContext.TraceIdentifier;
+                    return StatusCode(StatusCodes.Status403Forbidden, new {
+                        success = false,
+                        message = "College Admin requires exactly one active college assignment. Ask Super Admin to review college assignments.",
+                        correlationId = HttpContext.TraceIdentifier });
+                }
+                assignedCollegeId = assignment.CollegeId;
+                if (account.CollegeId != assignedCollegeId)
+                    _logger.LogWarning("Effective college corrected from active assignment. UserId={UserId}, AccountCollegeId={AccountCollegeId}, AssignedCollegeId={AssignedCollegeId}, TraceId={TraceId}",
+                        userId, account.CollegeId, assignedCollegeId, HttpContext.TraceIdentifier);
+            }
             if (collegeId is <= 0)
                 return BadRequest(new { success = false, message = "collegeId must be a positive integer." });
-            var effectiveCollegeId = collegeId ?? account.CollegeId;
-            if (!isSuperAdmin && effectiveCollegeId != account.CollegeId &&
+            var effectiveCollegeId = collegeId ?? assignedCollegeId;
+            if (!isSuperAdmin && effectiveCollegeId != assignedCollegeId &&
                 (!isCollegeAdmin || !effectiveCollegeId.HasValue || !mappedCollegeIds.Contains(effectiveCollegeId.Value)))
-                return StatusCode(StatusCodes.Status403Forbidden, new { success = false, message = "An active college assignment is required." });
+            {
+                _logger.LogWarning("Effective college selection denied. UserId={UserId}, AssignedCollegeId={AssignedCollegeId}, RequestedCollegeId={RequestedCollegeId}, TraceId={TraceId}",
+                    userId, assignedCollegeId, effectiveCollegeId, HttpContext.TraceIdentifier);
+                Response.Headers[RequestLoggingMiddleware.CorrelationHeader] = HttpContext.TraceIdentifier;
+                return StatusCode(StatusCodes.Status403Forbidden, new {
+                    success = false, message = "An active college assignment is required.",
+                    correlationId = HttpContext.TraceIdentifier });
+            }
 
             var matrix = ModuleKeys.ToDictionary(k => k, _ => new PermissionActionsDto(), StringComparer.OrdinalIgnoreCase);
             if (isSuperAdmin)
@@ -143,6 +178,12 @@ public sealed class AuthAccessController : ControllerBase
                     target.View &= p.CanView==1;target.Create &= p.CanCreate==1;target.Edit &= p.CanEdit==1;target.Delete &= p.CanDelete==1;target.Export &= p.CanExport==1;
                 }
             }
+            // Reading the assigned college's own record is a baseline College Admin
+            // capability. The middleware permits only the known college metadata GET
+            // routes after resolving their ownership; all writes keep their grants.
+            if (isCollegeAdmin && !isSuperAdmin &&
+                !roleCodes.Contains("STUDENT", StringComparer.OrdinalIgnoreCase))
+                matrix["colleges"].View = true;
             var rolePermission = matrix.GetValueOrDefault("roles_permissions") ?? new PermissionActionsDto();
             var canManageAccess = isSuperAdmin || (isCollegeAdmin && rolePermission.View && (rolePermission.Create || rolePermission.Edit));
             var canDelegateAccess = isSuperAdmin || (isCollegeAdmin && rolePermission.View && rolePermission.Create && rolePermission.Edit);
@@ -160,13 +201,13 @@ public sealed class AuthAccessController : ControllerBase
                     assignedAcademicYearIds,
                     roleCodes,
                     collegeId = effectiveCollegeId,
-                    primaryCollegeId = account.CollegeId,
+                    primaryCollegeId = assignedCollegeId,
                     mappedCollegeIds,
                     academicYearCollegeIds = isCollegeAdmin
-                        ? mappedCollegeIds.Concat(account.CollegeId.HasValue ? new[] { account.CollegeId.Value } : Array.Empty<long>()).Distinct().ToArray()
+                        ? mappedCollegeIds
                         : account.CollegeId.HasValue ? new[] { account.CollegeId.Value } : Array.Empty<long>(),
                     academicSetupCollegeIds = isCollegeAdmin
-                        ? mappedCollegeIds.Concat(account.CollegeId.HasValue ? new[] { account.CollegeId.Value } : Array.Empty<long>()).Distinct().ToArray()
+                        ? mappedCollegeIds
                         : account.CollegeId.HasValue ? new[] { account.CollegeId.Value } : Array.Empty<long>(),
                     academicYearScope = isSuperAdmin ? "all-selected-colleges" : "assigned-colleges-with-permission",
                     roleClaimTypes = User.Identities.Select(i => i.RoleClaimType).Distinct().ToArray(),
@@ -191,6 +232,7 @@ public sealed class AuthAccessController : ControllerBase
     }
 
     private sealed class AccountRow { public long? CollegeId { get; set; } public bool ProfileCompleted {get;set;} public bool AcademicYearRestricted {get;set;} }
+    private sealed class CollegeAdminAssignment { public long? CollegeId { get; set; } public int ActiveAssignments { get; set; } }
     private sealed class PermissionRow
     {
         public string ModuleKey { get; set; } = string.Empty;

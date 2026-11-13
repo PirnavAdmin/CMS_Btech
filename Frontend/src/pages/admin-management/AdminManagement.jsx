@@ -770,7 +770,21 @@ const WEBSITE_VALIDATION_MESSAGE = collegeApiImports_WEBSITE_VALIDATION_MESSAGE
 const hasValue = (value) => value !== null && value !== undefined && String(value).trim() !== ''
 const dateInputValue = (value) => value ? String(value).slice(0, 10) : ''
 
-const TYPES = ['Engineering College', 'University', 'Autonomous College', 'Affiliated College', 'Deemed University', 'Other']
+const TYPES = ['Engineering College', 'Degree College', 'University', 'Autonomous College', 'Affiliated College', 'Deemed University', 'Others']
+const isOtherType = (type) => ['Other', 'Others'].includes(type)
+const normalizeCollegeType = (rawType) => {
+  if (!rawType) return { collegeType: '', collegeTypeOther: '' }
+  if (rawType === 'Engineering') return { collegeType: 'Engineering College', collegeTypeOther: '' }
+  if (rawType === 'Degree') return { collegeType: 'Degree College', collegeTypeOther: '' }
+  const matchedPredefined = TYPES.find((t) => !isOtherType(t) && t.toLowerCase() === String(rawType).trim().toLowerCase())
+  if (matchedPredefined) {
+    return { collegeType: matchedPredefined, collegeTypeOther: '' }
+  }
+  if (isOtherType(rawType)) {
+    return { collegeType: 'Others', collegeTypeOther: '' }
+  }
+  return { collegeType: 'Others', collegeTypeOther: String(rawType).trim() }
+}
 const ACCREDITATION_STATUSES = ['Accredited', 'Not Accredited', 'Under Review', 'Expired']
 const FORM_TABS = [
   { id: 'college', label: 'College Information', shortLabel: 'College' },
@@ -837,7 +851,7 @@ function validate(values) {
   else if (name.length < 3 || name.length > 120) errors.collegeName = 'Use between 3 and 120 characters.'
   if (!values.collegeCode) errors.collegeCode = 'College code is required.'
   else if (!codePattern.test(values.collegeCode)) errors.collegeCode = 'Use 2-12 uppercase letters and numbers only.'
-  if (values.collegeType === 'Other' && !values.collegeTypeOther.trim()) errors.collegeTypeOther = 'Enter the college type.'
+  if (isOtherType(values.collegeType) && !values.collegeTypeOther.trim()) errors.collegeTypeOther = 'Enter the college type.'
   const university = values.universityName.trim()
   if (university && (/\d/.test(university) || !institutionNamePattern.test(university))) errors.universityName = 'University name cannot contain numbers.'
   else if (university && (university.length < 3 || university.length > 120)) errors.universityName = 'Use between 3 and 120 characters.'
@@ -999,7 +1013,13 @@ function CollegeForm({ editId, onDismiss, onSaved, resumeDraft = false }) {
       loadedFormScope.current = formScope
       originalEditValues.current = null
       const draft = resumeDraft ? readNewCollegeDraft() : null
-      setValues({ ...initialValues, ...draft?.values })
+      const draftValues = draft?.values ? { ...draft.values } : {}
+      if (isOtherType(draftValues.collegeType)) {
+        draftValues.collegeType = 'Others'
+      } else if (draftValues.collegeType && !isOtherType(draftValues.collegeType)) {
+        draftValues.collegeTypeOther = ''
+      }
+      setValues({ ...initialValues, ...draftValues })
       const draftStep = FORM_TABS.findIndex(tab => tab.id === draft?.activeTab)
       if (draftStep > 0) {
         setActiveTab(FORM_TABS[draftStep].id)
@@ -1035,7 +1055,9 @@ function CollegeForm({ editId, onDismiss, onSaved, resumeDraft = false }) {
       const extended = readCollegeExtendedDetails(record)
       const addressParts = String(record.address ?? '').split(',').map((part) => part.trim())
       const rawType = record.type ?? record.collegeType ?? record.institutionType ?? ''
-      const isKnownType = TYPES.includes(rawType)
+      const normalizedType = normalizeCollegeType(rawType)
+      const loadedCollegeType = normalizedType.collegeType
+      const loadedCollegeTypeOther = normalizedType.collegeTypeOther || (isOtherType(rawType) ? (record.collegeTypeOther ?? '') : '')
       const loadedLogo = collegeLogoValue(record) || readCachedCollegeLogo(editId) || (record.code ? readCachedCollegeLogo(record.code) : '') || (record.collegeCode ? readCachedCollegeLogo(record.collegeCode) : '') || (record.name ? readCachedCollegeLogo(record.name) : '') || (record.collegeName ? readCachedCollegeLogo(record.collegeName) : '') || ''
       const logoUrl = getCollegeLogoUrl(editId, loadedLogo)
       // Backend logo URLs need an authorization header, which an <img> element
@@ -1048,7 +1070,7 @@ function CollegeForm({ editId, onDismiss, onSaved, resumeDraft = false }) {
         (record.collegeName ? readCachedCollegeDates(record.collegeName) : null) || {}
       const loadedStartDate = dateInputValue(record.startDate ?? record.StartDate ?? record.start_date ?? extended.startDate ?? cachedDates?.startDate)
       const loadedEndDate = dateInputValue(record.endDate ?? record.EndDate ?? record.end_date ?? extended.endDate ?? cachedDates?.endDate)
-      const loadedValues = { ...initialValues, collegeName: record.name ?? record.collegeName ?? record.CollegeName ?? '', collegeCode: record.code ?? record.collegeCode ?? record.CollegeCode ?? '', collegeType: rawType && !isKnownType ? 'Other' : rawType, collegeTypeOther: rawType && !isKnownType ? rawType : '', universityName: record.university ?? record.universityName ?? record.UniversityName ?? '', startDate: loadedStartDate, endDate: loadedEndDate, addressLine1: record.addressLine1 ?? addressRecord.addressLine1 ?? addressParts[0] ?? '', addressLine2: record.addressLine2 ?? addressRecord.addressLine2 ?? addressParts.slice(1).join(', '), area: record.area ?? addressRecord.area ?? extended.area ?? '', district: record.district ?? addressRecord.district ?? extended.district ?? '', city: record.city ?? addressRecord.city ?? record.City ?? '', state: record.state ?? addressRecord.state ?? record.State ?? '', pincode: String(record.pincode ?? addressRecord.pincode ?? record.Pincode ?? ''), country: record.country ?? addressRecord.country ?? '', contactNumber: String(record.contact ?? record.contactNumber ?? record.phoneNumber ?? record.mobile ?? record.phone ?? contactRecord.contactNumber ?? contactRecord.phoneNumber ?? contactRecord.mobile ?? contactRecord.phone ?? record.Contact ?? ''), alternateContactNumber: String(record.alternateContact ?? record.alternateContactNumber ?? record.alternatePhoneNumber ?? contactRecord.alternateContactNumber ?? extended.alternateContactNumber ?? ''), email: record.email ?? record.collegeEmail ?? contactRecord.email ?? record.Email ?? '', website: record.website ?? record.Website ?? contactRecord.website ?? contactRecord.Website ?? '', principalName: record.principal ?? record.principalName ?? principalRecord.principalName ?? record.PrincipalName ?? '', principalEmail: record.principalEmail ?? principalRecord.principalEmail ?? extended.principalEmail ?? '', principalContact: String(record.principalContact ?? record.principalPhone ?? principalRecord.principalContact ?? extended.principalContact ?? ''), accreditationBody: record.accreditationBody ?? accreditationRecord.body ?? accreditationRecord.accreditationBody ?? extended.accreditationBody ?? '', accreditationStatus: record.accreditationStatus ?? accreditationRecord.status ?? '', accreditationGrade: record.accreditationGrade ?? accreditationRecord.grade ?? extended.accreditationGrade ?? '', accreditationNumber: record.accreditationNumber ?? accreditationRecord.number ?? extended.accreditationNumber ?? '', validFrom: dateInputValue(record.validFrom ?? record.accreditationValidFrom ?? accreditationRecord.validFrom ?? extended.validFrom), validUntil: dateInputValue(record.validUntil ?? record.accreditationValidUntil ?? accreditationRecord.validUntil ?? extended.validUntil), logo: resolvedLogo, logoName: record.logoName ?? extended.logoName ?? '' }
+      const loadedValues = { ...initialValues, collegeName: record.name ?? record.collegeName ?? record.CollegeName ?? '', collegeCode: record.code ?? record.collegeCode ?? record.CollegeCode ?? '', collegeType: loadedCollegeType, collegeTypeOther: loadedCollegeTypeOther, universityName: record.university ?? record.universityName ?? record.UniversityName ?? '', startDate: loadedStartDate, endDate: loadedEndDate, addressLine1: record.addressLine1 ?? addressRecord.addressLine1 ?? addressParts[0] ?? '', addressLine2: record.addressLine2 ?? addressRecord.addressLine2 ?? addressParts.slice(1).join(', '), area: record.area ?? addressRecord.area ?? extended.area ?? '', district: record.district ?? addressRecord.district ?? extended.district ?? '', city: record.city ?? addressRecord.city ?? record.City ?? '', state: record.state ?? addressRecord.state ?? record.State ?? '', pincode: String(record.pincode ?? addressRecord.pincode ?? record.Pincode ?? ''), country: record.country ?? addressRecord.country ?? '', contactNumber: String(record.contact ?? record.contactNumber ?? record.phoneNumber ?? record.mobile ?? record.phone ?? contactRecord.contactNumber ?? contactRecord.phoneNumber ?? contactRecord.mobile ?? contactRecord.phone ?? record.Contact ?? ''), alternateContactNumber: String(record.alternateContact ?? record.alternateContactNumber ?? record.alternatePhoneNumber ?? contactRecord.alternateContactNumber ?? extended.alternateContactNumber ?? ''), email: record.email ?? record.collegeEmail ?? contactRecord.email ?? record.Email ?? '', website: record.website ?? record.Website ?? contactRecord.website ?? contactRecord.Website ?? '', principalName: record.principal ?? record.principalName ?? principalRecord.principalName ?? record.PrincipalName ?? '', principalEmail: record.principalEmail ?? principalRecord.principalEmail ?? extended.principalEmail ?? '', principalContact: String(record.principalContact ?? record.principalPhone ?? principalRecord.principalContact ?? extended.principalContact ?? ''), accreditationBody: record.accreditationBody ?? accreditationRecord.body ?? accreditationRecord.accreditationBody ?? extended.accreditationBody ?? '', accreditationStatus: record.accreditationStatus ?? accreditationRecord.status ?? '', accreditationGrade: record.accreditationGrade ?? accreditationRecord.grade ?? extended.accreditationGrade ?? '', accreditationNumber: record.accreditationNumber ?? accreditationRecord.number ?? extended.accreditationNumber ?? '', validFrom: dateInputValue(record.validFrom ?? record.accreditationValidFrom ?? accreditationRecord.validFrom ?? extended.validFrom), validUntil: dateInputValue(record.validUntil ?? record.accreditationValidUntil ?? accreditationRecord.validUntil ?? extended.validUntil), logo: resolvedLogo, logoName: record.logoName ?? extended.logoName ?? '' }
       setValues(loadedValues)
       originalEditValues.current = loadedValues
       if (logoUrl && isBackendCollegeLogo(logoUrl)) {
@@ -1125,9 +1147,24 @@ function CollegeForm({ editId, onDismiss, onSaved, resumeDraft = false }) {
     if (['contactNumber', 'alternateContactNumber'].includes(name)) next = value.replace(/\D/g, '').slice(0, 12)
     if (['principalName', 'city', 'state', 'district'].includes(name)) next = value.replace(/[^a-zA-Z\s.'-]/g, '')
     if (['collegeName', 'universityName'].includes(name)) next = value.replace(/[0-9]/g, '')
-    setValues((current) => name === 'pincode' ? { ...current, pincode: next, area: '', district: '', city: '', state: '' } : { ...current, [name]: next })
+    setValues((current) => {
+      if (name === 'pincode') return { ...current, pincode: next, area: '', district: '', city: '', state: '' }
+      if (name === 'collegeType') {
+        const isSwitchingToPredefined = !isOtherType(next)
+        return {
+          ...current,
+          collegeType: next,
+          ...(isSwitchingToPredefined ? { collegeTypeOther: '' } : {}),
+        }
+      }
+      return { ...current, [name]: next }
+    })
     if (name === 'pincode') { setPostOffices([]); setPincodeStatus('') }
-    setTouched((current) => ({ ...current, [name]: true }))
+    setTouched((current) => ({
+      ...current,
+      [name]: true,
+      ...(name === 'collegeType' && !isOtherType(next) ? { collegeTypeOther: false } : {}),
+    }))
     setDirty(true); setNotice(''); setSaved(false)
   }
 
@@ -1276,7 +1313,7 @@ function CollegeForm({ editId, onDismiss, onSaved, resumeDraft = false }) {
       if (duplicate) throw new Error('A college with the same name, code, email, or contact number already exists.')
       const website = normalizeWebsite(values.website)
       const college = {
-        name: values.collegeName.trim(), code: values.collegeCode, type: values.collegeType === 'Other' ? values.collegeTypeOther.trim() : values.collegeType,
+        name: values.collegeName.trim(), code: values.collegeCode, type: isOtherType(values.collegeType) ? (values.collegeTypeOther.trim() || values.collegeType) : values.collegeType,
         university: values.universityName.trim(), address: [values.addressLine1, values.addressLine2].map(part => part.trim()).filter(Boolean).join(', '),
         addressLine1: values.addressLine1.trim(), addressLine2: values.addressLine2.trim(),
         area: values.area.trim(), district: values.district.trim(), country: values.country.trim(),
@@ -1421,8 +1458,8 @@ function CollegeForm({ editId, onDismiss, onSaved, resumeDraft = false }) {
         {section('College Information', 'Core identity and affiliation details.', <>
           <Field label="College Name" name="collegeName" values={values} errors={{ ...errors, ...(duplicateName ? { collegeName: 'A college with this name already exists.' } : {}) }} touched={touched} onChange={update} required maxLength={120} placeholder="e.g. Crescent Institute of Technology" />
           <Field label="College Code" name="collegeCode" values={values} errors={{ ...errors, ...(duplicateCode ? { collegeCode: 'This college code already exists.' } : {}) }} touched={touched} onChange={update} required maxLength={12} placeholder="e.g. CIT2026" />
-          <label className="ac-field" htmlFor="ac-collegeType"><span>College Type</span><ProjectSelect id="ac-collegeType" name="collegeType" value={values.collegeType} onChange={update} onBlur={() => setTouched((current) => ({ ...current, collegeType: true }))} aria-invalid={Boolean((touched.collegeType || Boolean(values.collegeType)) && errors.collegeType)}><option value="">Select type</option>{TYPES.map((type) => <option key={type}>{type}</option>)}</ProjectSelect>{(touched.collegeType || Boolean(values.collegeType)) && errors.collegeType && <small className="ac-error" role="alert">{errors.collegeType}</small>}</label>
-          {values.collegeType === 'Other' && <Field label="Specify College Type" name="collegeTypeOther" values={values} errors={errors} touched={touched} onChange={update} required maxLength={60} placeholder="e.g. Community College" />}
+          <label className="ac-field" htmlFor="ac-collegeType"><span>College Type</span><ProjectSelect id="ac-collegeType" name="collegeType" value={values.collegeType} onChange={update} onBlur={() => setTouched((current) => ({ ...current, collegeType: true }))} aria-invalid={Boolean((touched.collegeType || Boolean(values.collegeType)) && errors.collegeType)}><option value="">Select type</option>{TYPES.map((type) => <option key={type}>{type}</option>)}{values.collegeType === 'Other' && <option value="Other">Other</option>}</ProjectSelect>{(touched.collegeType || Boolean(values.collegeType)) && errors.collegeType && <small className="ac-error" role="alert">{errors.collegeType}</small>}</label>
+          {isOtherType(values.collegeType) && <Field label="Specify College Type" name="collegeTypeOther" values={values} errors={errors} touched={touched} onChange={update} required maxLength={60} placeholder="e.g. Community College" />}
           <Field label="University Name" name="universityName" values={values} errors={errors} touched={touched} onChange={update} maxLength={120} placeholder="Affiliated university" readOnly={values.collegeType === 'Deemed University'} />
           <div className="ac-upload ac-span-2" role="group" aria-label="College logo" aria-busy={readingLogo} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); selectLogo(e.dataTransfer.files[0]) }}>
             <input ref={fileRef} type="file" aria-label="Choose college logo" accept=".png,.jpg,.jpeg,.webp" onChange={(e) => selectLogo(e.target.files?.[0])} hidden />
@@ -1481,7 +1518,7 @@ function CollegeForm({ editId, onDismiss, onSaved, resumeDraft = false }) {
           <Field label="Valid Until" name="validUntil" type="date" values={values} errors={errors} touched={touched} onChange={update} />
           {values.accreditationStatus === 'Accredited' && <p className="ac-hint ac-span-2">Complete the accreditation grade, number, and validity dates for a comprehensive record.</p>}
         </>)}
-        {activeTab === 'review' && <section className="ac-review" aria-labelledby="college-review-title"><h2 id="college-review-title">Review college details</h2><p>Check the information below before submitting. Return to any section to make changes.</p><div className="ac-review-grid">{FORM_TABS.filter(tab => tab.id !== 'review').map(tab => <section key={tab.id}><h3>{tab.label}</h3><dl>{TAB_FIELDS[tab.id].filter(name => !['startDate', 'endDate'].includes(name)).map(name => <div key={name}><dt>{name.replace(/([A-Z])/g, ' $1').replace(/^./, letter => letter.toUpperCase())}</dt><dd>{values[name] || 'Not provided'}</dd></div>)}</dl></section>)}</div>{values.logo && <p>Logo: {values.logoName || 'Existing college logo'}</p>}</section>}
+        {activeTab === 'review' && <section className="ac-review" aria-labelledby="college-review-title"><h2 id="college-review-title">Review college details</h2><p>Check the information below before submitting. Return to any section to make changes.</p><div className="ac-review-grid">{FORM_TABS.filter(tab => tab.id !== 'review').map(tab => <section key={tab.id}><h3>{tab.label}</h3><dl>{TAB_FIELDS[tab.id].filter(name => !['startDate', 'endDate'].includes(name) && (name !== 'collegeTypeOther' || isOtherType(values.collegeType))).map(name => <div key={name}><dt>{name.replace(/([A-Z])/g, ' $1').replace(/^./, letter => letter.toUpperCase())}</dt><dd>{values[name] || 'Not provided'}</dd></div>)}</dl></section>)}</div>{values.logo && <p>Logo: {values.logoName || 'Existing college logo'}</p>}</section>}
         </fieldset>
         {!inModal && <footer className="ac-actions">{footer}</footer>}
       </form>
@@ -5166,7 +5203,7 @@ function RolesAndDesignationsWorkspace() {
           {/* TAB 1: ROLES & PERMISSIONS TABLE */}
           {/* ============================================================== */}
           {activeTab === 'roles' && (
-            <div className="sa-table-wrap rbac-table-wrap">
+            <div className="sa-table-wrap rbac-table-wrap" role="region" aria-label="Roles and permissions table" tabIndex={0}>
               <table className="rbac-data-table">
                 <thead>
                   <tr>
@@ -5273,7 +5310,7 @@ function RolesAndDesignationsWorkspace() {
           {/* TAB 2: DESIGNATIONS TABLE */}
           {/* ============================================================== */}
           {activeTab === 'designations' && (
-            <div className="sa-table-wrap rbac-table-wrap">
+            <div className="sa-table-wrap rbac-table-wrap" role="region" aria-label="Designations table" tabIndex={0}>
               <table className="rbac-data-table">
                 <thead>
                   <tr>
@@ -5373,7 +5410,7 @@ function RolesAndDesignationsWorkspace() {
           {/* TAB 3: STAFF ACCESS ASSIGNMENTS TABLE */}
           {/* ============================================================== */}
           {activeTab === 'assignments' && (
-            <div className="sa-table-wrap rbac-table-wrap">
+            <div className="sa-table-wrap rbac-table-wrap" role="region" aria-label="Staff access table" tabIndex={0}>
               <table className="rbac-data-table">
                 <thead>
                   <tr>
@@ -6477,6 +6514,7 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
   const [query, setQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
   const [blockFilter, setBlockFilter] = useState('')
+  const [floorFilter, setFloorFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
 
@@ -6489,6 +6527,9 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
   const [selectedSectionId, setSelectedSectionId] = useState('')
   const [deletingRoom, setDeletingRoom] = useState(null)
   const [deallocatingRoom, setDeallocatingRoom] = useState(null)
+  const [showRoomGenerator, setShowRoomGenerator] = useState(false)
+  const [generatingRooms, setGeneratingRooms] = useState(false)
+  const [roomGeneration, setRoomGeneration] = useState({ block: '', floorCount: 1, roomPrefix: 'A', roomsPerFloor: 10, roomType: 'Classroom', capacity: 60 })
 
   // Load Rooms, Sections, and Student Assignments
   const loadRooms = async () => {
@@ -6607,11 +6648,12 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
 
       const matchesType = !typeFilter || r.roomType === typeFilter
       const matchesBlock = !blockFilter || r.buildingBlock === blockFilter
+      const matchesFloor = !floorFilter || r.floor === floorFilter
       const matchesStatus = !statusFilter || r.status === statusFilter
 
-      return matchesSearch && matchesType && matchesBlock && matchesStatus
+      return matchesSearch && matchesType && matchesBlock && matchesFloor && matchesStatus
     })
-  }, [rooms, query, typeFilter, blockFilter, statusFilter, sectionMetaMap])
+  }, [rooms, query, typeFilter, blockFilter, floorFilter, statusFilter, sectionMetaMap])
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filteredRooms.length / PAGE_SIZE))
@@ -6623,7 +6665,7 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1)
-  }, [query, typeFilter, blockFilter, statusFilter])
+  }, [query, typeFilter, blockFilter, floorFilter, statusFilter])
 
   // Header Compact Summary
   const compactSummaryItems = useMemo(() => {
@@ -6639,6 +6681,58 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
       { label: 'LABS', value: labs, tone: 'default' },
     ]
   }, [rooms])
+
+  const savedBuildings = useMemo(() => [...new Set(rooms.map((room) => String(room.buildingBlock || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)), [rooms])
+  const maxGeneratedFloors = 50
+  const generationFloorLabel = (index) => {
+    if (index === 0) return 'Ground Floor'
+    const floor = index
+    const lastTwo = floor % 100
+    const suffix = lastTwo >= 11 && lastTwo <= 13 ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[floor % 10] || 'th')
+    return `${floor}${suffix} Floor`
+  }
+  const previewFloorCount = Math.min(maxGeneratedFloors, Math.max(0, Number(roomGeneration.floorCount) || 0))
+  const previewFloorIndexes = previewFloorCount <= 2
+    ? Array.from({ length: previewFloorCount }, (_, index) => index)
+    : [0, previewFloorCount - 1]
+  const handleGenerateRooms = async (event) => {
+    event.preventDefault()
+    const block = roomGeneration.block.trim()
+    const floorCount = Number(roomGeneration.floorCount)
+    const roomsPerFloor = Number(roomGeneration.roomsPerFloor)
+    const roomPrefix = roomGeneration.roomPrefix.trim().toUpperCase()
+    const capacity = Number(roomGeneration.capacity)
+    if (!block || !Number.isInteger(floorCount) || floorCount < 1 || floorCount > maxGeneratedFloors || !/^[A-Z0-9]{1,8}$/.test(roomPrefix) || !Number.isInteger(roomsPerFloor) || roomsPerFloor < 1 || roomsPerFloor > 99 || !Number.isInteger(capacity) || capacity < 1) {
+      showError(`Review the block, floor count (1–${maxGeneratedFloors}), room prefix, rooms per floor (1–99), and capacity.`)
+      return
+    }
+    const existingNumbers = new Set(rooms.filter((room) => String(room.buildingBlock || '').trim().toLowerCase() === block.toLowerCase()).map((room) => String(room.roomNumber).trim().toLowerCase()))
+    const planned = []
+    for (let floorIndex = 0; floorIndex < floorCount; floorIndex += 1) {
+      const floorNumber = floorIndex + 1
+      const floorLabel = generationFloorLabel(floorIndex)
+      for (let offset = 0; offset < roomsPerFloor; offset += 1) {
+        const roomNumber = `${roomPrefix}-${floorNumber * 100 + 1 + offset}`
+        if (existingNumbers.has(roomNumber.toLowerCase())) continue
+        planned.push({ roomNumber, roomName: `${roomGeneration.roomType} ${roomNumber}`, buildingBlock: block, floor: floorLabel, roomType: roomGeneration.roomType, capacity, department: 'General / Shared', status: 'Available', facilities: [], description: '' })
+      }
+    }
+    if (!planned.length) return showError('All room numbers in this generation range already exist.')
+    if (planned.length > 300) return showError('Generate up to 300 rooms at a time. Reduce the floors, divisions, or rooms per division.')
+    setGeneratingRooms(true)
+    let created = 0
+    const failures = []
+    try {
+      for (const room of planned) {
+        try { await roomService.createRoomPersisted(room); created += 1 } catch (error) { failures.push(`${room.roomNumber}: ${error?.message || 'save failed'}`) }
+      }
+      await loadRooms()
+      if (failures.length) showError(`Created ${created} of ${planned.length} rooms. Failed: ${failures.slice(0, 3).join('; ')}${failures.length > 3 ? '…' : ''}`)
+      else { showSuccess(`${created} rooms generated in ${block}.`); setShowRoomGenerator(false) }
+    } finally {
+      setGeneratingRooms(false)
+    }
+  }
 
   // Helper to generate section dropdown options without allowing double-allocation
   // Helper to generate section dropdown options without allowing double-allocation
@@ -6909,6 +7003,7 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
     setQuery('')
     setTypeFilter('')
     setBlockFilter('')
+    setFloorFilter('')
     setStatusFilter('')
   }
 
@@ -7485,7 +7580,7 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
                       </div>}
                       <div className="rooms-form-group">
                         <label>Building Block <span className="req-mark">*</span></label>
-                        <SearchableSelect label="Building Block" value={customBuildingBlock ? '__other__' : editingRoom.buildingBlock} options={[...BUILDING_BLOCKS, { value: '__other__', label: 'Others' }]} placeholder="Select Building Block" searchPlaceholder="Search building blocks..." noOptionsMessage="No matching building blocks. Clear the search and select Others to enter a custom block." onChange={(value) => {
+                        <SearchableSelect label="Building Block" value={customBuildingBlock ? '__other__' : editingRoom.buildingBlock} options={[...new Set([...BUILDING_BLOCKS, ...savedBuildings]), { value: '__other__', label: 'Others' }]} placeholder="Select Building Block" searchPlaceholder="Search building blocks..." noOptionsMessage="No matching building blocks. Clear the search and select Others to enter a custom block." onChange={(value) => {
                           const other = value === '__other__'
                           setCustomBuildingBlock(other)
                           setEditingRoom({ ...editingRoom, buildingBlock: other ? '' : value })
@@ -7546,6 +7641,35 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
       <div className="rooms-page">
         <SectionsRoomsHeader view="rooms" compactSummary={compactSummaryItems} />
 
+        <section className="rooms-block-overview" aria-label="Academic block overview">
+          <div className="rooms-block-overview__intro">
+            <div><span>ACADEMIC SPACE</span><h2>Blocks & floor plan</h2><p>Blocks and floor divisions are grouped from saved room records.</p></div>
+            <button type="button" className="rooms-add-btn" onClick={() => { const block = savedBuildings[0] || ''; const inferredPrefix = block.match(/([A-Za-z0-9]+)\s*$/)?.[1]?.toUpperCase() || 'A'; setRoomGeneration((current) => ({ ...current, block, roomPrefix: inferredPrefix })); setShowRoomGenerator(true) }}><FiZap /> Generate rooms</button>
+          </div>
+          <div className="rooms-block-overview__list">
+            {savedBuildings.length ? savedBuildings.map((block) => {
+              const blockRooms = rooms.filter((room) => room.buildingBlock === block)
+              const floors = new Set(blockRooms.map((room) => room.floor).filter(Boolean))
+              return <button type="button" key={block} className={`rooms-block-overview__item ${blockFilter === block ? 'is-selected' : ''}`} onClick={() => { setBlockFilter((current) => current === block ? '' : block); setCurrentPage(1) }}><FiHome /><span><strong>{block}</strong><small>{blockRooms.length} rooms · {floors.size} floors</small></span></button>
+            }) : <div className="rooms-block-overview__empty">No saved blocks yet. Generate rooms to create the first block.</div>}
+          </div>
+        </section>
+
+        {showRoomGenerator && <ViewDialog title="Generate rooms by floor" subtitle="Create configurable room ranges and save each room through the existing room service." icon={FiGrid} maxWidth="720px" showExport={false} busy={generatingRooms} className="rooms-generator-dialog" onClose={() => !generatingRooms && setShowRoomGenerator(false)} footerContent={<><button type="button" className="erp-btn erp-btn--secondary" onClick={() => setShowRoomGenerator(false)} disabled={generatingRooms}>Cancel</button><button type="submit" form="room-generator-form" className="erp-btn erp-btn--primary" disabled={generatingRooms}>{generatingRooms ? 'Generating…' : 'Generate rooms'}</button></>}>
+          <form id="room-generator-form" className="rooms-generator-form" onSubmit={handleGenerateRooms}>
+            <div className="rooms-generator-note"><FiInfo /> Codes start at <strong>{roomGeneration.roomPrefix || 'A'}-101</strong> on the ground floor and continue based on rooms per floor. The next floor starts at {roomGeneration.roomPrefix || 'A'}-201. Existing codes are skipped.</div>
+            <label>Academic block<input value={roomGeneration.block} onChange={(event) => { const block = event.target.value; const inferredPrefix = block.match(/([A-Za-z0-9]+)\s*$/)?.[1]?.toUpperCase(); setRoomGeneration((current) => ({ ...current, block, ...(inferredPrefix ? { roomPrefix: inferredPrefix } : {}) })) }} placeholder="e.g. Mechanical Block-A" required list="saved-academic-blocks" /><datalist id="saved-academic-blocks">{savedBuildings.map((block) => <option key={block} value={block} />)}</datalist></label>
+            <div className="rooms-generator-form__grid">
+              <label>Number of floors<input type="number" min="1" max={maxGeneratedFloors} step="1" value={roomGeneration.floorCount} onChange={(event) => setRoomGeneration((current) => ({ ...current, floorCount: event.target.value === '' ? '' : Number(event.target.value) }))} required /><small>Enter 1–{maxGeneratedFloors}; floor names are assigned in order.</small></label>
+              <label>Room code prefix<input value={roomGeneration.roomPrefix} onChange={(event) => setRoomGeneration((current) => ({ ...current, roomPrefix: event.target.value }))} placeholder="A" maxLength={8} required /><small>You can edit this manually.</small></label>
+              <label>Rooms per floor<input type="number" min="1" max="99" value={roomGeneration.roomsPerFloor} onChange={(event) => setRoomGeneration((current) => ({ ...current, roomsPerFloor: Number(event.target.value) }))} /></label>
+              <label>Room type<select value={roomGeneration.roomType} onChange={(event) => setRoomGeneration((current) => ({ ...current, roomType: event.target.value }))}>{['Classroom', 'Laboratory', 'Seminar Hall', 'Staff Room'].map((type) => <option key={type}>{type}</option>)}</select></label>
+              <label>Capacity<input type="number" min="1" max="500" value={roomGeneration.capacity} onChange={(event) => setRoomGeneration((current) => ({ ...current, capacity: Number(event.target.value) }))} /></label>
+            </div>
+            <p className="rooms-generator-preview">{previewFloorCount * Math.max(0, Number(roomGeneration.roomsPerFloor) || 0)} rooms planned · {previewFloorIndexes.map((index) => `${generationFloorLabel(index)}: ${roomGeneration.roomPrefix || 'A'}-${(index + 1) * 100 + 1} to ${roomGeneration.roomPrefix || 'A'}-${(index + 1) * 100 + (Number(roomGeneration.roomsPerFloor) || 0)}`).join(previewFloorCount > 2 ? ' · … · ' : ' · ') || 'Choose floors'}</p>
+          </form>
+        </ViewDialog>}
+
         {/* Main Directory Card */}
         <div className="erp-directory-card rooms-directory-card">
           <div className="course-directory-heading rooms-heading">
@@ -7565,20 +7689,13 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
                 filename="rooms_directory"
                 title="Classrooms & Spatial Directory"
               />
-              <button
-                type="button"
-                className="rooms-add-btn"
-                onClick={handleOpenCreate}
-              >
-                <FiPlus /> Add Classroom
-              </button>
             </div>
           </div>
 
           {/* Controls Toolbar */}
           <FilterPanel
             className="rooms-directory-filters"
-            active={Boolean(query || typeFilter || blockFilter || statusFilter)}
+            active={Boolean(query || typeFilter || blockFilter || floorFilter || statusFilter)}
             onClear={clearFilters}
             search={<label className="rooms-search">
               <FiSearch aria-hidden="true" />
@@ -7612,12 +7729,17 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
                 className="rooms-filter"
                 aria-label="Filter by building block"
                 value={blockFilter}
-                onChange={(e) => setBlockFilter(e.target.value)}
+                onChange={(e) => { setBlockFilter(e.target.value); setFloorFilter('') }}
               >
                 <option value="">All Building Blocks</option>
-                {BUILDING_BLOCKS.map((b) => (
+                {[...new Set([...BUILDING_BLOCKS, ...savedBuildings])].map((b) => (
                   <option key={b} value={b}>{b}</option>
                 ))}
+              </ProjectSelect>
+
+              <ProjectSelect className="rooms-filter" aria-label="Filter by floor" value={floorFilter} onChange={(e) => setFloorFilter(e.target.value)}>
+                <option value="">All Floors</option>
+                {[...new Set(rooms.filter((room) => !blockFilter || room.buildingBlock === blockFilter).map((room) => room.floor).filter(Boolean))].sort((a, b) => a.localeCompare(b)).map((floor) => <option key={floor} value={floor}>{floor}</option>)}
               </ProjectSelect>
 
               <ProjectSelect
@@ -7688,7 +7810,6 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
                                   {room.roomName}
                                 </button>
                               </div>
-                              <small className="room-dept-text" title={room.department || 'General / Shared'}>{room.department || 'General / Shared'}</small>
                             </div>
                           </div>
                         </td>

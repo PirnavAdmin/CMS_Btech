@@ -277,7 +277,7 @@ export default function SubjectManagement() {
               />
             ) : (
               <table className="sm-table">
-                <colgroup>{[80, 130, 140, 70, 70, 70, 60, 100, 80, 70, 210].map((width, index) => <col key={index} style={{ width: `${width}px` }} />)}</colgroup>
+                <colgroup>{[8, 13, 13, 6, 7, 7, 6, 9, 8, 7, 16].map((width, index) => <col key={index} style={{ width: `${width}%` }} />)}</colgroup>
                 <thead>
                   <tr>
                     <th className="table-center">Subject Code</th>
@@ -326,7 +326,7 @@ export default function SubjectManagement() {
                         <td className="table-center"><div className="table-primary-cell"><span>L/T/P: {[s.lectureHours, s.tutorialHours, s.practicalHours].map(value => value ?? '—').join(' / ')}</span><small>Internal / External: {[s.internalMarks, s.externalMarks].map(value => value ?? '—').join(' / ')}</small></div></td>
                         <td className="table-center"><CompletionIndicator completion={completion} /></td>
                         <td className="table-center"><StatusBadge value={s.status} /></td>
-                        <td className="table-center">
+                        <td className="table-center sm-actions-cell">
                           <div className="sm-row-actions">
                             <TableActionButton type="view" ariaLabel={`View ${s.subjectCode}`} onClick={() => setViewing(s)} />
                             <TableActionButton hidden={!canEdit} type="edit" ariaLabel={`Edit ${s.subjectCode}`} onClick={() => openEdit(s)} />

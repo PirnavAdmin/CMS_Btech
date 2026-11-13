@@ -1,3 +1,5 @@
+using System.Data;
+using System.Globalization;
 using BTech.Services;
 using BTech.DTOs.FacultyPayroll;
 using ClosedXML.Excel;
@@ -5,60 +7,118 @@ using Dapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MySqlConnector;
-
 namespace BTech.Controllers.V1.FacultyManagement;
-
-[ApiController]
-[Route("api/v1/faculty-payroll")]
-[Authorize]
-public class FacultyPayrollController : ControllerBase
+[ApiController, Authorize, Route("api/v1/faculty-payroll")]
+public sealed class FacultyPayrollController : ControllerBase
 {
-    private readonly IConfiguration _configuration;
-    public FacultyPayrollController(IConfiguration configuration)=>_configuration=configuration;
-    private long? Scope()=>CollegeDataScope.Resolve(HttpContext);
-    private long? OwnUser()=>new[]{"SUPER_ADMIN","COLLEGE_ADMIN","PRINCIPAL","HOD"}.Any(x=>CollegeDataScope.HasRole(HttpContext,x))?null:CollegeDataScope.Actor(HttpContext);
-    private MySqlConnection Connection()=>new(_configuration.GetConnectionString("DefaultConnection"));
-    private long? CurrentUserId(){var v=User.FindFirst("user_id")?.Value??User.FindFirst("sub")?.Value;return long.TryParse(v,out var id)?id:null;}
-
-    [HttpGet]
-    public async Task<IActionResult> Get([FromQuery]string? month,[FromQuery]string? search,[FromQuery]string? facultyType,[FromQuery]string? department,[FromQuery]string? status)
+    private readonly IConfiguration _config;
+    private readonly ILogger<FacultyPayrollController> _log;
+    public FacultyPayrollController(IConfiguration config,ILogger<FacultyPayrollController> log){_config=config;_log=log;}
+    private MySqlConnection Db()=>new(_config.GetConnectionString("DefaultConnection"));
+    private bool Admin()=>new[]{"SUPER_ADMIN","COLLEGE_ADMIN","PRINCIPAL","HOD"}.Any(x=>CollegeDataScope.HasRole(HttpContext,x));
+    private long? College(long? id=null)=>CollegeDataScope.Resolve(HttpContext,id);
+    private long? Own()=>Admin()?null:CollegeDataScope.Actor(HttpContext);
+    private static DateTime Month(string? month)=>DateTime.TryParseExact(month??DateTime.UtcNow.ToString("yyyy-MM"),"yyyy-MM",CultureInfo.InvariantCulture,DateTimeStyles.None,out var d)?d.Date:throw new ArgumentException("month must be yyyy-MM.");
+    private async Task<List<dynamic>> Read(string? month,string view,long? id=null)
     {
-        month=string.IsNullOrWhiteSpace(month)?DateTime.UtcNow.ToString("yyyy-MM"):month;
-        if(!DateTime.TryParse($"{month}-01",out var monthDate))return BadRequest(new{success=false,message="Invalid payroll month. Use yyyy-MM."});
-        const string sql=@"
-SELECT f.faculty_id AS id,f.faculty_code AS employeeId,f.faculty_name AS fullName,f.designation,d.department_name AS department,
-CASE WHEN UPPER(COALESCE(f.employment_type,'')) LIKE '%NON%' THEN 'Non-Teaching' ELSE 'Teaching' END AS type,
-COUNT(a.attendance_id) AS working,SUM(CASE WHEN UPPER(a.status)='PRESENT' THEN 1 ELSE 0 END) AS present,
-SUM(CASE WHEN UPPER(a.status)='LATE' THEN 1 ELSE 0 END) AS late,SUM(CASE WHEN UPPER(a.status) IN ('HALF DAY','HALF_DAY') THEN 1 ELSE 0 END) AS halfDay,
-SUM(CASE WHEN UPPER(a.status) IN ('LEAVE','ON LEAVE') THEN 1 ELSE 0 END) AS paidLeave,SUM(CASE WHEN UPPER(a.status)='LOP' THEN 1 ELSE 0 END) AS lop,
-p.payroll_id AS payrollId,p.status, p.gross_salary AS grossSalary,p.deductions,p.net_salary AS netSalary,p.hold_reason AS holdReason
-FROM faculty f JOIN departments d ON d.department_id=f.department_id
-LEFT JOIN faculty_attendance a ON a.faculty_id=f.faculty_id AND DATE_FORMAT(a.attendance_date,'%Y-%m')=@month
-LEFT JOIN faculty_payroll p ON p.faculty_id=f.faculty_id AND p.payroll_month=@MonthDate
-WHERE (@collegeScope IS NULL OR f.college_id=@collegeScope) AND (@ownUser IS NULL OR f.user_id=@ownUser) AND f.deleted_at IS NULL AND (@search IS NULL OR f.faculty_name LIKE CONCAT('%',@search,'%') OR f.faculty_code LIKE CONCAT('%',@search,'%'))
-AND (@facultyType IS NULL OR (CASE WHEN UPPER(COALESCE(f.employment_type,'')) LIKE '%NON%' THEN 'Non-Teaching' ELSE 'Teaching' END)=@facultyType)
-AND (@department IS NULL OR d.department_name=@department) AND (@status IS NULL OR COALESCE(p.status,'Draft')=@status)
-GROUP BY f.faculty_id,f.faculty_code,f.faculty_name,f.designation,d.department_name,type,p.payroll_id,p.status,p.gross_salary,p.deductions,p.net_salary,p.hold_reason
-ORDER BY f.faculty_name;";
-        try{await using var c=Connection();await c.OpenAsync();var rows=(await c.QueryAsync(sql,new{collegeScope=Scope(),ownUser=OwnUser(),month,MonthDate=monthDate.Date,search=Null(search),facultyType=Null(facultyType),department=Null(department),status=Null(status)})).ToList();return Ok(new{success=true,message="Faculty payroll retrieved successfully.",data=rows});}catch(MySqlException ex){return DbError(ex);}
+        await using var c=Db();await c.OpenAsync();
+        return (await c.QueryAsync("sp_payroll_read",new {p_college=College(),p_own_user=Own(),p_month=id.HasValue?(DateTime?)null:Month(month),p_id=id,p_view=view},commandType:CommandType.StoredProcedure)).ToList();
     }
-
+    private async Task<IActionResult> List(string? month,string view,string message)
+    {
+        try{return Ok(new{success=true,message,data=await Read(month,view)});}
+        catch(ArgumentException ex){return BadRequest(new{success=false,message=ex.Message});}
+        catch(MySqlException ex){return Error(ex);}
+    }
+    [HttpGet] public async Task<IActionResult> Get([FromQuery]string? month,[FromQuery]string? search,[FromQuery]string? facultyType,[FromQuery]string? department,[FromQuery]string? status)
+    {
+        try
+        {
+            var rows=await Read(month,"PROCESSING");
+            var data=rows.Where(r=> (string.IsNullOrWhiteSpace(search)||
+                ((string)r.fullName).Contains(search,StringComparison.OrdinalIgnoreCase)||
+                ((string)r.employeeId).Contains(search,StringComparison.OrdinalIgnoreCase)) &&
+                (string.IsNullOrWhiteSpace(facultyType)||(string)r.type==facultyType) &&
+                (string.IsNullOrWhiteSpace(department)||(string)r.department==department) &&
+                (string.IsNullOrWhiteSpace(status)||(string)r.status==status)).ToList();
+            return Ok(new{success=true,message="Faculty payroll retrieved successfully.",data});
+        }
+        catch(ArgumentException ex){return BadRequest(new{success=false,message=ex.Message});}
+        catch(MySqlException ex){return Error(ex);}
+    }
+    [HttpGet("salary-records")] public Task<IActionResult> SalaryRecords([FromQuery]string? month)=>List(month,"SALARY","Salary records retrieved successfully.");
+    [HttpGet("payslips")] public Task<IActionResult> Payslips([FromQuery]string? month)=>List(month,"PAYSLIPS","Payslips retrieved successfully.");
     [HttpGet("{payrollId:long}")]
-    public async Task<IActionResult> GetById(long payrollId){if(payrollId<=0)return BadRequest(new{success=false,message="Invalid payroll ID."});try{await using var c=Connection();await c.OpenAsync();var row=await c.QueryFirstOrDefaultAsync("SELECT * FROM faculty_payroll WHERE payroll_id=@payrollId LIMIT 1",new{payrollId});return row is null?NotFound(new{success=false,message="Payroll record not found."}):Ok(new{success=true,message="Payroll record retrieved successfully.",data=row});}catch(MySqlException ex){return DbError(ex);}}
-
-    [HttpGet("salary-records")]
-    public async Task<IActionResult> SalaryRecords([FromQuery]string? month)=>await GetSalaryOrPayslips(month,false);
-    [HttpGet("payslips")]
-    public async Task<IActionResult> Payslips([FromQuery]string? month)=>await GetSalaryOrPayslips(month,true);
-
-    private async Task<IActionResult> GetSalaryOrPayslips(string? month,bool payslip){month=string.IsNullOrWhiteSpace(month)?DateTime.UtcNow.ToString("yyyy-MM"):month;if(!DateTime.TryParse($"{month}-01",out var md))return BadRequest(new{success=false,message="Invalid payroll month. Use yyyy-MM."});try{await using var c=Connection();await c.OpenAsync();var rows=await c.QueryAsync(@"SELECT p.payroll_id AS id,p.payroll_month AS payrollMonth,f.faculty_code AS employeeId,f.faculty_name AS fullName,f.designation,d.department_name AS department,p.status,p.gross_salary AS grossSalary,p.deductions,p.net_salary AS netSalary,p.hold_reason AS holdReason FROM faculty_payroll p JOIN faculty f ON f.faculty_id=p.faculty_id JOIN departments d ON d.department_id=f.department_id WHERE (@collegeScope IS NULL OR f.college_id=@collegeScope) AND (@ownUser IS NULL OR f.user_id=@ownUser) AND p.payroll_month=@md ORDER BY f.faculty_name",new{md=md.Date,collegeScope=Scope(),ownUser=OwnUser()});return Ok(new{success=true,message=payslip?"Payslips retrieved successfully.":"Salary records retrieved successfully.",data=rows});}catch(MySqlException ex){return DbError(ex);}}
-
+    public async Task<IActionResult> GetById(long payrollId)
+    {
+        if(payrollId<=0)return BadRequest(new{success=false,message="Invalid payroll ID."});
+        try{var row=(await Read(null,"DETAIL",payrollId)).FirstOrDefault();return row is null?NotFound(new{success=false,message="Payroll record not found."}):Ok(new{success=true,message="Payroll record retrieved successfully.",data=row});}
+        catch(MySqlException ex){return Error(ex);}
+    }
+    [HttpPost("salary-records")] public Task<IActionResult> CreateSalary([FromBody]PayrollSalaryRequest request)=>Save(null,request);
+    [HttpPut("{payrollId:long}/salary")] public Task<IActionResult> UpdateSalary(long payrollId,[FromBody]PayrollSalaryRequest request)=>Save(payrollId,request);
+    private async Task<IActionResult> Save(long? id,PayrollSalaryRequest request)
+    {
+        if(!Admin())return Forbid();
+        try
+        {
+            var m=Month(request.PayrollMonth);
+            if(request.FacultyId<=0||request.PayDate.Date<m||request.Deductions>request.GrossSalary||request.GrossSalary<0||request.Deductions<0)
+                return BadRequest(new{success=false,message="Valid faculty, payday and amounts are required."});
+            var college=College(request.CollegeId);if(college is null)return BadRequest(new{success=false,message="Select a college."});
+            await using var c=Db();await c.OpenAsync();
+            var result=await c.QuerySingleAsync("sp_payroll_save",new{p_id=id,p_college=college,p_faculty=request.FacultyId,p_month=m,p_gross=request.GrossSalary,p_deductions=request.Deductions,p_payday=request.PayDate.Date,p_revision=request.RevisionNo,p_actor=CollegeDataScope.Actor(HttpContext)},commandType:CommandType.StoredProcedure);
+            var row=(await Read(null,"DETAIL",Convert.ToInt64(result.payrollId))).First();
+            return StatusCode(id.HasValue?200:201,new{success=true,message=id.HasValue?"Salary updated successfully.":"Salary created successfully.",data=row});
+        }
+        catch(ArgumentException ex){return BadRequest(new{success=false,message=ex.Message});}
+        catch(MySqlException ex){return Error(ex);}
+    }
+    [HttpPost("{payrollId:long}/process")] public Task<IActionResult> Process(long payrollId,[FromBody]PayrollRevisionRequest request)=>Change(payrollId,"PROCESS",request.RevisionNo,null,null);
+    [HttpPost("{payrollId:long}/confirm-payment")] public Task<IActionResult> Pay(long payrollId,[FromBody]PayrollPaymentRequest request)=>Change(payrollId,"PAY",request.RevisionNo,null,request.PaymentReference);
+    [HttpPut("{payrollId:long}/release-hold")] public Task<IActionResult> ReleaseHold(long payrollId,[FromBody]PayrollRevisionRequest request)=>Change(payrollId,"RELEASE_HOLD",request.RevisionNo,null,null);
     [HttpPut("{payrollId:long}/hold")]
-    public async Task<IActionResult> Hold(long payrollId,[FromBody]FacultyPayrollHoldRequest request){if(payrollId<=0||string.IsNullOrWhiteSpace(request.Reason))return BadRequest(new{success=false,message="Payroll ID and hold reason are required."});try{await using var c=Connection();await c.OpenAsync();var n=await c.ExecuteAsync("UPDATE faculty_payroll SET status='Hold',hold_reason=@Reason,updated_at=UTC_TIMESTAMP(),updated_by=@By WHERE payroll_id=@payrollId",new{payrollId,request.Reason,By=CurrentUserId()});return n==0?NotFound(new{success=false,message="Payroll record not found."}):Ok(new{success=true,message="Payroll placed on hold successfully.",data=new{payrollId,status="Hold"}});}catch(MySqlException ex){return DbError(ex);}}
-
+    public async Task<IActionResult> Hold(long payrollId,[FromBody]FacultyPayrollHoldRequest request)
+    {
+        if(!Admin())return Forbid();
+        if(string.IsNullOrWhiteSpace(request.Reason))return BadRequest(new{success=false,message="Hold reason required."});
+        try{var row=(await Read(null,"DETAIL",payrollId)).FirstOrDefault();return row is null?NotFound(new{success=false,message="Payroll not found."}):await Change(payrollId,"HOLD",Convert.ToInt32(row.revisionNo),request.Reason,null);}
+        catch(MySqlException ex){return Error(ex);}
+    }
+    private async Task<IActionResult> Change(long id,string action,int revision,string? reason,string? reference)
+    {
+        if(!Admin())return Forbid();
+        if(id<=0||revision<=0||action=="PAY"&&string.IsNullOrWhiteSpace(reference))return BadRequest(new{success=false,message="Valid payroll ID, revision and payment reference required."});
+        try
+        {
+            var college=College();if(college is null)return BadRequest(new{success=false,message="Select a college."});
+            await using var c=Db();await c.OpenAsync();
+            await c.QuerySingleAsync("sp_payroll_transition",new{p_id=id,p_college=college,p_actor=CollegeDataScope.Actor(HttpContext),p_action=action,p_reason=reason,p_reference=reference?.Trim(),p_revision=revision},commandType:CommandType.StoredProcedure);
+            var row=(await Read(null,"DETAIL",id)).First();
+            _log.LogInformation("Payroll {Action} id={PayrollId} college={CollegeId} correlation={CorrelationId}",action,id,college,HttpContext.TraceIdentifier);
+            return Ok(new{success=true,message="Payroll status updated successfully.",data=row});
+        }
+        catch(MySqlException ex){return Error(ex);}
+    }
     [HttpGet("export")]
-    public async Task<IActionResult> Export([FromQuery]string? month){month=string.IsNullOrWhiteSpace(month)?DateTime.UtcNow.ToString("yyyy-MM"):month;if(!DateTime.TryParse($"{month}-01",out var md))return BadRequest(new{success=false,message="Invalid payroll month. Use yyyy-MM."});try{await using var c=Connection();await c.OpenAsync();var rows=(await c.QueryAsync(@"SELECT f.faculty_code AS employeeId,f.faculty_name AS employee,d.department_name AS department,p.payroll_month AS payrollMonth,p.status,p.gross_salary AS grossSalary,p.deductions,p.net_salary AS netSalary FROM faculty_payroll p JOIN faculty f ON f.faculty_id=p.faculty_id JOIN departments d ON d.department_id=f.department_id WHERE (@collegeScope IS NULL OR f.college_id=@collegeScope) AND (@ownUser IS NULL OR f.user_id=@ownUser) AND p.payroll_month=@md ORDER BY f.faculty_name",new{md=md.Date,collegeScope=Scope(),ownUser=OwnUser()})).ToList();using var wb=new XLWorkbook();var ws=wb.Worksheets.Add("Faculty Payroll");var headers=new[]{"employee_id","employee","department","payroll_month","status","gross_salary","deductions","net_salary"};for(var i=0;i<headers.Length;i++)ws.Cell(1,i+1).Value=headers[i];var r=2;foreach(var x in rows){ws.Cell(r,1).Value=(string)x.employeeId;ws.Cell(r,2).Value=(string)x.employee;ws.Cell(r,3).Value=(string)x.department;ws.Cell(r,4).Value=(DateTime)x.payrollMonth;ws.Cell(r,4).Style.DateFormat.Format="yyyy-mm";ws.Cell(r,5).Value=(string?)x.status??"Draft";ws.Cell(r,6).Value=x.grossSalary is null?0:Convert.ToDecimal(x.grossSalary);ws.Cell(r,7).Value=x.deductions is null?0:Convert.ToDecimal(x.deductions);ws.Cell(r,8).Value=x.netSalary is null?0:Convert.ToDecimal(x.netSalary);r++;}ws.Range(1,1,1,headers.Length).Style.Font.Bold=true;ws.Columns().AdjustToContents();ws.SheetView.FreezeRows(1);using var ms=new MemoryStream();wb.SaveAs(ms);return File(ms.ToArray(),"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",$"faculty-payroll-{month}.xlsx");}catch(MySqlException ex){return DbError(ex);}}
-
-    private static string? Null(string? v)=>string.IsNullOrWhiteSpace(v)?null:v.Trim();
-    private IActionResult DbError(MySqlException ex)=>StatusCode(500,new{success=false,message="Unable to process faculty payroll.",error=ex.Message});
+    public async Task<IActionResult> Export([FromQuery]string? month)
+    {
+        try
+        {
+            var rows=await Read(month,"PAYSLIPS");using var wb=new XLWorkbook();var ws=wb.Worksheets.Add("Released Payslips");
+            var heads=new[]{"Employee","Month","Payday","Paid at UTC","Gross","Deductions","Net"};
+            for(int i=0;i<heads.Length;i++)ws.Cell(1,i+1).Value=heads[i];int n=2;
+            foreach(var x in rows){ws.Cell(n,1).Value=(string)x.employeeId;ws.Cell(n,2).Value=(string)x.payrollMonth;ws.Cell(n,3).Value=(string)x.payDate;ws.Cell(n,4).Value=(string)x.paidAt;ws.Cell(n,5).Value=Convert.ToDecimal(x.grossSalary);ws.Cell(n,6).Value=Convert.ToDecimal(x.deductions);ws.Cell(n,7).Value=Convert.ToDecimal(x.netSalary);n++;}
+            ws.Range(1,1,1,heads.Length).Style.Font.Bold=true;using var stream=new MemoryStream();wb.SaveAs(stream);
+            return File(stream.ToArray(),"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",$"faculty-payslips-{Month(month):yyyy-MM}.xlsx");
+        }
+        catch(ArgumentException ex){return BadRequest(new{success=false,message=ex.Message});}
+        catch(MySqlException ex){return Error(ex);}
+    }
+    private IActionResult Error(MySqlException ex)
+    {
+        _log.LogError(ex,"Payroll database error {Code} correlation={CorrelationId}",ex.Number,HttpContext.TraceIdentifier);
+        var conflict=ex.Number==1062||ex.SqlState=="45000";
+        return StatusCode(conflict?409:500,new{success=false,message=ex.Number==1062?"Duplicate salary or payment reference.":conflict?ex.Message:"Payroll operation failed.",correlationId=HttpContext.TraceIdentifier});
+    }
 }

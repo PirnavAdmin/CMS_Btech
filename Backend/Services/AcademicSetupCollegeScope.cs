@@ -46,11 +46,7 @@ public static class AcademicSetupCollegeScope
             try
             {
                 using var body = await JsonDocument.ParseAsync(request.Body, cancellationToken: context.RequestAborted);
-                if (body.RootElement.ValueKind == JsonValueKind.Object)
-                    foreach (var property in body.RootElement.EnumerateObject())
-                        if (OwnershipSql.ContainsKey(property.Name) &&
-                            long.TryParse(property.Value.ToString(), out var id) && id > 0)
-                            references.Add((property.Name, id));
+                CollectReferences(body.RootElement, references, 0);
             }
             catch (JsonException) { /* Model binding handles malformed JSON. */ }
             finally { if (request.Body.CanSeek) request.Body.Position = 0; }
@@ -81,5 +77,24 @@ public static class AcademicSetupCollegeScope
             college = owner;
         }
         return (college, null);
+    }
+
+    private static void CollectReferences(JsonElement element, List<(string Key, long Id)> references, int depth)
+    {
+        if (depth > 32) throw new BadHttpRequestException("Academic request nesting is too deep.");
+        if (element.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in element.EnumerateArray()) CollectReferences(item, references, depth + 1);
+            return;
+        }
+        if (element.ValueKind != JsonValueKind.Object) return;
+        foreach (var property in element.EnumerateObject())
+        {
+            if (OwnershipSql.ContainsKey(property.Name) &&
+                long.TryParse(property.Value.ToString(), out var id) && id > 0)
+                references.Add((property.Name, id));
+            else if (property.Value.ValueKind is JsonValueKind.Object or JsonValueKind.Array)
+                CollectReferences(property.Value, references, depth + 1);
+        }
     }
 }

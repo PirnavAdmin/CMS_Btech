@@ -41,6 +41,7 @@ public sealed class ForeignRecordScopeFilter(IConfiguration config) : IAsyncActi
             }
         }
         var references=new HashSet<(string Name,long Id,bool Route)>();
+        var visited=0;
         if(context.ActionArguments.TryGetValue("id",out var genericId))
         {
             var parts=(http.Request.Path.Value??"").Split('/',StringSplitOptions.RemoveEmptyEntries);
@@ -48,22 +49,45 @@ public sealed class ForeignRecordScopeFilter(IConfiguration config) : IAsyncActi
             var resource=parts.Length>root?parts[root].ToLowerInvariant():"";
             var key=resource switch { "courses" or "course"=>"courseId", "branches" or "branch"=>"branchId",
                 "semester" or "semesters"=>"semesterId", "sections" or "section"=>"sectionId",
-                "students" or "student"=>"studentId", "departments" or "department"=>"departmentId",
+                "students" or "student"=>"studentId", "faculty"=>"facultyId",
+                "exams" or "exam"=>"examId", "departments" or "department"=>"departmentId",
                 "academic-years" or "academic-year"=>"academicYearId", _=>null };
             if(key!=null)Add(key,genericId,true);
         }
         foreach(var entry in context.ActionArguments)
-        {
-            Add(entry.Key,entry.Value,http.Request.RouteValues.ContainsKey(entry.Key));
-            if(entry.Value is JsonElement json && json.ValueKind==JsonValueKind.Object)
-                foreach(var prop in json.EnumerateObject())Add(prop.Name,prop.Value.ToString(),false);
-            if(entry.Value is not null && entry.Value is not string && !entry.Value.GetType().IsPrimitive)
-                foreach(var prop in entry.Value.GetType().GetProperties().Where(x=>x.CanRead&&x.GetIndexParameters().Length==0&&Entities.ContainsKey(x.Name)))
-                    Add(prop.Name,prop.GetValue(entry.Value),false);
-        }
+            Collect(entry.Key,entry.Value,http.Request.RouteValues.ContainsKey(entry.Key),0);
         void Add(string name,object? value,bool route)
         {
             if(Entities.ContainsKey(name)&&long.TryParse(value?.ToString(),out var id)&&id>0)references.Add((name,id,route));
+        }
+        // Check IDs in bulk rows and nested DTOs as well as the top-level request.
+        // Never traverse framework objects, streams, or entity navigation graphs.
+        void Collect(string name,object? value,bool route,int depth)
+        {
+            if(value is null)return;
+            if(depth>8 || ++visited>4096 || references.Count>512)
+                throw new ContractException(400,"TOO_MANY_REFERENCES","Request has too many or too deeply nested academic references.");
+            if(value is JsonElement json)
+            {
+                if(json.ValueKind is JsonValueKind.Object)
+                    foreach(var prop in json.EnumerateObject())Collect(prop.Name,prop.Value,false,depth+1);
+                else if(json.ValueKind is JsonValueKind.Array)
+                    foreach(var child in json.EnumerateArray())Collect(name,child,false,depth+1);
+                else Add(name,json.ToString(),route);
+                return;
+            }
+            Add(name,value,route);
+            if(value is string || value is byte[] || value is Microsoft.AspNetCore.Http.IFormFile || value is Stream)return;
+            var type=value.GetType();
+            if(type.IsPrimitive || type.IsEnum || type.IsValueType)return;
+            if(value is IEnumerable sequence)
+            {
+                foreach(var item in sequence)Collect("",item,false,depth+1);
+                return;
+            }
+            if(type.Namespace?.StartsWith("System",StringComparison.Ordinal)==true)return;
+            foreach(var prop in type.GetProperties().Where(p=>p.CanRead&&p.GetIndexParameters().Length==0))
+                Collect(prop.Name,prop.GetValue(value),false,depth+1);
         }
         if(references.Count>0 && (scope.HasValue||CollegeDataScope.HasRole(http,"STUDENT")))
         {

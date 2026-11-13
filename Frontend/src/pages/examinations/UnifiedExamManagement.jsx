@@ -24,6 +24,27 @@ const examStatusLabel = exam => {
   return ({ active: 'Active', scheduled: 'Scheduled', completed: 'Completed', cancelled: 'Cancelled', canceled: 'Cancelled', draft: 'Draft', published: 'Published' })[normalized] || String(value)
 }
 
+function normalizeAcademicYear(value) {
+  const row = record(value)
+  const id = row.id ?? row.academicYearId ?? row.academicYearID ?? row.AcademicYearId ?? row.AcademicYearID ?? row.yearId ?? row.yearID
+  const name = row.name ?? row.academicYearName ?? row.academicYearTitle ?? row.AcademicYearName ?? row.AcademicYearTitle ?? row.yearName ?? row.title
+  if (id == null || !String(id).trim()) return null
+  return { ...row, id: String(id), academicYearId: String(id), name: String(name || `Academic Year ${id}`) }
+}
+
+function mergeAcademicYears(...collections) {
+  const byId = new Map()
+  for (const collection of collections) {
+    for (const value of collection || []) {
+      const row = normalizeAcademicYear(value)
+      if (!row) continue
+      const previous = byId.get(row.id)
+      byId.set(row.id, previous ? { ...previous, ...row, name: row.name || previous.name } : row)
+    }
+  }
+  return [...byId.values()]
+}
+
 export default function UnifiedExamManagement() {
   const academic = useAcademic()
   const { canAction } = useScreenAccess()
@@ -94,7 +115,7 @@ export default function UnifiedExamManagement() {
       ])
       const lookupData = record(unwrap(lookupResponse) || {})
       const examTypes = typeRows.map(record)
-      setLookups({ ...lookupData, examTypes, courses: (lookupData.courses || []).map(record), branches: (lookupData.branches || []).map(record), semesters: (lookupData.semesters || []).map(record), sections: (lookupData.sections || []).map(record), subjects: (lookupData.subjects || []).map(record), classrooms: (lookupData.classrooms || []).map(record), academicYears: (lookupData.academicYears || []).map(record) })
+      setLookups({ ...lookupData, examTypes, courses: (lookupData.courses || []).map(record), branches: (lookupData.branches || []).map(record), semesters: (lookupData.semesters || []).map(record), sections: (lookupData.sections || []).map(record), subjects: (lookupData.subjects || []).map(record), classrooms: (lookupData.classrooms || []).map(record), academicYears: mergeAcademicYears(lookupData.academicYears, academic.academicYears, [academic.selectedAcademicYear, academic.currentAcademicYear]) })
       const normalizedExams = examRows.map(record)
       setExams(normalizedExams)
       // Load each examination's saved timetable from the same existing child
@@ -151,10 +172,13 @@ export default function UnifiedExamManagement() {
       setLoadError(`${requestError?.requestPath ? `${requestError.requestPath} failed. ` : `Unable to load ${requestStage}. `}${message}`)
     }
     finally { setLoading(false) }
-  }, [academic.selectedCollegeId, academic.selectedAcademicYearId])
+  }, [academic.selectedCollegeId, academic.selectedAcademicYearId, academic.academicYears, academic.selectedAcademicYear, academic.currentAcademicYear])
 
   useEffect(() => { reload() }, [reload])
-  useEffect(() => { setDraft(value => ({ ...value, academicYearId: academic.selectedAcademicYearId ? String(academic.selectedAcademicYearId) : '' })) }, [academic.selectedAcademicYearId])
+  useEffect(() => {
+    const academicYearId = academic.selectedAcademicYearId || academic.selectedAcademicYear?.id || academic.selectedAcademicYear?.academicYearId || academic.currentAcademicYear?.id || academic.currentAcademicYear?.academicYearId || ''
+    setDraft(value => ({ ...value, academicYearId: academicYearId ? String(academicYearId) : '' }))
+  }, [academic.selectedAcademicYearId, academic.selectedAcademicYear, academic.currentAcademicYear])
 
   const loadExamAllocations = useCallback(async examId => {
     if (!examId) { setRoomExamAllocations([]); return [] }
@@ -628,4 +652,11 @@ export default function UnifiedExamManagement() {
   </main></DashboardLayout>
 }
 
-function initialDraft(academic) { return { examName:'', examCode:`EX-${new Date().getFullYear()}-${String(Date.now()).slice(-5)}`, academicYearId:academic.selectedAcademicYearId ? String(academic.selectedAcademicYearId) : '', examTypeId:'', customExamTypeName:'', branchId:'', courseId:'', year:'', semesterId:'', sectionId:'', startDate:'', endDate:'' } }
+function initialDraft(academic) {
+  const academicYearId = academic.selectedAcademicYearId || academic.selectedAcademicYear?.id || academic.selectedAcademicYear?.academicYearId || academic.currentAcademicYear?.id || academic.currentAcademicYear?.academicYearId || ''
+  return {
+    examName: '', examCode: `EX-${new Date().getFullYear()}-${String(Date.now()).slice(-5)}`,
+    academicYearId: academicYearId ? String(academicYearId) : '', examTypeId: '', customExamTypeName: '',
+    branchId: '', courseId: '', year: '', semesterId: '', sectionId: '', startDate: '', endDate: '',
+  }
+}
