@@ -8,3 +8,4 @@
 /.vs/BTech Backend/FileContentIndex/merges
 /.vs/BTech Backend/FileContentIndex
 *.sqlite
+/Backend/.github/copilot-instructions.md
