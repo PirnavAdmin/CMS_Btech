@@ -13,6 +13,7 @@ import FeeWorkspaceTabs from './FeeWorkspaceTabs'
 import { approveForAdmission } from '../../services/academicFeePlanApproval.js'
 import '../admin-management/AdminManagement.css'
 import './fees.css'
+import './fees-advanced.css'
 import { ProjectSelect } from '../../components/SearchableSelect'
 import { TableActionButton } from '../../components/TableActionButton';
 // Comprehensive Fee Management Module: Overview, Fee Plans, Student Fees, Payments, Reports
@@ -4913,10 +4914,33 @@ export const FeeManagementModule = (() => {
 
   function studentRecord(r) {
     const personal = r.personalDetails || r.personal || {};
-    const admission = r.admissionDetails || r.admission || {};
-    const academic = r.academicDetails || r.academic || {};
-    const merged = { ...r, ...admission, ...academic };
     const text = (...vals) => vals.find((v) => v != null && String(v).trim()) || "";
+    let formData = r.formData ?? r.FormData ?? r.frontendFormData ?? r.frontendFormDataJson ?? {};
+    if (typeof formData === "string") {
+      try { formData = JSON.parse(formData); } catch { formData = {}; }
+    }
+    if (!formData || typeof formData !== "object" || Array.isArray(formData)) formData = {};
+    const admission = r.admissionDetails || r.admission || formData.admission || {};
+    const academic = r.academicDetails || r.academic || formData.academic || {};
+    const merged = { ...r, ...admission, ...academic };
+    const quotaOther = text(
+      r.quotaOther, r.QuotaOther, academic.quotaOther, academic.QuotaOther,
+      formData.quotaOther, formData.QuotaOther, formData.academic?.quotaOther
+    );
+    const quotaSource = text(
+      r.admissionQuota, r.AdmissionQuota, admission.admissionQuota, admission.AdmissionQuota,
+      r.quota, r.Quota, admission.quota, academic.quota, academic.Quota,
+      formData.admissionQuota, formData.AdmissionQuota, formData.quota, formData.Quota,
+      formData.academic?.quota
+    );
+    const quota = String(quotaSource).trim().toLowerCase() === "other"
+      ? text(quotaOther, quotaSource)
+      : text(quotaSource, quotaOther);
+    const studentCategory = text(
+      r.studentCategory, r.StudentCategory, admission.studentCategory, academic.studentCategory,
+      formData.studentCategory, formData.StudentCategory, formData.academic?.studentCategory,
+      formData.admission?.studentCategory, r.category, r.Category
+    );
     return {
       id: String(r.studentId || r.id || ""),
       admissionId: r.admissionId || admission.admissionId,
@@ -4945,9 +4969,9 @@ export const FeeManagementModule = (() => {
       courseName: text(r.courseName, r.course, academic.courseName),
       branchName: text(r.branchName, r.branch, academic.branchName),
       collegeId: text(merged.collegeId),
-      category: text(r.admissionQuota, r.quota, r.studentCategory),
-      quota: text(academic.quotaOther, academic.quota, merged.admissionQuota, merged.quota),
-      studentCategory: text(merged.studentCategory),
+      category: text(quota, studentCategory, r.category, r.Category),
+      quota,
+      studentCategory,
       admissionType: text(merged.admissionType),
     };
   }
@@ -5475,22 +5499,32 @@ export const FeeManagementModule = (() => {
     const structure = details.structure;
     const components = structure?.feeComponents || structure?.academicFeePlan?.components || [];
     const installments = structure?.paymentSchedule || [];
-    return <SharedFeeDialog title={'Student Fee Profile — ' + student.name} onClose={onClose} maxWidth="1100px" className="fm-student-profile-dialog" showExport={false}
+    return <SharedFeeDialog title={'Student Fee Profile — ' + student.name} onClose={onClose} maxWidth="1240px" className="fm-student-profile-dialog" showExport={false}
       footerActions={<><button type="button" className="erp-btn erp-btn--secondary" onClick={onClose}>Close</button>{!loading && !error && outstanding > 0 && (canAction("/fees", "create") || canAction("/fees", "edit")) && <button type="button" className="erp-btn fm-collect-action" onClick={() => { if (!keepOpenForCollection) onClose(); onCollect({ ...student, balance: outstanding }); }}>Collect Payment</button>}</>}>
       <div className="fm-student-profile">
         <dl className="fm-student-facts">{[['Admission Number', student.admissionNumber || student.application], ['Student', student.name], ['Course / Branch', [student.courseName, student.branchName].filter(Boolean).join(' / ')], ['Admission Quota', structure?.quota || student.quota], ['Student Category', structure?.studentCategory || student.studentCategory], ['Batch', student.batch]].map(([label,value]) => <div key={label}><dt>{label}</dt><dd>{value || 'Not reported'}</dd></div>)}</dl>
         {loading ? <p role="status">Loading student fee records…</p> : error ? <div role="alert" className="fm-error-banner">{error}<button type="button" className="erp-btn erp-btn--secondary" onClick={() => setAttempt(value => value + 1)}>Retry</button></div> : <>
-          <div className="fm-profile-totals">{[['Total Assigned', null], ['Total Collected', collected], ['Outstanding', outstanding], ['Overdue', details.dues.length ? overdue : null]].map(([label,value]) => <div key={label}><small>{label}</small><strong>{reportedMoney(value)}</strong></div>)}</div>
-          <p className="fm-data-note">Complete assigned totals and settled semester details are currently unavailable. Outstanding covers pending obligations only. Confirmed student payments are listed below; semester references appear where recorded.</p>
-          <h3>Semester Fees</h3>
+          <section className="fm-profile-overview" aria-label="Fee summary">
+            <div className="fm-profile-totals">{[['Total Assigned', null], ['Total Collected', collected], ['Outstanding', outstanding], ['Overdue', details.dues.length ? overdue : null]].map(([label,value]) => <div key={label}><small>{label}</small><strong>{reportedMoney(value)}</strong></div>)}</div>
+            <p className="fm-data-note">Pending obligations are shown below. Assigned totals and settled semester details are not currently available.</p>
+          </section>
+          <section className="fm-profile-section" aria-labelledby="fm-profile-fees-title">
+          <div className="fm-profile-section-heading"><h3 id="fm-profile-fees-title">Semester Fees</h3><span className="fm-profile-count">{groups.length} {groups.length === 1 ? 'semester' : 'semesters'}</span></div>
+          <div className="fm-profile-table-wrap" role="region" aria-label="Semester fee obligations" tabIndex={0}>
           <table className="fm-profile-table"><thead><tr>{['Semester / Fee', 'Fee Amount', 'Paid', 'Balance', 'Due Date', 'Status'].map(label => <th key={label} scope="col">{label}</th>)}</tr></thead><tbody>
             {groups.map(group => <external0.Fragment key={group.key}><tr><th scope="row">{semesterName(group)}<small>{group.category}</small></th><td>{reportedMoney(group.amount)}</td><td>{reportedMoney(group.paid)}</td><td>{reportedMoney(group.balance)}</td><td>{date(group.dueDate)}</td><td>{group.status}</td></tr><tr><td colSpan={6}><details><summary>Installments and fee items ({group.rows.length})</summary><ul className="fm-obligation-list">{group.rows.map(row => <li key={row.studentFeeId}><strong>{row.feeCategory || 'Academic'} · {row.feeCode || 'Fee item'}</strong><span>Installment {row.installmentNumber || '—'} · Due {date(row.dueDate)}</span><span>Assigned {reportedMoney(row.payableAmount)} · Paid {reportedMoney(row.paidAmount)} · Balance {reportedMoney(row.balanceAmount)}</span></li>)}</ul></details></td></tr></external0.Fragment>)}
             {!groups.length && <tr><td colSpan={6}>No pending obligations returned. This does not confirm that no fees were assigned.</td></tr>}
           </tbody></table>
+          </div>
+          </section>
           {structure && <details className="fm-assignment-snapshot"><summary>Admission fee assignment — saved configuration</summary><p>Quota: {structure.quota || 'Not reported'} · Category: {structure.studentCategory || 'Not reported'}. This snapshot is shown separately from collection balances.</p>{components.length ? <ul>{components.map((row,index) => <li key={row.code || index}>{row.name || row.componentName || row.code}: {reportedMoney(row.amount)}</li>)}</ul> : <p>No component details returned.</p>}{installments.length > 0 && <ul>{installments.map((row,index) => <li key={row.number || index}>Installment {row.number || index + 1}: {reportedMoney(row.amount)} · {date(row.dueDate)}</li>)}</ul>}</details>}
           {details.integrationUnavailable && <p role="status">The admission fee configuration could not be loaded. Collection balances above are from the fee collection service.</p>}
-          <div className="fm-profile-section-heading"><h3>Payment History & Receipts</h3><ExportMenu title="Student payment history" filename={'student-payments-' + student.id} rows={details.payments} columns={[{label:'Receipt Number',value:'receiptNumber'},{label:'Date',value:'paymentDate'},{label:'Method',value:'paymentMode'},{label:'Fee',value:'feeAmount'},{label:'Fine',value:'fineAmount'},{label:'Total',value:'totalAmount'},{label:'Reference',value:'transactionReference'}]} /></div>
+          <section className="fm-profile-section" aria-labelledby="fm-profile-payments-title">
+          <div className="fm-profile-section-heading"><div><h3 id="fm-profile-payments-title">Payment History & Receipts</h3><p>Confirmed payments recorded for this student.</p></div><ExportMenu title="Student payment history" filename={'student-payments-' + student.id} rows={details.payments} columns={[{label:'Receipt Number',value:'receiptNumber'},{label:'Date',value:'paymentDate'},{label:'Method',value:'paymentMode'},{label:'Fee',value:'feeAmount'},{label:'Fine',value:'fineAmount'},{label:'Total',value:'totalAmount'},{label:'Reference',value:'transactionReference'}]} /></div>
+          <div className="fm-profile-table-wrap" role="region" aria-label="Payment history and receipts" tabIndex={0}>
           <table className="fm-profile-table"><thead><tr>{['Receipt Number','Payment Date','Method / Reference','Semester','Amount','Receipt'].map(label => <th key={label} scope="col">{label}</th>)}</tr></thead><tbody>{details.payments.map(payment => <tr key={payment.paymentId}><td>{payment.receiptNumber || 'Unavailable'}</td><td>{date(payment.paymentDate)}</td><td>{payment.paymentMode}<small>{payment.transactionReference || '—'}</small></td><td>{payment.semesterName || (payment.semesterId ? semesterName(payment) : 'Not reported')}</td><td>{reportedMoney(payment.totalAmount)}</td><td><button type="button" className="erp-btn erp-btn--secondary" disabled={!payment.receiptId} onClick={() => onOpenReceipt(payment, student)}>Receipt</button></td></tr>)}{!details.payments.length && <tr><td colSpan={6}>No confirmed payments returned.</td></tr>}</tbody></table>
+          </div>
+          </section>
         </>}
       </div>
     </SharedFeeDialog>;
