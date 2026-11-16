@@ -11,10 +11,11 @@ import Sidebar from '../components/Sidebar'
 import ThemeColorPicker from '../components/ThemeColorPicker'
 import { feeBreadcrumbs } from '../utils/feeNavigation'
 import HeaderAcademicYear from '../components/HeaderAcademicYear'
-import AcademicContextSelect from '../components/AcademicContextSelect'
+import CampusContextSelect from '../components/CampusContextSelect'
 import DeactivationBlockedDialog from '../components/DeactivationBlockedDialog'
 import { API_FAILURE_EVENT } from '../api/apiFailureNotice'
 import { dismissToast, getToasts, subscribeToToasts } from '../utils/toast'
+import { CAMPUS_SELECTION_EVENT } from '../utils/campusSelection'
 import './DashboardLayout.css'
 import './AccountMenu.css'
 import '../styles/error-notices.css'
@@ -108,6 +109,7 @@ export default function DashboardLayout({ children }) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [campusGeneration, setCampusGeneration] = useState(0)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('pirnav-sidebar-collapsed') === 'true')
   const [globalQuery, setGlobalQuery] = useState('')
   const [account, setAccount] = useState(() => ({
@@ -115,6 +117,12 @@ export default function DashboardLayout({ children }) {
     identifier: localStorage.getItem('btech-user-id') || sessionStorage.getItem('btech-user-id') || '',
   }))
   const { canView, access: accountAccess } = useScreenAccess()
+
+  useEffect(() => {
+    const handleCampusChange = () => setCampusGeneration(current => current + 1)
+    window.addEventListener(CAMPUS_SELECTION_EVENT, handleCampusChange)
+    return () => window.removeEventListener(CAMPUS_SELECTION_EVENT, handleCampusChange)
+  }, [])
 
   const userRole = getUserRole() || 'user'
   const mustChangePassword = localStorage.getItem('btech-must-change-password') === 'true' || sessionStorage.getItem('btech-must-change-password') === 'true'
@@ -345,9 +353,8 @@ export default function DashboardLayout({ children }) {
           <div className="global-search"><FiSearch aria-hidden="true" /><input aria-label="Search modules" value={globalQuery} onChange={(event) => setGlobalQuery(event.target.value)} placeholder="Search" />{globalResults.length > 0 && <div className="global-search-results">{globalResults.map(([label, to]) => <Link to={to} key={to} onClick={() => setGlobalQuery('')}>{label}</Link>)}</div>}</div>
 
           <div className="dashboard-header__actions">
-          <div className="dashboard-header__college">
-            <span className="dashboard-header__college-label">College</span>
-            <AcademicContextSelect kind="college" compact />
+          <div className="dashboard-header__campus">
+            <CampusContextSelect />
           </div>
           <HeaderAcademicYear />
           <ThemeColorPicker />
@@ -399,7 +406,7 @@ export default function DashboardLayout({ children }) {
           </div>
         </header>
 
-        <section className="page-content"><PageErrorNotices pathname={pathname} />{!(pathname === '/faculty' || pathname.startsWith('/faculty/')) && <nav className="app-breadcrumb" aria-label="Breadcrumb"><Link to="/dashboard">Home</Link>{financeBreadcrumbs ? financeBreadcrumbs.map((crumb, index) => <span className="app-breadcrumb__item" key={`${crumb.label}:${index}`}><span aria-hidden="true">/</span>{index === financeBreadcrumbs.length - 1 ? <strong>{crumb.label}</strong> : crumb.to ? <Link to={crumb.to}>{crumb.label}</Link> : <span>{crumb.label}</span>}</span>) : <><span aria-hidden="true">/</span><span>{breadcrumbSection}</span>{pageName !== breadcrumbSection && <><span aria-hidden="true">/</span><strong>{pageName}</strong></>}</>}</nav>}{children}</section>
+        <section className="page-content" key={campusGeneration}><PageErrorNotices pathname={pathname} />{!(pathname === '/faculty' || pathname.startsWith('/faculty/')) && <nav className="app-breadcrumb" aria-label="Breadcrumb"><Link to="/dashboard">Home</Link>{financeBreadcrumbs ? financeBreadcrumbs.map((crumb, index) => <span className="app-breadcrumb__item" key={`${crumb.label}:${index}`}><span aria-hidden="true">/</span>{index === financeBreadcrumbs.length - 1 ? <strong>{crumb.label}</strong> : crumb.to ? <Link to={crumb.to}>{crumb.label}</Link> : <span>{crumb.label}</span>}</span>) : <><span aria-hidden="true">/</span><span>{breadcrumbSection}</span>{pageName !== breadcrumbSection && <><span aria-hidden="true">/</span><strong>{pageName}</strong></>}</>}</nav>}{children}</section>
         <DeactivationBlockedDialog />
 
         {/* Logout Confirmation Modal */}

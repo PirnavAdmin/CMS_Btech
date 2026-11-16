@@ -481,9 +481,9 @@ const dataResponse = (response) => response?.data?.data ?? response?.data ?? res
 const listData = (response) => listResponse(response)
 
 export const campusApi = {
-  async list({ collegeId, isSuperAdmin, pageNumber }) {
+  async list({ collegeId, isSuperAdmin, pageNumber, pageSize = 25, isActive }) {
     const scope = requiredId(collegeId, 'College ID')
-    const params = { pageNumber, pageSize: 25 }
+    const params = { pageNumber, pageSize, isActive }
     const readCollegeDirectory = () => request(withQuery(endpoint('/api/v1/campuses'), { ...params, collegeId: scope }))
     let response
     if (isSuperAdmin) {
