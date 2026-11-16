@@ -64,6 +64,10 @@ const STEP_ICONS = [FiUser, FiPhone, FiUsers, FiBookOpen, FiFileText, FiHome, Fi
 const STATUS = { DRAFT: 'Draft', PENDING: 'Pending', SUBMITTED: 'Submitted', APPLICATION_SUBMITTED: 'Submitted', UNDER_REVIEW: 'Under Review', VERIFIED: 'Verified', APPROVED: 'Approved', CORRECTION_REQUIRED: 'Correction Required', REJECTED: 'Rejected' }
 const normalizeStatus = raw => normalizeAdmissionStatus(raw)
 const formatFeeStatus = value => String(value || 'Pending').trim().toLowerCase().replace(/[_-]+/g, ' ').replace(/\b\w/g, character => character.toUpperCase())
+const admissionFeeStatus = value => {
+  const status = String(value ?? '').trim()
+  return !status || status.toLowerCase() === 'unavailable' ? 'In Progress' : status
+}
 const formatPaymentPreference = value => {
   if (!value) return 'Full Payment'
   const val = String(value).trim().toUpperCase()
@@ -493,7 +497,7 @@ function AddressFields({ data, prefix, update, errors, markTouched }) { return [
 function Breadcrumb({ tail }) { return <div className="sa-breadcrumb"><span>Student Management</span><FiChevronRight /><span>Admissions</span>{tail && <><FiChevronRight /><strong>{tail}</strong></>}</div> }
 
 function AdmissionFilters({ rows, query, setQuery, filters, setFilters, hidden = false }) {
-  const options = key => [...new Set(rows.map(item => key === 'status' ? item.status : key === 'feeStatus' ? (item.fees?.paymentStatus || 'Pending') : key === 'quota' ? quota(item) : item.academic?.[key]).filter(Boolean))].sort()
+  const options = key => [...new Set(rows.map(item => key === 'status' ? item.status : key === 'feeStatus' ? admissionFeeStatus(item.fees?.paymentStatus) : key === 'quota' ? quota(item) : item.academic?.[key]).filter(Boolean))].sort()
   const active = Object.entries(filters).filter(([,value]) => value)
   const clear = () => { setQuery(''); setFilters(Object.fromEntries(FILTERS.map(([key]) => [key, '']))) }
   return (
@@ -604,7 +608,7 @@ function AdmissionList() {
   const shown = useMemo(() => scopedRows.filter(item => {
     const needle = [studentName(item),item?.application?.number,item?.application?.admissionNumber,item?.application?.registrationNumber,item?.contact?.mobile,item?.contact?.email].join(' ').toLowerCase()
     const normStat = normalizeStatus(item?.status)
-    const values = { status: normStat, course: item?.academic?.course, department: item?.academic?.department, branch: item?.academic?.branch, semester: item?.academic?.semester, admissionType: item?.academic?.admissionType, quota: quota(item), feeStatus: item?.fees?.paymentStatus || 'Pending' }
+    const values = { status: normStat, course: item?.academic?.course, department: item?.academic?.department, branch: item?.academic?.branch, semester: item?.academic?.semester, admissionType: item?.academic?.admissionType, quota: quota(item), feeStatus: admissionFeeStatus(item?.fees?.paymentStatus) }
     return needle.includes(query.trim().toLowerCase()) && Object.entries(filters).every(([key,value]) => !value || values[key] === value)
   }), [scopedRows, query, filters])
   useEffect(() => { setPage(1) }, [query, filters])
@@ -680,7 +684,7 @@ function AdmissionList() {
               <tbody>
                 {pageRows.map(item => {
                   const normStat = normalizeStatus(item.status)
-                  const feeStat = item.fees?.paymentStatus || 'Pending'
+                  const feeStat = admissionFeeStatus(item.fees?.paymentStatus)
                   const isEditable = canEdit && ['DRAFT', 'CORRECTION_REQUIRED'].includes(normStat)
                   const isReviewable = canEdit && ['SUBMITTED', 'PENDING', 'UNDER_REVIEW', 'VERIFIED'].includes(normStat)
                   const targetId = item.admissionId || item.id || item.studentAdmissionId

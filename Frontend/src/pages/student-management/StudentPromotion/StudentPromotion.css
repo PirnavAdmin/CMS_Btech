@@ -1198,3 +1198,4 @@
 .promotion-confirm-context { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0; }
 .promotion-confirm-context dt { color: var(--text-muted); font-size: 12px; }
 .promotion-confirm-context dd { margin: 4px 0 0; font-weight: 600; }
+.promotion-confirm-override { margin: 14px 0 0; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--warning) 35%, var(--border)); border-radius: 8px; color: var(--text-primary); background: color-mix(in srgb, var(--warning) 9%, var(--surface)); font-size: 12px; line-height: 1.45; }
