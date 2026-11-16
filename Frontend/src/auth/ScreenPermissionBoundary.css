@@ -3,3 +3,6 @@
 #root .workspace-unavailable__data { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 16px; min-height: 180px; padding: 24px; border: 1px solid var(--ui-border, #dbe5ef); border-radius: 14px; background: var(--ui-surface, #fff); }
 #root .workspace-unavailable__data p { margin: 0; color: var(--ui-muted, var(--text-muted)); font-size: 14px; }
 #root .workspace-unavailable__data button { padding: 8px 16px; border: 1px solid var(--ui-border, var(--border-strong)); border-radius: 8px; background: var(--ui-surface, #fff); color: var(--ui-text, #0f2745); font: inherit; cursor: pointer; }
+#root .screen-access-loading { min-height: 100vh; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 24px; color: var(--ui-muted, var(--text-muted)); background: var(--ui-page, var(--bg, #f5f3eb)); font-family: inherit; font-size: 14px; font-weight: 500; line-height: 1.4; }
+#root .screen-access-loading__spinner { width: 18px; height: 18px; border: 2px solid var(--ui-border, #dbe5ef); border-top-color: var(--brand, #6c674f); border-radius: 50%; animation: screen-access-spin .7s linear infinite; }
+@keyframes screen-access-spin { to { transform: rotate(360deg); } }

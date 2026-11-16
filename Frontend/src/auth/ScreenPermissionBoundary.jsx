@@ -15,12 +15,10 @@ export default function ScreenPermissionBoundary({ children }) {
   const page = MODULE_REGISTRY.filter(entry => pathname === entry.path || pathname.startsWith(entry.path + '/'))
     .sort((a, b) => b.path.length - a.path.length)[0]
   if (canAction(pathname, requiredActionForScreen(pathname))) return <Fragment key={collegeId || 'unselected'}>{children}</Fragment>
-  if (loading) return shell(<main className="workspace-unavailable">
-    <h1>{page?.label || 'Workspace'}</h1>
-    <section className="workspace-unavailable__data" aria-label="Page data">
-      <p role="status">Loading page data…</p>
-    </section>
-  </main>)
+  if (loading) return <main className="screen-access-loading" role="status" aria-busy="true">
+    <span className="screen-access-loading__spinner" aria-hidden="true" />
+    <span>Loading workspace...</span>
+  </main>
   const settingsContextError = pathname.replace(/\/$/, '') === '/settings' ? academic?.error : null
   if (error || settingsContextError) return (
     shell(<main className="workspace-unavailable">

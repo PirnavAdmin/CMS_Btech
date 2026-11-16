@@ -53,6 +53,14 @@ export class AuthRequestError extends Error {
 }
 
 export const API_ENDPOINTS = Object.freeze({
+  demoRequests: Object.freeze({
+    list: endpoint('/api/v1/demo-requests'),
+  }),
+  subscriptions: Object.freeze({
+    list: endpoint('/api/v1/subscriptions'),
+    create: endpoint('/api/v1/subscriptions'),
+    update: id => endpoint(`/api/v1/subscriptions/${id}`),
+  }),
   exports: Object.freeze({
     list: endpoint('/api/v1/exports'),
     screen: screen => endpoint(`/api/v1/exports/${encodeURIComponent(screen === 'semester' ? 'semesters' : screen)}`),
@@ -580,6 +588,34 @@ export const userDirectoryApi = {
   resetPassword: id => request(endpoint(`/api/v1/admin/users/${encodeURIComponent(id)}/reset-password`), { method: 'POST' }),
   activity: async (id, params = {}) => (await request(withQuery(endpoint(`/api/v1/admin/users/${encodeURIComponent(id)}/activity`), params)))?.data ?? [],
   exportCsv: params => screenExportsApi.download('users', { Format: 'csv', ...params }),
+}
+
+export const demoRequestsApi = {
+  list: async params => {
+    const rows = extractListResponse(await request(withQuery(API_ENDPOINTS.demoRequests.list, params)))
+    if (!rows) throw new Error('The demo request list returned an unexpected response.')
+    return rows
+  },
+}
+
+export const subscriptionsApi = {
+  list: async () => {
+    const rows = extractListResponse(await request(API_ENDPOINTS.subscriptions.list))
+    if (!rows) throw new Error('The subscription list returned an unexpected response.')
+    return rows
+  },
+  create: async payload => {
+    const response = await request(API_ENDPOINTS.subscriptions.create, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+    })
+    return response?.data?.data ?? response?.data
+  },
+  update: async (id, payload) => {
+    const response = await request(API_ENDPOINTS.subscriptions.update(encodeURIComponent(id)), {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+    })
+    return response?.data?.data ?? response?.data
+  },
 }
 
 export const collegeUserMappingsApi = {

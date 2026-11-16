@@ -788,7 +788,7 @@ const normalizeCollegeType = (rawType) => {
 }
 const ACCREDITATION_STATUSES = ['Accredited', 'Not Accredited', 'Under Review', 'Expired']
 const FORM_TABS = [
-  { id: 'college', label: 'College Information', shortLabel: 'College' },
+  { id: 'college', label: 'Organization Information', shortLabel: 'Organization' },
   { id: 'address', label: 'Address', shortLabel: 'Address' },
   { id: 'contact', label: 'Contact Information', shortLabel: 'Contact' },
   { id: 'administration', label: 'Administration', shortLabel: 'Admin' },
@@ -1403,10 +1403,10 @@ function LegacyCollegeForm({ editId, onDismiss, onSaved, resumeDraft = false }) 
   const optionalStep = completionSchemas.college.some(group => group.id === activeTab && !group.fields.some(field => field.required))
   const step = FORM_TABS.findIndex(tab => tab.id === activeTab) + 1
   const busy = submitting || saved
-  const title = editId ? 'Edit College' : inModal ? 'Add New College' : 'Add College'
+  const title = editId ? 'Edit Organization' : inModal ? 'Add New Organization' : 'Add Organization'
   const footer = <>
     {saved
-      ? <span className="ac-save-success" role="status">{editId ? 'College updated successfully.' : 'College added successfully!'}</span>
+      ? <span className="ac-save-success" role="status">{editId ? 'Organization updated successfully.' : 'Organization added successfully!'}</span>
       : <span className="ac-step-count">Step {step} of {FORM_TABS.length}</span>}
     <div className="ac-footer-buttons">
       {inModal && activeTab !== 'review' && <button type="button" className="ac-secondary" disabled={busy} onClick={requestLeave}>Cancel</button>}
@@ -1415,18 +1415,18 @@ function LegacyCollegeForm({ editId, onDismiss, onSaved, resumeDraft = false }) 
       {activeTab !== 'review'
         ? <button type="button" className="ac-primary" disabled={busy || readingLogo || loadingCollege || Boolean(collegeLoadError)} onClick={saveAndNext}>Next</button>
         : <button type="button" className="ac-primary" disabled={busy || readingLogo || loadingCollege} onClick={submit}>
-          {submitting ? 'Saving...' : saved ? 'Saved' : editId ? 'Save Changes' : 'Submit College'}
+          {submitting ? 'Saving...' : saved ? 'Saved' : editId ? 'Save Changes' : 'Submit Organization'}
         </button>}
     </div>
   </>
   const form = collegeLoadError
     ? <AsyncState status="error" message={collegeLoadError} onRetry={() => setLoadAttempt(value => value + 1)} />
     : <>
-    {loadingCollege && <div className="ac-notice" role="status">Loading college details...</div>}
+    {loadingCollege && <div className="ac-notice" role="status">Loading organization details...</div>}
     {submitError && <div className="ac-submit-error" role="alert">{submitError}</div>}
     <div className="college-form-layout" data-without-live-preview="true">
       <form className="college-form-main" aria-busy={submitting || loadingCollege || readingLogo} onSubmit={(event) => event.preventDefault()} noValidate>
-        <nav ref={tabsNavRef} className="ac-tabs" aria-label="College form sections" role="tablist">
+        <nav ref={tabsNavRef} className="ac-tabs" aria-label="Organization form sections" role="tablist">
           {FORM_TABS.map((tab, index) => {
             const isCompleted = index < highestUnlockedTab
             const isActive = activeTab === tab.id
@@ -1456,11 +1456,11 @@ function LegacyCollegeForm({ editId, onDismiss, onSaved, resumeDraft = false }) 
         </nav>
         <fieldset className="ac-panel" disabled={busy || loadingCollege} role="tabpanel" id={`college-panel-${activeTab}`} aria-labelledby={`college-tab-${activeTab}`} tabIndex={0}>
         {activeTab === 'college' && <>
-        {section('College Information', 'Core identity and affiliation details.', <>
-          <Field label="College Name" name="collegeName" values={values} errors={{ ...errors, ...(duplicateName ? { collegeName: 'A college with this name already exists.' } : {}) }} touched={touched} onChange={update} required maxLength={120} placeholder="e.g. Crescent Institute of Technology" />
-          <Field label="College Code" name="collegeCode" values={values} errors={{ ...errors, ...(duplicateCode ? { collegeCode: 'This college code already exists.' } : {}) }} touched={touched} onChange={update} required maxLength={12} placeholder="e.g. CIT2026" />
-          <label className="ac-field" htmlFor="ac-collegeType"><span>College Type</span><ProjectSelect id="ac-collegeType" name="collegeType" value={values.collegeType} onChange={update} onBlur={() => setTouched((current) => ({ ...current, collegeType: true }))} aria-invalid={Boolean((touched.collegeType || Boolean(values.collegeType)) && errors.collegeType)}><option value="">Select type</option>{TYPES.map((type) => <option key={type}>{type}</option>)}{values.collegeType === 'Other' && <option value="Other">Other</option>}</ProjectSelect>{(touched.collegeType || Boolean(values.collegeType)) && errors.collegeType && <small className="ac-error" role="alert">{errors.collegeType}</small>}</label>
-          {isOtherType(values.collegeType) && <Field label="Specify College Type" name="collegeTypeOther" values={values} errors={errors} touched={touched} onChange={update} required maxLength={60} placeholder="e.g. Community College" />}
+        {section('Organization Information', 'Core identity and affiliation details.', <>
+          <Field label="Organization Name" name="collegeName" values={values} errors={{ ...errors, ...(duplicateName ? { collegeName: 'An organization with this name already exists.' } : {}) }} touched={touched} onChange={update} required maxLength={120} placeholder="e.g. Crescent Institute of Technology" />
+          <Field label="Organization Code" name="collegeCode" values={values} errors={{ ...errors, ...(duplicateCode ? { collegeCode: 'This organization code already exists.' } : {}) }} touched={touched} onChange={update} required maxLength={12} placeholder="e.g. CIT2026" />
+          <label className="ac-field" htmlFor="ac-collegeType"><span>Organization Type</span><ProjectSelect id="ac-collegeType" name="collegeType" value={values.collegeType} onChange={update} onBlur={() => setTouched((current) => ({ ...current, collegeType: true }))} aria-invalid={Boolean((touched.collegeType || Boolean(values.collegeType)) && errors.collegeType)}><option value="">Select type</option>{TYPES.map((type) => <option key={type}>{type}</option>)}{values.collegeType === 'Other' && <option value="Other">Other</option>}</ProjectSelect>{(touched.collegeType || Boolean(values.collegeType)) && errors.collegeType && <small className="ac-error" role="alert">{errors.collegeType}</small>}</label>
+          {isOtherType(values.collegeType) && <Field label="Specify Organization Type" name="collegeTypeOther" values={values} errors={errors} touched={touched} onChange={update} required maxLength={60} placeholder="e.g. Community College" />}
           <Field label="University Name" name="universityName" values={values} errors={errors} touched={touched} onChange={update} maxLength={120} placeholder="Affiliated university" readOnly={values.collegeType === 'Deemed University'} />
           <div className="ac-upload ac-span-2" role="group" aria-label="College logo" aria-busy={readingLogo} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); selectLogo(e.dataTransfer.files[0]) }}>
             <input ref={fileRef} type="file" aria-label="Choose college logo" accept=".png,.jpg,.jpeg,.webp" onChange={(e) => selectLogo(e.target.files?.[0])} hidden />
@@ -1545,7 +1545,7 @@ function LegacyCollegeForm({ editId, onDismiss, onSaved, resumeDraft = false }) 
   </ViewDialog>
 
   return <main className="add-college">
-    <nav className="ac-breadcrumb" aria-label="Breadcrumb"><Link to="/settings">Global Settings</Link><span aria-hidden="true">/</span><Link to="/college-institution-management">College Configuration</Link><span aria-hidden="true">/</span><span aria-current="page">{title}</span></nav>
+    <nav className="ac-breadcrumb" aria-label="Breadcrumb"><Link to="/settings">Global Settings</Link><span aria-hidden="true">/</span><Link to="/college-institution-management">Organization Configuration</Link><span aria-hidden="true">/</span><span aria-current="page">{title}</span></nav>
     <header className="ac-page-header"><div><h1>{title}</h1><p>{editId ? 'Update college details' : 'Configure college details'}</p></div><button className="ac-back" type="button" onClick={requestLeave}><FiArrowLeft aria-hidden="true" />Back</button></header>
     {form}
     {confirmation}
@@ -2445,11 +2445,11 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
             <Link className="college-back-link" to="/settings"><FiArrowLeft /> Global Settings</Link>
             <header className="college-config-heading">
               <div>
-                <h1>College Configuration</h1>
-                <p className="college-config-context"><span>Working College</span><strong>{selectedCollege?.name || selectedCollege?.collegeName || 'Not selected'}</strong><small>{selectedCollege?.code || selectedCollege?.collegeCode || ''}</small></p>
+                <h1>Organization Configuration</h1>
+                <p className="college-config-context"><span>Working Organization</span><strong>{selectedCollege?.name || selectedCollege?.collegeName || 'Not selected'}</strong><small>{selectedCollege?.code || selectedCollege?.collegeCode || ''}</small></p>
               </div>
-              <CompactSummaryImports_default label="College summary" items={summaryCards.map(({ label, value, tone }) => ({
-                label: `${label} Colleges`,
+              <CompactSummaryImports_default label="Organization summary" items={summaryCards.map(({ label, value, tone }) => ({
+                label: `${label} Organizations`,
                 value: collegeSummary.loading || value === null ? '—' : Number(value).toLocaleString('en-IN'),
                 tone: tone === 'inactive' ? 'danger' : tone,
               }))} />
@@ -2457,7 +2457,7 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
             {collegeSummary.error && !collegeError && <p role="alert">{collegeSummary.error}</p>}
             {visibleCollegeDraft?.values && canCreateCollege && (
               <aside className="college-config-draft">
-                <div><small>Unsaved college draft</small><strong>{visibleCollegeDraft.values.collegeName || 'New college draft'}</strong></div>
+                <div><small>Unsaved organization draft</small><strong>{visibleCollegeDraft.values.collegeName || 'New organization draft'}</strong></div>
                 <div className="college-config-actions">
                   <button type="button" className="erp-btn erp-btn--primary" onClick={() => setCollegeForm({ resumeDraft: true })}>Resume draft</button>
                   <button type="button" className="erp-btn erp-btn--secondary" onClick={() => { localStorage.removeItem(NEW_COLLEGE_DRAFT_KEY); setCollegeDraft(null) }}>Discard draft</button>
@@ -2466,10 +2466,10 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
             )}
             <section className="college-config-directory" aria-labelledby="college-directory-title">
               <header className="college-config-directory-header">
-                <h2 id="college-directory-title">College Directory</h2>
+                <h2 id="college-directory-title">Organization Directory</h2>
                 <div className="college-config-actions">
-                  <ExportMenu rows={filteredColleges} columns={collegeColumns} title="Colleges" filename="colleges" loading={isCollegesLoading || Boolean(collegeError)} />
-                  {canCreateCollege && <button type="button" className="erp-btn erp-btn--primary" onClick={openAdd}><Plus aria-hidden="true" /> Add College</button>}
+                  <ExportMenu rows={filteredColleges} columns={collegeColumns} title="Organizations" filename="organizations" loading={isCollegesLoading || Boolean(collegeError)} />
+                  {canCreateCollege && <button type="button" className="erp-btn erp-btn--primary" onClick={openAdd}><Plus aria-hidden="true" /> Add Organization</button>}
                 </div>
               </header>
               <FilterPanelImports_default
@@ -2477,13 +2477,13 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
                 active={Boolean(typeFilter || statusFilter)}
                 appliedFilters={[typeFilter, statusFilter === 'active' ? 'Active' : statusFilter === 'inactive' ? 'Inactive' : ''].filter(Boolean)}
                 onClear={() => { setTypeFilter(''); setStatusFilter(''); setCurrentPage(1) }}
-                search={<label className="college-config-search"><FiSearch aria-hidden="true" /><input type="search" placeholder="Search by name, code or city…" value={searchTerm} onChange={handleSearchChange} aria-label="Search colleges" /></label>}
+                search={<label className="college-config-search"><FiSearch aria-hidden="true" /><input type="search" placeholder="Search by organization name, code or city…" value={searchTerm} onChange={handleSearchChange} aria-label="Search organizations" /></label>}
                 filters={<div className="college-config-toolbar">
-                  <ProjectSelect aria-label="Filter colleges by type" value={typeFilter} onChange={event => { setTypeFilter(event.target.value); setCurrentPage(1) }}>
-                    <option value="">All types</option>
+                  <ProjectSelect aria-label="Filter organizations by type" value={typeFilter} onChange={event => { setTypeFilter(event.target.value); setCurrentPage(1) }}>
+                    <option value="">All organization types</option>
                     {availableCollegeTypes.map(type => <option key={type}>{type}</option>)}
                   </ProjectSelect>
-                  <div className="college-config-filter-tabs" role="group" aria-label="College status">
+                  <div className="college-config-filter-tabs" role="group" aria-label="Organization status">
                     {[['', 'All'], ['active', 'Active'], ['inactive', 'Inactive']].map(([value, label]) => (
                       <button key={label} type="button" aria-pressed={statusFilter === value} onClick={() => { setStatusFilter(value); setCurrentPage(1) }}>{label}</button>
                     ))}
@@ -2492,7 +2492,7 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
               />
             {isCollegesLoading ? (
               <div className="cm-empty">
-                <p>Loading colleges...</p>
+                <p>Loading organizations...</p>
               </div>
             ) : collegeError ? (
               <div className="cm-empty cm-empty--error" role="alert">
@@ -2504,14 +2504,14 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
             ) : filteredColleges.length === 0 ? (
               <EmptyStateImports_default
                 className="college-config-empty"
-                title={searchTerm || typeFilter || statusFilter ? 'No matching colleges' : 'No colleges found'}
-                description={searchTerm || typeFilter || statusFilter ? 'Try a different search or adjust the filters.' : isAssignedCollegeAdmin ? 'No assigned or created colleges were found.' : visibleCollegeDraft?.values && canCreateCollege ? 'Resume your draft above to finish adding a college.' : undefined}
+                title={searchTerm || typeFilter || statusFilter ? 'No matching organizations' : 'No organizations found'}
+                description={searchTerm || typeFilter || statusFilter ? 'Try a different search or adjust the filters.' : isAssignedCollegeAdmin ? 'No assigned or created organizations were found.' : visibleCollegeDraft?.values && canCreateCollege ? 'Resume your draft above to finish adding an organization.' : undefined}
               />
             ) : (
               <>
-                <DataTable caption="Colleges" tableClassName="college-config-table" rows={filteredColleges} pagination={{ page: currentPage, pageSize: itemsPerPage, onPageChange: setCurrentPage }} columns={[
-                  { key:'name', label:'College', className:'college-col-identity', render:college => <div className="college-config-identity"><CollegeLogoImage src={college.logo} fallbackSrc={getCollegeLogoEndpoint(college.id)} alt="" code={college.code} className="college-config-logo" /><div><button type="button" className="college-config-name" title={college.name} aria-label={`View details for ${college.name}`} onClick={() => openDetails(college)}>{college.name}</button><small title={college.type}>{college.type}</small>{String(selectedCollegeId) === String(college.id) && <span className="college-config-working">Working college</span>}</div></div> },
-                  { key:'code', label:'College Code', className:'college-col-code', render:college => <code className="college-config-truncate" title={college.code}>{college.code}</code> },
+                <DataTable caption="Organizations" tableClassName="college-config-table" rows={filteredColleges} pagination={{ page: currentPage, pageSize: itemsPerPage, onPageChange: setCurrentPage }} columns={[
+                  { key:'name', label:'Organization Name', className:'college-col-identity', render:college => <div className="college-config-identity"><CollegeLogoImage src={college.logo} fallbackSrc={getCollegeLogoEndpoint(college.id)} alt="" code={college.code} className="college-config-logo" /><div><button type="button" className="college-config-name" title={college.name} aria-label={`View details for ${college.name}`} onClick={() => openDetails(college)}>{college.name}</button><small title={college.type}>{college.type}</small>{String(selectedCollegeId) === String(college.id) && <span className="college-config-working">Working organization</span>}</div></div> },
+                  { key:'code', label:'Organization Code', className:'college-col-code', render:college => <code className="college-config-truncate" title={college.code}>{college.code}</code> },
                   { key:'university', label:'Affiliation / University', className:'college-col-affiliation', render:college => <span className="college-config-truncate" title={college.university}>{college.university || '—'}</span> },
                   { key:'address', label:'Location', className:'college-col-location', render:college => <span className="college-config-truncate" title={[college.addressLine1 || college.address, college.city, college.state].filter(Boolean).join(', ')}>{[college.addressLine1 || college.address, college.city, college.state].filter(Boolean).join(', ') || '—'}</span> },
                   { key:'contact', label:'Contact', className:'college-col-contact', render:college => <div><span className="college-config-truncate" title={college.contact}>{college.contact || '—'}</span><small className="college-config-email college-config-truncate" title={college.email}>{college.email || '—'}</small></div> },
@@ -2531,34 +2531,34 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
             <form className="cm-form cm-modal-card" onSubmit={handleSave} noValidate>
               <header className="cm-header">
                 <div>
-                  <h1>Edit College</h1>
-                  <p>Fill in the college's details below.</p>
+                  <h1>Edit Organization</h1>
+                  <p>Fill in the organization's details below.</p>
                 </div>
                 <button type="button" className="cm-secondary-btn" onClick={backToList}>
                   <FiArrowLeft /> Back
                 </button>
               </header>
 
-              {isCollegeDetailsLoading && <p>Loading college details...</p>}
+              {isCollegeDetailsLoading && <p>Loading organization details...</p>}
               {collegeError && <p className="cm-field-error" role="alert">{collegeError}</p>}
 
               <div className="cm-form-grid">
                 <label>
-                  <span>College Name *</span>
+                  <span>Organization Name *</span>
                   <input type="text" name="name" value={formValues.name} onChange={updateField} placeholder="e.g. Engineering College Name" />
                   {errors.name && <p className="cm-field-error">{errors.name}</p>}
                 </label>
 
                 <label>
-                  <span>College Code *</span>
+                  <span>Organization Code *</span>
                   <input type="text" name="code" value={formValues.code} onChange={updateField} placeholder="e.g. ABCE001" />
                   {errors.code && <p className="cm-field-error">{errors.code}</p>}
                 </label>
 
                 <label>
-                  <span>College Type *</span>
+                  <span>Organization Type *</span>
                   <ProjectSelect name="type" value={formValues.type} onChange={updateField}>
-                    <option value="">Select College Type</option>
+                    <option value="">Select Organization Type</option>
                     {COLLEGE_TYPES.map((type) => (
                       <option key={type} value={type}>{type}</option>
                     ))}
@@ -2602,13 +2602,13 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
 
                 <label>
                   <span>Email *</span>
-                  <input type="text" name="email" value={formValues.email} onChange={updateField} placeholder="college@example.edu" />
+                  <input type="text" name="email" value={formValues.email} onChange={updateField} placeholder="office@example.org" />
                   {errors.email && <p className="cm-field-error">{errors.email}</p>}
                 </label>
 
                 <label>
                   <span>Website</span>
-                  <input type="text" name="website" value={formValues.website} onChange={updateField} onBlur={normalizeEditWebsite} placeholder="https://college.edu" />
+                  <input type="text" name="website" value={formValues.website} onChange={updateField} onBlur={normalizeEditWebsite} placeholder="https://organization.org" />
                   {errors.website && <p className="cm-field-error">{errors.website}</p>}
                 </label>
 
@@ -2624,12 +2624,12 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
                 </label>
 
                 <label className="cm-span-2">
-                  <span>College Logo</span>
+                  <span>Organization Logo</span>
                   <input type="file" accept="image/*" onChange={handleLogoUpload} />
                   {(formValues.logo || activeId) && <CollegeLogoImage
                     src={formValues.logo}
                     fallbackSrc={activeId ? getCollegeLogoEndpoint(activeId) : ''}
-                    alt={formValues.name || 'College logo'}
+                    alt={formValues.name || 'Organization logo'}
                     code={formValues.code}
                     className="cm-logo-preview"
                   />}
@@ -2647,19 +2647,19 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
         )}
 
         {collegeForm && <AddCollegeScreen.CollegeForm editId={collegeForm.editId} resumeDraft={collegeForm.resumeDraft} onDismiss={closeCollegeForm} onSaved={afterCollegeSave} />}
-        {viewMode === 'details' && activeCollege && <ViewDialog className="college-workspace-dialog" title="College Details" subtitle={activeCollege.name} onClose={backToList} maxWidth="920px" exportFilename={`college_${activeCollege.code || activeCollege.id}`} footerActions={canEditCollege && canManageCollege(activeCollege) ? <button className="erp-btn erp-btn--primary" onClick={() => openEdit(activeCollege)}>Edit college</button> : null}>
+        {viewMode === 'details' && activeCollege && <ViewDialog className="college-workspace-dialog" title="Organization Details" subtitle={activeCollege.name} onClose={backToList} maxWidth="920px" exportFilename={`organization_${activeCollege.code || activeCollege.id}`} footerActions={canEditCollege && canManageCollege(activeCollege) ? <button className="erp-btn erp-btn--primary" onClick={() => openEdit(activeCollege)}>Edit organization</button> : null}>
           {isCollegeDetailsLoading ? <AsyncState status="loading" title="Loading college details…" /> : collegeError ? <AsyncState status="error" message={collegeError} onRetry={() => openDetails(activeCollege)} /> : <><CompletionSummary completion={activeCollege.completion} name={activeCollege.name} onClick={canEditCollege && canManageCollege(activeCollege) ? () => openEdit(activeCollege) : undefined} /><div className="college-config-detail-identity"><CollegeLogoImage src={activeCollege.logo} fallbackSrc={getCollegeLogoEndpoint(activeCollege.id)} alt="" code={activeCollege.code} className="college-config-logo" /><div><h3>{activeCollege.name}</h3><p>{activeCollege.code} · {activeCollege.university}</p></div><StatusBadge value={activeCollege.status === 'active' ? 'Active' : 'Inactive'} /></div><div className="college-config-detail-grid">
                 <InfoCard
-                  title="Basic College Information"
+                  title="Basic Organization Information"
                   icon={AcademicIcon}
                   items={[
-                    { label: 'College Name', value: activeCollege.name },
-                    { label: 'College Code', value: activeCollege.code },
-                    { label: 'College Type', value: activeCollege.type },
+                    { label: 'Organization Name', value: activeCollege.name },
+                    { label: 'Organization Code', value: activeCollege.code },
+                    { label: 'Organization Type', value: activeCollege.type },
                     { label: 'University Name', value: activeCollege.university },
                     { label: 'Start Date', value: activeCollege.startDate },
                     { label: 'End Date', value: activeCollege.endDate },
-                    { label: 'College Status', value: activeCollege.status === 'active' ? 'Active' : 'Inactive' },
+                    { label: 'Organization Status', value: activeCollege.status === 'active' ? 'Active' : 'Inactive' },
                   ]}
                 />
 
@@ -2718,11 +2718,11 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
           <div className="cm-settings">
             <header className="cm-header">
               <div>
-                <h1>College Settings</h1>
-                <p>Manage academic and college settings for every college.</p>
+                <h1>Organization Settings</h1>
+                <p>Manage academic and organization settings for every organization.</p>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <ExportMenu rows={settingsList} columns={collegeSettingsColumns} title="College Settings" filename="college-settings" loading={isSettingsLoading || Boolean(settingsListError)} /><button type="button" className="cm-primary-btn" onClick={openAddSettings}>
+                <ExportMenu rows={settingsList} columns={collegeSettingsColumns} title="Organization Settings" filename="organization-settings" loading={isSettingsLoading || Boolean(settingsListError)} /><button type="button" className="cm-primary-btn" onClick={openAddSettings}>
                   + Add Settings
                 </button>
                 <button type="button" className="cm-secondary-btn" onClick={backToList}>
@@ -2731,7 +2731,7 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
               </div>
             </header>
 
-            {isSettingsLoading && <p>Loading college settings...</p>}
+            {isSettingsLoading && <p>Loading organization settings...</p>}
 
             {!isSettingsLoading && settingsListError && (
               <div className="cm-empty cm-empty--error" role="alert">
@@ -2744,7 +2744,7 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
 
             {!isSettingsLoading && !settingsListError && settingsList.length === 0 && (
               <div className="cm-empty">
-                <p>No college settings found.</p>
+                <p>No organization settings found.</p>
                 <button type="button" className="cm-primary-btn" onClick={openAddSettings}>
                   + Add your first settings record
                 </button>
@@ -2756,7 +2756,7 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
                 <table className="cm-table">
                   <thead>
                     <tr>
-                      <th>College Name</th>
+                      <th>Organization Name</th>
                       <th className="table-center">Code</th>
                       <th>Email</th>
                       <th>City / State</th>
@@ -2812,7 +2812,7 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
             <form className="cm-form cm-modal-card" onSubmit={handleSaveSettings} noValidate>
               <header className="cm-header">
                 <div>
-                  <h1>{activeSettingsId ? 'Edit College Settings' : 'Add College Settings'}</h1>
+                  <h1>{activeSettingsId ? 'Edit Organization Settings' : 'Add Organization Settings'}</h1>
                   <p>Fill in the settings details below.</p>
                 </div>
                 <button type="button" className="cm-secondary-btn" onClick={backToSettingsList}>
@@ -2822,19 +2822,19 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
 
               <div className="cm-form-grid">
                 <label>
-                  <span>College Name *</span>
+                  <span>Organization Name *</span>
                   <input type="text" name="collegeName" value={settingsForm.collegeName} onChange={updateSettingsField} />
                   {settingsErrors.collegeName && <p className="cm-field-error">{settingsErrors.collegeName}</p>}
                 </label>
 
                 <label>
-                  <span>College Code *</span>
+                  <span>Organization Code *</span>
                   <input type="text" name="collegeCode" value={settingsForm.collegeCode} onChange={updateSettingsField} />
                   {settingsErrors.collegeCode && <p className="cm-field-error">{settingsErrors.collegeCode}</p>}
                 </label>
 
                 <label>
-                  <span>College Email *</span>
+                  <span>Organization Email *</span>
                   <input type="text" name="collegeEmail" value={settingsForm.collegeEmail} onChange={updateSettingsField} />
                   {settingsErrors.collegeEmail && <p className="cm-field-error">{settingsErrors.collegeEmail}</p>}
                 </label>
@@ -2846,13 +2846,13 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
 
                 <label>
                   <span>Website</span>
-                  <input type="text" name="website" value={settingsForm.website} onChange={updateSettingsField} placeholder="https://college.edu" />
+                  <input type="text" name="website" value={settingsForm.website} onChange={updateSettingsField} placeholder="https://organization.org" />
                 </label>
 
                 <label>
-                  <span>College Type</span>
+                  <span>Organization Type</span>
                   <ProjectSelect name="institutionType" value={settingsForm.institutionType} onChange={updateSettingsField}>
-                    <option value="">Select College Type</option>
+                    <option value="">Select Organization Type</option>
                     {COLLEGE_TYPES.map((type) => (
                       <option key={type} value={type}>{type}</option>
                     ))}
@@ -5095,8 +5095,8 @@ function RolesAndDesignationsWorkspace() {
       <div className="rbac-page">
         {/* Page Header with Top-Right Compact Summary */}
         <PageHeader
-          title="Roles & Designations Management"
-          subtitle="Define organizational hierarchy, configure granular RBAC permission matrix across all modules, and govern staff access."
+          title="Permissions"
+          subtitle="Manage roles, designations, and staff access across modules."
           compactSummary={compactSummaryItems}
         />
 

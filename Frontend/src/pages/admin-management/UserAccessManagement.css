@@ -155,13 +155,94 @@
 .user-access-mock__details dd { margin: 0; color: var(--text-primary); font-size: 14px; font-weight: 650; overflow-wrap: anywhere; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; clip-path: inset(50%); }
 
+/* User access metrics: keep all four cards on one full-width desktop row. */
+:root #root .user-directory .user-directory__stats:not([hidden]) {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 12px;
+  width: 100%;
+  max-width: none;
+  margin: 0 0 16px;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+:root #root .user-directory .user-directory__stats:not([hidden]) > div:not([hidden]) {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 82px;
+  max-width: none;
+  flex: initial;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 17px 14px 19px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  text-align: left;
+  transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+
+:root #root .user-directory .user-directory__stats:not([hidden]) > div:not([hidden])::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--brand);
+}
+
+:root #root .user-directory .user-directory__stats:not([hidden]) > div:nth-child(2)::before { background: var(--success); }
+:root #root .user-directory .user-directory__stats:not([hidden]) > div:nth-child(3)::before { background: var(--warning); }
+:root #root .user-directory .user-directory__stats:not([hidden]) > div:nth-child(4)::before { background: var(--text-muted); }
+
+:root #root .user-directory .user-directory__stats:not([hidden]) > div:not([hidden]):hover {
+  transform: translateY(-2px);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-md, var(--shadow-sm));
+}
+
+:root #root .user-directory .user-directory__stats:not([hidden]) > div:not([hidden]) > dt {
+  order: initial;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .065em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+:root #root .user-directory .user-directory__stats:not([hidden]) > div:not([hidden]) > dd {
+  order: initial;
+  color: var(--text-primary);
+  font-size: clamp(19px, 1.7vw, 25px);
+  font-weight: 800;
+  letter-spacing: -.035em;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 640px) {
-  .user-directory__stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  :root #root .user-directory .user-directory__stats:not([hidden]) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  :root #root .user-directory .user-directory__stats:not([hidden]) > div:not([hidden]) { min-height: 74px; padding: 11px 12px 11px 15px; }
   .user-directory__filters > label:not(.user-directory__search) { max-width: none; }
   .user-directory__filters .user-directory__search { flex-basis: 100%; }
   .user-directory__pagination { flex-wrap: wrap; gap: 8px; }
   .user-directory__wizard-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .user-directory__dialog-content dl { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 420px) {
+  :root #root .user-directory .user-directory__stats:not([hidden]) { grid-template-columns: 1fr; }
 }
 .user-directory__recovery { margin: 12px 24px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-soft); }
 .user-directory__recovery .user-directory__button { margin: 4px 8px 4px 0; }
