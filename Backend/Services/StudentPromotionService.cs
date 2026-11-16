@@ -28,108 +28,37 @@ namespace BTech.Services
         // =====================================================
 
         public async Task<List<EligibleStudentDto>> GetEligibleStudentsAsync(
+            long? collegeId,
             long branchId,
             long academicYearId,
             int semesterNumber)
         {
             if (branchId <= 0)
-                throw new ArgumentException(
-                    "A valid branch ID is required.");
+                throw new ArgumentException("A valid branch ID is required.");
 
             if (academicYearId <= 0)
-                throw new ArgumentException(
-                    "A valid academic year ID is required.");
+                throw new ArgumentException("A valid academic year ID is required.");
 
             if (semesterNumber <= 0)
-                throw new ArgumentException(
-                    "A valid semester number is required.");
-
-            var collegeId = await _context.Students
-                .AsNoTracking()
-                .Where(s =>
-                    s.BranchId == branchId &&
-                    s.AcademicYearId == academicYearId &&
-                    s.Status == 1 &&
-                    s.DeletedAt == null)
-                .Select(s => (long?)s.CollegeId)
-                .FirstOrDefaultAsync();
-
-            if (!collegeId.HasValue)
-            {
-                return new List<EligibleStudentDto>();
-            }
+                throw new ArgumentException("A valid semester number is required.");
 
             var result = await _repository.GetEligibleStudentsAsync(
-                collegeId.Value,
-                new EligibleStudentRequestDto
-                {
-                    AcademicYearId = academicYearId,
-                    BranchId = branchId,
-                    Semester = semesterNumber
-                });
-
+                collegeId, studentId: null, branchId, academicYearId, semesterNumber);
             return result.ToList();
         }
-
 
         // =====================================================
         // 2. GET STUDENT ELIGIBILITY
         // =====================================================
 
-        public async Task<EligibleStudentDto?> GetStudentEligibilityAsync(
-            long studentId)
+        public async Task<EligibleStudentDto?> GetStudentEligibilityAsync(long? collegeId, long studentId)
         {
             if (studentId <= 0)
-                throw new ArgumentException(
-                    "A valid student ID is required.");
-
-            var student = await _context.Students
-                .AsNoTracking()
-                .FirstOrDefaultAsync(s =>
-                    s.StudentId == studentId &&
-                    s.Status == 1 &&
-                    s.DeletedAt == null);
-
-            if (student == null)
-                return null;
+                throw new ArgumentException("A valid student ID is required.");
 
             var result = await _repository.GetEligibleStudentsAsync(
-                student.CollegeId,
-                new EligibleStudentRequestDto
-                {
-                    AcademicYearId = student.AcademicYearId,
-                    BranchId = student.BranchId,
-                    Search = student.StudentCode
-                });
-
-            var eligibility = result.FirstOrDefault(item =>
-                item.StudentId == studentId);
-
-            if (eligibility != null)
-            {
-                return eligibility;
-            }
-
-            var latestPromotion = await _context.StudentPromotions
-                .AsNoTracking()
-                .Where(p =>
-                    p.StudentId == studentId &&
-                    p.DeletedAt == null)
-                .OrderByDescending(p => p.CreatedAt)
-                .FirstOrDefaultAsync();
-
-            return new EligibleStudentDto
-            {
-                StudentId = student.StudentId,
-                StudentName = student.FullName,
-                BranchId = student.BranchId ?? 0,
-                AcademicYearId = student.AcademicYearId,
-                CurrentSemester = latestPromotion?.NextSemester ?? 0,
-                NextSemester = (latestPromotion?.NextSemester ?? 0) + 1,
-                EligibilityStatus =
-                    latestPromotion?.EligibilityStatus ?? "PENDING_REVIEW",
-                PromotionStatus = latestPromotion?.PromotionStatus
-            };
+                collegeId, studentId, branchId: null, academicYearId: null, semesterNumber: null);
+            return result.SingleOrDefault();
         }
 
 
@@ -237,10 +166,7 @@ namespace BTech.Services
             // including academic-year/semester/history updates, or none are.
             // targetSectionId is intentionally nullable: an unassigned promoted
             // student can be allocated to a section later.
-            var rows = await _repository.PromoteStudentsBulkAtomicAsync(request);
-            foreach (var row in rows)
-                row.History = (await _repository.GetCompletePromotionHistoryAsync(row.StudentId)).ToList();
-            return rows;
+            return await _repository.PromoteStudentsBulkAtomicAsync(request);
         }
 
 
@@ -337,6 +263,7 @@ namespace BTech.Services
                 .Include(p => p.Student)
                 .Where(p =>
                     p.StudentId == studentId &&
+                    p.PromotionType != "ELIGIBILITY_REVIEW" &&
                     p.DeletedAt == null)
                 .OrderByDescending(p => p.CreatedAt)
                 .ToListAsync();
@@ -431,65 +358,21 @@ namespace BTech.Services
         // 8. UPDATE ELIGIBILITY STATUS
         // =====================================================
 
-        public async Task<bool> UpdateEligibilityStatusAsync(
-            long studentId,
-            string eligibilityStatus)
+        public Task UpdateEligibilityStatusAsync(
+            long? collegeId, long studentId, string eligibilityStatus, long reviewerId)
         {
             if (studentId <= 0)
-                throw new ArgumentException(
-                    "A valid student ID is required.");
+                throw new ArgumentException("A valid student ID is required.");
 
-            if (string.IsNullOrWhiteSpace(eligibilityStatus))
-                throw new ArgumentException(
-                    "Eligibility status is required.");
+            var normalizedStatus = eligibilityStatus?.Trim().ToUpperInvariant().Replace(' ', '_');
+            if (normalizedStatus == "INELIGIBLE")
+                normalizedStatus = "NOT_ELIGIBLE";
 
-            var student = await _context.Students
-                .AsNoTracking()
-                .FirstOrDefaultAsync(s =>
-                    s.StudentId == studentId &&
-                    s.DeletedAt == null);
-
-            if (student == null)
-                return false;
-
-            var normalizedStatus = eligibilityStatus
-                .Trim()
-                .ToUpperInvariant()
-                .Replace(' ', '_');
-
-            var allowedStatuses = new HashSet<string>(
-                StringComparer.OrdinalIgnoreCase)
-            {
-                "ELIGIBLE",
-                "PENDING_REVIEW",
-                "NOT_ELIGIBLE",
-                "FAILED",
-                "DETAINED"
-            };
-
-            if (!allowedStatuses.Contains(normalizedStatus))
-            {
+            if (normalizedStatus is not ("ELIGIBLE" or "PENDING_REVIEW" or "NOT_ELIGIBLE" or "FAILED" or "DETAINED"))
                 throw new ArgumentException(
                     "Eligibility status must be ELIGIBLE, PENDING_REVIEW, NOT_ELIGIBLE, FAILED, or DETAINED.");
-            }
 
-            var promotion = await _context.StudentPromotions
-                .Where(p =>
-                    p.StudentId == studentId &&
-                    p.DeletedAt == null)
-                .OrderByDescending(p => p.CreatedAt)
-                .FirstOrDefaultAsync();
-
-            if (promotion == null)
-            {
-                return false;
-            }
-
-            promotion.EligibilityStatus = normalizedStatus;
-            promotion.UpdatedAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
-
-            return true;
+            return _repository.UpdateEligibilityStatusAsync(collegeId, studentId, normalizedStatus, reviewerId);
         }
     }
 }

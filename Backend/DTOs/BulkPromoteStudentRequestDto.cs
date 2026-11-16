@@ -34,6 +34,10 @@ namespace BTech.DTOs.StudentPromotion
 
         public string? Remarks { get; set; }
 
+        // Authorized request scope is set by the API after access is verified.
+        [JsonIgnore]
+        public long? AuthorizedCollegeId { get; set; }
+
         // Audit actor comes from the authenticated JWT, never from frontend JSON.
         [JsonIgnore]
         public long? CreatedBy { get; set; }

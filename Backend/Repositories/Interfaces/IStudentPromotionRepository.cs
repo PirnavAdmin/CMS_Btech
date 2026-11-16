@@ -8,10 +8,11 @@ namespace BTech.Repositories.Interfaces
         // GET ELIGIBLE STUDENTS
         // =====================================================
 
-        Task<IEnumerable<EligibleStudentDto>>
-            GetEligibleStudentsAsync(
-                long collegeId,
-                EligibleStudentRequestDto request);
+        Task<IEnumerable<EligibleStudentDto>> GetEligibleStudentsAsync(
+            long? collegeId, long? studentId, long? branchId, long? academicYearId, int? semesterNumber);
+
+        Task UpdateEligibilityStatusAsync(
+            long? collegeId, long studentId, string eligibilityStatus, long reviewerId);
 
 
         // =====================================================

@@ -35,41 +35,48 @@ namespace BTech.Repositories.Implementations
         // 1. GET ELIGIBLE STUDENTS
         // =====================================================
 
-        public async Task<IEnumerable<EligibleStudentDto>>
-            GetEligibleStudentsAsync(
-                long collegeId,
-                EligibleStudentRequestDto request)
+        public async Task<IEnumerable<EligibleStudentDto>> GetEligibleStudentsAsync(
+            long? collegeId, long? studentId, long? branchId, long? academicYearId, int? semesterNumber)
         {
-            const string procedure =
-                "sp_student_promotion_get_eligible";
-
-            _logger.LogInformation(
-                "Getting eligible promotion students. " +
-                "CollegeId={CollegeId}, AcademicYearId={AcademicYearId}",
-                collegeId,
-                request.AcademicYearId);
-
             await using var connection = CreateConnection();
-
             await connection.OpenAsync();
 
-            var parameters = new
+            return await connection.QueryAsync<EligibleStudentDto>(
+                "sp_student_promotion_eligibility_get",
+                new
+                {
+                    p_college_id = collegeId,
+                    p_student_id = studentId,
+                    p_branch_id = branchId,
+                    p_academic_year_id = academicYearId,
+                    p_semester = semesterNumber
+                },
+                commandType: CommandType.StoredProcedure);
+        }
+
+        public async Task UpdateEligibilityStatusAsync(
+            long? collegeId, long studentId, string eligibilityStatus, long reviewerId)
+        {
+            await using var connection = CreateConnection();
+            await connection.OpenAsync();
+
+            try
             {
-                p_college_id = collegeId,
-                p_academic_year_id = request.AcademicYearId,
-                p_course_id = request.CourseId,
-                p_branch_id = request.BranchId,
-                p_semester = request.Semester,
-                p_search = request.Search
-            };
-
-            var result =
-                await connection.QueryAsync<EligibleStudentDto>(
-                    procedure,
-                    parameters,
+                await connection.ExecuteAsync(
+                    "sp_student_promotion_review_scoped",
+                    new
+                    {
+                        p_college_id = collegeId,
+                        p_student_id = studentId,
+                        p_eligibility_status = eligibilityStatus,
+                        p_changed_by = reviewerId
+                    },
                     commandType: CommandType.StoredProcedure);
-
-            return result;
+            }
+            catch (MySqlException ex) when (ex.SqlState == "45000")
+            {
+                throw CreatePromotionValidationException(studentId, ex.Message);
+            }
         }
 
 
@@ -210,13 +217,13 @@ namespace BTech.Repositories.Implementations
         public async Task<List<PromotionResponseDto>> PromoteStudentsBulkAtomicAsync(
             BulkPromoteStudentRequestDto request)
         {
-            const string procedure = "sp_student_promote_contract";
+            const string procedure = "sp_student_promote_bulk_scoped";
             var results = new List<PromotionResponseDto>();
             long currentStudentId = 0;
 
             await using var connection = CreateConnection();
             await connection.OpenAsync();
-            await using var transaction = await connection.BeginTransactionAsync();
+            await using var transaction = await connection.BeginTransactionAsync(IsolationLevel.ReadCommitted);
 
             try
             {
@@ -227,11 +234,13 @@ namespace BTech.Repositories.Implementations
                     if (studentId <= 0)
                         throw new InvalidOperationException("Every student ID must be valid for atomic bulk promotion.");
 
-                    var row = await connection.QueryFirstOrDefaultAsync<PromotionResponseDto>(
+                    PromotionResponseDto row;
+                    using (var outcome = await connection.QueryMultipleAsync(
                         procedure,
                         new
                         {
                             p_student_id = studentId,
+                            p_college_id = request.AuthorizedCollegeId,
                             p_branch_id = request.BranchId,
                             p_academic_year_id = request.AcademicYearId,
                             p_current_semester = request.CurrentSemester,
@@ -243,15 +252,42 @@ namespace BTech.Repositories.Implementations
                             p_remarks = request.Remarks,
                             p_degree_conferred = request.DegreeConferred ? 1 : 0,
                             p_degree_conferred_at = request.DegreeConferredAt,
-                            p_created_by = request.CreatedBy,
-                            p_manage_transaction = 0
+                            p_created_by = request.CreatedBy
                         },
                         transaction: transaction,
-                        commandType: CommandType.StoredProcedure);
+                        commandType: CommandType.StoredProcedure))
+                    {
+                        var failure = await outcome.ReadSingleOrDefaultAsync<PromotionTargetFailure>();
+                        if (failure is not null)
+                        {
+                            _logger.LogWarning(
+                                "Promotion target rejected. StudentId={StudentId}, CollegeId={CollegeId}, " +
+                                "SubmittedSemesterId={SubmittedSemesterId}, SubmittedAcademicYearId={SubmittedAcademicYearId}, " +
+                                "ExpectedSemester={ExpectedSemester}, ActualSemester={ActualSemester}, " +
+                                "ExpectedCourseId={ExpectedCourseId}, ActualCourseId={ActualCourseId}, " +
+                                "ExpectedBranchId={ExpectedBranchId}, ActualBranchId={ActualBranchId}, " +
+                                "ExpectedAcademicYearId={ExpectedAcademicYearId}, ActualAcademicYearId={ActualAcademicYearId}, " +
+                                "TargetStatus={TargetStatus}, TargetArchived={TargetArchived}, Field={Field}",
+                                studentId, failure.CollegeId, request.TargetSemesterId, request.TargetAcademicYearId,
+                                failure.ExpectedSemester, failure.ActualSemester,
+                                failure.ExpectedCourseId, failure.ActualCourseId,
+                                failure.ExpectedBranchId, failure.ActualBranchId,
+                                failure.ExpectedAcademicYearId, failure.ActualAcademicYearId,
+                                failure.TargetStatus, failure.TargetArchived, failure.Field);
 
-                    if (row == null)
-                        throw new InvalidOperationException($"Promotion returned no row for StudentId {studentId}.");
+                            throw new PromotionValidationException(
+                                failure.Field, $"StudentId {studentId}: {failure.Message}", studentId);
+                        }
 
+                        row = await outcome.ReadSingleAsync<PromotionResponseDto>();
+                    }
+
+                    // Read the response history within the same transaction as the writes.
+                    row.History = (await connection.QueryAsync<CompletePromotionHistoryDto>(
+                        "sp_student_promotion_get_history",
+                        new { p_student_id = studentId },
+                        transaction: transaction,
+                        commandType: CommandType.StoredProcedure)).AsList();
                     results.Add(row);
                 }
 
@@ -268,6 +304,23 @@ namespace BTech.Repositories.Implementations
                 await transaction.RollbackAsync();
                 throw;
             }
+        }
+
+        private sealed class PromotionTargetFailure
+        {
+            public string Field { get; set; } = string.Empty;
+            public string Message { get; set; } = string.Empty;
+            public long CollegeId { get; set; }
+            public int ExpectedSemester { get; set; }
+            public int? ActualSemester { get; set; }
+            public long ExpectedCourseId { get; set; }
+            public long? ActualCourseId { get; set; }
+            public long ExpectedBranchId { get; set; }
+            public long? ActualBranchId { get; set; }
+            public long? ExpectedAcademicYearId { get; set; }
+            public long? ActualAcademicYearId { get; set; }
+            public int? TargetStatus { get; set; }
+            public int? TargetArchived { get; set; }
         }
 
         private static PromotionValidationException CreatePromotionValidationException(
