@@ -582,6 +582,29 @@ export const userDirectoryApi = {
   exportCsv: params => screenExportsApi.download('users', { Format: 'csv', ...params }),
 }
 
+export const collegeUserMappingsApi = {
+  getAll: async () => {
+    const response = await request(endpoint('/api/v1/super-admin/college-mappings'))
+    const rows = extractListResponse(response)
+    if (!rows) throw new Error('College administrator assignments returned an unexpected response.')
+    return rows
+  },
+  getByUser: async userId => {
+    const response = await request(endpoint(`/api/v1/super-admin/college-mappings/user/${encodeURIComponent(userId)}`))
+    const rows = extractListResponse(response)
+    if (!rows) throw new Error('The administrator assignments returned an unexpected response.')
+    return rows
+  },
+  assign: body => request(endpoint('/api/v1/super-admin/college-mappings'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }),
+  remove: (userId, collegeSettingId) => request(endpoint(`/api/v1/super-admin/college-mappings/user/${encodeURIComponent(userId)}/college/${encodeURIComponent(collegeSettingId)}`), {
+    method: 'DELETE',
+  }),
+}
+
 export const authAccessApi = {
   get: async collegeId => (await request(withQuery(endpoint('/api/auth/me/access'), collegeId ? { collegeId } : {})))?.data,
 }

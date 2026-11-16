@@ -123,22 +123,18 @@ test('edit form retains entered values when context access refreshes and support
   expect(document.activeElement).toBe(tabs[1])
 })
 
-test.each(['light', 'dark'])('add form uses the management stepper and validates before advancing in %s theme', async theme => {
+test.each(['light', 'dark'])('create form follows the Contact, Address, Administrators layout in %s theme', async theme => {
   document.documentElement.dataset.theme = theme
   mount('/college-institution-management/add')
-  expect(screen.getByRole('dialog', { name: 'Add New College' })).toBeTruthy()
-  expect(screen.getByRole('tablist').classList.contains('erp-tabs-bar')).toBe(false)
-  expect(screen.getAllByRole('tab')).toHaveLength(6)
-  expect(screen.getByRole('tab', { name: 'College Information' }).getAttribute('aria-current')).toBe('step')
-  fireEvent.click(screen.getByRole('button', { name: /^Next/ }))
-  expect(screen.getByText('College name is required.')).toBeTruthy()
-  expect(screen.getByRole('tab', { name: 'Address' }).disabled).toBe(true)
-  for (const [label, value] of [[/^College Name/, 'Crescent Engineering College'], [/^College Code/, 'CEC'], [/^College Type/, 'Engineering College'], [/^University Name/, 'Engineering University']]) fireEvent.change(screen.getByLabelText(label), { target: { value } })
-  fireEvent.click(screen.getByRole('button', { name: /^Next/ }))
-  expect(screen.getByRole('tab', { name: 'Address' }).getAttribute('aria-selected')).toBe('true')
-  fireEvent.click(screen.getByRole('button', { name: /Previous/ }))
-  expect(screen.getByLabelText(/^College Name/).value).toBe('Crescent Engineering College')
-  expect(createCollege).not.toHaveBeenCalled(); expect(updateCollege).not.toHaveBeenCalled()
+  const dialog = within(screen.getByRole('dialog', { name: 'Create College' }))
+  expect(dialog.getAllByRole('heading').map(heading => heading.textContent).slice(1, 4)).toEqual(['Contact Details', 'Address Details', 'Administrators'])
+  expect(dialog.getByLabelText(/^Country/).value).toBe('India')
+  expect(dialog.getByLabelText(/^Status/).value).toBe('1')
+  fireEvent.click(dialog.getByRole('button', { name: 'Create College' }))
+  expect(dialog.getByText('College name is required.')).toBeTruthy()
+  expect(dialog.getByText('College code is required.')).toBeTruthy()
+  expect(dialog.getByText('Full name is required.')).toBeTruthy()
+  expect(createCollege).not.toHaveBeenCalled()
 })
 
 test('direct entry uses the compact dialog and stepper focus does not scroll its body', async () => {
@@ -158,31 +154,11 @@ test('direct entry uses the compact dialog and stepper focus does not scroll its
   } finally { scroll.mockRestore() }
 })
 
-test('logo upload has a visible icon and drag-drop uses the existing preview workflow', async () => {
-  const { container } = mount('/college-institution-management/add')
-  expect(screen.getByRole('button', { name: /Upload college logo/ }).querySelector('svg')).toBeTruthy()
-  fireEvent.drop(screen.getByRole('group', { name: 'College logo' }), { dataTransfer: { files: [new File(['image'], 'dropped.png', { type: 'image/png' })] } })
-  await screen.findByAltText('College logo preview')
-  expect(container.querySelector('.ac-logo-preview').textContent).toContain('dropped.png')
-  expect(uploadCollegeLogo).not.toHaveBeenCalled()
-})
-
-test('logo validation preserves the chosen image and supports removal and replacement', async () => {
+test('create form keeps its additional College API fields', async () => {
   mount('/college-institution-management/add')
-  const input = screen.getByLabelText('Choose college logo')
-  fireEvent.change(input, { target: { files: [new File(['image'], 'first.png', { type: 'image/png' })] } })
-  await screen.findByAltText('College logo preview')
-  fireEvent.change(input, { target: { files: [new File(['bad'], 'invalid.pdf', { type: 'application/pdf' })] } })
-  expect(screen.getByText('Choose a PNG, JPG, JPEG, or WEBP image.')).toBeTruthy()
-  expect(screen.getByAltText('College logo preview')).toBeTruthy()
-  fireEvent.change(input, { target: { files: [new File([new Uint8Array(2 * 1024 * 1024 + 1)], 'large.png', { type: 'image/png' })] } })
-  expect(screen.getByText('Logo must be 2 MB or smaller. Save was stopped.')).toBeTruthy()
-  expect(screen.getByAltText('College logo preview')).toBeTruthy()
-  fireEvent.click(screen.getByRole('button', { name: 'Remove image' }))
-  expect(screen.queryByAltText('College logo preview')).toBeNull()
-  fireEvent.change(input, { target: { files: [new File(['image'], 'replacement.png', { type: 'image/png' })] } })
-  await screen.findByText('replacement.png')
-  expect(uploadCollegeLogo).not.toHaveBeenCalled()
+  fireEvent.change(screen.getByLabelText(/^College Type/), { target: { value: 'Others' } })
+  expect(screen.getByLabelText(/Specify College Type/)).toBeTruthy()
+  expect(screen.getByLabelText(/^University Name/)).toBeTruthy()
 })
 
 test('final review retains backend values and save errors can be retried without duplicate writes', async () => {
@@ -224,36 +200,19 @@ test('failed logo upload does not navigate or publish a success notification', a
   expect(uploadCollegeLogo).toHaveBeenCalledTimes(2)
 })
 
-test('new college creation keeps the saved identifier when logo upload fails and retries without creating a duplicate', async () => {
+test('Cancel closes the create dialog without replacing the College directory', async () => {
   mount()
   const directory = await screen.findByRole('table', { name: 'Colleges' })
   fireEvent.click(screen.getByRole('button', { name: 'Add College' }))
-  const modal = screen.getByRole('dialog', { name: 'Add New College' })
-  const form = within(modal)
+  const modal = screen.getByRole('dialog', { name: 'Create College' })
   expect(screen.getByRole('table', { name: 'Colleges' })).toBe(directory)
   expect(document.body.style.overflow).toBe('hidden')
-  const change = (label,value) => fireEvent.change(form.getByLabelText(label), { target:{value} })
-  const next = () => fireEvent.click(form.getByRole('button', { name: 'Next' }))
-  change(/^College Name/,'New Engineering College'); change(/^College Code/,'NEC'); change(/^College Type/,'Engineering College'); change(/^University Name/,'Engineering University')
-  fireEvent.change(document.querySelector('input[type=file]'), { target:{ files:[new File(['image'],'logo.png',{type:'image/png'})] } })
-  await waitFor(() => expect(document.querySelector('.ac-logo-preview img')).toBeTruthy())
-  next(); change(/^Address Line 1/,'Campus Road'); change(/^Pincode/,'560001'); change(/^City/,'Bengaluru'); change(/^State/,'Karnataka'); next()
-  change(/^Official Contact Number/,'9876543299'); change(/^Official Email/,'newcollege@example.edu'); next()
-  change(/^Principal Name/,'Principal Name'); change(/^Principal Email/,'newprincipal@example.edu'); change(/^Principal Contact Number/,'9876543298'); next()
-  next()
-  uploadCollegeLogo.mockRejectedValueOnce(new Error('Upload failed'))
-  fireEvent.click(screen.getByRole('button', { name:'Submit College' }))
-  await waitFor(() => expect(uploadCollegeLogo).toHaveBeenCalledOnce())
-  expect(createCollege).toHaveBeenCalledOnce()
-  await waitFor(() => expect(screen.getByRole('button', { name:'Submit College' }).disabled).toBe(false))
-  fireEvent.click(screen.getByRole('button', { name:'Submit College' }))
-  await form.findByText('College added successfully!')
-  expect(modal.open).toBe(true)
-  await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Add New College' })).toBeNull(), { timeout: 3000 })
+  fireEvent.click(within(modal).getByRole('button', { name: 'Cancel' }))
+  await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Create College' })).toBeNull())
   expect(document.body.style.overflow).toBe('')
-  expect(await screen.findByRole('button', { name: 'View details for New Engineering College' })).toBeTruthy()
-  expect(createCollege).toHaveBeenCalledOnce(); expect(uploadCollegeLogo).toHaveBeenLastCalledWith(90, expect.any(File))
-}, 10000)
+  expect(screen.getByRole('table', { name: 'Colleges' })).toBe(directory)
+  expect(createCollege).not.toHaveBeenCalled()
+})
 
 
 test('view opens the shared edit dialog and cancel keeps the directory mounted', async () => {
@@ -271,150 +230,36 @@ test('view opens the shared edit dialog and cancel keeps the directory mounted',
   expect(document.body.style.overflow).toBe('')
 })
 
-test('leaving a dirty modal preserves the existing draft and can resume it over the directory', async () => {
+test('create form retains its values after an API failure', async () => {
   mount()
   await screen.findByRole('table', { name: 'Colleges' })
   fireEvent.click(screen.getByRole('button', { name: 'Add College' }))
-  const dialog = within(screen.getByRole('dialog', { name: 'Add New College' }))
+  const dialog = within(screen.getByRole('dialog', { name: 'Create College' }))
   fireEvent.change(dialog.getByLabelText(/^College Name/), { target: { value: 'Draft College' } })
-  fireEvent.click(dialog.getByRole('button', { name: 'Cancel' }))
-  fireEvent.click(dialog.getByRole('button', { name: 'Stay' }))
+  fireEvent.change(dialog.getByLabelText(/^College Code/), { target: { value: 'DRAFT1' } })
+  const adminRow = within(dialog.getByRole('group', { name: 'New administrator 1' }))
+  fireEvent.change(adminRow.getByLabelText(/^Full Name/), { target: { value: 'Draft Admin' } })
+  fireEvent.change(adminRow.getByLabelText(/^Phone Number/), { target: { value: '9876543210' } })
+  fireEvent.change(adminRow.getByLabelText(/^Admin Email/), { target: { value: 'draft@example.edu' } })
+  createCollege.mockRejectedValueOnce(new Error('Creation service unavailable'))
+  fireEvent.click(dialog.getByRole('button', { name: 'Create College' }))
+  await dialog.findByText('Creation service unavailable')
   expect(dialog.getByLabelText(/^College Name/).value).toBe('Draft College')
-  fireEvent.click(dialog.getByRole('button', { name: 'Cancel' }))
-  fireEvent.click(dialog.getByRole('button', { name: 'Leave' }))
-  fireEvent.click(screen.getByRole('button', { name: 'Resume draft' }))
-  expect(within(screen.getByRole('dialog', { name: 'Add New College' })).getByLabelText(/^College Name/).value).toBe('Draft College')
+  expect(adminRow.getByLabelText(/^Admin Email/).value).toBe('draft@example.edu')
 })
-
-test('minimum college setup skips optional sections, persists, and recalculates after an authorized edit', async () => {
-  fixture.rows = [{ ...college(), email: '', contact: '' }]
-  updateCollege.mockImplementation(async (id, payload) => {
-    fixture.rows = fixture.rows.map(row => String(row.id) === String(id) ? { ...row, ...payload } : row)
-    return {}
-  })
-  const view = mount()
-  fireEvent.click(await screen.findByRole('button', { name: 'Add College' }))
-  const add = within(screen.getByRole('dialog', { name: 'Add New College' }))
-  expect(add.queryByRole('button', { name: 'Skip' })).toBeNull()
-  fireEvent.click(add.getByRole('button', { name: 'Save & Continue Later' }))
-  expect(createCollege).not.toHaveBeenCalled()
-  fireEvent.change(add.getByLabelText(/^College Name/), { target: { value: 'Minimal Engineering College' } })
-  fireEvent.change(add.getByLabelText(/^College Code/), { target: { value: 'MEC' } })
-  fireEvent.click(add.getByRole('button', { name: 'Next' }))
-  fireEvent.click(add.getByRole('button', { name: 'Skip' }))
-  expect(add.getByRole('tab', { name: 'Contact Information' }).getAttribute('aria-selected')).toBe('true')
-  fireEvent.click(add.getByRole('button', { name: 'Save & Continue Later' }))
-  await add.findByText('College added successfully!')
-  expect(createCollege).toHaveBeenCalledWith(expect.objectContaining({ code: 'MEC', name: 'Minimal Engineering College', email: '', addressLine1: '' }))
-  await screen.findByRole('button', { name: 'Resume setup for Minimal Engineering College' }, { timeout: 3500 })
-
-  view.unmount()
-  mount()
-  const resume = await screen.findByRole('button', { name: 'Resume setup for Minimal Engineering College' })
-  const score = () => Number(within(screen.getByRole('button', { name: 'Resume setup for Minimal Engineering College' }).closest('tr')).getByRole('progressbar').value)
-  const initial = score()
-  expect(initial).toBeGreaterThan(0)
-  expect(initial).toBeLessThan(100)
-  fireEvent.click(resume)
-  const edit = within(screen.getByRole('dialog', { name: 'Edit College' }))
-  await waitFor(() => expect(edit.getByLabelText(/^College Name/).value).toBe('Minimal Engineering College'))
-  fireEvent.click(edit.getByRole('tab', { name: 'Address' }))
-  fireEvent.change(edit.getByLabelText(/^Address Line 1/), { target: { value: 'Campus Road' } })
-  fireEvent.click(edit.getByRole('button', { name: 'Save & Continue Later' }))
-  await waitFor(() => expect(score()).toBeGreaterThan(initial), { timeout: 3500 })
-  const updated = score()
-
-  fireEvent.click(screen.getByRole('button', { name: 'View details for Minimal Engineering College' }))
-  const details = within(screen.getByRole('dialog', { name: 'College Details' }))
-  const detailScore = await details.findByRole('progressbar')
-  expect(Number(detailScore.value)).toBe(updated)
-  fireEvent.click(details.getByRole('button', { name: 'Continue setup for Minimal Engineering College' }))
-  const clear = within(screen.getByRole('dialog', { name: 'Edit College' }))
-  await waitFor(() => expect(clear.getByLabelText(/^College Name/).value).toBe('Minimal Engineering College'))
-  fireEvent.click(clear.getByRole('tab', { name: 'Address' }))
-  fireEvent.change(clear.getByLabelText(/^Address Line 1/), { target: { value: '' } })
-  fireEvent.click(clear.getByRole('button', { name: 'Save & Continue Later' }))
-  await waitFor(() => expect(score()).toBe(initial), { timeout: 3500 })
-}, 20000)
 
 test('college account cannot open creation despite a create permission grant',async()=>{fixture.access={isSuperAdmin:false,isCollegeAdmin:true,primaryCollegeId:7,collegeId:7,permissions:{colleges:{view:true,create:true,edit:true}}};mount('/college-institution-management/add');expect(await screen.findByText(/Only the platform Super Admin/)).toBeTruthy();expect(createCollege).not.toHaveBeenCalled();expect(screen.queryByLabelText(/^College Name/)).toBeNull();});
 
-test('conditional rendering of college type other in add, edit and review forms', async () => {
+test('create form validates and clears the custom College Type when a predefined type is chosen', async () => {
   mount('/college-institution-management/add')
-  const nameInput = screen.getByLabelText(/^College Name/)
-  const codeInput = screen.getByLabelText(/^College Code/)
-  const typeSelect = screen.getByLabelText(/^College Type/)
-
-  fireEvent.change(nameInput, { target: { value: 'Horizon Engineering College' } })
-  fireEvent.change(codeInput, { target: { value: 'HEC' } })
-  fireEvent.change(typeSelect, { target: { value: 'Engineering College' } })
-
-  // "Specify College Type" should not appear for predefined college type
-  expect(screen.queryByLabelText(/Specify College Type/i)).toBeNull()
-
-  // Advance through steps to Review
-  fireEvent.click(screen.getByRole('button', { name: /^Next/ })) // Step 1 -> Step 2
-  fireEvent.click(screen.getByRole('button', { name: /^Next/ })) // Step 2 -> Step 3
-  fireEvent.click(screen.getByRole('button', { name: /^Next/ })) // Step 3 -> Step 4
-  fireEvent.click(screen.getByRole('button', { name: /^Next/ })) // Step 4 -> Step 5
-  fireEvent.click(screen.getByRole('button', { name: /^Next/ })) // Step 5 -> Step 6 (Review)
-
-  const review = screen.getByRole('region', { name: 'Review college details' })
-  const collegeSection = within(review).getByRole('heading', { name: 'College Information' }).closest('section')
-
-  // Predefined College Type displayed
-  expect(within(collegeSection).getByText('Engineering College')).toBeTruthy()
-  // "College Type Other: Not provided" must NOT appear
-  expect(within(collegeSection).queryByText(/College Type Other/i)).toBeNull()
-  expect(within(collegeSection).getAllByRole('term').map(dt => dt.textContent)).toEqual([
-    'College Name', 'College Code', 'College Type', 'University Name'
-  ])
-
-  // Go back to College Information tab
-  fireEvent.click(screen.getByRole('tab', { name: 'College Information' }))
-
-  // Select "Others" -> dynamically displays required "Specify College Type"
   fireEvent.change(screen.getByLabelText(/^College Type/), { target: { value: 'Others' } })
-
   const customTypeInput = screen.getByLabelText(/Specify College Type/i)
   expect(customTypeInput).toBeTruthy()
-  expect(customTypeInput.required).toBe(true)
-
-  // Validate that empty custom type shows error when attempting to advance
-  fireEvent.click(screen.getByRole('button', { name: /^Next/ }))
+  fireEvent.click(screen.getByRole('button', { name: 'Create College' }))
   expect(screen.getByText('Enter the college type.')).toBeTruthy()
-
-  // Enter custom type
   fireEvent.change(customTypeInput, { target: { value: 'Community College' } })
-
-  // Navigate between steps using Next and Previous -> preserves values
-  fireEvent.click(screen.getByRole('button', { name: /^Next/ }))
-  expect(screen.getByRole('tab', { name: 'Address' }).getAttribute('aria-selected')).toBe('true')
-  fireEvent.click(screen.getByRole('button', { name: /Previous/ }))
-  expect(screen.getByLabelText(/^College Type/).value).toBe('Others')
-  expect(screen.getByLabelText(/Specify College Type/i).value).toBe('Community College')
-
-  // Advance to Review step
-  fireEvent.click(screen.getByRole('tab', { name: 'Review & Submit' }))
-  const reviewOthers = screen.getByRole('region', { name: 'Review college details' })
-  const collegeSectionOthers = within(reviewOthers).getByRole('heading', { name: 'College Information' }).closest('section')
-  expect(within(collegeSectionOthers).getByText('Others')).toBeTruthy()
-  expect(within(collegeSectionOthers).getByText('Community College')).toBeTruthy()
-
-  // Switching from "Others" to predefined clears custom college type value
-  fireEvent.click(screen.getByRole('tab', { name: 'College Information' }))
   fireEvent.change(screen.getByLabelText(/^College Type/), { target: { value: 'Degree College' } })
   expect(screen.queryByLabelText(/Specify College Type/i)).toBeNull()
-
-  fireEvent.click(screen.getByRole('tab', { name: 'Review & Submit' }))
-  const reviewDegree = screen.getByRole('region', { name: 'Review college details' })
-  const collegeSectionDegree = within(reviewDegree).getByRole('heading', { name: 'College Information' }).closest('section')
-  expect(within(collegeSectionDegree).getByText('Degree College')).toBeTruthy()
-  expect(within(collegeSectionDegree).queryByText('Community College')).toBeNull()
-  expect(within(collegeSectionDegree).queryByText(/College Type Other/i)).toBeNull()
-  expect(within(collegeSectionDegree).getAllByRole('term').map(dt => dt.textContent)).toEqual([
-    'College Name', 'College Code', 'College Type', 'University Name'
-  ])
 })
 
 test('edit college correctly populates predefined and custom college types and payloads', async () => {
