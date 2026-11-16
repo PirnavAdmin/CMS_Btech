@@ -4,10 +4,9 @@
 .dashboard-layout.sidebar-collapsed>main { width:calc(100% - var(--sidebar-collapsed-width)); margin-left:var(--sidebar-collapsed-width); }
 .dashboard-header { position:sticky; top:0; z-index:40; box-sizing:border-box; min-height:var(--header-height); display:flex; flex-wrap:wrap; align-items:center; gap:14px; padding:8px var(--space-5); background:var(--header-bg); backdrop-filter:blur(8px); border-bottom:1px solid var(--border); }
 .dashboard-header__actions { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin-left:auto; min-width:0; }
-.dashboard-header__college { display:flex; align-items:center; flex:0 1 260px; min-width:180px; height:48px; }
-.dashboard-header__college-label { display:none; }
-.dashboard-header__college .workspace-context-select { width:100%; max-width:260px; }
-.dashboard-header__college .searchable-select__trigger { height:48px; min-height:48px; padding:0 12px; border-radius:9px; }
+.dashboard-header__campus { display:flex; align-items:center; flex:0 1 260px; min-width:180px; height:48px; }
+.dashboard-header__campus .workspace-context-select { width:100%; max-width:260px; }
+.dashboard-header__campus .searchable-select__trigger { height:48px; min-height:48px; padding:0 12px; border-radius:9px; }
 .global-search { position:relative; box-sizing:border-box; display:flex; align-items:center; gap:8px; flex:1; height:48px; max-width:380px; min-width:100px; padding:7px 12px; background:var(--input-bg); border:1px solid var(--border); border-radius:9px; color:var(--text-muted); }
 .global-search:focus-within { border-color:var(--brand); box-shadow:var(--focus-ring); }
 .global-search input { border:0; outline:none; width:100%; min-width:0; background:transparent; color:var(--text-primary); font:13.5px var(--font-family); }
@@ -36,13 +35,13 @@
   .dashboard-header { height:var(--header-height); min-height:var(--header-height); flex:0 0 var(--header-height); flex-wrap:nowrap; gap:10px; padding-block:0; }
   .dashboard-header > .global-search { min-width:0; }
   .dashboard-header__actions { flex:0 1 auto; flex-wrap:nowrap; gap:8px; }
-  .dashboard-header__college { flex:0 1 clamp(145px, 16vw, 220px); min-width:0; }
-  .dashboard-header__college .workspace-context-select { max-width:none; }
+  .dashboard-header__campus { flex:0 1 clamp(145px, 16vw, 220px); min-width:0; }
+  .dashboard-header__campus .workspace-context-select { max-width:none; }
   .header-academic-year { flex:0 1 250px; min-width:145px; }
   .dashboard-header > .global-search { flex:1 1 120px; max-width:380px; }
 }
 @media(max-width:992px) { .dashboard-layout>main,.dashboard-layout.sidebar-collapsed>main { width:100%; margin-left:0; } .mobile-navigation-toggle { display:grid; } .dashboard-header { padding:8px 12px; gap:8px; flex-wrap:wrap; } .dashboard-header__actions { gap:6px; } .page-content { padding:var(--space-3); } }
-@media(max-width:600px) { .global-search { max-width:none; } .dashboard-header__actions { width:100%; justify-content:space-between; } .dashboard-header__college { flex:1 1 200px; min-width:0; } .dashboard-header__college .workspace-context-select { max-width:none; } .account-menu summary>span:nth-child(2) { display:none; } }
+@media(max-width:600px) { .global-search { max-width:none; } .dashboard-header__actions { width:100%; justify-content:space-between; } .dashboard-header__campus { flex:1 1 200px; min-width:0; } .dashboard-header__campus .workspace-context-select { max-width:none; } .account-menu summary>span:nth-child(2) { display:none; } }
 /* ==========================================================================
    Account Menu Dropdown & Header
    ========================================================================== */

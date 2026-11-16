@@ -47,6 +47,7 @@ import roomServiceImports_default, { ROOM_TYPES as roomServiceImports_ROOM_TYPES
 import '../../styles/directory-search.css'
 import './AdminManagement.css'
 import { selectedCollegeId as readSelectedCollegeId, createCollegeScope } from '../../utils/collegeScope.js'
+import CreateCollegeForm from './CreateCollegeForm.jsx'
 
 // AcademicYearManagement screen and private helpers.
 const AcademicYearManagementScreen = (() => {
@@ -899,10 +900,10 @@ function AddCollege() {
   if (access?.isSuperAdmin !== true) return <DashboardLayout><AsyncState status="error" message="Only the platform Super Admin can access college creation. Use College Profile to edit your assigned college." /></DashboardLayout>
   // Direct add/edit URLs use the same dialog as the College Configuration
   // directory, so navigation context never changes the form presentation.
-  return <DashboardLayout><CollegeForm key={editId || 'new'} editId={editId} onDismiss={() => navigate('/college-institution-management')} /></DashboardLayout>
+  return <DashboardLayout><CollegeForm key={editId || 'new'} editId={editId} onDismiss={() => navigate('/college-institution-management')} onSaved={editId ? undefined : () => navigate('/college-institution-management')} /></DashboardLayout>
 }
 
-function CollegeForm({ editId, onDismiss, onSaved, resumeDraft = false }) {
+function LegacyCollegeForm({ editId, onDismiss, onSaved, resumeDraft = false }) {
   const navigate = useNavigate()
   const { collegeAccess, loading: contextLoading } = AcademicContextImports_useAcademic()
   const { access: effectiveAccess, loading: accessLoading } = screenAccessImports_useScreenAccess()
@@ -1549,6 +1550,11 @@ function CollegeForm({ editId, onDismiss, onSaved, resumeDraft = false }) {
     {form}
     {confirmation}
   </main>
+}
+
+function CollegeForm(props) {
+  if (props.editId || props.resumeDraft) return <LegacyCollegeForm {...props} />
+  return <CreateCollegeForm {...props} />
 }
 
 return { default: AddCollege, CollegeForm }

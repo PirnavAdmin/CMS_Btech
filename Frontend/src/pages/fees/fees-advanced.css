@@ -1,0 +1,516 @@
+/* Student Fees directory and profile dialog refinements. */
+#root .fm-page .fm-student-fees-page {
+  column-gap: 14px;
+  row-gap: 8px;
+}
+
+#root .fm-page .fm-student-fees-page > .erp-page-header {
+  min-width: 0;
+  padding-block: 2px;
+}
+
+#root .fm-page .fm-student-fees-page > .fm-student-fee-summary-strip {
+  gap: 8px;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+}
+
+#root .fm-page .fm-student-fees-page > .fm-student-fee-summary-strip > .fm-summary-card {
+  min-height: 74px;
+  padding: 10px 12px;
+  align-items: stretch;
+  justify-content: center;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface);
+  box-shadow: 0 3px 12px rgba(15, 23, 42, .045);
+  text-align: left;
+}
+
+#root .fm-page .fm-student-fees-page > .fm-student-fee-summary-strip > .fm-summary-card:last-child {
+  border-right: 1px solid var(--border);
+}
+
+#root .fm-page .fm-student-fee-summary-strip .fm-summary-card__header {
+  order: 0;
+  justify-content: space-between;
+}
+
+#root .fm-page .fm-student-fee-summary-strip .fm-summary-card__label {
+  font-size: 10px;
+  letter-spacing: .045em;
+  text-align: left;
+}
+
+#root .fm-page .fm-student-fee-summary-strip .fm-summary-card__icon-box {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--surface-soft);
+  font-size: 13px;
+}
+
+#root .fm-page .fm-student-fee-summary-strip .fm-summary-card__value {
+  order: 0;
+  margin: 0;
+  font-size: clamp(16px, 1.3vw, 20px);
+  line-height: 1.2;
+  text-align: left;
+}
+
+#root .fm-page .fm-student-fee-summary-strip .fm-summary-card__meta {
+  display: none;
+}
+
+#root .fm-page .fm-student-fees-page > .fm-fee-workspace-nav {
+  margin: 0;
+  padding: 0 0 2px;
+  gap: 7px;
+}
+
+#root .fm-page .fm-student-fees-page > [role="status"] {
+  padding: 7px 10px;
+  border: 1px solid color-mix(in srgb, var(--brand) 18%, var(--border));
+  border-left: 3px solid var(--brand);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--brand-soft) 58%, var(--surface));
+  line-height: 1.4;
+}
+
+#root .fm-page .fm-student-fees-page > .fm-workspace {
+  min-width: 0;
+  margin-top: 0;
+  padding: 14px 16px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, .035);
+}
+
+#root .fm-page .fm-student-fees-page .fm-workspace-heading {
+  margin: 0;
+  padding: 0 0 11px;
+  border-bottom: 1px solid var(--border);
+}
+
+#root .fm-page .fm-student-fees-page .fm-workspace-heading p {
+  margin-top: 3px;
+}
+
+#root .fm-page .fm-student-fees-page .filter-disclosure__bar {
+  padding-block: 10px;
+}
+
+#root .fm-page .fm-student-fees-page .fm-table-wrap {
+  max-width: 100%;
+  border-radius: 10px;
+}
+
+#root .fm-page .fm-student-accounts-table .fm-table {
+  width: 100%;
+  min-width: 1260px;
+  table-layout: auto;
+}
+
+#root .fm-page .fm-student-accounts-table .fm-table th {
+  height: 42px !important;
+  padding: 10px 9px !important;
+  white-space: normal;
+  line-height: 1.25;
+  overflow-wrap: normal;
+}
+
+#root .fm-page .fm-student-accounts-table .fm-table td {
+  min-width: 0;
+  padding: 10px 9px !important;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+#root .fm-page .fm-student-accounts-table .fm-table th:nth-child(1) { width: 9%; }
+#root .fm-page .fm-student-accounts-table .fm-table th:nth-child(2) { width: 15%; }
+#root .fm-page .fm-student-accounts-table .fm-table th:nth-child(3) { width: 16%; }
+#root .fm-page .fm-student-accounts-table .fm-table th:nth-child(4) { width: 7%; }
+#root .fm-page .fm-student-accounts-table .fm-table th:nth-child(5) { width: 8%; }
+#root .fm-page .fm-student-accounts-table .fm-table th:nth-child(6) { width: 10%; }
+#root .fm-page .fm-student-accounts-table .fm-table th:nth-child(7) { width: 8%; }
+#root .fm-page .fm-student-accounts-table .fm-table th:nth-child(8) { width: 9%; }
+#root .fm-page .fm-student-accounts-table .fm-table th:nth-child(9) { width: 10%; }
+#root .fm-page .fm-student-accounts-table .fm-table th:last-child,
+#root .fm-page .fm-student-accounts-table .fm-table td:last-child {
+  width: 82px;
+  min-width: 82px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+#root .fm-page .fm-student-accounts-table .fm-table td:nth-child(1),
+#root .fm-page .fm-student-accounts-table .fm-table td:nth-child(6),
+#root .fm-page .fm-student-accounts-table .fm-table td:nth-child(7),
+#root .fm-page .fm-student-accounts-table .fm-table td:nth-child(8) {
+  font-variant-numeric: tabular-nums;
+}
+
+#root .fm-page .fm-student-accounts-table .fm-account-actions {
+  justify-content: center;
+  gap: 6px;
+}
+
+#root .fm-page .fm-student-accounts-table .fm-account-actions button {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  border-radius: 8px;
+}
+
+#root .fm-page .fm-student-fees-page .fm-table-footer {
+  padding-top: 9px;
+}
+
+/* Keep the profile dialog content in one readable vertical flow. */
+.fm-student-profile-dialog.shared-view-dialog {
+  width: min(1240px, calc(100vw - 40px));
+  max-height: calc(100dvh - 40px);
+}
+
+.fm-student-profile-dialog > .shared-view-dialog__header {
+  min-height: 62px;
+  padding: 12px 20px;
+}
+
+.fm-student-profile-dialog > .shared-view-dialog__body {
+  display: block;
+  min-width: 0;
+  min-height: 0;
+  padding: 16px 20px 18px;
+  overflow: auto;
+  background: var(--surface-soft);
+}
+
+.fm-student-profile-dialog > .shared-view-dialog__footer {
+  flex-shrink: 0;
+  padding: 10px 20px;
+}
+
+.fm-student-profile-dialog .fm-student-profile {
+  display: grid;
+  min-width: 0;
+  align-items: stretch;
+  justify-content: stretch;
+  gap: 12px;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.fm-student-profile-dialog .fm-student-facts {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface);
+}
+
+.fm-student-profile-dialog .fm-student-facts > div {
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.fm-student-profile-dialog .fm-student-facts dt {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+}
+
+.fm-student-profile-dialog .fm-student-facts dd {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.fm-student-profile-dialog .fm-profile-overview {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.fm-student-profile-dialog .fm-profile-totals {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.fm-student-profile-dialog .fm-profile-totals > div {
+  min-width: 0;
+  gap: 5px;
+  padding: 11px 13px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.fm-student-profile-dialog .fm-profile-totals > div + div {
+  border-left: 1px solid var(--border);
+}
+
+.fm-student-profile-dialog .fm-profile-totals small {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+}
+
+.fm-student-profile-dialog .fm-profile-totals strong {
+  font-size: clamp(16px, 1.6vw, 21px);
+  font-variant-numeric: tabular-nums;
+}
+
+.fm-student-profile-dialog .fm-data-note {
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--brand) 18%, var(--border));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--brand-soft) 58%, var(--surface));
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.fm-student-profile-dialog .fm-profile-section {
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface);
+}
+
+.fm-student-profile-dialog .fm-profile-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+}
+
+.fm-student-profile-dialog .fm-profile-section-heading > div {
+  min-width: 0;
+}
+
+.fm-student-profile-dialog .fm-profile-section-heading h3 {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.fm-student-profile-dialog .fm-profile-section-heading p {
+  margin: 3px 0 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.fm-student-profile-dialog .fm-profile-count {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.fm-student-profile-dialog .fm-profile-table-wrap {
+  min-width: 0;
+  max-width: 100%;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  scrollbar-width: thin;
+}
+
+.fm-student-profile-dialog .fm-profile-table {
+  width: 100%;
+  min-width: 760px;
+  table-layout: auto;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--surface);
+  font-size: 11px;
+}
+
+.fm-student-profile-dialog .fm-profile-table :is(th, td) {
+  min-width: 0;
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: middle;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.fm-student-profile-dialog .fm-profile-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface-soft);
+  color: var(--text-secondary);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.fm-student-profile-dialog .fm-profile-table tbody tr:last-child > :is(th, td) {
+  border-bottom: 0;
+}
+
+.fm-student-profile-dialog .fm-profile-table tbody tr:hover > :is(th, td) {
+  background: var(--surface-soft);
+}
+
+.fm-student-profile-dialog .fm-profile-table small {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-secondary);
+}
+
+.fm-student-profile-dialog .fm-profile-table .fm-profile-detail-row > td {
+  padding: 0 10px 8px;
+  background: var(--surface-soft);
+}
+
+.fm-student-profile-dialog .fm-profile-table details summary,
+.fm-student-profile-dialog .fm-assignment-snapshot summary {
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.fm-student-profile-dialog .fm-profile-table details summary {
+  padding: 8px 0 2px;
+}
+
+.fm-student-profile-dialog .fm-profile-table details summary span,
+.fm-student-profile-dialog .fm-assignment-snapshot summary span {
+  margin-left: 4px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.fm-student-profile-dialog .fm-obligation-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  padding: 4px 0 0;
+  margin: 0;
+  list-style: none;
+}
+
+.fm-student-profile-dialog .fm-obligation-list li {
+  min-width: 0;
+  margin: 0;
+  padding: 8px 9px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+}
+
+.fm-student-profile-dialog .fm-obligation-list span {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-secondary);
+}
+
+.fm-student-profile-dialog .fm-assignment-snapshot,
+.fm-student-profile-dialog .fm-profile-integration-note {
+  margin: 0;
+  padding: 11px 13px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.fm-student-profile-dialog .fm-assignment-snapshot p {
+  margin: 7px 0 0;
+  color: var(--text-secondary);
+}
+
+.fm-student-profile-dialog .fm-assignment-snapshot ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 16px;
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.fm-student-profile-dialog .fm-profile-integration-note {
+  color: var(--text-secondary);
+}
+
+@media (max-width: 1050px) {
+  #root .fm-page .fm-student-fee-summary-strip > .fm-summary-card {
+    min-height: 68px;
+  }
+}
+
+@media (max-width: 720px) {
+  #root .fm-page .fm-student-fees-page > .fm-workspace {
+    padding: 12px;
+  }
+
+  .fm-student-profile-dialog.shared-view-dialog {
+    width: calc(100vw - 20px);
+    max-height: calc(100dvh - 20px);
+  }
+
+  .fm-student-profile-dialog > .shared-view-dialog__header,
+  .fm-student-profile-dialog > .shared-view-dialog__body,
+  .fm-student-profile-dialog > .shared-view-dialog__footer {
+    padding-inline: 13px;
+  }
+
+  .fm-student-profile-dialog .fm-student-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 8px;
+  }
+
+  .fm-student-profile-dialog .fm-profile-totals {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fm-student-profile-dialog .fm-profile-section {
+    padding: 10px;
+  }
+
+  .fm-student-profile-dialog .fm-obligation-list,
+  .fm-student-profile-dialog .fm-assignment-snapshot ul {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 440px) {
+  .fm-student-profile-dialog .fm-student-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fm-student-profile-dialog .fm-profile-section-heading {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+}

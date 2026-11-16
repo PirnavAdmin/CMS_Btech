@@ -77,6 +77,72 @@
 .ay .erp-pill.active { background:var(--brand-soft); color:var(--brand); border-color:var(--cms-primary-border); }
 @media(max-width:640px) { .ay-detail-grid { grid-template-columns:1fr; }.ay-directory-heading .directory-export-actions { width:100%; flex-wrap:wrap; }.ay-session-strip { align-items:flex-start; }.ay-directory-heading { padding:12px; } }
 
+/* College create flow: contact, address, then multiple administrator assignments. */
+.college-create-dialog { max-height:calc(100dvh - 32px); }
+.college-create-dialog > .shared-view-dialog__body { padding:18px 22px; }
+.college-create-form { display:grid; gap:16px; color:var(--text-primary); }
+.college-create-section { display:grid; gap:14px; padding:16px; border:1px solid var(--border); border-radius:12px; background:var(--surface); }
+.college-create-section > header { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
+.college-create-section h2 { margin:0; color:var(--text-primary); font-size:15px; }
+.college-create-section header p { margin:4px 0 0; color:var(--text-muted); font-size:11px; }
+.college-create-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px 16px; }
+.college-create-field { display:grid; min-width:0; gap:6px; align-content:start; }
+.college-create-field--full { grid-column:1/-1; }
+.college-create-field label,
+.college-create-assignment > label { color:var(--text-primary); font-size:12px; font-weight:650; }
+.college-create-field label span { color:var(--danger,#c33); }
+.college-create-field :is(input,select,textarea),
+.college-create-assignment > input { width:100%; min-width:0; min-height:40px; padding:9px 11px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text-primary); font:inherit; font-size:12px; }
+.college-create-field textarea { min-height:92px; resize:vertical; }
+.college-create-field :is(input,select,textarea):focus,
+.college-create-assignment > input:focus { border-color:var(--brand); outline:0; box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 15%,transparent); }
+.college-create-field [aria-invalid="true"] { border-color:var(--danger,#c33); }
+.college-create-error { color:var(--danger,#c33); font-size:11px; }
+.college-create-alert { padding:11px 13px; border:1px solid color-mix(in srgb,var(--danger,#c33) 35%,transparent); border-radius:8px; background:color-mix(in srgb,var(--danger,#c33) 8%,var(--surface)); color:var(--text-primary); font-size:12px; line-height:1.5; }
+.college-create-note { margin:0; color:var(--text-muted); font-size:11px; line-height:1.5; }
+.college-create-inline-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
+.college-create-assign-trigger { position:relative; }
+.college-create-secondary,
+.college-create-primary,
+.college-create-remove,
+.college-create-link { display:inline-flex; align-items:center; justify-content:center; min-height:36px; padding:8px 12px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text-primary); font:600 12px var(--font-family); cursor:pointer; }
+.college-create-primary { border-color:var(--brand); background:var(--brand); color:var(--surface-on-brand,#fff); }
+.college-create-secondary:hover,
+.college-create-link:hover { border-color:var(--brand); color:var(--brand); }
+.college-create-primary:hover { filter:brightness(.96); }
+.college-create-secondary:disabled,
+.college-create-primary:disabled,
+.college-create-remove:disabled,
+.college-create-link:disabled { cursor:not-allowed; opacity:.6; }
+.college-create-admin-row { display:grid; gap:12px; min-width:0; margin:0; padding:14px; border:1px solid var(--border); border-radius:10px; }
+.college-create-admin-row legend { padding:0 6px; color:var(--text-secondary); font-size:11px; font-weight:700; }
+.college-create-selected { grid-column:1/-1; margin:0; color:var(--text-secondary); font-size:12px; }
+.college-create-row-actions { grid-column:1/-1; display:flex; justify-content:flex-end; gap:8px; }
+.college-create-remove { min-height:32px; border-color:color-mix(in srgb,var(--danger,#c33) 30%,var(--border)); color:var(--danger,#c33); }
+.college-create-link { min-height:32px; border-color:transparent; color:var(--brand); }
+.college-create-assignment { position:absolute; top:calc(100% + 6px); right:0; z-index:20; display:grid; width:min(440px,calc(100vw - 64px)); gap:10px; padding:14px; border:1px solid var(--cms-primary-border,var(--border)); border-radius:10px; background:var(--surface); box-shadow:0 12px 32px rgb(15 23 42 / 18%); }
+.college-create-assignment-heading { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.college-create-assignment-heading h3 { margin:0; font-size:13px; }
+.college-create-admin-options { display:grid; gap:6px; max-height:220px; overflow:auto; margin:0; padding:0; list-style:none; }
+.college-create-admin-options button { display:flex; width:100%; flex-wrap:wrap; justify-content:space-between; gap:4px 12px; padding:10px 12px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text-primary); font:inherit; font-size:12px; text-align:left; cursor:pointer; }
+.college-create-admin-options button:hover { border-color:var(--brand); background:var(--brand-soft); }
+.college-create-admin-options button:disabled { cursor:not-allowed; opacity:.65; }
+.college-create-admin-options span { color:var(--text-secondary); }
+.college-create-admin-options small { flex:0 0 100%; color:var(--text-muted); font-size:10px; }
+.college-create-footer { display:flex; justify-content:flex-end; gap:9px; padding-top:4px; }
+@media(max-width:640px) {
+  .college-create-dialog > .shared-view-dialog__body { padding:14px; }
+  .college-create-section { padding:13px; }
+  .college-create-section > header { flex-direction:column; }
+  .college-create-grid { grid-template-columns:1fr; }
+  .college-create-assignment { position:static; width:min(100%,calc(100vw - 64px)); }
+  .college-create-field--full,
+  .college-create-selected,
+  .college-create-row-actions { grid-column:auto; }
+  .college-create-inline-actions { width:100%; justify-content:flex-start; }
+  .college-create-footer { position:sticky; bottom:-14px; padding:12px 0 2px; background:var(--surface); }
+}
+
 /* College screen: CMS Inter CampusConfigurationPage banner, statistics, inline filters and table. */
 .college-management { width:100%; min-width:0; }
 .college-config-heading {

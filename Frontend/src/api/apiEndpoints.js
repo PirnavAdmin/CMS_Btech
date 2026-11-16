@@ -16,7 +16,7 @@ if (typeof window !== 'undefined' && window.localStorage) {
 }
 
 const normalizeBaseUrl = (value = '') => value.trim().replace(/\/+$/, '')
-const DEFAULT_API_BASE_URL = 'https://annotate-buckle-geometric.ngrok-free.dev'
+const DEFAULT_API_BASE_URL = 'https://moonstone-breeze-passport.ngrok-free.dev'
 // Results endpoints are optional until the institution's result service is integrated.
 export const RESULTS_API_ENABLED = String(import.meta.env.VITE_RESULTS_API_ENABLED || '').toLowerCase() === 'true'
 
@@ -481,9 +481,9 @@ const dataResponse = (response) => response?.data?.data ?? response?.data ?? res
 const listData = (response) => listResponse(response)
 
 export const campusApi = {
-  async list({ collegeId, isSuperAdmin, pageNumber }) {
+  async list({ collegeId, isSuperAdmin, pageNumber, pageSize = 25, isActive }) {
     const scope = requiredId(collegeId, 'College ID')
-    const params = { pageNumber, pageSize: 25 }
+    const params = { pageNumber, pageSize, isActive }
     const readCollegeDirectory = () => request(withQuery(endpoint('/api/v1/campuses'), { ...params, collegeId: scope }))
     let response
     if (isSuperAdmin) {
@@ -580,6 +580,29 @@ export const userDirectoryApi = {
   resetPassword: id => request(endpoint(`/api/v1/admin/users/${encodeURIComponent(id)}/reset-password`), { method: 'POST' }),
   activity: async (id, params = {}) => (await request(withQuery(endpoint(`/api/v1/admin/users/${encodeURIComponent(id)}/activity`), params)))?.data ?? [],
   exportCsv: params => screenExportsApi.download('users', { Format: 'csv', ...params }),
+}
+
+export const collegeUserMappingsApi = {
+  getAll: async () => {
+    const response = await request(endpoint('/api/v1/super-admin/college-mappings'))
+    const rows = extractListResponse(response)
+    if (!rows) throw new Error('College administrator assignments returned an unexpected response.')
+    return rows
+  },
+  getByUser: async userId => {
+    const response = await request(endpoint(`/api/v1/super-admin/college-mappings/user/${encodeURIComponent(userId)}`))
+    const rows = extractListResponse(response)
+    if (!rows) throw new Error('The administrator assignments returned an unexpected response.')
+    return rows
+  },
+  assign: body => request(endpoint('/api/v1/super-admin/college-mappings'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }),
+  remove: (userId, collegeSettingId) => request(endpoint(`/api/v1/super-admin/college-mappings/user/${encodeURIComponent(userId)}/college/${encodeURIComponent(collegeSettingId)}`), {
+    method: 'DELETE',
+  }),
 }
 
 export const authAccessApi = {

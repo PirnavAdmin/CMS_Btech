@@ -3190,7 +3190,7 @@ function FacultyManagement() {
                   </tbody>
                 </table>
               </div>
-              <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} />
+              {totalPages > 1 && <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} />}
             </>
           ) : (
             <EmptyState
