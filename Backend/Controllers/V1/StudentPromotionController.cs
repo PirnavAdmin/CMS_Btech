@@ -1,5 +1,6 @@
 using BTech.DTOs.StudentPromotion;
 using BTech.Exceptions;
+using BTech.Services;
 using BTech.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -38,6 +39,7 @@ namespace BTech.Controllers.V1
             {
                 var result =
                     await _service.GetEligibleStudentsAsync(
+                        CollegeDataScope.Resolve(HttpContext),
                         branchId,
                         academicYearId,
                         semesterNumber);
@@ -92,7 +94,7 @@ namespace BTech.Controllers.V1
 
                 var result =
                     await _service.GetStudentEligibilityAsync(
-                        studentId);
+                        CollegeDataScope.Resolve(HttpContext), studentId);
 
                 if (result == null)
                 {
@@ -249,6 +251,8 @@ namespace BTech.Controllers.V1
         public async Task<IActionResult> PromoteStudentsBulk(
             [FromBody] BulkPromoteStudentRequestDto request)
         {
+            var collegeId = CollegeDataScope.Resolve(HttpContext);
+
             try
             {
                 if (request == null)
@@ -273,6 +277,7 @@ namespace BTech.Controllers.V1
 
                 // Do not trust an audit user ID supplied by the client.
                 request.CreatedBy = changedBy.Value;
+                request.AuthorizedCollegeId = collegeId;
 
                 var result =
                     await _service.PromoteStudentsBulkAsync(request);
@@ -520,6 +525,8 @@ namespace BTech.Controllers.V1
             long studentId,
             [FromQuery] string eligibilityStatus)
         {
+            var collegeId = CollegeDataScope.Resolve(HttpContext);
+            var reviewerId = CollegeDataScope.Actor(HttpContext);
             try
             {
                 if (studentId <= 0)
@@ -540,24 +547,26 @@ namespace BTech.Controllers.V1
                     });
                 }
 
-                var result =
-                    await _service.UpdateEligibilityStatusAsync(
-                        studentId,
-                        eligibilityStatus);
-
-                if (!result)
-                {
-                    return BadRequest(new
-                    {
-                        success = false,
-                        message = "Eligibility status update failed."
-                    });
-                }
+                await _service.UpdateEligibilityStatusAsync(
+                    collegeId, studentId, eligibilityStatus, reviewerId);
 
                 return Ok(new
                 {
                     success = true,
                     message = "Eligibility status updated successfully."
+                });
+            }
+            catch (PromotionValidationException ex)
+            {
+                _logger.LogWarning("Promotion review rejected. CollegeId={CollegeId}, StudentId={StudentId}, Reason={Reason}",
+                    collegeId, studentId, ex.Message);
+
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message,
+                    studentId = ex.StudentId,
+                    errors = ex.Errors
                 });
             }
             catch (ArgumentException ex)

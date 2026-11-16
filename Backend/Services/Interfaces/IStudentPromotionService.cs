@@ -9,6 +9,7 @@ namespace BTech.Services.Interfaces
         // =====================================================
 
         Task<List<EligibleStudentDto>> GetEligibleStudentsAsync(
+            long? collegeId,
             long branchId,
             long academicYearId,
             int semesterNumber);
@@ -19,7 +20,7 @@ namespace BTech.Services.Interfaces
         // =====================================================
 
         Task<EligibleStudentDto?> GetStudentEligibilityAsync(
-            long studentId);
+            long? collegeId, long studentId);
 
 
         // =====================================================
@@ -68,8 +69,7 @@ namespace BTech.Services.Interfaces
         // UPDATE ELIGIBILITY STATUS
         // =====================================================
 
-        Task<bool> UpdateEligibilityStatusAsync(
-            long studentId,
-            string eligibilityStatus);
+        Task UpdateEligibilityStatusAsync(
+            long? collegeId, long studentId, string eligibilityStatus, long reviewerId);
     }
 }
