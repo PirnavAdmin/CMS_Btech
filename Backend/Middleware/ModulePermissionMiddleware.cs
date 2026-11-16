@@ -368,6 +368,7 @@ public sealed class ModulePermissionMiddleware
         if (p.Contains("access-request") || p.Contains("activity-log")) return "roles_permissions";
         if (p.Contains("credential")) return "roles_permissions";
         if (p.Contains("demo-request")) return "colleges";
+        if (p.Contains("subscription")) return "colleges";
         if (p.Contains("college-user") || p.Contains("college-user-mapping")) return "colleges";
         if (p.Contains("college") || p.Contains("campus")) return "colleges";
         if (p.Contains("department")) return "departments";
