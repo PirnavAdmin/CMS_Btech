@@ -18,6 +18,8 @@ namespace BTech.Data
 
         public DbSet<DemoRequest> DemoRequests { get; set; }
 
+        public DbSet<OrganizationSubscription> OrganizationSubscriptions => Set<OrganizationSubscription>();
+
         public DbSet<CourseSemesterMapping> CourseSemesterMappings
         {
             get => Set<CourseSemesterMapping>();

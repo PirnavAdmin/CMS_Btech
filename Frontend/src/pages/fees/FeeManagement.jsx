@@ -15,6 +15,7 @@ import '../admin-management/AdminManagement.css'
 import './fees.css'
 import './fees-advanced.css'
 import { ProjectSelect } from '../../components/SearchableSelect'
+import { ADMISSION_QUOTAS } from '../../utils/admissionQuotaOptions'
 import { TableActionButton } from '../../components/TableActionButton';
 // Comprehensive Fee Management Module: Overview, Fee Plans, Student Fees, Payments, Reports
 import * as external0 from "react";
@@ -890,9 +891,14 @@ export const FeeStructureWizardModule = (() => {
     const headsFor = config => config?.components || s.components;
     const totalFor = config => rupees(headsFor(config).reduce((sum, component) => sum + cents(configAmount(config, component)), 0) - cents(s.discount || 0));
     const scopedStudents = students.filter(row => { const owner = collegeScopeModule.collegeField(row, 'college'); return !owner || String(owner) === String(collegeId); });
-    const quotaValues = [...new Set([...serverPlans.map(row => row.quota), ...scopedStudents.map(row => row.admissionQuota ?? row.quota ?? row.academic?.quota ?? row.admission?.quota)]
+    const discoveredQuotas = [...new Set([...serverPlans.map(row => row.quota), ...scopedStudents.map(row => row.admissionQuota ?? row.quota ?? row.academic?.quota ?? row.admission?.quota)]
       .filter(value => value && !["other", "others"].includes(String(value).trim().toLowerCase())))];
-    const studentCategoryValues = [...new Set([...serverPlans.map(row => row.studentCategory), ...scopedStudents.map(row => row.studentCategory ?? row.academic?.studentCategory ?? row.admission?.studentCategory)].filter(Boolean))];
+    const defaultQuotas = [...new Set([...(ADMISSION_QUOTAS || []), "Convener", "Management", "NRI", "NRI Sponsored", "Institutional", "Sports"])]
+      .filter(value => value && !["other", "others"].includes(String(value).trim().toLowerCase()));
+    const quotaValues = [...new Set([...discoveredQuotas, ...defaultQuotas])];
+    const discoveredCategories = [...new Set([...serverPlans.map(row => row.studentCategory), ...scopedStudents.map(row => row.studentCategory ?? row.academic?.studentCategory ?? row.admission?.studentCategory)].filter(Boolean))];
+    const defaultCategories = ["General", "SC", "ST", "BC", "EWS"];
+    const studentCategoryValues = [...new Set([...discoveredCategories, ...defaultCategories])];
     const editingConfig = configurations.find(row => row.id === previewConfigId) || configurations[0];
     const defaultHeads = headsFor(editingConfig);
     
