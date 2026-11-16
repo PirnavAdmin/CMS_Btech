@@ -25,21 +25,27 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
     const source = status === 'error' || status === 'loading' ? unavailableNavigationGroups(userRole, modules) : navigationGroups({ role: userRole, access, selectedCollegeId, modules })
     if (userRole === 'admin' && access?.isSuperAdmin === true && status === 'ready') {
       const entries = new Map(source.flatMap(group => group.items).map(entry => [entry.id, entry]))
-      const make = (sourceId, id, label, path) => entries.has(sourceId) ? [{...entries.get(sourceId), id, label, path, children: [], aliases: []}] : []
+      const make = (sourceId, id, label, path) => {
+        const entry = entries.get(sourceId) || modules.find(module => module.id === sourceId)
+        return entry ? [{...entry, id, label, path, children: [], aliases: []}] : []
+      }
       return [{id:'platform',label:'Platform',items:[
         ...make('dashboard','dashboard','Dashboard','/dashboard'),
-        ...make('user_access','client_onboarding','Client Onboarding','/client-onboarding'),
-        ...make('colleges','colleges','Colleges','/college-institution-management'),
-        ...make('user_access','user_access','User Access Management','/user-access'),
-        ...make('roles_permissions','roles_permissions','Module Access Configuration','/roles-designations'),
+        ...make('colleges','colleges','Organizations','/college-institution-management'),
+        ...make('demo_requests','demo_requests','Demo Requests','/demo-requests'),
+        ...make('subscriptions','subscriptions','Subscriptions','/subscriptions'),
+        ...make('roles_permissions','roles_permissions','Permissions','/roles-designations'),
         ...make('academic_settings','academic_settings','Platform Settings','/settings'),
       ]}]
     }
     return userRole === 'admin' ? groupAdminWorkspaces(source) : source
   }, [status, userRole, access, selectedCollegeId])
   const activeId = useMemo(() => {
-    const module = activeSidebarEntry(pathname, userRole) || (pathname === '/settings' || pathname.startsWith('/settings/') || pathname === '/global-settings' ? 'academic_settings' : null)
-    if (access?.isSuperAdmin === true) return pathname.startsWith('/client-onboarding') ? 'client_onboarding' : module
+    const platformEntry = access?.isSuperAdmin === true
+      ? MODULE_REGISTRY.find(entry => entry.scope === 'platform' && (pathname === entry.path || pathname.startsWith(`${entry.path}/`)))?.id
+      : null
+    const module = activeSidebarEntry(pathname, userRole) || platformEntry || (pathname === '/settings' || pathname.startsWith('/settings/') || pathname === '/global-settings' ? 'academic_settings' : null)
+    if (access?.isSuperAdmin === true) return module
     const workspace = userRole === 'admin' && adminWorkspaceForModule(module)
     return workspace ? `workspace_${workspace.id}` : module
   }, [pathname, userRole, access])

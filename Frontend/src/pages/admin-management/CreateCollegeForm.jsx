@@ -149,9 +149,9 @@ export default function CreateCollegeForm({ onDismiss, onSaved }) {
   const validate = () => {
     const fieldErrors = {}
     const rowErrors = {}
-    if (!values.name.trim()) fieldErrors.name = 'College name is required.'
-    if (!values.code.trim()) fieldErrors.code = 'College code is required.'
-    if (['Other', 'Others'].includes(values.collegeType) && !values.collegeTypeOther.trim()) fieldErrors.collegeTypeOther = 'Enter the college type.'
+    if (!values.name.trim()) fieldErrors.name = 'Organization name is required.'
+    if (!values.code.trim()) fieldErrors.code = 'Organization code is required.'
+    if (['Other', 'Others'].includes(values.collegeType) && !values.collegeTypeOther.trim()) fieldErrors.collegeTypeOther = 'Enter the organization type.'
     if (values.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim())) fieldErrors.email = 'Enter a valid email address.'
     if (values.phone.trim() && !/^[0-9+()\-\s]{7,20}$/.test(values.phone.trim())) fieldErrors.phone = 'Enter a valid phone number.'
     if (!admins.length) fieldErrors.admins = 'Add or assign at least one College Admin.'
@@ -265,7 +265,7 @@ export default function CreateCollegeForm({ onDismiss, onSaved }) {
     try {
       const response = await getCollegeSettingsByCollegeId(collegeId)
       const id = settingIdentifier(response)
-      if (!id) throw new Error('College settings were returned without an identifier.')
+      if (!id) throw new Error('Organization settings were returned without an identifier.')
       setCollegeSettingId(id)
       return id
     } catch (error) {
@@ -284,7 +284,7 @@ export default function CreateCollegeForm({ onDismiss, onSaved }) {
         status: 1,
       })
       const id = settingIdentifier(response)
-      if (!id) throw new Error('College settings were created, but their identifier was not returned.')
+      if (!id) throw new Error('Organization settings were created, but their identifier was not returned.')
       setCollegeSettingId(id)
       return id
     }
@@ -294,7 +294,7 @@ export default function CreateCollegeForm({ onDismiss, onSaved }) {
     event.preventDefault()
     if (submitting || submitLock.current || !validate()) return
     if (access?.isSuperAdmin !== true) {
-      setSubmitError('Only the platform Super Admin can create a college.')
+      setSubmitError('Only the platform Super Admin can create an organization.')
       return
     }
     submitLock.current = true
@@ -304,7 +304,7 @@ export default function CreateCollegeForm({ onDismiss, onSaved }) {
     let progress = { ...adminProgress }
     try {
       if (!collegeId) {
-        if (creationUnconfirmed) throw new Error('College creation could not be confirmed. Refresh the College directory before trying again.')
+        if (creationUnconfirmed) throw new Error('Organization creation could not be confirmed. Refresh the Organization directory before trying again.')
         const latestResponse = await getColleges()
         const latestData = latestResponse?.data?.data ?? latestResponse?.data ?? latestResponse
         const rows = Array.isArray(latestData) ? latestData : Array.isArray(latestData?.items) ? latestData.items : []
@@ -312,7 +312,7 @@ export default function CreateCollegeForm({ onDismiss, onSaved }) {
         const duplicate = rows.find(row =>
           normalized(row.code ?? row.collegeCode) === normalized(values.code)
           || normalized(row.name ?? row.collegeName) === normalized(values.name))
-        if (duplicate) throw new Error('A college with the same name or code already exists.')
+        if (duplicate) throw new Error('An organization with the same name or code already exists.')
 
         let response
         try {
@@ -337,7 +337,7 @@ export default function CreateCollegeForm({ onDismiss, onSaved }) {
           throw error
         }
         collegeId = collegeIdFromResponse(response)
-        if (!collegeId) throw new Error('College creation was confirmed, but the API did not return its identifier.')
+        if (!collegeId) throw new Error('Organization creation was confirmed, but the API did not return its identifier.')
         setCreatedCollegeId(collegeId)
         rememberCreated('colleges', collegeId)
         const created = unwrapCollegeRecord(response)
@@ -454,22 +454,22 @@ export default function CreateCollegeForm({ onDismiss, onSaved }) {
         setCollegeStatusSaved(true)
       }
 
-      showSuccess('College created and administrators assigned successfully.')
+      showSuccess('Organization created and administrators assigned successfully.')
       if (onSaved) onSaved({ created: true })
       else onDismiss?.()
     } catch (error) {
       const apiDetails = error?.validationErrors && typeof error.validationErrors === 'object'
         ? Object.values(error.validationErrors).flat().filter(Boolean).join(' ')
         : ''
-      setSubmitError([error?.message, apiDetails].filter((message, index, list) => message && list.indexOf(message) === index).join(' ') || 'College creation could not be completed. Your form values have been retained.')
+      setSubmitError([error?.message, apiDetails].filter((message, index, list) => message && list.indexOf(message) === index).join(' ') || 'Organization creation could not be completed. Your form values have been retained.')
     } finally {
       submitLock.current = false
       setSubmitting(false)
     }
   }
 
-  if (accessLoading) return <ViewDialog title="Create College" onClose={onDismiss} maxWidth="1040px" showExport={false}><p role="status">Loading account access…</p></ViewDialog>
-  if (access?.isSuperAdmin !== true) return <ViewDialog title="Create College" onClose={onDismiss} maxWidth="1040px" showExport={false}><p role="alert">Only the platform Super Admin can access college creation.</p></ViewDialog>
+  if (accessLoading) return <ViewDialog title="Create Organization" onClose={onDismiss} maxWidth="1040px" showExport={false}><p role="status">Loading account access…</p></ViewDialog>
+  if (access?.isSuperAdmin !== true) return <ViewDialog title="Create Organization" onClose={onDismiss} maxWidth="1040px" showExport={false}><p role="alert">Only the platform Super Admin can access organization creation.</p></ViewDialog>
 
   const field = (label, name, type = 'text', options = {}) => (
     <div className={`college-create-field${options.full ? ' college-create-field--full' : ''}`} key={name}>
@@ -486,22 +486,22 @@ export default function CreateCollegeForm({ onDismiss, onSaved }) {
   )
 
   const form = <form className="college-create-form" onSubmit={submit} noValidate>
-    {submitError && <div className="college-create-alert" role="alert">{submitError}{createdCollegeId && <span> College #{createdCollegeId} is already saved; retry to finish pending assignments.</span>}{creationUnconfirmed && <span> Refresh the College directory before retrying to avoid a duplicate.</span>}</div>}
+    {submitError && <div className="college-create-alert" role="alert">{submitError}{createdCollegeId && <span> Organization #{createdCollegeId} is already saved; retry to finish pending assignments.</span>}{creationUnconfirmed && <span> Refresh the Organization directory before retrying to avoid a duplicate.</span>}</div>}
     <section className="college-create-section" aria-labelledby="college-create-contact-title">
-      <header><div><h2 id="college-create-contact-title">Contact Details</h2><p>College identity and primary contact information</p></div></header>
+      <header><div><h2 id="college-create-contact-title">Contact Details</h2><p>Organization identity and primary contact information</p></div></header>
       <div className="college-create-grid">
-        {field('College Name', 'name', 'text', { required: true })}
-        {field('College Code', 'code', 'text', { required: true })}
+        {field('Organization Name', 'name', 'text', { required: true })}
+        {field('Organization Code', 'code', 'text', { required: true })}
         {field('Contact Person', 'contactPerson')}
         {field('Email', 'email', 'email')}
         {field('Phone Number', 'phone', 'tel')}
         {field('Status', 'status', 'text', { select: [{ value: '1', label: 'Active' }, { value: '0', label: 'Inactive' }] })}
       </div>
-      <p className="college-create-note">Contact Person is saved to the College record’s existing Principal field.</p>
+      <p className="college-create-note">Contact Person is saved to the organization record’s existing Principal field.</p>
     </section>
 
     <section className="college-create-section" aria-labelledby="college-create-address-title">
-      <header><div><h2 id="college-create-address-title">Address Details</h2><p>College location and mailing address</p></div></header>
+      <header><div><h2 id="college-create-address-title">Address Details</h2><p>Organization location and mailing address</p></div></header>
       <div className="college-create-grid">
         {field('Address', 'address', 'text', { full: true, multiline: true })}
         {field('City', 'city')}
@@ -584,21 +584,21 @@ export default function CreateCollegeForm({ onDismiss, onSaved }) {
     </section>
 
     <section className="college-create-section" aria-labelledby="college-create-extra-title">
-      <header><div><h2 id="college-create-extra-title">College Details</h2><p>Additional fields retained from College management</p></div></header>
+      <header><div><h2 id="college-create-extra-title">Organization Details</h2><p>Additional fields retained from organization management</p></div></header>
       <div className="college-create-grid">
-        {field('College Type', 'collegeType', 'text', { select: [{ value: '', label: 'Select type' }, ...COLLEGE_TYPES.map(type => ({ value: type, label: type }))] })}
-        {['Other', 'Others'].includes(values.collegeType) && field('Specify College Type', 'collegeTypeOther', 'text', { required: true })}
+        {field('Organization Type', 'collegeType', 'text', { select: [{ value: '', label: 'Select type' }, ...COLLEGE_TYPES.map(type => ({ value: type, label: type }))] })}
+        {['Other', 'Others'].includes(values.collegeType) && field('Specify Organization Type', 'collegeTypeOther', 'text', { required: true })}
         {field('University Name', 'universityName')}
       </div>
     </section>
 
     <footer className="college-create-footer">
       <button type="button" className="college-create-secondary" onClick={onDismiss} disabled={submitting}>Cancel</button>
-      <button type="submit" className="college-create-primary" disabled={submitting || creationUnconfirmed}>{submitting ? 'Creating College…' : 'Create College'}</button>
+      <button type="submit" className="college-create-primary" disabled={submitting || creationUnconfirmed}>{submitting ? 'Creating Organization…' : 'Create Organization'}</button>
     </footer>
   </form>
 
-  return <ViewDialog title="Create College" subtitle="Create a College and configure its administrators" className="college-create-dialog" maxWidth="1040px" onClose={onDismiss} busy={submitting} showExport={false} hideFooter>
+  return <ViewDialog title="Create Organization" subtitle="Create an organization and configure its administrators" className="college-create-dialog" maxWidth="1040px" onClose={onDismiss} busy={submitting} showExport={false} hideFooter>
     {form}
   </ViewDialog>
 }

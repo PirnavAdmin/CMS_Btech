@@ -32,7 +32,7 @@ export default function PortalLayout({ children, title }) {
   const [open, setOpen] = useState(false), [logout, setLogout] = useState(false)
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('pirnav-sidebar-collapsed') === 'true')
   const [query, setQuery] = useState('')
-  const allNav = role === 'faculty' ? facultyNavigation : role === 'student' ? studentNavigation : role === 'staff' ? [['dashboard', 'Dashboard'], ['profile', 'My Profile']] : [['users', 'Roles & Designations']]
+  const allNav = role === 'faculty' ? facultyNavigation : role === 'student' ? studentNavigation : role === 'staff' ? [['dashboard', 'Dashboard'], ['profile', 'My Profile']] : [['users', 'Permissions']]
   const nav = [...allNav.filter(([key]) => canView(`/${role}-portal/${key}`)), ...(['faculty', 'staff'].includes(role) ? additionalScreens.filter(([path]) => canView(path)) : [])]
   const sidebarNav = nav.filter(([key]) => role === 'faculty' ? facultySidebarKeys.has(key) : key !== 'notifications')
   const base = role === 'admin' ? '/roles-designations' : `/${role}-portal`

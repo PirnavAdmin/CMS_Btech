@@ -19,6 +19,8 @@ import { facultyRouteByPath } from './features/faculty/routeConfig.js'
 const AcademicPortal = lazy(() => import('./pages/portals/AcademicPortal.jsx'))
 const StaffPortal = lazy(() => import('./pages/staff-portal/StaffPortal.jsx'))
 const UserAccessManagement = lazy(() => import('./pages/admin-management/UserAccessManagement.jsx'))
+const DemoRequests = lazy(() => import('./pages/platform/DemoRequests.jsx'))
+const Subscriptions = lazy(() => import('./pages/platform/Subscriptions.jsx'))
 const PortalPreview = lazy(() => import('./pages/portals/PortalPreview.jsx'))
 const FacultyDashboardPage = lazy(() => import('./features/faculty/dashboard/pages/FacultyDashboardPage.jsx'))
 const FacultyWorkspacePage = lazy(() => import('./features/faculty/FacultyWorkspacePage.jsx'))
@@ -203,7 +205,7 @@ export default function App() {
           </Route>
           <Route element={<AcademicProvider><PortalRoute roles={[ROLES.ADMIN]} /></AcademicProvider>}>
             <Route path="/user-access" element={<UserAccessManagement />} />
-            <Route path="/client-onboarding" element={<UserAccessManagement initialOnboarding />} />
+            <Route path="/client-onboarding" element={<Navigate to="/user-access" replace />} />
           </Route>
           {/* Existing administrator screens retain their URLs and components. */}
           <Route element={<PortalRoute roles={[ROLES.ADMIN]} permissionCheckedByChild />}>
@@ -340,6 +342,8 @@ export default function App() {
               <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN]} />}><Route path="/fees/*" element={<Fees />} /></Route>
               <Route path="/roles-designations" element={<RolesAndDesignations />} />
               <Route path="/roles-permissions" element={<RolesAndDesignations />} />
+              <Route path="/demo-requests" element={<DemoRequests />} />
+              <Route path="/subscriptions" element={<Subscriptions />} />
           </Route>
           </Route>
 
