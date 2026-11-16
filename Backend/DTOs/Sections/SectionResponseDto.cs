@@ -5,6 +5,7 @@
         public long SectionId { get; set; }
 
         public long CollegeId { get; set; }
+        public long? CampusId { get; set; }
         public string? CollegeName { get; set; }
 
         public long AcademicYearId { get; set; }

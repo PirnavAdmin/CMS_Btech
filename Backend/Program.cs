@@ -738,6 +738,7 @@ builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(options =>
 {
+    options.OperationFilter<CampusWorkspaceOperationFilter>();
     // --------------------------------------------------------
     // JWT SECURITY DEFINITION
     // --------------------------------------------------------
@@ -1001,6 +1002,7 @@ app.UseMiddleware<BTech.UserAccess.AccountReadinessMiddleware>();
 // so role-permission updates affect existing JWT sessions without re-login.
 app.UseMiddleware<BTech.Middleware.ModulePermissionMiddleware>();
 app.UseMiddleware<BTech.UserAccess.UserYearScopeMiddleware>();
+app.UseMiddleware<CampusWorkspaceMiddleware>();
 
 // ============================================================
 // CONTROLLERS

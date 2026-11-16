@@ -1,3 +1,4 @@
+using BTech.CampusManagement;
 using System.Data;
 using System.Globalization;
 using System.IO.Compression;
@@ -85,11 +86,25 @@ public sealed class ScreenExportsController(IConfiguration configuration, ILogge
         if (screen != "student-admissions") status = status?.ToLowerInvariant() switch { "active" or "true" => "1", "inactive" or "false" => "0", _ => status };
         await using var connection = new MySqlConnection(configuration.GetConnectionString("DefaultConnection"));
         await connection.OpenAsync(HttpContext.RequestAborted);
-        using var reader = await connection.ExecuteReaderAsync(new CommandDefinition("sp_cms_export", new {
-            p_screen=screen.ToLowerInvariant(),p_search=query.Search,p_status=status,p_college_id=query.CollegeId,
-            p_department_id=query.DepartmentId,p_course_id=query.CourseId,p_branch_id=query.BranchId,
-            p_semester_id=query.SemesterId,p_academic_year_id=query.AcademicYearId
-        }, commandType:CommandType.StoredProcedure, cancellationToken:HttpContext.RequestAborted));
+        var parameters = new DynamicParameters(new
+        {
+            p_search = query.Search, p_status = status, p_college_id = query.CollegeId,
+            p_department_id = query.DepartmentId, p_course_id = query.CourseId, p_branch_id = query.BranchId,
+            p_semester_id = query.SemesterId, p_academic_year_id = query.AcademicYearId
+        });
+        var procedure = "sp_cms_export";
+        if (screen.Equals("sections", StringComparison.OrdinalIgnoreCase) && CampusWorkspaceScope.From(HttpContext) is { } scope)
+        {
+            procedure = "sp_campus_section_export";
+            parameters.Add("p_college_id", scope.CollegeId);
+            parameters.Add("p_campus_id", scope.CampusId);
+        }
+        else
+        {
+            parameters.Add("p_screen", screen.ToLowerInvariant());
+        }
+        using var reader = await connection.ExecuteReaderAsync(new CommandDefinition(procedure, parameters,
+            commandType: CommandType.StoredProcedure, cancellationToken: HttpContext.RequestAborted));
         var rows = new List<Dictionary<string, object?>>();
         var headers = Enumerable.Range(0,reader.FieldCount).Select(reader.GetName).ToArray();
         while (reader.Read())
@@ -209,6 +224,7 @@ public sealed class ScreenExportsController(IConfiguration configuration, ILogge
     [HttpGet("~/api/semester/export")]
     public Task<IActionResult> DownloadSemesters([FromQuery] ScreenExportQuery query) => Download("semesters",query);
 
+    [CampusScoped]
     [HttpGet("~/api/v1/sections/download")]
     [HttpGet("~/api/v1/sections/export")]
     public Task<IActionResult> DownloadSections([FromQuery] ScreenExportQuery query) => Download("sections",query);

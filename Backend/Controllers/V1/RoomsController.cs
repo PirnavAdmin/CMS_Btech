@@ -1,3 +1,7 @@
+using System.Globalization;
+using System.Text;
+using BTech.CampusManagement;
+using BTech.Services;
 using System.Security.Claims;
 using BTech.DTOs.Rooms;
 using BTech.Services.Interfaces;
@@ -20,6 +24,7 @@ public sealed class RoomsController : ControllerBase
         _logger = logger;
     }
 
+    [CampusScoped]
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetRooms(
@@ -33,11 +38,29 @@ public sealed class RoomsController : ControllerBase
         return Ok(new { success = true, message = "Rooms retrieved successfully.", data, count = data.Count });
     }
 
+    [CampusScoped]
+    [HttpGet("export")]
+    public async Task<IActionResult> Export([FromQuery] long? collegeId, [FromQuery] string? search,
+        [FromQuery] string? roomType, [FromQuery] string? buildingBlock, [FromQuery] string? status)
+    {
+        var data = await _service.GetRoomsAsync(ResolveCollegeId(collegeId), search, roomType, buildingBlock, status);
+        var csv = new StringBuilder("RoomNumber,RoomName,BuildingBlock,Floor,RoomType,Capacity,Status\r\n");
+        foreach (var row in data)
+        {
+            object?[] fields = [row.RoomNumber, row.RoomName, row.BuildingBlock, row.Floor, row.RoomType, row.Capacity, row.Status];
+            csv.AppendLine(string.Join(",", fields.Select(ScreenExportsController.EscapeCsv)));
+        }
+        Response.Headers["X-Total-Count"] = data.Count.ToString(CultureInfo.InvariantCulture);
+        Response.Headers["Cache-Control"] = "no-store";
+        return File(Encoding.UTF8.GetBytes(csv.ToString()), "text/csv; charset=utf-8", "rooms.csv");
+    }
+
     [HttpGet("options")]
     [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public IActionResult GetOptions() => Ok(new { success = true, message = "Room options retrieved successfully.", data = _service.GetOptions() });
 
+    [CampusScoped]
     [HttpGet("{classroomId:long}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -47,6 +70,7 @@ public sealed class RoomsController : ControllerBase
         return Ok(new { success = true, message = "Room retrieved successfully.", data });
     }
 
+    [CampusScoped]
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -59,6 +83,7 @@ public sealed class RoomsController : ControllerBase
         return CreatedAtAction(nameof(GetRoom), new { classroomId = data.Id, collegeId }, new { success = true, message = "Room created successfully.", data });
     }
 
+    [CampusScoped]
     [HttpPut("{classroomId:long}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> UpdateRoom(long classroomId, [FromBody] SaveRoomRequest request)
@@ -69,6 +94,7 @@ public sealed class RoomsController : ControllerBase
         return Ok(new { success = true, message = "Room updated successfully.", data });
     }
 
+    [CampusScoped]
     [HttpDelete("{classroomId:long}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -80,6 +106,7 @@ public sealed class RoomsController : ControllerBase
         return Ok(new { success = true, message = "Room deleted successfully.", classroomId });
     }
 
+    [CampusScoped]
     [HttpPut("{classroomId:long}/allocation")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -91,6 +118,7 @@ public sealed class RoomsController : ControllerBase
         return Ok(new { success = true, message = "Room allocated successfully.", data });
     }
 
+    [CampusScoped]
     [HttpDelete("{classroomId:long}/allocation")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> DeallocateRoom(long classroomId, [FromQuery] long? collegeId = null)
@@ -103,6 +131,12 @@ public sealed class RoomsController : ControllerBase
 
     private long ResolveCollegeId(long? requested)
     {
+        if (CampusWorkspaceScope.From(HttpContext) is { } scope)
+        {
+            if (requested.HasValue && requested != scope.CollegeId)
+                throw new ContractException(403, "CROSS_COLLEGE_ACCESS", "The selected college does not match the request.");
+            return scope.CollegeId;
+        }
         if (requested.HasValue && requested.Value > 0) return requested.Value;
         var claim = User.FindFirstValue("collegeId");
         if (long.TryParse(claim, out var collegeId) && collegeId > 0) return collegeId;

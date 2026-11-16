@@ -5,6 +5,7 @@ public sealed class RoomDirectoryDto
     public long Id { get; set; }
     public long ClassroomId => Id;
     public long CollegeId { get; set; }
+    public long? CampusId { get; set; }
     public string RoomNumber { get; set; } = string.Empty;
     public string RoomName { get; set; } = string.Empty;
     public string BuildingBlock { get; set; } = string.Empty;

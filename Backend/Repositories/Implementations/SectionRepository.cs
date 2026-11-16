@@ -1,3 +1,5 @@
+using BTech.CampusManagement;
+using BTech.Exceptions;
 using System.Data;
 using BTech.DTOs.Sections;
 using BTech.Models;
@@ -11,13 +13,28 @@ namespace BTech.Repositories.Implementations
     {
         private readonly IConfiguration _configuration;
         private readonly ILogger<SectionRepository> _logger;
+        private readonly IHttpContextAccessor _http;
+        private CampusWorkspaceScope? Campus => CampusWorkspaceScope.From(_http.HttpContext);
 
         public SectionRepository(
             IConfiguration configuration,
-            ILogger<SectionRepository> logger)
+            ILogger<SectionRepository> logger,
+            IHttpContextAccessor http)
         {
             _configuration = configuration;
             _logger = logger;
+            _http = http;
+        }
+
+        private DynamicParameters ScopedParameters(object? values = null)
+        {
+            var parameters = new DynamicParameters(values);
+            if (Campus is { } scope)
+            {
+                parameters.Add("p_scope_college_id", scope.CollegeId);
+                parameters.Add("p_campus_id", scope.CampusId);
+            }
+            return parameters;
         }
 
         private MySqlConnection CreateConnection()
@@ -47,7 +64,8 @@ namespace BTech.Repositories.Implementations
 
                 var result =
                     await connection.QueryAsync<SectionResponseDto>(
-                        "sp_section_get_all",
+                        Campus is null ? "sp_section_get_all" : "sp_campus_section_get_all",
+                        ScopedParameters(),
                         commandType:
                             CommandType.StoredProcedure);
 
@@ -96,11 +114,11 @@ namespace BTech.Repositories.Implementations
                 var result =
                     await connection.QueryFirstOrDefaultAsync<
                         SectionResponseDto>(
-                        "sp_section_get_by_id",
-                        new
+                        Campus is null ? "sp_section_get_by_id" : "sp_campus_section_get_by_id",
+                        ScopedParameters(new
                         {
                             p_section_id = sectionId
-                        },
+                        }),
                         commandType:
                             CommandType.StoredProcedure);
 
@@ -171,8 +189,8 @@ namespace BTech.Repositories.Implementations
 
                 var result =
                     await connection.QueryAsync<SectionResponseDto>(
-                        "sp_section_search",
-                        new
+                        Campus is null ? "sp_section_search" : "sp_campus_section_search",
+                        ScopedParameters(new
                         {
                             p_search = search,
                             p_department_id = departmentId,
@@ -182,7 +200,7 @@ namespace BTech.Repositories.Implementations
                             p_status = status.HasValue
                                 ? (int?)(status.Value ? 1 : 0)
                                 : null
-                        },
+                        }),
                         commandType:
                             CommandType.StoredProcedure);
 
@@ -231,8 +249,8 @@ namespace BTech.Repositories.Implementations
 
                 var result =
                     await connection.QuerySingleAsync<long>(
-                        "sp_section_create",
-                        new
+                        Campus is null ? "sp_section_create" : "sp_campus_section_create",
+                        ScopedParameters(new
                         {
                             p_college_id =
                                 section.CollegeId,
@@ -263,7 +281,7 @@ namespace BTech.Repositories.Implementations
 
                             p_created_by =
                                 section.CreatedBy
-                        },
+                        }),
                         commandType:
                             CommandType.StoredProcedure);
 
@@ -316,7 +334,7 @@ namespace BTech.Repositories.Implementations
                 // Dynamic parameters for Section Update
                 // -------------------------------------------------
 
-                var parameters = new DynamicParameters();
+                var parameters = ScopedParameters();
 
                 parameters.Add(
                     "p_section_id",
@@ -366,7 +384,7 @@ namespace BTech.Repositories.Implementations
 
                 var result =
                     await connection.QuerySingleAsync<int>(
-                        "sp_section_update_details",
+                        Campus is null ? "sp_section_update_details" : "sp_campus_section_update_details",
                         parameters,
                         commandType:
                             CommandType.StoredProcedure);
@@ -431,15 +449,15 @@ namespace BTech.Repositories.Implementations
 
                 var result =
                     await connection.QuerySingleAsync<int>(
-                        "sp_section_delete",
-                        new
+                        Campus is null ? "sp_section_delete" : "sp_campus_section_delete",
+                        ScopedParameters(new
                         {
                             p_section_id =
                                 sectionId,
 
                             p_deleted_by =
                                 deletedBy
-                        },
+                        }),
                         commandType:
                             CommandType.StoredProcedure);
 
@@ -502,8 +520,8 @@ namespace BTech.Repositories.Implementations
 
                 var result =
                     await connection.QuerySingleAsync<int>(
-                        "sp_section_update_status",
-                        new
+                        Campus is null ? "sp_section_update_status" : "sp_campus_section_update_status",
+                        ScopedParameters(new
                         {
                             p_section_id =
                                 sectionId,
@@ -513,7 +531,7 @@ namespace BTech.Repositories.Implementations
 
                             p_updated_by =
                                 updatedBy
-                        },
+                        }),
                         commandType:
                             CommandType.StoredProcedure);
 
@@ -575,16 +593,19 @@ namespace BTech.Repositories.Implementations
                 await connection.OpenAsync();
 
                 var result =
-                    await connection.QuerySingleAsync<
+                    await connection.QuerySingleOrDefaultAsync<
                         SectionCapacityValidationDto>(
-                        "sp_section_validate_capacity",
-                        new
+                        Campus is null ? "sp_section_validate_capacity" : "sp_campus_section_validate_capacity",
+                        ScopedParameters(new
                         {
                             p_section_id = sectionId,
                             p_capacity = capacity
-                        },
+                        }),
                         commandType:
                             CommandType.StoredProcedure);
+
+                if (result == null)
+                    throw new NotFoundException("Section not found.");
 
                 _logger.LogInformation(
                     "Section capacity validation completed. SectionId: {SectionId}",
@@ -622,7 +643,8 @@ namespace BTech.Repositories.Implementations
                 using var connection = CreateConnection();
 
                 var result = await connection.QuerySingleAsync<SectionSummaryResponseDto>(
-                    "sp_section_get_summary",
+                    Campus is null ? "sp_section_get_summary" : "sp_campus_section_get_summary",
+                        ScopedParameters(),
                     commandType: CommandType.StoredProcedure);
 
                 _logger.LogInformation(

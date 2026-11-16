@@ -1,3 +1,5 @@
+using BTech.CampusManagement;
+using BTech.Services;
 using BTech.DTOs.Sections;
 using BTech.Services.Implementations;
 using BTech.Services.Interfaces;
@@ -8,6 +10,7 @@ using System.Security.Claims;
 namespace BTech.Controllers.V1
 {
     [ApiController]
+    [CampusScoped]
     [Route("api/v1/sections")]
     [Authorize(
         Roles =
@@ -144,6 +147,12 @@ namespace BTech.Controllers.V1
             [FromBody] CreateSectionRequestDto request)
         {
             var userId = GetUserId();
+            if (CampusWorkspaceScope.From(HttpContext) is { } scope)
+            {
+                if (request.CollegeId != 0 && request.CollegeId != scope.CollegeId)
+                    throw new ContractException(403, "CROSS_COLLEGE_ACCESS", "The selected college does not match the request.");
+                request.CollegeId = scope.CollegeId;
+            }
 
             _logger.LogInformation(
                 "Creating section. " +

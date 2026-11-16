@@ -337,7 +337,7 @@ public sealed class ModulePermissionMiddleware
         var resource=parts.Length>index?parts[index]:"";
         var mapped=resource switch
         {
-            "campuses" => "colleges",
+            "campuses" or "campus-workspace" => "colleges",
             "results" or "grades" or "grade-policies" => "results",
             "marks" => "marks",
             "exams" or "exam-types" or "exam-schedules" => "examinations",
