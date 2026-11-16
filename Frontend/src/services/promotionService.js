@@ -46,7 +46,8 @@ class PromotionService {
       throw new Error('Select at least one valid student for promotion.')
     }
 
-    if (!students.every(isEligible)) {
+    // The promotion screen can pass this only after an administrator confirms the override.
+    if (!students.every(isEligible) && promotionScope.allowEligibilityOverride !== true) {
       throw new Error('Every selected student must be marked eligible before promotion.')
     }
 
