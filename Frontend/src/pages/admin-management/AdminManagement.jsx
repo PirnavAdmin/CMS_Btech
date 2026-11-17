@@ -349,10 +349,6 @@ function AcademicYear() {
 
 
   const edit = (x) => {
-    if (isPresentYear(x)) {
-      setNotice('Present academic year cannot be edited directly.', 'error');
-      return;
-    }
     const item = mapYear(x);
     setSelected(item);
     setForm({
@@ -389,10 +385,6 @@ function AcademicYear() {
 
   async function save(e) {
     e.preventDefault();
-    if (selected && isPresentYear(selected)) {
-      setErrors({ form: 'Present academic year cannot be modified.' });
-      return;
-    }
     if (!validate() || saving) return;
     setSaving(true);
     try {
@@ -620,7 +612,7 @@ function AcademicYear() {
                               title={`Edit ${x.name || 'Academic Year'}`}
                               aria-label={`Edit ${x.name || 'Academic Year'}`}
                               onClick={() => edit(x)}
-                              disabled={['ARCHIVED','COMPLETED'].includes(x.status) || isPresentYear(x)}
+                              disabled={['ARCHIVED','COMPLETED'].includes(x.status)}
                             >
                               <FiEdit2 />
                             </button>
