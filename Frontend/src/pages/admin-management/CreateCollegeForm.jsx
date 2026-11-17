@@ -1,6 +1,6 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import ViewDialog from '../../components/ViewDialog'
-import { collegeUserMappingsApi, userDirectoryApi } from '../../api/apiEndpoints'
+import { collegeUserMappingsApi, lookupIndianPincode, userDirectoryApi } from '../../api/apiEndpoints'
 import {
   createCollege,
   createCollegeSettings,
@@ -21,10 +21,21 @@ const INDIA_STATES = [
   'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala',
   'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland',
   'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura',
-  'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Delhi',
+  'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Andaman and Nicobar Islands',
+  'Chandigarh', 'Delhi', 'Jammu and Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry',
 ]
 const COUNTRIES = ['India', 'United States', 'United Kingdom', 'Canada', 'Australia', 'Other']
-const COLLEGE_TYPES = ['Engineering College', 'Degree College', 'University', 'Autonomous College', 'Affiliated College', 'Deemed University', 'Others']
+const normalizedIndianState = value => {
+  const state = String(value || '').trim()
+  const key = state.toLowerCase().replace(/\s+/g, ' ')
+  const aliases = { orissa: 'Odisha', pondicherry: 'Puducherry', uttaranchal: 'Uttarakhand', 'jammu & kashmir': 'Jammu and Kashmir' }
+  return INDIA_STATES.find(item => item.toLowerCase() === key) || aliases[key] || state
+}
+const normalizedCountry = value => {
+  const country = String(value || '').trim()
+  if (country.toLowerCase().includes('india')) return 'India'
+  return COUNTRIES.find(item => item.toLowerCase() === country.toLowerCase()) || country || 'India'
+}
 let nextAdminRowId = 0
 
 const newAdminRow = () => ({
@@ -95,20 +106,22 @@ export default function CreateCollegeForm({ onDismiss, onSaved }) {
     phone: '',
     status: '1',
     address: '',
+    area: '',
     city: '',
+    district: '',
     state: '',
     country: 'India',
     pincode: '',
-    collegeType: '',
-    collegeTypeOther: '',
-    universityName: '',
   })
-  const [admins, setAdmins] = useState([newAdminRow()])
+  const [pincodeStatus, setPincodeStatus] = useState('')
+  const pincodeLookupRef = useRef(0)
+  const [admins, setAdmins] = useState([])
   const [errors, setErrors] = useState({})
   const [adminErrors, setAdminErrors] = useState({})
   const [submitError, setSubmitError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const submitLock = useRef(false)
+  const [adminMode, setAdminMode] = useState('none')
   const [assignOpen, setAssignOpen] = useState(false)
   const [assignLoading, setAssignLoading] = useState(false)
   const [assignError, setAssignError] = useState('')
@@ -121,21 +134,59 @@ export default function CreateCollegeForm({ onDismiss, onSaved }) {
   const [collegeStatusSaved, setCollegeStatusSaved] = useState(false)
   const [creationUnconfirmed, setCreationUnconfirmed] = useState(false)
 
+  useEffect(() => {
+    const pincode = values.pincode.trim()
+    const lookupId = ++pincodeLookupRef.current
+    if (values.country !== 'India' || !/^\d{6}$/.test(pincode)) {
+      setPincodeStatus('')
+      return undefined
+    }
+
+    let active = true
+    const timer = window.setTimeout(async () => {
+      setPincodeStatus('Finding address details…')
+      try {
+        const location = await lookupIndianPincode(pincode)
+        if (!active || lookupId !== pincodeLookupRef.current) return
+        const country = normalizedCountry(location.country)
+        const state = normalizedIndianState(location.state)
+        setValues(current => {
+          if (current.pincode.trim() !== pincode || current.country !== 'India') return current
+          return {
+            ...current,
+            area: location.town || current.area,
+            city: location.city || location.district || location.town || current.city,
+            district: location.district || current.district,
+            state: state || current.state,
+            country,
+          }
+        })
+        setErrors(current => ({ ...current, area: '', city: '', district: '', state: '' }))
+        setPincodeStatus('Location details filled from this PIN code.')
+      } catch (lookupError) {
+        if (active && lookupId === pincodeLookupRef.current) {
+          setPincodeStatus(lookupError?.message || 'Location lookup failed. Enter the address details manually.')
+        }
+      }
+    }, 300)
+
+    return () => {
+      active = false
+      window.clearTimeout(timer)
+    }
+  }, [values.pincode, values.country])
+
   const filteredEligibleAdmins = useMemo(() => {
     const term = assignSearch.trim().toLowerCase()
     const selectedIds = new Set(admins.filter(row => row.kind === 'existing').map(row => String(row.userId)))
     return existingAdmins.filter(user => {
-      if (selectedIds.has(String(user.userId))) return false
+      if (!user.eligible || selectedIds.has(String(user.userId))) return false
       return !term || `${user.fullName} ${user.email}`.toLowerCase().includes(term)
     })
   }, [admins, assignSearch, existingAdmins])
 
   const updateValue = (field, value) => {
-    setValues(current => ({
-      ...current,
-      [field]: value,
-      ...(field === 'collegeType' && !['Other', 'Others'].includes(value) ? { collegeTypeOther: '' } : {}),
-    }))
+    setValues(current => ({ ...current, [field]: value }))
     setErrors(current => ({ ...current, [field]: '' }))
     setSubmitError('')
   }
@@ -146,14 +197,33 @@ export default function CreateCollegeForm({ onDismiss, onSaved }) {
     setSubmitError('')
   }
 
+  const toggleAddAdmin = () => {
+    if (adminMode === 'new') {
+      setAdminMode('none')
+      return
+    }
+    setAssignOpen(false)
+    setAdminMode('new')
+    if (!admins.some(row => row.kind === 'new')) setAdmins(current => [...current, newAdminRow()])
+    setErrors(current => ({ ...current, admins: '' }))
+    setSubmitError('')
+  }
+
+  const addAnotherAdmin = () => setAdmins(current => [...current, newAdminRow()])
+
+  const removeAdmin = rowId => {
+    setAdmins(current => current.filter(item => item.id !== rowId))
+    setAdminErrors(current => { const next = { ...current }; delete next[rowId]; return next })
+  }
+
   const validate = () => {
     const fieldErrors = {}
     const rowErrors = {}
     if (!values.name.trim()) fieldErrors.name = 'Organization name is required.'
     if (!values.code.trim()) fieldErrors.code = 'Organization code is required.'
-    if (['Other', 'Others'].includes(values.collegeType) && !values.collegeTypeOther.trim()) fieldErrors.collegeTypeOther = 'Enter the organization type.'
     if (values.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim())) fieldErrors.email = 'Enter a valid email address.'
     if (values.phone.trim() && !/^[0-9+()\-\s]{7,20}$/.test(values.phone.trim())) fieldErrors.phone = 'Enter a valid phone number.'
+    if (values.country === 'India' && values.pincode.trim() && !/^\d{6}$/.test(values.pincode.trim())) fieldErrors.pincode = 'Enter a valid 6-digit PIN code.'
     if (!admins.length) fieldErrors.admins = 'Add or assign at least one College Admin.'
 
     const seenEmails = new Map()
@@ -195,8 +265,10 @@ export default function CreateCollegeForm({ onDismiss, onSaved }) {
   const openAssignAdmin = async () => {
     if (assignOpen) {
       setAssignOpen(false)
+      setAdminMode('none')
       return
     }
+    setAdminMode('assign')
     setAssignOpen(true)
     setAssignSearch('')
     setAssignError('')
@@ -225,12 +297,9 @@ export default function CreateCollegeForm({ onDismiss, onSaved }) {
             phone: user.mobile ?? user.phone ?? '',
             status: isActive(user.status ?? user.accountStatus) ? '1' : '0',
             eligible,
-            unavailableReason: mapping
-              ? `Already assigned to ${mapping.collegeName || 'another College'}`
-              : hasPrimaryCollege ? 'Already scoped to another College' : '',
           }
         })
-        .filter(user => user.userId && user.fullName && user.email))
+        .filter(user => user.userId && user.fullName && user.email && user.eligible))
     } catch (error) {
       setAssignError(error?.message || 'Could not load eligible administrators.')
     } finally {
@@ -240,7 +309,11 @@ export default function CreateCollegeForm({ onDismiss, onSaved }) {
 
   const selectExistingAdmin = user => {
     if (!user.eligible) return
-    const blankIndex = admins.findIndex(row => row.kind === 'new' && !row.fullName.trim() && !row.email.trim() && !row.phone.trim())
+    const blankIndex = admins.findIndex(row => row.kind === 'new'
+      && !row.fullName.trim()
+      && !row.email.trim()
+      && !row.phone.trim()
+      && !row.initialPassword.trim())
     const selected = {
       id: blankIndex >= 0 ? admins[blankIndex].id : `pending-admin-${++nextAdminRowId}`,
       kind: 'existing',
@@ -256,7 +329,9 @@ export default function CreateCollegeForm({ onDismiss, onSaved }) {
       : [...current, selected])
     setAdminErrors(current => ({ ...current, [selected.id]: {} }))
     setAssignOpen(false)
+    setAdminMode('none')
     setAssignError('')
+    setErrors(current => ({ ...current, admins: '' }))
     setSubmitError('')
   }
 
@@ -280,7 +355,6 @@ export default function CreateCollegeForm({ onDismiss, onSaved }) {
         city: values.city.trim(),
         state: values.state.trim(),
         pincode: values.pincode.trim(),
-        institutionType: values.collegeType.trim(),
         status: 1,
       })
       const id = settingIdentifier(response)
@@ -319,11 +393,11 @@ export default function CreateCollegeForm({ onDismiss, onSaved }) {
           response = await createCollege({
             name: values.name.trim(),
             code: values.code.trim(),
-            type: ['Other', 'Others'].includes(values.collegeType) ? values.collegeTypeOther.trim() : values.collegeType.trim(),
-            university: values.universityName.trim(),
             address: values.address.trim(),
             addressLine1: values.address.trim(),
+            area: values.area.trim(),
             city: values.city.trim(),
+            district: values.district.trim(),
             state: values.state.trim(),
             country: values.country,
             pincode: values.pincode.trim(),
@@ -501,95 +575,110 @@ export default function CreateCollegeForm({ onDismiss, onSaved }) {
     </section>
 
     <section className="college-create-section" aria-labelledby="college-create-address-title">
-      <header><div><h2 id="college-create-address-title">Address Details</h2><p>Organization location and mailing address</p></div></header>
+      <header><div><h2 id="college-create-address-title">Address Details</h2><p>Enter a PIN code to fill its area, city, district, and state.</p></div></header>
       <div className="college-create-grid">
         {field('Address', 'address', 'text', { full: true, multiline: true })}
+        {field('Area / Post Office', 'area')}
         {field('City', 'city')}
+        {field('District', 'district')}
         {values.country === 'India'
-          ? <div className="college-create-field" key="state"><label htmlFor="college-create-state">State</label><select id="college-create-state" value={values.state} onChange={event => updateValue('state', event.target.value)}><option value="">Select state</option>{INDIA_STATES.map(state => <option key={state} value={state}>{state}</option>)}</select></div>
+          ? <div className="college-create-field" key="state"><label htmlFor="college-create-state">State</label><select id="college-create-state" value={values.state} onChange={event => updateValue('state', event.target.value)}><option value="">Select state</option>{values.state && !INDIA_STATES.includes(values.state) && <option value={values.state}>{values.state}</option>}{INDIA_STATES.map(state => <option key={state} value={state}>{state}</option>)}</select></div>
           : field('State', 'state')}
-        {field('Country', 'country', 'text', { select: COUNTRIES.map(country => ({ value: country, label: country })) })}
-        {field('PIN Code', 'pincode')}
+        {field('Country', 'country', 'text', { select: [...(values.country && !COUNTRIES.includes(values.country) ? [{ value: values.country, label: values.country }] : []), ...COUNTRIES.map(country => ({ value: country, label: country }))] })}
+        <div className="college-create-field" key="pincode">
+          <label htmlFor="college-create-pincode">{values.country === 'India' ? 'PIN Code' : 'Postal Code'}</label>
+          <input id="college-create-pincode" name="pincode" type="text" inputMode={values.country === 'India' ? 'numeric' : 'text'} autoComplete="postal-code" maxLength={values.country === 'India' ? 6 : 12} value={values.pincode}
+            placeholder={values.country === 'India' ? '6-digit PIN code' : 'Enter postal code'}
+            onChange={event => updateValue('pincode', values.country === 'India' ? event.target.value.replace(/\D/g, '').slice(0, 6) : event.target.value.slice(0, 12))}
+            aria-invalid={Boolean(errors.pincode)} aria-describedby={errors.pincode ? 'college-create-pincode-error college-create-pincode-hint' : 'college-create-pincode-hint'} />
+          {errors.pincode && <small id="college-create-pincode-error" className="college-create-error" role="alert">{errors.pincode}</small>}
+          <small id="college-create-pincode-hint" className={`college-create-pincode-status${pincodeStatus.startsWith('Location details') ? ' is-success' : /could not|failed/i.test(pincodeStatus) ? ' is-error' : pincodeStatus ? ' is-pending' : ''}`} role="status">
+            {pincodeStatus || (values.country === 'India' ? 'Enter 6 digits to fill area, city, district, and state.' : 'Enter the postal code for this location.')}
+          </small>
+        </div>
       </div>
     </section>
 
     <section className="college-create-section" aria-labelledby="college-create-admin-title">
       <header className="college-create-section-heading">
-        <div><h2 id="college-create-admin-title">Administrators</h2><p>Invite new College Admins or assign an unassigned existing account</p></div>
+        <div><h2 id="college-create-admin-title">Administrators</h2><p>Add a new admin or assign an existing unassigned account</p></div>
         <div className="college-create-inline-actions">
           <div className="college-create-assign-trigger">
             <button type="button" className="college-create-secondary" onClick={openAssignAdmin} disabled={submitting || assignLoading} aria-expanded={assignOpen} aria-controls="college-create-admin-dropdown">Assign Admin</button>
             {assignOpen && <div id="college-create-admin-dropdown" className="college-create-assignment" role="region" aria-label="Assign existing College Admin">
-              <div className="college-create-assignment-heading"><h3>Assign Existing Admin</h3><button type="button" className="college-create-link" onClick={() => setAssignOpen(false)}>Close</button></div>
-              <label htmlFor="college-create-admin-search">Search active College Admins</label>
+              <div className="college-create-assignment-heading"><h3>Assign Existing Admin</h3><button type="button" className="college-create-link" onClick={() => { setAssignOpen(false); setAdminMode('none') }}>Close</button></div>
+              <label htmlFor="college-create-admin-search">Search unassigned College Admins</label>
               <input id="college-create-admin-search" type="search" value={assignSearch} onChange={event => setAssignSearch(event.target.value)} placeholder="Search by name or email" />
               {assignLoading && <p role="status">Loading active administrators…</p>}
               {assignError && <p className="college-create-error" role="alert">{assignError}</p>}
-              {!assignLoading && !assignError && !filteredEligibleAdmins.length && <p>No additional active College Admins match your search.</p>}
-              {filteredEligibleAdmins.length > 0 && <ul className="college-create-admin-options" aria-label="Active College Admins">
+              {!assignLoading && !assignError && !filteredEligibleAdmins.length && <p>No unassigned active College Admins match your search.</p>}
+              {filteredEligibleAdmins.length > 0 && <ul className="college-create-admin-options" aria-label="Unassigned active College Admins">
                 {filteredEligibleAdmins.map(user => <li key={user.userId}>
-                  <button type="button" onClick={() => selectExistingAdmin(user)} disabled={!user.eligible} title={user.unavailableReason || `Assign ${user.fullName}`}>
+                  <button type="button" onClick={() => selectExistingAdmin(user)} title={`Assign ${user.fullName}`}>
                     <strong>{user.fullName}</strong><span>{user.email}</span>
-                    {!user.eligible && <small>{user.unavailableReason}</small>}
                   </button>
                 </li>)}
               </ul>}
             </div>}
           </div>
-          <button type="button" className="college-create-secondary" onClick={() => setAdmins(current => [...current, newAdminRow()])} disabled={submitting}>Add Admin</button>
+          <button type="button" className={`college-create-secondary${adminMode === 'new' ? ' is-active' : ''}`} onClick={toggleAddAdmin} disabled={submitting} aria-expanded={adminMode === 'new'}>
+            {adminMode === 'new' ? 'Hide Admin Form' : 'Add Admin'}
+          </button>
         </div>
       </header>
-      <p className="college-create-note">New administrators receive a secure account-setup email. The password below is temporary; the administrator must choose a new password using that link. Admin Status changes the user account status.</p>
-      <p className="college-create-note">Active College Admins are listed; accounts already assigned to a College cannot be selected with the current assignment API.</p>
+      {adminMode === 'new' && <p className="college-create-note">New administrators receive a secure account-setup email. The password below is temporary; the administrator must choose a new password using that link. Admin Status changes the user account status.</p>}
+      {adminMode === 'assign' && <p className="college-create-note">Only active College Admin accounts without an existing College assignment are available here.</p>}
       {errors.admins && <p className="college-create-error" role="alert">{errors.admins}</p>}
-      {admins.map((row, index) => <fieldset className="college-create-admin-row" key={row.id}>
-        <legend>{row.kind === 'existing' ? `Assigned administrator ${index + 1}` : `New administrator ${index + 1}`}</legend>
-        {row.kind === 'existing' && <p className="college-create-selected" role="status">Selected: <strong>{row.fullName}</strong> · {row.email}</p>}
+      {!assignOpen && admins.length === 0 && <p className="college-create-note">Choose Add Admin to enter administrator credentials, or Assign Admin to select an unassigned account.</p>}
+      {adminMode === 'new' && admins.filter(row => row.kind === 'new').map((row, index) => <fieldset className="college-create-admin-row" key={row.id}>
+        <legend>New administrator {index + 1}</legend>
         <div className="college-create-grid">
           <div className="college-create-field">
-            <label htmlFor={`${row.id}-name`}>Full Name{row.kind === 'new' && <span aria-hidden="true"> *</span>}</label>
-            <input id={`${row.id}-name`} value={row.fullName} readOnly={row.kind === 'existing'} onChange={event => updateAdmin(row.id, 'fullName', event.target.value)} aria-invalid={Boolean(adminErrors[row.id]?.fullName)} />
+            <label htmlFor={`${row.id}-name`}>Full Name <span aria-hidden="true">*</span></label>
+            <input id={`${row.id}-name`} value={row.fullName} onChange={event => updateAdmin(row.id, 'fullName', event.target.value)} aria-invalid={Boolean(adminErrors[row.id]?.fullName)} />
             {adminErrors[row.id]?.fullName && <small className="college-create-error">{adminErrors[row.id].fullName}</small>}
           </div>
           <div className="college-create-field">
-            <label htmlFor={`${row.id}-phone`}>Phone Number{row.kind === 'new' && <span aria-hidden="true"> *</span>}</label>
-            <input id={`${row.id}-phone`} type="tel" value={row.phone} readOnly={row.kind === 'existing'} onChange={event => updateAdmin(row.id, 'phone', event.target.value)} aria-invalid={Boolean(adminErrors[row.id]?.phone)} />
+            <label htmlFor={`${row.id}-phone`}>Phone Number <span aria-hidden="true">*</span></label>
+            <input id={`${row.id}-phone`} type="tel" value={row.phone} onChange={event => updateAdmin(row.id, 'phone', event.target.value)} aria-invalid={Boolean(adminErrors[row.id]?.phone)} />
             {adminErrors[row.id]?.phone && <small className="college-create-error">{adminErrors[row.id].phone}</small>}
           </div>
           <div className="college-create-field">
             <label htmlFor={`${row.id}-email`}>Admin Email <span aria-hidden="true">*</span></label>
-            <input id={`${row.id}-email`} type="email" value={row.email} readOnly={row.kind === 'existing'} onChange={event => updateAdmin(row.id, 'email', event.target.value)} aria-invalid={Boolean(adminErrors[row.id]?.email)} />
+            <input id={`${row.id}-email`} type="email" value={row.email} onChange={event => updateAdmin(row.id, 'email', event.target.value)} aria-invalid={Boolean(adminErrors[row.id]?.email)} />
             {adminErrors[row.id]?.email && <small className="college-create-error">{adminErrors[row.id].email}</small>}
           </div>
-          {row.kind === 'new' && <div className="college-create-field">
+          <div className="college-create-field">
             <label htmlFor={`${row.id}-password`}>Admin Password <span aria-hidden="true">*</span></label>
             <input id={`${row.id}-password`} type="password" autoComplete="new-password" maxLength="72" value={row.initialPassword} onChange={event => updateAdmin(row.id, 'initialPassword', event.target.value)} aria-invalid={Boolean(adminErrors[row.id]?.initialPassword)} aria-describedby={`${row.id}-password-hint`} />
             <small id={`${row.id}-password-hint`}>At least 12 characters; maximum 72 UTF-8 bytes.</small>
             {adminErrors[row.id]?.initialPassword && <small className="college-create-error">{adminErrors[row.id].initialPassword}</small>}
-          </div>}
+          </div>
           <div className="college-create-field">
             <label htmlFor={`${row.id}-status`}>Admin Status</label>
             <select id={`${row.id}-status`} value={row.status} onChange={event => updateAdmin(row.id, 'status', event.target.value)}>
               <option value="1">Active</option><option value="0">Inactive</option>
             </select>
           </div>
-          {adminErrors[row.id]?.selection && <p className="college-create-error college-create-field--full">{adminErrors[row.id].selection}</p>}
           <div className="college-create-row-actions">
-            {row.kind === 'new' && <button type="button" className="college-create-link" onClick={openAssignAdmin} disabled={submitting || assignLoading}>Assign Existing Admin</button>}
-            <button type="button" className="college-create-remove" onClick={() => { setAdmins(current => current.filter(item => item.id !== row.id)); setAdminErrors(current => { const next = { ...current }; delete next[row.id]; return next }) }} disabled={submitting}>Remove</button>
+            <button type="button" className="college-create-remove" onClick={() => removeAdmin(row.id)} disabled={submitting}>Remove</button>
           </div>
         </div>
       </fieldset>)}
+      {adminMode === 'new' && <button type="button" className="college-create-link college-create-add-another" onClick={addAnotherAdmin} disabled={submitting}>Add another administrator</button>}
+      {admins.filter(row => row.kind === 'existing').length > 0 && <div className="college-create-assigned-admins" aria-label="Assigned administrators">
+        {admins.filter(row => row.kind === 'existing').map((row, index) => <div className="college-create-assigned-admin" key={row.id}>
+          <span><strong>Assigned administrator {index + 1}</strong><small>{row.fullName} · {row.email}</small></span>
+          <button type="button" className="college-create-remove" onClick={() => removeAdmin(row.id)} disabled={submitting}>Remove</button>
+        </div>)}
+      </div>}
+      {adminMode !== 'new' && admins.filter(row => row.kind === 'new').length > 0 && <div className="college-create-assigned-admins" aria-label="New administrator drafts">
+        {admins.filter(row => row.kind === 'new').map((row, index) => <div className="college-create-assigned-admin" key={row.id}>
+          <span><strong>New administrator draft {index + 1}</strong><small>{row.fullName || 'Name not entered'}{row.email ? ` · ${row.email}` : ''}</small>{Object.values(adminErrors[row.id] || {}).filter(Boolean).map((message, errorIndex) => <small className="college-create-error" key={`${row.id}-error-${errorIndex}`}>{message}</small>)}</span>
+          <button type="button" className="college-create-link" onClick={() => setAdminMode('new')}>Edit details</button>
+        </div>)}
+      </div>}
 
-    </section>
-
-    <section className="college-create-section" aria-labelledby="college-create-extra-title">
-      <header><div><h2 id="college-create-extra-title">Organization Details</h2><p>Additional fields retained from organization management</p></div></header>
-      <div className="college-create-grid">
-        {field('Organization Type', 'collegeType', 'text', { select: [{ value: '', label: 'Select type' }, ...COLLEGE_TYPES.map(type => ({ value: type, label: type }))] })}
-        {['Other', 'Others'].includes(values.collegeType) && field('Specify Organization Type', 'collegeTypeOther', 'text', { required: true })}
-        {field('University Name', 'universityName')}
-      </div>
     </section>
 
     <footer className="college-create-footer">
