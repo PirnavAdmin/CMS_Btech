@@ -330,7 +330,7 @@ namespace BTech.Repositories.Implementations
         // EXECUTE PROCEDURE RETURNING ONE COLLEGE
         // =====================================================
 
-        private async Task<College?> ExecuteSingleAsync(
+        internal async Task<College?> ExecuteSingleAsync(
             string procedure,
             params (
                 string Name,
@@ -367,7 +367,7 @@ namespace BTech.Repositories.Implementations
         // COMMAND HELPER
         // =====================================================
 
-        private async Task WithCommandAsync(
+        internal async Task WithCommandAsync(
             string procedure,
             Func<DbCommand, Task> action)
         {
@@ -419,7 +419,7 @@ namespace BTech.Repositories.Implementations
             AddParameter(command, "p_unrestricted", scope.IsSuperAdmin);
         }
 
-        private static void AddParameter(
+        internal static void AddParameter(
             DbCommand command,
             string name,
             object? value)
@@ -441,7 +441,7 @@ namespace BTech.Repositories.Implementations
         // COLLEGE CREATE/UPDATE PARAMETERS
         // =====================================================
 
-        private static (
+        internal static (
             string Name,
             object? Value)[] CollegeParameters(
                 College college,

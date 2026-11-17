@@ -33,47 +33,6 @@ namespace BTech.Controllers.V1
         }
 
         // =====================================================
-        // CREATE COLLEGE
-        // POST: /api/v1/colleges
-        // =====================================================
-
-        [HttpPost]
-        public async Task<IActionResult> Create(
-            [FromBody] CreateCollegeDto dto)
-        {
-            try
-            {
-                var college =
-                    await _collegeService
-                        .CreateCollegeAsync(
-                            dto,
-                            GetUserId());
-
-                return CreatedAtAction(
-                    nameof(GetById),
-                    new
-                    {
-                        id = college.CollegeId
-                    },
-                    new
-                    {
-                        success = true,
-                        message =
-                            "College created successfully.",
-                        data = college
-                    });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Conflict(new
-                {
-                    success = false,
-                    message = ex.Message
-                });
-            }
-        }
-
-        // =====================================================
         // GET ALL COLLEGES
         // GET: /api/v1/colleges
         // =====================================================
