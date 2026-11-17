@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import { FiChevronLeft, FiChevronRight, FiX } from 'react-icons/fi'
 import { navigationGroups, unavailableNavigationGroups, activeSidebarEntry } from '../config/sidebarNavigation.js'
@@ -9,16 +9,12 @@ import useSidebarAccess from '../hooks/useSidebarAccess.js'
 import { getUserRole, getAccessToken } from '../auth/auth'
 import { useAcademic } from '../context/AcademicContext'
 import './Sidebar.css'
-import { collegeLogoValue } from '../utils/collegeLogo'
-import { cacheCollegeLogo, fetchCollegeLogo, getCollegeById, getCollegeLogoEndpoint, getCollegeLogoUrl, getColleges, isBackendCollegeLogo, readCachedCollegeLogo, unwrapCollegeRecord } from '../auth/collegeApi'
-
-const failedLogoUrls = new Set()
 
 export default function Sidebar({ open = false, onClose = () => {}, collapsed = false, onToggleCollapse = () => {} }) {
   const userRole = getUserRole()
   const { pathname } = useLocation()
   const navigationRef = useRef(null)
-  const { selectedCollege, selectedCollegeId, colleges = [], loading: collegeLoading = false, collegeAccess = null } = useAcademic()
+  const { selectedCollegeId, loading: collegeLoading = false, collegeAccess = null } = useAcademic()
   const { status, access } = useSidebarAccess({ token: getAccessToken(), collegeId: selectedCollegeId, collegeLoading, providedAccess: collegeAccess })
   const groups = useMemo(() => {
     const modules = userRole === 'admin' ? MODULE_REGISTRY.map(entry => entry.id === 'academic_settings' ? { ...entry, navigation: true, label: 'Global Settings' } : entry) : MODULE_REGISTRY
@@ -50,99 +46,6 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
     return workspace ? `workspace_${workspace.id}` : module
   }, [pathname, userRole, access])
 
-  const collegeDisplayName = selectedCollege?.name || selectedCollege?.collegeName || 'B-Tech Management'
-  const matchingCollege = colleges.find(college => {
-    const name = String(college?.name || college?.collegeName || '').toLowerCase().replace(/[^a-z0-9]/g, '')
-    const current = String(collegeDisplayName).toLowerCase().replace(/[^a-z0-9]/g, '')
-    return name && current && (name === current || name.includes(current) || current.includes(name))
-  }) || (String(collegeDisplayName).toLowerCase().includes('btech') ? colleges.find(college => /btech.*college.*engineering/i.test(String(college?.name || college?.collegeName || ''))) : null)
-  const selectedCollegeHasId = Boolean(selectedCollege?.id ?? selectedCollege?.collegeId ?? selectedCollege?.CollegeId ?? selectedCollegeId)
-  const activeCollege = selectedCollegeHasId ? selectedCollege : (matchingCollege || selectedCollege)
-  const collegeId = activeCollege?.id ?? activeCollege?.collegeId ?? activeCollege?.CollegeId ?? selectedCollegeId
-  const [collegeLogo, setCollegeLogo] = useState('')
-  useEffect(() => {
-    let active = true
-    let objectUrl = ''
-    const loadLogo = async () => {
-      // The context list can omit logo fields. Load the selected college detail
-      // once so the same uploaded asset used in College Management is available
-      // in the persistent sidebar too.
-      let record = activeCollege || {}
-      let targetCollegeId = collegeId
-      let logoValue = collegeLogoValue(record)
-        || readCachedCollegeLogo(collegeId)
-        || readCachedCollegeLogo(record?.code || record?.collegeCode)
-        || readCachedCollegeLogo(collegeDisplayName)
-      if (!logoValue) {
-        try {
-          const response = await getColleges()
-          const raw = response?.data ?? response
-          const list = Array.isArray(raw) ? raw : raw?.colleges || raw?.items || raw?.records || raw?.data || []
-          const requested = String(collegeDisplayName).toLowerCase().replace(/[^a-z0-9]/g, '')
-          const listMatch = list.map(unwrapCollegeRecord).find(item => {
-            const name = String(item?.name || item?.collegeName || '').toLowerCase().replace(/[^a-z0-9]/g, '')
-            const code = String(item?.code || item?.collegeCode || '').toLowerCase()
-            return (name && requested && (name === requested || name.includes(requested) || requested.includes(name)))
-          })
-          if (listMatch) {
-            record = listMatch
-            targetCollegeId = record.id ?? record.collegeId ?? record.CollegeId ?? targetCollegeId
-            logoValue = collegeLogoValue(record)
-          }
-        } catch { /* The logo endpoint below remains the fallback. */ }
-      }
-      if (!logoValue && targetCollegeId) {
-        try {
-          const response = await getCollegeById(targetCollegeId)
-          record = unwrapCollegeRecord(response?.data ?? response)
-          targetCollegeId = record.id ?? record.collegeId ?? record.CollegeId ?? targetCollegeId
-          logoValue = collegeLogoValue(record)
-          if (logoValue) {
-            cacheCollegeLogo(targetCollegeId, logoValue, [record.code, record.collegeCode, record.name, record.collegeName])
-          } else if (targetCollegeId) {
-            const endpoint = getCollegeLogoEndpoint(targetCollegeId)
-            if (endpoint) failedLogoUrls.add(endpoint)
-          }
-        } catch { /* The logo endpoint below remains the fallback. */ }
-      }
-      if (!logoValue) {
-        if (active) setCollegeLogo('')
-        return
-      }
-
-      // Always prefer the current academic-context college and its uploaded
-      // asset. A fixed institution ID would show a stale logo after an admin
-      // changes the selected college or uploads a replacement.
-      const logoUrl = getCollegeLogoUrl(targetCollegeId, logoValue, [record?.code, record?.collegeCode, collegeDisplayName])
-      if (!logoUrl || failedLogoUrls.has(logoUrl)) {
-        if (active) setCollegeLogo('')
-        return
-      }
-      if (!isBackendCollegeLogo(logoUrl)) {
-        if (active) setCollegeLogo(logoUrl)
-        return
-      }
-      if (active) setCollegeLogo('')
-      try {
-        const blob = await fetchCollegeLogo(logoUrl)
-        if (blob) {
-          objectUrl = URL.createObjectURL(blob)
-          if (active) setCollegeLogo(objectUrl)
-        } else {
-          failedLogoUrls.add(logoUrl)
-          if (active) setCollegeLogo('')
-        }
-      } catch {
-        failedLogoUrls.add(logoUrl)
-        if (active) setCollegeLogo('')
-      }
-    }
-    loadLogo()
-    return () => {
-      active = false
-      if (objectUrl) URL.revokeObjectURL(objectUrl)
-    }
-  }, [collegeId, collegeDisplayName, activeCollege, colleges])
 
   useEffect(() => {
     const navigation = navigationRef.current
@@ -159,11 +62,14 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
     <aside className={`sidebar sidebar--module-icons ${open ? 'is-open' : ''} ${collapsed ? 'is-collapsed' : ''}`} aria-label="Primary navigation">
       <div className="sidebar-brand">
         <span className="sidebar-brand__mark" aria-hidden="true">
-          {collegeLogo ? <img src={collegeLogo} alt="" onError={() => setCollegeLogo('')} /> : <svg viewBox="0 0 32 32"><path d="M4 12 16 5l12 7H4Z"/><path d="M7 14v10M12 14v10M20 14v10M25 14v10"/><path d="M4 25h24M2.5 28h27"/></svg>}
+          <svg viewBox="0 0 36 36" focusable="false">
+            <path d="M10 29V8h9.1c6.1 0 9.4 3.1 9.4 8s-3.3 8-9.4 8H15v5h-5Zm5-9h4c3.1 0 4.6-1.3 4.6-4s-1.5-4-4.6-4h-4v8Z" fill="currentColor" />
+            <circle cx="27.5" cy="27.5" r="2.5" fill="currentColor" />
+          </svg>
         </span>
         <div className="sidebar-brand__copy">
-          <strong title={collegeDisplayName}>{collegeDisplayName}</strong>
-          <span className="sidebar-brand__subtitle">Digital Campus</span>
+          <strong title="Pirnav Group of Institutions">Pirnav</strong>
+          <span>Group of Institutions</span>
         </div>
         <button className="sidebar-collapse" onClick={onToggleCollapse} aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'} title={collapsed ? 'Expand navigation' : 'Collapse navigation'}>{collapsed ? <FiChevronRight /> : <FiChevronLeft />}</button>
         <button className="sidebar-close" onClick={onClose} aria-label="Close navigation"><FiX /></button>

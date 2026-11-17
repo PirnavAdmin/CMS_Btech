@@ -27,7 +27,7 @@ public sealed class AdminUsersController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetUsers(CancellationToken cancellationToken,
         [FromQuery] long? collegeId = null, [FromQuery] string? search = null,
-        [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 50)
+        [FromQuery] string? roleCode = null, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 50)
     {
         if (!IsVerifiedSuperAdmin) return Forbid();
         if (collegeId is <= 0 || pageNumber < 1 || pageSize < 1 || pageSize > 200)
@@ -38,11 +38,24 @@ public sealed class AdminUsersController : ControllerBase
         var parameters = new
         {
             collegeId, search = string.IsNullOrWhiteSpace(search) ? null : "%" + search.Trim() + "%",
+            roleCode = string.IsNullOrWhiteSpace(roleCode) ? null : roleCode.Trim().ToUpperInvariant(),
             pageSize, offset = ((long)pageNumber - 1) * pageSize
         };
         const string filter = """
             FROM users u
-            WHERE u.deleted_at IS NULL AND (@collegeId IS NULL OR u.college_id=@collegeId)
+            WHERE u.deleted_at IS NULL
+              AND (@collegeId IS NULL OR u.college_id=@collegeId OR EXISTS (
+                  SELECT 1 FROM college_user_mappings m
+                  INNER JOIN college_settings cs ON cs.college_setting_id=m.college_setting_id
+                  WHERE m.user_id=u.user_id AND m.status=1 AND m.removed_at IS NULL
+                    AND cs.status=1 AND cs.college_id=@collegeId
+              ))
+              AND (@roleCode IS NULL OR EXISTS (
+                  SELECT 1 FROM user_roles ur
+                  INNER JOIN roles r ON r.role_id=ur.role_id
+                  WHERE ur.user_id=u.user_id AND ur.status=1 AND ur.removed_at IS NULL
+                    AND r.status=1 AND r.deleted_at IS NULL AND UPPER(r.role_code)=@roleCode
+              ))
               AND (@search IS NULL OR u.full_name LIKE @search OR u.employee_user_id LIKE @search OR u.email LIKE @search)
             """;
         var totalCount = await connection.ExecuteScalarAsync<long>(new CommandDefinition(

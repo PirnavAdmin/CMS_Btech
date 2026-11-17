@@ -10,8 +10,6 @@ import { changePassword, profileApi } from '../api/apiEndpoints'
 import Sidebar from '../components/Sidebar'
 import ThemeColorPicker from '../components/ThemeColorPicker'
 import { feeBreadcrumbs } from '../utils/feeNavigation'
-import HeaderAcademicYear from '../components/HeaderAcademicYear'
-import CampusContextSelect from '../components/CampusContextSelect'
 import DeactivationBlockedDialog from '../components/DeactivationBlockedDialog'
 import { API_FAILURE_EVENT } from '../api/apiFailureNotice'
 import { dismissToast, getToasts, subscribeToToasts } from '../utils/toast'
@@ -353,10 +351,6 @@ export default function DashboardLayout({ children }) {
           <div className="global-search"><FiSearch aria-hidden="true" /><input aria-label="Search modules" value={globalQuery} onChange={(event) => setGlobalQuery(event.target.value)} placeholder="Search" />{globalResults.length > 0 && <div className="global-search-results">{globalResults.map(([label, to]) => <Link to={to} key={to} onClick={() => setGlobalQuery('')}>{label}</Link>)}</div>}</div>
 
           <div className="dashboard-header__actions">
-          <div className="dashboard-header__campus">
-            <CampusContextSelect />
-          </div>
-          <HeaderAcademicYear />
           <ThemeColorPicker />
 
           <details className="account-menu" ref={accountMenuRef}>

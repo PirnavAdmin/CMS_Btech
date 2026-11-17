@@ -1968,6 +1968,19 @@ const rolePayload = (role) => {
 export const roleApi = {
   getAll: async (params) => listData(await request(withQuery(API_ENDPOINTS.roles.list, params))),
   getById: async (id) => isNumericId(id) ? (await request(API_ENDPOINTS.roles.detail(id)))?.data : null,
+  getCollegePermissions: async (id, collegeId) => {
+    const roleId = requiredId(id, 'Role ID')
+    const scopeId = requiredId(collegeId, 'College ID')
+    const response = await request(withQuery(endpoint(`/api/v1/admin/roles/${roleId}/permissions`), { collegeId: scopeId }))
+    return response?.data ?? response
+  },
+  saveCollegePermissions: async (id, collegeId, permissions) => {
+    const roleId = requiredId(id, 'Role ID')
+    const scopeId = requiredId(collegeId, 'College ID')
+    const numericScopeId = Number(scopeId)
+    if (!Number.isSafeInteger(numericScopeId) || numericScopeId <= 0) throw new Error('College ID must be a positive number.')
+    return jsonRequest(endpoint(`/api/v1/admin/roles/${roleId}/permissions`), 'PUT', { collegeId: numericScopeId, permissions })
+  },
   create: async (payload) => (await jsonRequest(API_ENDPOINTS.roles.create, 'POST', rolePayload(payload)))?.data,
   update: async (id, payload) => {
     if (isNumericId(id)) {
