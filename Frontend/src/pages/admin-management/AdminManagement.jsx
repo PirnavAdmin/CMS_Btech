@@ -25,7 +25,7 @@ import FilterPanelImports_default from '../../components/FilterPanel'
 import TablePaginationImports_default, { PAGE_SIZE as TablePaginationImports_PAGE_SIZE } from '../../components/TablePagination'
 import StatusConfirmDialogImports_default from '../../components/StatusConfirmDialog'
 import InfoCardImports_default from '../../components/InfoCard'
-import { academicYearApi as apiEndpointsImports_academicYearApi, studentApi as apiEndpointsImports_studentApi, facultyApi as apiEndpointsImports_facultyApi, courseApi as apiEndpointsImports_courseApi, roleApi as apiEndpointsImports_roleApi, sectionApi as apiEndpointsImports_sectionApi, sectionAssignmentApi as apiEndpointsImports_sectionAssignmentApi } from '../../api/apiEndpoints'
+import { academicYearApi as apiEndpointsImports_academicYearApi, studentApi as apiEndpointsImports_studentApi, facultyApi as apiEndpointsImports_facultyApi, courseApi as apiEndpointsImports_courseApi, roleApi as apiEndpointsImports_roleApi, userDirectoryApi as apiEndpointsImports_userDirectoryApi, sectionApi as apiEndpointsImports_sectionApi, sectionAssignmentApi as apiEndpointsImports_sectionAssignmentApi } from '../../api/apiEndpoints'
 import eventBusImports_default, { ERP_EVENTS as eventBusImports_ERP_EVENTS } from '../../services/eventBus'
 import { showDeactivationBlocked as DeactivationBlockedDialogImports_showDeactivationBlocked } from '../../components/DeactivationBlockedDialog'
 import { FiEye, FiEdit2, FiToggleLeft, FiToggleRight, FiPlus, FiCalendar, FiClock, FiSearch, FiX, FiCheck, FiArrowLeft, FiAlertCircle, FiHome, FiFilter, FiTrash2, FiUserPlus, FiLayers, FiBookOpen, FiUser, FiUserCheck, FiShield, FiAward, FiUsers, FiKey, FiSliders, FiChevronLeft, FiChevronRight, FiInfo, FiRotateCcw, FiGrid, FiCheckCircle, FiBookmark, FiLink, FiUnlock, FiCpu, FiMonitor, FiMapPin, FiAlertTriangle, FiSlash, FiDownload, FiZap, FiUploadCloud } from 'react-icons/fi'
@@ -3859,6 +3859,40 @@ const showError = toastImports_showError
 
 const academicService = academicServiceImports_default
 const roleApi = apiEndpointsImports_roleApi
+const userDirectoryApi = apiEndpointsImports_userDirectoryApi
+
+const isCollegeAdminRole = role => String(role?.code || role?.roleCode || '').toUpperCase().replace(/[^A-Z]/g, '') === 'COLLEGEADMIN'
+const organizationRecordsFrom = response => {
+  let current = response?.data ?? response
+  for (let depth = 0; depth < 5 && current && typeof current === 'object'; depth += 1) {
+    if (Array.isArray(current)) return current
+    const rows = current.items ?? current.colleges ?? current.organizations ?? current.records
+    if (Array.isArray(rows)) return rows
+    if (current.data && typeof current.data === 'object') { current = current.data; continue }
+    if (current.result && typeof current.result === 'object') { current = current.result; continue }
+    break
+  }
+  return []
+}
+const grantEnabled = value => value === true || value === 1 || value === '1' || String(value).toLowerCase() === 'true'
+const countVisiblePermissions = permissions => SYSTEM_MODULES.reduce((count, module) =>
+  count + Object.values(permissions?.[module.id] || {}).filter(grantEnabled).length, 0)
+const mergeScopedRolePermissions = (base = {}, scoped = []) => {
+  const rows = Array.isArray(scoped) ? scoped : Array.isArray(scoped?.permissions) ? scoped.permissions : []
+  return rows.reduce((permissions, row) => {
+    const moduleKey = row.moduleKey ?? row.ModuleKey
+    if (!moduleKey) return permissions
+    permissions[moduleKey] = {
+      view: grantEnabled(row.canView ?? row.CanView),
+      create: grantEnabled(row.canCreate ?? row.CanCreate),
+      edit: grantEnabled(row.canEdit ?? row.CanEdit),
+      delete: grantEnabled(row.canDelete ?? row.CanDelete),
+      export: grantEnabled(row.canExport ?? row.CanExport),
+    }
+    return permissions
+  }, { ...base })
+}
+
 // ==========================================
 // SYSTEM MODULES & PERMISSION SCHEMAS
 // ==========================================
@@ -4329,7 +4363,8 @@ function RolesAndDesignations() {
 }
 
 function RolesAndDesignationsWorkspace() {
-  const { canAction } = screenAccessImports_useScreenAccess()
+  const { canAction, access } = screenAccessImports_useScreenAccess()
+  const isSuperAdmin = access?.isSuperAdmin === true
   const canCreateAccess = canAction('/roles-designations', 'create')
   const canEditAccess = canAction('/roles-designations', 'edit')
   const canDeleteAccess = canAction('/roles-designations', 'delete')
@@ -4340,10 +4375,18 @@ function RolesAndDesignationsWorkspace() {
   const [pageSize, setPageSize] = useState(10)
 
   const { selectedCollegeId } = AcademicContextImports_useAcademic()
+  const [organizations, setOrganizations] = useState([])
+  const [selectedOrganizationId, setSelectedOrganizationId] = useState(String(selectedCollegeId || ''))
+  const [organizationLoadError, setOrganizationLoadError] = useState('')
+  const [organizationAdmin, setOrganizationAdmin] = useState('')
+  const [organizationAdminLoading, setOrganizationAdminLoading] = useState(false)
+  const [organizationAdminError, setOrganizationAdminError] = useState('')
+  const permissionCollegeId = isSuperAdmin ? selectedOrganizationId : selectedCollegeId
   const [roles, setRoles] = useState([]), [designations, setDesignations] = useState([]), [assignments, setAssignments] = useState({})
   const [governanceBusy, setGovernanceBusy] = useState(false)
-  const governanceLock = reactImports_useRef(false), activeGovernanceCollege = reactImports_useRef(selectedCollegeId)
-  activeGovernanceCollege.current = selectedCollegeId
+  const governanceLock = reactImports_useRef(false), activeGovernanceCollege = reactImports_useRef(permissionCollegeId)
+  activeGovernanceCollege.current = permissionCollegeId
+  const activeRolesLoadRequest = reactImports_useRef(0)
   const [facultyList, setFacultyList] = useCollegeState([])
   const [departments, setDepartments] = useCollegeState([])
   const [isLoadingFaculty, setIsLoadingFaculty] = useState(false)
@@ -4381,20 +4424,101 @@ function RolesAndDesignationsWorkspace() {
 
   const [deletingDesignation, setDeletingDesignation] = useState(null)
 
+  useEffect(() => {
+    if (!isSuperAdmin) return undefined
+    let active = true
+    setOrganizationLoadError('')
+    collegeApiImports_getColleges()
+      .then(response => {
+        const records = organizationRecordsFrom(response).map(collegeApiImports_unwrapCollegeRecord)
+        const rows = records.map(row => ({
+          id: String(row.id ?? row.collegeId ?? row.CollegeId ?? ''),
+          name: String(row.name ?? row.collegeName ?? row.CollegeName ?? 'Unnamed organization'),
+          active: ['1', 'true', 'active'].includes(String(row.status ?? row.collegeStatus ?? row.isActive ?? '1').toLowerCase()),
+        })).filter(row => row.id)
+        if (!active) return
+        setOrganizations(rows)
+        setSelectedOrganizationId(current => {
+          const preferred = rows.find(row => row.id === String(current || ''))
+            || rows.find(row => row.id === String(selectedCollegeId || ''))
+            || rows[0]
+          return preferred?.id || ''
+        })
+      })
+      .catch(error => { if (active) setOrganizationLoadError(error?.message || 'Organizations could not be loaded.') })
+    return () => { active = false }
+  }, [isSuperAdmin, selectedCollegeId])
+
+  useEffect(() => {
+    if (!isSuperAdmin || !selectedOrganizationId) {
+      setOrganizationAdmin('')
+      setOrganizationAdminError('')
+      setOrganizationAdminLoading(false)
+      return undefined
+    }
+    let active = true
+    setOrganizationAdmin('')
+    setOrganizationAdminError('')
+    setOrganizationAdminLoading(true)
+    userDirectoryApi.getAll({ collegeId: selectedOrganizationId, roleCode: 'COLLEGE_ADMIN', pageNumber: 1, pageSize: 200 })
+      .then(users => {
+        if (!active) return
+        const administrators = users.filter(user => {
+          const roleValues = [
+            ...(Array.isArray(user.roleCodes) ? user.roleCodes : []),
+            ...(Array.isArray(user.roleNames) ? user.roleNames : []),
+            ...String(user.roleCode || '').split(/[,;]/),
+            ...String(user.roleName || '').split(/[,;]/),
+          ].filter(Boolean).map(value => typeof value === 'object'
+            ? value.code ?? value.roleCode ?? value.name ?? value.roleName ?? ''
+            : value)
+          return roleValues.some(value => {
+            const normalized = String(value).toUpperCase().replace(/[^A-Z]/g, '')
+            return normalized === 'COLLEGEADMIN' || normalized === 'COLLEGEADMINISTRATOR'
+          })
+        })
+        setOrganizationAdmin(administrators.map(user => {
+          const name = user.fullName || user.name || 'College Admin'
+          return user.email ? `${name} (${user.email})` : name
+        }).join(', '))
+      })
+      .catch(error => { if (active) setOrganizationAdminError(error?.message || 'The organization admin could not be loaded.') })
+      .finally(() => { if (active) setOrganizationAdminLoading(false) })
+    return () => { active = false }
+  }, [isSuperAdmin, selectedOrganizationId])
+
   const loadRoles = useCallback(async () => {
+    const requestId = ++activeRolesLoadRequest.current
     setRolesLoadError('');setIsLoadingFaculty(true)
     try {
-      if (!selectedCollegeId) { setRoles([]);setDesignations([]);setFacultyList([]);setAssignments({});return }
-      const data = await accessGovernance.bootstrap(selectedCollegeId)
-      if (String(selectedCollegeId) !== String(activeGovernanceCollege.current)) return
-      setRoles((data.roles || []).map(row=>({...row,id:String(row.id),roleId:String(row.roleId ?? row.id),permissions:row.permissions || {}})))
+      if (!permissionCollegeId) { setRoles([]);setDesignations([]);setFacultyList([]);setAssignments({});return }
+      const data = await accessGovernance.bootstrap(permissionCollegeId)
+      if (String(permissionCollegeId) !== String(activeGovernanceCollege.current)) return
+      const nextRoles = (data.roles || []).map(row=>({...row,id:String(row.id),roleId:String(row.roleId ?? row.id),permissions:row.permissions || {}}))
+      if (isSuperAdmin) {
+        const adminRole = nextRoles.find(isCollegeAdminRole)
+        if (adminRole) {
+          const scopedPermissions = await roleApi.getCollegePermissions(adminRole.id, permissionCollegeId)
+          if (String(permissionCollegeId) !== String(activeGovernanceCollege.current)) return
+          adminRole.permissions = mergeScopedRolePermissions(adminRole.permissions, scopedPermissions)
+        }
+      }
+      setRoles(nextRoles)
       setDesignations((data.designations || []).map(row=>({...row,id:String(row.id),defaultRole:row.defaultRoleId ? String(row.defaultRoleId):''})))
-      setFacultyList((data.staffAssignments || []).map(row=>({...row,id:String(row.employeeProfileId),collegeId:Number(selectedCollegeId)})))
+      setFacultyList((data.staffAssignments || []).map(row=>({...row,id:String(row.employeeProfileId),collegeId:Number(permissionCollegeId)})))
       setAssignments(Object.fromEntries((data.staffAssignments || []).map(row=>[String(row.employeeProfileId),{...row,roleId:row.roleId == null ? '' : String(row.roleId),designationId:row.designationId == null ? '' : String(row.designationId)}])))
-    } catch(error) {if (String(selectedCollegeId) !== String(activeGovernanceCollege.current)) return;setRoles([]);setDesignations([]);setFacultyList([]);setAssignments({});setRolesLoadError(error.message || 'Access governance could not be loaded.')}
-    finally {setIsLoadingFaculty(false)}
-  }, [selectedCollegeId, setFacultyList])
-  useEffect(() => { loadRoles(); academicService.getDepartments().then(setDepartments).catch(()=>setDepartments([])) }, [loadRoles, setDepartments])
+    } catch(error) {if (String(permissionCollegeId) !== String(activeGovernanceCollege.current)) return;setRoles([]);setDesignations([]);setFacultyList([]);setAssignments({});setRolesLoadError(error.message || 'Access governance could not be loaded.')}
+    finally {if (requestId === activeRolesLoadRequest.current) setIsLoadingFaculty(false)}
+  }, [permissionCollegeId, isSuperAdmin, setFacultyList])
+  useEffect(() => {
+    loadRoles()
+    if (isSuperAdmin) setDepartments([])
+    else academicService.getDepartments().then(setDepartments).catch(()=>setDepartments([]))
+  }, [loadRoles, isSuperAdmin, setDepartments])
+
+  useEffect(() => {
+    if (isSuperAdmin && activeTab !== 'roles') setActiveTab('roles')
+  }, [isSuperAdmin, activeTab])
 
   // Reset pagination on tab / search / filter change
   useEffect(() => {
@@ -4646,6 +4770,7 @@ function RolesAndDesignationsWorkspace() {
 
   // Permissions Matrix Handlers
   const handleOpenPermissions = (role) => {
+    if (isSuperAdmin && (!isCollegeAdminRole(role) || !selectedOrganization?.active || organizationLoadError || !permissionCollegeId || isLoadingFaculty)) return
     setPermsModalError('')
     setEditingPermissionsRole(JSON.parse(JSON.stringify(role)))
     setIsPermModalOpen(true)
@@ -4758,7 +4883,25 @@ function RolesAndDesignationsWorkspace() {
     setIsSavingPerms(true)
     try {
       if (!isExistingNumeric) throw new Error('Reload roles before assigning permissions to an unsaved role.')
-      await roleApi.update(editingPermissionsRole.id, payload)
+      if (isSuperAdmin) {
+        if (!isCollegeAdminRole(editingPermissionsRole) || !selectedOrganization?.active || organizationLoadError || !permissionCollegeId) {
+          throw new Error('Select an active organization before saving permissions.')
+        }
+        const grants = SYSTEM_MODULES.map(module => {
+          const permission = editingPermissionsRole.permissions?.[module.id] || {}
+          return {
+            moduleKey: module.id,
+            canView: Boolean(permission.view),
+            canCreate: Boolean(permission.create),
+            canEdit: Boolean(permission.edit),
+            canDelete: Boolean(permission.delete),
+            canExport: Boolean(permission.export),
+          }
+        })
+        await roleApi.saveCollegePermissions(editingPermissionsRole.id, permissionCollegeId, grants)
+      } else {
+        await roleApi.update(editingPermissionsRole.id, payload)
+      }
 
       // API Succeeded -> Update state, notify, close modal
       setRoles((current) => current.map((r) => (r.id === editingPermissionsRole.id ? editingPermissionsRole : r)))
@@ -4974,13 +5117,16 @@ function RolesAndDesignationsWorkspace() {
   // ==========================================
   // FILTERED DATA & PAGINATION
   // ==========================================
+  const roleDirectory = useMemo(() => isSuperAdmin ? roles.filter(isCollegeAdminRole) : roles, [roles, isSuperAdmin])
+  const selectedOrganization = organizations.find(row => row.id === String(selectedOrganizationId || ''))
+  const canConfigureAdminPermissions = !isSuperAdmin || Boolean(selectedOrganization?.active && !organizationLoadError && permissionCollegeId && !isLoadingFaculty)
   const filteredRoles = useMemo(() => {
-    return roles.filter((role) => {
+    return roleDirectory.filter((role) => {
       const matchesQuery = `${role.name} ${role.code} ${role.description} ${role.category}`.toLowerCase().includes(query.toLowerCase())
       const matchesCategory = !categoryFilter || role.category === categoryFilter
       return matchesQuery && matchesCategory
     })
-  }, [roles, query, categoryFilter])
+  }, [roleDirectory, query, categoryFilter])
 
   const filteredDesignations = useMemo(() => {
     return designations.filter((des) => {
@@ -5058,7 +5204,7 @@ function RolesAndDesignationsWorkspace() {
 
   const grantedPermsCount = useMemo(() => {
     if (!editingPermissionsRole?.permissions) return 0
-    return Object.values(editingPermissionsRole.permissions).reduce((acc, p) => acc + Object.values(p || {}).filter(Boolean).length, 0)
+    return countVisiblePermissions(editingPermissionsRole.permissions)
   }, [editingPermissionsRole])
 
   // Correct ASSIGNED count: represents actual explicitly assigned staff records
@@ -5067,13 +5213,14 @@ function RolesAndDesignationsWorkspace() {
   }, [staffAssignmentRows])
 
   const compactSummaryItems = useMemo(() => {
-    return [
-      { label: 'ROLES', value: roles.length, tone: 'default' },
+    const rolesSummary = { label: 'ROLES', value: roleDirectory.length, tone: 'default' }
+    return isSuperAdmin ? [] : [
+      rolesSummary,
       { label: 'DESIGNATIONS', value: designations.length, tone: 'default' },
       { label: 'ASSIGNED', value: assignedCount, tone: 'active' },
       { label: 'STAFF', value: facultyList.length, tone: 'default' },
     ]
-  }, [roles.length, designations.length, assignedCount, facultyList.length])
+  }, [roleDirectory.length, isSuperAdmin, designations.length, assignedCount, facultyList.length])
 
   // Recommended role for currently selected designation in assignment modal
   const recommendedRoleForSelectedDes = useMemo(() => {
@@ -5088,9 +5235,47 @@ function RolesAndDesignationsWorkspace() {
         {/* Page Header with Top-Right Compact Summary */}
         <PageHeader
           title="Permissions"
-          subtitle="Manage roles, designations, and staff access across modules."
+          subtitle={isSuperAdmin ? 'Configure screen permissions for each organization’s College Admin.' : 'Manage roles, designations, and staff access across modules.'}
           compactSummary={compactSummaryItems}
         />
+
+        {isSuperAdmin && (
+          <section className="rbac-org-admin-context" aria-label="Organization admin permissions">
+            <label>
+              <span>Organization</span>
+              <ProjectSelect
+                className="rbac-org-select"
+                aria-label="Select organization"
+                value={selectedOrganizationId}
+                disabled={!organizations.length || Boolean(organizationLoadError)}
+                onChange={event => {
+                  setSelectedOrganizationId(event.target.value)
+                  setQuery('')
+                  setCurrentPage(1)
+                  setIsPermModalOpen(false)
+                  setEditingPermissionsRole(null)
+                }}
+              >
+                <option value="">{organizations.length ? 'Select an organization' : 'No organizations available'}</option>
+                {organizations.map(organization => <option key={organization.id} value={organization.id}>{organization.name}{organization.active ? '' : ' (Inactive)'}</option>)}
+              </ProjectSelect>
+              {organizationLoadError && <small className="rbac-org-admin-error" role="alert">{organizationLoadError}</small>}
+            </label>
+            <label>
+              <span>Admin</span>
+              <input
+                aria-label="Organization admin"
+                type="text"
+                readOnly
+                value={organizationAdminLoading ? 'Loading admin…' : organizationAdminError ? 'Admin unavailable' : organizationAdmin || (selectedOrganization ? 'No College Admin assigned' : '')}
+                title={organizationAdmin}
+                placeholder="Select an organization"
+              />
+              {organizationAdminError && <small className="rbac-org-admin-error" role="alert">{organizationAdminError}</small>}
+            </label>
+            <p>{selectedOrganization && !selectedOrganization.active ? 'Activate this organization before changing its College Admin permissions.' : 'Screen permissions here apply only to this organization’s College Admin.'}</p>
+          </section>
+        )}
 
         {rolesLoadError && (
           <div className="rbac-load-error-strip" role="alert">
@@ -5107,44 +5292,44 @@ function RolesAndDesignationsWorkspace() {
         {/* Main Card Container */}
         <div className="sa-directory rbac-main-card">
           {/* Tabs Navigation Header */}
-          <div className="rbac-tabs-bar">
+          {!isSuperAdmin && <div className="rbac-tabs-bar">
             <div className="rbac-tabs-list">
               <button
                 type="button"
                 className={`rbac-tab-btn ${activeTab === 'roles' ? 'is-active' : ''}`}
                 onClick={() => { setActiveTab('roles'); setQuery(''); setCategoryFilter('') }}
               >
-                <FiShield /> Roles & Permissions <span className="rbac-tab-count">{roles.length}</span>
+                <FiShield /> Roles & Permissions <span className="rbac-tab-count">{roleDirectory.length}</span>
               </button>
-              <button
+              {!isSuperAdmin && <button
                 type="button"
                 className={`rbac-tab-btn ${activeTab === 'designations' ? 'is-active' : ''}`}
                 onClick={() => { setActiveTab('designations'); setQuery(''); setCategoryFilter('') }}
               >
                 <FiAward /> Designations <span className="rbac-tab-count">{designations.length}</span>
-              </button>
-              <button
+              </button>}
+              {!isSuperAdmin && <button
                 type="button"
                 className={`rbac-tab-btn ${activeTab === 'assignments' ? 'is-active' : ''}`}
                 onClick={() => { setActiveTab('assignments'); setQuery(''); setCategoryFilter('') }}
               >
                 <FiUserCheck /> Staff Access <span className="rbac-tab-count">{staffAssignmentRows.length}</span>
-              </button>
+              </button>}
             </div>
 
             <div className="rbac-header-actions">
-              {activeTab === 'roles' && (
+              {activeTab === 'roles' && !isSuperAdmin && (
                 <button type="button" className="sa-primary rbac-action-btn" disabled={!canCreateAccess} onClick={handleOpenCreateRole}>
                   <FiPlus /> Create New Role
                 </button>
               )}
-              {activeTab === 'designations' && (
+              {activeTab === 'designations' && !isSuperAdmin && (
                 <button type="button" className="sa-primary rbac-action-btn" disabled={!canCreateAccess} onClick={handleOpenCreateDesignation}>
                   <FiPlus /> Add Designation
                 </button>
               )}
             </div>
-          </div>
+          </div>}
 
           {/* Controls Toolbar */}
           <div className="sa-toolbar rbac-toolbar">
@@ -5164,7 +5349,7 @@ function RolesAndDesignationsWorkspace() {
               )}
             </div>
 
-            {activeTab !== 'assignments' && (
+            {!isSuperAdmin && activeTab !== 'assignments' && (
               <ProjectSelect
                 className="rbac-filter-select"
                 value={categoryFilter}
@@ -5216,7 +5401,7 @@ function RolesAndDesignationsWorkspace() {
                 </thead>
                 <tbody>
                   {paginatedData.map((role) => {
-                    const activePermCount = Object.values(role.permissions || {}).reduce((acc, p) => acc + Object.values(p || {}).filter(Boolean).length, 0)
+                    const activePermCount = countVisiblePermissions(role.permissions)
                     return (
                       <tr key={role.id}>
                         <td>
@@ -5245,8 +5430,9 @@ function RolesAndDesignationsWorkspace() {
                           <button
                             type="button"
                             className="rbac-perm-pill-btn"
+                            disabled={!canEditAccess || !canConfigureAdminPermissions}
                             onClick={() => handleOpenPermissions(role)}
-                            title="Configure granular permissions matrix"
+                            title={isSuperAdmin ? 'Configure this organization’s College Admin permissions' : 'Configure granular permissions matrix'}
                           >
                             <FiSliders /> {activePermCount} Active Permissions
                           </button>
@@ -5258,21 +5444,22 @@ function RolesAndDesignationsWorkspace() {
                           <div className="rbac-table-row-actions">
                             <button
                               type="button"
+                              disabled={!canEditAccess || !canConfigureAdminPermissions}
                               onClick={() => handleOpenPermissions(role)}
                               title="Configure Permissions"
                               className="rbac-icon-btn is-matrix"
                             >
                               <FiKey />
                             </button>
-                            <button
+                            {!isSuperAdmin && <button
                               type="button"
                               disabled={!canEditAccess} onClick={() => handleOpenEditRole(role)}
                               title="Edit Role Details"
                               className="rbac-icon-btn is-edit"
                             >
                               <FiEdit2 />
-                            </button>
-                            {!role.isSystem && (
+                            </button>}
+                            {!isSuperAdmin && !role.isSystem && (
                               <button
                                 type="button"
                                 disabled={!canDeleteAccess} onClick={() => handleDeleteRole(role)}
@@ -5953,6 +6140,14 @@ function RolesAndDesignationsWorkspace() {
                   <FiX />
                 </button>
               </div>
+
+              {isSuperAdmin && (
+                <div className="rbac-org-admin-modal-context">
+                  <span><small>Organization</small><strong>{selectedOrganization?.name || 'Not selected'}</strong></span>
+                  <span><small>Admin</small><strong>{organizationAdmin || 'No College Admin assigned'}</strong></span>
+                  <p>This matrix is saved for this organization’s College Admin role only.</p>
+                </div>
+              )}
 
               {permsModalError && (
                 <div className="rbac-modal-error-banner" style={{ margin: '10px 16px 0' }} role="alert">
