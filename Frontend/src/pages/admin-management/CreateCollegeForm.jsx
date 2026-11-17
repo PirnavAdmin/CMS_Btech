@@ -4,8 +4,10 @@ import { collegeUserMappingsApi, lookupIndianPincode, userDirectoryApi } from '.
 import {
   createCollege,
   createCollegeSettings,
+  getCollegeById,
   getCollegeSettingsByCollegeId,
   getColleges,
+  updateCollege,
   updateCollegeStatus,
   unwrapCollegeRecord,
 } from '../../auth/collegeApi'
@@ -96,7 +98,7 @@ function collegeIdFromResponse(response) {
   return created?.id ?? created?.collegeId ?? response?.data?.id ?? response?.data?.collegeId
 }
 
-export default function CreateCollegeForm({ onDismiss, onSaved }) {
+export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
   const { access, loading: accessLoading } = useScreenAccess()
   const [values, setValues] = useState({
     name: '',
@@ -133,6 +135,108 @@ export default function CreateCollegeForm({ onDismiss, onSaved }) {
   const [adminProgress, setAdminProgress] = useState({})
   const [collegeStatusSaved, setCollegeStatusSaved] = useState(false)
   const [creationUnconfirmed, setCreationUnconfirmed] = useState(false)
+  const [formLoading, setFormLoading] = useState(Boolean(editId))
+  const [formLoadError, setFormLoadError] = useState('')
+  const originalCollegeRef = useRef(null)
+  const originalStatusRef = useRef('1')
+
+  useEffect(() => {
+    if (!editId) return undefined
+    let active = true
+    const loadOrganization = async () => {
+      try {
+        const [collegeResponse, settingsResult, users, mappings] = await Promise.all([
+          getCollegeById(editId),
+          getCollegeSettingsByCollegeId(editId).catch(error => {
+            if (Number(error?.status ?? error?.response?.status) === 404) return null
+            throw error
+          }),
+          loadAllUsers(),
+          collegeUserMappingsApi.getAll(),
+        ])
+        if (!active) return
+        const college = unwrapCollegeRecord(collegeResponse)
+        originalCollegeRef.current = college
+        const settingId = settingsResult ? settingIdentifier(settingsResult) : null
+        setCollegeSettingId(settingId)
+        const rawStatus = college.status ?? college.isActive
+        const status = rawStatus == null || rawStatus === '' ? '1' : isActive(rawStatus) ? '1' : '0'
+        originalStatusRef.current = status
+        setValues({
+          name: String(college.name ?? college.collegeName ?? ''),
+          code: String(college.code ?? college.collegeCode ?? ''),
+          contactPerson: String(college.contactPerson ?? college.principalName ?? college.principal ?? ''),
+          email: String(college.email ?? college.collegeEmail ?? ''),
+          phone: String(college.contactNumber ?? college.phoneNumber ?? college.contact ?? ''),
+          status,
+          address: String(college.address ?? college.addressLine1 ?? ''),
+          area: String(college.area ?? ''),
+          city: String(college.city ?? ''),
+          district: String(college.district ?? ''),
+          state: String(college.state ?? ''),
+          country: normalizedCountry(college.country),
+          pincode: String(college.pincode ?? college.pinCode ?? ''),
+        })
+
+        const userById = new Map(users.map(user => [String(user.userId ?? user.id), user]))
+        const matchesOrganization = mapping =>
+          (settingId != null && String(mapping.collegeSettingId ?? mapping.settingId ?? '') === String(settingId))
+          || String(mapping.collegeId ?? '') === String(editId)
+        const mappedUserIds = new Set(mappings.filter(activeMapping).filter(matchesOrganization).map(mapping => String(mapping.userId)))
+        const assignedUsers = users.filter(user => {
+          const userId = String(user.userId ?? user.id)
+          return isCollegeAdmin(user) && (mappedUserIds.has(userId)
+            || String(user.collegeId ?? user.primaryCollegeId ?? '') === String(editId))
+        })
+        const rowsById = new Map()
+        assignedUsers.forEach(user => {
+          const userId = user.userId ?? user.id
+          if (userId == null || rowsById.has(String(userId))) return
+          const currentStatus = isActive(user.status ?? user.accountStatus) ? '1' : '0'
+          rowsById.set(String(userId), {
+            id: `assigned-admin-${userId}`,
+            kind: 'existing',
+            fullName: user.fullName ?? user.name ?? '',
+            email: user.email ?? '',
+            phone: user.mobile ?? user.phone ?? '',
+            status: currentStatus,
+            currentStatus,
+            userId,
+            alreadyAssigned: true,
+          })
+        })
+        mappedUserIds.forEach(userId => {
+          const user = userById.get(userId)
+          if (!user || !isCollegeAdmin(user) || rowsById.has(userId)) return
+          const currentStatus = isActive(user.status ?? user.accountStatus) ? '1' : '0'
+          rowsById.set(userId, {
+            id: `assigned-admin-${userId}`,
+            kind: 'existing',
+            fullName: user.fullName ?? user.name ?? '',
+            email: user.email ?? '',
+            phone: user.mobile ?? user.phone ?? '',
+            status: currentStatus,
+            currentStatus,
+            userId: user.userId ?? user.id,
+            alreadyAssigned: true,
+          })
+        })
+        const assignedRows = [...rowsById.values()]
+        setAdmins(assignedRows)
+        setAdminProgress(Object.fromEntries(assignedRows.map(row => [row.id, {
+          userId: row.userId,
+          assigned: true,
+          statusSaved: false,
+        }])))
+      } catch (error) {
+        if (active) setFormLoadError(error?.message || 'Could not load the organization and its administrator assignments.')
+      } finally {
+        if (active) setFormLoading(false)
+      }
+    }
+    loadOrganization()
+    return () => { active = false }
+  }, [editId])
 
   useEffect(() => {
     const pincode = values.pincode.trim()
@@ -368,16 +472,47 @@ export default function CreateCollegeForm({ onDismiss, onSaved }) {
     event.preventDefault()
     if (submitting || submitLock.current || !validate()) return
     if (access?.isSuperAdmin !== true) {
-      setSubmitError('Only the platform Super Admin can create an organization.')
+      setSubmitError(`Only the platform Super Admin can ${editId ? 'edit an organization' : 'create an organization'}.`)
       return
     }
     submitLock.current = true
     setSubmitting(true)
     setSubmitError('')
-    let collegeId = createdCollegeId
+    let collegeId = editId || createdCollegeId
     let progress = { ...adminProgress }
     try {
-      if (!collegeId) {
+      if (editId) {
+        const original = originalCollegeRef.current || {}
+        const organization = {
+          ...original,
+          name: values.name.trim(),
+          collegeName: values.name.trim(),
+          code: values.code.trim(),
+          collegeCode: values.code.trim(),
+          address: values.address.trim(),
+          addressLine1: values.address.trim(),
+          area: values.area.trim(),
+          city: values.city.trim(),
+          district: values.district.trim(),
+          state: values.state.trim(),
+          country: values.country,
+          pincode: values.pincode.trim(),
+          contact: values.phone.trim(),
+          contactNumber: values.phone.trim(),
+          phoneNumber: values.phone.trim(),
+          email: values.email.trim(),
+          collegeEmail: values.email.trim(),
+          principal: values.contactPerson.trim(),
+          principalName: values.contactPerson.trim(),
+        }
+        const response = await updateCollege(editId, organization)
+        const updated = unwrapCollegeRecord(response)
+        academicService?.clearCache?.()
+        eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED, {
+          collegeId,
+          college: { ...original, ...updated, ...organization, id: collegeId, collegeId },
+        })
+      } else if (!collegeId) {
         if (creationUnconfirmed) throw new Error('Organization creation could not be confirmed. Refresh the Organization directory before trying again.')
         const latestResponse = await getColleges()
         const latestData = latestResponse?.data?.data ?? latestResponse?.data ?? latestResponse
@@ -521,29 +656,33 @@ export default function CreateCollegeForm({ onDismiss, onSaved }) {
         }
       }
 
-      if (!collegeStatusSaved && String(values.status) === '0') {
-        await updateCollegeStatus(collegeId, 0)
+      if (!collegeStatusSaved && (editId
+        ? String(values.status) !== String(originalStatusRef.current)
+        : String(values.status) === '0')) {
+        await updateCollegeStatus(collegeId, Number(values.status))
         setCollegeStatusSaved(true)
       } else if (!collegeStatusSaved) {
         setCollegeStatusSaved(true)
       }
 
-      showSuccess('Organization created and administrators assigned successfully.')
-      if (onSaved) onSaved({ created: true })
+      showSuccess(editId ? 'Organization and administrators updated successfully.' : 'Organization created and administrators assigned successfully.')
+      if (onSaved) onSaved({ created: !editId })
       else onDismiss?.()
     } catch (error) {
       const apiDetails = error?.validationErrors && typeof error.validationErrors === 'object'
         ? Object.values(error.validationErrors).flat().filter(Boolean).join(' ')
         : ''
-      setSubmitError([error?.message, apiDetails].filter((message, index, list) => message && list.indexOf(message) === index).join(' ') || 'Organization creation could not be completed. Your form values have been retained.')
+      setSubmitError([error?.message, apiDetails].filter((message, index, list) => message && list.indexOf(message) === index).join(' ') || `Organization ${editId ? 'update' : 'creation'} could not be completed. Your form values have been retained.`)
     } finally {
       submitLock.current = false
       setSubmitting(false)
     }
   }
 
-  if (accessLoading) return <ViewDialog title="Create Organization" onClose={onDismiss} maxWidth="1040px" showExport={false}><p role="status">Loading account access…</p></ViewDialog>
-  if (access?.isSuperAdmin !== true) return <ViewDialog title="Create Organization" onClose={onDismiss} maxWidth="1040px" showExport={false}><p role="alert">Only the platform Super Admin can access organization creation.</p></ViewDialog>
+  const formTitle = editId ? 'Edit Organization' : 'Create Organization'
+  const submitLabel = editId ? 'Save Organization' : 'Create Organization'
+  if (accessLoading) return <ViewDialog title={formTitle} onClose={onDismiss} maxWidth="1040px" showExport={false}><p role="status">Loading account access…</p></ViewDialog>
+  if (access?.isSuperAdmin !== true) return <ViewDialog title={formTitle} onClose={onDismiss} maxWidth="1040px" showExport={false}><p role="alert">Only the platform Super Admin can access organization management.</p></ViewDialog>
 
   const field = (label, name, type = 'text', options = {}) => (
     <div className={`college-create-field${options.full ? ' college-create-field--full' : ''}`} key={name}>
@@ -561,8 +700,10 @@ export default function CreateCollegeForm({ onDismiss, onSaved }) {
 
   const form = <form className="college-create-form" onSubmit={submit} noValidate>
     {submitError && <div className="college-create-alert" role="alert">{submitError}{createdCollegeId && <span> Organization #{createdCollegeId} is already saved; retry to finish pending assignments.</span>}{creationUnconfirmed && <span> Refresh the Organization directory before retrying to avoid a duplicate.</span>}</div>}
+    {formLoading && <p role="status">Loading organization and administrator assignments…</p>}
+    {formLoadError && <div className="college-create-alert" role="alert">{formLoadError}</div>}
     <section className="college-create-section" aria-labelledby="college-create-contact-title">
-      <header><div><h2 id="college-create-contact-title">Contact Details</h2><p>Organization identity and primary contact information</p></div></header>
+      <header><div><h2 id="college-create-contact-title">Organization Details</h2><p>Organization identity and primary contact information</p></div></header>
       <div className="college-create-grid">
         {field('Organization Name', 'name', 'text', { required: true })}
         {field('Organization Code', 'code', 'text', { required: true })}
@@ -668,8 +809,8 @@ export default function CreateCollegeForm({ onDismiss, onSaved }) {
       {adminMode === 'new' && <button type="button" className="college-create-link college-create-add-another" onClick={addAnotherAdmin} disabled={submitting}>Add another administrator</button>}
       {admins.filter(row => row.kind === 'existing').length > 0 && <div className="college-create-assigned-admins" aria-label="Assigned administrators">
         {admins.filter(row => row.kind === 'existing').map((row, index) => <div className="college-create-assigned-admin" key={row.id}>
-          <span><strong>Assigned administrator {index + 1}</strong><small>{row.fullName} · {row.email}</small></span>
-          <button type="button" className="college-create-remove" onClick={() => removeAdmin(row.id)} disabled={submitting}>Remove</button>
+          <span><strong>{row.alreadyAssigned ? 'Current administrator' : `Assigned administrator ${index + 1}`}</strong><small>{row.fullName} · {row.email}</small></span>
+          {!row.alreadyAssigned && <button type="button" className="college-create-remove" onClick={() => removeAdmin(row.id)} disabled={submitting}>Remove</button>}
         </div>)}
       </div>}
       {adminMode !== 'new' && admins.filter(row => row.kind === 'new').length > 0 && <div className="college-create-assigned-admins" aria-label="New administrator drafts">
@@ -683,11 +824,11 @@ export default function CreateCollegeForm({ onDismiss, onSaved }) {
 
     <footer className="college-create-footer">
       <button type="button" className="college-create-secondary" onClick={onDismiss} disabled={submitting}>Cancel</button>
-      <button type="submit" className="college-create-primary" disabled={submitting || creationUnconfirmed}>{submitting ? 'Creating Organization…' : 'Create Organization'}</button>
+      <button type="submit" className="college-create-primary" disabled={submitting || creationUnconfirmed || formLoading || Boolean(formLoadError)}>{submitting ? (editId ? 'Saving Organization…' : 'Creating Organization…') : submitLabel}</button>
     </footer>
   </form>
 
-  return <ViewDialog title="Create Organization" subtitle="Create an organization and configure its administrators" className="college-create-dialog" maxWidth="1040px" onClose={onDismiss} busy={submitting} showExport={false} hideFooter>
+  return <ViewDialog title={formTitle} subtitle={editId ? 'Update organization information and administrator assignments' : 'Create an organization and configure its administrators'} className="college-create-dialog" maxWidth="1040px" onClose={onDismiss} busy={submitting} showExport={false} hideFooter>
     {form}
   </ViewDialog>
 }

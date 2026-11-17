@@ -1545,7 +1545,7 @@ function LegacyCollegeForm({ editId, onDismiss, onSaved, resumeDraft = false }) 
 }
 
 function CollegeForm(props) {
-  if (props.editId || props.resumeDraft) return <LegacyCollegeForm {...props} />
+  if (props.resumeDraft && !props.editId) return <LegacyCollegeForm {...props} />
   return <CreateCollegeForm {...props} />
 }
 
@@ -6122,7 +6122,7 @@ function RolesAndDesignationsWorkspace() {
         {/* MODAL 3: GRANULAR PERMISSIONS MATRIX */}
         {/* ============================================================== */}
         {isPermModalOpen && editingPermissionsRole && (
-          <ViewDialog title="Module Permissions" onClose={() => setIsPermModalOpen(false)} busy={isSavingPerms} showExport={false} hideFooter maxWidth="1200px">
+          <ViewDialog title="Module Permissions" onClose={() => setIsPermModalOpen(false)} busy={isSavingPerms} showExport={false} hideFooter maxWidth="1440px" className="rbac-permissions-dialog">
             <div className="rbac-matrix-dialog">
               {/* Header Bar */}
               <div className="rbac-matrix-top-bar">
@@ -6141,14 +6141,6 @@ function RolesAndDesignationsWorkspace() {
                 </button>
               </div>
 
-              {isSuperAdmin && (
-                <div className="rbac-org-admin-modal-context">
-                  <span><small>Organization</small><strong>{selectedOrganization?.name || 'Not selected'}</strong></span>
-                  <span><small>Admin</small><strong>{organizationAdmin || 'No College Admin assigned'}</strong></span>
-                  <p>This matrix is saved for this organization’s College Admin role only.</p>
-                </div>
-              )}
-
               {permsModalError && (
                 <div className="rbac-modal-error-banner" style={{ margin: '10px 16px 0' }} role="alert">
                   <FiAlertCircle />
@@ -6156,32 +6148,17 @@ function RolesAndDesignationsWorkspace() {
                 </div>
               )}
 
-              {/* Sub-Header Toolbar: Presets & Legend */}
-              <div className="rbac-matrix-sub-toolbar">
-                <div className="rbac-presets-strip">
-                  <span className="rbac-preset-caption">Quick Presets:</span>
-                  <button type="button" className="rbac-preset-chip" disabled={!canEditAccess} onClick={() => handleApplyPreset('full')}>
-                    Full Access
-                  </button>
-                  <button type="button" className="rbac-preset-chip" disabled={!canEditAccess} onClick={() => handleApplyPreset('hod')}>
-                    HOD Lead
-                  </button>
-                  <button type="button" className="rbac-preset-chip" disabled={!canEditAccess} onClick={() => handleApplyPreset('faculty')}>
-                    Teaching Faculty
-                  </button>
-                  <button type="button" className="rbac-preset-chip" disabled={!canEditAccess} onClick={() => handleApplyPreset('read')}>
-                    Read Only
-                  </button>
-                </div>
-
-                <div className="rbac-legend-strip">
-                  <span><strong><FiEye size={16} aria-hidden="true" /> View:</strong> Read</span>
-                  <span><strong><FiPlus size={16} aria-hidden="true" /> Create:</strong> Add</span>
-                  <span><strong><FiEdit2 size={16} aria-hidden="true" /> Edit:</strong> Update</span>
-                  <span><strong><FiTrash2 size={16} aria-hidden="true" /> Delete:</strong> Remove</span>
-                  <span><strong><FiDownload size={16} aria-hidden="true" /> Export:</strong> Download</span>
-                </div>
-              </div>
+              {isSuperAdmin && (
+                <table className="rbac-org-admin-modal-context" aria-label="Organization permission assignment">
+                  <colgroup><col style={{ width: '28%' }} /><col style={{ width: '37%' }} /><col style={{ width: '35%' }} /></colgroup>
+                  <thead><tr><th scope="col">Organization</th><th scope="col">Admin</th><th scope="col">Permission scope</th></tr></thead>
+                  <tbody><tr>
+                    <td>{selectedOrganization?.name || 'Not selected'}</td>
+                    <td>{organizationAdmin || 'No College Admin assigned'}</td>
+                    <td className="rbac-org-admin-modal-scope">This matrix is saved for this organization’s College Admin role only.</td>
+                  </tr></tbody>
+                </table>
+              )}
 
               {/* Matrix Table Viewport */}
               <div className="rbac-matrix-viewport">

@@ -1845,20 +1845,43 @@
 }
 
 .rbac-org-admin-modal-context {
-  display: grid;
-  grid-template-columns: minmax(180px, .8fr) minmax(240px, 1.2fr) minmax(200px, 1fr);
-  align-items: center;
-  gap: 12px;
-  margin: 12px 16px 0;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
+  box-sizing: border-box;
+  width: 100%;
+  margin: 20px 0;
+  border: 1px solid var(--border-strong);
   border-radius: 8px;
-  background: var(--surface-soft);
+  background: var(--surface);
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
 }
-.rbac-org-admin-modal-context span { display: grid; gap: 3px; min-width: 0; }
-.rbac-org-admin-modal-context small { color: var(--text-muted); font-size: 9px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; }
-.rbac-org-admin-modal-context strong { overflow-wrap: anywhere; color: var(--text-primary); font-size: 11px; }
-.rbac-org-admin-modal-context p { margin: 0; color: var(--text-muted); font-size: 10px; line-height: 1.45; }
+.rbac-org-admin-modal-context th,
+.rbac-org-admin-modal-context td {
+  min-width: 0;
+  padding: 9px 12px;
+  border-right: 1px solid var(--border);
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.rbac-org-admin-modal-context th {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-strong);
+  color: var(--text-secondary);
+  background: var(--table-head);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+.rbac-org-admin-modal-context td {
+  color: var(--text-primary);
+  background: var(--surface);
+  font-size: 11px;
+  font-weight: 750;
+}
+.rbac-org-admin-modal-context .rbac-org-admin-modal-scope { color: var(--text-muted); font-size: 10px; font-weight: 400; line-height: 1.45; }
+.rbac-org-admin-modal-context th:last-child,
+.rbac-org-admin-modal-context td:last-child { border-right: 0; }
 
 .rbac-tabs-bar {
   display: flex;
@@ -2884,7 +2907,6 @@
   justify-content: space-between;
   gap: 16px;
   padding-bottom: 12px;
-  border-bottom: 1px solid var(--border, var(--border));
   flex-shrink: 0;
 }
 
@@ -3418,7 +3440,6 @@
 @media (max-width: 768px) {
   .rbac-org-admin-context { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .rbac-org-admin-context p { grid-column: 1 / -1; padding-bottom: 0; }
-  .rbac-org-admin-modal-context { grid-template-columns: 1fr; }
   .rbac-tabs-bar {
     flex-direction: column;
     align-items: stretch;
@@ -3437,7 +3458,7 @@
 
 @media (max-width: 540px) {
   .rbac-org-admin-context { grid-template-columns: 1fr; }
-  .rbac-org-admin-modal-context { margin-inline: 10px; }
+  .rbac-org-admin-modal-context { width: 100%; margin-inline: 0; }
   .rbac-summary-grid {
     grid-template-columns: 1fr;
   }
@@ -5695,6 +5716,7 @@
 }
 
 /* Shared native dialog owns access-governance positioning and surface. */
+.shared-view-dialog.rbac-permissions-dialog { box-sizing:border-box; width:min(1440px, calc(100vw - 48px)); max-width:min(1440px, calc(100vw - 48px)) !important; }
 .shared-view-dialog :is(.rbac-modal-window,.rbac-matrix-dialog,.rbac-delete-modal-window){width:100%;max-width:none;max-height:none;margin:0;padding:0;border:0;border-radius:0;box-shadow:none;background:transparent;overflow:visible}.shared-view-dialog :is(.rbac-modal-close,.rbac-modal-header,.rbac-delete-modal-header){display:none}.shared-view-dialog .rbac-matrix-top-bar{padding:0 0 12px}
 
 /* Match Academic Structure's compact, theme-aware room directory filters. */

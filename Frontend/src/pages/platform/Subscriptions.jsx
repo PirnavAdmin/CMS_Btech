@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { FiCalendar, FiCheckCircle, FiCreditCard, FiFilter, FiPlus, FiRefreshCw, FiSearch, FiUsers, FiX } from 'react-icons/fi'
+import { FiCheckCircle, FiCreditCard, FiFilter, FiPlus, FiRefreshCw, FiSearch, FiUsers, FiX } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout.jsx'
 import PageHeader from '../../components/PageHeader.jsx'
 import { useScreenAccess } from '../../auth/ScreenAccess.jsx'
@@ -93,7 +93,6 @@ export default function Subscriptions() {
   }, [permitted])
 
   const organizationOptions = useMemo(() => [...organizations].sort((a, b) => a.name.localeCompare(b.name)), [organizations])
-  const selectedOrganization = organizationOptions.find(item => String(item.id) === String(form.organizationId))
   const activeCount = subscriptions.filter(item => String(item.status).toLowerCase() === 'active').length
   const trialCount = subscriptions.filter(item => String(item.status).toLowerCase() === 'trial').length
   const expiringCount = subscriptions.filter(item => {
@@ -133,9 +132,16 @@ export default function Subscriptions() {
         maximumUsers: Number(form.maximumUsers),
       })
       if (created?.subscriptionId) setSubscriptions(current => [created, ...current])
-      else await refresh()
       setForm(emptyForm())
+      setFormOpen(false)
       setNotice('Subscription created successfully.')
+      if (!created?.subscriptionId) {
+        try {
+          await refresh()
+        } catch (reason) {
+          setError(reason.message || 'Subscription was created, but the directory could not be refreshed.')
+        }
+      }
     } catch (reason) {
       setError(reason.message || 'The subscription could not be saved.')
     } finally {
@@ -191,18 +197,6 @@ export default function Subscriptions() {
               </div>
               {!loading && organizationOptions.length === 0 && <p className="platform-management__hint platform-subscriptions__empty-org">No organizations are available. Add an organization before creating a subscription.</p>}
             </form>
-            <aside className="platform-subscriptions__preview" aria-label="Live subscription preview">
-              <div className="platform-subscriptions__preview-heading"><span>LIVE PREVIEW</span><span className={`platform-management__status platform-management__status--${statusKey(form.status)}`}>{form.status}</span></div>
-              <p className="platform-subscriptions__preview-org">{selectedOrganization?.name || 'Select an organization'}</p>
-              <h3>{form.planName.trim() || 'Your plan name'}</h3>
-              <div className="platform-subscriptions__price">{form.price === '' ? money(0) : money(form.price)}<small>/ {form.billingCycle.toLowerCase()}</small></div>
-              <dl>
-                <div><dt><FiUsers />Maximum users</dt><dd>{form.maximumUsers || '—'}</dd></div>
-                <div><dt><FiCalendar />Starts</dt><dd>{dateLabel(form.startDate)}</dd></div>
-                <div><dt><FiCalendar />Ends</dt><dd>{dateLabel(form.endDate)}</dd></div>
-              </dl>
-              <p className="platform-subscriptions__preview-note">You can review these terms in the directory after saving.</p>
-            </aside>
           </div>}
         </section>}
 
