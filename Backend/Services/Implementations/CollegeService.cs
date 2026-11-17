@@ -426,7 +426,7 @@ namespace BTech.Services.Implementations
         // MODEL TO RESPONSE DTO
         // =====================================================
 
-        private static string? NormalizeOptional(
+        internal static string? NormalizeOptional(
             string? value)
         {
             return string.IsNullOrWhiteSpace(value)
@@ -434,7 +434,7 @@ namespace BTech.Services.Implementations
                 : value.Trim();
         }
 
-        private static CollegeResponseDto MapToResponseDto(
+        internal static CollegeResponseDto MapToResponseDto(
             College college)
         {
             return new CollegeResponseDto

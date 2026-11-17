@@ -299,9 +299,10 @@ builder.Services.AddScoped<
 // COLLEGE
 // ------------------------------------------------------------
 
-builder.Services.AddScoped<
-    ICollegeRepository,
-    CollegeRepository>();
+builder.Services.AddScoped<CollegeRepository>();
+builder.Services.AddScoped<ICollegeRepository>(services => services.GetRequiredService<CollegeRepository>());
+builder.Services.AddScoped<ISuperAdminCollegeRepository, SuperAdminCollegeRepository>();
+builder.Services.AddScoped<ISuperAdminCollegeService, SuperAdminCollegeService>();
 
 
 // ------------------------------------------------------------
