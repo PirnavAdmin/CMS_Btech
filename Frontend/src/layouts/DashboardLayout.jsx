@@ -9,6 +9,8 @@ import { getUserRole, signOut } from '../auth/auth'
 import { changePassword, profileApi } from '../api/apiEndpoints'
 import Sidebar from '../components/Sidebar'
 import ThemeColorPicker from '../components/ThemeColorPicker'
+import AcademicContextSelect from '../components/AcademicContextSelect'
+import HeaderAcademicYear from '../components/HeaderAcademicYear'
 import { feeBreadcrumbs } from '../utils/feeNavigation'
 import DeactivationBlockedDialog from '../components/DeactivationBlockedDialog'
 import { API_FAILURE_EVENT } from '../api/apiFailureNotice'
@@ -114,7 +116,7 @@ export default function DashboardLayout({ children }) {
     name: localStorage.getItem('btech-user-name') || sessionStorage.getItem('btech-user-name') || '',
     identifier: localStorage.getItem('btech-user-id') || sessionStorage.getItem('btech-user-id') || '',
   }))
-  const { canView, access: accountAccess } = useScreenAccess()
+  const { canView, access: accountAccess, status: accountAccessStatus } = useScreenAccess()
 
   useEffect(() => {
     const handleCampusChange = () => setCampusGeneration(current => current + 1)
@@ -123,6 +125,10 @@ export default function DashboardLayout({ children }) {
   }, [])
 
   const userRole = getUserRole() || 'user'
+  const normalizedRole = String(userRole).toLowerCase().replace(/[\s-]+/g, '_')
+  const showAdminHeaderContext = ['admin', 'college_admin', 'collegeadmin', 'administrator'].includes(normalizedRole)
+    && accountAccessStatus === 'ready'
+    && accountAccess?.isSuperAdmin !== true
   const mustChangePassword = localStorage.getItem('btech-must-change-password') === 'true' || sessionStorage.getItem('btech-must-change-password') === 'true'
   const profileIncomplete = localStorage.getItem('btech-profile-completed') === 'false' || sessionStorage.getItem('btech-profile-completed') === 'false'
   useEffect(() => {
@@ -351,6 +357,10 @@ export default function DashboardLayout({ children }) {
           <div className="global-search"><FiSearch aria-hidden="true" /><input aria-label="Search modules" value={globalQuery} onChange={(event) => setGlobalQuery(event.target.value)} placeholder="Search" />{globalResults.length > 0 && <div className="global-search-results">{globalResults.map(([label, to]) => <Link to={to} key={to} onClick={() => setGlobalQuery('')}>{label}</Link>)}</div>}</div>
 
           <div className="dashboard-header__actions">
+          {showAdminHeaderContext && <div className="dashboard-header__academic-context" data-no-print>
+            <AcademicContextSelect kind="college" compact />
+            <HeaderAcademicYear />
+          </div>}
           <ThemeColorPicker />
 
           <details className="account-menu" ref={accountMenuRef}>

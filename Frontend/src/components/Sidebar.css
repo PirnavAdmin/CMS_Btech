@@ -3,6 +3,8 @@
 .sidebar-brand { height:var(--header-height); min-height:var(--header-height); flex:0 0 var(--header-height); box-sizing:border-box; display:flex; align-items:center; gap:9px; padding:8px; border-bottom:1px solid var(--border); }
 .sidebar-brand__mark { display:grid; place-items:center; flex:0 0 38px; width:38px; height:38px; border-radius:11px; color:#fff; background:linear-gradient(140deg,var(--brand-solid),var(--brand)); box-shadow:0 3px 9px color-mix(in srgb,var(--brand) 24%,transparent); }
 .sidebar-brand__mark svg { width:29px; height:29px; }
+.sidebar-brand__mark img { box-sizing:border-box; width:100%; height:100%; padding:3px; border-radius:inherit; background:var(--surface); object-fit:contain; }
+.sidebar-brand__initial { font-size:18px; line-height:1; font-weight:850; }
 .sidebar-brand__copy { flex:1; min-width:0; }
 .sidebar-brand__copy strong { display:block; font-size:14px; line-height:1.15; font-weight:850; letter-spacing:.1px; color:var(--brand); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .sidebar-brand__copy span { display:block; margin-top:3px; font-size:9px; line-height:1.2; font-weight:750; letter-spacing:.55px; text-transform:uppercase; color:var(--text-secondary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }

@@ -4,6 +4,11 @@
 .dashboard-layout.sidebar-collapsed>main { width:calc(100% - var(--sidebar-collapsed-width)); margin-left:var(--sidebar-collapsed-width); }
 .dashboard-header { position:sticky; top:0; z-index:40; box-sizing:border-box; min-height:var(--header-height); display:flex; flex-wrap:wrap; align-items:center; gap:14px; padding:8px var(--space-5); background:var(--header-bg); backdrop-filter:blur(8px); border-bottom:1px solid var(--border); }
 .dashboard-header__actions { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin-left:auto; min-width:0; }
+.dashboard-header__academic-context { display:flex; align-items:center; gap:8px; min-width:0; }
+.dashboard-header__academic-context .workspace-context-select--college { flex:0 1 230px; width:230px; min-width:150px; }
+.dashboard-header__academic-context .workspace-context-select--college .searchable-select__trigger { min-height:48px; }
+.dashboard-header__academic-context .header-academic-year { flex:0 1 270px; width:270px; min-width:190px; }
+.dashboard-header__academic-context .header-academic-year > summary { width:100%; }
 .global-search { position:relative; box-sizing:border-box; display:flex; align-items:center; gap:8px; flex:1; height:48px; max-width:380px; min-width:100px; padding:7px 12px; background:var(--input-bg); border:1px solid var(--border); border-radius:9px; color:var(--text-muted); }
 .global-search:focus-within { border-color:var(--brand); box-shadow:var(--focus-ring); }
 .global-search input { border:0; outline:none; width:100%; min-width:0; background:transparent; color:var(--text-primary); font:13.5px var(--font-family); }
@@ -35,7 +40,9 @@
   .dashboard-header > .global-search { flex:1 1 120px; max-width:380px; }
 }
 @media(max-width:992px) { .dashboard-layout>main,.dashboard-layout.sidebar-collapsed>main { width:100%; margin-left:0; } .mobile-navigation-toggle { display:grid; } .dashboard-header { padding:8px 12px; gap:8px; flex-wrap:wrap; } .dashboard-header__actions { gap:6px; } .page-content { padding:var(--space-3); } }
-@media(max-width:600px) { .global-search { max-width:none; } .dashboard-header__actions { width:100%; justify-content:space-between; } .account-menu summary>span:nth-child(2) { display:none; } }
+@media(min-width:993px) and (max-width:1200px) { .dashboard-header { height:auto; min-height:var(--header-height); flex-wrap:wrap; padding-block:8px; } .dashboard-header__actions { flex:1 1 auto; flex-wrap:wrap; } .dashboard-header__academic-context { flex:1 1 100%; justify-content:flex-end; } }
+@media(max-width:992px) { .dashboard-header__actions { width:100%; margin-left:0; justify-content:flex-end; flex-wrap:wrap; } .dashboard-header__academic-context { flex:1 1 100%; justify-content:flex-end; } }
+@media(max-width:600px) { .global-search { max-width:none; } .dashboard-header__actions { width:100%; justify-content:space-between; } .dashboard-header__academic-context { flex:1 1 100%; justify-content:stretch; flex-wrap:wrap; } .dashboard-header__academic-context .workspace-context-select--college, .dashboard-header__academic-context .header-academic-year { flex:1 1 190px; width:auto; min-width:0; } .account-menu summary>span:nth-child(2) { display:none; } }
 /* ==========================================================================
    Account Menu Dropdown & Header
    ========================================================================== */
