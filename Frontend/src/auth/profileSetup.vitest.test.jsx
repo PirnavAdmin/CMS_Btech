@@ -22,6 +22,26 @@ test('password setup does not open the profile form before the password stage co
 test('ordinary completed profile remains viewable without opening the setup editor', async () => {
  profileApi.getProfile.mockResolvedValue({ ...profile, profileCompleted: true }); mount('/my-profile'); await screen.findByRole('heading', { name: 'My Profile' }); expect(screen.queryByRole('dialog')).toBeNull()
 })
+test('profile update conflict explains duplicate email or mobile values', async () => {
+ profileApi.getProfile.mockResolvedValue({ ...profile, profileCompleted: true })
+ profileApi.updateProfile.mockRejectedValue(Object.assign(new Error('A record with the same unique value already exists.'), { status: 409 }))
+ mount('/my-profile')
+ await screen.findByRole('heading', { name: 'My Profile' })
+ fireEvent.click(screen.getByRole('button', { name: 'Edit Profile' }))
+ fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }))
+ expect((await screen.findAllByText(/already linked to another account/i)).length).toBeGreaterThan(0)
+})
+test('Super Admin profile shows only core identity fields', async () => {
+ profileApi.getProfile.mockResolvedValue({ ...profile, role: 'SUPER_ADMIN', profileCompleted: true })
+ mount('/my-profile')
+ await screen.findByRole('heading', { name: 'My Profile' })
+ expect(screen.queryByText('Institutional Details')).toBeNull()
+ expect(screen.queryByText('Address & Bio')).toBeNull()
+ expect(screen.queryByText('Date of Birth')).toBeNull()
+ expect(screen.queryByText('Department')).toBeNull()
+ expect(screen.getByText('ID')).toBeTruthy()
+ expect(screen.getByText('Role')).toBeTruthy()
+})
 test('successful setup saves through the existing profile API and advances only after server completion', async () => {
  localStorage.setItem('btech-authenticated', 'true')
  profileApi.getProfile.mockResolvedValueOnce({ ...profile }).mockResolvedValueOnce({ ...profile, profileCompleted: true }); mount(); await screen.findByRole('dialog')
