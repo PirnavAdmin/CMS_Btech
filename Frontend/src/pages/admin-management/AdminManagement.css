@@ -5842,6 +5842,37 @@
 .ac-primary:hover:not(:disabled) { background: var(--brand-solid-hover); }
 .ac-secondary:hover:not(:disabled) { background: var(--surface-hover); }
 
+/* Keep Organization Directory columns readable and scroll as one table on narrow screens. */
+.college-management .college-config-directory .erp-data-table {
+  width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) var(--surface-soft);
+}
+.college-management .college-config-directory .college-config-table {
+  width: 100%;
+  min-width: 1340px;
+  table-layout: fixed;
+}
+.college-management .college-config-directory .college-config-table th {
+  padding: 8px 9px;
+  line-height: 1.4;
+}
+.college-management .college-config-directory .college-config-table td {
+  padding: 8px 9px;
+  line-height: 1.3;
+}
+.college-management .college-config-directory .college-config-table .college-col-identity { width: 300px !important; }
+.college-management .college-config-directory .college-config-table .college-col-code { display: table-cell !important; width: 110px !important; }
+.college-management .college-config-directory .college-config-table .college-col-affiliation { display: table-cell !important; width: 170px !important; }
+.college-management .college-config-directory .college-config-table .college-col-location { display: table-cell !important; width: 170px !important; }
+.college-management .college-config-directory .college-config-table .college-col-contact { display: table-cell !important; width: 220px !important; }
+.college-management .college-config-directory .college-config-table .college-col-status { display: table-cell !important; width: 110px !important; }
+.college-management .college-config-directory .college-config-table .record-completion-cell { width: 110px !important; }
+.college-management .college-config-directory .college-config-table .col-actions { width: 150px !important; min-width: 150px !important; }
+.college-management .college-config-directory .college-config-row-actions { gap: 4px; }
+
 @media (max-width: 640px) {
   :is(.college-workspace-dialog, .college-form-dialog) { width: calc(100vw - 12px); max-height: calc(100dvh - 12px); }
   .college-workspace-dialog .shared-view-dialog__header,
