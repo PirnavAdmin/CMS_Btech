@@ -140,12 +140,12 @@ test.each(['students', 'lookup failure', 'clear'])('archiving preserves the %s d
 })
 test('first-cycle generation retains its existing annual DTO and manual confirmation', async () => {
  fixture.rows = []; mount(); await screen.findByRole('heading', { name: 'No academic years found.' }); fireEvent.click(screen.getByRole('button', { name: 'Generate Academic Year' }))
- fireEvent.change(screen.getByLabelText('Academic year start date'), { target: { value: '2032-06-01' } }); expect(academicYearApi.create).not.toHaveBeenCalled(); fireEvent.click(screen.getByRole('button', { name: 'Generate Cycle' }))
- await waitFor(() => expect(generateNextAcademicYear).toHaveBeenCalledWith({ collegeId: 7, startDate: '2032-06-01', activateImmediately: false })); await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+ fireEvent.change(screen.getByLabelText('Academic year start date'), { target: { value: '2032-06-01' } }); fireEvent.change(screen.getByLabelText('Academic year end date'), { target: { value: '2033-05-31' } }); expect(academicYearApi.create).not.toHaveBeenCalled(); fireEvent.click(screen.getByRole('button', { name: 'Generate Cycle' }))
+ await waitFor(() => expect(generateNextAcademicYear).toHaveBeenCalledWith({ collegeId: 7, startDate: '2032-06-01', endDate: '2033-05-31', activateImmediately: false })); await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
 })
 test('next-cycle generation retains its annual dates, state and API contract', async () => {
  mount(); await directory(); fireEvent.click(screen.getByRole('button', { name: 'Generate Next Year' })); expect(screen.getByRole('dialog').textContent).toContain('2031 - 2032'); fireEvent.click(screen.getByRole('button', { name: 'Generate Cycle' }))
- await waitFor(() => expect(generateNextAcademicYear).toHaveBeenCalledTimes(1)); expect(generateNextAcademicYear.mock.calls[0][0]).toEqual({ collegeId: 7, activateImmediately: false }); expect(academicYearApi.create).not.toHaveBeenCalled()
+ await waitFor(() => expect(generateNextAcademicYear).toHaveBeenCalledTimes(1)); expect(generateNextAcademicYear.mock.calls[0][0]).toEqual({ collegeId: 7, activateImmediately: false, startDate: '2031-06-01', endDate: '2032-05-31' }); expect(academicYearApi.create).not.toHaveBeenCalled()
 })
 test('generation failure keeps the dialog open with existing college-specific 403 feedback', async () => {
  generateNextAcademicYear.mockRejectedValueOnce(Object.assign(new Error('Forbidden'), { status: 403 })); mount(); await directory(); fireEvent.click(screen.getByRole('button', { name: 'Generate Next Year' })); fireEvent.click(screen.getByRole('button', { name: 'Generate Cycle' }))
