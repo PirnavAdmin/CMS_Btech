@@ -3027,10 +3027,11 @@
 }
 
 .rbac-matrix-grid-table {
-  width: 100%;
+  width: max-content;
   min-width: 860px;
-  table-layout: fixed;
+  table-layout: auto;
   border-collapse: collapse;
+  margin-inline: auto;
 }
 
 .rbac-matrix-grid-table th {
@@ -3039,7 +3040,7 @@
   z-index: 20;
   background: var(--table-head) !important;
   color: var(--text-secondary) !important;
-  padding: 11px 8px;
+  padding: 9px 5px;
   font-size: 11px !important;
   font-weight: 800;
   letter-spacing: 0.04em;
@@ -3050,7 +3051,7 @@
 
 .rbac-matrix-grid-table th.th-mod-name {
   text-align: left;
-  padding-left: 16px;
+  padding-left: 10px;
 }
 
 .rbac-cat-header-row td {
@@ -3105,7 +3106,7 @@
 }
 
 .rbac-mod-item-row td {
-  padding: 10px 8px;
+  padding: 7px 5px;
   border: 1px solid var(--border);
   vertical-align: middle;
   background: var(--surface);
@@ -3116,7 +3117,7 @@
 }
 
 .rbac-mod-cell {
-  padding-left: 16px !important;
+  padding-left: 10px !important;
 }
 
 .rbac-mod-info-card strong {
@@ -5716,7 +5717,7 @@
 }
 
 /* Shared native dialog owns access-governance positioning and surface. */
-.shared-view-dialog.rbac-permissions-dialog { box-sizing:border-box; width:min(1440px, calc(100vw - 48px)); max-width:min(1440px, calc(100vw - 48px)) !important; }
+.shared-view-dialog.rbac-permissions-dialog { box-sizing:border-box; width:min(1200px, calc(100vw - 48px)); max-width:min(1200px, calc(100vw - 48px)) !important; }
 .shared-view-dialog :is(.rbac-modal-window,.rbac-matrix-dialog,.rbac-delete-modal-window){width:100%;max-width:none;max-height:none;margin:0;padding:0;border:0;border-radius:0;box-shadow:none;background:transparent;overflow:visible}.shared-view-dialog :is(.rbac-modal-close,.rbac-modal-header,.rbac-delete-modal-header){display:none}.shared-view-dialog .rbac-matrix-top-bar{padding:0 0 12px}
 
 /* Match Academic Structure's compact, theme-aware room directory filters. */
@@ -5734,12 +5735,18 @@
 .rooms-page .filter-disclosure__content { padding:12px 16px; border-color:var(--border); background:var(--surface-soft); }
 .rooms-page .filter-disclosure__content-inner { width:100%; gap:8px; align-items:center; }
 .rooms-page .filter-disclosure__content-inner .rooms-toolbar { display:block; flex:1 1 100%; width:100%; padding:0; border:0; background:transparent; }
-.rooms-page .rooms-filters-group { display:grid; grid-template-columns:repeat(3,minmax(150px,1fr)); gap:8px; width:100%; }
-.rooms-page .rooms-filter { box-sizing:border-box; width:100%; height:38px; min-height:38px; padding:0 10px; border-color:var(--border); border-radius:8px; background:var(--surface); color:var(--text-primary); font-size:.8125rem; font-weight:500; }
-.rooms-page .rooms-filter .searchable-select__trigger { box-sizing:border-box; width:100%; height:38px; min-height:38px; padding:0 10px; border-color:var(--border); border-radius:8px; background:var(--surface); color:var(--text-primary); font-size:.8125rem; }
+.rooms-page .rooms-filters-group { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; width:100%; }
+.rooms-page .rooms-filter { box-sizing:border-box; display:block; width:100%; min-width:0; height:auto; min-height:0; padding:0; border:0; border-radius:8px; background:transparent; }
+.rooms-page .rooms-filter .searchable-select__trigger { box-sizing:border-box; width:100%; height:38px; min-height:38px; padding:0 10px; border-color:var(--border); border-radius:8px; background:var(--surface); color:var(--text-primary); font-size:.8125rem; font-weight:500; }
 .rooms-page .filter-disclosure__content-inner>.filter-disclosure__clear-btn { min-height:38px; border-radius:8px; }
 @media(max-width:760px){.rooms-page .rooms-filters-group{grid-template-columns:repeat(2,minmax(140px,1fr))}}
 @media(max-width:480px){.rooms-page .rooms-filters-group{grid-template-columns:1fr}}
+
+.rooms-page .rooms-table .room-type-tag.is-hall { background:var(--brand-soft); color:var(--brand-hover); border:1px solid var(--border-strong); }
+.rooms-page .rooms-table .room-type-tag.is-staff { background:var(--surface-soft); color:var(--text-secondary); border:1px solid var(--border); }
+.rooms-page .rooms-table .room-type-tag.is-workshop { background:var(--warning-soft); color:var(--warning); border:1px solid var(--warning-border); }
+.rooms-page .rooms-table .room-type-tag.is-special { background:var(--surface-soft); color:var(--brand); border:1px solid var(--border); }
+.rooms-page .rooms-table .room-type-tag.is-other { background:var(--surface-soft); color:var(--text-secondary); border:1px solid var(--border); }
 
 .rooms-block-overview{display:grid;gap:14px;padding:16px 18px;border:1px solid var(--border);border-radius:14px;background:var(--surface);box-shadow:0 4px 14px rgb(25 42 70 / 4%)}
 .rooms-block-overview__intro{display:flex;align-items:center;justify-content:space-between;gap:16px}
@@ -5840,6 +5847,37 @@
 .ac-leave-confirmation p { margin: 0; color: var(--text-secondary); }
 .ac-primary:hover:not(:disabled) { background: var(--brand-solid-hover); }
 .ac-secondary:hover:not(:disabled) { background: var(--surface-hover); }
+
+/* Keep Organization Directory columns readable and scroll as one table on narrow screens. */
+.college-management .college-config-directory .erp-data-table {
+  width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) var(--surface-soft);
+}
+.college-management .college-config-directory .college-config-table {
+  width: 100%;
+  min-width: 1340px;
+  table-layout: fixed;
+}
+.college-management .college-config-directory .college-config-table th {
+  padding: 8px 9px;
+  line-height: 1.4;
+}
+.college-management .college-config-directory .college-config-table td {
+  padding: 8px 9px;
+  line-height: 1.3;
+}
+.college-management .college-config-directory .college-config-table .college-col-identity { width: 300px !important; }
+.college-management .college-config-directory .college-config-table .college-col-code { display: table-cell !important; width: 110px !important; }
+.college-management .college-config-directory .college-config-table .college-col-affiliation { display: table-cell !important; width: 170px !important; }
+.college-management .college-config-directory .college-config-table .college-col-location { display: table-cell !important; width: 170px !important; }
+.college-management .college-config-directory .college-config-table .college-col-contact { display: table-cell !important; width: 220px !important; }
+.college-management .college-config-directory .college-config-table .college-col-status { display: table-cell !important; width: 110px !important; }
+.college-management .college-config-directory .college-config-table .record-completion-cell { width: 110px !important; }
+.college-management .college-config-directory .college-config-table .col-actions { width: 150px !important; min-width: 150px !important; }
+.college-management .college-config-directory .college-config-row-actions { gap: 4px; }
 
 @media (max-width: 640px) {
   :is(.college-workspace-dialog, .college-form-dialog) { width: calc(100vw - 12px); max-height: calc(100dvh - 12px); }

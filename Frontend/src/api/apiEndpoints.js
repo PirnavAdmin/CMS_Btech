@@ -59,7 +59,7 @@ export const API_ENDPOINTS = Object.freeze({
   subscriptions: Object.freeze({
     list: endpoint('/api/v1/subscriptions'),
     create: endpoint('/api/v1/subscriptions'),
-    update: id => endpoint(`/api/v1/subscriptions/${id}`),
+    detail: id => endpoint(`/api/v1/subscriptions/${id}`),
   }),
   exports: Object.freeze({
     list: endpoint('/api/v1/exports'),
@@ -611,11 +611,12 @@ export const subscriptionsApi = {
     return response?.data?.data ?? response?.data
   },
   update: async (id, payload) => {
-    const response = await request(API_ENDPOINTS.subscriptions.update(encodeURIComponent(id)), {
+    const response = await request(API_ENDPOINTS.subscriptions.detail(encodeURIComponent(id)), {
       method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
     })
     return response?.data?.data ?? response?.data
   },
+  remove: id => request(API_ENDPOINTS.subscriptions.detail(encodeURIComponent(id)), { method: 'DELETE' }),
 }
 
 export const collegeUserMappingsApi = {
@@ -1765,16 +1766,9 @@ export const resultsApi = {
   getTranscript: async (studentId) => normalizeRecord(await request(API_ENDPOINTS.results.transcript(requiredId(studentId, 'Student ID')))),
 }
 
-export async function lookupIndianPincode(pincode) {
+export async function lookupIndianPostOffices(pincode) {
   const digits = String(pincode || '').replace(/\D/g, '').trim()
   if (!/^\d{6}$/.test(digits)) throw new Error('Enter a valid 6-digit PIN code.')
-
-  // Last-resort values for PINs which have previously been returned empty by
-  // the upstream providers. The all-India postal directory below is primary.
-  const knownLocations = {
-    '500072': { town: 'Kukatpally', city: 'Hyderabad', district: 'Medchal Malkajgiri', state: 'Telangana', country: 'India' },
-    '500073': { town: 'Srinagar Colony', city: 'Hyderabad', district: 'Hyderabad', state: 'Telangana', country: 'India' },
-  }
 
   const urls = [
     `/postal-lookup/pincode/${digits}`,
@@ -1816,36 +1810,61 @@ export async function lookupIndianPincode(pincode) {
     return []
   }
 
+  let receivedPostalResponse = false
   for (const url of urls) {
     try {
       const response = await fetch(url, { headers: { Accept: 'application/json' }, cache: 'no-store' })
       if (!response.ok) continue
       const data = await response.json()
+      receivedPostalResponse = true
       const locations = findLocations(data)
-      const primary = locations.find(location => read(location, 'deliveryStatus', 'delivery_status').toLowerCase() === 'delivery') || locations[0]
-      if (!primary) continue
       const metadata = Array.isArray(data) ? data.find(item => item && typeof item === 'object') || {} : (data?.data && typeof data.data === 'object' ? data.data : data)
-      const town = read(primary, 'Name', 'officeName', 'office_name', 'postOfficeName', 'post_office_name', 'place name', 'town', 'locality')
-      const district = read(primary, 'District', 'district', 'districtName', 'district_name') || read(metadata, 'District', 'district', 'districtName', 'district_name')
-      const block = read(primary, 'Block', 'block', 'Taluk', 'taluk', 'subDistrict', 'sub_district', 'city', 'place name') || read(metadata, 'Block', 'block', 'Taluk', 'taluk', 'subDistrict', 'sub_district', 'city')
-      const state = read(primary, 'State', 'state', 'stateName', 'state_name') || read(metadata, 'State', 'state', 'stateName', 'state_name')
-      if (!town && !district && !state) continue
-      return {
-        town: town.replace(/\s+(?:G\.?P\.?O\.?|H\.?O\.?|S\.?O\.?|B\.?O\.?)$/i, '') || block || district,
-        city: block && block.toUpperCase() !== 'NA' ? block : (district || town),
-        district,
-        state,
-        country: read(primary, 'Country', 'country') || 'India',
-      }
+      const offices = locations.map(office => {
+        const officeName = read(office, 'Name', 'officeName', 'office_name', 'postOfficeName', 'post_office_name', 'place name', 'town', 'locality')
+        const district = read(office, 'District', 'district', 'districtName', 'district_name') || read(metadata, 'District', 'district', 'districtName', 'district_name')
+        const block = read(office, 'Block', 'block', 'Taluk', 'taluk', 'subDistrict', 'sub_district', 'city', 'place name') || read(metadata, 'Block', 'block', 'Taluk', 'taluk', 'subDistrict', 'sub_district', 'city')
+        const state = read(office, 'State', 'state', 'stateName', 'state_name') || read(metadata, 'State', 'state', 'stateName', 'state_name')
+        const town = officeName.replace(/\s+(?:G\.?P\.?O\.?|H\.?O\.?|S\.?O\.?|B\.?O\.?)$/i, '') || block || district
+        if (!officeName && !district && !state) return null
+        return {
+          name: officeName || town,
+          town,
+          city: block && block.toUpperCase() !== 'NA' ? block : (district || town),
+          district,
+          state,
+          country: read(office, 'Country', 'country') || read(metadata, 'Country', 'country') || 'India',
+          branchType: read(office, 'BranchType', 'branchType', 'officeType', 'office_type'),
+          deliveryStatus: read(office, 'DeliveryStatus', 'deliveryStatus', 'delivery_status'),
+        }
+      }).filter(Boolean)
+      if (offices.length) return offices
     } catch {
       // try next url
     }
   }
 
-  if (knownLocations[digits]) return knownLocations[digits]
+  if (receivedPostalResponse) throw new Error('No post offices found for this PIN code.')
 
   // Providers can be temporarily unavailable or omit a valid PIN. Don't
   // claim that the PIN is invalid; let the admission form be completed by hand.
+  throw new Error('Could not retrieve post office details for this PIN code. Please try again or enter the address manually.')
+}
+
+export async function lookupIndianPincode(pincode) {
+  const digits = String(pincode || '').replace(/\D/g, '').trim()
+  if (!/^\d{6}$/.test(digits)) throw new Error('Enter a valid 6-digit PIN code.')
+  try {
+    const [office] = await lookupIndianPostOffices(digits)
+    if (office) return office
+  } catch (error) {
+    // Retain the older city-only fallback for existing student and profile forms.
+    const knownLocations = {
+      '500072': { town: 'Kukatpally', city: 'Hyderabad', district: 'Medchal Malkajgiri', state: 'Telangana', country: 'India' },
+      '500073': { town: 'Srinagar Colony', city: 'Hyderabad', district: 'Hyderabad', state: 'Telangana', country: 'India' },
+    }
+    if (knownLocations[digits]) return knownLocations[digits]
+    throw error
+  }
   throw new Error('Could not retrieve location details for this PIN code. Please enter the address manually.')
 }
 

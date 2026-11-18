@@ -116,7 +116,9 @@ const createClient = (baseUrl, prefix, scopeCollege = false) => {
     postForm: (path, data) => request(path, { method: "POST", body: data }),
     put: (path, data) => request(path, { method: "PUT", body: JSON.stringify(data) }),
     patch: (path, data) => request(path, { method: "PATCH", body: JSON.stringify(data) }),
-    delete: (path) => request(path, { method: "DELETE" }),
+    // The academic-scope middleware parses JSON on mutating requests; send an
+    // empty object for DELETE calls so requests without a domain payload remain valid JSON.
+    delete: (path) => request(path, { method: "DELETE", body: JSON.stringify({}) }),
   };
 };
 

@@ -5,8 +5,11 @@ import { roomApi } from '../api/apiEndpoints'
 const STORAGE_KEY_ROOMS = 'pirnav_academic_rooms'
 
 export const ROOM_TYPES = [
-  'Lecture Hall',
   'Classroom',
+  'Laboratory',
+  'Seminar Hall',
+  'Staff Room',
+  'Lecture Hall',
   'Computer Lab',
   'Electronics Lab',
   'Mechanical Workshop',

@@ -66,7 +66,8 @@ namespace BTech.Services.Implementations
                 collegeId,
                 dto.ActivateImmediately,
                 userId,
-                dto.StartDate);
+                dto.StartDate,
+                dto.EndDate);
 
             if (entity == null)
             {

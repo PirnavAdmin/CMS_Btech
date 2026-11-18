@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import ViewDialog from '../../components/ViewDialog'
-import { collegeUserMappingsApi, lookupIndianPincode, userDirectoryApi } from '../../api/apiEndpoints'
+import { collegeUserMappingsApi, lookupIndianPostOffices, userDirectoryApi } from '../../api/apiEndpoints'
 import {
   createCollege,
   createCollegeSettings,
@@ -16,6 +16,7 @@ import academicService from '../../services/academicService'
 import eventBus, { ERP_EVENTS } from '../../services/eventBus'
 import { rememberCreated } from '../../utils/newestFirst'
 import { showSuccess } from '../../utils/toast'
+import SearchableSelect from '../../components/SearchableSelect.jsx'
 import './AdminManagement.css'
 
 const INDIA_STATES = [
@@ -27,6 +28,22 @@ const INDIA_STATES = [
   'Chandigarh', 'Delhi', 'Jammu and Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry',
 ]
 const COUNTRIES = ['India', 'United States', 'United Kingdom', 'Canada', 'Australia', 'Other']
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
+const PERSON_NAME_PATTERN = /^[\p{L}\p{M}\s.'’-]+$/u
+const LOCATION_NAME_PATTERN = /^[\p{L}\p{M}\d\s.,&'’()/-]+$/u
+const ORGANIZATION_NAME_PATTERN = /^[\p{L}\p{M}\d\s.,&'’()/-]+$/u
+const ORGANIZATION_CODE_PATTERN = /^[A-Z0-9]{2,10}$/i
+const isValidIndianMobile = value => {
+  const phone = String(value || '').trim()
+  if (!/^\+?[\d\s()-]+$/.test(phone)) return false
+  const compactPhone = phone.replace(/[\s()-]/g, '')
+  const nationalNumber = compactPhone.startsWith('+91')
+    ? compactPhone.slice(3)
+    : compactPhone.length === 12 && compactPhone.startsWith('91')
+      ? compactPhone.slice(2)
+      : compactPhone
+  return /^[6-9]\d{9}$/.test(nationalNumber)
+}
 const normalizedIndianState = value => {
   const state = String(value || '').trim()
   const key = state.toLowerCase().replace(/\s+/g, ' ')
@@ -116,6 +133,8 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
     pincode: '',
   })
   const [pincodeStatus, setPincodeStatus] = useState('')
+  const [postOffices, setPostOffices] = useState([])
+  const [pincodeLoading, setPincodeLoading] = useState(false)
   const pincodeLookupRef = useRef(0)
   const [admins, setAdmins] = useState([])
   const [errors, setErrors] = useState({})
@@ -241,35 +260,56 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
   useEffect(() => {
     const pincode = values.pincode.trim()
     const lookupId = ++pincodeLookupRef.current
-    if (values.country !== 'India' || !/^\d{6}$/.test(pincode)) {
+    setPostOffices([])
+    if (values.country !== 'India') {
+      setPincodeLoading(false)
+      setPincodeStatus('Post office lookup is available for India PIN codes.')
+      return undefined
+    }
+    if (!pincode) {
+      setPincodeLoading(false)
       setPincodeStatus('')
+      return undefined
+    }
+    if (!/^[1-9]\d{5}$/.test(pincode)) {
+      setPincodeLoading(false)
+      setPincodeStatus('Enter a valid 6-digit PIN code to find post offices.')
       return undefined
     }
 
     let active = true
     const timer = window.setTimeout(async () => {
+      setPincodeLoading(true)
       setPincodeStatus('Finding address details…')
       try {
-        const location = await lookupIndianPincode(pincode)
+        const offices = await lookupIndianPostOffices(pincode)
         if (!active || lookupId !== pincodeLookupRef.current) return
-        const country = normalizedCountry(location.country)
-        const state = normalizedIndianState(location.state)
-        setValues(current => {
-          if (current.pincode.trim() !== pincode || current.country !== 'India') return current
-          return {
+        setPostOffices(offices)
+        const savedPostOffice = values.area.trim().toLocaleLowerCase()
+        const selectedOffice = offices.find(office => office.name.trim().toLocaleLowerCase() === savedPostOffice)
+          || (offices.length === 1 ? offices[0] : null)
+        if (selectedOffice) {
+          setValues(current => current.pincode.trim() !== pincode || current.country !== 'India' ? current : ({
             ...current,
-            area: location.town || current.area,
-            city: location.city || location.district || location.town || current.city,
-            district: location.district || current.district,
-            state: state || current.state,
-            country,
-          }
-        })
-        setErrors(current => ({ ...current, area: '', city: '', district: '', state: '' }))
-        setPincodeStatus('Location details filled from this PIN code.')
+            area: selectedOffice.name,
+            city: selectedOffice.city || selectedOffice.district || selectedOffice.town || '',
+            district: selectedOffice.district || '',
+            state: normalizedIndianState(selectedOffice.state) || '',
+            country: normalizedCountry(selectedOffice.country),
+          }))
+          setErrors(current => ({ ...current, area: '', city: '', district: '', state: '' }))
+          setPincodeStatus(offices.length === 1 ? `Post office ${selectedOffice.name} selected; address details filled.` : `Saved post office ${selectedOffice.name} restored; address details filled.`)
+        } else {
+          setPincodeStatus(`${offices.length} post offices found. Select the correct post office.`)
+        }
       } catch (lookupError) {
         if (active && lookupId === pincodeLookupRef.current) {
-          setPincodeStatus(lookupError?.message || 'Location lookup failed. Enter the address details manually.')
+          setPostOffices([])
+          setPincodeStatus(lookupError?.message || 'Post office lookup failed. Please try again.')
+        }
+      } finally {
+        if (active && lookupId === pincodeLookupRef.current) {
+          setPincodeLoading(false)
         }
       }
     }, 300)
@@ -279,6 +319,31 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
       window.clearTimeout(timer)
     }
   }, [values.pincode, values.country])
+
+  const postOfficeOptions = useMemo(() => {
+    const savedName = values.area.trim()
+    const hasSavedOffice = savedName && !postOffices.some(office => office.name.trim().toLocaleLowerCase() === savedName.toLocaleLowerCase())
+    return [
+      ...(hasSavedOffice ? [{ id: savedName, name: savedName, code: 'Saved selection', disabled: true }] : []),
+      ...postOffices.map(office => ({ id: office.name, name: office.name })),
+    ]
+  }, [postOffices, values.area])
+
+  const selectPostOffice = name => {
+    const office = postOffices.find(item => item.name === name)
+    if (!office) return
+    setValues(current => ({
+      ...current,
+      area: office.name,
+      city: office.city || office.district || office.town || '',
+      district: office.district || '',
+      state: normalizedIndianState(office.state) || '',
+      country: normalizedCountry(office.country),
+    }))
+    setErrors(current => ({ ...current, area: '', city: '', district: '', state: '' }))
+    setPincodeStatus(`Address details filled for ${office.name}.`)
+    setSubmitError('')
+  }
 
   const filteredEligibleAdmins = useMemo(() => {
     const term = assignSearch.trim().toLowerCase()
@@ -290,6 +355,16 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
   }, [admins, assignSearch, existingAdmins])
 
   const updateValue = (field, value) => {
+    if (field === 'pincode') {
+      pincodeLookupRef.current++
+      setPostOffices([])
+      setPincodeLoading(false)
+      setPincodeStatus(value && value.length < 6 ? 'Enter a valid 6-digit PIN code to find post offices.' : '')
+      setValues(current => ({ ...current, pincode: value, area: '', city: '', district: '', state: '' }))
+      setErrors(current => ({ ...current, pincode: '', area: '', city: '', district: '', state: '' }))
+      setSubmitError('')
+      return
+    }
     setValues(current => ({ ...current, [field]: value }))
     setErrors(current => ({ ...current, [field]: '' }))
     setSubmitError('')
@@ -323,24 +398,43 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
   const validate = () => {
     const fieldErrors = {}
     const rowErrors = {}
-    if (!values.name.trim()) fieldErrors.name = 'Organization name is required.'
-    if (!values.code.trim()) fieldErrors.code = 'Organization code is required.'
-    if (values.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim())) fieldErrors.email = 'Enter a valid email address.'
-    if (values.phone.trim() && !/^[0-9+()\-\s]{7,20}$/.test(values.phone.trim())) fieldErrors.phone = 'Enter a valid phone number.'
-    if (values.country === 'India' && values.pincode.trim() && !/^\d{6}$/.test(values.pincode.trim())) fieldErrors.pincode = 'Enter a valid 6-digit PIN code.'
+    const organizationName = values.name.trim()
+    const organizationCode = values.code.trim()
+    const contactPerson = values.contactPerson.trim()
+    const email = values.email.trim()
+    const address = values.address.trim()
+    if (!organizationName) fieldErrors.name = 'Organization name is required.'
+    else if (organizationName.length < 3 || organizationName.length > 30) fieldErrors.name = 'Use between 3 and 30 characters.'
+    else if (!ORGANIZATION_NAME_PATTERN.test(organizationName)) fieldErrors.name = 'Use letters, numbers, spaces, and standard punctuation.'
+    if (!organizationCode) fieldErrors.code = 'Organization code is required.'
+    else if (!ORGANIZATION_CODE_PATTERN.test(organizationCode)) fieldErrors.code = 'Use 2-10 letters and numbers only.'
+    if (contactPerson && (contactPerson.length < 2 || contactPerson.length > 30 || !PERSON_NAME_PATTERN.test(contactPerson))) fieldErrors.contactPerson = 'Enter a valid contact person name (2-30 letters).'
+    if (email && (email.length > 254 || !EMAIL_PATTERN.test(email))) fieldErrors.email = 'Enter a valid email address (maximum 254 characters).'
+    if (values.phone.trim() && !isValidIndianMobile(values.phone)) fieldErrors.phone = 'Enter a valid 10-digit Indian mobile number starting with 6-9.'
+    if (address && address.length > 250) fieldErrors.address = 'Address must not exceed 250 characters.'
+    for (const name of ['area', 'city', 'district', 'state']) {
+      const location = values[name].trim()
+      if (location && (location.length < 2 || location.length > 100 || !LOCATION_NAME_PATTERN.test(location))) {
+        fieldErrors[name] = 'Use 2-100 letters, numbers, spaces, or standard punctuation.'
+      }
+    }
+    if (values.country === 'India' && values.pincode.trim() && !/^[1-9]\d{5}$/.test(values.pincode.trim())) fieldErrors.pincode = 'Enter a valid 6-digit Indian PIN code starting with 1-9.'
+    else if (values.country !== 'India' && values.pincode.trim() && !/^[\p{L}\p{N}][\p{L}\p{N}\s-]{1,11}$/u.test(values.pincode.trim())) fieldErrors.pincode = 'Enter a valid postal code (2-12 letters or numbers).'
     if (!admins.length) fieldErrors.admins = 'Add or assign at least one College Admin.'
 
     const seenEmails = new Map()
     const seenUsers = new Map()
     admins.forEach(row => {
       const current = {}
-      if (row.kind === 'new' && !row.fullName.trim()) current.fullName = 'Full name is required.'
+      const fullName = row.fullName.trim()
+      if (row.kind === 'new' && !fullName) current.fullName = 'Full name is required.'
+      else if (row.kind === 'new' && (fullName.length < 2 || fullName.length > 30 || !PERSON_NAME_PATTERN.test(fullName))) current.fullName = 'Enter a valid full name (2-30 letters).'
       if (row.kind === 'new' && row.initialPassword.length < 12) current.initialPassword = 'Password must be at least 12 characters.'
       else if (row.kind === 'new' && new TextEncoder().encode(row.initialPassword).length > 72) current.initialPassword = 'Password must not exceed 72 UTF-8 bytes.'
       if (!row.email.trim()) current.email = 'Admin email is required.'
-      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email.trim())) current.email = 'Enter a valid email address.'
+      else if (row.email.trim().length > 254 || !EMAIL_PATTERN.test(row.email.trim())) current.email = 'Enter a valid email address (maximum 254 characters).'
       if (row.kind === 'new' && !row.phone.trim()) current.phone = 'Phone number is required.'
-      else if (row.phone.trim() && !/^[0-9+()\-\s]{7,20}$/.test(row.phone.trim())) current.phone = 'Enter a valid phone number.'
+      else if (row.kind === 'new' && !isValidIndianMobile(row.phone)) current.phone = 'Enter a valid 10-digit Indian mobile number starting with 6-9.'
       if (row.kind === 'existing' && !row.userId) current.selection = 'Select an existing administrator.'
 
       const normalizedEmail = row.email.trim().toLowerCase()
@@ -688,13 +782,14 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
     <div className={`college-create-field${options.full ? ' college-create-field--full' : ''}`} key={name}>
       <label htmlFor={`college-create-${name}`}>{label}{options.required && <span aria-hidden="true"> *</span>}</label>
       {options.multiline
-        ? <textarea id={`college-create-${name}`} rows="3" value={values[name]} onChange={event => updateValue(name, event.target.value)} aria-invalid={Boolean(errors[name])} />
+        ? <textarea id={`college-create-${name}`} rows="3" maxLength={options.maxLength} value={values[name]} onChange={event => updateValue(name, event.target.value)} aria-invalid={Boolean(errors[name])} />
         : options.select
         ? <select id={`college-create-${name}`} value={values[name]} onChange={event => updateValue(name, event.target.value)} aria-invalid={Boolean(errors[name])}>
           {options.select.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
         </select>
-        : <input id={`college-create-${name}`} type={type} value={values[name]} onChange={event => updateValue(name, event.target.value)} aria-invalid={Boolean(errors[name])} />}
-      {errors[name] && <small className="college-create-error">{errors[name]}</small>}
+        : <input id={`college-create-${name}`} type={type} maxLength={options.maxLength} inputMode={options.inputMode} value={values[name]} onChange={event => updateValue(name, event.target.value)} aria-invalid={Boolean(errors[name])} />}
+      {options.hint && <small>{options.hint}</small>}
+      {errors[name] && <small className="college-create-error" role="alert">{errors[name]}</small>}
     </div>
   )
 
@@ -705,11 +800,11 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
     <section className="college-create-section" aria-labelledby="college-create-contact-title">
       <header><div><h2 id="college-create-contact-title">Organization Details</h2><p>Organization identity and primary contact information</p></div></header>
       <div className="college-create-grid">
-        {field('Organization Name', 'name', 'text', { required: true })}
-        {field('Organization Code', 'code', 'text', { required: true })}
-        {field('Contact Person', 'contactPerson')}
-        {field('Email', 'email', 'email')}
-        {field('Phone Number', 'phone', 'tel')}
+        {field('Organization Name', 'name', 'text', { required: true, maxLength: 30 })}
+        {field('Organization Code', 'code', 'text', { required: true, maxLength: 10 })}
+        {field('Contact Person', 'contactPerson', 'text', { maxLength: 30 })}
+        {field('Email', 'email', 'email', { maxLength: 254 })}
+        {field('Phone Number', 'phone', 'tel', { maxLength: 20, hint: '10-digit Indian mobile number starting with 6-9.' })}
         {field('Status', 'status', 'text', { select: [{ value: '1', label: 'Active' }, { value: '0', label: 'Inactive' }] })}
       </div>
       <p className="college-create-note">Contact Person is saved to the organization record’s existing Principal field.</p>
@@ -718,14 +813,11 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
     <section className="college-create-section" aria-labelledby="college-create-address-title">
       <header><div><h2 id="college-create-address-title">Address Details</h2><p>Enter a PIN code to fill its area, city, district, and state.</p></div></header>
       <div className="college-create-grid">
-        {field('Address', 'address', 'text', { full: true, multiline: true })}
-        {field('Area / Post Office', 'area')}
-        {field('City', 'city')}
-        {field('District', 'district')}
-        {values.country === 'India'
-          ? <div className="college-create-field" key="state"><label htmlFor="college-create-state">State</label><select id="college-create-state" value={values.state} onChange={event => updateValue('state', event.target.value)}><option value="">Select state</option>{values.state && !INDIA_STATES.includes(values.state) && <option value={values.state}>{values.state}</option>}{INDIA_STATES.map(state => <option key={state} value={state}>{state}</option>)}</select></div>
-          : field('State', 'state')}
-        {field('Country', 'country', 'text', { select: [...(values.country && !COUNTRIES.includes(values.country) ? [{ value: values.country, label: values.country }] : []), ...COUNTRIES.map(country => ({ value: country, label: country }))] })}
+        {field('Address', 'address', 'text', { full: true, multiline: true, maxLength: 250 })}
+        {field('City', 'city', 'text', { maxLength: 100 })}
+        {field('District', 'district', 'text', { maxLength: 100 })}
+        {field('State', 'state')}
+        {field('Country', 'country')}
         <div className="college-create-field" key="pincode">
           <label htmlFor="college-create-pincode">{values.country === 'India' ? 'PIN Code' : 'Postal Code'}</label>
           <input id="college-create-pincode" name="pincode" type="text" inputMode={values.country === 'India' ? 'numeric' : 'text'} autoComplete="postal-code" maxLength={values.country === 'India' ? 6 : 12} value={values.pincode}
@@ -733,9 +825,27 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
             onChange={event => updateValue('pincode', values.country === 'India' ? event.target.value.replace(/\D/g, '').slice(0, 6) : event.target.value.slice(0, 12))}
             aria-invalid={Boolean(errors.pincode)} aria-describedby={errors.pincode ? 'college-create-pincode-error college-create-pincode-hint' : 'college-create-pincode-hint'} />
           {errors.pincode && <small id="college-create-pincode-error" className="college-create-error" role="alert">{errors.pincode}</small>}
-          <small id="college-create-pincode-hint" className={`college-create-pincode-status${pincodeStatus.startsWith('Location details') ? ' is-success' : /could not|failed/i.test(pincodeStatus) ? ' is-error' : pincodeStatus ? ' is-pending' : ''}`} role="status">
-            {pincodeStatus || (values.country === 'India' ? 'Enter 6 digits to fill area, city, district, and state.' : 'Enter the postal code for this location.')}
+          <small id="college-create-pincode-hint" className={`college-create-pincode-status${/filled|selected|restored/i.test(pincodeStatus) ? ' is-success' : /could not|failed|no post offices|valid 6-digit/i.test(pincodeStatus) ? ' is-error' : pincodeStatus ? ' is-pending' : ''}`} role="status">
+            {pincodeLoading ? 'Loading post offices…' : pincodeStatus || (values.country === 'India' ? 'Enter 6 digits to find post offices.' : 'Enter the postal code for this location.')}
           </small>
+        </div>
+        <div className="college-create-field" key="post-office">
+          <label htmlFor="college-create-post-office">Post Office / Area</label>
+          <SearchableSelect
+            label="Post Office / Area"
+            value={values.area}
+            options={postOfficeOptions}
+            onChange={selectPostOffice}
+            placeholder={pincodeLoading ? 'Loading post offices…' : postOffices.length ? 'Select a post office' : values.area || 'Enter a valid PIN code first'}
+            searchPlaceholder="Search post offices…"
+            noOptionsMessage={pincodeStatus.toLowerCase().includes('no post offices') ? pincodeStatus : 'No post offices found for this PIN code.'}
+            loading={pincodeLoading}
+            disabled={values.country !== 'India' || !/^\d{6}$/.test(values.pincode.trim()) || pincodeLoading || (!postOffices.length && !values.area)}
+            error={Boolean(errors.area)}
+            triggerProps={{ id: 'college-create-post-office', 'aria-describedby': errors.area ? 'college-create-post-office-error' : undefined }}
+          />
+          {errors.area && <small id="college-create-post-office-error" className="college-create-error" role="alert">{errors.area}</small>}
+          {postOffices.length > 1 && !values.area && <small className="college-create-pincode-status is-pending" role="status">Select the correct post office to fill the address.</small>}
         </div>
       </div>
     </section>
@@ -776,23 +886,22 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
         <div className="college-create-grid">
           <div className="college-create-field">
             <label htmlFor={`${row.id}-name`}>Full Name <span aria-hidden="true">*</span></label>
-            <input id={`${row.id}-name`} value={row.fullName} onChange={event => updateAdmin(row.id, 'fullName', event.target.value)} aria-invalid={Boolean(adminErrors[row.id]?.fullName)} />
+            <input id={`${row.id}-name`} maxLength="30" value={row.fullName} onChange={event => updateAdmin(row.id, 'fullName', event.target.value)} aria-invalid={Boolean(adminErrors[row.id]?.fullName)} />
             {adminErrors[row.id]?.fullName && <small className="college-create-error">{adminErrors[row.id].fullName}</small>}
           </div>
           <div className="college-create-field">
             <label htmlFor={`${row.id}-phone`}>Phone Number <span aria-hidden="true">*</span></label>
-            <input id={`${row.id}-phone`} type="tel" value={row.phone} onChange={event => updateAdmin(row.id, 'phone', event.target.value)} aria-invalid={Boolean(adminErrors[row.id]?.phone)} />
+            <input id={`${row.id}-phone`} type="tel" inputMode="tel" maxLength="20" value={row.phone} onChange={event => updateAdmin(row.id, 'phone', event.target.value)} aria-invalid={Boolean(adminErrors[row.id]?.phone)} />
             {adminErrors[row.id]?.phone && <small className="college-create-error">{adminErrors[row.id].phone}</small>}
           </div>
           <div className="college-create-field">
             <label htmlFor={`${row.id}-email`}>Admin Email <span aria-hidden="true">*</span></label>
-            <input id={`${row.id}-email`} type="email" value={row.email} onChange={event => updateAdmin(row.id, 'email', event.target.value)} aria-invalid={Boolean(adminErrors[row.id]?.email)} />
+            <input id={`${row.id}-email`} type="email" maxLength="254" value={row.email} onChange={event => updateAdmin(row.id, 'email', event.target.value)} aria-invalid={Boolean(adminErrors[row.id]?.email)} />
             {adminErrors[row.id]?.email && <small className="college-create-error">{adminErrors[row.id].email}</small>}
           </div>
           <div className="college-create-field">
             <label htmlFor={`${row.id}-password`}>Admin Password <span aria-hidden="true">*</span></label>
-            <input id={`${row.id}-password`} type="password" autoComplete="new-password" maxLength="72" value={row.initialPassword} onChange={event => updateAdmin(row.id, 'initialPassword', event.target.value)} aria-invalid={Boolean(adminErrors[row.id]?.initialPassword)} aria-describedby={`${row.id}-password-hint`} />
-            <small id={`${row.id}-password-hint`}>At least 12 characters; maximum 72 UTF-8 bytes.</small>
+            <input id={`${row.id}-password`} type="password" autoComplete="new-password" maxLength="72" value={row.initialPassword} onChange={event => updateAdmin(row.id, 'initialPassword', event.target.value)} aria-invalid={Boolean(adminErrors[row.id]?.initialPassword)} />
             {adminErrors[row.id]?.initialPassword && <small className="college-create-error">{adminErrors[row.id].initialPassword}</small>}
           </div>
           <div className="college-create-field">

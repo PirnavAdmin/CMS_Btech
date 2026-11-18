@@ -173,6 +173,45 @@
   font-size: 12px;
 }
 
+.platform-demo-requests__table-wrap {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong, #b9b29e) var(--surface-soft, #f1eddd);
+}
+
+.platform-demo-requests__table-wrap:focus-visible {
+  outline: 2px solid var(--brand, #625e47);
+  outline-offset: -2px;
+}
+
+.platform-demo-requests__table {
+  min-width: 1450px;
+  table-layout: fixed;
+}
+
+.platform-demo-requests__table :is(th, td) {
+  padding: 10px 12px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.platform-demo-requests__table :is(th, td):nth-child(1) { width: 260px; }
+.platform-demo-requests__table :is(th, td):nth-child(2) { width: 160px; }
+.platform-demo-requests__table :is(th, td):nth-child(3) { width: 130px; }
+.platform-demo-requests__table :is(th, td):nth-child(4) { width: 85px; }
+.platform-demo-requests__table :is(th, td):nth-child(5) { width: 145px; }
+.platform-demo-requests__table :is(th, td):nth-child(6) { width: 180px; }
+.platform-demo-requests__table :is(th, td):nth-child(7) { width: 125px; }
+.platform-demo-requests__table :is(th, td):nth-child(8) { width: 190px; }
+.platform-demo-requests__table :is(th, td):nth-child(9) { width: 140px; }
+
+.platform-demo-requests__table td:nth-child(4),
+.platform-demo-requests__table td:nth-child(7),
+.platform-demo-requests__table td:nth-child(9) {
+  white-space: nowrap;
+}
+
 .platform-management__status {
   display: inline-flex;
   align-items: center;
@@ -283,12 +322,31 @@
 .platform-subscriptions__filters :is(input,select):focus-visible { border-color:var(--brand,#625e47); outline:0; box-shadow:0 0 0 3px color-mix(in srgb,var(--brand,#625e47) 13%,transparent); }
 .platform-subscriptions__refresh { min-height:38px; }
 .platform-subscriptions__refresh:disabled { cursor:wait; opacity:.65; }
-.platform-subscriptions__table { min-width:900px; }
+.platform-subscriptions__table { min-width:740px; table-layout:auto; }
+.platform-subscriptions__table th,
+.platform-subscriptions__table td { padding:7px 10px; }
+.platform-subscriptions__table th:last-child,
+.platform-subscriptions__table td:last-child { width:1%; text-align:center; white-space:nowrap; }
+.platform-subscriptions__row-actions { display:flex; justify-content:center; gap:4px; }
+.platform-subscriptions__row-actions button {
+  display:grid;
+  place-items:center;
+  width:32px;
+  height:32px;
+  color:inherit;
+  background:transparent;
+  border:1px solid transparent;
+  border-radius:6px;
+  cursor:pointer;
+}
+.platform-subscriptions__row-actions button:hover:not(:disabled) { border-color:var(--border-color, #e4dfce); }
+.platform-subscriptions__row-actions button:focus-visible { outline:2px solid currentColor; outline-offset:1px; }
+.platform-subscriptions__row-actions button:disabled { opacity:.5; cursor:default; }
+.platform-subscriptions__row-actions button[title="Delete Subscription"] { color:#a62c2c; }
+.platform-subscriptions__edit-fields { border:0; padding:0; margin:0; min-inline-size:0; grid-template-columns:repeat(2,minmax(0,1fr)); }
 .platform-subscriptions__table th { background:#f4f0e2; }
 .platform-subscriptions__table tbody tr { transition:background-color .15s ease; }
 .platform-subscriptions__table tbody tr:hover { background:color-mix(in srgb,var(--brand-soft,#f4efd9) 42%,var(--surface,#fffdf7)); }
-.platform-subscriptions__table td:first-child { min-width:210px; }
-.platform-subscriptions__table td:nth-child(6) { min-width:210px; }
 .platform-subscriptions__table td:nth-child(6) strong { font-size:11px; white-space:nowrap; }
 .platform-subscriptions__table td:nth-child(6) small { font-size:10px; }
 .platform-subscriptions__cycle { display:inline-flex; min-height:25px; align-items:center; border:1px solid var(--border-color,#ded8c4); border-radius:7px; padding:0 8px; background:var(--surface,#fffdf7); color:var(--text-secondary,#647084); font-size:11px; font-weight:650; white-space:nowrap; }

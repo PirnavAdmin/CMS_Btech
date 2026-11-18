@@ -9,6 +9,9 @@ namespace BTech.DTOs.AcademicYear
         // Required only when the selected college has no academic years yet.
         public DateTime? StartDate { get; set; }
 
+        // Optional custom end date. When omitted, the standard one-year cycle is used.
+        public DateTime? EndDate { get; set; }
+
         public bool ActivateImmediately { get; set; } = false;
     }
 }

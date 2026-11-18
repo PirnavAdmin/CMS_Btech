@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { FiCheckCircle, FiCreditCard, FiFilter, FiPlus, FiRefreshCw, FiSearch, FiUsers, FiX } from 'react-icons/fi'
+import { Pencil, Trash2 } from 'lucide-react'
+import ViewDialog from '../../components/ViewDialog.jsx'
 import DashboardLayout from '../../layouts/DashboardLayout.jsx'
 import PageHeader from '../../components/PageHeader.jsx'
 import { useScreenAccess } from '../../auth/ScreenAccess.jsx'
@@ -42,11 +44,34 @@ const remainingDays = value => {
   return Math.ceil((date.getTime() - today.getTime()) / 86400000)
 }
 
+function SubscriptionFields({ form, onChange }) {
+  return <>
+    <label><span>Plan name <b>*</b></span><input name="planName" value={form.planName} onChange={onChange} maxLength="120" placeholder="e.g. Growth" required /></label>
+    <label><span>Billing cycle <b>*</b></span><select name="billingCycle" value={form.billingCycle} onChange={onChange} required>
+      <option>Monthly</option><option>Quarterly</option><option>Half-yearly</option><option>Yearly</option>
+    </select></label>
+    <label><span>Price (₹) <b>*</b></span><input name="price" type="number" min="0" max="9999999999.99" step="0.01" value={form.price} onChange={onChange} placeholder="0.00" required /></label>
+    <label><span>Maximum users <b>*</b></span><input name="maximumUsers" type="number" min="1" max="2147483647" step="1" value={form.maximumUsers} onChange={onChange} placeholder="e.g. 500" required /></label>
+    <label><span>Status <b>*</b></span><select name="status" value={form.status} onChange={onChange} required>
+      <option>Active</option><option>Trial</option><option>Suspended</option><option>Cancelled</option>
+    </select></label>
+    <label><span>Start date <b>*</b></span><input name="startDate" type="date" value={form.startDate} onChange={onChange} required /></label>
+    <label><span>End date <b>*</b></span><input name="endDate" type="date" value={form.endDate} onChange={onChange} min={form.startDate || undefined} required /></label>
+  </>
+}
+
 export default function Subscriptions() {
   const { access, canView, canAction, loading: accessLoading } = useScreenAccess()
   const isSuperAdmin = access?.isSuperAdmin === true
   const permitted = isSuperAdmin && canView('/subscriptions')
   const canCreate = permitted && canAction('/subscriptions', 'create')
+  const canEdit = permitted && canAction('/subscriptions', 'edit')
+  const canDelete = permitted && canAction('/subscriptions', 'delete')
+  const [action, setAction] = useState(null)
+  const [editForm, setEditForm] = useState(emptyForm)
+  const [actionError, setActionError] = useState('')
+  const [mutating, setMutating] = useState(false)
+  const mutation = useRef(false)
   const [organizations, setOrganizations] = useState([])
   const [subscriptions, setSubscriptions] = useState([])
   const [form, setForm] = useState(emptyForm)
@@ -149,6 +174,71 @@ export default function Subscriptions() {
     }
   }
 
+  const openAction = (type, row) => {
+    if (type === 'edit') {
+      setEditForm({
+        organizationId: row.organizationId,
+        planName: row.planName,
+        billingCycle: row.billingCycle,
+        price: row.price,
+        maximumUsers: row.maximumUsers,
+        status: row.status,
+        startDate: row.startDate?.slice(0, 10) ?? '',
+        endDate: row.endDate?.slice(0, 10) ?? '',
+      })
+    }
+    setActionError('')
+    setAction({ type, row })
+  }
+
+  const closeAction = () => {
+    if (!mutation.current) setAction(null)
+  }
+
+  const submitAction = async event => {
+    event.preventDefault()
+    if (!action || mutation.current) return
+    const { type, row } = action
+    if (type === 'edit' && editForm.endDate <= editForm.startDate) {
+      setActionError('End date must be later than the start date.')
+      return
+    }
+
+    mutation.current = true
+    setMutating(true)
+    setActionError('')
+    setError('')
+    setNotice('')
+    try {
+      if (type === 'edit') {
+        const updated = await subscriptionsApi.update(row.subscriptionId, {
+          ...editForm,
+          price: Number(editForm.price),
+          maximumUsers: Number(editForm.maximumUsers),
+        })
+        if (updated?.subscriptionId) {
+          setSubscriptions(current => current.map(item => item.subscriptionId === row.subscriptionId ? updated : item))
+        }
+        setNotice('Subscription updated successfully.')
+      } else {
+        await subscriptionsApi.remove(row.subscriptionId)
+        setSubscriptions(current => current.filter(item => item.subscriptionId !== row.subscriptionId))
+        setNotice('Subscription deleted successfully.')
+      }
+      try {
+        await refresh()
+      } catch {
+        setError('The change was saved, but the directory could not be refreshed.')
+      }
+      setAction(null)
+    } catch (reason) {
+      setActionError((reason.status < 500 && reason.backendMessage) || reason.message || 'The subscription could not be changed.')
+    } finally {
+      mutation.current = false
+      setMutating(false)
+    }
+  }
+
   return <DashboardLayout>
     <main className="platform-management platform-subscriptions">
       <PageHeader title="Subscriptions" subtitle="Manage organization plans, billing terms, and user capacity."
@@ -180,20 +270,10 @@ export default function Subscriptions() {
               <label><span>Organization <b>*</b></span><select name="organizationId" value={form.organizationId} onChange={updateField} required disabled={loading || organizationOptions.length === 0}>
                 <option value="">Select organization</option>{organizationOptions.map(organization => <option key={organization.id} value={organization.id}>{organization.name}</option>)}
               </select></label>
-              <label><span>Plan name <b>*</b></span><input name="planName" value={form.planName} onChange={updateField} maxLength="120" placeholder="e.g. Growth" required /></label>
-              <label><span>Billing cycle <b>*</b></span><select name="billingCycle" value={form.billingCycle} onChange={updateField} required>
-                <option>Monthly</option><option>Quarterly</option><option>Half-yearly</option><option>Yearly</option>
-              </select></label>
-              <label><span>Price (₹) <b>*</b></span><input name="price" type="number" min="0" step="0.01" value={form.price} onChange={updateField} placeholder="0.00" required /></label>
-              <label><span>Maximum users <b>*</b></span><input name="maximumUsers" type="number" min="1" step="1" value={form.maximumUsers} onChange={updateField} placeholder="e.g. 500" required /></label>
-              <label><span>Status <b>*</b></span><select name="status" value={form.status} onChange={updateField} required>
-                <option>Active</option><option>Trial</option><option>Suspended</option><option>Cancelled</option>
-              </select></label>
-              <label><span>Start date <b>*</b></span><input name="startDate" type="date" value={form.startDate} onChange={updateField} required /></label>
-              <label><span>End date <b>*</b></span><input name="endDate" type="date" value={form.endDate} onChange={updateField} min={form.startDate || undefined} required /></label>
+              <SubscriptionFields form={form} onChange={updateField} />
               <div className="platform-management__form-actions platform-subscriptions__form-actions">
                 <span>All fields are required.</span>
-                <button type="submit" disabled={saving || loading || organizationOptions.length === 0}>{saving ? 'Saving…' : <><FiCheckCircle />Create subscription</>}</button>
+                <button type="submit" disabled={saving || loading || refreshing || mutating || organizationOptions.length === 0}>{saving ? 'Saving…' : <><FiCheckCircle />Create subscription</>}</button>
               </div>
               {!loading && organizationOptions.length === 0 && <p className="platform-management__hint platform-subscriptions__empty-org">No organizations are available. Add an organization before creating a subscription.</p>}
             </form>
@@ -219,13 +299,13 @@ export default function Subscriptions() {
             <label><FiCreditCard /><span className="platform-management__sr-only">Filter by billing cycle</span><select value={cycleFilter} onChange={event => setCycleFilter(event.target.value)}>
               <option>All billing cycles</option><option>Monthly</option><option>Quarterly</option><option>Half-yearly</option><option>Yearly</option>
             </select></label>
-            <button type="button" className="platform-subscriptions__refresh" onClick={() => refresh().catch(reason => setError(reason.message || 'Subscriptions could not be refreshed.'))} disabled={refreshing || loading} aria-label="Refresh subscriptions" title="Refresh subscriptions">
+            <button type="button" className="platform-subscriptions__refresh" onClick={() => refresh().catch(reason => setError(reason.message || 'Subscriptions could not be refreshed.'))} disabled={refreshing || loading || mutating || saving} aria-label="Refresh subscriptions" title="Refresh subscriptions">
               <FiRefreshCw className={refreshing ? 'is-spinning' : ''} />{refreshing ? 'Refreshing' : 'Refresh'}
             </button>
           </div>
           {loading ? <p className="platform-management__state" role="status">Loading subscriptions…</p> :
-            <div className="platform-management__table-wrap"><table className="platform-management__table platform-subscriptions__table">
-              <thead><tr><th>Organization / plan</th><th>Billing</th><th>Price</th><th>Maximum users</th><th>Status</th><th>Subscription term</th></tr></thead>
+            <div className="platform-management__table-wrap" tabIndex={0} role="region" aria-label="Subscription directory records"><table className="platform-management__table platform-subscriptions__table">
+              <thead><tr><th>Organization / plan</th><th>Billing</th><th>Price</th><th>Maximum users</th><th>Status</th><th>Subscription term</th><th>Actions</th></tr></thead>
               <tbody>{visibleSubscriptions.map((row, index) => {
                 const days = remainingDays(row.endDate)
                 const status = statusKey(row.status)
@@ -237,6 +317,10 @@ export default function Subscriptions() {
                   <td><span className="platform-subscriptions__capacity"><FiUsers />{row.maximumUsers ?? '—'}<small>users</small></span></td>
                   <td><span className={`platform-management__status platform-management__status--${status}`}>{row.status || 'Unknown'}</span></td>
                   <td><strong>{dateLabel(row.startDate)} – {dateLabel(row.endDate)}</strong><small>{days == null ? 'Term not set' : days < 0 ? 'Expired' : days === 0 ? 'Ends today' : `Ends in ${days} day${days === 1 ? '' : 's'}`}</small></td>
+                  <td><div className="platform-subscriptions__row-actions">
+                    {canEdit && <button type="button" title="Edit Subscription" aria-label="Edit Subscription" disabled={!row.subscriptionId || mutating || refreshing || saving} onClick={() => openAction('edit', row)}><Pencil size={16} aria-hidden="true" /></button>}
+                    {canDelete && <button type="button" title="Delete Subscription" aria-label="Delete Subscription" disabled={!row.subscriptionId || mutating || refreshing || saving} onClick={() => openAction('delete', row)}><Trash2 size={16} aria-hidden="true" /></button>}
+                  </div></td>
                 </tr>
               })}</tbody>
             </table>{!visibleSubscriptions.length && <div className="platform-subscriptions__empty-state">
@@ -247,6 +331,33 @@ export default function Subscriptions() {
               {!subscriptions.length && canCreate && !formOpen && <button type="button" className="platform-subscriptions__clear" onClick={() => setFormOpen(true)}>Create subscription</button>}
             </div>}</div>}
         </section>
+        {action && <ViewDialog
+          title={action.type === 'edit' ? 'Edit Subscription' : 'Delete Subscription'}
+          icon={action.type === 'edit' ? Pencil : Trash2}
+          onClose={closeAction}
+          busy={mutating}
+          showExport={false}
+          maxWidth={action.type === 'edit' ? '640px' : '440px'}
+          footerContent={<>
+            <button type="button" className="erp-btn erp-btn--secondary" onClick={closeAction} disabled={mutating}>Cancel</button>
+            <button type="submit" form="subscription-action-form" className={action.type === 'edit' ? 'erp-btn erp-btn--primary' : 'erp-btn erp-btn--danger'} disabled={mutating}>
+              {action.type === 'edit' ? (mutating ? 'Saving…' : 'Save changes') : (mutating ? 'Deleting…' : 'Delete Subscription')}
+            </button>
+          </>}
+        >
+          <form id="subscription-action-form" onSubmit={submitAction}>
+            {action.type === 'edit' ?
+              <fieldset className="platform-management__form platform-subscriptions__form platform-subscriptions__edit-fields" disabled={mutating}>
+                <label><span>Organization</span><input value={action.row.organizationName} readOnly /></label>
+                <SubscriptionFields form={editForm} onChange={event => {
+                  const { name, value } = event.target
+                  setEditForm(current => ({ ...current, [name]: value }))
+                }} />
+              </fieldset> :
+              <p>Remove the <strong>{action.row.planName}</strong> subscription for <strong>{action.row.organizationName}</strong> from the directory?</p>}
+            {actionError && <p className="platform-management__notice platform-management__notice--error" role="alert">{actionError}</p>}
+          </form>
+        </ViewDialog>}
       </>}
     </main>
   </DashboardLayout>

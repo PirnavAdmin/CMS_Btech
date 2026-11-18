@@ -178,7 +178,8 @@ public class AcademicYearRepository : IAcademicYearRepository
         long collegeId,
         bool activateImmediately,
         long? createdBy,
-        DateTime? firstStartDate = null)
+        DateTime? requestedStartDate = null,
+        DateTime? requestedEndDate = null)
     {
         await using var transaction = await _context.Database.BeginTransactionAsync(
             System.Data.IsolationLevel.Serializable);
@@ -192,13 +193,24 @@ public class AcademicYearRepository : IAcademicYearRepository
                 .ThenByDescending(x => x.AcademicYearId)
                 .FirstOrDefaultAsync();
 
-            if (lastYear == null && !firstStartDate.HasValue)
+            if (lastYear == null && !requestedStartDate.HasValue)
                 throw new ArgumentException("StartDate is required to generate the first academic year for this college.");
 
-            var startDate = lastYear == null ? firstStartDate!.Value.Date : lastYear.EndDate.Date.AddDays(1);
+            var startDate = requestedStartDate?.Date ?? lastYear!.EndDate.Date.AddDays(1);
             if (startDate.Year < 1900 || startDate.Year > 9998)
                 throw new ArgumentException("StartDate must be between 1900 and 9998.");
-            var endDate = startDate.AddYears(1).AddDays(-1);
+            var endDate = requestedEndDate?.Date ?? startDate.AddYears(1).AddDays(-1);
+            if (endDate <= startDate)
+                throw new ArgumentException("End date must be greater than start date.");
+
+            var overlapsExistingYear = await _context.AcademicYears.AnyAsync(x =>
+                x.CollegeId == collegeId &&
+                x.DeletedAt == null &&
+                x.StartDate <= endDate &&
+                x.EndDate >= startDate);
+            if (overlapsExistingYear)
+                throw new InvalidOperationException("The selected date range overlaps an existing academic year for this college.");
+
             var today = DateTime.UtcNow.Date;
             var shouldActivate = activateImmediately ||
                 (lastYear == null && startDate <= today && endDate >= today);
