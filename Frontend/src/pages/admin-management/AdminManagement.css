@@ -244,23 +244,26 @@
 .college-management .college-config-table .record-completion-cell { width:106px; }
 .college-config-table .college-col-identity { width:22%; }
 .college-config-table .college-col-code { width:9%; }
-.college-config-table .college-col-affiliation { width:13%; }
 .college-config-table .college-col-location { width:13%; }
 .college-config-table .college-col-contact { width:18%; }
 .college-config-table .college-col-status { width:11%; }
-.college-config-identity,.college-config-detail-identity { display:flex; align-items:center; gap:6px; }
-.college-config-identity>div { min-width:0; flex:1; }
+.college-config-identity {
+  --directory-logo-size:32px;
+  display:grid;
+  grid-template-columns:var(--directory-logo-size) minmax(0,1fr) var(--directory-logo-size);
+  align-items:center;
+  gap:6px;
+}
+.college-config-detail-identity { display:flex; align-items:center; gap:6px; }
+.college-config-identity-details { min-width:0; display:flex; flex-direction:column; align-items:center; gap:2px; text-align:center; }
 .college-config-identity small,.college-config-email { display:block; font-size:11px; color:var(--text-muted); margin-top:2px; }
 .college-config-logo { width:26px; height:26px; flex:0 0 26px; object-fit:contain; border:1px solid var(--border); border-radius:9px; background:var(--surface); }
-.college-config-name { display:block; width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; border:0; padding:0; background:transparent; color:var(--text-primary); font:600 13px var(--font-family); text-align:left; cursor:pointer; }
+.college-config-name { display:block; width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; border:0; padding:0; background:transparent; color:var(--text-primary); font:600 13px var(--font-family); text-align:center; cursor:pointer; }
 .college-config-name:hover { color:var(--brand); text-decoration:underline; }
 .college-config-address { display:block; max-width:230px; line-height:1.5; }
 .college-config-working { display:inline-flex; align-items:center; gap:3px; margin-top:0; padding:1px 5px; border:1px solid var(--cms-primary-border); border-radius:999px; color:var(--brand); background:var(--surface); font-size:10px; font-weight:700; }
 .college-config-working::before { content:""; width:6px; height:6px; flex:0 0 6px; border-radius:50%; background:var(--brand); }
 .college-config-table tbody tr:has(.college-config-working) td:first-child { box-shadow:inset 3px 0 0 var(--brand); }
-.college-config-identity > div:has(.college-config-working) { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:2px 4px; }
-.college-config-identity > div:has(.college-config-working) .college-config-name { grid-column:1 / -1; }
-.college-config-identity > div:has(.college-config-working) small { margin:0; }
 .college-config-working { white-space:nowrap; }
 .college-config-draft { display:flex; align-items:center; flex-wrap:wrap; gap:8px; padding:12px; margin-bottom:14px; border:1px solid var(--cms-primary-border); border-radius:10px; background:var(--brand-soft); font-size:12px; }
 .college-config-draft>div:first-child { flex:1 1 200px; min-width:0; overflow-wrap:anywhere; }
@@ -349,7 +352,6 @@
 .add-college :is(button,input,select):focus-visible,.college-management :is(button,input,select):focus-visible { outline:2px solid var(--brand); outline-offset:2px; }
 @media(max-width:1100px) {
  .college-management .college-config-table .col-actions { width:144px; }
- .college-config-table .college-col-affiliation { display:none; }
  .college-config-table .college-col-identity { width:28%; }
  .college-config-table .college-col-contact { width:21%; }
 }
@@ -368,8 +370,7 @@
  .college-management .college-config-table .record-completion-cell { width:78px; padding-inline:6px; }
  .college-config-table .record-completion progress { inline-size:1.25rem; }
  .college-management .college-config-table { min-width:420px; }
- .college-config-identity > div:has(.college-config-working) { grid-template-columns:minmax(0,1fr); }
- .college-config-working { justify-self:start; white-space:normal; }
+ .college-config-working { white-space:normal; }
  .college-config-stats article { padding:8px; gap:6px; }
  .college-config-stats h2 { font-size:9px; letter-spacing:0; }
  .college-config-stat-mark { width:24px; height:24px; flex-basis:24px; border-radius:6px; }
@@ -5858,7 +5859,7 @@
 }
 .college-management .college-config-directory .college-config-table {
   width: 100%;
-  min-width: 1340px;
+  min-width: 1170px;
   table-layout: fixed;
 }
 .college-management .college-config-directory .college-config-table th {
@@ -5870,8 +5871,17 @@
   line-height: 1.3;
 }
 .college-management .college-config-directory .college-config-table .college-col-identity { width: 300px !important; }
+.college-management .college-config-directory .college-config-table th.college-col-identity { text-align:center; }
 .college-management .college-config-directory .college-config-table .college-col-code { display: table-cell !important; width: 110px !important; }
-.college-management .college-config-directory .college-config-table .college-col-affiliation { display: table-cell !important; width: 170px !important; }
+.college-management .college-config-directory .college-config-table .college-col-code { text-align:center; }
+.college-config-identity > .college-config-logo {
+  box-sizing:border-box;
+  width:var(--directory-logo-size);
+  height:var(--directory-logo-size);
+  margin:0;
+}
+.college-config-identity > .college-config-logo .cm-emblem-icon { width:12px; height:12px; }
+.college-config-identity > .college-config-logo .cm-emblem-code { max-width:100%; letter-spacing:0; }
 .college-management .college-config-directory .college-config-table .college-col-location { display: table-cell !important; width: 170px !important; }
 .college-management .college-config-directory .college-config-table .college-col-contact { display: table-cell !important; width: 220px !important; }
 .college-management .college-config-directory .college-config-table .college-col-status { display: table-cell !important; width: 110px !important; }
