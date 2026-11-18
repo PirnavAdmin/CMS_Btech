@@ -220,7 +220,7 @@ namespace BTech.Middleware
 
                 await HandleExceptionAsync(
                     context,
-                    new Exception(DuplicateMessage(dbException)),
+                    new Exception(DuplicateMessage(dbException, context.Request.Path)),
                     HttpStatusCode.Conflict);
             }
             catch (DbUpdateException ex) when (
@@ -245,7 +245,7 @@ namespace BTech.Middleware
             catch (MySqlException ex) when (ex.Number is 1062 or 1451 or 1452 or 3819)
             {
                 _logger.LogWarning("Database constraint rejected request. Code={Code}, CorrelationId={CorrelationId}",ex.Number,context.TraceIdentifier);
-                await HandleExceptionAsync(context,new Exception(ex.Number==1062?DuplicateMessage(ex):"The operation conflicts with related records or invalid data."),ex.Number is 1062 or 1451 ? HttpStatusCode.Conflict : HttpStatusCode.BadRequest);
+                await HandleExceptionAsync(context,new Exception(ex.Number==1062?DuplicateMessage(ex, context.Request.Path):"The operation conflicts with related records or invalid data."),ex.Number is 1062 or 1451 ? HttpStatusCode.Conflict : HttpStatusCode.BadRequest);
             }
             catch (MySqlException ex) when (ex.SqlState == "45000")
             {
@@ -290,10 +290,16 @@ namespace BTech.Middleware
         }
 
 
-        private static string DuplicateMessage(MySqlException exception) =>
-            exception.Message.Contains("Aadhaar", StringComparison.OrdinalIgnoreCase)
-                ? "This Aadhaar number is already assigned to another admission."
-                : "A record with the same unique value already exists.";
+        private static string DuplicateMessage(MySqlException exception, PathString requestPath)
+        {
+            if (exception.Message.Contains("Aadhaar", StringComparison.OrdinalIgnoreCase))
+                return "This Aadhaar number is already assigned to another admission.";
+
+            if (requestPath.StartsWithSegments("/api/v1/profile"))
+                return "The email address or mobile number is already used by another account.";
+
+            return "A record with the same unique value already exists.";
+        }
 
         private static async Task HandleExceptionAsync(
             HttpContext context,
