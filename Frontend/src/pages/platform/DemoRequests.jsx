@@ -87,7 +87,7 @@ export default function DemoRequests() {
         </div>
 
         {loading ? <p className="platform-management__state" role="status">Loading demo requests…</p> :
-          <div className="platform-management__table-wrap"><table className="platform-management__table">
+          <div className="platform-management__table-wrap platform-demo-requests__table-wrap" role="region" aria-label="Demo requests table" tabIndex={0}><table className="platform-management__table platform-demo-requests__table">
             <thead><tr><th>Contact</th><th>Organization</th><th>Role</th><th>Students</th><th>Location</th><th>Requested demo</th><th>Status</th><th>Notes / consent</th><th>Submitted</th></tr></thead>
             <tbody>{visibleRequests.map(row => <tr key={row.requestId}>
               <td><strong>{row.fullName || 'Unnamed contact'}</strong><small>{row.email || '—'}{row.mobile ? ` · ${row.mobile}` : ''}</small></td>

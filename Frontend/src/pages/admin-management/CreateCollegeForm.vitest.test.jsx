@@ -1,13 +1,14 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import CreateCollegeForm from './CreateCollegeForm.jsx'
-import { collegeUserMappingsApi, userDirectoryApi } from '../../api/apiEndpoints'
+import { collegeUserMappingsApi, lookupIndianPostOffices, userDirectoryApi } from '../../api/apiEndpoints'
 import { createCollege, getCollegeById, getCollegeSettingsByCollegeId, getColleges, updateCollege, updateCollegeStatus } from '../../auth/collegeApi'
 
 const mocks = vi.hoisted(() => ({ saved: vi.fn(), dismiss: vi.fn() }))
 vi.mock('../../auth/ScreenAccess', () => ({ useScreenAccess: () => ({ access: { isSuperAdmin: true }, loading: false }) }))
 vi.mock('../../api/apiEndpoints', () => ({
   collegeUserMappingsApi: { getAll: vi.fn(), getByUser: vi.fn(), assign: vi.fn() },
+  lookupIndianPostOffices: vi.fn(),
   userDirectoryApi: { getAll: vi.fn(), lookups: vi.fn(), create: vi.fn(), setStatus: vi.fn() },
 }))
 vi.mock('../../auth/collegeApi', () => ({
@@ -30,6 +31,7 @@ beforeEach(() => {
   mocks.saved = vi.fn()
   mocks.dismiss = vi.fn()
   getColleges.mockResolvedValue({ data: [] })
+  lookupIndianPostOffices.mockResolvedValue([])
   createCollege.mockResolvedValue({ data: { id: 41 } })
   getCollegeById.mockResolvedValue({ data: {} })
   getCollegeSettingsByCollegeId.mockResolvedValue({ data: { data: { id: 501 } } })
@@ -88,6 +90,52 @@ test('edits organization information and keeps the existing admin in the compact
   }))
   expect(collegeUserMappingsApi.assign).not.toHaveBeenCalled()
   expect(createCollege).not.toHaveBeenCalled()
+})
+
+test('loads multiple post offices for a PIN, fills the chosen address, and saves it on edit', async () => {
+  getCollegeById.mockResolvedValue({ data: {
+    id: 41,
+    name: 'North College',
+    code: 'NC01',
+    address: 'Main Street',
+    pincode: '516003',
+    country: 'India',
+    area: 'Old post office',
+    status: 1,
+  } })
+  lookupIndianPostOffices.mockResolvedValue([
+    { name: 'Chinthakomma Dinne', city: 'Y.S.R.', district: 'Y.S.R.', state: 'Andhra Pradesh', country: 'India' },
+    { name: 'Kadapa H.O.', city: 'Kadapa', district: 'Y.S.R.', state: 'Andhra Pradesh', country: 'India' },
+  ])
+  userDirectoryApi.getAll.mockResolvedValue([{
+    userId: 12,
+    fullName: 'Existing Admin',
+    email: 'existing.admin@example.test',
+    roleCodes: ['COLLEGE_ADMIN'],
+    status: 1,
+    collegeId: null,
+  }])
+  render(<CreateCollegeForm editId="41" onDismiss={mocks.dismiss} onSaved={mocks.saved} />)
+
+  const officeSelect = await screen.findByRole('button', { name: 'Post Office / Area' })
+  await waitFor(() => expect(lookupIndianPostOffices).toHaveBeenCalledWith('516003'))
+  await waitFor(() => expect(officeSelect.disabled).toBe(false))
+  fireEvent.click(officeSelect)
+  fireEvent.click(await screen.findByRole('option', { name: 'Kadapa H.O.' }))
+
+  expect(screen.getByLabelText(/^City/).value).toBe('Kadapa')
+  expect(screen.getByLabelText(/^District/).value).toBe('Y.S.R.')
+  expect(screen.getByLabelText(/^State/).value).toBe('Andhra Pradesh')
+  fireEvent.click(screen.getByRole('button', { name: 'Assign Admin' }))
+  fireEvent.click(await screen.findByRole('button', { name: /Existing Admin.*existing\.admin@example\.test/ }))
+  fireEvent.click(screen.getByRole('button', { name: 'Save Organization' }))
+  await waitFor(() => expect(updateCollege).toHaveBeenCalledWith('41', expect.objectContaining({
+    area: 'Kadapa H.O.',
+    city: 'Kadapa',
+    district: 'Y.S.R.',
+    state: 'Andhra Pradesh',
+    pincode: '516003',
+  })))
 })
 
 test('creates a College with a new setup-link administrator and prevents repeat submissions', async () => {

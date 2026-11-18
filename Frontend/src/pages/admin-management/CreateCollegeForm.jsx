@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import ViewDialog from '../../components/ViewDialog'
-import { collegeUserMappingsApi, lookupIndianPincode, userDirectoryApi } from '../../api/apiEndpoints'
+import { collegeUserMappingsApi, lookupIndianPostOffices, userDirectoryApi } from '../../api/apiEndpoints'
 import {
   createCollege,
   createCollegeSettings,
@@ -16,6 +16,7 @@ import academicService from '../../services/academicService'
 import eventBus, { ERP_EVENTS } from '../../services/eventBus'
 import { rememberCreated } from '../../utils/newestFirst'
 import { showSuccess } from '../../utils/toast'
+import SearchableSelect from '../../components/SearchableSelect.jsx'
 import './AdminManagement.css'
 
 const INDIA_STATES = [
@@ -116,6 +117,8 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
     pincode: '',
   })
   const [pincodeStatus, setPincodeStatus] = useState('')
+  const [postOffices, setPostOffices] = useState([])
+  const [pincodeLoading, setPincodeLoading] = useState(false)
   const pincodeLookupRef = useRef(0)
   const [admins, setAdmins] = useState([])
   const [errors, setErrors] = useState({})
@@ -241,35 +244,56 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
   useEffect(() => {
     const pincode = values.pincode.trim()
     const lookupId = ++pincodeLookupRef.current
-    if (values.country !== 'India' || !/^\d{6}$/.test(pincode)) {
+    setPostOffices([])
+    if (values.country !== 'India') {
+      setPincodeLoading(false)
+      setPincodeStatus('Post office lookup is available for India PIN codes.')
+      return undefined
+    }
+    if (!pincode) {
+      setPincodeLoading(false)
       setPincodeStatus('')
+      return undefined
+    }
+    if (!/^\d{6}$/.test(pincode)) {
+      setPincodeLoading(false)
+      setPincodeStatus('Enter a valid 6-digit PIN code to find post offices.')
       return undefined
     }
 
     let active = true
     const timer = window.setTimeout(async () => {
+      setPincodeLoading(true)
       setPincodeStatus('Finding address details…')
       try {
-        const location = await lookupIndianPincode(pincode)
+        const offices = await lookupIndianPostOffices(pincode)
         if (!active || lookupId !== pincodeLookupRef.current) return
-        const country = normalizedCountry(location.country)
-        const state = normalizedIndianState(location.state)
-        setValues(current => {
-          if (current.pincode.trim() !== pincode || current.country !== 'India') return current
-          return {
+        setPostOffices(offices)
+        const savedPostOffice = values.area.trim().toLocaleLowerCase()
+        const selectedOffice = offices.find(office => office.name.trim().toLocaleLowerCase() === savedPostOffice)
+          || (offices.length === 1 ? offices[0] : null)
+        if (selectedOffice) {
+          setValues(current => current.pincode.trim() !== pincode || current.country !== 'India' ? current : ({
             ...current,
-            area: location.town || current.area,
-            city: location.city || location.district || location.town || current.city,
-            district: location.district || current.district,
-            state: state || current.state,
-            country,
-          }
-        })
-        setErrors(current => ({ ...current, area: '', city: '', district: '', state: '' }))
-        setPincodeStatus('Location details filled from this PIN code.')
+            area: selectedOffice.name,
+            city: selectedOffice.city || selectedOffice.district || selectedOffice.town || '',
+            district: selectedOffice.district || '',
+            state: normalizedIndianState(selectedOffice.state) || '',
+            country: normalizedCountry(selectedOffice.country),
+          }))
+          setErrors(current => ({ ...current, area: '', city: '', district: '', state: '' }))
+          setPincodeStatus(offices.length === 1 ? `Post office ${selectedOffice.name} selected; address details filled.` : `Saved post office ${selectedOffice.name} restored; address details filled.`)
+        } else {
+          setPincodeStatus(`${offices.length} post offices found. Select the correct post office.`)
+        }
       } catch (lookupError) {
         if (active && lookupId === pincodeLookupRef.current) {
-          setPincodeStatus(lookupError?.message || 'Location lookup failed. Enter the address details manually.')
+          setPostOffices([])
+          setPincodeStatus(lookupError?.message || 'Post office lookup failed. Please try again.')
+        }
+      } finally {
+        if (active && lookupId === pincodeLookupRef.current) {
+          setPincodeLoading(false)
         }
       }
     }, 300)
@@ -279,6 +303,31 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
       window.clearTimeout(timer)
     }
   }, [values.pincode, values.country])
+
+  const postOfficeOptions = useMemo(() => {
+    const savedName = values.area.trim()
+    const hasSavedOffice = savedName && !postOffices.some(office => office.name.trim().toLocaleLowerCase() === savedName.toLocaleLowerCase())
+    return [
+      ...(hasSavedOffice ? [{ id: savedName, name: savedName, code: 'Saved selection', disabled: true }] : []),
+      ...postOffices.map(office => ({ id: office.name, name: office.name })),
+    ]
+  }, [postOffices, values.area])
+
+  const selectPostOffice = name => {
+    const office = postOffices.find(item => item.name === name)
+    if (!office) return
+    setValues(current => ({
+      ...current,
+      area: office.name,
+      city: office.city || office.district || office.town || '',
+      district: office.district || '',
+      state: normalizedIndianState(office.state) || '',
+      country: normalizedCountry(office.country),
+    }))
+    setErrors(current => ({ ...current, area: '', city: '', district: '', state: '' }))
+    setPincodeStatus(`Address details filled for ${office.name}.`)
+    setSubmitError('')
+  }
 
   const filteredEligibleAdmins = useMemo(() => {
     const term = assignSearch.trim().toLowerCase()
@@ -290,6 +339,16 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
   }, [admins, assignSearch, existingAdmins])
 
   const updateValue = (field, value) => {
+    if (field === 'pincode') {
+      pincodeLookupRef.current++
+      setPostOffices([])
+      setPincodeLoading(false)
+      setPincodeStatus(value && value.length < 6 ? 'Enter a valid 6-digit PIN code to find post offices.' : '')
+      setValues(current => ({ ...current, pincode: value, area: '', city: '', district: '', state: '' }))
+      setErrors(current => ({ ...current, pincode: '', area: '', city: '', district: '', state: '' }))
+      setSubmitError('')
+      return
+    }
     setValues(current => ({ ...current, [field]: value }))
     setErrors(current => ({ ...current, [field]: '' }))
     setSubmitError('')
@@ -719,13 +778,10 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
       <header><div><h2 id="college-create-address-title">Address Details</h2><p>Enter a PIN code to fill its area, city, district, and state.</p></div></header>
       <div className="college-create-grid">
         {field('Address', 'address', 'text', { full: true, multiline: true })}
-        {field('Area / Post Office', 'area')}
         {field('City', 'city')}
         {field('District', 'district')}
-        {values.country === 'India'
-          ? <div className="college-create-field" key="state"><label htmlFor="college-create-state">State</label><select id="college-create-state" value={values.state} onChange={event => updateValue('state', event.target.value)}><option value="">Select state</option>{values.state && !INDIA_STATES.includes(values.state) && <option value={values.state}>{values.state}</option>}{INDIA_STATES.map(state => <option key={state} value={state}>{state}</option>)}</select></div>
-          : field('State', 'state')}
-        {field('Country', 'country', 'text', { select: [...(values.country && !COUNTRIES.includes(values.country) ? [{ value: values.country, label: values.country }] : []), ...COUNTRIES.map(country => ({ value: country, label: country }))] })}
+        {field('State', 'state')}
+        {field('Country', 'country')}
         <div className="college-create-field" key="pincode">
           <label htmlFor="college-create-pincode">{values.country === 'India' ? 'PIN Code' : 'Postal Code'}</label>
           <input id="college-create-pincode" name="pincode" type="text" inputMode={values.country === 'India' ? 'numeric' : 'text'} autoComplete="postal-code" maxLength={values.country === 'India' ? 6 : 12} value={values.pincode}
@@ -733,9 +789,27 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
             onChange={event => updateValue('pincode', values.country === 'India' ? event.target.value.replace(/\D/g, '').slice(0, 6) : event.target.value.slice(0, 12))}
             aria-invalid={Boolean(errors.pincode)} aria-describedby={errors.pincode ? 'college-create-pincode-error college-create-pincode-hint' : 'college-create-pincode-hint'} />
           {errors.pincode && <small id="college-create-pincode-error" className="college-create-error" role="alert">{errors.pincode}</small>}
-          <small id="college-create-pincode-hint" className={`college-create-pincode-status${pincodeStatus.startsWith('Location details') ? ' is-success' : /could not|failed/i.test(pincodeStatus) ? ' is-error' : pincodeStatus ? ' is-pending' : ''}`} role="status">
-            {pincodeStatus || (values.country === 'India' ? 'Enter 6 digits to fill area, city, district, and state.' : 'Enter the postal code for this location.')}
+          <small id="college-create-pincode-hint" className={`college-create-pincode-status${/filled|selected|restored/i.test(pincodeStatus) ? ' is-success' : /could not|failed|no post offices|valid 6-digit/i.test(pincodeStatus) ? ' is-error' : pincodeStatus ? ' is-pending' : ''}`} role="status">
+            {pincodeLoading ? 'Loading post offices…' : pincodeStatus || (values.country === 'India' ? 'Enter 6 digits to find post offices.' : 'Enter the postal code for this location.')}
           </small>
+        </div>
+        <div className="college-create-field" key="post-office">
+          <label htmlFor="college-create-post-office">Post Office / Area</label>
+          <SearchableSelect
+            label="Post Office / Area"
+            value={values.area}
+            options={postOfficeOptions}
+            onChange={selectPostOffice}
+            placeholder={pincodeLoading ? 'Loading post offices…' : postOffices.length ? 'Select a post office' : values.area || 'Enter a valid PIN code first'}
+            searchPlaceholder="Search post offices…"
+            noOptionsMessage={pincodeStatus.toLowerCase().includes('no post offices') ? pincodeStatus : 'No post offices found for this PIN code.'}
+            loading={pincodeLoading}
+            disabled={values.country !== 'India' || !/^\d{6}$/.test(values.pincode.trim()) || pincodeLoading || (!postOffices.length && !values.area)}
+            error={Boolean(errors.area)}
+            triggerProps={{ id: 'college-create-post-office', 'aria-describedby': errors.area ? 'college-create-post-office-error' : undefined }}
+          />
+          {errors.area && <small id="college-create-post-office-error" className="college-create-error" role="alert">{errors.area}</small>}
+          {postOffices.length > 1 && !values.area && <small className="college-create-pincode-status is-pending" role="status">Select the correct post office to fill the address.</small>}
         </div>
       </div>
     </section>
