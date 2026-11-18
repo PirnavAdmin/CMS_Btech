@@ -15,9 +15,16 @@
 .meetings-filters .filter-disclosure__search { min-width: min(100%, 260px); flex: 1 1 320px; }
 .meetings-filters label, .meetings-form label { display: grid; min-width: 0; gap: 5px; color: var(--text-secondary); font-size: 12px; font-weight: 600; }
 .meetings-filters .filter-disclosure__content-inner { display: grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap: 12px; }
-.meetings-search { position: relative; }
-.meetings-search svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); pointer-events: none; }
-.meetings-search input { padding-left: 34px; }
+.meetings-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 0;
+}
+.meetings-search svg {
+  margin-right: 4px;
+}
+.meetings-search input { flex: 1; padding-left: 8px; }
 .meetings-calendar-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .meetings-calendar-nav strong { margin-inline: 4px; font-size: 15px; }
 .meetings-view { gap: 4px; }

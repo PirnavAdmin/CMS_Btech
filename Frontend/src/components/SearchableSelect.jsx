@@ -193,7 +193,7 @@ export default function SearchableSelect({
       buttons[index]?.scrollIntoView({ block: 'nearest' })
     }} style={{ position: 'fixed', top: menuStyle.top, bottom: menuStyle.bottom, left: menuStyle.left, width: menuStyle.width, maxHeight: menuStyle.maxHeight, zIndex: 4000 }}>
       {!hideSearch && <label className="searchable-select__search">
-        <FiSearch aria-hidden="true" />
+        <FiSearch aria-hidden="true" className="search-icon" />
         <input
           ref={inputRef}
           type="text"
