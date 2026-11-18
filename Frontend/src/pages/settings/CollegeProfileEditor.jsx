@@ -562,7 +562,7 @@ export default function CollegeProfileEditor({ editId, college, profile, onDismi
     title="Edit College"
     subtitle="Update college details"
     className="college-profile-editor-dialog"
-    maxWidth="980px"
+    maxWidth="860px"
     onClose={requestClose}
     busy={saving}
     showExport={false}
