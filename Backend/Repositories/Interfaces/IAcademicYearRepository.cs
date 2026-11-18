@@ -23,7 +23,8 @@ namespace BTech.Repositories.Interfaces
             long collegeId,
             bool activateImmediately,
             long? createdBy,
-        DateTime? firstStartDate = null);
+            DateTime? requestedStartDate = null,
+            DateTime? requestedEndDate = null);
 
         Task<AcademicYear?> GetByIdAsync(
             long academicYearId,

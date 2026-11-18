@@ -154,19 +154,6 @@ const nextCycle = (year) => {
     autoActivate: false,
   };
 };
-const academicYearDates = (name) => {
-  const match = String(name || '').trim().match(/^(\d{4})\s*[-–/]\s*(\d{2}|\d{4})$/);
-  if (!match) return null;
-  const startYear = Number(match[1]);
-  let endYear = Number(match[2]);
-  if (match[2].length === 2) endYear += Math.floor(startYear / 100) * 100;
-  if (endYear <= startYear) endYear += 100;
-  if (endYear !== startYear + 1) return null;
-  const start = new Date(startYear, 5, 1);
-  const end = new Date(endYear, 4, 31);
-  return { startDate: dateOnly(start), endDate: dateOnly(end) };
-};
-
 const ACADEMIC_YEAR_DATES_KEY = 'academic_year_dates_cache';
 
 const readCachedYearDates = (id, name) => {
@@ -244,6 +231,7 @@ function AcademicYear() {
   const [selected, setSelected] = useState(null);
   const [form, setForm] = useState(blank);
   const [errors, setErrors] = useToastState({}, 'error');
+  const [generationDates, setGenerationDates] = useState(null);
   const [, setNoticeValue] = useToastState('', 'success');
   const [noticeTone, setNoticeTone] = useState('info');
   const [exportLoading, setExportLoading] = useState(true);
@@ -324,7 +312,7 @@ function AcademicYear() {
     (latest, year) => (!latest || year.endDate > latest.endDate ? year : latest),
     null
   );
-  const generatedCycle = generationBase ? nextCycle(generationBase) : (() => {
+  const suggestedCycle = generationBase ? nextCycle(generationBase) : (() => {
     if (!firstYearStart) return null;
     const start = d(firstYearStart);
     if (isNaN(start.getTime())) return null;
@@ -333,6 +321,26 @@ function AcademicYear() {
     end.setDate(end.getDate() - 1);
     return { name: `${start.getFullYear()} - ${end.getFullYear()}`, startDate: firstYearStart, endDate: dateOnly(end), autoActivate: false };
   })();
+  const generatedCycle = suggestedCycle && generationDates ? (() => {
+    const start = d(generationDates.startDate);
+    const end = d(generationDates.endDate);
+    return {
+      ...suggestedCycle,
+      startDate: generationDates.startDate,
+      endDate: generationDates.endDate,
+      name: !isNaN(start.getTime()) && !isNaN(end.getTime())
+        ? `${start.getFullYear()} - ${end.getFullYear()}`
+        : '',
+    };
+  })() : suggestedCycle;
+
+  const openGenerate = () => {
+    setGenerationDates(suggestedCycle
+      ? { startDate: suggestedCycle.startDate, endDate: suggestedCycle.endDate }
+      : { startDate: '', endDate: '' });
+    setErrors({});
+    setModal('generate');
+  };
 
   const shown = useMemo(
     () =>
@@ -364,18 +372,19 @@ function AcademicYear() {
   function validate() {
     let e = {},
       others = years.filter((x) => x.id !== selected?.id);
-    const dates = form.startDate && form.endDate ? form : academicYearDates(form.name);
     if (!selectedCollegeId) e.form = 'Select a college before adding an academic year.';
     if (!form.name.trim()) e.name = 'Academic year title is required.';
-    if (!dates) e.name = 'Use a consecutive academic year title, such as 2025 - 2026.';
-    if (dates?.startDate && dates?.endDate && d(dates.endDate) <= d(dates.startDate))
-      e.name = 'The academic year title must describe a valid date range.';
+    if (!form.startDate) e.startDate = 'Start date is required.';
+    if (!form.endDate) e.endDate = 'End date is required.';
+    if (form.startDate && form.endDate && d(form.endDate) <= d(form.startDate))
+      e.endDate = 'End date must be after start date.';
     if (form.name.trim() && others.some((x) => x.name.toLowerCase() === form.name.trim().toLowerCase()))
       e.name = 'This academic year already exists.';
     if (
-      dates?.startDate &&
-      dates?.endDate &&
-      others.some((x) => d(dates.startDate) <= d(x.endDate) && d(dates.endDate) >= d(x.startDate))
+      form.startDate &&
+      form.endDate &&
+      d(form.endDate) > d(form.startDate) &&
+      others.some((x) => x.startDate && x.endDate && d(form.startDate) <= d(x.endDate) && d(form.endDate) >= d(x.startDate))
     )
       e.range = 'This date range overlaps an existing academic year.';
     setErrors(e);
@@ -388,7 +397,7 @@ function AcademicYear() {
     if (!validate() || saving) return;
     setSaving(true);
     try {
-      const dates = form.startDate && form.endDate ? form : academicYearDates(form.name);
+      const dates = { startDate: form.startDate, endDate: form.endDate };
       const payload = {
         name: form.name.trim(),
         academicYearName: form.name.trim(),
@@ -454,15 +463,32 @@ function AcademicYear() {
   }
 
   async function generate() {
-    if (!selectedCollegeId || contextLoading || !generatedCycle || saving) return;
+    if (!selectedCollegeId || contextLoading || saving) return;
     setErrors({});
+    const dateErrors = {};
+    if (!generationDates?.startDate) dateErrors.startDate = 'Start date is required.';
+    if (!generationDates?.endDate) dateErrors.endDate = 'End date is required.';
+    if (generationDates?.startDate && generationDates?.endDate && d(generationDates.endDate) <= d(generationDates.startDate)) {
+      dateErrors.endDate = 'End date must be after start date.';
+    }
+    if (!Object.keys(dateErrors).length && years.some((year) =>
+      year.startDate && year.endDate && d(generationDates.startDate) <= d(year.endDate) && d(generationDates.endDate) >= d(year.startDate)
+    )) {
+      dateErrors.range = 'This date range overlaps an existing academic year.';
+    }
+    if (Object.keys(dateErrors).length) {
+      setErrors(dateErrors);
+      showWarning('Correct the highlighted academic year dates.');
+      return;
+    }
+    if (!generatedCycle) return;
     const item = generatedCycle;
     if (years.some((x) => x.name === item.name)) {
       setNotice(`${item.name} already exists, so no duplicate was created.`, 'info');
     } else {
       setSaving(true);
       try {
-        const response = await generateNextAcademicYear({ collegeId: Number(selectedCollegeId), activateImmediately: false, ...(!generationBase ? { startDate: firstYearStart } : {}) });
+        const response = await generateNextAcademicYear({ collegeId: Number(selectedCollegeId), activateImmediately: false, startDate: item.startDate, endDate: item.endDate });
         const genResult = response?.data?.data ?? response?.data ?? response;
         cacheYearDates(genResult?.academicYearId ?? genResult?.id, genResult?.name || genResult?.academicYearName || item.name, { startDate: item.startDate, endDate: item.endDate });
         rememberCreated('academic-years', genResult);
@@ -544,7 +570,7 @@ function AcademicYear() {
                     filename="academic-years"
                     loading={exportLoading || noticeTone === 'error'}
                   />
-                  {mayCreate && <button type="button" className="erp-btn erp-btn--secondary" disabled={!selectedCollegeId || contextLoading || exportLoading || Boolean(loadError)} onClick={() => setModal('generate')}>
+                  {mayCreate && <button type="button" className="erp-btn erp-btn--secondary" disabled={!selectedCollegeId || contextLoading || exportLoading || Boolean(loadError)} onClick={openGenerate}>
                     {generationBase ? 'Generate Next Year' : 'Generate Academic Year'}
                   </button>}
                   {mayCreate && <button type="button" className="erp-btn erp-btn--primary" disabled={!selectedCollegeId || contextLoading} onClick={openAdd}>
@@ -657,7 +683,12 @@ function AcademicYear() {
                   <FormField label="Academic Year Title" required error={errors.name} className="erp-form-field--full">
                     <input autoFocus placeholder="e.g. 2025 - 2026" value={form.name} onChange={e => setForm(x => ({ ...x, name: e.target.value }))} />
                   </FormField>
-                  {modal === 'add' && <p className="erp-form-field--full">Dates are generated from the academic year title (June 1 to May 31).</p>}
+                  <FormField label="Start Date" required error={errors.startDate}>
+                    <input type="date" value={form.startDate} onChange={e => setForm(x => ({ ...x, startDate: e.target.value }))} />
+                  </FormField>
+                  <FormField label="End Date" required error={errors.endDate}>
+                    <input type="date" value={form.endDate} onChange={e => setForm(x => ({ ...x, endDate: e.target.value }))} />
+                  </FormField>
                 {modal === 'add' && (
                   <label className="toggle erp-form-field--full">
                     <input
@@ -682,6 +713,23 @@ function AcademicYear() {
               <p>College: <strong>{selectedCollege?.name || selectedCollege?.collegeName || 'Selected college'}</strong></p>
               {!generationBase && generatedCycle && <p className="ay-generation-note">The first academic year becomes active automatically if its dates include today.</p>}
               {errors.form && <p className="field-error" role="alert">{errors.form}</p>}
+              <FormGroup className="ay-generation-fields">
+                <FormField label="Start Date" required error={errors.startDate}>
+                  <input type="date" aria-label="Academic year start date" value={generationDates?.startDate || ''} onChange={(event) => {
+                    const startDate = event.target.value;
+                    setGenerationDates((current) => ({ ...(current || {}), startDate }));
+                    setErrors((current) => ({ ...current, startDate: '', range: '', form: '' }));
+                  }} />
+                </FormField>
+                <FormField label="End Date" required error={errors.endDate}>
+                  <input type="date" aria-label="Academic year end date" value={generationDates?.endDate || ''} onChange={(event) => {
+                    const endDate = event.target.value;
+                    setGenerationDates((current) => ({ ...(current || {}), endDate }));
+                    setErrors((current) => ({ ...current, endDate: '', range: '', form: '' }));
+                  }} />
+                </FormField>
+              </FormGroup>
+              {errors.range && <p className="field-error" role="alert">{errors.range}</p>}
               <p style={{ marginTop: '12px', color: 'var(--text-secondary)' }}>
                 {generationBase ? `Generate the next annual cycle after ${generationBase.name}.` : 'Generate a new annual academic cycle for this college.'}
                 {generatedCycle && <> <strong>{generatedCycle.name}</strong> ({formatDate(generatedCycle.startDate)} – {formatDate(generatedCycle.endDate)}).</>}
@@ -690,7 +738,7 @@ function AcademicYear() {
                 <button type="button" className="erp-btn erp-btn--secondary" onClick={close} disabled={saving}>
                   Cancel
                 </button>
-                <button type="button" className="erp-btn erp-btn--primary" onClick={generate} disabled={saving || !generatedCycle || !selectedCollegeId || contextLoading}>
+                <button type="button" className="erp-btn erp-btn--primary" onClick={generate} disabled={saving || !selectedCollegeId || contextLoading}>
                   {saving ? 'Generating...' : 'Generate Cycle'}
                 </button>
               </footer>
