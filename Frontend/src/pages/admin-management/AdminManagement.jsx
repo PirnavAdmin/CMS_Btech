@@ -6122,7 +6122,7 @@ function RolesAndDesignationsWorkspace() {
         {/* MODAL 3: GRANULAR PERMISSIONS MATRIX */}
         {/* ============================================================== */}
         {isPermModalOpen && editingPermissionsRole && (
-          <ViewDialog title="Module Permissions" onClose={() => setIsPermModalOpen(false)} busy={isSavingPerms} showExport={false} hideFooter maxWidth="1440px" className="rbac-permissions-dialog">
+          <ViewDialog title="Module Permissions" onClose={() => setIsPermModalOpen(false)} busy={isSavingPerms} showExport={false} hideFooter maxWidth="1200px" className="rbac-permissions-dialog">
             <div className="rbac-matrix-dialog">
               {/* Header Bar */}
               <div className="rbac-matrix-top-bar">
@@ -6164,23 +6164,23 @@ function RolesAndDesignationsWorkspace() {
               <div className="rbac-matrix-viewport">
                 <table className="rbac-matrix-grid-table">
                   <colgroup>
-                    <col style={{ width: '36%' }} />
-                    <col style={{ width: '10%' }} />
-                    <col style={{ width: '10%' }} />
-                    <col style={{ width: '10%' }} />
-                    <col style={{ width: '10%' }} />
-                    <col style={{ width: '10%' }} />
-                    <col style={{ width: '14%' }} />
+                    <col style={{ width: '24rem' }} />
+                    <col style={{ width: '7rem' }} />
+                    <col style={{ width: '7rem' }} />
+                    <col style={{ width: '7rem' }} />
+                    <col style={{ width: '7rem' }} />
+                    <col style={{ width: '7rem' }} />
+                    <col style={{ width: '12rem' }} />
                   </colgroup>
                   <thead>
                     <tr>
                       <th className="th-mod-name">ERP Module & Scope Description</th>
-                      <th className="th-action-col"><FiEye size={16} aria-hidden="true" /> VIEW</th>
-                      <th className="th-action-col"><FiPlus size={16} aria-hidden="true" /> CREATE</th>
-                      <th className="th-action-col"><FiEdit2 size={16} aria-hidden="true" /> EDIT</th>
-                      <th className="th-action-col"><FiTrash2 size={16} aria-hidden="true" /> DELETE</th>
-                      <th className="th-action-col"><FiDownload size={16} aria-hidden="true" /> EXPORT</th>
-                      <th className="th-toggle-col"><FiZap size={16} aria-hidden="true" /> MODULE QUICK ALL</th>
+                      <th className="th-action-col">VIEW</th>
+                      <th className="th-action-col">CREATE</th>
+                      <th className="th-action-col">EDIT</th>
+                      <th className="th-action-col">DELETE</th>
+                      <th className="th-action-col">EXPORT</th>
+                      <th className="th-toggle-col">MODULE QUICK ALL</th>
                     </tr>
                   </thead>
                   <tbody>
