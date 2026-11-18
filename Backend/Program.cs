@@ -157,6 +157,8 @@ if (string.IsNullOrWhiteSpace(connectionString))
         "DefaultConnection is missing from appsettings.json.");
 }
 
+builder.Services.AddScoped<BTech.Repositories.Interfaces.ISubscriptionRepository, BTech.Repositories.Implementations.SubscriptionRepository>();
+builder.Services.AddScoped<BTech.Services.Interfaces.ISubscriptionService, BTech.Services.Implementations.SubscriptionService>();
 builder.Services.AddDbContext<ApplicationDbContext>(
     options =>
     {

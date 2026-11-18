@@ -31,3 +31,8 @@ public sealed class SaveSubscriptionDto
     [Required]
     public DateOnly? EndDate { get; set; }
 }
+
+public sealed record SubscriptionRecord(
+    long SubscriptionId, long OrganizationId, string OrganizationName, string PlanName,
+    string BillingCycle, decimal Price, int MaximumUsers, string Status,
+    string StartDate, string EndDate, DateTime CreatedAt, DateTime? UpdatedAt);

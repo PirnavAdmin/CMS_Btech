@@ -1,26 +1,30 @@
+using System.Globalization;
+using System.Security.Claims;
 using BTech.Data;
 using BTech.DTOs.Subscriptions;
 using BTech.Models;
+using BTech.Services.Implementations;
+using BTech.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using MySqlConnector;
 
 namespace BTech.Controllers.V1;
 
 [ApiController]
 [Authorize(Roles = "SUPER_ADMIN")]
 [Route("api/v1/subscriptions")]
-public sealed class SubscriptionsController(ApplicationDbContext db) : ControllerBase
+public sealed class SubscriptionsController(ApplicationDbContext db, ISubscriptionService subscriptions,
+    ILogger<SubscriptionsController> logger) : ControllerBase
 {
-    private static readonly string[] BillingCycles = ["Monthly", "Quarterly", "Half-yearly", "Yearly"];
-    private static readonly string[] Statuses = ["Active", "Trial", "Suspended", "Cancelled"];
-
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
         var rows = await (from subscription in db.OrganizationSubscriptions.AsNoTracking()
                           join organization in db.Colleges.AsNoTracking().Where(item => item.DeletedAt == null)
                               on subscription.OrganizationId equals organization.CollegeId
+                          where subscription.DeletedAt == null
                           orderby subscription.CreatedAt descending
                           select new { Subscription = subscription, organization.CollegeName })
             .ToListAsync();
@@ -34,7 +38,7 @@ public sealed class SubscriptionsController(ApplicationDbContext db) : Controlle
         var row = await (from subscription in db.OrganizationSubscriptions.AsNoTracking()
                          join organization in db.Colleges.AsNoTracking().Where(item => item.DeletedAt == null)
                              on subscription.OrganizationId equals organization.CollegeId
-                         where subscription.SubscriptionId == id
+                         where subscription.SubscriptionId == id && subscription.DeletedAt == null
                          select new { Subscription = subscription, organization.CollegeName })
             .FirstOrDefaultAsync();
 
@@ -46,88 +50,100 @@ public sealed class SubscriptionsController(ApplicationDbContext db) : Controlle
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] SaveSubscriptionDto request)
     {
-        var validation = await Validate(request);
-        if (validation != null) return validation;
+        if (SubscriptionService.Normalize(request, requireLaterEndDate: false) is { } error)
+            return BadRequest(new { success = false, message = error });
 
-        var organization = await db.Colleges.AsNoTracking()
-            .FirstAsync(item => item.CollegeId == request.OrganizationId);
-        var subscription = new OrganizationSubscription();
-        Apply(subscription, request);
+        var organizationName = await db.Colleges.AsNoTracking()
+            .Where(item => item.CollegeId == request.OrganizationId && item.DeletedAt == null)
+            .Select(item => item.CollegeName)
+            .FirstOrDefaultAsync();
+        if (organizationName == null)
+            return BadRequest(new { success = false, message = "Select an active organization." });
+
+        var subscription = new OrganizationSubscription
+        {
+            OrganizationId = request.OrganizationId,
+            PlanName = request.PlanName.Trim(),
+            BillingCycle = request.BillingCycle,
+            Price = decimal.Round(request.Price, 2),
+            MaximumUsers = request.MaximumUsers,
+            Status = request.Status,
+            StartDate = request.StartDate!.Value,
+            EndDate = request.EndDate!.Value,
+        };
         db.OrganizationSubscriptions.Add(subscription);
         await db.SaveChangesAsync();
 
         return CreatedAtAction(nameof(GetById), new { id = subscription.SubscriptionId },
-            new { success = true, data = ToRecord(subscription, organization.CollegeName) });
+            new { success = true, data = ToRecord(subscription, organizationName) });
     }
 
     [HttpPut("{id:long}")]
-    public async Task<IActionResult> Update(long id, [FromBody] SaveSubscriptionDto request)
+    public Task<IActionResult> Update(long id, [FromBody] SaveSubscriptionDto request, CancellationToken cancellationToken) =>
+        ExecuteMutation(id, async actorId =>
+        {
+            if (SubscriptionService.Normalize(request, requireLaterEndDate: true) is { } error)
+                return BadRequest(new { success = false, message = error });
+
+            var updated = await subscriptions.UpdateAsync(id, request, actorId, HttpContext.TraceIdentifier, cancellationToken);
+            return Ok(new { success = true, data = updated });
+        });
+
+    [HttpDelete("{id:long}")]
+    public Task<IActionResult> Delete(long id, CancellationToken cancellationToken) =>
+        ExecuteMutation(id, async actorId =>
+        {
+            await subscriptions.DeleteAsync(id, actorId, HttpContext.TraceIdentifier, cancellationToken);
+            return NoContent();
+        });
+
+    private async Task<IActionResult> ExecuteMutation(long id, Func<long, Task<IActionResult>> execute)
     {
-        var subscription = await db.OrganizationSubscriptions
-            .FirstOrDefaultAsync(item => item.SubscriptionId == id);
-        if (subscription == null)
-            return NotFound(new { success = false, message = "Subscription was not found." });
+        if (!long.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub"),
+                out var actorId) || actorId <= 0)
+            return Unauthorized();
+        if (id <= 0)
+            return BadRequest(new { success = false, message = "Enter a valid subscription ID." });
 
-        var validation = await Validate(request);
-        if (validation != null) return validation;
-
-        var organization = await db.Colleges.AsNoTracking()
-            .FirstAsync(item => item.CollegeId == request.OrganizationId);
-        Apply(subscription, request);
-        subscription.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync();
-
-        return Ok(new { success = true, data = ToRecord(subscription, organization.CollegeName) });
+        try
+        {
+            return await execute(actorId);
+        }
+        catch (MySqlException exception) when (exception.Number is 60001 or 60002 or 60003 or 60004 or 60005)
+        {
+            return exception.Number switch
+            {
+                60001 => NotFound(new { success = false, message = "Subscription was not found." }),
+                60002 => BadRequest(new { success = false, message = "The subscription must stay with its current organization." }),
+                60003 => Conflict(new { success = false, message = "A subscription for this plan and term already exists for the organization." }),
+                60004 => Conflict(new { success = false, message = "Only cancelled subscriptions whose term has ended can be deleted." }),
+                _ => Conflict(new { success = false, message = "This subscription has a billing dependency that must be reviewed before deletion." }),
+            };
+        }
+        catch (Exception exception) when (!HttpContext.RequestAborted.IsCancellationRequested)
+        {
+            logger.LogError(exception, "Subscription mutation failed. SubscriptionId={SubscriptionId}, TraceId={TraceId}",
+                id, HttpContext.TraceIdentifier);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                success = false,
+                message = "The subscription change could not be completed.",
+                correlationId = HttpContext.TraceIdentifier,
+            });
+        }
     }
 
-    private async Task<IActionResult?> Validate(SaveSubscriptionDto request)
-    {
-        if (request.StartDate is not DateOnly startDate || request.EndDate is not DateOnly endDate || startDate > endDate)
-            return BadRequest(new { success = false, message = "End date must be on or after the start date." });
-
-        var cycle = request.BillingCycle.Trim();
-        if (!BillingCycles.Contains(cycle, StringComparer.OrdinalIgnoreCase))
-            return BadRequest(new { success = false, message = "Select a valid billing cycle." });
-
-        var status = request.Status.Trim();
-        if (!Statuses.Contains(status, StringComparer.OrdinalIgnoreCase))
-            return BadRequest(new { success = false, message = "Select a valid subscription status." });
-
-        var organizationExists = await db.Colleges.AnyAsync(organization =>
-            organization.CollegeId == request.OrganizationId && organization.DeletedAt == null);
-        if (!organizationExists)
-            return BadRequest(new { success = false, message = "Select an active organization." });
-
-        return null;
-    }
-
-    private static void Apply(OrganizationSubscription target, SaveSubscriptionDto request)
-    {
-        target.OrganizationId = request.OrganizationId;
-        target.PlanName = request.PlanName.Trim();
-        target.BillingCycle = BillingCycles.First(value =>
-            value.Equals(request.BillingCycle.Trim(), StringComparison.OrdinalIgnoreCase));
-        target.Price = decimal.Round(request.Price, 2);
-        target.MaximumUsers = request.MaximumUsers;
-        target.Status = Statuses.First(value =>
-            value.Equals(request.Status.Trim(), StringComparison.OrdinalIgnoreCase));
-        target.StartDate = request.StartDate!.Value;
-        target.EndDate = request.EndDate!.Value;
-    }
-
-    private static object ToRecord(OrganizationSubscription subscription, string organizationName) => new
-    {
-        subscriptionId = subscription.SubscriptionId,
-        organizationId = subscription.OrganizationId,
+    private static SubscriptionRecord ToRecord(OrganizationSubscription subscription, string organizationName) => new(
+        subscription.SubscriptionId,
+        subscription.OrganizationId,
         organizationName,
         subscription.PlanName,
         subscription.BillingCycle,
         subscription.Price,
-        maximumUsers = subscription.MaximumUsers,
+        subscription.MaximumUsers,
         subscription.Status,
-        startDate = subscription.StartDate,
-        endDate = subscription.EndDate,
-        createdAt = subscription.CreatedAt,
-        updatedAt = subscription.UpdatedAt,
-    };
+        subscription.StartDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+        subscription.EndDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+        subscription.CreatedAt,
+        subscription.UpdatedAt);
 }

@@ -146,6 +146,13 @@ public sealed class ModulePermissionMiddleware
                 return true;
             }
 
+            if (path.Equals("/api/v1/subscriptions", StringComparison.OrdinalIgnoreCase) ||
+                path.StartsWith("/api/v1/subscriptions/", StringComparison.OrdinalIgnoreCase))
+            {
+                await Deny(context, StatusCodes.Status403Forbidden, "Only Platform Super Admins may manage subscriptions.");
+                return false;
+            }
+
             if (roleCodes.Contains("COLLEGE_ADMIN"))
             {
                 var assignment = await connection.QuerySingleAsync<CollegeAdminAssignment>(new CommandDefinition(
