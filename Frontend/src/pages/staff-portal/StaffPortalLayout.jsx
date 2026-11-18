@@ -1,4 +1,5 @@
 import ThemeColorPicker from '../../components/ThemeColorPicker'
+import { getUserRoleDisplayName } from '../../auth/auth'
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { FiBell, FiBookOpen, FiCalendar, FiCheckCircle, FiCheckSquare, FiChevronDown, FiChevronLeft, FiChevronRight, FiClock, FiFileText, FiGrid, FiLock, FiLogOut, FiMenu, FiSearch, FiUser, FiUsers, FiX } from 'react-icons/fi'
@@ -24,6 +25,7 @@ export const STAFF_NAVIGATION = [
 
 export default function StaffPortalLayout({ children, currentScreen = 'dashboard', title = 'Dashboard', subtitle }) {
   const navigate = useNavigate()
+  const roleDisplayName = getUserRoleDisplayName()
   const [open, setOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('pirnav-sidebar-collapsed') === 'true')
   const [query, setQuery] = useState('')
@@ -186,7 +188,7 @@ export default function StaffPortalLayout({ children, currentScreen = 'dashboard
                   </span>
                   <span className="faculty-account-identity">
                     <strong title="sirisha">sirisha</strong>
-                    <small>Non-Teaching Staff</small>
+                    <small>{roleDisplayName || 'Non-Teaching Staff'}</small>
                   </span>
                   <FiChevronDown className="faculty-account-chevron" aria-hidden="true" />
                 </summary>

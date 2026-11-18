@@ -44,6 +44,27 @@ export default function CollegeProfile({ EditForm }) {
   ]
   const name = value('collegeName','name') || 'College Profile'
   const metadata = [value('collegeCode', 'code'), value('universityName', 'university', 'affiliation')].filter(Boolean)
+  const location = [value('city'), value('district'), value('state')]
+    .filter((item, index, items) => item && items.findIndex(candidate => String(candidate).trim().toLowerCase() === String(item).trim().toLowerCase()) === index)
+    .join(', ')
+  const savedSummary = value('aboutCollege', 'collegeSummary', 'collegeDescription', 'description')
+  const summaryFacts = [
+    value('collegeType', 'type') && `classified as ${value('collegeType', 'type')}`,
+    value('universityName', 'university', 'affiliation') && `affiliated with ${value('universityName', 'university', 'affiliation')}`,
+    location && `located in ${location}`,
+  ].filter(Boolean)
+  const collegeSummary = savedSummary || (summaryFacts.length
+    ? `${name} is ${summaryFacts.join(', ')}.`
+    : `Institutional identity, address, and contact details for ${name} are shown in this profile.`)
+  const renderSection = ([heading, fields]) => {
+    const savedFields = fields.filter(([, data]) => data != null)
+    return <section key={heading}>
+      <h3>{heading}</h3>
+      {savedFields.length ? <dl>
+        {savedFields.map(([label, data]) => <div key={label}><dt>{label}</dt><dd>{String(data)}</dd></div>)}
+      </dl> : <p className="college-profile-empty">No details saved.</p>}
+    </section>
+  }
   const rawStatus = String(value('status', 'isActive') ?? '').trim().toLowerCase()
   const status = ['true', '1', 'active'].includes(rawStatus) ? 'Active'
     : ['false', '0', 'inactive', 'disabled'].includes(rawStatus) ? 'Inactive' : 'Status unavailable'
@@ -72,18 +93,17 @@ export default function CollegeProfile({ EditForm }) {
           </button>}
       </section>
       <div className="college-profile-sections">
-        {sections.map(([heading, fields]) => {
-          const savedFields = fields.filter(([, data]) => data != null)
-          return <section key={heading}>
-            <h3>{heading}</h3>
-            {savedFields.length ? <dl>
-              {savedFields.map(([label, data]) => <div key={label}><dt>{label}</dt><dd>{String(data)}</dd></div>)}
-            </dl> : <p className="college-profile-empty">No details saved.</p>}
+        <div className="college-profile-column">
+          {renderSection(sections[0])}
+          <section className="college-profile-about" aria-labelledby="college-profile-about-title">
+            <h3 id="college-profile-about-title">College Summary</h3>
+            <p>{collegeSummary}</p>
           </section>
-        })}
+        </div>
+        <div className="college-profile-column">{sections.slice(1).map(renderSection)}</div>
       </div>
     </>}
-    {editing && EditForm && <EditForm key={assignedId} editId={assignedId} onDismiss={() => setEditing(false)} onSaved={async () => { setEditing(false); setAttempt(current => current + 1); await context.refreshHierarchy?.() }} />}
+    {editing && EditForm && <EditForm key={assignedId} editId={assignedId} college={record} profile={record} onDismiss={() => setEditing(false)} onSaved={async () => { setEditing(false); setAttempt(current => current + 1); await context.refreshHierarchy?.() }} />}
   </main></DashboardLayout>
 }
 

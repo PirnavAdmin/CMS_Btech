@@ -483,6 +483,30 @@ export const updateCollege = (id, collegeData) => {
   return API.put(`/colleges/${id}`, buildCollegePayload(collegeData));
 };
 
+// College Admin profile edits are scoped to the assigned college. Identity
+// fields are editable there, while academic scope, timezone, currency, status
+// and user/role assignment data stay out of this request.
+export const updateCollegeProfile = (id, profileData = {}) => {
+  const editableFields = [
+    "CollegeName", "CollegeCode", "CollegeType", "UniversityName", "Email", "Mobile", "Phone", "Principal", "PrincipalEmail",
+    "PrincipalContact", "AlternateContactNumber", "AccreditationStatus",
+    "AccreditationBody", "AccreditationGrade", "AccreditationNumber", "ValidFrom",
+    "ValidUntil", "AddressLine1", "AddressLine2", "City", "Area", "District",
+    "State", "Country", "Pincode", "Website",
+  ];
+  const optionalValidatedFields = new Set(["Email", "PrincipalEmail", "Website"]);
+  const payload = {};
+  for (const field of editableFields) {
+    if (!Object.hasOwn(profileData, field)) continue;
+    const value = profileData[field];
+    // Empty email/URL values are omitted to satisfy the DTO validators. The
+    // editor prevents clearing an existing value when this API cannot do so.
+    if (optionalValidatedFields.has(field) && !String(value ?? "").trim()) continue;
+    payload[field] = value;
+  }
+  return API.put(`/colleges/${encodeURIComponent(id)}`, payload);
+};
+
 export const updateCollegeStatus = (id, status) => {
   return API.patch(`/colleges/${id}/status`, { status });
 };

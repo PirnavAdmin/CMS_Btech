@@ -1,5 +1,6 @@
 const AUTH_STORAGE_KEY = 'btech-authenticated'
 const ROLE_STORAGE_KEY = 'btech-user-role'
+const DISPLAY_ROLE_STORAGE_KEY = 'btech-user-display-role'
 
 const safeStorage = (storageName) => {
   try {
@@ -18,12 +19,39 @@ const readStorageValue = (storage, key) => {
 }
 
 function normalizeStoredRole(role) {
-  const rawRole = Array.isArray(role) ? role[0] : role
+  const roleValue = Array.isArray(role) ? role[0] : role
+  const rawRole = roleValue && typeof roleValue === 'object'
+    ? roleValue.roleName ?? roleValue.name ?? roleValue.roleCode ?? roleValue.code ?? roleValue.role
+    : roleValue
   const normalizedRole = String(rawRole || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
 
   if (['admin', 'college_admin', 'collegeadmin', 'super_admin', 'superadmin'].includes(normalizedRole)) return 'admin'
   if (['staff', 'non_teaching', 'non_teaching_staff', 'nonteaching', 'nonteaching_staff', 'nonteachingstaff', 'principal', 'hod', 'accountant', 'librarian'].includes(normalizedRole)) return 'staff'
   return normalizedRole
+}
+
+function roleDisplayValue(value) {
+  if (Array.isArray(value)) {
+    return value.map(roleDisplayValue).filter(Boolean).filter((role, index, roles) => roles.indexOf(role) === index).join(', ')
+  }
+  if (value && typeof value === 'object') {
+    return roleDisplayValue(value.roleName ?? value.displayName ?? value.name ?? value.roleCode ?? value.code ?? value.role)
+  }
+  return String(value || '').trim()
+}
+
+function roleFromAccessToken() {
+  try {
+    const payload = getAccessToken().split('.')[1]?.replace(/-/g, '+').replace(/_/g, '/')
+    const claims = payload ? JSON.parse(atob(payload)) : {}
+    return roleDisplayValue([
+      claims.role,
+      claims.roles,
+      claims['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'],
+    ].filter(Boolean))
+  } catch {
+    return ''
+  }
 }
 
 export function getAuthStorage() {
@@ -99,6 +127,7 @@ export function signIn(role, accessToken, refreshToken, rememberMe = false, user
 
   storage.setItem(AUTH_STORAGE_KEY, 'true')
   storage.setItem(ROLE_STORAGE_KEY, normalizeStoredRole(role))
+  storage.setItem(DISPLAY_ROLE_STORAGE_KEY, roleDisplayValue(role) || roleDisplayValue(user.assignedRole ?? user.role))
   storage.setItem('btech-access-token', accessToken)
   storage.setItem('btech-refresh-token', refreshToken)
   storage.setItem('btech-user-name', String(user.name || '').trim())
@@ -119,10 +148,12 @@ export function signOut() {
   if (localStore) {
     localStore.removeItem(AUTH_STORAGE_KEY)
     localStore.removeItem(ROLE_STORAGE_KEY)
+    localStore.removeItem(DISPLAY_ROLE_STORAGE_KEY)
   }
   if (sessionStore) {
     sessionStore.removeItem(AUTH_STORAGE_KEY)
     sessionStore.removeItem(ROLE_STORAGE_KEY)
+    sessionStore.removeItem(DISPLAY_ROLE_STORAGE_KEY)
   }
   ;['btech-access-token', 'btech-refresh-token', 'btech-user-name', 'btech-user-id', 'btech-jwt', 'btech-session', 'accessToken', 'refreshToken', 'jwt', 'token'].forEach((key) => {
     localStore?.removeItem(key)
@@ -141,6 +172,20 @@ export function getUserRole() {
   }
 
   return normalizedRole || null
+}
+
+// Keep the assigned role label separate from the normalized value used by RBAC checks.
+export function getUserRoleDisplayName() {
+  const storage = getAuthStorage()
+  const storedName = readStorageValue(storage, DISPLAY_ROLE_STORAGE_KEY)
+    || readStorageValue(safeStorage('localStorage'), DISPLAY_ROLE_STORAGE_KEY)
+    || readStorageValue(safeStorage('sessionStorage'), DISPLAY_ROLE_STORAGE_KEY)
+  const assignedRole = storedName || roleFromAccessToken()
+  if (assignedRole) return assignedRole
+
+  const role = getUserRole() || ''
+  if (role === 'admin') return 'Administrator'
+  return role ? role.replace(/[_-]+/g, ' ').replace(/\b\w/g, letter => letter.toUpperCase()) : 'User'
 }
 
 export function hasRole(allowedRoles = []) {

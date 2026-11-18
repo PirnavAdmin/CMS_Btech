@@ -244,10 +244,8 @@ namespace BTech.Services.Implementations
             if (!scope.IsSuperAdmin && (!scope.IsCollegeAdmin || scope.SelectedCollegeId != collegeId || scope.AssignedCollegeId != collegeId))
                 throw new BTech.Exceptions.ForbiddenException("Only the assigned college's administrator may edit its profile.");
             if (!scope.IsSuperAdmin &&
-                (dto.CollegeCode != null || dto.Code != null || dto.CollegeType != null || dto.Type != null ||
-                 dto.UniversityName != null || dto.University != null || dto.AcademicYearId.HasValue || dto.Timezone != null ||
-                 dto.CurrencyCode != null))
-                throw new BTech.Exceptions.ForbiddenException("College code, type, university, academic scope, timezone, currency and status are managed by Super Admin.");
+                (dto.AcademicYearId.HasValue || dto.Timezone != null || dto.CurrencyCode != null))
+                throw new BTech.Exceptions.ForbiddenException("Academic scope, timezone, currency and status are managed by Super Admin.");
             var college =
                 await _collegeRepository.GetByIdAsync(
                     collegeId);

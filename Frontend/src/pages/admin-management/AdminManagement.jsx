@@ -1,4 +1,5 @@
 import CollegeProfileView from '../settings/CollegeProfile.jsx'
+import CollegeProfileEditor from '../settings/CollegeProfileEditor.jsx'
 import { calculateCompletion, completionSchemas, departmentDirectoryCompletion } from '../../utils/recordCompletion'
 import { CompletionSummary, ProgressiveFormFooter, ResumeSetupAction, completionColumn } from '../../components/RecordCompletion'
 import SectionsRoomsHeader from '../../components/SectionsRoomsHeader'
@@ -2985,7 +2986,7 @@ function CollegeOwnershipWorkspace(props) {
   const { access, loading } = screenAccessImports_useScreenAccess()
   const { collegeAccess, loading: contextLoading } = AcademicContextImports_useAcademic()
   if (loading || contextLoading) return <DashboardLayout><AsyncState status="loading" title="Loading college access…" /></DashboardLayout>
-  if ((access || collegeAccess)?.isSuperAdmin !== true) return <CollegeProfileView EditForm={AddCollegeScreen.CollegeForm} />
+  if ((access || collegeAccess)?.isSuperAdmin !== true) return <CollegeProfileView EditForm={CollegeProfileEditor} />
   return <CollegeInstitutionManagement {...props} />
 }
 return { default: CollegeOwnershipWorkspace }

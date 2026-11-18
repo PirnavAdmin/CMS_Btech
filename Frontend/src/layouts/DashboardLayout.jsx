@@ -5,7 +5,7 @@ import useToastState from '../hooks/useToastState'
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { FiAlertCircle, FiLock, FiLogOut, FiMenu, FiSearch, FiUser, FiX } from 'react-icons/fi'
-import { getUserRole, signOut } from '../auth/auth'
+import { getUserRole, getUserRoleDisplayName, signOut } from '../auth/auth'
 import { changePassword, profileApi } from '../api/apiEndpoints'
 import Sidebar from '../components/Sidebar'
 import ThemeColorPicker from '../components/ThemeColorPicker'
@@ -115,6 +115,7 @@ export default function DashboardLayout({ children }) {
   const [account, setAccount] = useState(() => ({
     name: localStorage.getItem('btech-user-name') || sessionStorage.getItem('btech-user-name') || '',
     identifier: localStorage.getItem('btech-user-id') || sessionStorage.getItem('btech-user-id') || '',
+    role: getUserRoleDisplayName(),
   }))
   const { canView, access: accountAccess, status: accountAccessStatus } = useScreenAccess()
 
@@ -135,9 +136,7 @@ export default function DashboardLayout({ children }) {
     if (mustChangePassword && !pathname.startsWith('/my-profile')) navigate('/my-profile?setup=1', { replace: true })
     else if (!mustChangePassword && profileIncomplete && pathname !== '/my-profile') navigate('/my-profile?profileSetup=1', { replace: true })
   }, [mustChangePassword, profileIncomplete, pathname, navigate])
-  const roleLabel = ['admin', 'college_admin', 'super_admin'].includes(String(userRole).toLowerCase())
-    ? 'Administrator'
-    : userRole.charAt(0).toUpperCase() + userRole.slice(1)
+  const roleLabel = account.role || getUserRoleDisplayName()
   const isMarksWorkspace = pathname === '/marks-management' || /^\/marks-management\/(marks-entry|bulk-marks-upload|submitted-marks|marks-approval|publish-results)\/?$/.test(pathname)
   const pageName = isMarksWorkspace ? 'Marks Management' : ({
     '/library': 'Library Management', '/placement': 'Placements', '/meetings-events': 'Meetings & Events', '/user-access': 'User Access Management', '/dashboard': 'Overview', '/academic-structure': 'Program Configuration', '/my-profile': 'My Profile', '/settings': 'Settings',
@@ -169,7 +168,7 @@ export default function DashboardLayout({ children }) {
     if (pathname.startsWith('/faculty')) return undefined
     let active = true
     profileApi.getProfile()
-      .then((profile) => { if (active) setAccount({ name: profile.fullName || '', identifier: profile.identifier || profile.admissionNumber || '' }) })
+      .then((profile) => { if (active) setAccount({ name: profile.fullName || '', identifier: profile.identifier || profile.admissionNumber || '', role: profile.role || getUserRoleDisplayName() }) })
       .catch(() => {})
     return () => { active = false }
   }, [])
