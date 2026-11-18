@@ -6621,6 +6621,21 @@ const BUILDING_BLOCKS = roomServiceImports_BUILDING_BLOCKS
 const FLOORS = roomServiceImports_FLOORS
 const ROOM_FACILITIES = roomServiceImports_ROOM_FACILITIES
 const roomService = roomServiceImports_default
+const normalizeRoomType = value => {
+  const type = String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+  const aliases = {
+    'class room': 'classroom',
+    'lab': 'laboratory',
+    'computer laboratory': 'computer lab',
+    'computing lab': 'computer lab',
+    'electronics laboratory': 'electronics lab',
+    'mechanical lab': 'mechanical workshop',
+    'workshop': 'mechanical workshop',
+    'lecture theatre': 'lecture hall',
+    'auditorium hall': 'auditorium',
+  }
+  return aliases[type] || type
+}
 const showSuccess = toastImports_showSuccess
 const showError = toastImports_showError
 
@@ -6816,7 +6831,7 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
         (r.assignedSection && r.assignedSection.toLowerCase().includes(q)) ||
         secMetaText.includes(q)
 
-      const matchesType = !typeFilter || r.roomType === typeFilter
+      const matchesType = !typeFilter || normalizeRoomType(r.roomType) === normalizeRoomType(typeFilter)
       const matchesBlock = !blockFilter || r.buildingBlock === blockFilter
       const matchesFloor = !floorFilter || r.floor === floorFilter
       const matchesStatus = !statusFilter || r.status === statusFilter
@@ -7182,8 +7197,22 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
     if (t.includes('computer') || t.includes('computing')) return FiMonitor
     if (t.includes('electronic') || t.includes('dsp') || t.includes('vlsi')) return FiCpu
     if (t.includes('lab') || t.includes('workshop')) return FiLayers
+    if (t.includes('staff')) return FiUsers
     if (t.includes('seminar') || t.includes('auditorium')) return FiBookmark
+    if (t.includes('lecture') || t.includes('tutorial') || t.includes('drawing')) return FiBookOpen
     return FiHome
+  }
+
+  const getRoomTypeTagClass = type => {
+    const t = normalizeRoomType(type)
+    if (t.includes('lab')) return 'is-lab'
+    if (t.includes('workshop')) return 'is-workshop'
+    if (t.includes('seminar')) return 'is-seminar'
+    if (t.includes('auditorium') || t.includes('lecture hall')) return 'is-hall'
+    if (t.includes('staff')) return 'is-staff'
+    if (t.includes('tutorial') || t.includes('drawing')) return 'is-special'
+    if (t.includes('classroom')) return 'is-class'
+    return 'is-other'
   }
 
   const isDetailsView = viewMode || (Boolean(roomId) && !formMode)
@@ -7833,7 +7862,7 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
               <label>Number of floors<input type="number" min="1" max={maxGeneratedFloors} step="1" value={roomGeneration.floorCount} onChange={(event) => setRoomGeneration((current) => ({ ...current, floorCount: event.target.value === '' ? '' : Number(event.target.value) }))} required /><small>Enter 1–{maxGeneratedFloors}; floor names are assigned in order.</small></label>
               <label>Room code prefix<input value={roomGeneration.roomPrefix} onChange={(event) => setRoomGeneration((current) => ({ ...current, roomPrefix: event.target.value }))} placeholder="A" maxLength={8} required /><small>You can edit this manually.</small></label>
               <label>Rooms per floor<input type="number" min="1" max="99" value={roomGeneration.roomsPerFloor} onChange={(event) => setRoomGeneration((current) => ({ ...current, roomsPerFloor: Number(event.target.value) }))} /></label>
-              <label>Room type<select value={roomGeneration.roomType} onChange={(event) => setRoomGeneration((current) => ({ ...current, roomType: event.target.value }))}>{['Classroom', 'Laboratory', 'Seminar Hall', 'Staff Room'].map((type) => <option key={type}>{type}</option>)}</select></label>
+              <label>Room type<select value={roomGeneration.roomType} onChange={(event) => setRoomGeneration((current) => ({ ...current, roomType: event.target.value }))}>{ROOM_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}</select></label>
               <label>Capacity<input type="number" min="1" max="500" value={roomGeneration.capacity} onChange={(event) => setRoomGeneration((current) => ({ ...current, capacity: Number(event.target.value) }))} /></label>
             </div>
             <p className="rooms-generator-preview">{previewFloorCount * Math.max(0, Number(roomGeneration.roomsPerFloor) || 0)} rooms planned · {previewFloorIndexes.map((index) => `${generationFloorLabel(index)}: ${roomGeneration.roomPrefix || 'A'}-${(index + 1) * 100 + 1} to ${roomGeneration.roomPrefix || 'A'}-${(index + 1) * 100 + (Number(roomGeneration.roomsPerFloor) || 0)}`).join(previewFloorCount > 2 ? ' · … · ' : ' · ') || 'Choose floors'}</p>
@@ -7986,7 +8015,7 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
 
                         {/* Type */}
                         <td className="table-center">
-                          <span className={`room-type-tag ${/lab/i.test(room.roomType) ? 'is-lab' : /seminar/i.test(room.roomType) ? 'is-seminar' : 'is-class'}`}>
+                          <span className={`room-type-tag ${getRoomTypeTagClass(room.roomType)}`}>
                             <RoomIcon /> {room.roomType}
                           </span>
                         </td>
