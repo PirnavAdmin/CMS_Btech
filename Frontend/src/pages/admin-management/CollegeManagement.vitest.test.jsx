@@ -28,34 +28,35 @@ const mount = (path = '/college-institution-management') => render(<MemoryRouter
   <Route path="/college-institution-management" element={<CollegeInstitutionManagement />} />
   <Route path="/college-institution-management/add" element={<AddCollege />} />
 </Routes></MemoryRouter>)
-test('college directory retains affiliation/contact fields and five-row pagination', async () => {
+test('organization directory omits affiliation and keeps contact fields and five-row pagination', async () => {
   fixture.rows = Array.from({ length: 6 }, (_, index) => college(index + 1)); mount()
-  const table = await screen.findByRole('table', { name: 'Colleges' })
+  const table = await screen.findByRole('table', { name: 'Organizations' })
   expect(within(table).getAllByRole('row')).toHaveLength(6)
-  expect(within(table).getByRole('columnheader', { name: 'Affiliation / University' })).toBeTruthy()
-  expect(within(table).getAllByText('Engineering University')).toHaveLength(5)
+  expect(within(table).queryByRole('columnheader', { name: 'Affiliation / University' })).toBeNull()
+  expect(within(table).queryByText('Engineering University')).toBeNull()
+  expect(within(table).getAllByText(/^office\d+@example\.edu$/)).toHaveLength(5)
   fireEvent.click(screen.getByRole('button', { name: 'Next' }))
   expect(within(screen.getByRole('table')).getAllByRole('row')).toHaveLength(2)
   fireEvent.click(screen.getByRole('button', { name: 'Filters', exact: true }))
   fireEvent.click(screen.getByRole('button', { name: 'Inactive', exact: true }))
-  expect(await screen.findByRole('heading', { name: 'No matching colleges' })).toBeTruthy()
+  expect(await screen.findByRole('heading', { name: 'No matching organizations' })).toBeTruthy()
 })
 
 test.each(['light', 'dark'])('compact directory preserves full values and horizontal actions in %s theme', async theme => {
   document.documentElement.dataset.theme = theme
   const record = college(); record.name = 'A long engineering college name that must remain accessible'; fixture.rows = [record]
   const { container } = mount()
-  const table = await screen.findByRole('table', { name: 'Colleges' })
-  expect(within(table).getAllByRole('columnheader').map(cell => cell.textContent)).toEqual(['College', 'College Code', 'Affiliation / University', 'Location', 'Contact', 'Status', 'Completion', 'Actions'])
-  const summary = screen.getByLabelText('College summary')
-  for (const label of ['Total Colleges', 'Active Colleges', 'Inactive Colleges']) expect(within(summary).getByText(label)).toBeTruthy()
+  const table = await screen.findByRole('table', { name: 'Organizations' })
+  expect(within(table).getAllByRole('columnheader').map(cell => cell.textContent)).toEqual(['Organization Name', 'Organization Code', 'Location', 'Contact', 'Status', 'Completion', 'Actions'])
+  const summary = screen.getByLabelText('Organization summary')
+  for (const label of ['Total Organizations', 'Active Organizations', 'Inactive Organizations']) expect(within(summary).getByText(label)).toBeTruthy()
   expect(container.querySelector('.college-config-context').textContent).toContain('Selected College')
   expect(within(table).getByRole('button', { name: `View details for ${record.name}` }).title).toBe(record.name)
   expect(within(table).getByText(record.email).title).toBe(record.email)
   const actions = container.querySelector('.college-config-row-actions')
   expect(within(actions).getAllByRole('button')).toHaveLength(4)
   for (const button of within(actions).getAllByRole('button')) expect(button.title).toBe(button.getAttribute('aria-label'))
-  expect(within(screen.getByRole('region', { name: 'College Directory' })).getByRole('button', { name: 'Export' })).toBeTruthy()
+  expect(within(screen.getByRole('region', { name: 'Organization Directory' })).getByRole('button', { name: 'Export' })).toBeTruthy()
   document.documentElement.removeAttribute('data-theme')
 })
 

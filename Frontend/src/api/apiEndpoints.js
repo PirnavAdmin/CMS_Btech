@@ -59,7 +59,7 @@ export const API_ENDPOINTS = Object.freeze({
   subscriptions: Object.freeze({
     list: endpoint('/api/v1/subscriptions'),
     create: endpoint('/api/v1/subscriptions'),
-    update: id => endpoint(`/api/v1/subscriptions/${id}`),
+    detail: id => endpoint(`/api/v1/subscriptions/${id}`),
   }),
   exports: Object.freeze({
     list: endpoint('/api/v1/exports'),
@@ -611,11 +611,12 @@ export const subscriptionsApi = {
     return response?.data?.data ?? response?.data
   },
   update: async (id, payload) => {
-    const response = await request(API_ENDPOINTS.subscriptions.update(encodeURIComponent(id)), {
+    const response = await request(API_ENDPOINTS.subscriptions.detail(encodeURIComponent(id)), {
       method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
     })
     return response?.data?.data ?? response?.data
   },
+  remove: id => request(API_ENDPOINTS.subscriptions.detail(encodeURIComponent(id)), { method: 'DELETE' }),
 }
 
 export const collegeUserMappingsApi = {
