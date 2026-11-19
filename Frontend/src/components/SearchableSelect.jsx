@@ -33,7 +33,7 @@ export default function SearchableSelect({
   onChange,
   placeholder = 'Select an option',
   searchPlaceholder = 'Search...',
-  hideSearch = false,
+  hideSearch = true,
   disabled = false,
   loading = false,
   error = false,
@@ -301,7 +301,7 @@ export function selectOptions(children, inheritedDisabled = false) {
 
 // Retain the native control for form submission and existing React event handlers.
 // Small lists and multi-select listboxes keep their existing native behavior.
-export function ProjectSelect({ children, forceCustom = false, menuPlacement = 'auto', hideSearch = false, hidePlaceholder = false, placeholder, ...props }) {
+export function ProjectSelect({ children, forceCustom = false, menuPlacement = 'auto', hideSearch = true, hidePlaceholder = false, placeholder, ...props }) {
   const nativeRef = useRef(null)
   const wrapperRef = useRef(null)
   const [uncontrolledValue, setUncontrolledValue] = useState(props.defaultValue ?? '')
