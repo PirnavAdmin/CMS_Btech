@@ -1,5 +1,4 @@
 using System.Security.Cryptography;
-using System.Text;
 using BTech.Data;
 using BTech.Models;
 using BTech.Services;
@@ -41,14 +40,11 @@ namespace BTech.Services.Implementations
             if (!string.Equals(newPassword, confirmNewPassword, StringComparison.Ordinal))
                 return (false, "New password and confirmation do not match.");
 
-            if (newPassword.Length < 12)
-                return (false, "Password must be at least 12 characters long.");
-
-            if (Encoding.UTF8.GetByteCount(newPassword) > 72)
-                return (false, "Password must not exceed 72 UTF-8 bytes.");
-
             if (token.StartsWith("ua_", StringComparison.Ordinal))
                 return await _invitations.CompleteAsync(loginId, token, newPassword, confirmNewPassword);
+
+            if (AccountSetupPasswordPolicy.GetError(newPassword) is { } passwordError)
+                return (false, passwordError);
 
             // Compatibility for previously issued legacy ACCOUNT_SETUP OTP links.
             var normalizedLoginId = loginId.Trim();

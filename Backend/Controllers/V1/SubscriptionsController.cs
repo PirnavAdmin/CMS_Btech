@@ -18,33 +18,63 @@ namespace BTech.Controllers.V1;
 public sealed class SubscriptionsController(ApplicationDbContext db, ISubscriptionService subscriptions,
     ILogger<SubscriptionsController> logger) : ControllerBase
 {
+    private IQueryable<OrganizationSubscription> ActiveRecords => db.OrganizationSubscriptions.AsNoTracking()
+        .Where(subscription => subscription.DeletedAt == null);
+
+    private IQueryable<OrganizationUser> OrganizationUsers =>
+        db.Users.Where(user => user.Status == 1 && user.DeletedAt == null && user.college_id.HasValue)
+            .Select(user => new OrganizationUser { OrganizationId = user.college_id!.Value, UserId = user.user_id })
+            .Union(from mapping in db.CollegeUserMappings
+                   join setting in db.CollegeSettings on mapping.CollegeSettingId equals setting.Id
+                   join user in db.Users on mapping.UserId equals user.user_id
+                   where mapping.Status == 1 && mapping.RemovedAt == null && setting.Status == 1
+                     && user.Status == 1 && user.DeletedAt == null
+                   select new OrganizationUser { OrganizationId = setting.CollegeId, UserId = user.user_id });
+
+    private sealed class OrganizationUser
+    {
+        public long OrganizationId { get; init; }
+        public long UserId { get; init; }
+    }
+
+    private IQueryable<SubscriptionDetails> SubscriptionDetailsQuery =>
+        from subscription in ActiveRecords
+        join organization in db.Colleges.AsNoTracking().Where(item => item.DeletedAt == null)
+            on subscription.OrganizationId equals organization.CollegeId
+        select new SubscriptionDetails
+        {
+            Subscription = subscription,
+            OrganizationName = organization.CollegeName,
+            AccessedUsersCount = OrganizationUsers.Count(user => user.OrganizationId == subscription.OrganizationId),
+        };
+
+    private sealed class SubscriptionDetails
+    {
+        public required OrganizationSubscription Subscription { get; init; }
+        public required string OrganizationName { get; init; }
+        public int AccessedUsersCount { get; init; }
+
+        public SubscriptionRecord ToRecord() =>
+            SubscriptionsController.ToRecord(Subscription, OrganizationName, AccessedUsersCount);
+    }
+
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        var rows = await (from subscription in db.OrganizationSubscriptions.AsNoTracking()
-                          join organization in db.Colleges.AsNoTracking().Where(item => item.DeletedAt == null)
-                              on subscription.OrganizationId equals organization.CollegeId
-                          where subscription.DeletedAt == null
-                          orderby subscription.CreatedAt descending
-                          select new { Subscription = subscription, organization.CollegeName })
+        var rows = await SubscriptionDetailsQuery.OrderByDescending(row => row.Subscription.CreatedAt)
             .ToListAsync();
 
-        return Ok(new { success = true, data = rows.Select(row => ToRecord(row.Subscription, row.CollegeName)) });
+        return Ok(new { success = true, data = rows.Select(row => row.ToRecord()) });
     }
 
     [HttpGet("{id:long}")]
     public async Task<IActionResult> GetById(long id)
     {
-        var row = await (from subscription in db.OrganizationSubscriptions.AsNoTracking()
-                         join organization in db.Colleges.AsNoTracking().Where(item => item.DeletedAt == null)
-                             on subscription.OrganizationId equals organization.CollegeId
-                         where subscription.SubscriptionId == id && subscription.DeletedAt == null
-                         select new { Subscription = subscription, organization.CollegeName })
-            .FirstOrDefaultAsync();
+        var row = await SubscriptionDetailsQuery.FirstOrDefaultAsync(item => item.Subscription.SubscriptionId == id);
 
         return row == null
             ? NotFound(new { success = false, message = "Subscription was not found." })
-            : Ok(new { success = true, data = ToRecord(row.Subscription, row.CollegeName) });
+            : Ok(new { success = true, data = row.ToRecord() });
     }
 
     [HttpPost]
@@ -73,9 +103,10 @@ public sealed class SubscriptionsController(ApplicationDbContext db, ISubscripti
         };
         db.OrganizationSubscriptions.Add(subscription);
         await db.SaveChangesAsync();
+        var accessedUsersCount = await OrganizationUsers.CountAsync(user => user.OrganizationId == subscription.OrganizationId);
 
         return CreatedAtAction(nameof(GetById), new { id = subscription.SubscriptionId },
-            new { success = true, data = ToRecord(subscription, organizationName) });
+            new { success = true, data = ToRecord(subscription, organizationName, accessedUsersCount) });
     }
 
     [HttpPut("{id:long}")]
@@ -86,7 +117,8 @@ public sealed class SubscriptionsController(ApplicationDbContext db, ISubscripti
                 return BadRequest(new { success = false, message = error });
 
             var updated = await subscriptions.UpdateAsync(id, request, actorId, HttpContext.TraceIdentifier, cancellationToken);
-            return Ok(new { success = true, data = updated });
+            var accessedUsersCount = await OrganizationUsers.CountAsync(user => user.OrganizationId == updated.OrganizationId, cancellationToken);
+            return Ok(new { success = true, data = updated with { AccessedUsersCount = accessedUsersCount } });
         });
 
     [HttpDelete("{id:long}")]
@@ -109,7 +141,7 @@ public sealed class SubscriptionsController(ApplicationDbContext db, ISubscripti
         {
             return await execute(actorId);
         }
-        catch (MySqlException exception) when (exception.Number is 60001 or 60002 or 60003 or 60004 or 60005)
+        catch (MySqlException exception) when (exception.Number is 60001 or 60002 or 60003 or 60004 or 60005 or 60006)
         {
             return exception.Number switch
             {
@@ -117,6 +149,7 @@ public sealed class SubscriptionsController(ApplicationDbContext db, ISubscripti
                 60002 => BadRequest(new { success = false, message = "The subscription must stay with its current organization." }),
                 60003 => Conflict(new { success = false, message = "A subscription for this plan and term already exists for the organization." }),
                 60004 => Conflict(new { success = false, message = "Only cancelled subscriptions whose term has ended can be deleted." }),
+                60006 => Conflict(new { success = false, message = exception.Message }),
                 _ => Conflict(new { success = false, message = "This subscription has a billing dependency that must be reviewed before deletion." }),
             };
         }
@@ -133,7 +166,7 @@ public sealed class SubscriptionsController(ApplicationDbContext db, ISubscripti
         }
     }
 
-    private static SubscriptionRecord ToRecord(OrganizationSubscription subscription, string organizationName) => new(
+    private static SubscriptionRecord ToRecord(OrganizationSubscription subscription, string organizationName, int accessedUsersCount) => new(
         subscription.SubscriptionId,
         subscription.OrganizationId,
         organizationName,
@@ -145,5 +178,5 @@ public sealed class SubscriptionsController(ApplicationDbContext db, ISubscripti
         subscription.StartDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
         subscription.EndDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
         subscription.CreatedAt,
-        subscription.UpdatedAt);
+        subscription.UpdatedAt) { AccessedUsersCount = accessedUsersCount };
 }

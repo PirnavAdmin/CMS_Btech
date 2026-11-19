@@ -35,4 +35,7 @@ public sealed class SaveSubscriptionDto
 public sealed record SubscriptionRecord(
     long SubscriptionId, long OrganizationId, string OrganizationName, string PlanName,
     string BillingCycle, decimal Price, int MaximumUsers, string Status,
-    string StartDate, string EndDate, DateTime CreatedAt, DateTime? UpdatedAt);
+    string StartDate, string EndDate, DateTime CreatedAt, DateTime? UpdatedAt)
+{
+    public int AccessedUsersCount { get; init; }
+}
