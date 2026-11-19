@@ -513,6 +513,7 @@ export const updateCollegeStatus = (id, status) => {
   return API.patch(`/colleges/${id}/status`, { status });
 };
 export const getCollegeDeactivationImpact = (id) => API.get(`/colleges/${id}/deactivation-impact`);
+export const deleteCollege = (id) => API.delete(`/colleges/${encodeURIComponent(id)}`);
 
 // -------------------------
 // DEPARTMENT APIs

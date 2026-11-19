@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { AddCollege, CollegeInstitutionManagement } from './AdminManagement.jsx'
-import { getColleges, searchColleges, getCollegeById, createCollege, updateCollege, updateCollegeStatus, uploadCollegeLogo } from '../../auth/collegeApi'
+import { getColleges, searchColleges, getCollegeById, createCollege, deleteCollege, updateCollege, updateCollegeStatus, uploadCollegeLogo } from '../../auth/collegeApi'
 import { showToast } from '../../utils/toast'
 
 const fixture = vi.hoisted(() => ({ rows: [], edit: true, create: true, access: { isSuperAdmin: true, userId: 1 } }))
@@ -11,7 +11,7 @@ vi.mock('../../components/ExportMenu', () => ({ default: () => <button>Export</b
 vi.mock('../../context/AcademicContext', () => ({ useAcademic: () => ({ collegeAccess: fixture.access, selectedCollegeId: '7', selectedCollege: { id: '7', name: 'Selected College' }, loading: false }) }))
 vi.mock('../../auth/ScreenAccess', () => ({ useScreenAccess: () => ({ access: fixture.access, loading: false, canAction: (_path, action) => action === 'create' ? fixture.create : fixture.edit }) }))
 vi.mock('../../utils/toast', async original => ({ ...await original(), showToast: vi.fn() }))
-vi.mock('../../auth/collegeApi', async original => ({ ...await original(), getColleges: vi.fn(), searchColleges: vi.fn(), getCollegeById: vi.fn(), createCollege: vi.fn(), updateCollege: vi.fn(), updateCollegeStatus: vi.fn(), uploadCollegeLogo: vi.fn(), fetchCollegeLogo: vi.fn(async () => ''), getCollegeLogoEndpoint: () => '', getCollegeLogoUrl: () => '', readCachedCollegeLogo: () => '' }))
+vi.mock('../../auth/collegeApi', async original => ({ ...await original(), getColleges: vi.fn(), searchColleges: vi.fn(), getCollegeById: vi.fn(), createCollege: vi.fn(), deleteCollege: vi.fn(), updateCollege: vi.fn(), updateCollegeStatus: vi.fn(), uploadCollegeLogo: vi.fn(), fetchCollegeLogo: vi.fn(async () => ''), getCollegeLogoEndpoint: () => '', getCollegeLogoUrl: () => '', readCachedCollegeLogo: () => '' }))
 const college = (id = 7) => ({ id, name: `College ${String.fromCharCode(64 + id)}`, code: `COL${id}`, type: 'Engineering', university: 'Engineering University', addressLine1: 'Campus Road', city: 'Bengaluru', state: 'Karnataka', pincode: '560001', contact: '9876543210', email: `office${id}@example.edu`, principal: 'Principal Name', principalEmail: 'principal@example.edu', principalContact: '9876543211', status: 1 })
 beforeEach(() => {
   vi.clearAllMocks(); localStorage.clear(); fixture.rows = [college()]; fixture.edit = true; fixture.create = true; fixture.access = { isSuperAdmin: true, userId: 1 }
@@ -21,6 +21,9 @@ beforeEach(() => {
   createCollege.mockReset().mockImplementation(async payload => { const created = { ...payload, id:90 }; fixture.rows.push(created); return { data:created } })
   updateCollege.mockReset().mockResolvedValue({}); uploadCollegeLogo.mockReset().mockResolvedValue({})
   updateCollegeStatus.mockReset().mockResolvedValue({ data: { success: true } })
+  deleteCollege.mockReset().mockImplementation(async id => {
+    fixture.rows = fixture.rows.filter(row => row.id !== id)
+  })
   vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Lookup unavailable')))
 })
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); document.documentElement.removeAttribute('data-theme') })
@@ -54,7 +57,12 @@ test.each(['light', 'dark'])('compact directory preserves full values and horizo
   expect(within(table).getByRole('button', { name: `View details for ${record.name}` }).title).toBe(record.name)
   expect(within(table).getByText(record.email).title).toBe(record.email)
   const actions = container.querySelector('.college-config-row-actions')
-  expect(within(actions).getAllByRole('button')).toHaveLength(4)
+  expect(within(actions).getAllByRole('button').map(button => button.getAttribute('aria-label'))).toEqual([
+    `View ${record.name}`,
+    `Edit ${record.name}`,
+    `Deactivate ${record.name}`,
+    `Delete ${record.name}`,
+  ])
   for (const button of within(actions).getAllByRole('button')) expect(button.title).toBe(button.getAttribute('aria-label'))
   expect(within(screen.getByRole('region', { name: 'Organization Directory' })).getByRole('button', { name: 'Export' })).toBeTruthy()
   document.documentElement.removeAttribute('data-theme')
@@ -88,6 +96,22 @@ test('read-only access hides create/edit/status actions and retains view', async
   expect(screen.queryByRole('button', { name: 'Add College' })).toBeNull()
   expect(screen.queryByRole('button', { name: 'Edit College G' })).toBeNull()
   expect(screen.queryByRole('button', { name: 'Deactivate College G' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Delete College G' })).toBeNull()
+})
+
+test('organization deletion requires confirmation and refreshes the directory', async () => {
+  fixture.rows = [college(), college(8)]
+  mount()
+  const action = await screen.findByRole('button', { name: 'Delete College H' })
+  fireEvent.click(action)
+  fireEvent.click(within(screen.getByRole('dialog', { name: 'Delete Organization' })).getByRole('button', { name: 'Cancel' }))
+  expect(deleteCollege).not.toHaveBeenCalled()
+
+  fireEvent.click(action)
+  fireEvent.click(within(screen.getByRole('dialog', { name: 'Delete Organization' })).getByRole('button', { name: 'Delete Organization' }))
+  await waitFor(() => expect(screen.queryByRole('button', { name: 'Delete College H' })).toBeNull())
+  expect(deleteCollege).toHaveBeenCalledExactlyOnceWith(8)
+  expect(await screen.findByRole('button', { name: 'View College G' })).toBeTruthy()
 })
 
 test('status action requires confirmation, retains backend errors and allows retry', async () => {
