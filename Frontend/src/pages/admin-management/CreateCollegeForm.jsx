@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import ViewDialog from '../../components/ViewDialog'
-import { collegeUserMappingsApi, lookupIndianPostOffices, userDirectoryApi } from '../../api/apiEndpoints'
+import { collegeUserMappingsApi, lookupIndianPostOffices, roleApi, userDirectoryApi } from '../../api/apiEndpoints'
 import {
   createCollege,
   createCollegeSettings,
@@ -17,6 +17,7 @@ import eventBus, { ERP_EVENTS } from '../../services/eventBus'
 import { rememberCreated } from '../../utils/newestFirst'
 import { showSuccess } from '../../utils/toast'
 import SearchableSelect from '../../components/SearchableSelect.jsx'
+import { SYSTEM_MODULES } from './systemPermissionModules.js'
 import './AdminManagement.css'
 
 const INDIA_STATES = [
@@ -43,6 +44,21 @@ const isValidIndianMobile = value => {
       ? compactPhone.slice(2)
       : compactPhone
   return /^[6-9]\d{9}$/.test(nationalNumber)
+}
+const isValidAdminMobile = value => /^[6-9]\d{9}$/.test(String(value || '').trim())
+const adminMobileError = value => !String(value || '').trim()
+  ? 'Phone number is required.'
+  : isValidAdminMobile(value) ? '' : 'Enter a 10-digit mobile number starting with 6-9.'
+const adminPasswordError = value => {
+  const password = String(value || '')
+  if (!password) return 'Admin password is required.'
+  if (new TextEncoder().encode(password).length > 72) return 'Password must not exceed 72 UTF-8 bytes.'
+  const missing = []
+  if (Array.from(password).length < 8) missing.push('at least 8 characters')
+  if (!/[A-Z]/.test(password)) missing.push('one uppercase letter')
+  if (!/[a-z]/.test(password)) missing.push('one lowercase letter')
+  if (!/\d/.test(password)) missing.push('one number')
+  return missing.length ? `Password must include ${missing.join(', ')}.` : ''
 }
 const normalizedIndianState = value => {
   const state = String(value || '').trim()
@@ -88,17 +104,47 @@ const settingIdentifier = response => {
   const body = response?.data ?? response
   return identifier(body?.data ?? body?.setting ?? body)
 }
-const roleIdentifier = lookups => {
+const collegeAdminRoleFromLookups = lookups => {
   const roles = Array.isArray(lookups?.roles) ? lookups.roles : []
-  const role = roles.find(item => {
+  return roles.find(item => {
     const roleCode = String(item.roleCode ?? item.code ?? '').toUpperCase()
     const roleName = String(item.roleName ?? item.name ?? '').toUpperCase()
     const isGlobal = item.collegeId == null || Number(item.collegeId) === 0
     return isGlobal && (roleCode === 'COLLEGE_ADMIN' || roleName === 'COLLEGE ADMIN' || roleName === 'COLLEGE ADMINISTRATOR')
   })
+}
+const roleIdentifier = lookups => {
+  const role = collegeAdminRoleFromLookups(lookups)
   return role?.roleId ?? role?.id
 }
+const permissionDefaults = () => Object.fromEntries(SYSTEM_MODULES.map(module => [module.id, {
+  view: true,
+  create: true,
+  edit: true,
+  delete: false,
+  export: true,
+}]))
+const asPermissionRows = value => Array.isArray(value) ? value : Array.isArray(value?.permissions) ? value.permissions : []
+const applyPermissionRows = (base, rows) => rows.reduce((permissions, row) => {
+  const moduleKey = row.moduleKey ?? row.ModuleKey
+  if (!moduleKey || !SYSTEM_MODULES.some(module => module.id === moduleKey)) return permissions
+  permissions[moduleKey] = {
+    view: isActive(row.canView ?? row.CanView),
+    create: isActive(row.canCreate ?? row.CanCreate),
+    edit: isActive(row.canEdit ?? row.CanEdit),
+    delete: isActive(row.canDelete ?? row.CanDelete),
+    export: isActive(row.canExport ?? row.CanExport),
+  }
+  return permissions
+}, { ...base })
 const activeMapping = mapping => isActive(mapping.status) && !mapping.removedAt
+const WIZARD_STEPS = [
+  { id: 'organization', label: 'Organization', description: 'Identity and primary contact' },
+  { id: 'address', label: 'Address', description: 'Location and postal details' },
+  { id: 'admins', label: 'Administrators', description: 'Add or assign College Admins' },
+  { id: 'permissions', label: 'Permissions', description: 'Initialize admin screen access' },
+  { id: 'review', label: 'Review', description: 'Confirm and create' },
+]
 
 async function loadAllUsers() {
   const rows = []
@@ -137,6 +183,7 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
   const [pincodeLoading, setPincodeLoading] = useState(false)
   const pincodeLookupRef = useRef(0)
   const [admins, setAdmins] = useState([])
+  const [editingAdminIds, setEditingAdminIds] = useState({})
   const [errors, setErrors] = useState({})
   const [adminErrors, setAdminErrors] = useState({})
   const [submitError, setSubmitError] = useState('')
@@ -149,6 +196,12 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
   const [assignSearch, setAssignSearch] = useState('')
   const [existingAdmins, setExistingAdmins] = useState([])
   const [adminRoleId, setAdminRoleId] = useState(null)
+  const [permissionGrants, setPermissionGrants] = useState(permissionDefaults)
+  const [permissionLoading, setPermissionLoading] = useState(Boolean(editId))
+  const [permissionLoadError, setPermissionLoadError] = useState('')
+  const [permissionLoadAttempt, setPermissionLoadAttempt] = useState(0)
+  const [activeStep, setActiveStep] = useState(0)
+  const [highestUnlockedStep, setHighestUnlockedStep] = useState(0)
   const [createdCollegeId, setCreatedCollegeId] = useState(null)
   const [collegeSettingId, setCollegeSettingId] = useState(null)
   const [adminProgress, setAdminProgress] = useState({})
@@ -211,13 +264,20 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
         assignedUsers.forEach(user => {
           const userId = user.userId ?? user.id
           if (userId == null || rowsById.has(String(userId))) return
+          const fullName = user.fullName ?? user.name ?? ''
+          const email = user.email ?? ''
+          const phone = user.mobile ?? user.phone ?? ''
           const currentStatus = isActive(user.status ?? user.accountStatus) ? '1' : '0'
           rowsById.set(String(userId), {
             id: `assigned-admin-${userId}`,
             kind: 'existing',
-            fullName: user.fullName ?? user.name ?? '',
-            email: user.email ?? '',
-            phone: user.mobile ?? user.phone ?? '',
+            fullName,
+            email,
+            phone,
+            originalFullName: fullName,
+            originalEmail: email,
+            originalPhone: phone,
+            roleIds: Array.isArray(user.roleIds) ? user.roleIds : user.roleId ? [user.roleId] : [],
             status: currentStatus,
             currentStatus,
             userId,
@@ -227,13 +287,20 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
         mappedUserIds.forEach(userId => {
           const user = userById.get(userId)
           if (!user || !isCollegeAdmin(user) || rowsById.has(userId)) return
+          const fullName = user.fullName ?? user.name ?? ''
+          const email = user.email ?? ''
+          const phone = user.mobile ?? user.phone ?? ''
           const currentStatus = isActive(user.status ?? user.accountStatus) ? '1' : '0'
           rowsById.set(userId, {
             id: `assigned-admin-${userId}`,
             kind: 'existing',
-            fullName: user.fullName ?? user.name ?? '',
-            email: user.email ?? '',
-            phone: user.mobile ?? user.phone ?? '',
+            fullName,
+            email,
+            phone,
+            originalFullName: fullName,
+            originalEmail: email,
+            originalPhone: phone,
+            roleIds: Array.isArray(user.roleIds) ? user.roleIds : user.roleId ? [user.roleId] : [],
             status: currentStatus,
             currentStatus,
             userId: user.userId ?? user.id,
@@ -242,9 +309,11 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
         })
         const assignedRows = [...rowsById.values()]
         setAdmins(assignedRows)
+        setEditingAdminIds({})
         setAdminProgress(Object.fromEntries(assignedRows.map(row => [row.id, {
           userId: row.userId,
           assigned: true,
+          detailsSaved: false,
           statusSaved: false,
         }])))
       } catch (error) {
@@ -256,6 +325,39 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
     loadOrganization()
     return () => { active = false }
   }, [editId])
+
+  useEffect(() => {
+    if (!editId || accessLoading) return undefined
+    if (access?.isSuperAdmin !== true) {
+      setPermissionLoading(false)
+      return undefined
+    }
+    let active = true
+    setPermissionLoading(true)
+    setPermissionLoadError('')
+    const loadPermissions = async () => {
+      try {
+        const roleId = roleIdentifier(await userDirectoryApi.lookups())
+        if (!roleId) throw new Error('The global College Admin role is not available in role lookups.')
+        if (!active) return
+        setAdminRoleId(roleId)
+        let scoped = []
+        try {
+          scoped = await roleApi.getCollegePermissions(roleId, editId)
+        } catch (error) {
+          if (Number(error?.status ?? error?.response?.status) !== 404) throw error
+        }
+        if (!active) return
+        setPermissionGrants(applyPermissionRows(permissionDefaults(), asPermissionRows(scoped)))
+      } catch (error) {
+        if (active) setPermissionLoadError(error?.message || 'Could not load this organization’s College Admin permissions.')
+      } finally {
+        if (active) setPermissionLoading(false)
+      }
+    }
+    loadPermissions()
+    return () => { active = false }
+  }, [editId, access?.isSuperAdmin, accessLoading, permissionLoadAttempt])
 
   useEffect(() => {
     const pincode = values.pincode.trim()
@@ -353,6 +455,55 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
       return !term || `${user.fullName} ${user.email}`.toLowerCase().includes(term)
     })
   }, [admins, assignSearch, existingAdmins])
+  const permissionGroups = useMemo(() => SYSTEM_MODULES.reduce((groups, module) => {
+    if (!groups[module.category]) groups[module.category] = []
+    groups[module.category].push(module)
+    return groups
+  }, {}), [])
+  const activePermissionCount = SYSTEM_MODULES.reduce((count, module) =>
+    count + Object.values(permissionGrants[module.id] || {}).filter(Boolean).length, 0)
+
+  const updatePermission = (moduleId, actionId, checked) => {
+    setPermissionGrants(current => {
+      const module = current[moduleId] || { view: false, create: false, edit: false, delete: false, export: false }
+      return {
+        ...current,
+        [moduleId]: {
+          ...module,
+          [actionId]: checked,
+          ...(checked && actionId !== 'view' ? { view: true } : {}),
+          ...(!checked && actionId === 'view' ? { create: false, edit: false, delete: false, export: false } : {}),
+        },
+      }
+    })
+    setErrors(current => ({ ...current, permissions: '' }))
+    setSubmitError('')
+  }
+
+  const toggleModulePermissions = moduleId => {
+    setPermissionGrants(current => {
+      const module = current[moduleId] || {}
+      const enabled = ['view', 'create', 'edit', 'delete', 'export'].every(action => Boolean(module[action]))
+      return {
+        ...current,
+        [moduleId]: Object.fromEntries(['view', 'create', 'edit', 'delete', 'export'].map(action => [action, !enabled])),
+      }
+    })
+    setErrors(current => ({ ...current, permissions: '' }))
+    setSubmitError('')
+  }
+
+  const applyPermissionPreset = preset => {
+    setPermissionGrants(Object.fromEntries(SYSTEM_MODULES.map(module => [module.id, {
+      view: preset !== 'clear',
+      create: preset === 'full' || preset === 'recommended',
+      edit: preset === 'full' || preset === 'recommended',
+      delete: preset === 'full',
+      export: preset !== 'clear',
+    }])))
+    setErrors(current => ({ ...current, permissions: '' }))
+    setSubmitError('')
+  }
 
   const updateValue = (field, value) => {
     if (field === 'pincode') {
@@ -373,7 +524,22 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
   const updateAdmin = (rowId, field, value) => {
     setAdmins(current => current.map(row => row.id === rowId ? { ...row, [field]: value } : row))
     setAdminErrors(current => ({ ...current, [rowId]: { ...current[rowId], [field]: '' } }))
+    setAdminProgress(current => ({ ...current, [rowId]: { ...current[rowId], detailsSaved: false } }))
     setSubmitError('')
+  }
+
+  const validateAdminPhone = rowId => {
+    const row = admins.find(item => item.id === rowId)
+    if (!row || row.kind !== 'new') return
+    const message = adminMobileError(row.phone)
+    setAdminErrors(current => ({ ...current, [rowId]: { ...current[rowId], phone: message } }))
+  }
+
+  const validateAdminPassword = rowId => {
+    const row = admins.find(item => item.id === rowId)
+    if (!row || row.kind !== 'new') return
+    const message = adminPasswordError(row.initialPassword)
+    setAdminErrors(current => ({ ...current, [rowId]: { ...current[rowId], initialPassword: message } }))
   }
 
   const toggleAddAdmin = () => {
@@ -395,7 +561,7 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
     setAdminErrors(current => { const next = { ...current }; delete next[rowId]; return next })
   }
 
-  const validate = () => {
+  const validate = (scope = 'all') => {
     const fieldErrors = {}
     const rowErrors = {}
     const organizationName = values.name.trim()
@@ -403,38 +569,53 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
     const contactPerson = values.contactPerson.trim()
     const email = values.email.trim()
     const address = values.address.trim()
-    if (!organizationName) fieldErrors.name = 'Organization name is required.'
-    else if (organizationName.length < 3 || organizationName.length > 30) fieldErrors.name = 'Use between 3 and 30 characters.'
-    else if (!ORGANIZATION_NAME_PATTERN.test(organizationName)) fieldErrors.name = 'Use letters, numbers, spaces, and standard punctuation.'
-    if (!organizationCode) fieldErrors.code = 'Organization code is required.'
-    else if (!ORGANIZATION_CODE_PATTERN.test(organizationCode)) fieldErrors.code = 'Use 2-10 letters and numbers only.'
-    if (contactPerson && (contactPerson.length < 2 || contactPerson.length > 30 || !PERSON_NAME_PATTERN.test(contactPerson))) fieldErrors.contactPerson = 'Enter a valid contact person name (2-30 letters).'
-    if (email && (email.length > 254 || !EMAIL_PATTERN.test(email))) fieldErrors.email = 'Enter a valid email address (maximum 254 characters).'
-    if (values.phone.trim() && !isValidIndianMobile(values.phone)) fieldErrors.phone = 'Enter a valid 10-digit Indian mobile number starting with 6-9.'
-    if (address && address.length > 250) fieldErrors.address = 'Address must not exceed 250 characters.'
-    for (const name of ['area', 'city', 'district', 'state']) {
-      const location = values[name].trim()
-      if (location && (location.length < 2 || location.length > 100 || !LOCATION_NAME_PATTERN.test(location))) {
-        fieldErrors[name] = 'Use 2-100 letters, numbers, spaces, or standard punctuation.'
-      }
+    const checkOrganization = scope === 'all' || scope === 'organization'
+    const checkAddress = scope === 'all' || scope === 'address'
+    const checkAdmins = scope === 'all' || scope === 'admins'
+    const checkPermissions = scope === 'all' || scope === 'permissions'
+    if (checkOrganization) {
+      if (!organizationName) fieldErrors.name = 'Organization name is required.'
+      else if (organizationName.length < 3 || organizationName.length > 30) fieldErrors.name = 'Use between 3 and 30 characters.'
+      else if (!ORGANIZATION_NAME_PATTERN.test(organizationName)) fieldErrors.name = 'Use letters, numbers, spaces, and standard punctuation.'
+      if (!organizationCode) fieldErrors.code = 'Organization code is required.'
+      else if (!ORGANIZATION_CODE_PATTERN.test(organizationCode)) fieldErrors.code = 'Use 2-10 letters and numbers only.'
+      if (!contactPerson) fieldErrors.contactPerson = 'Contact person is required.'
+      else if (contactPerson.length < 2 || contactPerson.length > 30 || !PERSON_NAME_PATTERN.test(contactPerson)) fieldErrors.contactPerson = 'Enter a valid contact person name (2-30 letters).'
+      if (!email) fieldErrors.email = 'Email is required.'
+      else if (email.length > 254 || !EMAIL_PATTERN.test(email)) fieldErrors.email = 'Enter a valid email address (maximum 254 characters).'
+      if (!values.phone.trim()) fieldErrors.phone = 'Phone number is required.'
+      else if (!isValidIndianMobile(values.phone)) fieldErrors.phone = 'Enter a valid 10-digit Indian mobile number starting with 6-9.'
     }
-    if (values.country === 'India' && values.pincode.trim() && !/^[1-9]\d{5}$/.test(values.pincode.trim())) fieldErrors.pincode = 'Enter a valid 6-digit Indian PIN code starting with 1-9.'
-    else if (values.country !== 'India' && values.pincode.trim() && !/^[\p{L}\p{N}][\p{L}\p{N}\s-]{1,11}$/u.test(values.pincode.trim())) fieldErrors.pincode = 'Enter a valid postal code (2-12 letters or numbers).'
-    if (!admins.length) fieldErrors.admins = 'Add or assign at least one College Admin.'
+    if (checkAddress) {
+      if (!address) fieldErrors.address = 'Address is required.'
+      else if (address.length > 250) fieldErrors.address = 'Address must not exceed 250 characters.'
+      for (const name of ['area', 'city', 'district', 'state']) {
+        const location = values[name].trim()
+        if (!location) fieldErrors[name] = `${name[0].toUpperCase()}${name.slice(1)} is required.`
+        else if (location.length < 2 || location.length > 100 || !LOCATION_NAME_PATTERN.test(location)) {
+          fieldErrors[name] = 'Use 2-100 letters, numbers, spaces, or standard punctuation.'
+        }
+      }
+      if (!values.country.trim()) fieldErrors.country = 'Country is required.'
+      if (!values.pincode.trim()) fieldErrors.pincode = 'PIN or postal code is required.'
+      else if (values.country === 'India' && !/^[1-9]\d{5}$/.test(values.pincode.trim())) fieldErrors.pincode = 'Enter a valid 6-digit Indian PIN code starting with 1-9.'
+      else if (values.country !== 'India' && !/^[\p{L}\p{N}][\p{L}\p{N}\s-]{1,11}$/u.test(values.pincode.trim())) fieldErrors.pincode = 'Enter a valid postal code (2-12 letters or numbers).'
+    }
 
     const seenEmails = new Map()
     const seenUsers = new Map()
-    admins.forEach(row => {
+    if (checkAdmins && !admins.length) fieldErrors.admins = 'Add or assign at least one College Admin.'
+    if (checkPermissions && !SYSTEM_MODULES.some(module => permissionGrants[module.id]?.view)) fieldErrors.permissions = 'Grant View access to at least one screen so the College Admin can use this organization.'
+    if (checkAdmins) admins.forEach(row => {
       const current = {}
       const fullName = row.fullName.trim()
-      if (row.kind === 'new' && !fullName) current.fullName = 'Full name is required.'
-      else if (row.kind === 'new' && (fullName.length < 2 || fullName.length > 30 || !PERSON_NAME_PATTERN.test(fullName))) current.fullName = 'Enter a valid full name (2-30 letters).'
-      if (row.kind === 'new' && row.initialPassword.length < 12) current.initialPassword = 'Password must be at least 12 characters.'
-      else if (row.kind === 'new' && new TextEncoder().encode(row.initialPassword).length > 72) current.initialPassword = 'Password must not exceed 72 UTF-8 bytes.'
+      if (!fullName) current.fullName = 'Full name is required.'
+      else if (fullName.length < 2 || fullName.length > 30 || !PERSON_NAME_PATTERN.test(fullName)) current.fullName = 'Enter a valid full name (2-30 letters).'
+      if (row.kind === 'new' && adminPasswordError(row.initialPassword)) current.initialPassword = adminPasswordError(row.initialPassword)
       if (!row.email.trim()) current.email = 'Admin email is required.'
       else if (row.email.trim().length > 254 || !EMAIL_PATTERN.test(row.email.trim())) current.email = 'Enter a valid email address (maximum 254 characters).'
-      if (row.kind === 'new' && !row.phone.trim()) current.phone = 'Phone number is required.'
-      else if (row.kind === 'new' && !isValidIndianMobile(row.phone)) current.phone = 'Enter a valid 10-digit Indian mobile number starting with 6-9.'
+      if (row.kind === 'new' && adminMobileError(row.phone)) current.phone = adminMobileError(row.phone)
+      else if (row.kind === 'existing' && row.phone.trim() && !isValidIndianMobile(row.phone)) current.phone = 'Enter a valid 10-digit Indian mobile number starting with 6-9.'
       if (row.kind === 'existing' && !row.userId) current.selection = 'Select an existing administrator.'
 
       const normalizedEmail = row.email.trim().toLowerCase()
@@ -455,9 +636,38 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
       if (Object.keys(current).length) rowErrors[row.id] = { ...rowErrors[row.id], ...current }
     })
 
-    setErrors(fieldErrors)
-    setAdminErrors(rowErrors)
+    if (scope === 'all') setErrors(fieldErrors)
+    else {
+      const keysToReplace = scope === 'organization'
+        ? ['name', 'code', 'contactPerson', 'email', 'phone']
+        : scope === 'address'
+          ? ['address', 'area', 'city', 'district', 'state', 'country', 'pincode']
+          : scope === 'admins'
+            ? ['admins']
+            : ['permissions']
+      setErrors(current => {
+        const next = { ...current }
+        keysToReplace.forEach(key => { delete next[key] })
+        return { ...next, ...fieldErrors }
+      })
+    }
+    if (checkAdmins) setAdminErrors(rowErrors)
     return !Object.keys(fieldErrors).length && !Object.keys(rowErrors).length
+  }
+
+  const goNext = () => {
+    const current = WIZARD_STEPS[activeStep]
+    if (current?.id === 'permissions' && (permissionLoading || permissionLoadError)) return
+    if (!current || !validate(current.id)) return
+    setSubmitError('')
+    setActiveStep(step => Math.min(WIZARD_STEPS.length - 1, step + 1))
+    setHighestUnlockedStep(step => Math.min(WIZARD_STEPS.length - 1, Math.max(step, activeStep + 1)))
+  }
+
+  const goToStep = index => {
+    if (submitting || index < 0 || index > highestUnlockedStep) return
+    setActiveStep(index)
+    setSubmitError('')
   }
 
   const openAssignAdmin = async () => {
@@ -493,6 +703,7 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
             fullName: user.fullName ?? user.name ?? '',
             email: user.email ?? '',
             phone: user.mobile ?? user.phone ?? '',
+            roleIds: Array.isArray(user.roleIds) ? user.roleIds : user.roleId ? [user.roleId] : [],
             status: isActive(user.status ?? user.accountStatus) ? '1' : '0',
             eligible,
           }
@@ -518,6 +729,10 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
       fullName: user.fullName,
       email: user.email,
       phone: user.phone,
+      originalFullName: user.fullName,
+      originalEmail: user.email,
+      originalPhone: user.phone,
+      roleIds: user.roleIds || [],
       status: user.status,
       currentStatus: user.status,
       userId: user.userId,
@@ -562,9 +777,9 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
     }
   }
 
-  const submit = async event => {
-    event.preventDefault()
-    if (submitting || submitLock.current || !validate()) return
+  const submit = async () => {
+    if (activeStep !== WIZARD_STEPS.length - 1) return
+    if (submitting || submitLock.current || permissionLoading || permissionLoadError || !validate()) return
     if (access?.isSuperAdmin !== true) {
       setSubmitError(`Only the platform Super Admin can ${editId ? 'edit an organization' : 'create an organization'}.`)
       return
@@ -659,13 +874,24 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
       }
 
       const settingId = await ensureCollegeSetting(collegeId)
-      const hasNewAdmin = admins.some(row => row.kind === 'new' && !progress[row.id]?.userId)
       let collegeAdminRoleId = adminRoleId
-      if (hasNewAdmin && !collegeAdminRoleId) {
+      if (!collegeAdminRoleId) {
         collegeAdminRoleId = roleIdentifier(await userDirectoryApi.lookups())
         if (!collegeAdminRoleId) throw new Error('The global College Admin role is not available in role lookups.')
         setAdminRoleId(collegeAdminRoleId)
       }
+
+      await roleApi.saveCollegePermissions(collegeAdminRoleId, collegeId, SYSTEM_MODULES.map(module => {
+        const grants = permissionGrants[module.id] || {}
+        return {
+          moduleKey: module.id,
+          canView: Boolean(grants.view),
+          canCreate: Boolean(grants.create),
+          canEdit: Boolean(grants.edit),
+          canDelete: Boolean(grants.delete),
+          canExport: Boolean(grants.export),
+        }
+      }))
 
       for (const row of admins) {
         const current = { ...(progress[row.id] || {}) }
@@ -718,6 +944,25 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
           }
           current.userId = userId
           current.assigned = true
+          progress = { ...progress, [row.id]: current }
+          setAdminProgress(progress)
+        }
+
+        if (row.kind === 'existing' && !current.detailsSaved) {
+          const detailsChanged = String(row.fullName).trim() !== String(row.originalFullName ?? row.fullName).trim()
+            || String(row.email).trim() !== String(row.originalEmail ?? row.email).trim()
+            || String(row.phone).trim() !== String(row.originalPhone ?? row.phone).trim()
+          if (detailsChanged) {
+            const roleIds = Array.isArray(row.roleIds) && row.roleIds.length ? row.roleIds : [collegeAdminRoleId]
+            await userDirectoryApi.update(userId, {
+              fullName: row.fullName.trim(),
+              email: row.email.trim(),
+              mobile: row.phone.trim() || null,
+              collegeId: Number(collegeId),
+              roleIds,
+            })
+          }
+          current.detailsSaved = true
           progress = { ...progress, [row.id]: current }
           setAdminProgress(progress)
         }
@@ -782,75 +1027,91 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
     <div className={`college-create-field${options.full ? ' college-create-field--full' : ''}`} key={name}>
       <label htmlFor={`college-create-${name}`}>{label}{options.required && <span aria-hidden="true"> *</span>}</label>
       {options.multiline
-        ? <textarea id={`college-create-${name}`} rows="3" maxLength={options.maxLength} value={values[name]} onChange={event => updateValue(name, event.target.value)} aria-invalid={Boolean(errors[name])} />
+        ? <textarea id={`college-create-${name}`} rows="3" maxLength={options.maxLength} value={values[name]} onChange={event => updateValue(name, event.target.value)} aria-invalid={Boolean(errors[name])} aria-required={Boolean(options.required)} required={Boolean(options.required)} disabled={options.disabled} aria-describedby={errors[name] ? `college-create-${name}-error` : undefined} />
         : options.select
-        ? <select id={`college-create-${name}`} value={values[name]} onChange={event => updateValue(name, event.target.value)} aria-invalid={Boolean(errors[name])}>
+        ? <select id={`college-create-${name}`} value={values[name]} onChange={event => updateValue(name, event.target.value)} aria-invalid={Boolean(errors[name])} aria-required={Boolean(options.required)} required={Boolean(options.required)} disabled={options.disabled} aria-describedby={errors[name] ? `college-create-${name}-error` : undefined}>
           {options.select.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
         </select>
-        : <input id={`college-create-${name}`} type={type} maxLength={options.maxLength} inputMode={options.inputMode} value={values[name]} onChange={event => updateValue(name, event.target.value)} aria-invalid={Boolean(errors[name])} />}
+        : <input id={`college-create-${name}`} type={type} maxLength={options.maxLength} inputMode={options.inputMode} value={values[name]} onChange={event => updateValue(name, event.target.value)} aria-invalid={Boolean(errors[name])} aria-required={Boolean(options.required)} required={Boolean(options.required)} disabled={options.disabled} aria-describedby={errors[name] ? `college-create-${name}-error` : undefined} />}
       {options.hint && <small>{options.hint}</small>}
-      {errors[name] && <small className="college-create-error" role="alert">{errors[name]}</small>}
+      {errors[name] && <small id={`college-create-${name}-error`} className="college-create-error" role="alert">{errors[name]}</small>}
     </div>
   )
 
-  const form = <form className="college-create-form" onSubmit={submit} noValidate>
+  const form = <form className="college-create-form" onSubmit={event => { event.preventDefault(); if (activeStep < WIZARD_STEPS.length - 1) goNext() }} noValidate>
     {submitError && <div className="college-create-alert" role="alert">{submitError}{createdCollegeId && <span> Organization #{createdCollegeId} is already saved; retry to finish pending assignments.</span>}{creationUnconfirmed && <span> Refresh the Organization directory before retrying to avoid a duplicate.</span>}</div>}
     {formLoading && <p role="status">Loading organization and administrator assignments…</p>}
     {formLoadError && <div className="college-create-alert" role="alert">{formLoadError}</div>}
-    <section className="college-create-section" aria-labelledby="college-create-contact-title">
+    <nav className="college-create-stepper" aria-label="Organization setup steps">
+      {WIZARD_STEPS.map((step, index) => <button
+        key={step.id}
+        type="button"
+        className={`college-create-step${activeStep === index ? ' is-current' : ''}${index < activeStep ? ' is-complete' : ''}`}
+        aria-current={activeStep === index ? 'step' : undefined}
+        aria-label={`Step ${index + 1}: ${step.label}`}
+        disabled={submitting || index > highestUnlockedStep}
+        onClick={() => goToStep(index)}
+      >
+        <span className="college-create-step-number">{index < activeStep ? '✓' : index + 1}</span>
+        <span className="college-create-step-copy"><strong>{step.label}</strong><small>{step.description}</small></span>
+      </button>)}
+    </nav>
+    <section className="college-create-section" hidden={activeStep !== 0} aria-labelledby="college-create-contact-title">
       <header><div><h2 id="college-create-contact-title">Organization Details</h2><p>Organization identity and primary contact information</p></div></header>
       <div className="college-create-grid">
         {field('Organization Name', 'name', 'text', { required: true, maxLength: 30 })}
         {field('Organization Code', 'code', 'text', { required: true, maxLength: 10 })}
-        {field('Contact Person', 'contactPerson', 'text', { maxLength: 30 })}
-        {field('Email', 'email', 'email', { maxLength: 254 })}
-        {field('Phone Number', 'phone', 'tel', { maxLength: 20, hint: '10-digit Indian mobile number starting with 6-9.' })}
-        {field('Status', 'status', 'text', { select: [{ value: '1', label: 'Active' }, { value: '0', label: 'Inactive' }] })}
+        {field('Contact Person', 'contactPerson', 'text', { required: true, maxLength: 30 })}
+        {field('Email', 'email', 'email', { required: true, maxLength: 254 })}
+        {field('Phone Number', 'phone', 'tel', { required: true, inputMode: 'tel', maxLength: 20, hint: '10-digit Indian mobile number starting with 6-9.' })}
+        {field('Status', 'status', 'text', { required: true, select: [{ value: '1', label: 'Active' }, { value: '0', label: 'Inactive' }] })}
       </div>
       <p className="college-create-note">Contact Person is saved to the organization record’s existing Principal field.</p>
     </section>
 
-    <section className="college-create-section" aria-labelledby="college-create-address-title">
+    <section className="college-create-section" hidden={activeStep !== 1} aria-labelledby="college-create-address-title">
       <header><div><h2 id="college-create-address-title">Address Details</h2><p>Enter a PIN code to fill its area, city, district, and state.</p></div></header>
       <div className="college-create-grid">
-        {field('Address', 'address', 'text', { full: true, multiline: true, maxLength: 250 })}
-        {field('City', 'city', 'text', { maxLength: 100 })}
-        {field('District', 'district', 'text', { maxLength: 100 })}
-        {field('State', 'state')}
-        {field('Country', 'country')}
+        {field('Address', 'address', 'text', { required: true, full: true, multiline: true, maxLength: 250 })}
+        {field('City', 'city', 'text', { required: true, maxLength: 100 })}
+        {field('District', 'district', 'text', { required: true, maxLength: 100 })}
+        {field('State', 'state', 'text', { required: true, maxLength: 100 })}
+        {field('Country', 'country', 'text', { required: true, select: [...new Set([...COUNTRIES, values.country])].map(country => ({ value: country, label: country })) })}
         <div className="college-create-field" key="pincode">
-          <label htmlFor="college-create-pincode">{values.country === 'India' ? 'PIN Code' : 'Postal Code'}</label>
+          <label htmlFor="college-create-pincode">{values.country === 'India' ? 'PIN Code' : 'Postal Code'} <span aria-hidden="true">*</span></label>
           <input id="college-create-pincode" name="pincode" type="text" inputMode={values.country === 'India' ? 'numeric' : 'text'} autoComplete="postal-code" maxLength={values.country === 'India' ? 6 : 12} value={values.pincode}
             placeholder={values.country === 'India' ? '6-digit PIN code' : 'Enter postal code'}
             onChange={event => updateValue('pincode', values.country === 'India' ? event.target.value.replace(/\D/g, '').slice(0, 6) : event.target.value.slice(0, 12))}
-            aria-invalid={Boolean(errors.pincode)} aria-describedby={errors.pincode ? 'college-create-pincode-error college-create-pincode-hint' : 'college-create-pincode-hint'} />
+            required aria-required="true" aria-invalid={Boolean(errors.pincode)} aria-describedby={errors.pincode ? 'college-create-pincode-error college-create-pincode-hint' : 'college-create-pincode-hint'} />
           {errors.pincode && <small id="college-create-pincode-error" className="college-create-error" role="alert">{errors.pincode}</small>}
           <small id="college-create-pincode-hint" className={`college-create-pincode-status${/filled|selected|restored/i.test(pincodeStatus) ? ' is-success' : /could not|failed|no post offices|valid 6-digit/i.test(pincodeStatus) ? ' is-error' : pincodeStatus ? ' is-pending' : ''}`} role="status">
             {pincodeLoading ? 'Loading post offices…' : pincodeStatus || (values.country === 'India' ? 'Enter 6 digits to find post offices.' : 'Enter the postal code for this location.')}
           </small>
         </div>
-        <div className="college-create-field" key="post-office">
-          <label htmlFor="college-create-post-office">Post Office / Area</label>
-          <SearchableSelect
-            label="Post Office / Area"
-            value={values.area}
-            options={postOfficeOptions}
-            onChange={selectPostOffice}
-            placeholder={pincodeLoading ? 'Loading post offices…' : postOffices.length ? 'Select a post office' : values.area || 'Enter a valid PIN code first'}
-            searchPlaceholder="Search post offices…"
-            noOptionsMessage={pincodeStatus.toLowerCase().includes('no post offices') ? pincodeStatus : 'No post offices found for this PIN code.'}
-            loading={pincodeLoading}
-            disabled={values.country !== 'India' || !/^\d{6}$/.test(values.pincode.trim()) || pincodeLoading || (!postOffices.length && !values.area)}
-            error={Boolean(errors.area)}
-            triggerProps={{ id: 'college-create-post-office', 'aria-describedby': errors.area ? 'college-create-post-office-error' : undefined }}
-          />
-          {errors.area && <small id="college-create-post-office-error" className="college-create-error" role="alert">{errors.area}</small>}
-          {postOffices.length > 1 && !values.area && <small className="college-create-pincode-status is-pending" role="status">Select the correct post office to fill the address.</small>}
-        </div>
+        {values.country === 'India' && postOffices.length > 0
+          ? <div className="college-create-field" key="post-office">
+            <label htmlFor="college-create-post-office">Post Office / Area <span aria-hidden="true">*</span></label>
+            <SearchableSelect
+              label="Post Office / Area"
+              value={values.area}
+              options={postOfficeOptions}
+              onChange={selectPostOffice}
+              placeholder={pincodeLoading ? 'Loading post offices…' : 'Select a post office'}
+              searchPlaceholder="Search post offices…"
+              noOptionsMessage={pincodeStatus.toLowerCase().includes('no post offices') ? pincodeStatus : 'No post offices found for this PIN code.'}
+              loading={pincodeLoading}
+              disabled={!/^\d{6}$/.test(values.pincode.trim()) || pincodeLoading}
+              error={Boolean(errors.area)}
+              triggerProps={{ id: 'college-create-post-office', 'aria-required': 'true', 'aria-describedby': errors.area ? 'college-create-post-office-error' : undefined }}
+            />
+            {errors.area && <small id="college-create-post-office-error" className="college-create-error" role="alert">{errors.area}</small>}
+            {postOffices.length > 1 && !values.area && <small className="college-create-pincode-status is-pending" role="status">Select the correct post office to fill the address.</small>}
+          </div>
+          : field('Area', 'area', 'text', { required: true, maxLength: 100 })}
       </div>
     </section>
 
-    <section className="college-create-section" aria-labelledby="college-create-admin-title">
+    <section className="college-create-section" hidden={activeStep !== 2} aria-labelledby="college-create-admin-title">
       <header className="college-create-section-heading">
         <div><h2 id="college-create-admin-title">Administrators</h2><p>Add a new admin or assign an existing unassigned account</p></div>
         <div className="college-create-inline-actions">
@@ -891,8 +1152,9 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
           </div>
           <div className="college-create-field">
             <label htmlFor={`${row.id}-phone`}>Phone Number <span aria-hidden="true">*</span></label>
-            <input id={`${row.id}-phone`} type="tel" inputMode="tel" maxLength="20" value={row.phone} onChange={event => updateAdmin(row.id, 'phone', event.target.value)} aria-invalid={Boolean(adminErrors[row.id]?.phone)} />
-            {adminErrors[row.id]?.phone && <small className="college-create-error">{adminErrors[row.id].phone}</small>}
+            <input id={`${row.id}-phone`} type="tel" inputMode="numeric" autoComplete="tel-national" maxLength="10" value={row.phone} onChange={event => updateAdmin(row.id, 'phone', event.target.value.replace(/\D/g, '').slice(0, 10))} onBlur={() => validateAdminPhone(row.id)} aria-invalid={Boolean(adminErrors[row.id]?.phone)} aria-describedby={`${row.id}-phone-hint${adminErrors[row.id]?.phone ? ` ${row.id}-phone-error` : ''}`} />
+            <small id={`${row.id}-phone-hint`}>Enter 10 digits starting with 6-9.</small>
+            {adminErrors[row.id]?.phone && <small id={`${row.id}-phone-error`} className="college-create-error" role="alert">{adminErrors[row.id].phone}</small>}
           </div>
           <div className="college-create-field">
             <label htmlFor={`${row.id}-email`}>Admin Email <span aria-hidden="true">*</span></label>
@@ -901,8 +1163,9 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
           </div>
           <div className="college-create-field">
             <label htmlFor={`${row.id}-password`}>Admin Password <span aria-hidden="true">*</span></label>
-            <input id={`${row.id}-password`} type="password" autoComplete="new-password" maxLength="72" value={row.initialPassword} onChange={event => updateAdmin(row.id, 'initialPassword', event.target.value)} aria-invalid={Boolean(adminErrors[row.id]?.initialPassword)} />
-            {adminErrors[row.id]?.initialPassword && <small className="college-create-error">{adminErrors[row.id].initialPassword}</small>}
+            <input id={`${row.id}-password`} type="password" autoComplete="new-password" maxLength="72" value={row.initialPassword} onChange={event => updateAdmin(row.id, 'initialPassword', event.target.value)} onBlur={() => validateAdminPassword(row.id)} aria-invalid={Boolean(adminErrors[row.id]?.initialPassword)} aria-describedby={`${row.id}-password-hint${adminErrors[row.id]?.initialPassword ? ` ${row.id}-password-error` : ''}`} />
+            <small id={`${row.id}-password-hint`}>At least 8 characters, including uppercase, lowercase, and a number.</small>
+            {adminErrors[row.id]?.initialPassword && <small id={`${row.id}-password-error`} className="college-create-error" role="alert">{adminErrors[row.id].initialPassword}</small>}
           </div>
           <div className="college-create-field">
             <label htmlFor={`${row.id}-status`}>Admin Status</label>
@@ -918,8 +1181,39 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
       {adminMode === 'new' && <button type="button" className="college-create-link college-create-add-another" onClick={addAnotherAdmin} disabled={submitting}>Add another administrator</button>}
       {admins.filter(row => row.kind === 'existing').length > 0 && <div className="college-create-assigned-admins" aria-label="Assigned administrators">
         {admins.filter(row => row.kind === 'existing').map((row, index) => <div className="college-create-assigned-admin" key={row.id}>
-          <span><strong>{row.alreadyAssigned ? 'Current administrator' : `Assigned administrator ${index + 1}`}</strong><small>{row.fullName} · {row.email}</small></span>
-          {!row.alreadyAssigned && <button type="button" className="college-create-remove" onClick={() => removeAdmin(row.id)} disabled={submitting}>Remove</button>}
+          <div className="college-create-assigned-admin-heading">
+            <span><strong>{row.alreadyAssigned ? `Current administrator ${index + 1}` : `Assigned administrator ${index + 1}`}</strong><small>{row.fullName} · {row.email}{row.phone ? ` · ${row.phone}` : ''}</small></span>
+            <div className="college-create-inline-actions">
+              {editId && row.alreadyAssigned && <button type="button" className="college-create-secondary" onClick={() => setEditingAdminIds(current => ({ ...current, [row.id]: !current[row.id] }))} disabled={submitting} aria-expanded={Boolean(editingAdminIds[row.id])}>
+                {editingAdminIds[row.id] ? 'Done editing' : 'Edit details'}
+              </button>}
+              {!row.alreadyAssigned && <button type="button" className="college-create-remove" onClick={() => removeAdmin(row.id)} disabled={submitting}>Remove</button>}
+            </div>
+          </div>
+          {editId && row.alreadyAssigned && editingAdminIds[row.id] && <div className="college-create-grid college-create-assigned-admin-fields">
+            <div className="college-create-field">
+              <label htmlFor={`${row.id}-name`}>Full Name <span aria-hidden="true">*</span></label>
+              <input id={`${row.id}-name`} maxLength="30" value={row.fullName} onChange={event => updateAdmin(row.id, 'fullName', event.target.value)} aria-invalid={Boolean(adminErrors[row.id]?.fullName)} />
+              {adminErrors[row.id]?.fullName && <small className="college-create-error" role="alert">{adminErrors[row.id].fullName}</small>}
+            </div>
+            <div className="college-create-field">
+              <label htmlFor={`${row.id}-email`}>Admin Email <span aria-hidden="true">*</span></label>
+              <input id={`${row.id}-email`} type="email" maxLength="254" value={row.email} onChange={event => updateAdmin(row.id, 'email', event.target.value)} aria-invalid={Boolean(adminErrors[row.id]?.email)} />
+              {adminErrors[row.id]?.email && <small className="college-create-error" role="alert">{adminErrors[row.id].email}</small>}
+            </div>
+            <div className="college-create-field">
+              <label htmlFor={`${row.id}-phone`}>Phone Number</label>
+              <input id={`${row.id}-phone`} type="tel" inputMode="numeric" autoComplete="tel-national" maxLength="20" value={row.phone} onChange={event => updateAdmin(row.id, 'phone', event.target.value)} aria-invalid={Boolean(adminErrors[row.id]?.phone)} />
+              <small>Optional; use a 10-digit Indian mobile number starting with 6-9.</small>
+              {adminErrors[row.id]?.phone && <small className="college-create-error" role="alert">{adminErrors[row.id].phone}</small>}
+            </div>
+            <div className="college-create-field">
+              <label htmlFor={`${row.id}-status`}>Admin Status</label>
+              <select id={`${row.id}-status`} value={row.status} onChange={event => updateAdmin(row.id, 'status', event.target.value)}>
+                <option value="1">Active</option><option value="0">Inactive</option>
+              </select>
+            </div>
+          </div>}
         </div>)}
       </div>}
       {adminMode !== 'new' && admins.filter(row => row.kind === 'new').length > 0 && <div className="college-create-assigned-admins" aria-label="New administrator drafts">
@@ -931,9 +1225,64 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
 
     </section>
 
+    <section className="college-create-section college-create-permissions" hidden={activeStep !== 3} aria-labelledby="college-create-permissions-title">
+      <header className="college-create-permissions-heading">
+        <div><h2 id="college-create-permissions-title">College Admin Permissions</h2><p>Choose which screens the College Admin can access in this organization.</p></div>
+        <span className="college-create-permission-count">{activePermissionCount} of {SYSTEM_MODULES.length * 5} grants</span>
+      </header>
+      {permissionLoading && <p className="college-create-note" role="status">Loading this organization’s permission settings…</p>}
+      {permissionLoadError && <div className="college-create-alert" role="alert">{permissionLoadError}<button type="button" className="college-create-link" onClick={() => setPermissionLoadAttempt(value => value + 1)} disabled={permissionLoading}>Retry</button></div>}
+      <div className="college-create-permission-presets" role="group" aria-label="Permission presets">
+        <span>Start with</span>
+        <button type="button" className="college-create-secondary" onClick={() => applyPermissionPreset('recommended')} disabled={permissionLoading || Boolean(permissionLoadError) || submitting}>Recommended</button>
+        <button type="button" className="college-create-secondary" onClick={() => applyPermissionPreset('readOnly')} disabled={permissionLoading || Boolean(permissionLoadError) || submitting}>Read only</button>
+        <button type="button" className="college-create-secondary" onClick={() => applyPermissionPreset('full')} disabled={permissionLoading || Boolean(permissionLoadError) || submitting}>Full access</button>
+        <button type="button" className="college-create-link" onClick={() => applyPermissionPreset('clear')} disabled={permissionLoading || Boolean(permissionLoadError) || submitting}>Clear all</button>
+      </div>
+      <p className="college-create-note">Recommended access includes view, create, edit, and export. Delete stays off until you grant it.</p>
+      {errors.permissions && <p className="college-create-error" role="alert">{errors.permissions}</p>}
+      <div className="college-create-permission-groups">
+        {Object.entries(permissionGroups).map(([category, modules]) => <section className="college-create-permission-group" key={category} aria-labelledby={`college-permission-${category.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`}>
+          <h3 id={`college-permission-${category.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`}>{category}</h3>
+          <div className="college-create-permission-table-wrap">
+            <table className="college-create-permission-table">
+              <thead><tr><th scope="col">Screen</th><th scope="col">View</th><th scope="col">Create</th><th scope="col">Edit</th><th scope="col">Delete</th><th scope="col">Export</th><th scope="col">Row</th></tr></thead>
+              <tbody>{modules.map(module => <tr key={module.id}>
+                <th scope="row"><span>{module.name}</span><small>{module.description}</small></th>
+                {['view', 'create', 'edit', 'delete', 'export'].map(action => <td key={action}><input
+                  type="checkbox"
+                  aria-label={`${module.name} ${action}`}
+                  checked={Boolean(permissionGrants[module.id]?.[action])}
+                  onChange={event => updatePermission(module.id, action, event.target.checked)}
+                  disabled={permissionLoading || Boolean(permissionLoadError) || submitting}
+                /></td>)}
+                <td><button type="button" className="college-create-link" onClick={() => toggleModulePermissions(module.id)} disabled={permissionLoading || Boolean(permissionLoadError) || submitting}>All</button></td>
+              </tr>)}</tbody>
+            </table>
+          </div>
+        </section>)}
+      </div>
+    </section>
+
+    <section className="college-create-section college-create-review" hidden={activeStep !== 4} aria-labelledby="college-create-review-title">
+      <header><div><h2 id="college-create-review-title">Review organization setup</h2><p>Confirm the details, administrators, and initial screen access.</p></div></header>
+      <div className="college-create-review-grid">
+        <article><span>Organization</span><strong>{values.name || 'Name not entered'}</strong><small>{values.code || 'Code not entered'} · {values.status === '1' ? 'Active' : 'Inactive'}</small></article>
+        <article><span>Primary contact</span><strong>{values.contactPerson || 'Not provided'}</strong><small>{values.email || 'No email'}{values.phone ? ` · ${values.phone}` : ''}</small></article>
+        <article><span>Address</span><strong>{[values.address, values.area, values.city, values.district, values.state, values.pincode, values.country].filter(Boolean).join(', ') || 'No address provided'}</strong></article>
+        <article><span>Administrators</span>{admins.length ? admins.map(row => <small key={row.id}><strong>{row.fullName || 'New administrator'}</strong> · {row.email || 'Email not entered'}{row.kind === 'existing' ? ' · Existing account' : ' · New account'}</small>) : <small>No College Admin selected</small>}</article>
+        <article><span>Initial permissions</span><strong>{activePermissionCount} grants across {SYSTEM_MODULES.length} screens</strong><small>Delete access is {SYSTEM_MODULES.some(module => permissionGrants[module.id]?.delete) ? 'enabled for selected screens' : 'off'}.</small></article>
+      </div>
+    </section>
+
     <footer className="college-create-footer">
-      <button type="button" className="college-create-secondary" onClick={onDismiss} disabled={submitting}>Cancel</button>
-      <button type="submit" className="college-create-primary" disabled={submitting || creationUnconfirmed || formLoading || Boolean(formLoadError)}>{submitting ? (editId ? 'Saving Organization…' : 'Creating Organization…') : submitLabel}</button>
+      <div className="college-create-footer-start"><span>Step {activeStep + 1} of {WIZARD_STEPS.length}</span><button type="button" className="college-create-secondary" onClick={onDismiss} disabled={submitting}>Cancel</button></div>
+      <div className="college-create-footer-actions">
+        {activeStep > 0 && <button type="button" className="college-create-secondary" onClick={() => goToStep(activeStep - 1)} disabled={submitting}>Previous</button>}
+        {activeStep < WIZARD_STEPS.length - 1
+          ? <button type="button" className="college-create-primary" onClick={goNext} disabled={submitting || formLoading || permissionLoading && activeStep === 3 || Boolean(formLoadError) || Boolean(permissionLoadError && activeStep === 3)}>Continue</button>
+          : <button type="button" className="college-create-primary" onClick={submit} disabled={submitting || creationUnconfirmed || formLoading || permissionLoading || Boolean(formLoadError) || Boolean(permissionLoadError)}>{submitting ? (editId ? 'Saving Organization…' : 'Creating Organization…') : submitLabel}</button>}
+      </div>
     </footer>
   </form>
 

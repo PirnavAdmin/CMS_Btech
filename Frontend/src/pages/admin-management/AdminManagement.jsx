@@ -4,7 +4,7 @@ import { calculateCompletion, completionSchemas, departmentDirectoryCompletion }
 import { CompletionSummary, ProgressiveFormFooter, ResumeSetupAction, completionColumn } from '../../components/RecordCompletion'
 import SectionsRoomsHeader from '../../components/SectionsRoomsHeader'
 import { accessGovernance } from '../../services/accessGovernanceService'
-import { deleteDepartment, generateNextAcademicYear } from '../../auth/collegeApi'
+import { deleteCollege, deleteDepartment, generateNextAcademicYear } from '../../auth/collegeApi'
 import ViewDialog from '../../components/ViewDialog'
 import { Link, useLocation } from 'react-router-dom'
 import DataTable from '../../components/DataTable'
@@ -49,6 +49,7 @@ import '../../styles/directory-search.css'
 import './AdminManagement.css'
 import { selectedCollegeId as readSelectedCollegeId, createCollegeScope } from '../../utils/collegeScope.js'
 import CreateCollegeForm from './CreateCollegeForm.jsx'
+import { SYSTEM_MODULES as systemPermissionModules } from './systemPermissionModules.js'
 
 // AcademicYearManagement screen and private helpers.
 const AcademicYearManagementScreen = (() => {
@@ -2056,6 +2057,7 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
   const isSuperAdmin = collegeAccess?.isSuperAdmin === true || effectiveAccess?.isSuperAdmin === true
   const canCreateCollege = canAction('/college-institution-management', 'create')
   const canEditCollege = canAction('/college-institution-management', 'edit')
+  const canDeleteCollege = isSuperAdmin && canAction('/college-institution-management', 'delete')
   const isAssignedCollegeAdmin = !isSuperAdmin && Boolean(assignedCollegeId)
   const currentUserId = effectiveAccess?.userId == null ? '' : String(effectiveAccess.userId)
   const canManageCollege = (college) => isSuperAdmin || String(college.id) === String(assignedCollegeId) || (currentUserId && String(college.createdBy) === currentUserId)
@@ -2095,6 +2097,10 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
   const [pendingStatus, setPendingStatus] = useState(null)
   const [collegeImpact, setCollegeImpact] = useState(null)
   const [isStatusSaving, setIsStatusSaving] = useState(false)
+  const [collegeToDelete, setCollegeToDelete] = useState(null)
+  const [collegeDeleteError, setCollegeDeleteError] = useState('')
+  const [isCollegeDeleting, setIsCollegeDeleting] = useState(false)
+  const collegeDeleteLock = useRef(false)
   const [collegeSummary, setCollegeSummary] = useState({ total: null, active: null, inactive: null, loading: true, error: '' })
 
   // Pagination state
@@ -2395,6 +2401,25 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
     }
   }
 
+  const confirmCollegeDelete = async () => {
+    if (!canDeleteCollege || !collegeToDelete || collegeDeleteLock.current) return
+    collegeDeleteLock.current = true
+    setIsCollegeDeleting(true)
+    setCollegeDeleteError('')
+    try {
+      await deleteCollege(collegeToDelete.id)
+      setCollegeToDelete(null)
+      eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED)
+      showSuccess('Organization deleted successfully.')
+      await Promise.all([loadColleges(searchTerm), refreshCollegeSummary()])
+    } catch (error) {
+      setCollegeDeleteError(getApiErrorMessage(error, 'Unable to delete this organization. Please try again.'))
+    } finally {
+      collegeDeleteLock.current = false
+      setIsCollegeDeleting(false)
+    }
+  }
+
   // -- College Settings: list --
   const fetchSettingsList = async () => {
     setIsSettingsLoading(true)
@@ -2557,7 +2582,22 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
                   { key:'contact', label:'Contact', className:'college-col-contact', render:college => <div><span className="college-config-truncate" title={college.contact}>{college.contact || '—'}</span><small className="college-config-email college-config-truncate" title={college.email}>{college.email || '—'}</small></div> },
                   { key:'status', label:'Status', className:'college-col-status', render:college => <StatusBadge value={college.status === 'active' ? 'Active' : 'Inactive'} /> },
                   completionColumn,
-                ]} rowActions={college => <div className="college-config-row-actions"><button type="button" className="table-action-btn" title={`View ${college.name}`} aria-label={`View ${college.name}`} onClick={() => openDetails(college)}><FiEye /></button>{canEditCollege && canManageCollege(college) && <><button type="button" className="table-action-btn action-edit" title={`Edit ${college.name}`} aria-label={`Edit ${college.name}`} onClick={() => openEdit(college)}><EditIcon /></button><ResumeSetupAction completion={college.completion} name={college.name} onClick={() => openEdit(college)} /><button type="button" className="table-action-btn" title={`${college.status === 'active' ? 'Deactivate' : 'Activate'} ${college.name}`} aria-label={`${college.status === 'active' ? 'Deactivate' : 'Activate'} ${college.name}`} onClick={() => toggleStatus(college)}>{college.status === 'active' ? <FiToggleRight data-status="active" /> : <FiToggleLeft data-status="inactive" />}</button></>}</div>} />
+                ]} rowActions={college => (
+                  <div className="college-config-row-actions">
+                    <button type="button" className="table-action-btn" title={`View ${college.name}`} aria-label={`View ${college.name}`} onClick={() => openDetails(college)}><FiEye /></button>
+                    {canEditCollege && canManageCollege(college) && <>
+                      <button type="button" className="table-action-btn action-edit" title={`Edit ${college.name}`} aria-label={`Edit ${college.name}`} onClick={() => openEdit(college)}><EditIcon /></button>
+                      <button type="button" className="table-action-btn" title={`${college.status === 'active' ? 'Deactivate' : 'Activate'} ${college.name}`} aria-label={`${college.status === 'active' ? 'Deactivate' : 'Activate'} ${college.name}`} onClick={() => toggleStatus(college)}>{college.status === 'active' ? <FiToggleRight data-status="active" /> : <FiToggleLeft data-status="inactive" />}</button>
+                    </>}
+                    {canDeleteCollege && <button
+                      type="button"
+                      className="table-action-btn action-delete"
+                      title={`Delete ${college.name}`}
+                      aria-label={`Delete ${college.name}`}
+                      onClick={() => { setCollegeDeleteError(''); setCollegeToDelete(college) }}
+                    ><FiTrash2 /></button>}
+                  </div>
+                )} />
               </>
             )}
             </section>
@@ -2966,6 +3006,23 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
           </>
         )}
       </div>
+
+      {collegeToDelete && <ViewDialog
+        title="Delete Organization"
+        subtitle={collegeToDelete.name}
+        icon={FiTrash2}
+        showExport={false}
+        busy={isCollegeDeleting}
+        maxWidth="440px"
+        onClose={() => setCollegeToDelete(null)}
+        footerContent={<>
+          <button type="button" className="erp-btn erp-btn--secondary" disabled={isCollegeDeleting} onClick={() => setCollegeToDelete(null)}>Cancel</button>
+          <button type="button" className="erp-btn erp-btn--danger" disabled={isCollegeDeleting} onClick={confirmCollegeDelete}>{isCollegeDeleting ? 'Deleting…' : 'Delete Organization'}</button>
+        </>}
+      >
+        <p>Delete <strong>{collegeToDelete.name}</strong> from the organization directory?</p>
+        {collegeDeleteError && <p role="alert">{collegeDeleteError}</p>}
+      </ViewDialog>}
 
       {pendingStatus && <StatusConfirmDialog entity="College" name={`${pendingStatus.college.name} (${pendingStatus.college.code})`} nextStatus={pendingStatus.nextStatus} onCancel={() => { setPendingStatus(null); setCollegeImpact(null) }} onConfirm={confirmStatusChange} busy={isStatusSaving} error={statusError}
         confirmLabel={pendingStatus.nextStatus === 'active' ? 'Activate College' : 'Deactivate College'}
@@ -3944,32 +4001,7 @@ const mergeScopedRolePermissions = (base = {}, scoped = []) => {
 // ==========================================
 // SYSTEM MODULES & PERMISSION SCHEMAS
 // ==========================================
-const SYSTEM_MODULES = [
-  { id: 'colleges', name: 'Colleges & Institutions', description: 'Manage campus details, leadership & accreditation', category: 'Administration' },
-  { id: 'departments', name: 'Departments & Leadership', description: 'Department HODs, academic streams & allocations', category: 'Administration' },
-  { id: 'academic_years', name: 'Academic Years', description: 'Configure academic batches, terms & calendars', category: 'Administration' },
-  { id: 'courses', name: 'Courses & Degrees', description: 'B.Tech / M.Tech degree programs & curricula', category: 'Academic Structure' },
-  { id: 'branches', name: 'Branches / Streams', description: 'CSE, ECE, EEE, Mechanical & other specializations', category: 'Academic Structure' },
-  { id: 'semesters', name: 'Semesters Management', description: 'Semester terms, session schedules & durations', category: 'Academic Structure' },
-  { id: 'sections', name: 'Sections & Allocations', description: 'Student class sections, batches & capacities', category: 'Academic Structure' },
-  { id: 'subjects', name: 'Subject Management', description: 'Core theory & lab subjects syllabus and codes', category: 'Curriculum' },
-  { id: 'timetable', name: 'Timetable Scheduling', description: 'Weekly faculty-subject class periods & classrooms', category: 'Curriculum' },
-  { id: 'credits', name: 'Credits & Syllabus', description: 'Credit points weightage, passing marks & units', category: 'Curriculum' },
-  { id: 'electives', name: 'Elective Selection', description: 'Professional & open electives student allotments', category: 'Curriculum' },
-  { id: 'faculty_directory', name: 'Faculty Directory', description: 'Faculty staff profiles, credentials & contact details', category: 'Staff & HR' },
-  { id: 'faculty_attendance', name: 'Faculty Attendance', description: 'Daily biometric attendance & duty logs', category: 'Staff & HR' },
-  { id: 'faculty_leaves', name: 'Faculty Leaves', description: 'Staff leave applications, approval & balance tracking', category: 'Staff & HR' },
-  { id: 'faculty_payroll', name: 'Faculty Payroll', description: 'Salary slips, allowances, deductions & disbursal', category: 'Staff & HR' },
-  { id: 'student_admissions', name: 'Student Admissions', description: 'New student admissions, document verification & enrollment', category: 'Students' },
-  { id: 'student_profiles', name: 'Student Profiles', description: 'Student biodata, parent contact & academic records', category: 'Students' },
-  { id: 'student_attendance', name: 'Student Attendance', description: 'Period-wise attendance marking & percentage tracking', category: 'Students' },
-  { id: 'student_promotions', name: 'Student Promotions', description: 'Yearly/semester promotion, detention & batch upgrades', category: 'Students' },
-  { id: 'marks', name: 'Marks & Internal Assessment', description: 'Mid exam marks, lab internals & assignment grading', category: 'Exams & Results' },
-  { id: 'results', name: 'Semester Results & Grading', description: 'Final SGPA/CGPA generation, grade cards & publishing', category: 'Exams & Results' },
-  { id: 'fees', name: 'Fee Structures & Collections', description: 'Tuition fees, dues, challans & payment receipts', category: 'Finance' },
-  { id: 'roles_permissions', name: 'Roles & Access Control', description: 'Manage RBAC permissions matrix and security policies', category: 'System Settings' },
-  { id: 'academic_settings', name: 'Academic Context Settings', description: 'Active academic year, college selection & global rules', category: 'System Settings' },
-]
+const SYSTEM_MODULES = systemPermissionModules
 
 const PERMISSION_ACTIONS = [
   { id: 'view', label: 'View', icon: FiEye, desc: 'Read / View records' },
