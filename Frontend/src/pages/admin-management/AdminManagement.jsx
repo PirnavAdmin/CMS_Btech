@@ -2051,7 +2051,7 @@ const mapRecordToForm = (record) => ({
 
 function CollegeInstitutionManagement({ initialView = 'list' }) {
   const navigate = useNavigate()
-  const { collegeAccess, selectedCollege, selectedCollegeId } = AcademicContextImports_useAcademic()
+  const { collegeAccess } = AcademicContextImports_useAcademic()
   const { access: effectiveAccess, canAction } = screenAccessImports_useScreenAccess()
   const assignedCollegeId = getUserCollegeId()
   const isSuperAdmin = collegeAccess?.isSuperAdmin === true || effectiveAccess?.isSuperAdmin === true
@@ -2512,7 +2512,6 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
             <header className="college-config-heading">
               <div>
                 <h1>Organization Configuration</h1>
-                <p className="college-config-context"><span>Working Organization</span><strong>{selectedCollege?.name || selectedCollege?.collegeName || 'Not selected'}</strong><small>{selectedCollege?.code || selectedCollege?.collegeCode || ''}</small></p>
               </div>
               <CompactSummaryImports_default label="Organization summary" items={summaryCards.map(({ label, value, tone }) => ({
                 label: `${label} Organizations`,
@@ -2576,9 +2575,9 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
             ) : (
               <>
                 <DataTable caption="Organizations" tableClassName="college-config-table" rows={filteredColleges} pagination={{ page: currentPage, pageSize: itemsPerPage, onPageChange: setCurrentPage }} columns={[
-                  { key:'name', label:'Organization Name', className:'college-col-identity', render:college => <div className="college-config-identity"><CollegeLogoImage src={college.logo} fallbackSrc={getCollegeLogoEndpoint(college.id)} alt="" code={college.code} className="college-config-logo" /><div className="college-config-identity-details"><button type="button" className="college-config-name" title={college.name} aria-label={`View details for ${college.name}`} onClick={() => openDetails(college)}>{college.name}</button><small title={college.type}>{college.type}</small>{String(selectedCollegeId) === String(college.id) && <span className="college-config-working">Working organization</span>}</div></div> },
+                  { key:'name', label:'Organization Name', className:'college-col-identity', render:college => <div className="college-config-identity"><CollegeLogoImage src={college.logo} fallbackSrc={getCollegeLogoEndpoint(college.id)} alt="" code={college.code} className="college-config-logo" /><div className="college-config-identity-details"><button type="button" className="college-config-name" title={college.name} aria-label={`View details for ${college.name}`} onClick={() => openDetails(college)}>{college.name}</button><small title={college.type}>{college.type}</small></div></div> },
                   { key:'code', label:'Organization Code', className:'college-col-code', render:college => <code className="college-config-truncate" title={college.code}>{college.code}</code> },
-                  { key:'address', label:'Location', className:'college-col-location', render:college => <span className="college-config-truncate" title={[college.addressLine1 || college.address, college.city, college.state].filter(Boolean).join(', ')}>{[college.addressLine1 || college.address, college.city, college.state].filter(Boolean).join(', ') || '—'}</span> },
+                  { key:'principal', label:'Contact Person', className:'college-col-contact-person', render:college => <span className="college-config-truncate" title={college.principal}>{college.principal || '—'}</span> },
                   { key:'contact', label:'Contact', className:'college-col-contact', render:college => <div><span className="college-config-truncate" title={college.contact}>{college.contact || '—'}</span><small className="college-config-email college-config-truncate" title={college.email}>{college.email || '—'}</small></div> },
                   { key:'status', label:'Status', className:'college-col-status', render:college => <StatusBadge value={college.status === 'active' ? 'Active' : 'Inactive'} /> },
                   completionColumn,
