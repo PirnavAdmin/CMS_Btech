@@ -1,6 +1,6 @@
 .college-profile-editor-dialog {
-  width: min(980px, calc(100vw - 40px));
-  max-height: min(76dvh, 640px);
+  width: min(860px, calc(100vw - 40px));
+  max-height: min(72dvh, 560px);
   margin: auto;
   border-radius: 16px;
 }
