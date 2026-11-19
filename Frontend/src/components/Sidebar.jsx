@@ -61,6 +61,7 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
         ...make('colleges','colleges','Organizations','/college-institution-management'),
         ...make('demo_requests','demo_requests','Demo Requests','/demo-requests'),
         ...make('subscriptions','subscriptions','Subscriptions','/subscriptions'),
+        ...make('accounts_billing','accounts_billing','Accounts & Billing','/accounts-billing'),
         ...make('roles_permissions','roles_permissions','Permissions','/roles-designations'),
         ...make('academic_settings','academic_settings','Platform Settings','/settings'),
       ]}]

@@ -85,6 +85,10 @@
 .college-create-section > header { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
 .college-create-section h2 { margin:0; color:var(--text-primary); font-size:15px; }
 .college-create-section header p { margin:4px 0 0; color:var(--text-muted); font-size:11px; }
+.college-create-setup-subsection { display:grid; gap:14px; margin-top:4px; padding-top:14px; border-top:1px solid var(--border); }
+.college-create-setup-subsection > header { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
+.college-create-setup-subsection h3 { margin:0; color:var(--text-primary); font-size:13px; }
+.college-create-setup-subsection header p { margin:4px 0 0; color:var(--text-muted); font-size:11px; }
 .college-create-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px 16px; }
 .college-create-field { display:grid; min-width:0; gap:6px; align-content:start; }
 .college-create-field--full { grid-column:1/-1; }
@@ -119,10 +123,10 @@
 .college-create-primary:disabled,
 .college-create-remove:disabled,
 .college-create-link:disabled { cursor:not-allowed; opacity:.6; }
-.college-create-admin-row { display:grid; gap:12px; min-width:0; margin:0; padding:14px; border:1px solid var(--border); border-radius:10px; }
-.college-create-admin-row legend { padding:0 6px; color:var(--text-secondary); font-size:11px; font-weight:700; }
+.college-create-admin-row { display:grid; gap:12px; min-width:0; margin:0; padding:0; border:0; }
+.college-create-admin-row legend { padding:0 0 2px; color:var(--text-secondary); font-size:11px; font-weight:700; }
 .college-create-assigned-admins { display:grid; gap:8px; }
-.college-create-assigned-admin { display:grid; gap:12px; min-width:0; padding:10px 12px; border:1px solid var(--border); border-radius:9px; background:var(--surface); }
+.college-create-assigned-admin { display:grid; gap:12px; min-width:0; padding:10px 0; border-bottom:1px solid var(--border); background:transparent; }
 .college-create-assigned-admin-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; min-width:0; }
 .college-create-assigned-admin-heading > span { display:grid; gap:3px; min-width:0; color:var(--text-primary); font-size:12px; }
 .college-create-assigned-admin-fields { width:100%; padding-top:12px; border-top:1px solid var(--border); }
@@ -135,7 +139,7 @@
 .college-create-assignment-heading { display:flex; align-items:center; justify-content:space-between; gap:10px; }
 .college-create-assignment-heading h3 { margin:0; font-size:13px; }
 .college-create-section[hidden] { display:none; }
-.college-create-stepper { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px; padding:4px 0 10px; border-bottom:1px solid var(--border); }
+.college-create-stepper { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; padding:4px 0 10px; border-bottom:1px solid var(--border); }
 .college-create-step { display:flex; align-items:center; gap:9px; min-width:0; padding:9px 10px; border:1px solid transparent; border-radius:10px; background:transparent; color:var(--text-secondary); font:inherit; text-align:left; cursor:pointer; }
 .college-create-step:hover:not(:disabled) { background:var(--surface); border-color:var(--border); }
 .college-create-step.is-current { color:var(--brand); background:var(--brand-soft); border-color:var(--cms-primary-border,var(--border)); }
@@ -193,7 +197,7 @@
   .college-create-field--full,
   .college-create-row-actions { grid-column:auto; }
   .college-create-inline-actions { width:100%; justify-content:flex-start; }
-  .college-create-stepper { grid-template-columns:repeat(5,minmax(108px,1fr)); overflow:auto; padding-bottom:8px; }
+  .college-create-stepper { grid-template-columns:repeat(3,minmax(108px,1fr)); overflow:auto; padding-bottom:8px; }
   .college-create-step { padding:8px 7px; }
   .college-create-step-copy small { display:none; }
   .college-create-permissions-heading { flex-direction:row !important; align-items:flex-start !important; }
