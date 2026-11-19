@@ -49,6 +49,7 @@ import '../../styles/directory-search.css'
 import './AdminManagement.css'
 import { selectedCollegeId as readSelectedCollegeId, createCollegeScope } from '../../utils/collegeScope.js'
 import CreateCollegeForm from './CreateCollegeForm.jsx'
+import { SYSTEM_MODULES as systemPermissionModules } from './systemPermissionModules.js'
 
 // AcademicYearManagement screen and private helpers.
 const AcademicYearManagementScreen = (() => {
@@ -3944,32 +3945,7 @@ const mergeScopedRolePermissions = (base = {}, scoped = []) => {
 // ==========================================
 // SYSTEM MODULES & PERMISSION SCHEMAS
 // ==========================================
-const SYSTEM_MODULES = [
-  { id: 'colleges', name: 'Colleges & Institutions', description: 'Manage campus details, leadership & accreditation', category: 'Administration' },
-  { id: 'departments', name: 'Departments & Leadership', description: 'Department HODs, academic streams & allocations', category: 'Administration' },
-  { id: 'academic_years', name: 'Academic Years', description: 'Configure academic batches, terms & calendars', category: 'Administration' },
-  { id: 'courses', name: 'Courses & Degrees', description: 'B.Tech / M.Tech degree programs & curricula', category: 'Academic Structure' },
-  { id: 'branches', name: 'Branches / Streams', description: 'CSE, ECE, EEE, Mechanical & other specializations', category: 'Academic Structure' },
-  { id: 'semesters', name: 'Semesters Management', description: 'Semester terms, session schedules & durations', category: 'Academic Structure' },
-  { id: 'sections', name: 'Sections & Allocations', description: 'Student class sections, batches & capacities', category: 'Academic Structure' },
-  { id: 'subjects', name: 'Subject Management', description: 'Core theory & lab subjects syllabus and codes', category: 'Curriculum' },
-  { id: 'timetable', name: 'Timetable Scheduling', description: 'Weekly faculty-subject class periods & classrooms', category: 'Curriculum' },
-  { id: 'credits', name: 'Credits & Syllabus', description: 'Credit points weightage, passing marks & units', category: 'Curriculum' },
-  { id: 'electives', name: 'Elective Selection', description: 'Professional & open electives student allotments', category: 'Curriculum' },
-  { id: 'faculty_directory', name: 'Faculty Directory', description: 'Faculty staff profiles, credentials & contact details', category: 'Staff & HR' },
-  { id: 'faculty_attendance', name: 'Faculty Attendance', description: 'Daily biometric attendance & duty logs', category: 'Staff & HR' },
-  { id: 'faculty_leaves', name: 'Faculty Leaves', description: 'Staff leave applications, approval & balance tracking', category: 'Staff & HR' },
-  { id: 'faculty_payroll', name: 'Faculty Payroll', description: 'Salary slips, allowances, deductions & disbursal', category: 'Staff & HR' },
-  { id: 'student_admissions', name: 'Student Admissions', description: 'New student admissions, document verification & enrollment', category: 'Students' },
-  { id: 'student_profiles', name: 'Student Profiles', description: 'Student biodata, parent contact & academic records', category: 'Students' },
-  { id: 'student_attendance', name: 'Student Attendance', description: 'Period-wise attendance marking & percentage tracking', category: 'Students' },
-  { id: 'student_promotions', name: 'Student Promotions', description: 'Yearly/semester promotion, detention & batch upgrades', category: 'Students' },
-  { id: 'marks', name: 'Marks & Internal Assessment', description: 'Mid exam marks, lab internals & assignment grading', category: 'Exams & Results' },
-  { id: 'results', name: 'Semester Results & Grading', description: 'Final SGPA/CGPA generation, grade cards & publishing', category: 'Exams & Results' },
-  { id: 'fees', name: 'Fee Structures & Collections', description: 'Tuition fees, dues, challans & payment receipts', category: 'Finance' },
-  { id: 'roles_permissions', name: 'Roles & Access Control', description: 'Manage RBAC permissions matrix and security policies', category: 'System Settings' },
-  { id: 'academic_settings', name: 'Academic Context Settings', description: 'Active academic year, college selection & global rules', category: 'System Settings' },
-]
+const SYSTEM_MODULES = systemPermissionModules
 
 const PERMISSION_ACTIONS = [
   { id: 'view', label: 'View', icon: FiEye, desc: 'Read / View records' },
