@@ -272,17 +272,8 @@
 .accounts-billing .ab-dark-select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .ab-portfolio-controls > div { display: grid; justify-items: end; gap: 5px; }
 .ab-portfolio-controls small { color: var(--text-muted); font-size: 9px; white-space: nowrap; }
-.ab-dashboard-export { display: inline-flex; align-items: center; gap: 6px; height: 34px; border: 1px solid var(--border); border-radius: 7px; padding: 0 10px; background: var(--surface-soft); color: var(--text-primary); font-size: 10px !important; font-weight: 800; }
+.ab-dashboard-export { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 7px; width: 118px; min-width: 118px; height: 36px; min-height: 36px; border: 1px solid var(--border); border-radius: 8px; padding: 0 10px; background: var(--surface-soft); color: var(--text-primary); font: 750 .82rem/1 var(--font-family); white-space: nowrap; cursor: pointer; }
 .ab-dashboard-export:hover { background: var(--surface-hover); }
-.ab-portfolio-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-.ab-portfolio-kpis article { position: relative; display: grid; gap: 6px; min-width: 0; overflow: hidden; border: 1px solid var(--border); border-radius: 10px; padding: 11px 13px; background: color-mix(in srgb, var(--surface) 88%, var(--brand) 12%); }
-.ab-portfolio-kpis article::before { position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--ab-chart-account); content: ''; }
-.ab-portfolio-kpis .ab-portfolio-kpi--green::before { background: var(--ab-chart-active); }
-.ab-portfolio-kpis .ab-portfolio-kpi--blue::before { background: var(--ab-chart-expiring); }
-.ab-portfolio-kpis .ab-portfolio-kpi--orange::before { background: var(--ab-chart-cancelled); }
-.ab-portfolio-kpis article > span { overflow: hidden; color: var(--text-secondary); font-size: 9px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
-.ab-portfolio-kpis article > strong { color: var(--text-primary); font-size: 23px; line-height: 1; }
-.ab-portfolio-kpis article > small { overflow: hidden; color: var(--text-muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
 .ab-dashboard-primary-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(290px, .9fr); gap: 12px; }
 .ab-dark-chart-card { min-width: 0; overflow: hidden; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
 .ab-dark-chart-card > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; min-height: 60px; border-bottom: 1px solid var(--border); padding: 12px 14px; }
@@ -306,56 +297,17 @@
 .ab-donut-layout li > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ab-donut-layout li > strong { color: var(--text-primary); font-size: 9px; }
 .ab-dashboard-secondary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.ab-chart-bars { display: grid; gap: 11px; margin: 0; padding: 14px; list-style: none; }
-.ab-chart-bars li { display: grid; gap: 6px; min-width: 0; }
-.ab-chart-bars li > div { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; min-width: 0; }
-.ab-chart-bars li > div > span { overflow: hidden; color: var(--text-primary); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
-.ab-chart-bars li > div > strong { flex: 0 0 auto; color: var(--text-secondary); font-size: 9px; font-weight: 800; }
-.ab-chart-bars li > i { display: block; height: 7px; overflow: hidden; border-radius: 999px; background: var(--surface-soft); }
-.ab-chart-bars li > i > b { display: block; height: 100%; min-width: 3px; border-radius: inherit; background: linear-gradient(90deg, var(--ab-chart-account), var(--ab-chart-expiring)); }
-.ab-chart-bars--usage li > i > b { background: linear-gradient(90deg, var(--ab-chart-active), color-mix(in srgb, var(--ab-chart-active) 68%, var(--brand))); }
-.ab-chart-bars--usage li > i > b.is-warning { background: linear-gradient(90deg, var(--ab-chart-cancelled), var(--ab-chart-expired)); }
+.ab-plan-chart-wrap,
+.ab-capacity-chart-wrap { overflow-x: auto; padding: 10px 13px 6px; scrollbar-width: thin; }
+.ab-plan-chart-wrap svg { display: block; width: 100%; min-width: 560px; height: auto; }
+.ab-capacity-chart-wrap svg { display: block; width: 100%; min-width: 620px; height: auto; }
+.ab-plan-chart-percent { fill: var(--text-muted); font-size: 10px; }
+.ab-capacity-chart-label { fill: var(--text-secondary); font-size: 10px; }
+.ab-capacity-chart-value { fill: var(--text-primary); font-size: 10px; font-weight: 800; }
 .ab-chart-note { margin: 10px 14px 0; color: var(--warning); font-size: 9px; }
 .ab-chart-loading { padding: 22px 16px; color: var(--text-secondary); font-size: 10px; }
-.ab-dashboard-financials { display: grid; gap: 8px; }
-.ab-dashboard-financials__heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.ab-dashboard-financials__heading strong { color: var(--text-primary); font-size: 10px; }
-.ab-dashboard-financials__heading span { color: var(--text-muted); font-size: 9px; }
-.ab-dashboard-financials > div:last-child { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
-.ab-dashboard-financials article { display: grid; gap: 4px; border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; background: color-mix(in srgb, var(--surface) 84%, var(--brand) 16%); }
-.ab-dashboard-financials article span { color: var(--text-secondary); font-size: 9px; font-weight: 700; }
-.ab-dashboard-financials article strong { color: var(--text-primary); font-size: 11px; }
-.ab-dashboard-financials article small { color: var(--text-muted); font-size: 8px; }
-.ab-dashboard-footnote { margin: -5px 0 0; color: var(--text-muted); font-size: 9px; }
-.ab-metric-guide,
-.ab-coverage { border: 1px solid var(--ab-border); border-radius: 13px; background: #fffdf8; }
-.ab-metric-guide { overflow: hidden; }
-.ab-metric-guide summary { padding: 14px 17px; color: #484b40; font-size: 12px; font-weight: 800; cursor: pointer; }
-.ab-metric-guide[open] summary { border-bottom: 1px solid #e8e4d6; background: #f8f6ee; }
-.ab-metric-guide__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding: 13px; }
-.ab-metric-guide__grid article { border-radius: 9px; padding: 11px; background: #f7f5ed; }
-.ab-metric-guide__grid strong,
 .ab-explanation-copy strong { color: #414439; font-size: 11px; }
-.ab-metric-guide__grid p,
 .ab-explanation-copy p { margin: 5px 0 0; color: #73786f; font-size: 11px; line-height: 1.55; }
-.ab-coverage { padding: 16px; }
-.ab-coverage > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; margin-bottom: 13px; }
-.ab-coverage h2 { margin: 3px 0 4px; color: #33372f; font-size: 15px; }
-.ab-coverage header p { margin: 0; color: #757b73; font-size: 11px; }
-.ab-eyebrow { color: #777157; font-size: 9px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
-.ab-refreshed { flex: 0 0 auto; color: #777d75; font-size: 10px; }
-.ab-coverage__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
-.ab-coverage-item { display: grid; align-content: start; gap: 6px; min-height: 90px; border: 1px solid #e8e4d8; border-radius: 9px; padding: 10px; background: #fffefa; }
-.ab-coverage-item > strong { color: #3d4139; font-size: 11px; }
-.ab-coverage-item > p { margin: 0; color: #747a72; font-size: 10px; line-height: 1.45; }
-.ab-coverage-item__status { display: inline-flex; align-items: center; gap: 5px; color: #777d75; font-size: 9px; font-weight: 800; text-transform: uppercase; }
-.ab-coverage-item__status i { width: 7px; height: 7px; border-radius: 50%; background: #9a9c94; }
-.ab-coverage-item--available .ab-coverage-item__status { color: #237450; }
-.ab-coverage-item--available .ab-coverage-item__status i { background: #2d9b68; }
-.ab-coverage-item--partial .ab-coverage-item__status { color: #906414; }
-.ab-coverage-item--partial .ab-coverage-item__status i { background: #d29a36; }
-.ab-coverage-item--error .ab-coverage-item__status { color: #9b453d; }
-.ab-coverage-item--error .ab-coverage-item__status i { background: #c6675e; }
 .ab-status-explanation { margin: -5px 0 14px; border-left: 3px solid #9b9578; border-radius: 0 7px 7px 0; padding: 9px 11px; background: #f7f5ed; color: #686d63; font-size: 11px; line-height: 1.5; }
 .ab-explanation-copy { margin-top: 13px; border-top: 1px solid #eeeade; padding-top: 12px; }
 @keyframes ab-spin { to { transform: rotate(360deg); } }
@@ -365,8 +317,6 @@
   .ab-filters,
   .ab-filters--compact { grid-template-columns: repeat(4, minmax(120px, 1fr)); }
   .ab-filters .ab-search { grid-column: span 2; }
-  .ab-coverage__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .ab-metric-guide__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ab-dashboard-primary-grid,
   .ab-dashboard-secondary-grid { grid-template-columns: 1fr; }
 }
@@ -374,14 +324,9 @@
 @media (max-width: 760px) {
   .accounts-billing { gap: 13px; }
   .ab-overview-grid { grid-template-columns: 1fr; }
-  .ab-coverage > header { flex-direction: column; }
-  .ab-coverage__grid,
-  .ab-metric-guide__grid { grid-template-columns: 1fr; }
   .ab-portfolio-dashboard { padding: 14px; }
   .ab-portfolio-header { align-items: flex-start; flex-direction: column; }
   .ab-portfolio-controls { width: 100%; justify-content: space-between; }
-  .ab-portfolio-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .ab-dashboard-financials > div:last-child { grid-template-columns: 1fr; }
   .ab-card__heading { align-items: flex-start; padding: 13px 14px; }
   .ab-filters,
   .ab-filters--compact { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 12px; }
@@ -398,13 +343,10 @@
   .ab-drawer__header { padding: 13px; }
   .ab-drawer__body { padding: 11px; }
   .ab-detail-section { padding: 12px; }
-  .ab-coverage { padding: 12px; }
   .ab-portfolio-dashboard { gap: 12px; padding: 11px; border-radius: 13px; }
   .ab-portfolio-controls { align-items: flex-end; gap: 8px; }
   .accounts-billing .ab-dark-select { min-width: 112px; }
   .ab-donut-layout { grid-template-columns: 120px minmax(0, 1fr); padding: 12px 10px; }
-  .ab-portfolio-kpis article { padding: 10px; }
-  .ab-portfolio-kpis article > strong { font-size: 20px; }
   .ab-detail-grid { grid-template-columns: 1fr; }
   .ab-history-list > article { align-items: flex-start; flex-wrap: wrap; }
   .ab-history-list > article > div { min-width: calc(100% - 30px); }

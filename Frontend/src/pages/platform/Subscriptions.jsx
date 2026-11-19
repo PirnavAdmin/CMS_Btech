@@ -76,7 +76,7 @@ export default function Subscriptions() {
   const [organizations, setOrganizations] = useState([])
   const [subscriptions, setSubscriptions] = useState([])
   const [form, setForm] = useState(emptyForm)
-  const [formOpen, setFormOpen] = useState(true)
+  const [formOpen, setFormOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [saving, setSaving] = useState(false)

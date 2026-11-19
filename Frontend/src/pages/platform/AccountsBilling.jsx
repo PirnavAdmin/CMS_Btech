@@ -130,38 +130,6 @@ function subscriptionExplanation(account) {
   return `The status “${subscription.status}” comes from the saved subscription record.`
 }
 
-function DataCoverage({ sources, lastRefreshed }) {
-  const rows = [
-    ['Organizations', sources.organizations, 'College identity and contact details'],
-    ['Subscriptions', sources.subscriptions, 'Plan, cycle, price, user cap, dates, and saved status'],
-    ['User directory', sources.users, 'Administrator assignments and active account counts'],
-    ['Payments and invoices', 'unavailable', 'No invoice, transaction, balance, or tax endpoint is connected'],
-    ['Storage and entitlements', 'unavailable', 'No storage meter or effective module entitlement endpoint is connected'],
-    ['Renewal and billing audit', 'unavailable', 'No reminder, grace-period, confirmation, or billing audit endpoint is connected'],
-  ]
-  return <section className="ab-coverage" aria-label="Data coverage and freshness">
-    <header><div><span className="ab-eyebrow">Data coverage</span><h2>What this dashboard can verify</h2><p>Every value below is tied to a connected platform record or identified as unavailable.</p></div><span className="ab-refreshed">{lastRefreshed ? `Last checked ${lastRefreshed.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}` : 'Loading source status'}</span></header>
-    <div className="ab-coverage__grid">{rows.map(([name, status, detail]) => <article key={name} className={`ab-coverage-item ab-coverage-item--${status}`}>
-      <span className="ab-coverage-item__status"><i aria-hidden="true" />{status === 'available' ? 'Connected' : status === 'partial' ? 'Partial' : status === 'error' ? 'Unavailable' : 'Not connected'}</span>
-      <strong>{name}</strong><p>{detail}</p>
-    </article>)}</div>
-  </section>
-}
-
-function MetricGuide() {
-  return <details className="ab-metric-guide">
-    <summary>How to interpret the figures and statuses</summary>
-    <div className="ab-metric-guide__grid">
-      <article><strong>Active subscriptions</strong><p>Counts organizations whose effective subscription status is Active. It does not mean a payment was received; payment records are not connected.</p></article>
-      <article><strong>Expiry windows</strong><p>The 7-day and 30-day KPIs count Active subscriptions with a recorded end date from today through each window. Trial accounts appear in renewal alerts, but not in these Active subscription KPIs.</p></article>
-      <article><strong>Expired</strong><p>Derived from the saved end date when it is before today. Cancelled and suspended records keep their saved status.</p></article>
-      <article><strong>User capacity</strong><p>Active user-directory accounts divided by the subscription’s maximum user count. Student and Faculty values are role counts; separate role limits are not exposed.</p></article>
-      <article><strong>Revenue and balances</strong><p>The period selector chooses a requested revenue window, but revenue, pending payments, and balances remain unavailable without a payment ledger. Plan price is saved metadata, not revenue.</p></article>
-      <article><strong>Unavailable values</strong><p>A blank or unavailable figure means the required backend source is missing. It is never treated as zero or estimated.</p></article>
-    </div>
-  </details>
-}
-
 function SnapshotCharts({ summary, loading }) {
   const metrics = [
     { key: 'totalAccounts', label: ['College', 'accounts'], value: summary.totalAccounts, color: 'var(--ab-chart-account)' },
@@ -241,24 +209,79 @@ function AnalyticsCharts({ accounts, usersUnavailable, usersTruncated, loading }
   const plans = [...planCounts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
   const usage = accounts.filter(account => account.usagePercentage != null && account.subscription?.maximumUsers)
     .sort((a, b) => b.usagePercentage - a.usagePercentage).slice(0, 8)
+  const shownPlans = plans.slice(0, 7)
   const total = Math.max(accounts.length, 1)
+  const planChart = { width: 720, height: 256, left: 44, right: 14, top: 22, bottom: 183 }
+  const planTick = Math.max(1, Math.ceil(Math.max(...plans.map(([, count]) => count), 1) / 4))
+  const planAxisMax = planTick * 4
+  const planPlotHeight = planChart.bottom - planChart.top
+  const planSlotWidth = (planChart.width - planChart.left - planChart.right) / Math.max(shownPlans.length, 1)
+  const planBarWidth = Math.min(48, planSlotWidth * 0.52)
+  const capacityChart = { width: 760, left: 178, right: 112, top: 28, rowHeight: 38 }
+  const capacityPlotWidth = capacityChart.width - capacityChart.left - capacityChart.right
+  const capacityPlotBottom = capacityChart.top + usage.length * capacityChart.rowHeight
+  const capacityChartHeight = capacityPlotBottom + 30
+  const capacityTicks = [0, 25, 50, 75, 100]
 
   return <div className="ab-dashboard-secondary-grid">
       <article className="ab-dark-chart-card">
-        <header><div><h3>Plan mix</h3><p>Organizations by their current plan; percentages use all organizations as the denominator.</p></div></header>
-        {loading ? <div className="ab-chart-loading" role="status">Loading organization records…</div> : plans.length ? <>{plans.length > 7 && <p className="ab-chart-note">Showing the 7 most common plans.</p>}<ul className="ab-chart-bars">{plans.slice(0, 7).map(([plan, count]) => <li key={plan}>
-          <div><span title={plan}>{plan}</span><strong>{count} · {Math.round(count / total * 100)}%</strong></div>
-          <i role="img" aria-label={`${count} of ${accounts.length} organizations, ${Math.round(count / total * 100)} percent`}><b style={{ width: `${count / total * 100}%` }} /></i>
-        </li>)}</ul></> : <EmptyState title="No organization records">Plan mix will appear when organization records are available.</EmptyState>}
+        <header><div><h3>Plan mix</h3><p>Organizations by plan, with each plan’s share of all accounts.</p></div></header>
+        {loading ? <div className="ab-chart-loading" role="status">Loading organization records…</div> : plans.length ? <>
+          {plans.length > 7 && <p className="ab-chart-note">Showing the 7 most common plans.</p>}
+          <div className="ab-plan-chart-wrap">
+            <svg viewBox={`0 0 ${planChart.width} ${planChart.height}`} role="img" aria-labelledby="ab-plan-chart-title ab-plan-chart-description">
+              <title id="ab-plan-chart-title">Organizations by subscription plan</title>
+              <desc id="ab-plan-chart-description">A column chart showing the count and percentage of organizations in each plan.</desc>
+              {Array.from({ length: 5 }, (_, index) => {
+                const value = planTick * (4 - index)
+                const y = planChart.top + (index / 4) * planPlotHeight
+                return <g key={value}><line x1={planChart.left} x2={planChart.width - planChart.right} y1={y} y2={y} className="ab-snapshot-gridline" /><text x={planChart.left - 9} y={y + 4} textAnchor="end" className="ab-snapshot-axis-label">{value}</text></g>
+              })}
+              {shownPlans.map(([plan, count], index) => {
+                const centerX = planChart.left + planSlotWidth * (index + 0.5)
+                const barHeight = count / planAxisMax * planPlotHeight
+                const barY = planChart.bottom - barHeight
+                const percentage = Math.round(count / total * 100)
+                const displayName = plan.length > 14 ? `${plan.slice(0, 13)}…` : plan
+                return <g key={plan}>
+                  <title>{`${plan}: ${count} organizations (${percentage}%)`}</title>
+                  <rect x={centerX - planBarWidth / 2} y={barY} width={planBarWidth} height={Math.max(barHeight, 2)} rx="5" fill="var(--ab-chart-account)" />
+                  <text x={centerX} y={Math.max(planChart.top - 6, barY - 7)} textAnchor="middle" className="ab-snapshot-value">{count}</text>
+                  <text x={centerX} y={planChart.bottom + 19} textAnchor="middle" className="ab-snapshot-category">{displayName}</text>
+                  <text x={centerX} y={planChart.bottom + 34} textAnchor="middle" className="ab-plan-chart-percent">{percentage}%</text>
+                </g>
+              })}
+            </svg>
+          </div>
+        </> : <EmptyState title="No organization records">Plan mix will appear when organization records are available.</EmptyState>}
       </article>
       <article className="ab-dark-chart-card">
-        <header><div><h3>Highest user-cap usage</h3><p>Active directory users compared with each subscription’s maximum user limit.</p></div></header>
+        <header><div><h3>Highest user-cap usage</h3><p>Ranked against a 0–100% scale of each subscription’s user limit.</p></div></header>
         {loading ? <div className="ab-chart-loading" role="status">Loading directory and subscription records…</div> : usersUnavailable ? <EmptyState title="Usage data unavailable">The user directory could not be loaded, so capacity cannot be calculated.</EmptyState> : usage.length ? <>
           {usersTruncated && <p className="ab-chart-note">Directory paging was incomplete; these counts may be understated.</p>}
-          <ul className="ab-chart-bars ab-chart-bars--usage">{usage.map(account => <li key={account.id}>
-            <div><span title={account.name}>{account.name}</span><strong>{account.activeUserCount} / {account.subscription.maximumUsers} · {account.usagePercentage}%</strong></div>
-            <i role="img" aria-label={`${account.name}: ${account.activeUserCount} of ${account.subscription.maximumUsers} active users, ${account.usagePercentage} percent`}><b className={account.usagePercentage >= 90 ? 'is-warning' : ''} style={{ width: `${account.usagePercentage}%` }} /></i>
-          </li>)}</ul>
+          <div className="ab-capacity-chart-wrap">
+            <svg viewBox={`0 0 ${capacityChart.width} ${capacityChartHeight}`} role="img" aria-labelledby="ab-capacity-chart-title ab-capacity-chart-description">
+              <title id="ab-capacity-chart-title">Colleges with the highest user-cap usage</title>
+              <desc id="ab-capacity-chart-description">A ranked horizontal bar chart comparing active users to each college’s maximum user limit, on a scale from zero to one hundred percent.</desc>
+              {capacityTicks.map(tick => {
+                const x = capacityChart.left + capacityPlotWidth * tick / 100
+                return <g key={tick}><line x1={x} x2={x} y1={capacityChart.top - 10} y2={capacityPlotBottom} className="ab-snapshot-gridline" /><text x={x} y={capacityPlotBottom + 19} textAnchor="middle" className="ab-snapshot-axis-label">{tick}%</text></g>
+              })}
+              {usage.map((account, index) => {
+                const centerY = capacityChart.top + capacityChart.rowHeight * (index + 0.5)
+                const percentage = account.usagePercentage
+                const limit = Number(account.subscription.maximumUsers)
+                const displayName = account.name.length > 24 ? `${account.name.slice(0, 23)}…` : account.name
+                return <g key={account.id}>
+                  <title>{`${account.name}: ${account.activeUserCount} of ${limit} active users (${percentage}%)`}</title>
+                  <text x={capacityChart.left - 12} y={centerY + 4} textAnchor="end" className="ab-capacity-chart-label">{displayName}</text>
+                  <rect x={capacityChart.left} y={centerY - 5} width={capacityPlotWidth} height="10" rx="5" fill="var(--surface-soft)" />
+                  <rect x={capacityChart.left} y={centerY - 5} width={Math.max(capacityPlotWidth * percentage / 100, 2)} height="10" rx="5" fill={percentage >= 90 ? 'var(--ab-chart-expired)' : 'var(--ab-chart-active)'} />
+                  <text x={capacityChart.width - capacityChart.right + 12} y={centerY + 4} className="ab-capacity-chart-value">{account.activeUserCount}/{limit} · {percentage}%</text>
+                </g>
+              })}
+            </svg>
+          </div>
         </> : <EmptyState title="No configured user caps">A capacity graph needs a subscription maximum-user limit and directory user data.</EmptyState>}
       </article>
   </div>
@@ -374,7 +397,6 @@ export default function AccountsBilling() {
   const [selectedAccount, setSelectedAccount] = useState(null)
   const [filters, setFilters] = useState(DEFAULT_FILTERS)
   const [filtersOpen, setFiltersOpen] = useState(false)
-  const [dataSources, setDataSources] = useState({ organizations: 'loading', subscriptions: 'loading', users: 'loading' })
   const [lastRefreshed, setLastRefreshed] = useState(null)
   const [page, setPage] = useState(1)
   const [reportPeriod, setReportPeriod] = useState('month')
@@ -385,11 +407,6 @@ export default function AccountsBilling() {
     Promise.allSettled([getColleges(), subscriptionsApi.list(), loadUsers()]).then(results => {
       if (!active) return
       const [organizationResult, subscriptionResult, userResult] = results
-      setDataSources({
-        organizations: organizationResult.status === 'fulfilled' ? 'available' : 'error',
-        subscriptions: subscriptionResult.status === 'fulfilled' ? 'available' : 'error',
-        users: userResult.status !== 'fulfilled' ? 'error' : userResult.value.truncated ? 'partial' : 'available',
-      })
       if (organizationResult.status === 'fulfilled') {
         const rows = listFrom(organizationResult.value).map(unwrapCollegeRecord)
         setOrganizations(rows)
@@ -437,7 +454,6 @@ export default function AccountsBilling() {
   const refresh = () => {
     setLoading(true)
     setError('')
-    setDataSources({ organizations: 'loading', subscriptions: 'loading', users: 'loading' })
     setRefreshKey(value => value + 1)
   }
   const openAccount = account => setSelectedAccount(account)
@@ -479,26 +495,12 @@ export default function AccountsBilling() {
                 <div><small>{lastRefreshed ? `Updated ${lastRefreshed.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}` : 'Loading data'}</small><button type="button" className="ab-dashboard-export" onClick={exportReport}><FiDownload /> Export</button></div>
               </div>
             </header>
-            <div className="ab-portfolio-kpis">
-              <article><span>Total college accounts</span><strong>{showLoading && !accounts.length ? '—' : summary.totalAccounts}</strong><small>Organizations in directory</small></article>
-              <article className="ab-portfolio-kpi--green"><span>Active subscriptions</span><strong>{showLoading && !accounts.length ? '—' : summary.activeSubscriptions}</strong><small>Payment status is not connected</small></article>
-              <article className="ab-portfolio-kpi--blue"><span>Expiring in 30 days</span><strong>{showLoading && !accounts.length ? '—' : summary.expiring30}</strong><small>{summary.expiring7} within 7 days</small></article>
-              <article className="ab-portfolio-kpi--orange"><span>Expired subscriptions</span><strong>{showLoading && !accounts.length ? '—' : summary.expired}</strong><small>Based on recorded expiry dates</small></article>
-            </div>
             <div className="ab-dashboard-primary-grid">
               <SnapshotCharts summary={summary} loading={showLoading && !accounts.length} />
               <SubscriptionDonut statusCounts={statusCounts} totalAccounts={accounts.length} loading={showLoading && !accounts.length} />
             </div>
             <AnalyticsCharts accounts={accounts} usersUnavailable={usersUnavailable} usersTruncated={usersTruncated} loading={showLoading && !accounts.length} />
-            <div className="ab-dashboard-financials"><div className="ab-dashboard-financials__heading"><strong>Billing ledger metrics</strong><span>Unavailable values are not treated as zero.</span></div><div>
-              <article><span>Pending payments</span><strong>Unavailable</strong><small>Payment ledger not connected</small></article>
-              <article><span>Outstanding amount</span><strong>Unavailable</strong><small>Payment ledger not connected</small></article>
-              <article><span>Revenue · {reportPeriod === 'month' ? 'this month' : reportPeriod === 'quarter' ? 'this quarter' : 'this year'}</span><strong>Unavailable</strong><small>Payment ledger not connected</small></article>
-            </div></div>
-            <p className="ab-dashboard-footnote">Current records only · Historical trends, payments, and invoices aren’t available from the connected services.</p>
           </section>
-          <MetricGuide />
-          <DataCoverage sources={dataSources} lastRefreshed={lastRefreshed} />
           <div className="ab-overview-grid">
             <section className="ab-card">
               <div className="ab-card__heading"><div><h2>Renewal alerts</h2><p>Expired and active subscriptions expiring within 30 days.</p></div><FiCalendar aria-hidden="true" /></div>
