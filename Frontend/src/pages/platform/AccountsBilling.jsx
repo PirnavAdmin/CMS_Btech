@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   FiAlertCircle, FiArrowUpRight, FiCalendar, FiCheckCircle,
-  FiChevronLeft, FiChevronRight, FiClock, FiDownload, FiExternalLink,
-  FiFileText, FiRefreshCw, FiSearch, FiX,
+  FiChevronDown, FiChevronLeft, FiChevronRight, FiClock, FiDownload,
+  FiFileText, FiFilter, FiSearch, FiX,
 } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout.jsx'
 import PageHeader from '../../components/PageHeader.jsx'
+import ExportMenu from '../../components/ExportMenu.jsx'
 import { useScreenAccess } from '../../auth/ScreenAccess.jsx'
 import { subscriptionsApi, userDirectoryApi } from '../../api/apiEndpoints.js'
 import { fetchCollegeLogo, getCollegeLogoUrl, getColleges, isBackendCollegeLogo, unwrapCollegeRecord } from '../../auth/collegeApi.js'
@@ -19,14 +20,27 @@ const TABS = [
   ['accounts', 'College Accounts'],
   ['renewals', 'Renewals'],
   ['payments', 'Payments & Invoices'],
-  ['usage', 'Usage & Limits'],
   ['reports', 'Reports'],
   ['audit', 'Audit History'],
 ]
-const PAGE_SIZE = 10
+const PAGE_SIZE = 5
 const USER_PAGE_SIZE = 200
 const MAX_USER_PAGES = 100
-const DEFAULT_FILTERS = Object.freeze({ search: '', college: 'all', plan: 'all', status: 'all', payment: 'all', expiry: 'all', cycle: 'all', sort: 'name', direction: 'asc' })
+const DEFAULT_FILTERS = Object.freeze({ search: '', college: 'all', plan: 'all', status: 'all', expiry: 'all', cycle: 'all', sort: 'name', direction: 'asc' })
+const ACCOUNT_EXPORT_COLUMNS = [
+  { label: 'College', value: account => account.name },
+  { label: 'College code', value: account => account.code },
+  { label: 'Assigned admin', value: account => account.admin?.name || 'Not assigned' },
+  { label: 'Admin email', value: account => account.admin?.email },
+  { label: 'Plan', value: account => account.subscription?.planName || 'No plan' },
+  { label: 'Billing cycle', value: account => account.subscription?.billingCycle },
+  { label: 'Renewal date', value: account => account.subscription ? dateLabel(account.subscription.endDate) : 'Not set' },
+  { label: 'Days remaining', value: account => account.subscription ? daysLabel(account.daysRemaining) : 'Not set' },
+  { label: 'Status', value: account => account.subscription?.status || 'No subscription' },
+  { label: 'Active users', value: account => account.activeUserCount },
+  { label: 'User limit', value: account => account.subscription?.maximumUsers },
+  { label: 'Usage', value: account => account.usagePercentage == null ? 'Unavailable' : `${account.usagePercentage}%` },
+]
 
 function listFrom(response) {
   let current = response
@@ -321,18 +335,16 @@ function AccountsTable({ accounts, onOpen, page, setPage, loading, usersUnavaila
     <div className="ab-table-scroll" role="region" aria-label="College accounts table" tabIndex={0}>
       <table className="ab-table">
         <thead><tr>
-          <th>College</th><th>Code</th><th>Assigned admin</th><th>Plan</th><th>Cycle</th><th>Start date</th><th>Expiry date</th><th>Days remaining</th><th>Status</th><th>Usage</th><th>Payment</th><th>Actions</th>
+          <th>College</th><th>Code</th><th>Assigned admin</th><th>Plan</th><th>Renewal</th><th>Status</th><th>Usage</th><th>Actions</th>
         </tr></thead>
         <tbody>{rows.map(account => <tr key={account.id}>
           <td><button type="button" className="ab-college-cell" onClick={() => onOpen(account)}><CollegeLogo account={account} /><span><strong>{account.name}</strong><small>{account.email || 'College details'}</small></span></button></td>
           <td>{account.code || '—'}</td>
           <td>{account.admin ? <><strong>{account.admin.name}</strong><small>{account.admin.email || 'Email not available'}</small></> : <span className="ab-muted">Not assigned</span>}</td>
-          <td>{account.subscription?.planName || 'No plan'}</td><td>{account.subscription?.billingCycle || '—'}</td>
-          <td>{dateLabel(account.subscription?.startDate)}</td><td>{dateLabel(account.subscription?.endDate)}</td>
-          <td className={account.daysRemaining != null && account.daysRemaining <= 7 ? 'ab-days--urgent' : ''}>{account.subscription ? daysLabel(account.daysRemaining) : '—'}</td>
+          <td>{account.subscription ? <><strong>{account.subscription.planName || 'Plan not named'}</strong><small>{account.subscription.billingCycle || 'Cycle not set'}</small></> : <span className="ab-muted">No plan</span>}</td>
+          <td>{account.subscription ? <><strong>{dateLabel(account.subscription.endDate)}</strong><small className={account.daysRemaining != null && account.daysRemaining <= 7 ? 'ab-days--urgent' : ''}>{daysLabel(account.daysRemaining)}</small></> : <span className="ab-muted">Not set</span>}</td>
           <td><StatusBadge value={account.subscription?.status || 'No subscription'} /></td>
           <td>{usersUnavailable || account.usagePercentage == null ? <span className="ab-muted">{usersUnavailable ? 'Unavailable' : '—'}</span> : <div className="ab-usage-cell"><span>{account.usagePercentage}%</span><i><b style={{ width: `${account.usagePercentage}%` }} /></i><small>{account.activeUserCount} / {account.subscription.maximumUsers}</small></div>}</td>
-          <td><span className="ab-status ab-status--unknown">Not tracked</span></td>
           <td><button type="button" className="ab-button ab-button--quiet" onClick={() => onOpen(account)}>View details <FiArrowUpRight /></button></td>
         </tr>)}</tbody>
       </table>
@@ -361,6 +373,7 @@ export default function AccountsBilling() {
   const [activeTab, setActiveTab] = useState('overview')
   const [selectedAccount, setSelectedAccount] = useState(null)
   const [filters, setFilters] = useState(DEFAULT_FILTERS)
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [dataSources, setDataSources] = useState({ organizations: 'loading', subscriptions: 'loading', users: 'loading' })
   const [lastRefreshed, setLastRefreshed] = useState(null)
   const [page, setPage] = useState(1)
@@ -400,10 +413,7 @@ export default function AccountsBilling() {
 
   const accounts = useMemo(() => buildBillingAccounts(organizations, subscriptions, users), [organizations, subscriptions, users])
   const summary = useMemo(() => summarizeBillingAccounts(accounts), [accounts])
-  const visibleAccounts = useMemo(() => filterBillingAccounts(accounts, filters).filter(() => {
-    if (filters.payment === 'all') return true
-    return filters.payment === 'unavailable'
-  }), [accounts, filters])
+  const visibleAccounts = useMemo(() => filterBillingAccounts(accounts, filters), [accounts, filters])
   const plans = useMemo(() => [...new Set(accounts.map(account => account.subscription?.planName).filter(Boolean))].sort(), [accounts])
   const cycles = useMemo(() => [...new Set(accounts.map(account => account.subscription?.billingCycle).filter(Boolean))].sort(), [accounts])
   const statusCounts = useMemo(() => {
@@ -424,7 +434,6 @@ export default function AccountsBilling() {
     setFilters(current => ({ ...current, [name]: value }))
   }
   const clearFilters = () => { setPage(1); setFilters(DEFAULT_FILTERS) }
-  const hasActiveFilters = Object.keys(DEFAULT_FILTERS).some(key => filters[key] !== DEFAULT_FILTERS[key])
   const refresh = () => {
     setLoading(true)
     setError('')
@@ -449,10 +458,7 @@ export default function AccountsBilling() {
   const showLoading = accessLoading || permitted && loading
   return <DashboardLayout>
     <main className="accounts-billing">
-      <PageHeader title="Accounts & Billing" subtitle="Review college subscriptions, renewal timing, and plan capacity across the platform."
-        breadcrumb={[{ label: 'Platform', link: '/dashboard' }, 'Accounts & Billing']}
-        secondaryActions={<button type="button" className="ab-button" onClick={refresh} disabled={showLoading}><FiRefreshCw className={showLoading ? 'ab-spin' : ''} /> Refresh</button>}
-        primaryAction={<button type="button" className="ab-button ab-button--primary" onClick={goManageSubscription}>Manage subscriptions <FiExternalLink /></button>} />
+      <PageHeader title="Accounts & Billing" />
 
       {!accessLoading && !permitted && <section className="ab-alert ab-alert--error" role="alert">This platform dashboard is available to verified Super Admins only.</section>}
       {error && <section className="ab-alert ab-alert--error" role="alert"><FiAlertCircle />{error}<button type="button" className="ab-alert__action" onClick={refresh}>Retry</button></section>}
@@ -502,9 +508,10 @@ export default function AccountsBilling() {
           </div>
         </>}
 
-        {activeTab === 'accounts' && <section className="ab-card">
+        {activeTab === 'accounts' && <section className="ab-card ab-card--directory">
           <div className="ab-card__heading"><div><h2>College accounts</h2><p>Search and compare organization plans, renewals, and user limits.</p></div><span className="ab-count">{visibleAccounts.length} accounts</span></div>
-          <FilterBar filters={filters} setFilter={setFilter} accounts={accounts} plans={plans} cycles={cycles} onClear={clearFilters} hasActiveFilters={hasActiveFilters} />
+          <TableControls filters={filters} setFilter={setFilter} rows={visibleAccounts} loading={showLoading} filtersOpen={filtersOpen} onToggleFilters={() => setFiltersOpen(value => !value)} activeFilterCount={activeDropdownFilterCount(filters)} filterPanelId="ab-account-filter-panel" />
+          {filtersOpen && <div className="ab-filter-panel" id="ab-account-filter-panel" role="region" aria-label="College account filters"><FilterPanelHeader activeCount={activeDropdownFilterCount(filters)} onClear={clearFilters} /><FilterBar filters={filters} setFilter={setFilter} accounts={accounts} plans={plans} cycles={cycles} oneLine /></div>}
           <AccountsTable accounts={visibleAccounts} onOpen={openAccount} page={page} setPage={setPage} loading={showLoading} usersUnavailable={usersUnavailable} />
         </section>}
 
@@ -519,17 +526,11 @@ export default function AccountsBilling() {
           <EmptyState icon={FiFileText} title="No payment or invoice records are connected">The backend currently provides subscription plan records only. Invoice numbers, payment status, amounts paid, balances, transaction references, tax, and downloadable invoices are unavailable.</EmptyState>
         </section>}
 
-        {activeTab === 'usage' && <section className="ab-card">
-          <div className="ab-card__heading"><div><h2>Usage & limits</h2><p>Active user counts are compared with subscription limits. Module counts show explicit admin overrides only.</p></div></div>
-          {usersUnavailable && <div className="ab-alert ab-alert--inline"><FiAlertCircle />User counts could not be loaded.</div>}
-          <div className="ab-usage-explanation"><strong>What these usage figures mean</strong><p><b>Active users</b> includes directory accounts marked Active or Profile Pending. Pending invitations and suspended accounts are excluded. The percentage is active users divided by the subscription’s maximum users, capped at 100%; an unset cap means no percentage can be calculated.</p><p><b>Students and Faculty</b> are counts by directory role and have no separate quota in the connected API. <b>Admin permission overrides</b> counts explicit per-user permission records with <code>canView</code>; it does not calculate effective access from inherited roles. <b>Storage</b> and effective module entitlements are not exposed by the available services.</p></div>
-          <UsageTable accounts={accounts} usersUnavailable={usersUnavailable} onOpen={openAccount} />
-        </section>}
-
-        {activeTab === 'reports' && <section className="ab-card">
-          <div className="ab-card__heading"><div><h2>Accounts report</h2><p>Export organization, subscription, expiry, and usage fields available from connected APIs.</p></div><button type="button" className="ab-button ab-button--primary" onClick={exportReport}><FiDownload /> Export CSV</button></div>
+        {activeTab === 'reports' && <section className="ab-card ab-card--directory">
+          <div className="ab-card__heading"><div><h2>Accounts report</h2><p>Export organization, subscription, expiry, and usage fields available from connected APIs.</p></div></div>
           <div className="ab-report-controls"><label><span>Revenue period</span><select value={reportPeriod} onChange={event => setReportPeriod(event.target.value)}><option value="month">This month</option><option value="quarter">This quarter</option><option value="year">This year</option></select></label><p><FiAlertCircle />Revenue for {reportPeriod === 'month' ? 'this month' : reportPeriod === 'quarter' ? 'this quarter' : 'this year'} is unavailable because payment records are not connected.</p></div>
-          <FilterBar filters={filters} setFilter={setFilter} accounts={accounts} plans={plans} cycles={cycles} compact onClear={clearFilters} hasActiveFilters={hasActiveFilters} />
+          <TableControls filters={filters} setFilter={setFilter} rows={visibleAccounts} loading={showLoading} filtersOpen={filtersOpen} onToggleFilters={() => setFiltersOpen(value => !value)} activeFilterCount={activeDropdownFilterCount(filters)} filterPanelId="ab-report-filter-panel" />
+          {filtersOpen && <div className="ab-filter-panel" id="ab-report-filter-panel" role="region" aria-label="College account filters"><FilterPanelHeader activeCount={activeDropdownFilterCount(filters)} onClear={clearFilters} /><FilterBar filters={filters} setFilter={setFilter} accounts={accounts} plans={plans} cycles={cycles} oneLine /></div>}
           <AccountsTable accounts={visibleAccounts} onOpen={openAccount} page={page} setPage={setPage} loading={showLoading} usersUnavailable={usersUnavailable} />
         </section>}
 
@@ -544,30 +545,37 @@ export default function AccountsBilling() {
   </DashboardLayout>
 }
 
-function FilterBar({ filters, setFilter, accounts, plans, cycles, compact = false, onClear, hasActiveFilters }) {
-  return <div className={`ab-filters ${compact ? 'ab-filters--compact' : ''}`}>
-    <label className="ab-search"><FiSearch aria-hidden="true" /><span className="ab-sr-only">Search accounts</span><input value={filters.search} onChange={event => setFilter('search', event.target.value)} placeholder="Search college, code, admin, or plan" /></label>
+function activeDropdownFilterCount(filters) {
+  return Object.keys(DEFAULT_FILTERS).filter(key => key !== 'search' && filters[key] !== DEFAULT_FILTERS[key]).length
+}
+
+function TableControls({ filters, setFilter, rows, loading, filtersOpen, onToggleFilters, activeFilterCount, filterPanelId }) {
+  return <div className="ab-table-toolbar">
+    <label className="ab-table-search"><FiSearch aria-hidden="true" /><span className="ab-sr-only">Search accounts</span><input value={filters.search} onChange={event => setFilter('search', event.target.value)} placeholder="Search college, code, admin, or plan" />{filters.search && <button type="button" className="ab-table-search__clear" onClick={() => setFilter('search', '')} aria-label="Clear search"><FiX /></button>}</label>
+    <div className="ab-table-toolbar__actions">
+      <ExportMenu rows={rows} columns={ACCOUNT_EXPORT_COLUMNS} title="College Accounts" filename="college-accounts" loading={loading} scope="Current filtered results" />
+      <button type="button" className={`ab-filters-btn ${filtersOpen ? 'is-active' : ''} ${activeFilterCount > 0 ? 'has-active' : ''}`} onClick={onToggleFilters} aria-expanded={filtersOpen} aria-controls={filterPanelId}>
+        <FiFilter aria-hidden="true" /><span>Filters</span>{activeFilterCount > 0 && <span className="ab-filter-count">{activeFilterCount}</span>}<FiChevronDown className={`ab-filter-chevron ${filtersOpen ? 'is-rotated' : ''}`} aria-hidden="true" />
+      </button>
+    </div>
+  </div>
+}
+
+function FilterPanelHeader({ activeCount, onClear }) {
+  return <div className="ab-filter-panel__header">
+    <div><FiFilter aria-hidden="true" /><strong>College account filters</strong>{activeCount > 0 && <span>{activeCount} active</span>}</div>
+    {activeCount > 0 && <button type="button" onClick={onClear}><FiX aria-hidden="true" /> Reset filters</button>}
+  </div>
+}
+
+function FilterBar({ filters, setFilter, accounts, plans, cycles, oneLine = false }) {
+  return <div className={`ab-filters ${oneLine ? 'ab-filters--one-line' : ''}`}>
     <label><span>College</span><select value={filters.college} onChange={event => setFilter('college', event.target.value)}><option value="all">All colleges</option>{accounts.map(account => <option key={account.id} value={account.id}>{account.name}</option>)}</select></label>
     <label><span>Plan</span><select value={filters.plan} onChange={event => setFilter('plan', event.target.value)}><option value="all">All plans</option>{plans.map(plan => <option key={plan}>{plan}</option>)}</select></label>
     <label><span>Status</span><select value={filters.status} onChange={event => setFilter('status', event.target.value)}><option value="all">All statuses</option>{['Active', 'Trial', 'Scheduled', 'Expired', 'Suspended', 'Cancelled', 'No subscription'].map(status => <option key={status}>{status}</option>)}</select></label>
-    <label><span>Payment</span><select value={filters.payment} onChange={event => setFilter('payment', event.target.value)}><option value="all">All payment data</option><option value="unavailable">Not tracked</option></select></label>
     <label><span>Expiry</span><select value={filters.expiry} onChange={event => setFilter('expiry', event.target.value)}><option value="all">Any expiry</option><option value="7">Within 7 days</option><option value="30">Within 30 days</option><option value="expired">Expired</option><option value="no-plan">No subscription</option></select></label>
     <label><span>Cycle</span><select value={filters.cycle} onChange={event => setFilter('cycle', event.target.value)}><option value="all">All cycles</option>{cycles.map(cycle => <option key={cycle}>{cycle}</option>)}</select></label>
     <label><span>Sort by</span><select value={filters.sort} onChange={event => setFilter('sort', event.target.value)}><option value="name">College name</option><option value="plan">Plan</option><option value="expiry">Expiry</option><option value="usage">Usage</option></select></label>
     <label><span>Order</span><select value={filters.direction} onChange={event => setFilter('direction', event.target.value)}><option value="asc">Ascending</option><option value="desc">Descending</option></select></label>
-    <button type="button" className="ab-button ab-filter-clear" onClick={onClear} disabled={!hasActiveFilters}>Clear filters</button>
   </div>
 }
-
-function UsageTable({ accounts, usersUnavailable, onOpen }) {
-  return <div className="ab-usage-list">{accounts.length ? accounts.map(account => <article key={account.id}>
-    <div className="ab-usage-list__college"><CollegeLogo account={account} /><span><strong>{account.name}</strong><small>{account.subscription?.planName || 'No plan'} · {account.subscription?.status || 'No subscription'}</small></span><button type="button" className="ab-button ab-button--quiet" onClick={() => onOpen(account)}>Details <FiArrowUpRight /></button></div>
-    <div className="ab-usage-metrics"><UsageMetric label="Active users" used={usersUnavailable ? null : account.activeUserCount} limit={account.subscription?.maximumUsers} /><UsageMetric label="Students" used={usersUnavailable ? null : account.studentCount} /><UsageMetric label="Faculty" used={usersUnavailable ? null : account.facultyCount} /><UsageMetric label="Admin permission overrides" used={account.enabledModuleCount} /><div className="ab-usage-metric"><span>Storage</span><strong>Unavailable</strong><small>No storage API</small></div></div>
-  </article>) : <EmptyState title="No accounts found">College usage will appear when organization records are available.</EmptyState>}</div>
-}
-
-function UsageMetric({ label, used, limit }) {
-  const percentage = used != null && limit ? Math.min(100, Math.round(used / limit * 100)) : null
-  return <div className="ab-usage-metric"><span>{label}</span><strong>{used == null ? 'Unavailable' : limit ? `${used} / ${limit}` : used}</strong>{percentage == null ? <small>{used == null ? 'No user data' : 'No configured limit'}</small> : <><i role="progressbar" aria-label={`${label} usage`} aria-valuemin="0" aria-valuemax="100" aria-valuenow={percentage}><b className={percentage >= 90 ? 'is-warning' : ''} style={{ width: `${percentage}%` }} /></i><small>{percentage}% of limit{percentage >= 90 ? ' · near capacity' : ''}</small></>}</div>
-}
-

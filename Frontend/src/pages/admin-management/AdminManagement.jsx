@@ -2534,28 +2534,34 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
               <header className="college-config-directory-header">
                 <h2 id="college-directory-title">Organization Directory</h2>
                 <div className="college-config-actions">
-                  <ExportMenu rows={filteredColleges} columns={collegeColumns} title="Organizations" filename="organizations" loading={isCollegesLoading || Boolean(collegeError)} />
                   {canCreateCollege && <button type="button" className="erp-btn erp-btn--primary" onClick={openAdd}><Plus aria-hidden="true" /> Add Organization</button>}
                 </div>
               </header>
-              <FilterPanelImports_default
-                className="college-config-filters"
-                active={Boolean(typeFilter || statusFilter)}
-                appliedFilters={[typeFilter, statusFilter === 'active' ? 'Active' : statusFilter === 'inactive' ? 'Inactive' : ''].filter(Boolean)}
-                onClear={() => { setTypeFilter(''); setStatusFilter(''); setCurrentPage(1) }}
-                search={<label className="college-config-search"><FiSearch aria-hidden="true" /><input type="search" placeholder="Search by organization name, code or city…" value={searchTerm} onChange={handleSearchChange} aria-label="Search organizations" /></label>}
-                filters={<div className="college-config-toolbar">
-                  <ProjectSelect aria-label="Filter organizations by type" value={typeFilter} onChange={event => { setTypeFilter(event.target.value); setCurrentPage(1) }}>
-                    <option value="">All organization types</option>
-                    {availableCollegeTypes.map(type => <option key={type}>{type}</option>)}
-                  </ProjectSelect>
-                  <div className="college-config-filter-tabs" role="group" aria-label="Organization status">
-                    {[['', 'All'], ['active', 'Active'], ['inactive', 'Inactive']].map(([value, label]) => (
-                      <button key={label} type="button" aria-pressed={statusFilter === value} onClick={() => { setStatusFilter(value); setCurrentPage(1) }}>{label}</button>
-                    ))}
-                  </div>
-                </div>}
-              />
+              <div className="college-config-search-row">
+                <label className="college-config-search"><FiSearch aria-hidden="true" /><input type="search" placeholder="Search by organization name, code or city…" value={searchTerm} onChange={handleSearchChange} aria-label="Search organizations" /></label>
+                <div className="college-config-toolbar-actions">
+                  <ExportMenu rows={filteredColleges} columns={collegeColumns} title="Organizations" filename="organizations" loading={isCollegesLoading || Boolean(collegeError)} />
+                  <FilterPanelImports_default
+                    className="college-config-toolbar-filter"
+                    active={Boolean(typeFilter || statusFilter)}
+                    onClear={() => { setTypeFilter(''); setStatusFilter(''); setCurrentPage(1) }}
+                    hideClear
+                    search={null}
+                    filters={<div className="college-config-toolbar">
+                      <ProjectSelect aria-label="Filter organizations by type" value={typeFilter} onChange={event => { setTypeFilter(event.target.value); setCurrentPage(1) }}>
+                        <option value="">All organization types</option>
+                        {availableCollegeTypes.map(type => <option key={type}>{type}</option>)}
+                      </ProjectSelect>
+                      <div className="college-config-filter-tabs" role="group" aria-label="Organization status">
+                        {[['', 'All'], ['active', 'Active'], ['inactive', 'Inactive']].map(([value, label]) => (
+                          <button key={label} type="button" aria-pressed={statusFilter === value} onClick={() => { setStatusFilter(value); setCurrentPage(1) }}>{label}</button>
+                        ))}
+                      </div>
+                      {(typeFilter || statusFilter) && <button type="button" className="filter-disclosure__clear-btn" onClick={() => { setTypeFilter(''); setStatusFilter(''); setCurrentPage(1) }}><FiRotateCcw aria-hidden="true" /> Clear Filters</button>}
+                    </div>}
+                  />
+                </div>
+              </div>
             {isCollegesLoading ? (
               <div className="cm-empty">
                 <p>Loading organizations...</p>

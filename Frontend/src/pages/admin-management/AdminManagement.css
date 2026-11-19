@@ -230,25 +230,67 @@
 }
 .college-config-directory-header h2 { margin:0; font-size:16px; }
 .college-config-directory:has(.college-config-directory-header) { overflow:visible; }
-.college-config-filters .college-config-toolbar { margin:0; }
-.college-config-filters .filter-disclosure__bar { gap:6px; padding:6px 10px; }
-.college-config-filters .filter-disclosure__toggle,
-.college-config-filters .filter-disclosure__clear-btn { min-height:30px; padding-inline:9px; }
-.college-config-filters .filter-disclosure__content { padding:8px 10px; }
-.college-config-filters .filter-disclosure__search .college-config-search {
-  padding:0 10px;
-  min-width:0;
-  height:auto;
+.college-config-toolbar-actions { display:flex; align-items:center; justify-content:flex-end; flex:0 0 auto; gap:6px; }
+.college-config-toolbar-actions > .export-control .export-button,
+.college-config-toolbar-actions > .college-config-toolbar-filter .filter-disclosure__toggle {
+  box-sizing:border-box;
+  width:118px;
+  min-width:118px;
+  height:36px;
+  min-height:36px;
+  justify-content:center;
+  border-radius:8px;
 }
-.college-config-filters .college-config-search svg { flex:none; }
-.college-config-filters .college-config-search input {
-  min-height:28px;
-  padding-inline:0;
-  background:transparent;
+.college-config-toolbar-filter.filter-disclosure {
+  position:relative;
+  flex:0 0 auto;
+  width:118px;
+  overflow:visible;
   border:0;
-  outline:none;
-  box-shadow:none;
+  background:transparent;
 }
+.college-config-toolbar-filter .filter-disclosure__bar { gap:0; padding:0; }
+.college-config-toolbar-filter .filter-disclosure__search { display:none; }
+.college-config-toolbar-filter .filter-disclosure__toggle {
+  gap:7px;
+  padding-inline:10px;
+  background:var(--brand-soft);
+  color:var(--brand);
+}
+.college-config-toolbar-filter .filter-disclosure__toggle:hover,
+.college-config-toolbar-filter .filter-disclosure__toggle[aria-expanded="true"] {
+  border-color:var(--cms-primary-border);
+  background:var(--surface-hover);
+  color:var(--brand);
+}
+.college-config-toolbar-filter .filter-disclosure__content {
+  position:absolute;
+  top:calc(100% + 8px);
+  right:0;
+  z-index:30;
+  width:min(560px, calc(100vw - 32px));
+  box-sizing:border-box;
+  padding:12px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:var(--surface);
+  box-shadow:var(--shadow-lg, 0 12px 32px rgba(15,23,42,.16));
+}
+.college-config-toolbar-filter .filter-disclosure__content-inner { align-items:center; gap:8px; }
+.college-config-toolbar-filter .college-config-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+.college-config-toolbar-filter .college-config-toolbar select,
+.college-config-toolbar-filter .college-config-filter-tabs { height:38px; min-height:38px; }
+.college-config-search-row { position:relative; z-index:4; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:9px 14px; border-bottom:1px solid var(--border); }
+.college-config-search-row .college-config-search {
+  flex:1 1 360px;
+  width:min(568px, 100%);
+  max-width:100%;
+  min-height:40px;
+  height:40px;
+  padding-inline:12px;
+  box-sizing:border-box;
+}
+.college-config-search-row .college-config-search input { min-height:36px; }
 .college-config-directory .college-config-empty {
   min-height:0;
   padding:28px 16px;
@@ -5948,6 +5990,12 @@
 .college-management .college-config-directory .college-config-row-actions { gap: 4px; }
 
 @media (max-width: 640px) {
+  .college-config-search-row { align-items:stretch; flex-wrap:wrap; }
+  .college-config-search-row .college-config-search { flex-basis:100%; }
+  .college-config-toolbar-actions { width:100%; }
+  .college-config-toolbar-filter .filter-disclosure__content { right:0; }
+  .college-config-toolbar-actions > .export-control .export-button,
+  .college-config-toolbar-actions > .college-config-toolbar-filter .filter-disclosure__toggle { width:118px; min-width:118px; }
   :is(.college-workspace-dialog, .college-form-dialog) { width: calc(100vw - 12px); max-height: calc(100dvh - 12px); }
   .college-workspace-dialog .shared-view-dialog__header,
   .college-workspace-dialog .shared-view-dialog__body,
