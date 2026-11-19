@@ -322,11 +322,11 @@
 .platform-subscriptions__filters :is(input,select):focus-visible { border-color:var(--brand,#625e47); outline:0; box-shadow:0 0 0 3px color-mix(in srgb,var(--brand,#625e47) 13%,transparent); }
 .platform-subscriptions__refresh { min-height:38px; }
 .platform-subscriptions__refresh:disabled { cursor:wait; opacity:.65; }
-.platform-subscriptions__table { min-width:740px; table-layout:auto; }
+.platform-subscriptions__table { width:min(100%, 1120px); min-width:740px; margin-inline:auto; table-layout:auto; }
 .platform-subscriptions__table th,
-.platform-subscriptions__table td { padding:7px 10px; }
+.platform-subscriptions__table td { padding:7px 6px; text-align:center; vertical-align:middle; }
 .platform-subscriptions__table th:last-child,
-.platform-subscriptions__table td:last-child { width:1%; text-align:center; white-space:nowrap; }
+.platform-subscriptions__table td:last-child { width:1%; white-space:nowrap; }
 .platform-subscriptions__row-actions { display:flex; justify-content:center; gap:4px; }
 .platform-subscriptions__row-actions button {
   display:grid;

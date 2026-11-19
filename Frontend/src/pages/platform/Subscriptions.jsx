@@ -305,7 +305,7 @@ export default function Subscriptions() {
           </div>
           {loading ? <p className="platform-management__state" role="status">Loading subscriptions…</p> :
             <div className="platform-management__table-wrap" tabIndex={0} role="region" aria-label="Subscription directory records"><table className="platform-management__table platform-subscriptions__table">
-              <thead><tr><th>Organization / plan</th><th>Billing</th><th>Price</th><th>Accessed users</th><th>Maximum users</th><th>Status</th><th>Subscription term</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Organization / plan</th><th>Billing</th><th>Price</th><th>Maximum users</th><th>Accessed users</th><th>Status</th><th>Subscription term</th><th>Actions</th></tr></thead>
               <tbody>{visibleSubscriptions.map((row, index) => {
                 const days = remainingDays(row.endDate)
                 const status = statusKey(row.status)
@@ -314,8 +314,8 @@ export default function Subscriptions() {
                   <td><strong>{row.organizationName || 'Unnamed organization'}</strong><small>{row.planName || 'Plan not named'}</small></td>
                   <td><span className="platform-subscriptions__cycle">{row.billingCycle || '—'}</span></td>
                   <td className="platform-subscriptions__price-cell"><strong>{money(row.price)}</strong></td>
-                  <td><strong>{row.accessedUsersCount ?? '—'}</strong></td>
                   <td><span className="platform-subscriptions__capacity"><FiUsers />{row.maximumUsers ?? '—'}<small>users</small></span></td>
+                  <td><span className="platform-subscriptions__capacity"><FiUsers aria-hidden="true" /><span>{row.accessedUsersCount ?? '—'} / {row.maximumUsers ?? '—'}</span><small>users</small></span></td>
                   <td><span className={`platform-management__status platform-management__status--${status}`}>{row.status || 'Unknown'}</span></td>
                   <td><strong>{dateLabel(row.startDate)} – {dateLabel(row.endDate)}</strong><small>{days == null ? 'Term not set' : days < 0 ? 'Expired' : days === 0 ? 'Ends today' : `Ends in ${days} day${days === 1 ? '' : 's'}`}</small></td>
                   <td><div className="platform-subscriptions__row-actions">
