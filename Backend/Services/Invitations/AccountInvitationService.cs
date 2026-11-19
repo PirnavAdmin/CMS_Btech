@@ -72,8 +72,10 @@ public sealed class AccountInvitationService(
     public async Task<(bool Success,string Message)> CompleteAsync(string email,string token,string password,string confirmation)
     {
         if(string.IsNullOrWhiteSpace(email)||!token.StartsWith("ua_",StringComparison.Ordinal)||token.Length!=67||
-           !token.AsSpan(3).ToString().All(Uri.IsHexDigit)||password!=confirmation||password.Length<12||Encoding.UTF8.GetByteCount(password)>72)
-            return(false,"Use a valid setup link and matching passwords of at least 12 characters and at most 72 UTF-8 bytes.");
+           !token.AsSpan(3).ToString().All(Uri.IsHexDigit)||string.IsNullOrEmpty(password)||password!=confirmation)
+            return(false,"Use a valid setup link and matching passwords.");
+        if (AccountSetupPasswordPolicy.GetError(password) is { } passwordError)
+            return (false, passwordError);
         var trace=http.HttpContext?.TraceIdentifier??Guid.NewGuid().ToString("N");
         return await store.RedeemAsync(email.Trim(),Hash(token),password,clock.GetUtcNow().UtcDateTime,trace);
     }
