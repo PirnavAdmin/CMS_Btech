@@ -15,7 +15,6 @@ import {
   FiAlertCircle,
   FiX,
   FiInfo,
-  FiMoreHorizontal,
   FiEye,
   FiToggleRight,
   FiToggleLeft,
@@ -989,7 +988,6 @@ export default function AcademicStructure() {
 
   const renderProgramActions = ({ course, branch }) => {
     const name = courseNameOf(course)
-    const id = 'program-actions-' + courseIdOf(course) + (branch ? '-' + branchIdOf(branch) : '')
     const resume = programResumeAction(course)
     const canEdit = canAction('/courses', 'edit')
     const canDelete = canAction('/courses', 'delete')
@@ -1000,16 +998,8 @@ export default function AcademicStructure() {
       {canEdit && <button type="button" className="table-action-btn action-edit" title="Edit Program" aria-label="Edit Program" onClick={() => openEditModal('course', course)}><FiEdit2 aria-hidden="true" /></button>}
       {resume && <button type="button" className="table-action-btn" title="Resume Setup" aria-label="Resume Setup" onClick={resume}><FiPlayCircle aria-hidden="true" /></button>}
       {canEdit && <button type="button" className={`table-action-btn ${active ? 'action-activate' : 'action-deactivate'}`} title={statusAction} aria-label={statusAction} onClick={() => handleToggleStatus('course', course)}>{active ? <FiToggleRight aria-hidden="true" /> : <FiToggleLeft aria-hidden="true" />}</button>}
-      {canDelete && <>
-        <button type="button" className="table-action-btn" aria-label={'More Actions for ' + name} title="More Actions" popoverTarget={id}><FiMoreHorizontal aria-hidden="true" /></button>
-        <div id={id} popover="auto" className="table-action-popover" role="group" aria-label={'Actions for ' + name}
-          onToggle={event => { if (event.newState === 'open') event.currentTarget.querySelector('button')?.focus() }}>
-          <button type="button" onClick={event => {
-            event.currentTarget.parentElement.hidePopover?.()
-            setDeleteConfirm({ type: 'course', item: course })
-          }}>Delete Program</button>
-        </div>
-      </>}
+      <button type="button" className="table-action-btn action-delete" aria-label="Delete Program" title={canDelete ? 'Delete Program' : 'You do not have permission to delete programs'} disabled={!canDelete}
+        onClick={() => { if (canDelete) setDeleteConfirm({ type: 'course', item: course }) }}><FiTrash2 aria-hidden="true" /></button>
     </div>
   }
 

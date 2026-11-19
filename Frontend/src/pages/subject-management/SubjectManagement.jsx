@@ -535,7 +535,7 @@ export function SubjectDetailsPage() {
   return <><SubjectManagement />{subject && !loading && !error ? <Details subject={subject} sections={sections} close={() => navigate(returnTo)} edit={canAction('/subject-management','edit') ? edit : null} /> : <ViewDialog title="Subject Details" onClose={() => navigate(returnTo)} showExport={false}><div role={error ? 'alert' : 'status'}>{error || 'Loading subject details...'}{error && <button type="button" onClick={() => setAttempt(value => value + 1)}>Retry details</button>}</div></ViewDialog>}</>
 
 }
-function Select({ label, value, options, onChange, disabled, semester = false, hideSearch = false, placeholder = label }) { return <SearchableSelect placement="bottom" hideSearch={hideSearch} label={label} value={value} options={options} onChange={onChange} placeholder={placeholder} disabled={disabled} getOptionLabel={semester ? s => s.semesterName || s.name || `Semester ${semNo(s)}` : undefined} /> }
+function Select({ label, value, options, onChange, disabled, semester = false, hideSearch = true, placeholder = label }) { return <SearchableSelect placement="bottom" hideSearch={hideSearch} label={label} value={value} options={options} onChange={onChange} placeholder={placeholder} disabled={disabled} getOptionLabel={semester ? s => s.semesterName || s.name || `Semester ${semNo(s)}` : undefined} /> }
 function Field({ label, children }) { return <div className="sm-field"><label>{label}</label>{children}</div> }
 function Input({ label, value, change, type = 'text', disabled = false, error = null, placeholder }) {
   const numeric = type === 'number'
