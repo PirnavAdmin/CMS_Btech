@@ -4,7 +4,7 @@ import { calculateCompletion, completionSchemas, departmentDirectoryCompletion }
 import { CompletionSummary, ProgressiveFormFooter, ResumeSetupAction, completionColumn } from '../../components/RecordCompletion'
 import SectionsRoomsHeader from '../../components/SectionsRoomsHeader'
 import { accessGovernance } from '../../services/accessGovernanceService'
-import { deleteDepartment, generateNextAcademicYear } from '../../auth/collegeApi'
+import { deleteCollege, deleteDepartment, generateNextAcademicYear } from '../../auth/collegeApi'
 import ViewDialog from '../../components/ViewDialog'
 import { Link, useLocation } from 'react-router-dom'
 import DataTable from '../../components/DataTable'
@@ -2057,6 +2057,7 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
   const isSuperAdmin = collegeAccess?.isSuperAdmin === true || effectiveAccess?.isSuperAdmin === true
   const canCreateCollege = canAction('/college-institution-management', 'create')
   const canEditCollege = canAction('/college-institution-management', 'edit')
+  const canDeleteCollege = isSuperAdmin && canAction('/college-institution-management', 'delete')
   const isAssignedCollegeAdmin = !isSuperAdmin && Boolean(assignedCollegeId)
   const currentUserId = effectiveAccess?.userId == null ? '' : String(effectiveAccess.userId)
   const canManageCollege = (college) => isSuperAdmin || String(college.id) === String(assignedCollegeId) || (currentUserId && String(college.createdBy) === currentUserId)
@@ -2096,6 +2097,10 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
   const [pendingStatus, setPendingStatus] = useState(null)
   const [collegeImpact, setCollegeImpact] = useState(null)
   const [isStatusSaving, setIsStatusSaving] = useState(false)
+  const [collegeToDelete, setCollegeToDelete] = useState(null)
+  const [collegeDeleteError, setCollegeDeleteError] = useState('')
+  const [isCollegeDeleting, setIsCollegeDeleting] = useState(false)
+  const collegeDeleteLock = useRef(false)
   const [collegeSummary, setCollegeSummary] = useState({ total: null, active: null, inactive: null, loading: true, error: '' })
 
   // Pagination state
@@ -2396,6 +2401,25 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
     }
   }
 
+  const confirmCollegeDelete = async () => {
+    if (!canDeleteCollege || !collegeToDelete || collegeDeleteLock.current) return
+    collegeDeleteLock.current = true
+    setIsCollegeDeleting(true)
+    setCollegeDeleteError('')
+    try {
+      await deleteCollege(collegeToDelete.id)
+      setCollegeToDelete(null)
+      eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED)
+      showSuccess('Organization deleted successfully.')
+      await Promise.all([loadColleges(searchTerm), refreshCollegeSummary()])
+    } catch (error) {
+      setCollegeDeleteError(getApiErrorMessage(error, 'Unable to delete this organization. Please try again.'))
+    } finally {
+      collegeDeleteLock.current = false
+      setIsCollegeDeleting(false)
+    }
+  }
+
   // -- College Settings: list --
   const fetchSettingsList = async () => {
     setIsSettingsLoading(true)
@@ -2558,7 +2582,22 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
                   { key:'contact', label:'Contact', className:'college-col-contact', render:college => <div><span className="college-config-truncate" title={college.contact}>{college.contact || '—'}</span><small className="college-config-email college-config-truncate" title={college.email}>{college.email || '—'}</small></div> },
                   { key:'status', label:'Status', className:'college-col-status', render:college => <StatusBadge value={college.status === 'active' ? 'Active' : 'Inactive'} /> },
                   completionColumn,
-                ]} rowActions={college => <div className="college-config-row-actions"><button type="button" className="table-action-btn" title={`View ${college.name}`} aria-label={`View ${college.name}`} onClick={() => openDetails(college)}><FiEye /></button>{canEditCollege && canManageCollege(college) && <><button type="button" className="table-action-btn action-edit" title={`Edit ${college.name}`} aria-label={`Edit ${college.name}`} onClick={() => openEdit(college)}><EditIcon /></button><ResumeSetupAction completion={college.completion} name={college.name} onClick={() => openEdit(college)} /><button type="button" className="table-action-btn" title={`${college.status === 'active' ? 'Deactivate' : 'Activate'} ${college.name}`} aria-label={`${college.status === 'active' ? 'Deactivate' : 'Activate'} ${college.name}`} onClick={() => toggleStatus(college)}>{college.status === 'active' ? <FiToggleRight data-status="active" /> : <FiToggleLeft data-status="inactive" />}</button></>}</div>} />
+                ]} rowActions={college => (
+                  <div className="college-config-row-actions">
+                    <button type="button" className="table-action-btn" title={`View ${college.name}`} aria-label={`View ${college.name}`} onClick={() => openDetails(college)}><FiEye /></button>
+                    {canEditCollege && canManageCollege(college) && <>
+                      <button type="button" className="table-action-btn action-edit" title={`Edit ${college.name}`} aria-label={`Edit ${college.name}`} onClick={() => openEdit(college)}><EditIcon /></button>
+                      <button type="button" className="table-action-btn" title={`${college.status === 'active' ? 'Deactivate' : 'Activate'} ${college.name}`} aria-label={`${college.status === 'active' ? 'Deactivate' : 'Activate'} ${college.name}`} onClick={() => toggleStatus(college)}>{college.status === 'active' ? <FiToggleRight data-status="active" /> : <FiToggleLeft data-status="inactive" />}</button>
+                    </>}
+                    {canDeleteCollege && <button
+                      type="button"
+                      className="table-action-btn action-delete"
+                      title={`Delete ${college.name}`}
+                      aria-label={`Delete ${college.name}`}
+                      onClick={() => { setCollegeDeleteError(''); setCollegeToDelete(college) }}
+                    ><FiTrash2 /></button>}
+                  </div>
+                )} />
               </>
             )}
             </section>
@@ -2967,6 +3006,23 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
           </>
         )}
       </div>
+
+      {collegeToDelete && <ViewDialog
+        title="Delete Organization"
+        subtitle={collegeToDelete.name}
+        icon={FiTrash2}
+        showExport={false}
+        busy={isCollegeDeleting}
+        maxWidth="440px"
+        onClose={() => setCollegeToDelete(null)}
+        footerContent={<>
+          <button type="button" className="erp-btn erp-btn--secondary" disabled={isCollegeDeleting} onClick={() => setCollegeToDelete(null)}>Cancel</button>
+          <button type="button" className="erp-btn erp-btn--danger" disabled={isCollegeDeleting} onClick={confirmCollegeDelete}>{isCollegeDeleting ? 'Deleting…' : 'Delete Organization'}</button>
+        </>}
+      >
+        <p>Delete <strong>{collegeToDelete.name}</strong> from the organization directory?</p>
+        {collegeDeleteError && <p role="alert">{collegeDeleteError}</p>}
+      </ViewDialog>}
 
       {pendingStatus && <StatusConfirmDialog entity="College" name={`${pendingStatus.college.name} (${pendingStatus.college.code})`} nextStatus={pendingStatus.nextStatus} onCancel={() => { setPendingStatus(null); setCollegeImpact(null) }} onConfirm={confirmStatusChange} busy={isStatusSaving} error={statusError}
         confirmLabel={pendingStatus.nextStatus === 'active' ? 'Activate College' : 'Deactivate College'}

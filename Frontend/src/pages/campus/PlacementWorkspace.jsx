@@ -241,9 +241,9 @@ function Field({ name, title, form, setForm, errors = {}, type = 'text', ...prop
   return <label htmlFor={id}>{title}<input {...props} id={id} type={type} value={form[name] ?? ''} onChange={event => setForm(current => ({ ...current, [name]: event.target.value }))} aria-invalid={Boolean(errors[name])} aria-describedby={errors[name] ? `${id}-error` : undefined} />{errors[name] && <small id={`${id}-error`} className="placement-error" role="alert">{errors[name]}</small>}</label>
 }
 
-function Choice({ name, title, form, setForm, options, disabled, required, searchable = false }) {
-  return <label>{title}<ProjectSelect forceCustom={searchable} aria-label={title} required={required} disabled={disabled} value={form[name] ?? ''} onChange={event => setForm(current => ({ ...current, [name]: event.target.value }))}>
-    <option value="">Select {title.replace(' *', '').toLowerCase()}</option>{options.map(item => <option key={item.value ?? item} value={item.value ?? item}>{item.label ?? label(item)}</option>)}
+function Choice({ name, title, form, setForm, options, disabled, required, searchable = false, hideSearch = false, hidePlaceholder = false }) {
+  return <label>{title}<ProjectSelect forceCustom={searchable} hideSearch={hideSearch} hidePlaceholder={hidePlaceholder} placeholder={hidePlaceholder ? `Select ${title.replace(' *', '').toLowerCase()}` : undefined} aria-label={title} required={required} disabled={disabled} value={form[name] ?? ''} onChange={event => setForm(current => ({ ...current, [name]: event.target.value }))}>
+    {!hidePlaceholder && <option value="">Select {title.replace(' *', '').toLowerCase()}</option>}{options.map(item => <option key={item.value ?? item} value={item.value ?? item}>{item.label ?? label(item)}</option>)}
   </ProjectSelect></label>
 }
 
@@ -282,7 +282,7 @@ function PlacementEditor({ dialog, data, busy, onSave, onClose, onAddCompany }) 
       {field('hq', 'Address')}{choice('status', 'Status *', ['Active', 'Inactive'], { required: true })}
     </>}
     {type === 'drive' && <>
-      <div className="placement-company-field">{choice('companyId', 'Company *', data.companies.filter(row => row.status !== 'Inactive' || String(row.id) === String(form.companyId)).map(row => ({ value: row.id, label: row.name })), { required: true, searchable: true })}
+      <div className="placement-company-field">{choice('companyId', 'Company *', data.companies.filter(row => row.status !== 'Inactive' || String(row.id) === String(form.companyId)).map(row => ({ value: row.id, label: row.name })), { required: true, searchable: true, hideSearch: true, hidePlaceholder: true })}
         {onAddCompany && <button type="button" onClick={() => onAddCompany(form)}>Add Company</button>}
       </div>
       {field('title', 'Drive Title *', { required: true, maxLength: 200 })}

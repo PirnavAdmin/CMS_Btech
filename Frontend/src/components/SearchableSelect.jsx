@@ -301,11 +301,11 @@ export function selectOptions(children, inheritedDisabled = false) {
 
 // Retain the native control for form submission and existing React event handlers.
 // Small lists and multi-select listboxes keep their existing native behavior.
-export function ProjectSelect({ children, forceCustom = false, menuPlacement = 'auto', ...props }) {
+export function ProjectSelect({ children, forceCustom = false, menuPlacement = 'auto', hideSearch = false, hidePlaceholder = false, placeholder, ...props }) {
   const nativeRef = useRef(null)
   const wrapperRef = useRef(null)
   const [uncontrolledValue, setUncontrolledValue] = useState(props.defaultValue ?? '')
-  const options = selectOptions(children)
+  const options = selectOptions(children).filter(option => !hidePlaceholder || option.value !== '')
   const searchable = forceCustom || (!props.multiple && (!props.size || Number(props.size) === 1)
     && options.filter(option => option.value !== '').length >= 8)
   const selectedValue = props.value ?? uncontrolledValue
@@ -324,9 +324,10 @@ export function ProjectSelect({ children, forceCustom = false, menuPlacement = '
     <SearchableSelect
       label={props['aria-label'] || props.name || options.find(option => !option.value)?.label || 'Select an option'}
       value={selectedValue} options={options} disabled={props.disabled} required={props.required}
+      hideSearch={hideSearch}
       menuPlacement={menuPlacement}
       error={props['aria-invalid'] === true || props['aria-invalid'] === 'true'}
-      placeholder={options.find(option => !option.value)?.label || 'Select an option'}
+      placeholder={placeholder || options.find(option => !option.value)?.label || 'Select an option'}
       triggerProps={{ id: props.id, name: props.name, 'aria-labelledby': props['aria-labelledby'], 'aria-describedby': props['aria-describedby'], onBlur: props.onBlur }}
       onChange={value => {
         const native = nativeRef.current
@@ -350,7 +351,7 @@ export function ProjectSelect({ children, forceCustom = false, menuPlacement = '
       tabIndex={-1} aria-hidden="true" onFocus={focusTrigger}
       onInvalid={event => { props.onInvalid?.(event); focusTrigger() }}
       onChange={event => { setUncontrolledValue(event.target.value); props.onChange?.(event) }}>
-      {children}
+      {hidePlaceholder && <option value="" />}{children}
     </select>
   </div>
 }
