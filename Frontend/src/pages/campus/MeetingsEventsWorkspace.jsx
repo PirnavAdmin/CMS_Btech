@@ -212,6 +212,7 @@ function ActivityEditor({ editor, onClose, onSave, busy: saving, departments, ro
   const [form, setForm] = useState(editor.form)
   const [errors, setErrors] = useState({})
   const [error, setError] = useState('')
+  const [validationIssues, setValidationIssues] = useState([])
   const [submitting, setSubmitting] = useState(false)
   const busy = saving || submitting
   const lock = useRef(false)
@@ -224,14 +225,24 @@ function ActivityEditor({ editor, onClose, onSave, busy: saving, departments, ro
     if (kind === 'registration' && registrations.some(row => String(row.eventId) === String(form.eventId) && !isCancelled(row) && (form.participantType === 'STUDENT' ? String(row.studentId) === String(form.studentId) : String(row.userId) === String(form.userId)))) found.participant = 'This participant is already registered.'
     setErrors(found)
     if (Object.keys(found).length) return
-    lock.current = true; setSubmitting(true); setError('')
+    lock.current = true; setSubmitting(true); setError(''); setValidationIssues([])
     try {
       if (kind === 'meeting' || kind === 'event') {
         const result = api.unwrap(await api.call('meeting-event-validation/schedules/validate', { method: 'POST', body: { collegeId: Number(scope.collegeId), title: form.title, startAt: form.start, endAt: form.end, classroomId: form.roomId ? Number(form.roomId) : null, excludeMeetingId: kind === 'meeting' && old ? Number(old.id) : null, excludeEventId: kind === 'event' && old ? Number(old.id) : null } }))
-        if (result?.isValid === false) throw new Error(result.issues?.map(item => item.message).join(' ') || 'This schedule conflicts with another activity.')
+        if (result?.isValid === false) {
+          const failed = (result.issues || []).filter(item => item.severity?.toUpperCase() === 'ERROR')
+          const scheduleIssue = failed.find(item => item.code === 'SCHEDULE_INPUT')
+          if (scheduleIssue) setErrors(current => ({ ...current, end: scheduleIssue.message }))
+          setValidationIssues(failed.filter(item => item.code !== 'SCHEDULE_INPUT'))
+          if (!failed.length) setError('Schedule validation failed. Review the meeting details and try again.')
+          return
+        }
       }
       await onSave(kind, form, old)
-    } catch (failure) { setError(failure.message || 'Unable to save. Please retry.') }
+    } catch (failure) {
+      const message = failure.message || 'Unable to save. Please retry.'
+      setError(failure.status === 403 ? 'You do not have permission to create or edit meetings in this college.' : message)
+    }
     finally { lock.current = false; setSubmitting(false) }
   }
   const title = kind === 'registration' ? 'Register Participant' : kind === 'minute' ? `${old ? 'Edit' : 'Add'} Minutes` : `${old ? 'Edit' : 'Create'} ${kind === 'event' ? 'Campus Event' : 'Meeting'}`
@@ -254,6 +265,6 @@ function ActivityEditor({ editor, onClose, onSave, busy: saving, departments, ro
         <label className="meetings-full">Participant *<select required value={form.participantType === 'STUDENT' ? form.studentId || '' : form.userId || ''} onChange={event => set(form.participantType === 'STUDENT' ? 'studentId' : 'userId', event.target.value)}><option value="">Select saved participant</option>{(form.participantType === 'STUDENT' ? people.students : people.faculty.filter(item => item.userId)).map(item => <option key={item.studentId || item.userId || item.id} value={form.participantType === 'STUDENT' ? item.studentId || item.id : item.userId}>{item.fullName || item.studentName || item.facultyName || item.name} · {item.rollNumber || item.employeeId || item.studentId || item.userId}</option>)}</select>{errors.participant && <small role="alert">{errors.participant}</small>}</label>
       </>}
       {kind === 'minute' && <>{field('title', 'Minutes Title', { maxLength: 250 })}<label className="meetings-full">Minutes *<textarea required rows={5} value={form.minutes || ''} onChange={event => set('minutes', event.target.value)} /></label></>}
-    </fieldset>{lookupError && <p className="meetings-hint">{lookupError}</p>}{error && <p className="meetings-error" role="alert">{error}</p>}</form>
+    </fieldset>{lookupError && <p className="meetings-hint">{lookupError}</p>}{error && <p className="meetings-error" role="alert">{error}</p>}{validationIssues.length > 0 && <ul className="meetings-error" role="alert">{validationIssues.map((issue, index) => <li key={`${issue.code}-${index}`}>{issue.code === 'SCHEDULE_PERMISSION_CHECK' ? 'You do not have permission to create or edit meetings in this college.' : issue.message}</li>)}</ul>}</form>
   </ViewDialog>
 }

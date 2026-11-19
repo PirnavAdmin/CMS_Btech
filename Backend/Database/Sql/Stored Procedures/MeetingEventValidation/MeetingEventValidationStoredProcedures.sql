@@ -44,7 +44,7 @@ BEGIN
           JOIN role_permissions rp ON rp.role_id = r.role_id
          WHERE u.user_id = p_actor_user_id AND u.status = 1 AND u.deleted_at IS NULL
            AND (u.college_id = v_college_id OR p_is_super_admin = 1)
-           AND UPPER(rp.module_key) IN ('EVENT_MANAGEMENT','EVENTS')
+           AND UPPER(rp.module_key) IN ('MEETINGS_EVENTS','EVENT_MANAGEMENT','EVENTS')
            AND CASE UPPER(p_action)
                  WHEN 'VIEW' THEN rp.can_view
                  WHEN 'CREATE' THEN rp.can_create
@@ -157,7 +157,7 @@ BEGIN
           JOIN role_permissions rp ON rp.role_id = r.role_id
          WHERE u.user_id = p_actor_user_id AND u.status = 1 AND u.deleted_at IS NULL
            AND (u.college_id = v_college_id OR p_is_super_admin = 1)
-           AND UPPER(rp.module_key) IN ('MEETING_MANAGEMENT','MEETINGS')
+           AND UPPER(rp.module_key) IN ('MEETINGS_EVENTS','MEETING_MANAGEMENT','MEETINGS')
            AND CASE UPPER(p_action)
                  WHEN 'VIEW' THEN rp.can_view
                  WHEN 'CREATE' THEN rp.can_create
@@ -260,7 +260,7 @@ BEGIN
       JOIN role_permissions rp ON rp.role_id = r.role_id
      WHERE u.user_id = p_actor_user_id AND u.status = 1 AND u.deleted_at IS NULL
        AND (u.college_id = p_college_id OR p_is_super_admin = 1)
-       AND UPPER(rp.module_key) IN ('EVENT_MANAGEMENT','EVENTS','MEETING_MANAGEMENT','MEETINGS')
+       AND UPPER(rp.module_key) IN ('MEETINGS_EVENTS','EVENT_MANAGEMENT','EVENTS','MEETING_MANAGEMENT','MEETINGS')
        AND (rp.can_create = 1 OR rp.can_edit = 1);
 
     SELECT 'SCHEDULE_PERMISSION_CHECK' Code,

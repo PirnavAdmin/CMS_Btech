@@ -218,7 +218,6 @@
   margin-bottom:18px;
 }
 .college-config-heading h1 { margin:0 0 6px; font-size:clamp(21px, 2vw, 28px); }
-.college-config-heading .college-config-context { margin:0; font-size:12px; }
 .college-config-directory-header {
   display:flex;
   flex-wrap:wrap;
@@ -307,8 +306,6 @@
 .college-config-stats article { display:flex; align-items:center; gap:10px; min-width:0; padding:10px 12px; border:1px solid var(--border); border-radius:12px; background:var(--surface); }
 .college-config-stats h2 { margin:0 0 2px; font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.4px; }
 .college-config-stats strong { font-size:20px; font-weight:700; line-height:1.3; overflow-wrap:anywhere; }
-.college-config-context { display:flex; align-items:baseline; flex-wrap:wrap; gap:6px; margin:0 0 10px; font-size:11px; color:var(--text-muted); }
-.college-config-context strong { color:var(--text-secondary); font-weight:600; overflow-wrap:anywhere; }
 .college-config-stat-mark svg { width:17px; height:17px; }
 .college-config-truncate,.college-config-identity small { display:block; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; max-width:100%; }
 .college-config-row-actions { display:flex; align-items:center; justify-content:flex-end; gap:4px; flex-wrap:nowrap; }
@@ -344,7 +341,6 @@
 .college-management .college-config-table .record-completion-cell { width:106px; }
 .college-config-table .college-col-identity { width:22%; }
 .college-config-table .college-col-code { width:9%; }
-.college-config-table .college-col-location { width:13%; }
 .college-config-table .college-col-contact { width:18%; }
 .college-config-table .college-col-status { width:11%; }
 .college-config-identity {
@@ -361,10 +357,6 @@
 .college-config-name { display:block; width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; border:0; padding:0; background:transparent; color:var(--text-primary); font:600 13px var(--font-family); text-align:center; cursor:pointer; }
 .college-config-name:hover { color:var(--brand); text-decoration:underline; }
 .college-config-address { display:block; max-width:230px; line-height:1.5; }
-.college-config-working { display:inline-flex; align-items:center; gap:3px; margin-top:0; padding:1px 5px; border:1px solid var(--cms-primary-border); border-radius:999px; color:var(--brand); background:var(--surface); font-size:10px; font-weight:700; }
-.college-config-working::before { content:""; width:6px; height:6px; flex:0 0 6px; border-radius:50%; background:var(--brand); }
-.college-config-table tbody tr:has(.college-config-working) td:first-child { box-shadow:inset 3px 0 0 var(--brand); }
-.college-config-working { white-space:nowrap; }
 .college-config-draft { display:flex; align-items:center; flex-wrap:wrap; gap:8px; padding:12px; margin-bottom:14px; border:1px solid var(--cms-primary-border); border-radius:10px; background:var(--brand-soft); font-size:12px; }
 .college-config-draft>div:first-child { flex:1 1 200px; min-width:0; overflow-wrap:anywhere; }
 .college-config-draft :is(small,strong) { display:block; }
@@ -456,7 +448,7 @@
  .college-config-table .college-col-contact { width:21%; }
 }
 @media(max-width:760px) {
- .college-config-table :is(.college-col-code,.college-col-location) { display:none; }
+ .college-config-table .college-col-code { display:none; }
  .college-config-table .college-col-identity { width:auto; }
  .college-management .college-config-table .col-actions { width:144px; }
  .college-config-table .college-col-contact { width:25%; }
@@ -470,7 +462,6 @@
  .college-management .college-config-table .record-completion-cell { width:78px; padding-inline:6px; }
  .college-config-table .record-completion progress { inline-size:1.25rem; }
  .college-management .college-config-table { min-width:420px; }
- .college-config-working { white-space:normal; }
  .college-config-stats article { padding:8px; gap:6px; }
  .college-config-stats h2 { font-size:9px; letter-spacing:0; }
  .college-config-stat-mark { width:24px; height:24px; flex-basis:24px; border-radius:6px; }
@@ -5959,21 +5950,24 @@
 }
 .college-management .college-config-directory .college-config-table {
   width: 100%;
-  min-width: 1170px;
+  min-width: 980px;
   table-layout: fixed;
 }
-.college-management .college-config-directory .college-config-table th {
-  padding: 8px 9px;
-  line-height: 1.4;
+#root .college-management .college-config-directory .college-config-table thead tr th {
+  padding-inline: 8px !important;
+  text-align: center;
 }
 .college-management .college-config-directory .college-config-table td {
-  padding: 8px 9px;
+  padding: 8px;
   line-height: 1.3;
+  text-align: center;
+  vertical-align: middle;
 }
-.college-management .college-config-directory .college-config-table .college-col-identity { width: 300px !important; }
-.college-management .college-config-directory .college-config-table th.college-col-identity { text-align:center; }
-.college-management .college-config-directory .college-config-table .college-col-code { display: table-cell !important; width: 110px !important; }
-.college-management .college-config-directory .college-config-table .college-col-code { text-align:center; }
+.college-management .college-config-directory .college-config-table .college-col-identity { width: 24%; }
+.college-management .college-config-directory .college-config-identity { display: inline-flex; max-width: 100%; vertical-align: middle; }
+.college-management .college-config-directory .college-config-identity > .college-config-logo { flex: 0 0 var(--directory-logo-size); }
+.college-management .college-config-directory .college-config-table .college-col-contact-person { width: 13%; }
+.college-management .college-config-directory .college-config-table .college-col-code { display: table-cell !important; width: 11%; }
 .college-config-identity > .college-config-logo {
   box-sizing:border-box;
   width:var(--directory-logo-size);
@@ -5982,12 +5976,11 @@
 }
 .college-config-identity > .college-config-logo .cm-emblem-icon { width:12px; height:12px; }
 .college-config-identity > .college-config-logo .cm-emblem-code { max-width:100%; letter-spacing:0; }
-.college-management .college-config-directory .college-config-table .college-col-location { display: table-cell !important; width: 170px !important; }
-.college-management .college-config-directory .college-config-table .college-col-contact { display: table-cell !important; width: 220px !important; }
-.college-management .college-config-directory .college-config-table .college-col-status { display: table-cell !important; width: 110px !important; }
-.college-management .college-config-directory .college-config-table .record-completion-cell { width: 110px !important; }
-.college-management .college-config-directory .college-config-table .col-actions { width: 180px !important; min-width: 180px !important; }
-.college-management .college-config-directory .college-config-row-actions { gap: 4px; }
+.college-management .college-config-directory .college-config-table .college-col-contact { display: table-cell !important; width: 20%; }
+.college-management .college-config-directory .college-config-table .college-col-status { display: table-cell !important; width: 9%; }
+.college-management .college-config-directory .college-config-table .record-completion-cell { width: 9%; }
+.college-management .college-config-directory .college-config-table .col-actions { width: 14%; }
+.college-management .college-config-directory .college-config-row-actions { justify-content: center; gap: 4px; }
 
 @media (max-width: 640px) {
   .college-config-search-row { align-items:stretch; flex-wrap:wrap; }
