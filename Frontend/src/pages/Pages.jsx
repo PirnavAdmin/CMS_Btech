@@ -61,8 +61,9 @@ function ActivateAccount() {
     event.preventDefault()
     if (lock.current || !validLink) return
     const next = {}
-    if (!password.trim() || password.length < 12) next.password = 'Use at least 12 characters for your password.'
+    if (password.length < 8) next.password = 'Use at least 8 characters for your password.'
     else if (new TextEncoder().encode(password).length > 72) next.password = 'Password must not exceed 72 UTF-8 bytes. Use fewer characters.'
+    else if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) next.password = 'Include at least one uppercase letter, one lowercase letter, and one number.'
     if (!confirmPassword) next.confirmPassword = 'Confirm your new password.'
     else if (password !== confirmPassword) next.confirmPassword = 'Passwords do not match.'
     setErrors(next); setError('')
@@ -104,7 +105,7 @@ function ActivateAccount() {
         <p className="account-setup__notice">Your email link is a one-time verification. The server checks it when you activate your account.</p>
         <label htmlFor="setup-login-id"><span>Login ID</span><input id="setup-login-id" type="text" autoComplete="username" value={invitation.loginId} readOnly /></label>
         <label htmlFor="setup-password"><span>New password</span><span className="password-input"><input id="setup-password" type={visible ? 'text' : 'password'} autoComplete="new-password" placeholder="Create a secure password" value={password} onChange={event => { setPassword(event.target.value); setErrors(current => ({ ...current, password: '' })) }} required aria-invalid={Boolean(errors.password)} aria-describedby={errors.password ? 'setup-password-help setup-password-error' : 'setup-password-help'} /><button className="password-toggle" type="button" aria-label={visible ? 'Hide new password' : 'Show new password'} onClick={() => setVisible(value => !value)}>{visible ? <FiEyeOff aria-hidden="true" /> : <FiEye aria-hidden="true" />}</button></span></label>
-        <p className="account-setup__help" id="setup-password-help">At least 12 characters; maximum 72 UTF-8 bytes.</p>
+        <p className="account-setup__help" id="setup-password-help">Use at least 8 characters, including an uppercase letter, a lowercase letter, and a number. Maximum 72 UTF-8 bytes.</p>
         {errors.password && <p className="field-error" id="setup-password-error" role="alert">{errors.password}</p>}
         <label htmlFor="setup-confirm"><span>Confirm password</span><span className="password-input"><input id="setup-confirm" type={confirmVisible ? 'text' : 'password'} autoComplete="new-password" placeholder="Re-enter your password" value={confirmPassword} onChange={event => { setConfirmPassword(event.target.value); setErrors(current => ({ ...current, confirmPassword: '' })) }} required aria-invalid={Boolean(errors.confirmPassword)} aria-describedby={errors.confirmPassword ? 'setup-confirm-error' : undefined} /><button className="password-toggle" type="button" aria-label={confirmVisible ? 'Hide confirm password' : 'Show confirm password'} onClick={() => setConfirmVisible(value => !value)}>{confirmVisible ? <FiEyeOff aria-hidden="true" /> : <FiEye aria-hidden="true" />}</button></span></label>
         {errors.confirmPassword && <p className="field-error" id="setup-confirm-error" role="alert">{errors.confirmPassword}</p>}

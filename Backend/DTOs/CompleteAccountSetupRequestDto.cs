@@ -14,7 +14,7 @@ namespace BTech.DTOs
         public string Token { get; set; } = string.Empty;
 
         [Required]
-        [MinLength(12)]
+        [MinLength(8)]
         [MaxLength(72)]
         public string NewPassword { get; set; } = string.Empty;
 

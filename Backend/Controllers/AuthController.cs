@@ -187,7 +187,7 @@ namespace BTech.Controllers
                 return BadRequest(new
                 {
                     success = false,
-                    message = "Login ID, valid setup token, and matching password fields are required. Password must be at least 12 characters."
+                    message = "Login ID, valid setup token, and matching password fields are required. Use at least 8 characters, including an uppercase letter, a lowercase letter, and a number. Maximum 72 UTF-8 bytes."
                 });
             }
 
