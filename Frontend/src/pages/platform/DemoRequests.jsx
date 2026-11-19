@@ -11,7 +11,6 @@ const dateLabel = value => {
   return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 const statusLabel = value => String(value || 'Pending').replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, letter => letter.toUpperCase())
-const locationLabel = row => [row.city, row.state].filter(Boolean).join(', ') || '—'
 
 export default function DemoRequests() {
   const { access, canView, loading: accessLoading } = useScreenAccess()
@@ -88,16 +87,13 @@ export default function DemoRequests() {
 
         {loading ? <p className="platform-management__state" role="status">Loading demo requests…</p> :
           <div className="platform-management__table-wrap platform-demo-requests__table-wrap" role="region" aria-label="Demo requests table" tabIndex={0}><table className="platform-management__table platform-demo-requests__table">
-            <thead><tr><th>Contact</th><th>Organization</th><th>Role</th><th>Students</th><th>Location</th><th>Requested demo</th><th>Status</th><th>Notes / consent</th><th>Submitted</th></tr></thead>
+            <thead><tr><th>Contact</th><th>Organization</th><th>Role</th><th>Requested demo</th><th>Status</th><th>Submitted</th></tr></thead>
             <tbody>{visibleRequests.map(row => <tr key={row.requestId}>
               <td><strong>{row.fullName || 'Unnamed contact'}</strong><small>{row.email || '—'}{row.mobile ? ` · ${row.mobile}` : ''}</small></td>
               <td>{row.institutionName || '—'}</td>
               <td>{row.role || '—'}</td>
-              <td>{row.numberOfStudents ?? '—'}</td>
-              <td>{locationLabel(row)}</td>
               <td>{row.demoDate ? `${dateLabel(row.demoDate)}${row.demoTime ? ` · ${String(row.demoTime).slice(0, 5)}` : ''}` : 'Not scheduled'}</td>
               <td><span className={`platform-management__status platform-management__status--${String(row.status || 'pending').toLowerCase()}`}>{statusLabel(row.status)}</span></td>
-              <td>{row.remarks || '—'}<small>{row.agreeToContact ? 'Contact consent given' : 'No contact consent'}</small></td>
               <td>{dateLabel(row.createdAt)}</td>
             </tr>)}</tbody>
           </table>{!visibleRequests.length && <p className="platform-management__state">{requests.length ? 'No requests match these filters.' : 'No demo requests have been submitted yet.'}</p>}</div>}
