@@ -347,8 +347,8 @@
 .platform-subscriptions__table th { background:#f4f0e2; }
 .platform-subscriptions__table tbody tr { transition:background-color .15s ease; }
 .platform-subscriptions__table tbody tr:hover { background:color-mix(in srgb,var(--brand-soft,#f4efd9) 42%,var(--surface,#fffdf7)); }
-.platform-subscriptions__table td:nth-child(6) strong { font-size:11px; white-space:nowrap; }
-.platform-subscriptions__table td:nth-child(6) small { font-size:10px; }
+.platform-subscriptions__table td:nth-child(7) strong { font-size:11px; white-space:nowrap; }
+.platform-subscriptions__table td:nth-child(7) small { font-size:10px; }
 .platform-subscriptions__cycle { display:inline-flex; min-height:25px; align-items:center; border:1px solid var(--border-color,#ded8c4); border-radius:7px; padding:0 8px; background:var(--surface,#fffdf7); color:var(--text-secondary,#647084); font-size:11px; font-weight:650; white-space:nowrap; }
 .platform-subscriptions__price-cell { font-variant-numeric:tabular-nums; white-space:nowrap; }
 .platform-subscriptions__capacity { display:inline-flex; align-items:center; gap:6px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; }
