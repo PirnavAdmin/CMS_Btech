@@ -48,12 +48,18 @@ public sealed class AcademicFeePlanService(IConfiguration config, FeePlanAccess 
 
     public async Task<AcademicFeePlanDto> SaveAsync(AcademicFeePlanRequest p, long? id = null)
     {
+        var stage = "request-validation";
+        try
+        {
         FeePlanRules.Validate(p);
+        stage = "open-connection";
         await using var c = await OpenAsync();
+        stage = "authorize";
         var actor = await access.AuthorizeAsync(c, p.CollegeId, "fees", id.HasValue ? "edit" : "create");
         await using var tx = await c.BeginTransactionAsync();
         // Keep one lock order for plan edits, version creation and publication.
         await c.ExecuteScalarAsync<long>("SELECT college_id FROM colleges WHERE college_id=@CollegeId FOR UPDATE", new { p.CollegeId }, tx);
+        stage = "validate-academic-scope";
         await ValidateAcademicScopeAsync(c, tx, FeePlanRules.Scope(p), p.FeeCategoryId);
         var version = 1;
         var revision = 1;
@@ -95,6 +101,7 @@ public sealed class AcademicFeePlanService(IConfiguration config, FeePlanAccess 
         }
         // A NULL semester covers all semesters; reject overlapping plans for the same
         // audience/category before saving, so the picker cannot offer two charges.
+        stage = "check-scope-conflict";
         var duplicate = await c.ExecuteScalarAsync<long?>("sp_afp_scope_conflict", new
         {
             p.CollegeId, p.AcademicYearId, p.CourseId, p.BranchId, p.SemesterId,
@@ -105,6 +112,7 @@ public sealed class AcademicFeePlanService(IConfiguration config, FeePlanAccess 
             $"Fee plan {duplicate} already covers this category, audience, academic scope and effective period.", 409);
         if (!id.HasValue)
         {
+            stage = "insert-fee-structure";
             id = await c.ExecuteScalarAsync<long>("""
                 INSERT INTO fee_structures(structure_code,structure_group_code,structure_name,college_id,academic_year_id,
                   course_id,branch_id,semester_id,fee_category_id,amount,currency_code,effective_from,effective_to,status,created_by)
@@ -112,6 +120,7 @@ public sealed class AcademicFeePlanService(IConfiguration config, FeePlanAccess 
                   @FeeCategoryId,@TotalAmount,@CurrencyCode,@EffectiveFrom,@EffectiveTo,0,@actor);
                 SELECT LAST_INSERT_ID();
                 """, Parameters(p, actor, version, revision, null), tx);
+            stage = "insert-academic-fee-plan";
             await c.ExecuteAsync("""
                 INSERT INTO academic_fee_plans(fee_structure_id,college_id,plan_code,plan_name,academic_year_id,course_id,
                   branch_id,semester_id,fee_category_id,batch,quota,student_category,cycle,payment_mode,currency_code,total_amount,
@@ -135,11 +144,23 @@ public sealed class AcademicFeePlanService(IConfiguration config, FeePlanAccess 
                   effective_from=@EffectiveFrom,effective_to=@EffectiveTo,updated_by=@actor WHERE fee_structure_id=@id AND college_id=@CollegeId;
                 """, Parameters(p, actor, version, revision, id), tx);
         }
+        stage = "read-saved-plan";
         var saved = (await AcademicFeePlanStore.GetAsync(c, id!.Value, p.CollegeId, tx))!;
+        stage = "insert-audit";
         await AcademicFeePlanStore.AuditAsync(c, tx, saved, revision == 1 ? "CREATE_DRAFT" : "UPDATE_DRAFT", actor, null);
+        stage = "commit";
         await tx.CommitAsync();
         logger.LogInformation("Academic fee plan saved. FeeStructureId={Id}, CollegeId={College}, Revision={Revision}, Actor={Actor}", id, p.CollegeId, revision, actor);
         return saved;
+        }
+        catch (MySqlException ex)
+        {
+            logger.LogError(ex,
+                "Academic fee plan MySQL failure at {Stage}. CollegeId={CollegeId}, AcademicYearId={AcademicYearId}, CourseId={CourseId}, BranchId={BranchId}, SemesterId={SemesterId}, FeeCategoryId={FeeCategoryId}, MySqlNumber={MySqlNumber}, SqlState={SqlState}",
+                stage, p.CollegeId, p.AcademicYearId, p.CourseId, p.BranchId, p.SemesterId,
+                p.FeeCategoryId, ex.Number, ex.SqlState);
+            throw;
+        }
     }
 
     private static DynamicParameters Parameters(AcademicFeePlanRequest p, long actor, int version, int revision, long? id)
