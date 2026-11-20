@@ -450,8 +450,20 @@ const request = async (url, options = {}, retried = false, bypassDedupe = false,
       422: 'Some submitted values are invalid.',
       500: genericMsg,
     }[response.status] || 'The request could not be completed.'
-    const backendMessage = validationMessage(body) || fallback
-    const error = new Error(url.includes('/api/v1/timetable-management') ? backendMessage : (typeof userErrorMessage === 'function' ? userErrorMessage(backendMessage, response.status) : backendMessage))
+    const academicFeeRequest = url.includes('/api/v1/academic-fee-plans')
+    const academicFeeFallback = academicFeeRequest ? {
+      403: 'You do not have permission to manage this fee plan.',
+      404: 'The fee plan or a referenced academic record could not be found.',
+      409: 'This fee configuration conflicts with a saved plan.',
+    }[response.status] : undefined
+    const backendMessage = validationMessage(body) || academicFeeFallback || fallback
+    // "Server ID" in an academic validation message describes the expected identifier.
+    const validationText = academicFeeRequest && [400, 409, 422].includes(response.status)
+      ? backendMessage.replace(/\bserver IDs?\b/gi, match => match.endsWith('s') ? 'record IDs' : 'record ID')
+      : backendMessage
+    const sanitized = typeof userErrorMessage === 'function' ? userErrorMessage(validationText, response.status) : validationText
+    const safeMessage = academicFeeRequest && sanitized === validationText ? backendMessage : sanitized
+    const error = new Error(url.includes('/api/v1/timetable-management') ? backendMessage : safeMessage)
     error.status = response.status
     error.validationErrors = body?.errors && typeof body.errors === 'object' ? body.errors : undefined
     error.code = typeof body?.code === 'string' ? body.code : undefined
@@ -1611,7 +1623,7 @@ export const academicFeePlanApi = {
     return dataResponse(await request(withQuery(endpoint(`/api/v1/academic-fee-plans/${encodeURIComponent(id)}/${action}`), { collegeId }), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ expectedRevision, ...(action === 'return-to-draft' ? { reason: 'Returned to draft from Fee Management.' } : {}) }) }))
   },
   list: async (collegeId, params = {}) => listData(await request(withQuery(API_ENDPOINTS.academicFeePlans.list, { collegeId, page: 1, pageSize: 100, ...params }))),
-  create: async body => dataResponse(await request(API_ENDPOINTS.academicFeePlans.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })),
+  create: async body => dataResponse(await request(withQuery(API_ENDPOINTS.academicFeePlans.create, { collegeId: body.collegeId }), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })),
   submit: async (id, collegeId, expectedRevision) => dataResponse(await request(API_ENDPOINTS.academicFeePlans.submit(id, collegeId), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ expectedRevision }) })),
 }
 
