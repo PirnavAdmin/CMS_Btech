@@ -377,6 +377,7 @@ function SectionForm({ editMode = false }) {
   const semesterRequest = useRef(0)
   const legacy = useRef({})
   const originalRoom = useRef('')
+  const createdSectionId = useRef(null)
   const [formTab, setFormTab] = useState(editMode ? 'details' : 'mapping')
   const scopedCourses = useMemo(() => scopeRecords(masters.courses).filter(item => (item.status !== 'Inactive' && item.status !== 0 && item.status !== false && item.isActive !== false) || String(item.id) === String(form.courseId)), [scopeRecords, masters.courses, form.courseId])
   const course = scopedCourses.find((item) => String(item.id) === String(form.courseId))
@@ -424,9 +425,14 @@ function SectionForm({ editMode = false }) {
   useEffect(() => { load() }, [load])
   const prevCollegeIdRef = useRef(selectedCollegeId)
   const roomValue = (room) => room.buildingBlock && room.floor ? [room.buildingBlock, room.floor, room.roomNumber || room.roomName || room.id].join(' / ') : String(room.roomNumber || room.roomName || room.id)
+  const findRoom = (value) => {
+    const key = String(value || '').trim().toLowerCase()
+    return key && rooms.find(room => [roomValue(room), room.roomNumber || room.roomName || room.id]
+      .some(label => String(label).trim().toLowerCase() === key))
+  }
   useEffect(() => {
     if (!form.room) return
-    const selectedRoom = rooms.find((room) => String(roomValue(room)) === String(form.room) || String(room.roomNumber || room.roomName || room.id) === String(form.room))
+    const selectedRoom = findRoom(form.room)
     if (!selectedRoom) return
     setRoomBuilding(selectedRoom.buildingBlock || '')
     setRoomFloor(selectedRoom.floor || '')
@@ -511,6 +517,9 @@ function SectionForm({ editMode = false }) {
         ...legacy.current,
         capacity: Number(form.capacity),
       }
+      const selectedRoom = findRoom(payload.room)
+      if (payload.room && !selectedRoom) throw new Error('Select a room from the room directory before saving.')
+      const previousRoom = findRoom(originalRoom.current)
       let savedSection = null
       if (editMode) {
         const currentStudents = await sectionAssignmentApi.listBySection(id)
@@ -520,21 +529,22 @@ function SectionForm({ editMode = false }) {
         if (capacityCheck === false || capacityCheck?.isValid === false) throw new Error(capacityCheck?.message || 'The requested capacity is not allowed.')
         savedSection = await sectionApi.update(id, payload)
         await sectionApi.updateStatus(id, payload.status)
+      } else if (createdSectionId.current) {
+        savedSection = await sectionApi.update(createdSectionId.current, payload)
+        await sectionApi.updateStatus(createdSectionId.current, payload.status)
       } else {
         const created = await sectionApi.create(payload)
+        createdSectionId.current = created.id
         savedSection = created
         rememberCreated('sections', created)
         if (payload.status === 'Inactive') await sectionApi.updateStatus(created.id, payload.status)
       }
-      if (originalRoom.current && originalRoom.current !== payload.room && typeof roomService.allocateRoom === 'function') {
-        const previousRoom = rooms.find(room => String(room.roomNumber || room.roomName || room.id) === String(originalRoom.current))
-        if (previousRoom) await roomService.allocateRoom(previousRoom.id, '')
+      const sectionId = savedSection?.id ?? savedSection?.sectionId ?? id
+      if (previousRoom && previousRoom.id !== selectedRoom?.id && String(previousRoom.sectionId) === String(sectionId)) {
+        await roomService.allocateRoom(previousRoom.id, '')
       }
-      if (payload.room) {
-        const selectedRoom = rooms.find(room => String(room.roomNumber || room.roomName || room.id) === String(payload.room))
-        if (selectedRoom && typeof roomService.allocateRoom === 'function') {
-          await roomService.allocateRoom(selectedRoom.id, payload.name || 'Section', savedSection?.id ?? savedSection?.sectionId ?? id)
-        }
+      if (selectedRoom && payload.status !== 'Inactive' && String(selectedRoom.sectionId) !== String(sectionId)) {
+        await roomService.allocateRoom(selectedRoom.id, payload.name, sectionId)
       }
       originalRoom.current = payload.room || ''
       eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED, { form })

@@ -2029,7 +2029,7 @@ export const roomApi = {
   getById: async (classroomId) => (await request(API_ENDPOINTS.rooms.detail(requiredId(classroomId, 'Room ID'))))?.data,
   create: async (payload) => (await jsonRequest(API_ENDPOINTS.rooms.create, 'POST', payload))?.data,
   update: async (classroomId, payload) => (await jsonRequest(API_ENDPOINTS.rooms.update(requiredId(classroomId, 'Room ID')), 'PUT', payload))?.data,
-  allocate: async (classroomId, payload) => {
+  allocate: async (classroomId, payload, collegeId) => {
     let body = {}
     if (typeof payload === 'number') {
       body = { sectionId: Number(payload) }
@@ -2044,9 +2044,10 @@ export const roomApi = {
     } else {
       body = payload
     }
-    return (await jsonRequest(API_ENDPOINTS.rooms.allocation(requiredId(classroomId, 'Room ID')), 'PUT', body))?.data
+    return (await jsonRequest(withQuery(API_ENDPOINTS.rooms.allocation(requiredId(classroomId, 'Room ID')), { collegeId }), 'PUT', body))?.data
   },
-  deallocate: async (classroomId) => request(API_ENDPOINTS.rooms.allocation(requiredId(classroomId, 'Room ID')), { method: 'DELETE' }),
+  delete: async (classroomId, collegeId) => request(withQuery(API_ENDPOINTS.rooms.delete(requiredId(classroomId, 'Room ID')), { collegeId }), { method: 'DELETE' }),
+  deallocate: async (classroomId, collegeId) => request(withQuery(API_ENDPOINTS.rooms.allocation(requiredId(classroomId, 'Room ID')), { collegeId }), { method: 'DELETE' }),
 }
 export const roomsApi = roomApi
 
