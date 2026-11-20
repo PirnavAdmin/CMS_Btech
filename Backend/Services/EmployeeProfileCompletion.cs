@@ -15,11 +15,12 @@ public static class EmployeeProfileCompletion
     public static bool AppliesTo(IEnumerable<string> roles) =>
         !roles.Any(role => CanonicalRoleCode.Normalize(role) == "STUDENT");
 
-    public static bool IsComplete(string? fullName, string? email, string? mobile, string? houseNumber) =>
+    public static bool IsComplete(string? fullName, string? email, string? mobile, string? houseNumber, IEnumerable<string>? roles = null) =>
         !string.IsNullOrWhiteSpace(fullName) &&
         IsValidEmail(email) &&
         mobile != null && IndianMobile.IsMatch(mobile.Trim()) &&
-        !string.IsNullOrWhiteSpace(houseNumber);
+        ((roles?.Any(role => CanonicalRoleCode.Normalize(role) == "COLLEGE_ADMIN") ?? false) ||
+         !string.IsNullOrWhiteSpace(houseNumber));
 
     private static bool IsValidEmail(string? value)
     {
