@@ -4,6 +4,7 @@ import { Pencil, Trash2 } from 'lucide-react'
 import ViewDialog from '../../components/ViewDialog.jsx'
 import DashboardLayout from '../../layouts/DashboardLayout.jsx'
 import PageHeader from '../../components/PageHeader.jsx'
+import TablePagination, { PAGE_SIZE } from '../../components/TablePagination.jsx'
 import { useScreenAccess } from '../../auth/ScreenAccess.jsx'
 import { subscriptionsApi } from '../../api/apiEndpoints.js'
 import { getColleges, unwrapCollegeRecord } from '../../auth/collegeApi.js'
@@ -75,7 +76,7 @@ export default function Subscriptions() {
   const [organizations, setOrganizations] = useState([])
   const [subscriptions, setSubscriptions] = useState([])
   const [form, setForm] = useState(emptyForm)
-  const [formOpen, setFormOpen] = useState(true)
+  const [formOpen, setFormOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -84,6 +85,7 @@ export default function Subscriptions() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All statuses')
   const [cycleFilter, setCycleFilter] = useState('All billing cycles')
+  const [page, setPage] = useState(1)
 
   const refresh = async () => {
     setRefreshing(true)
@@ -134,6 +136,18 @@ export default function Subscriptions() {
       return matchesSearch && matchesStatus && matchesCycle
     })
   }, [subscriptions, search, statusFilter, cycleFilter])
+  const totalPages = Math.max(1, Math.ceil(visibleSubscriptions.length / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages)
+  const pageRows = visibleSubscriptions.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages)
+  }, [page, totalPages])
+
+  const updateFilter = (setFilter, value) => {
+    setFilter(value)
+    setPage(1)
+  }
 
   const updateField = event => {
     const { name, value } = event.target
@@ -291,12 +305,12 @@ export default function Subscriptions() {
           <div className="platform-subscriptions__filters">
             <label className="platform-subscriptions__search">
               <span className="platform-management__sr-only">Search subscriptions</span><FiSearch />
-              <input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search organization or plan" />
+              <input type="search" value={search} onChange={event => updateFilter(setSearch, event.target.value)} placeholder="Search organization or plan" />
             </label>
-            <label><FiFilter /><span className="platform-management__sr-only">Filter by status</span><select value={statusFilter} onChange={event => setStatusFilter(event.target.value)}>
+            <label><FiFilter /><span className="platform-management__sr-only">Filter by status</span><select value={statusFilter} onChange={event => updateFilter(setStatusFilter, event.target.value)}>
               <option>All statuses</option><option>Active</option><option>Trial</option><option>Suspended</option><option>Cancelled</option>
             </select></label>
-            <label><FiCreditCard /><span className="platform-management__sr-only">Filter by billing cycle</span><select value={cycleFilter} onChange={event => setCycleFilter(event.target.value)}>
+            <label><FiCreditCard /><span className="platform-management__sr-only">Filter by billing cycle</span><select value={cycleFilter} onChange={event => updateFilter(setCycleFilter, event.target.value)}>
               <option>All billing cycles</option><option>Monthly</option><option>Quarterly</option><option>Half-yearly</option><option>Yearly</option>
             </select></label>
             <button type="button" className="platform-subscriptions__refresh" onClick={() => refresh().catch(reason => setError(reason.message || 'Subscriptions could not be refreshed.'))} disabled={refreshing || loading || mutating || saving} aria-label="Refresh subscriptions" title="Refresh subscriptions">
@@ -305,8 +319,8 @@ export default function Subscriptions() {
           </div>
           {loading ? <p className="platform-management__state" role="status">Loading subscriptions…</p> :
             <div className="platform-management__table-wrap" tabIndex={0} role="region" aria-label="Subscription directory records"><table className="platform-management__table platform-subscriptions__table">
-              <thead><tr><th>Organization / plan</th><th>Billing</th><th>Price</th><th>Accessed users</th><th>Maximum users</th><th>Status</th><th>Subscription term</th><th>Actions</th></tr></thead>
-              <tbody>{visibleSubscriptions.map((row, index) => {
+              <thead><tr><th>Organization / plan</th><th>Billing</th><th>Price</th><th>Maximum users</th><th>Accessed users</th><th>Status</th><th>Subscription term</th><th>Actions</th></tr></thead>
+              <tbody>{pageRows.map((row, index) => {
                 const days = remainingDays(row.endDate)
                 const status = statusKey(row.status)
                 const rowId = row.subscriptionId ?? row.id ?? `${row.organizationId}-${row.planName}-${index}`
@@ -314,8 +328,8 @@ export default function Subscriptions() {
                   <td><strong>{row.organizationName || 'Unnamed organization'}</strong><small>{row.planName || 'Plan not named'}</small></td>
                   <td><span className="platform-subscriptions__cycle">{row.billingCycle || '—'}</span></td>
                   <td className="platform-subscriptions__price-cell"><strong>{money(row.price)}</strong></td>
-                  <td><strong>{row.accessedUsersCount ?? '—'}</strong></td>
                   <td><span className="platform-subscriptions__capacity"><FiUsers />{row.maximumUsers ?? '—'}<small>users</small></span></td>
+                  <td><span className="platform-subscriptions__capacity"><FiUsers aria-hidden="true" /><span>{row.accessedUsersCount ?? '—'} / {row.maximumUsers ?? '—'}</span><small>users</small></span></td>
                   <td><span className={`platform-management__status platform-management__status--${status}`}>{row.status || 'Unknown'}</span></td>
                   <td><strong>{dateLabel(row.startDate)} – {dateLabel(row.endDate)}</strong><small>{days == null ? 'Term not set' : days < 0 ? 'Expired' : days === 0 ? 'Ends today' : `Ends in ${days} day${days === 1 ? '' : 's'}`}</small></td>
                   <td><div className="platform-subscriptions__row-actions">
@@ -328,9 +342,12 @@ export default function Subscriptions() {
               <span className="platform-subscriptions__empty-icon"><FiCreditCard /></span>
               <strong>{subscriptions.length ? 'No subscriptions match these filters' : 'No subscriptions yet'}</strong>
               <p>{subscriptions.length ? 'Clear a filter or try a different search.' : 'Create the first subscription to start tracking plans and renewals.'}</p>
-              {subscriptions.length > 0 && <button type="button" className="platform-subscriptions__clear" onClick={() => { setSearch(''); setStatusFilter('All statuses'); setCycleFilter('All billing cycles') }}>Clear filters</button>}
+              {subscriptions.length > 0 && <button type="button" className="platform-subscriptions__clear" onClick={() => { setSearch(''); setStatusFilter('All statuses'); setCycleFilter('All billing cycles'); setPage(1) }}>Clear filters</button>}
               {!subscriptions.length && canCreate && !formOpen && <button type="button" className="platform-subscriptions__clear" onClick={() => setFormOpen(true)}>Create subscription</button>}
             </div>}</div>}
+          {!loading && visibleSubscriptions.length > 0 && <div className="erp-table-pagination-wrap">
+            <TablePagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />
+          </div>}
         </section>
         {action && <ViewDialog
           title={action.type === 'edit' ? 'Edit Subscription' : 'Delete Subscription'}

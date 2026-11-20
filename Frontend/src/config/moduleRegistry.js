@@ -282,6 +282,14 @@ const entries = [
     aliases: [], children: [], prerequisites: [],
   },
   {
+    id: "accounts_billing", label: "Accounts & Billing", icon: "receipt-indian-rupee",
+    path: "/accounts-billing", section: "access", order: 17,
+    permission: {"module":"colleges","action":"view","source":"Super Admin platform access"}, authorization: "super-admin-route-and-api-guard",
+    roles: ["admin"], scope: "platform", navigation: false,
+    component: "src/pages/platform/AccountsBilling.jsx", exportName: "default",
+    aliases: [], children: [], prerequisites: [],
+  },
+  {
     id: "my_profile", label: "My Profile", icon: "user-round",
     path: "/my-profile", section: "account", order: 10,
     permission: {"module":"my_profile","action":"view","source":"existing access matrix"}, authorization: "existing-guards-and-permissions",

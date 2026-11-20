@@ -16,7 +16,7 @@ if (typeof window !== 'undefined' && window.localStorage) {
 }
 
 const normalizeBaseUrl = (value = '') => value.trim().replace(/\/+$/, '')
-const DEFAULT_API_BASE_URL = 'https://moonstone-breeze-passport.ngrok-free.dev'
+const DEFAULT_API_BASE_URL = 'https://simplified-commission-presents-doctrine.trycloudflare.com'
 // Results endpoints are optional until the institution's result service is integrated.
 export const RESULTS_API_ENABLED = String(import.meta.env.VITE_RESULTS_API_ENABLED || '').toLowerCase() === 'true'
 
@@ -772,7 +772,8 @@ export const profileApi = {
     if (!response?.data) throw new Error('We couldn’t load your profile right now. Please try again.')
     return { ...normalizeProfile(response.data), profileCompleted: response.data.profileCompleted ?? response.data.isProfileCompleted }
   },
-  updateProfile: async (profile) => {
+  updateProfile: async (profile, { clearBlankAddresses = false } = {}) => {
+    const addressValue = (value) => String(value || '').trim() || (clearBlankAddresses ? '' : null)
     const response = await request(API_ENDPOINTS.profile.update, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -797,19 +798,19 @@ export const profileApi = {
         collegeCountry: String(profile.collegeCountry || '').trim() || null,
         collegePincode: String(profile.collegePincode || '').trim() || null,
         collegeWebsite: String(profile.collegeWebsite || '').trim() || null,
-        houseNumber: String(profile.houseNumber || '').trim() || null,
-        address: String(profile.address || '').trim() || null,
-        permanentHouseNumber: String(profile.permanentHouseNumber || '').trim() || null,
-        permanentAddress: String(profile.permanentAddress || '').trim() || null,
-        permanentPincode: String(profile.permanentPincode || '').trim() || null,
-        permanentCity: String(profile.permanentCity || '').trim() || null,
-        permanentDistrict: String(profile.permanentDistrict || '').trim() || null,
-        permanentState: String(profile.permanentState || '').trim() || null,
+        houseNumber: addressValue(profile.houseNumber),
+        address: addressValue(profile.address),
+        permanentHouseNumber: addressValue(profile.permanentHouseNumber),
+        permanentAddress: addressValue(profile.permanentAddress),
+        permanentPincode: addressValue(profile.permanentPincode),
+        permanentCity: addressValue(profile.permanentCity),
+        permanentDistrict: addressValue(profile.permanentDistrict),
+        permanentState: addressValue(profile.permanentState),
         permanentCountry: String(profile.permanentCountry || '').trim() || null,
-        pincode: String(profile.pincode || profile.postalCode || '').trim() || null,
-        city: String(profile.city || '').trim() || null,
-        district: String(profile.district || '').trim() || null,
-        state: String(profile.state || '').trim() || null,
+        pincode: addressValue(profile.pincode || profile.postalCode),
+        city: addressValue(profile.city),
+        district: addressValue(profile.district),
+        state: addressValue(profile.state),
         aboutMe: String(profile.bio || profile.aboutMe || '').trim() || null,
       }),
     })
@@ -2028,7 +2029,7 @@ export const roomApi = {
   getById: async (classroomId) => (await request(API_ENDPOINTS.rooms.detail(requiredId(classroomId, 'Room ID'))))?.data,
   create: async (payload) => (await jsonRequest(API_ENDPOINTS.rooms.create, 'POST', payload))?.data,
   update: async (classroomId, payload) => (await jsonRequest(API_ENDPOINTS.rooms.update(requiredId(classroomId, 'Room ID')), 'PUT', payload))?.data,
-  allocate: async (classroomId, payload) => {
+  allocate: async (classroomId, payload, collegeId) => {
     let body = {}
     if (typeof payload === 'number') {
       body = { sectionId: Number(payload) }
@@ -2043,9 +2044,10 @@ export const roomApi = {
     } else {
       body = payload
     }
-    return (await jsonRequest(API_ENDPOINTS.rooms.allocation(requiredId(classroomId, 'Room ID')), 'PUT', body))?.data
+    return (await jsonRequest(withQuery(API_ENDPOINTS.rooms.allocation(requiredId(classroomId, 'Room ID')), { collegeId }), 'PUT', body))?.data
   },
-  deallocate: async (classroomId) => request(API_ENDPOINTS.rooms.allocation(requiredId(classroomId, 'Room ID')), { method: 'DELETE' }),
+  delete: async (classroomId, collegeId) => request(withQuery(API_ENDPOINTS.rooms.delete(requiredId(classroomId, 'Room ID')), { collegeId }), { method: 'DELETE' }),
+  deallocate: async (classroomId, collegeId) => request(withQuery(API_ENDPOINTS.rooms.allocation(requiredId(classroomId, 'Room ID')), { collegeId }), { method: 'DELETE' }),
 }
 export const roomsApi = roomApi
 

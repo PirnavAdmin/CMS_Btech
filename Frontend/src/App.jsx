@@ -21,6 +21,7 @@ const StaffPortal = lazy(() => import('./pages/staff-portal/StaffPortal.jsx'))
 const UserAccessManagement = lazy(() => import('./pages/admin-management/UserAccessManagement.jsx'))
 const DemoRequests = lazy(() => import('./pages/platform/DemoRequests.jsx'))
 const Subscriptions = lazy(() => import('./pages/platform/Subscriptions.jsx'))
+const AccountsBilling = lazy(() => import('./pages/platform/AccountsBilling.jsx'))
 const PortalPreview = lazy(() => import('./pages/portals/PortalPreview.jsx'))
 const FacultyDashboardPage = lazy(() => import('./features/faculty/dashboard/pages/FacultyDashboardPage.jsx'))
 const FacultyWorkspacePage = lazy(() => import('./features/faculty/FacultyWorkspacePage.jsx'))
@@ -344,6 +345,7 @@ export default function App() {
               <Route path="/roles-permissions" element={<RolesAndDesignations />} />
               <Route path="/demo-requests" element={<DemoRequests />} />
               <Route path="/subscriptions" element={<Subscriptions />} />
+              <Route path="/accounts-billing" element={<AccountsBilling />} />
           </Route>
           </Route>
 

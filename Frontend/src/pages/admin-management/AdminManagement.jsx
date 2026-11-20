@@ -2051,7 +2051,7 @@ const mapRecordToForm = (record) => ({
 
 function CollegeInstitutionManagement({ initialView = 'list' }) {
   const navigate = useNavigate()
-  const { collegeAccess, selectedCollege, selectedCollegeId } = AcademicContextImports_useAcademic()
+  const { collegeAccess } = AcademicContextImports_useAcademic()
   const { access: effectiveAccess, canAction } = screenAccessImports_useScreenAccess()
   const assignedCollegeId = getUserCollegeId()
   const isSuperAdmin = collegeAccess?.isSuperAdmin === true || effectiveAccess?.isSuperAdmin === true
@@ -2512,7 +2512,6 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
             <header className="college-config-heading">
               <div>
                 <h1>Organization Configuration</h1>
-                <p className="college-config-context"><span>Working Organization</span><strong>{selectedCollege?.name || selectedCollege?.collegeName || 'Not selected'}</strong><small>{selectedCollege?.code || selectedCollege?.collegeCode || ''}</small></p>
               </div>
               <CompactSummaryImports_default label="Organization summary" items={summaryCards.map(({ label, value, tone }) => ({
                 label: `${label} Organizations`,
@@ -2534,28 +2533,34 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
               <header className="college-config-directory-header">
                 <h2 id="college-directory-title">Organization Directory</h2>
                 <div className="college-config-actions">
-                  <ExportMenu rows={filteredColleges} columns={collegeColumns} title="Organizations" filename="organizations" loading={isCollegesLoading || Boolean(collegeError)} />
                   {canCreateCollege && <button type="button" className="erp-btn erp-btn--primary" onClick={openAdd}><Plus aria-hidden="true" /> Add Organization</button>}
                 </div>
               </header>
-              <FilterPanelImports_default
-                className="college-config-filters"
-                active={Boolean(typeFilter || statusFilter)}
-                appliedFilters={[typeFilter, statusFilter === 'active' ? 'Active' : statusFilter === 'inactive' ? 'Inactive' : ''].filter(Boolean)}
-                onClear={() => { setTypeFilter(''); setStatusFilter(''); setCurrentPage(1) }}
-                search={<label className="college-config-search"><FiSearch aria-hidden="true" /><input type="search" placeholder="Search by organization name, code or city…" value={searchTerm} onChange={handleSearchChange} aria-label="Search organizations" /></label>}
-                filters={<div className="college-config-toolbar">
-                  <ProjectSelect aria-label="Filter organizations by type" value={typeFilter} onChange={event => { setTypeFilter(event.target.value); setCurrentPage(1) }}>
-                    <option value="">All organization types</option>
-                    {availableCollegeTypes.map(type => <option key={type}>{type}</option>)}
-                  </ProjectSelect>
-                  <div className="college-config-filter-tabs" role="group" aria-label="Organization status">
-                    {[['', 'All'], ['active', 'Active'], ['inactive', 'Inactive']].map(([value, label]) => (
-                      <button key={label} type="button" aria-pressed={statusFilter === value} onClick={() => { setStatusFilter(value); setCurrentPage(1) }}>{label}</button>
-                    ))}
-                  </div>
-                </div>}
-              />
+              <div className="college-config-search-row">
+                <label className="college-config-search"><FiSearch aria-hidden="true" /><input type="search" placeholder="Search by organization name, code or city…" value={searchTerm} onChange={handleSearchChange} aria-label="Search organizations" /></label>
+                <div className="college-config-toolbar-actions">
+                  <ExportMenu rows={filteredColleges} columns={collegeColumns} title="Organizations" filename="organizations" loading={isCollegesLoading || Boolean(collegeError)} />
+                  <FilterPanelImports_default
+                    className="college-config-toolbar-filter"
+                    active={Boolean(typeFilter || statusFilter)}
+                    onClear={() => { setTypeFilter(''); setStatusFilter(''); setCurrentPage(1) }}
+                    hideClear
+                    search={null}
+                    filters={<div className="college-config-toolbar">
+                      <ProjectSelect aria-label="Filter organizations by type" value={typeFilter} onChange={event => { setTypeFilter(event.target.value); setCurrentPage(1) }}>
+                        <option value="">All organization types</option>
+                        {availableCollegeTypes.map(type => <option key={type}>{type}</option>)}
+                      </ProjectSelect>
+                      <div className="college-config-filter-tabs" role="group" aria-label="Organization status">
+                        {[['', 'All'], ['active', 'Active'], ['inactive', 'Inactive']].map(([value, label]) => (
+                          <button key={label} type="button" aria-pressed={statusFilter === value} onClick={() => { setStatusFilter(value); setCurrentPage(1) }}>{label}</button>
+                        ))}
+                      </div>
+                      {(typeFilter || statusFilter) && <button type="button" className="filter-disclosure__clear-btn" onClick={() => { setTypeFilter(''); setStatusFilter(''); setCurrentPage(1) }}><FiRotateCcw aria-hidden="true" /> Clear Filters</button>}
+                    </div>}
+                  />
+                </div>
+              </div>
             {isCollegesLoading ? (
               <div className="cm-empty">
                 <p>Loading organizations...</p>
@@ -2576,9 +2581,9 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
             ) : (
               <>
                 <DataTable caption="Organizations" tableClassName="college-config-table" rows={filteredColleges} pagination={{ page: currentPage, pageSize: itemsPerPage, onPageChange: setCurrentPage }} columns={[
-                  { key:'name', label:'Organization Name', className:'college-col-identity', render:college => <div className="college-config-identity"><CollegeLogoImage src={college.logo} fallbackSrc={getCollegeLogoEndpoint(college.id)} alt="" code={college.code} className="college-config-logo" /><div className="college-config-identity-details"><button type="button" className="college-config-name" title={college.name} aria-label={`View details for ${college.name}`} onClick={() => openDetails(college)}>{college.name}</button><small title={college.type}>{college.type}</small>{String(selectedCollegeId) === String(college.id) && <span className="college-config-working">Working organization</span>}</div></div> },
+                  { key:'name', label:'Organization Name', className:'college-col-identity', render:college => <div className="college-config-identity"><CollegeLogoImage src={college.logo} fallbackSrc={getCollegeLogoEndpoint(college.id)} alt="" code={college.code} className="college-config-logo" /><div className="college-config-identity-details"><button type="button" className="college-config-name" title={college.name} aria-label={`View details for ${college.name}`} onClick={() => openDetails(college)}>{college.name}</button><small title={college.type}>{college.type}</small></div></div> },
                   { key:'code', label:'Organization Code', className:'college-col-code', render:college => <code className="college-config-truncate" title={college.code}>{college.code}</code> },
-                  { key:'address', label:'Location', className:'college-col-location', render:college => <span className="college-config-truncate" title={[college.addressLine1 || college.address, college.city, college.state].filter(Boolean).join(', ')}>{[college.addressLine1 || college.address, college.city, college.state].filter(Boolean).join(', ') || '—'}</span> },
+                  { key:'principal', label:'Contact Person', className:'college-col-contact-person', render:college => <span className="college-config-truncate" title={college.principal}>{college.principal || '—'}</span> },
                   { key:'contact', label:'Contact', className:'college-col-contact', render:college => <div><span className="college-config-truncate" title={college.contact}>{college.contact || '—'}</span><small className="college-config-email college-config-truncate" title={college.email}>{college.email || '—'}</small></div> },
                   { key:'status', label:'Status', className:'college-col-status', render:college => <StatusBadge value={college.status === 'active' ? 'Active' : 'Inactive'} /> },
                   completionColumn,
@@ -6894,6 +6899,28 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
     return map
   }, [sections])
 
+  // Older section saves can contain a room label without a classroom allocation.
+  const pendingSectionByRoom = useMemo(() => {
+    const linkedSectionIds = new Set(rooms.filter(room => room.sectionId).map(room => String(room.sectionId)))
+    const sectionByRoom = new Map()
+    for (const section of sections) {
+      const id = section.sectionId ?? section.id
+      const name = section.sectionName ?? section.name
+      const label = String(section.room ?? section.classRoom ?? '').trim().toLowerCase()
+      if (!id || !name || !label || linkedSectionIds.has(String(id)) || ['false', '0', 'inactive'].includes(String(section.status).toLowerCase())) continue
+      const matches = rooms.filter(room => {
+        const code = String(room.roomNumber || room.roomName || room.id).trim().toLowerCase()
+        const path = [room.buildingBlock, room.floor, code].join(' / ').toLowerCase()
+        return path === label || code === label
+      })
+      if (matches.length === 1 && !matches[0].assignedSection && !matches[0].sectionId) {
+        const roomId = matches[0].id
+        sectionByRoom.set(roomId, sectionByRoom.has(roomId) ? null : { id, name })
+      }
+    }
+    return sectionByRoom
+  }, [rooms, sections])
+
   // Filtered Records
   const filteredRooms = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -6922,10 +6949,15 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filteredRooms.length / PAGE_SIZE))
+  const visiblePage = Math.min(currentPage, totalPages)
   const paginatedRooms = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE
+    const start = (visiblePage - 1) * PAGE_SIZE
     return filteredRooms.slice(start, start + PAGE_SIZE)
-  }, [filteredRooms, currentPage])
+  }, [filteredRooms, visiblePage])
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages)
+  }, [currentPage, totalPages])
 
   // Reset page when filters change
   useEffect(() => {
@@ -7170,6 +7202,7 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
   // Delete Room via Modal
   const handleConfirmDeleteRoom = async () => {
     if (!deletingRoom) return
+    if (pendingSectionByRoom.get(deletingRoom.id)) return showError('Remove the room from its section before deleting it.')
     if (deletingRoom.assignedSection && deletingRoom.assignedSection.trim()) {
       const studentCount = sectionStudentCountMap.get(deletingRoom.assignedSection) || 0
       return showError(
@@ -7179,9 +7212,9 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
     try {
       const targetRoomId = deletingRoom.classroomId || deletingRoom.id
       await roomService.deleteRoom(targetRoomId)
-      showSuccess(`Room "${deletingRoom.roomNumber} - ${deletingRoom.roomName}" deleted successfully.`)
       setDeletingRoom(null)
       await loadRooms()
+      showSuccess(`Room "${deletingRoom.roomNumber} - ${deletingRoom.roomName}" deleted successfully.`)
     } catch (err) {
       showError(err.message || 'Failed to delete room.')
     }
@@ -8065,6 +8098,7 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
                 ) : (
                   paginatedRooms.map((room) => {
                     const RoomIcon = getRoomIcon(room.roomType)
+                    const pendingSection = pendingSectionByRoom.get(room.id)
                     const assignedStudentsCount = room.assignedSection ? (sectionStudentCountMap.get(room.assignedSection) || 0) : 0
                     const sectionMeta = room.assignedSection ? sectionMetaMap.get(room.assignedSection.toLowerCase()) : null
 
@@ -8151,6 +8185,13 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
                                 <FiUnlock /> Free
                               </button>
                             </div>
+                          ) : pendingSection ? (
+                            <div className="rooms-allocated-details">
+                              <span className="rooms-allocated-badge">{pendingSection.name}</span>
+                              <button type="button" className="rooms-deallocate-link" onClick={() => navigate(`/section-management/${pendingSection.id}/edit`)}>
+                                Confirm allocation in Sections
+                              </button>
+                            </div>
                           ) : (
                             <button
                               type="button"
@@ -8164,7 +8205,7 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
 
                         {/* Status */}
                         <td className="table-center">
-                          <StatusBadge status={room.status} />
+                          <StatusBadge status={pendingSection && room.status === 'Available' ? 'Pending' : room.status} />
                         </td>
 
                         {/* Actions */}
@@ -8198,7 +8239,7 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
 
           {/* Table Pagination */}
           <TablePagination
-            currentPage={currentPage}
+            currentPage={visiblePage}
             totalPages={totalPages}
             totalRecords={filteredRooms.length}
             onPageChange={setCurrentPage}

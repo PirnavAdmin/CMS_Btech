@@ -186,30 +186,14 @@
 }
 
 .platform-demo-requests__table {
-  min-width: 1450px;
-  table-layout: fixed;
+  min-width: 720px;
 }
 
 .platform-demo-requests__table :is(th, td) {
   padding: 10px 12px;
   line-height: 1.4;
   overflow-wrap: anywhere;
-}
-
-.platform-demo-requests__table :is(th, td):nth-child(1) { width: 260px; }
-.platform-demo-requests__table :is(th, td):nth-child(2) { width: 160px; }
-.platform-demo-requests__table :is(th, td):nth-child(3) { width: 130px; }
-.platform-demo-requests__table :is(th, td):nth-child(4) { width: 85px; }
-.platform-demo-requests__table :is(th, td):nth-child(5) { width: 145px; }
-.platform-demo-requests__table :is(th, td):nth-child(6) { width: 180px; }
-.platform-demo-requests__table :is(th, td):nth-child(7) { width: 125px; }
-.platform-demo-requests__table :is(th, td):nth-child(8) { width: 190px; }
-.platform-demo-requests__table :is(th, td):nth-child(9) { width: 140px; }
-
-.platform-demo-requests__table td:nth-child(4),
-.platform-demo-requests__table td:nth-child(7),
-.platform-demo-requests__table td:nth-child(9) {
-  white-space: nowrap;
+  text-align: center;
 }
 
 .platform-management__status {
@@ -322,11 +306,11 @@
 .platform-subscriptions__filters :is(input,select):focus-visible { border-color:var(--brand,#625e47); outline:0; box-shadow:0 0 0 3px color-mix(in srgb,var(--brand,#625e47) 13%,transparent); }
 .platform-subscriptions__refresh { min-height:38px; }
 .platform-subscriptions__refresh:disabled { cursor:wait; opacity:.65; }
-.platform-subscriptions__table { min-width:740px; table-layout:auto; }
+.platform-subscriptions__table { width:min(100%, 1120px); min-width:740px; margin-inline:auto; table-layout:auto; }
 .platform-subscriptions__table th,
-.platform-subscriptions__table td { padding:7px 10px; }
+.platform-subscriptions__table td { padding:7px 6px; text-align:center; vertical-align:middle; }
 .platform-subscriptions__table th:last-child,
-.platform-subscriptions__table td:last-child { width:1%; text-align:center; white-space:nowrap; }
+.platform-subscriptions__table td:last-child { width:1%; white-space:nowrap; }
 .platform-subscriptions__row-actions { display:flex; justify-content:center; gap:4px; }
 .platform-subscriptions__row-actions button {
   display:grid;

@@ -71,7 +71,7 @@ export const normalizeRoom = (r) => {
   }
   const department = r.department ?? r.Department ?? r.departmentName ?? r.DepartmentName ?? 'General / Shared'
   const assignedSection = r.assignedSection ?? r.AssignedSection ?? r.sectionName ?? r.SectionName ?? r.section ?? r.Section ?? ''
-  const sectionId = r.sectionId ?? r.SectionId ?? null
+  const sectionId = r.sectionId ?? r.SectionId ?? r.assignedSectionId ?? r.AssignedSectionId ?? null
   let status = r.status ?? r.Status ?? (assignedSection ? 'Allocated' : 'Available')
   if (typeof status === 'number' || typeof status === 'boolean') {
     status = status === 1 || status === true ? (assignedSection ? 'Allocated' : 'Available') : 'Inactive'
@@ -147,21 +147,9 @@ class RoomService {
         const known = cached.find(item => item.id === room.id)
         if (!known) return room
 
-        const apiHasAllocation = Boolean(room.assignedSection || room.sectionId)
-        const cachedHasAllocation = Boolean(known.assignedSection || known.sectionId)
-        const mergedRoom = !apiHasAllocation && cachedHasAllocation
-          ? {
-              ...room,
-              assignedSection: known.assignedSection,
-              sectionId: known.sectionId,
-              status: 'Allocated',
-              updatedAt: known.updatedAt || room.updatedAt,
-            }
-          : room
-
-        return mergedRoom.collegeId || !known.collegeId
-          ? mergedRoom
-          : { ...mergedRoom, collegeId: known.collegeId }
+        return room.collegeId || !known.collegeId
+          ? room
+          : { ...room, collegeId: known.collegeId }
       })
       const scoped = createCollegeScope(collegeId)(normalized)
       this.saveRooms(scoped, collegeId)
@@ -288,11 +276,7 @@ class RoomService {
 
   async deleteRoom(id) {
     const collegeId = selectedCollegeId()
-    try {
-      await roomApi.delete(id)
-    } catch (err) {
-      console.warn(`Backend delete room ${id} failed or fallback:`, err?.message || err)
-    }
+    await roomApi.delete(id, collegeId)
     const rooms = this.getStoredRooms(collegeId)
     const filtered = rooms.filter((r) => String(r.id) !== String(id) && String(r.classroomId) !== String(id) && String(r.roomNumber) !== String(id))
     this.saveRooms(filtered, collegeId)
@@ -301,15 +285,12 @@ class RoomService {
 
   async allocateRoom(roomId, sectionName, sectionId) {
     const collegeId = selectedCollegeId()
-    try {
-      if (sectionName && sectionName.trim()) {
-        const payload = sectionId ? { sectionId: Number(sectionId), sectionName: sectionName.trim() } : { sectionName: sectionName.trim() }
-        await roomApi.allocate(roomId, payload)
-      } else {
-        await roomApi.deallocate(roomId)
-      }
-    } catch (err) {
-      console.warn(`Backend allocate room ${roomId} failed or fallback:`, err?.message || err)
+    if (sectionName?.trim()) {
+      const numericSectionId = Number(sectionId)
+      if (!Number.isInteger(numericSectionId) || numericSectionId <= 0) throw new Error('A valid section ID is required.')
+      await roomApi.allocate(roomId, numericSectionId, collegeId)
+    } else {
+      await roomApi.deallocate(roomId, collegeId)
     }
 
     const rooms = this.getStoredRooms(collegeId)

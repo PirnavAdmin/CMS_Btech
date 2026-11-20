@@ -41,6 +41,7 @@ vi.mock('../../services/roomService', () => ({ default: { getRooms: vi.fn(async 
 afterEach(cleanup)
 beforeEach(() => { vi.clearAllMocks(); data.sections = [] })
 import { academicYearApi, sectionApi } from '../../api/apiEndpoints'
+import roomService from '../../services/roomService'
 
 it('shows only saved semesters for the selected academic year', async () => {
   render(<MemoryRouter><SectionManagement mode="form" /></MemoryRouter>)
@@ -80,7 +81,8 @@ it('rechecks the academic year before posting and preserves section details when
   expect(screen.getByRole('combobox', { name: 'Academic year' })).toBeTruthy()
 })
 
-it('submits the confirmed active year ID and name when creating a section', async () => {
+it('saves the active year and allocates the room selected by its full path', async () => {
+  roomService.getRooms.mockResolvedValueOnce(data.rooms.map(room => ({ ...room, buildingBlock: 'Main Academic Block', floor: 'Ground Floor' })))
   render(<MemoryRouter><SectionManagement mode="form" /></MemoryRouter>)
   await screen.findByRole('heading', { name: 'Add Section' })
   fireEvent.change(screen.getByRole('combobox', { name: 'Course' }), { target: { value: '10' } })
@@ -90,9 +92,12 @@ it('submits the confirmed active year ID and name when creating a section', asyn
   fireEvent.change(semesterSelect, { target: { value: '101' } })
   fireEvent.change(screen.getByLabelText(/Capacity/), { target: { value: '30' } })
   fireEvent.change(screen.getByLabelText(/Status/), { target: { value: 'Active' } })
-  fireEvent.change(screen.getByLabelText(/Room \/ Classroom/), { target: { value: 'R101' } })
+  fireEvent.change(screen.getByRole('combobox', { name: 'Academic block' }), { target: { value: 'Main Academic Block' } })
+  fireEvent.change(screen.getByRole('combobox', { name: 'Room floor' }), { target: { value: 'Ground Floor' } })
+  fireEvent.change(screen.getByLabelText(/Room \/ Classroom/), { target: { value: 'Main Academic Block / Ground Floor / R101' } })
   fireEvent.click(screen.getByRole('button', { name: 'Create Section' }))
   await waitFor(() => expect(sectionApi.create).toHaveBeenCalledWith(expect.objectContaining({ academicYearId: '1', academicYear: '2026-2027', semesterId: '101' })))
+  await waitFor(() => expect(roomService.allocateRoom).toHaveBeenCalledWith('room-1', expect.any(String), 500))
 })
 
 it('does not offer an inactive academic year for a new section', async () => {
