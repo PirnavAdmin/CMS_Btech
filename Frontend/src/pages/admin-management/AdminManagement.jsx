@@ -5099,11 +5099,17 @@ function RolesAndDesignationsWorkspace() {
 
     governanceLock.current = true; setGovernanceBusy(true)
     try {
-      const saved = await accessGovernance.saveDesignation({...editingDesignation,code:normalizedCode}, selectedCollegeId)
+      const saved = await accessGovernance.saveDesignation({
+        ...editingDesignation,
+        code: normalizedCode,
+        defaultRole: isSuperAdmin ? editingDesignation.defaultRole : '',
+      }, selectedCollegeId)
       if (!saved?.id && !saved?.designationId) throw new Error('The server did not return the saved designation identity. Refresh before trying again.')
       setEditingDesignation({...editingDesignation,...saved,id:String(saved.id ?? saved.designationId)})
       await loadRoles(); setIsDesModalOpen(false); showSuccess('Designation saved.')
-    } catch(error) {showError(error.message)} finally {governanceLock.current = false; setGovernanceBusy(false)}
+    } catch(error) {
+      setDesFieldErrors(prev => ({ ...prev, save: error.message || 'Designation could not be saved.' }))
+    } finally {governanceLock.current = false; setGovernanceBusy(false)}
   }
 
   const handleDeleteDesignation = (des) => {
@@ -6150,9 +6156,10 @@ function RolesAndDesignationsWorkspace() {
                     </ProjectSelect>
                   </div>
 
-                  <div className="sa-field">
+                  {isSuperAdmin && <div className="sa-field">
                     <label>Default / Recommended Role</label>
                     <ProjectSelect
+                      aria-label="Default / Recommended Role"
                       value={editingDesignation.defaultRole}
                       onChange={(e) => setEditingDesignation({ ...editingDesignation, defaultRole: e.target.value })}
                     >
@@ -6166,7 +6173,7 @@ function RolesAndDesignationsWorkspace() {
                     <small style={{ color: '#64748B', fontSize: '11px', marginTop: '4px', display: 'block' }}>
                       Recommended access profile. Can be overridden during staff access assignment.
                     </small>
-                  </div>
+                  </div>}
 
                   <div className={`sa-field ${desFieldErrors.status ? 'has-error' : ''}`}>
                     <label>Status <b>*</b></label>
@@ -6190,11 +6197,12 @@ function RolesAndDesignationsWorkspace() {
                   </div>
                 </div>
 
+                {desFieldErrors.save && <p className="rbac-field-error" role="alert">{desFieldErrors.save}</p>}
                 <footer className="rbac-modal-footer">
                   <button type="button" className="sa-secondary" onClick={() => setIsDesModalOpen(false)}>
                     Cancel
                   </button>
-                  <button type="submit" className="sa-primary">
+                  <button type="submit" className="sa-primary" disabled={governanceBusy}>
                     <FiCheck /> Save Designation
                   </button>
                 </footer>
@@ -8001,6 +8009,9 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
                 filename="rooms_directory"
                 title="Classrooms & Spatial Directory"
               />
+              <button type="button" className="rooms-add-btn" onClick={handleOpenCreate}>
+                <FiPlus aria-hidden="true" /> Add Room
+              </button>
             </div>
           </div>
 

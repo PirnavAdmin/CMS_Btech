@@ -10,7 +10,7 @@ import ScopedModuleNotice from '../../components/ScopedModuleNotice'
 import { useAcademic } from '../../context/AcademicContext'
 import { useScreenAccess } from '../../auth/ScreenAccess'
 import useScopedModule from '../../services/useScopedModule'
-import { call, loadLibrary, requireId, saveBook } from '../../services/scopedModulesService'
+import { call, LIBRARY_DEFAULT_CATEGORIES, loadLibrary, requireId, saveBook } from '../../services/scopedModulesService'
 import './LibraryWorkspace.css'
 
 const tabs = ['Books', 'Issue & Return', 'Borrowers', 'Reports']
@@ -289,6 +289,14 @@ function BookEditor({ book, books, categories, stockOnly, onSave, ...dialog }) {
     rack: book?.rack ?? '', description: book?.description ?? '',
   })
   const [validation, setValidation] = useState('')
+  const categoryOptions = [
+    ...categories.filter(activeBook).map(row => ({ value: String(row.categoryId), label: row.categoryName })),
+    ...LIBRARY_DEFAULT_CATEGORIES
+      .filter(defaultCategory => !categories.some(row =>
+        norm(row.categoryCode) === norm(defaultCategory.categoryCode) ||
+        norm(row.categoryName) === norm(defaultCategory.categoryName)))
+      .map(defaultCategory => ({ value: `default:${defaultCategory.categoryCode}`, label: defaultCategory.categoryName })),
+  ]
   const field = (key, label, attrs = {}) => <label>{label}<input className="erp-input" {...attrs} value={form[key]}
     onChange={event => setForm({ ...form, [key]: event.target.value })} /></label>
   const submit = event => {
@@ -325,7 +333,7 @@ function BookEditor({ book, books, categories, stockOnly, onSave, ...dialog }) {
       {field('accessionNo', 'Accession Number', { required: true, maxLength: 50 })}
       <label>Category<select className="erp-select" required value={form.categoryId} onChange={event => setForm({ ...form, categoryId: event.target.value })}>
         <option value="">Select category</option>
-        {categories.filter(activeBook).map(row => <option key={row.categoryId} value={row.categoryId}>{row.categoryName}</option>)}
+        {categoryOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
       </select></label>
       {stock}
       {field('publisher', 'Publisher', { maxLength: 200 })}
@@ -629,7 +637,7 @@ function LibraryScreen({ collegeId }) {
           <button type="button" className={`erp-btn ${bookView === 'cards' ? 'erp-btn--primary' : 'erp-btn--secondary'}`} onClick={() => setBookView('cards')} aria-pressed={bookView === 'cards'}>Grid View</button>
           <button type="button" className={`erp-btn ${bookView === 'table' ? 'erp-btn--primary' : 'erp-btn--secondary'}`} onClick={() => setBookView('table')} aria-pressed={bookView === 'table'}>Table View</button>
         </div>}
-        {tab === 'Books' && canCreate && <button className={primary} disabled={!writable('books') || !ready('categories') || !data.categories.some(activeBook)} onClick={() => open('edit')}>+ Add Book</button>}
+        {tab === 'Books' && canCreate && <button className={primary} disabled={!writable('books') || !ready('categories')} onClick={() => open('edit')}>+ Add Book</button>}
       </div>
       {ready(resource) && <>
         {tab === 'Books' && bookView === 'cards' ? (

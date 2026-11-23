@@ -674,7 +674,7 @@ public sealed class ExamManagementRepository
     // ---------------------------------------------------------------------
     // LOOKUPS
     // ---------------------------------------------------------------------
-    public async Task<object> LookupsAsync(long? collegeId, long? academicYearId, long? courseId, long? branchId, long? semesterId, CancellationToken ct)
+    public async Task<object> LookupsAsync(long? collegeId, long? academicYearId, long? courseId, long? branchId, long? semesterId, bool includeSubjects, CancellationToken ct)
     {
         const string sql = """
             SELECT exam_type_id AS id, type_code AS code, type_name AS name
@@ -708,11 +708,15 @@ public sealed class ExamManagementRepository
 
             SELECT DISTINCT sub.subject_id AS id, sub.subject_code AS code, sub.subject_name AS name
               FROM subjects sub
-              INNER JOIN subject_semesters ss ON ss.subject_id=sub.subject_id AND ss.status=1
-             WHERE sub.deleted_at IS NULL AND sub.status=1
-               AND (@CourseId IS NULL OR ss.course_id=@CourseId)
-               AND (@BranchId IS NULL OR ss.branch_id=@BranchId)
-               AND (@SemesterId IS NULL OR ss.semester_id=@SemesterId)
+              INNER JOIN subject_semesters m ON m.subject_id=sub.subject_id AND m.status=1
+              INNER JOIN semesters sem ON sem.semester_id=m.semester_id AND sem.course_id=m.course_id AND sem.branch_id=m.branch_id
+              INNER JOIN courses c ON c.course_id=m.course_id
+             WHERE @IncludeSubjects=1 AND sub.deleted_at IS NULL AND sub.status=1
+               AND (@CollegeId IS NULL OR c.college_id=@CollegeId)
+               AND (@AcademicYearId IS NULL OR sem.academic_year_id=@AcademicYearId)
+               AND (@CourseId IS NULL OR m.course_id=@CourseId)
+               AND (@BranchId IS NULL OR m.branch_id=@BranchId)
+               AND (@SemesterId IS NULL OR m.semester_id=@SemesterId)
              ORDER BY sub.subject_name;
 
             SELECT section_id AS id, section_code AS code, section_name AS name
@@ -739,7 +743,8 @@ public sealed class ExamManagementRepository
             AcademicYearId = academicYearId,
             CourseId = courseId,
             BranchId = branchId,
-            SemesterId = semesterId
+            SemesterId = semesterId,
+            IncludeSubjects = includeSubjects
         }, cancellationToken: ct));
 
         var types = (await sets.ReadAsync()).Select(x => Row((object)x)).ToList();

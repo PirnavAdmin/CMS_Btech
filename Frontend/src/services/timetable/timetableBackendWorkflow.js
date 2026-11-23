@@ -2,7 +2,7 @@ import { backendTimetableService as service, backendEntries } from '../backendTi
 import { normalizeTimetableMasterRows } from '../timetableService'
 import { departmentApi, subjectApi } from '../../api/apiEndpoints'
 import { academicLevel, scopeSections } from './timetableDomain'
-import { same } from '../../utils/timetableUtils'
+import { matchesScope, same } from '../../utils/timetableUtils'
 import { planningErrors, subjectRequirements, entryPlanningErrors } from '../../utils/timetablePlanner'
 import { getUserRole } from '../../auth/auth'
 import { selectedCollegeId } from '../../utils/collegeScope.js'
@@ -36,11 +36,17 @@ export const backendWorkflow = {
     }
     const saved = []
     for (const sectionId of selected) {
-      const previous = expected.find(row => same(row.sectionId, sectionId))
-      if (previous) await draft(previous)
+      const previous = expected.find(row => same(row.sectionId, sectionId)) ?? live.tables.find(row =>
+        row.publicationStatus === 'draft' && !row.entries.length &&
+        matchesScope(row, { ...scope, sectionId }) &&
+        row.planning?.calendar?.startDate === config.calendar.startDate &&
+        row.planning?.calendar?.endDate === config.calendar.endDate)
+      const current = previous ? await draft(previous) : null
       const sectionConfig = { ...config, requirements: Object.fromEntries(subjectRequirements(live.sources, { ...scope, sectionId }, config.requirements).filter(row => row.periodsPerWeek > 0).map(row => [row.subject.id, { periodsPerWeek: row.periodsPerWeek, blockSize: row.blockSize }])) }
-      const table = previous || await service.setup({ ...scope, sectionId }, `${live.sources.branches.find(row => same(row.id, scope.branchId))?.name} / ${sections.find(row => same(row.id, sectionId))?.name} / ${config.calendar.startDate}`, sectionConfig)
-      const generated = await service.generate(scope, table.name, config, { tableId: table.id, initial: !previous, replace })
+      const name = current?.name || `${live.sources.branches.find(row => same(row.id, scope.branchId))?.name} / ${sections.find(row => same(row.id, sectionId))?.name} / ${config.calendar.startDate}`
+      const initial = !current?.entries.length
+      const table = initial ? await service.setup({ ...scope, sectionId }, name, sectionConfig, { tableId: current?.id }) : current
+      const generated = await service.generate(scope, table.name, config, { tableId: table.id, initial, replace })
       saved.push({ ...table, ...generated, planning: table.planning })
     }
     return saved

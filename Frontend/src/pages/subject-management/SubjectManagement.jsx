@@ -700,6 +700,14 @@ function Editor({
     const seenCodes = new Map();
 
     multiSubjects.forEach((sub, idx) => {
+      if (sub.saveStatus === 'success') {
+        seenCodes.set(sub.subjectCode.trim().toLowerCase(), idx);
+      }
+    });
+
+    multiSubjects.forEach((sub, idx) => {
+      if (sub.saveStatus === 'success') return;
+
       const subErrors = {};
       const nameTrimmed = String(sub.subjectName || '').trim();
       const codeTrimmed = String(sub.subjectCode || '').trim();

@@ -13,6 +13,11 @@ afterEach(cleanup)
 const choose=(label,value)=>fireEvent.change(screen.getByLabelText(label),{target:{value}})
 async function fill(){await screen.findByRole('option',{name:'B.Tech'});for(const [label,value] of [['Course','2'],['Branch','3'],['Semester','4'],['Section','5'],['Subject','6']])choose(label,value)}
 function submit(){fireEvent.submit(screen.getByRole('button',{name:/Add Allocation|Update Assignment/}).closest('form'))}
+test('the allocation card resolves a missing subject name from the saved subject ID', async () => {
+  fixture.faculty.assignments = [{ id: 41, subjectId: '6', assignmentType: 'Subject Faculty' }]
+  render(<ApiAssignmentDialog faculty={fixture.faculty} onClose={() => {}} onChanged={vi.fn()} />)
+  expect((await screen.findByText('Programming')).tagName).toBe('STRONG')
+})
 test('create acknowledgement followed by failed refresh retries only refresh',async()=>{
  const changed=vi.fn().mockRejectedValueOnce(new Error('Refresh offline')).mockResolvedValue();render(<ApiAssignmentDialog faculty={fixture.faculty} onClose={()=>{}} onChanged={changed}/>);await fill();submit();await screen.findByText('Refresh offline');submit();await waitFor(()=>expect(changed).toHaveBeenCalledTimes(2));expect(facultyService.createSubjectAllocation).toHaveBeenCalledTimes(1);expect(facultyService.updateSubjectAllocation).not.toHaveBeenCalled()
 })

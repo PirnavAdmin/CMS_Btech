@@ -281,6 +281,19 @@ function ApiAssignmentDialog({ faculty, onClose, onChanged }) {
     return () => { active = false }
   }, [attempt, faculty.collegeId])
 
+  const subjectIdOf = row => row.subjectId ?? row.id ?? row.subjectMasterId ?? row.courseSubjectId
+  const subjectNameOf = row => row.subjectName ?? row.name ?? row.subject ?? row.title ?? row.subjectTitle ?? row.subject_name ?? row.courseName
+  const allocatedSubjectName = row => {
+    if (row.subjectName?.trim()) return row.subjectName
+    if (!row.subjectId) return row.assignmentType
+
+    const subject = masters?.subjects.find(subject =>
+      String(subjectIdOf(subject)) === String(row.subjectId) &&
+      (subject.collegeId == null || String(subject.collegeId) === String(faculty.collegeId))
+    )
+    return (subject && subjectNameOf(subject)) || row.assignmentType
+  }
+
   const optionsFor = (collection) => (masters?.[collection] || []).filter(row => {
     if (row.collegeId != null && String(row.collegeId) !== String(faculty.collegeId)) return false
     if (collection === 'branches') return form.courseId && String(row.courseId) === String(form.courseId)
@@ -382,9 +395,9 @@ function ApiAssignmentDialog({ faculty, onClose, onChanged }) {
                   >
                     <option value="">Select {label}</option>
                     {optionsFor(collection).map(row => {
-                      const optionId = row[idKey] ?? row.id ?? (key === 'subjectId' ? row.subjectMasterId ?? row.courseSubjectId : undefined)
+                      const optionId = key === 'subjectId' ? subjectIdOf(row) : row[idKey] ?? row.id
                       const optionLabel = key === 'subjectId'
-                        ? [row.subjectCode ?? row.code ?? row.subject_code, row.subjectName ?? row.name ?? row.subject ?? row.title ?? row.subjectTitle ?? row.subject_name ?? row.courseName].filter(value => value !== undefined && value !== null && String(value).trim() !== '').join(' - ') || 'Unnamed subject'
+                        ? [row.subjectCode ?? row.code ?? row.subject_code, subjectNameOf(row)].filter(value => value !== undefined && value !== null && String(value).trim() !== '').join(' - ') || 'Unnamed subject'
                         : row[nameKey] ?? row.name ?? row.code ?? 'Unnamed option'
                       return optionId == null ? null : <option key={optionId} value={optionId}>{optionLabel}</option>
                     })}
@@ -431,7 +444,7 @@ function ApiAssignmentDialog({ faculty, onClose, onChanged }) {
               {faculty.assignments.map(row => (
                 <article key={row.id} className="fm-assignment-card">
                   <div>
-                    <strong>{row.subjectName || row.assignmentType}</strong>
+                    <strong>{allocatedSubjectName(row)}</strong>
                     <p>{row.course || '—'} | {row.branch || faculty.department} | {row.semester} | {row.section}</p>
                     <p className="fm-muted">{row.assignmentType}</p>
                   </div>

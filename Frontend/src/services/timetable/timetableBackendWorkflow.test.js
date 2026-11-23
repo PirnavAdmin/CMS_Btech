@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import vm from 'node:vm'
-import { same } from '../../utils/timetableUtils.js'
+import { matchesScope, same } from '../../utils/timetableUtils.js'
 import { planningErrors, subjectRequirements, entryPlanningErrors } from '../../utils/timetablePlanner.js'
 import { academicLevel, scopeSections } from './timetableDomain.js'
 import { scopeTimetableData } from './timetableCollegeScope.js'
@@ -14,8 +14,8 @@ const sources = { years: [{ id: '1', collegeId: 1 }], departments: [{ id: '2', c
 const config = { calendar: { startDate: '2026-10-06', endDate: '2027-02-01', workingDays: ['MONDAY'], reviewed: true, holidays: [] }, periods: [{ id: '1', startTime: '09:00', endTime: '10:00' }], rooms: ['text:a'], requirements: {} }
 function fixture(fail = false) {
   const calls = [], tables = [{ ...scope, id: '10', publicationStatus: 'published', revision: 1, planning: config, entries: [] }]
-  const service = { getSources: async () => sources, list: async () => tables, detail: async id => tables.find(row => same(row.id, id)), setup: async (scope, name, planning) => { calls.push('create'); const table = { ...scope, id: '11', name, planning, publicationStatus: 'draft', revision: 1, entries: [] }; tables.push(table); return table }, generate: async () => { if (fail) throw new Error('Actual backend 500'); calls.push('generate') }, validate: async () => ({ valid: true, warnings: [] }), publish: async id => { calls.push(`publish:${id}`); tables.find(row => same(row.id, id)).publicationStatus = 'published' } }
-  const context = vm.createContext({ selectedCollegeId: () => 1, scopeTimetableData, service, departmentApi: { getAll: async () => sources.departments }, subjectApi: { list: async () => [] }, backendEntries: () => [], academicLevel, scopeSections, same, planningErrors, subjectRequirements, entryPlanningErrors, getUserRole: () => 'admin' })
+  const service = { getSources: async () => sources, list: async () => tables, detail: async id => tables.find(row => same(row.id, id)), setup: async (scope, name, planning, { tableId } = {}) => { if (tableId) { calls.push('resume'); const draft = tables.find(row => same(row.id, tableId)); draft.planning = planning; return draft }; calls.push('create'); const table = { ...scope, id: '11', name, planning, publicationStatus: 'draft', revision: 1, entries: [] }; tables.push(table); return table }, generate: async () => { if (fail) throw new Error('Actual backend 500'); calls.push('generate') }, validate: async () => ({ valid: true, warnings: [] }), publish: async id => { calls.push(`publish:${id}`); tables.find(row => same(row.id, id)).publicationStatus = 'published' } }
+  const context = vm.createContext({ selectedCollegeId: () => 1, scopeTimetableData, service, departmentApi: { getAll: async () => sources.departments }, subjectApi: { list: async () => [] }, backendEntries: () => [], academicLevel, scopeSections, matchesScope, same, planningErrors, subjectRequirements, entryPlanningErrors, getUserRole: () => 'admin' })
   vm.runInContext(`${normalizer}\n${code}\nthis.workflow = backendWorkflow`, context)
   return { ...context, calls, tables }
 }
@@ -35,6 +35,14 @@ test('backend failure remains a failure with no mock fallback or history changes
   const history = JSON.stringify(tables[0])
   await assert.rejects(workflow.generate({ scope, selected: ['6'], config, expected: [] }), /Actual backend 500/)
   assert.equal(JSON.stringify(tables[0]), history)
+})
+test('generation retry reuses an empty draft left by a failed setup', async () => {
+  const { workflow, tables, calls } = fixture()
+  tables.push({ ...scope, id: '11', name: 'Existing draft', publicationStatus: 'draft', revision: 1, planning: config, entries: [] })
+  const result = await workflow.generate({ scope, selected: ['6'], config, expected: [] })
+  assert.equal(tables.length, 2)
+  assert.equal(result[0].id, '11')
+  assert.deepEqual(calls, ['resume', 'generate'])
 })
 test('published mutation and destructive reopen are rejected', async () => {
   const { workflow, tables } = fixture()

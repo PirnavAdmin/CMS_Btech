@@ -11,6 +11,7 @@ import { facultyPayrollApi } from '../../api/apiEndpoints'
 import ExportMenu from '../../components/ExportMenu'
 import './PayrollWorkspace.css'
 import facultyService from '../../services/facultyService'
+import { isRecordActive } from '../../services/academicService'
 
 const amount = value => value == null || value === '' || !Number.isFinite(Number(value)) ? 'Unavailable' : new Intl.NumberFormat('en-IN', { style:'currency', currency:'INR' }).format(Number(value))
 const display = value => value == null || value === '' ? 'Unavailable' : String(value)
@@ -27,21 +28,26 @@ export default function PayrollWorkspace() {
   const { selectedCollegeId, scopeRecords } = useAcademic(), { canAction } = useScreenAccess()
   const [tab,setTab] = useState(tabs[0]), [month,setMonth] = useState(monthNow)
   const [records,setRecords] = useState([]), [loading,setLoading] = useState(false), [error,setError] = useState('')
+  const [members,setMembers] = useState([]), [salary,setSalary] = useState(null), [salaryError,setSalaryError] = useState('')
   const [query,setQuery] = useState(''), [type,setType] = useState(''), [status,setStatus] = useState(''), [page,setPage] = useState(1)
   const [selected,setSelected] = useState(null), [hold,setHold] = useState(null), [reason,setReason] = useState(''), [busy,setBusy] = useState(false), [notice,setNotice] = useState('')
   const generation = useRef(0), lock = useRef(false)
   const canHold = canAction('/faculty/payroll','edit')
+  const canCreate = canAction('/faculty/payroll','create')
+  const creatingSalary = canCreate && tab === 'Salary Records' && salary && salary.collegeId === selectedCollegeId && salary.payrollMonth === month
   const load = useCallback(async () => {
     const version = ++generation.current
-    setError(''); setRecords([]); setSelected(null); setLoading(true)
+    setError(''); setRecords([]); setMembers([]); setSelected(null); setLoading(true)
     try {
       if (!selectedCollegeId) return
       const fetchRows = tab === 'Salary Records' ? facultyPayrollApi.getSalaryRecords : tab === 'Payslips' ? facultyPayrollApi.getPayslips : facultyPayrollApi.getAll
-      const [rows,members] = await Promise.all([fetchRows({month,collegeId:selectedCollegeId}), facultyService.list()])
+      const [rows,faculty] = await Promise.all([fetchRows({month,collegeId:selectedCollegeId}), facultyService.list()])
       // Payroll feeds omit college IDs. Associate only by actual faculty identity/code.
-      const scopedMembers = scopeRecords(members)
+      const scopedMembers = scopeRecords(faculty)
       const scoped = rows.filter(row => scopedMembers.some(member => row.facultyId != null ? String(member.facultyId || member.id) === String(row.facultyId) : row.employeeId && String(member.facultyCode || member.employeeId) === String(row.employeeId)))
-      if (version === generation.current) setRecords(scoped
+      if (version !== generation.current) return
+      setMembers(scopedMembers.filter(isRecordActive))
+      setRecords(scoped
         .filter(row => tab !== 'Payroll Processing' || row.payrollId != null)
         .filter(row => tab !== 'Payslips' || payslipReleased(row))
         .map(row => ({...row, payrollRecordId:tab === 'Payroll Processing' ? row.payrollId : row.payrollId ?? row.id})))
@@ -51,6 +57,45 @@ export default function PayrollWorkspace() {
   useEffect(() => { const controller = new AbortController(); queueMicrotask(() => { if (!controller.signal.aborted) load() }); return () => controller.abort() }, [load])
   const rows = useMemo(() => records.filter(row => (!query || [row.fullName,row.employeeId,row.department].join(' ').toLowerCase().includes(query.toLowerCase())) && (!type || row.type === type) && (!status || row.status === status)), [records,query,type,status])
   const pages = Math.max(1,Math.ceil(rows.length/10)), current = Math.min(page,pages)
+  const openSalary = () => {
+    setSalaryError('')
+    setSalary({ collegeId: selectedCollegeId, payrollMonth: month, facultyId: '', grossSalary: '', deductions: '0', payDate: '' })
+  }
+  const changeSalary = event => {
+    const { name, value } = event.target
+    setSalary(current => ({ ...current, [name]: value }))
+  }
+  const saveSalary = async event => {
+    event.preventDefault()
+    if (!creatingSalary || lock.current) return
+    const facultyId = Number(salary.facultyId)
+    const grossSalary = Number(salary.grossSalary)
+    const deductions = Number(salary.deductions)
+    if (!members.some(member => Number(member.facultyId || member.id) === facultyId) ||
+        !salary.payDate || salary.payDate < `${month}-01` ||
+        [salary.grossSalary, salary.deductions].some(value => !/^\d+(\.\d{1,2})?$/.test(value) || Number(value) > 9999999999.99) ||
+        deductions > grossSalary) {
+      setSalaryError('Select a faculty member and enter a valid payday and amounts. Deductions cannot exceed gross salary.')
+      return
+    }
+    lock.current = true
+    setBusy(true)
+    setSalaryError('')
+    const version = generation.current
+    try {
+      await facultyPayrollApi.createSalary({ ...salary, collegeId: Number(salary.collegeId), facultyId, grossSalary, deductions })
+      setSalary(null)
+      if (version !== generation.current) return
+      setNotice('Salary record created.')
+      setQuery(''); setType(''); setStatus(''); setPage(1)
+      await load()
+    } catch (failure) {
+      if (version === generation.current) setSalaryError(failure.message || 'Salary record could not be saved.')
+    } finally {
+      lock.current = false
+      setBusy(false)
+    }
+  }
   const saveHold = async event => {
     event.preventDefault()
     if (!canHold || lock.current || !hold?.payrollRecordId || !reason.trim()) return
@@ -73,12 +118,13 @@ export default function PayrollWorkspace() {
     </nav>
     <p className="payroll-notice" role="status">
       <FiFileText aria-hidden="true" />
-      <span>{tab === 'Salary Records' ? 'Salary creation requires a backend save API. Existing salary records are shown below.' : tab === 'Payslips' ? 'Payslips are released only for paid records with a confirmed payment date that has arrived.' : 'Only saved payroll records are shown. Processing and payment actions require backend support.'}</span>
+      <span>{tab === 'Salary Records' ? 'Salary records are listed for the selected college and month.' : tab === 'Payslips' ? 'Payslips are released only for paid records with a confirmed payment date that has arrived.' : 'Only saved payroll records are shown. Create a new record from the Salary Records tab.'}</span>
     </p>
 
     <section className="payroll-directory" aria-labelledby="payroll-directory-title">
       <header className="payroll-directory-heading">
         <h2 id="payroll-directory-title">{tab === 'Payroll Processing' ? 'Payroll Directory' : tab}</h2>
+        {tab === 'Salary Records' && canCreate && selectedCollegeId && <button type="button" className="erp-btn erp-btn--primary" disabled={loading || Boolean(error) || busy} onClick={openSalary}>Add Salary Record</button>}
       </header>
 
       <label className="payroll-month">Payroll month<input type="month" aria-label="Payroll month" value={month} onChange={event=>{ if (event.target.value) { setMonth(event.target.value);setPage(1) } }} /></label>
@@ -132,6 +178,23 @@ export default function PayrollWorkspace() {
           <p>{query || type || status ? 'Try a different search or filter.' : tab === 'Payslips' ? 'No released payslips for this college and month. Payment must be confirmed and its date must have arrived.' : 'No payroll records returned for this college and month.'}</p>
         </div>}
     </section>
+    {creatingSalary && <ViewDialog title="Add Salary Record" subtitle={month} onClose={() => setSalary(null)} busy={busy} showExport={false} hideFooter>
+      <form className="payroll-hold-form payroll-salary-form" onSubmit={saveSalary}>
+        <label>Faculty member<select name="facultyId" required value={salary.facultyId} onChange={changeSalary}>
+          <option value="">Select faculty member</option>
+          {members.map(member => <option key={member.facultyId || member.id} value={member.facultyId || member.id}>{member.fullName || member.facultyName || member.facultyCode}{member.fullName && member.facultyCode ? ` (${member.facultyCode})` : ''}</option>)}
+        </select></label>
+        {!members.length && <p>No faculty members found for this college.</p>}
+        <label>Gross salary (INR)<input name="grossSalary" type="number" required min="0" max="9999999999.99" step="0.01" value={salary.grossSalary} onChange={changeSalary} /></label>
+        <label>Deductions (INR)<input name="deductions" type="number" required min="0" max="9999999999.99" step="0.01" value={salary.deductions} onChange={changeSalary} /></label>
+        <label>Pay date<input name="payDate" type="date" required min={`${month}-01`} value={salary.payDate} onChange={changeSalary} /></label>
+        {salaryError && <p role="alert">{salaryError}</p>}
+        <div className="payroll-row-actions">
+          <button type="button" className="erp-btn erp-btn--secondary" disabled={busy} onClick={() => setSalary(null)}>Cancel</button>
+          <button type="submit" className="erp-btn erp-btn--primary" disabled={busy || !members.length}>{busy ? 'Saving…' : 'Save Salary Record'}</button>
+        </div>
+      </form>
+    </ViewDialog>}
     {selected && <ViewDialog title="Payroll details" subtitle={selected.fullName} onClose={()=>setSelected(null)} showExport={false} footerActions={<button onClick={()=>window.print()}>Print / Save PDF</button>}><dl className="view-modal-fields">{details.map(([label,value])=><div className="view-modal-field" key={label}><dt className="view-modal-label">{label}</dt><dd className="view-modal-value">{display(value)}</dd></div>)}</dl></ViewDialog>}
     {hold && <ViewDialog title="Place payroll on hold" onClose={()=>setHold(null)} busy={busy} showExport={false} hideFooter><form className="payroll-hold-form" onSubmit={saveHold}><label>Hold reason<textarea required value={reason} onChange={event=>setReason(event.target.value)} /></label>{error && <p role="alert">{error}</p>}<div className="payroll-row-actions"><button type="button" className="erp-btn erp-btn--secondary" disabled={busy} onClick={()=>setHold(null)}>Cancel</button><button type="submit" className="erp-btn erp-btn--primary" disabled={busy}>{busy?'Saving…':'Confirm hold'}</button></div></form></ViewDialog>}
   </main></DashboardLayout>

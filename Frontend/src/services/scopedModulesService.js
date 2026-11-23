@@ -71,6 +71,18 @@ const dateTime = value => value ? String(value).replace(' ', 'T') : null
 export const statusLabel = value => String(value || '').toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 export const statusCode = value => String(value || '').trim().replace(/\s+/g, '_').toUpperCase()
 
+export const LIBRARY_DEFAULT_CATEGORIES = [
+  { categoryCode: 'PROG', categoryName: 'Programming', description: 'Programming languages, software development and coding.' },
+  { categoryCode: 'CS', categoryName: 'Computer Science', description: 'Computer science, algorithms and computing.' },
+  { categoryCode: 'MATH', categoryName: 'Mathematics', description: 'Engineering and applied mathematics.' },
+  { categoryCode: 'PHY', categoryName: 'Physics', description: 'Physics and applied science.' },
+  { categoryCode: 'ELEC', categoryName: 'Electronics', description: 'Electronics, circuits and communication.' },
+  { categoryCode: 'MECH', categoryName: 'Mechanical', description: 'Mechanical engineering and related subjects.' },
+  { categoryCode: 'CIVIL', categoryName: 'Civil', description: 'Civil engineering, construction and structures.' },
+  { categoryCode: 'ENG', categoryName: 'English', description: 'English language, grammar and literature.' },
+  { categoryCode: 'GK', categoryName: 'General Knowledge', description: 'General knowledge and competitive examinations.' },
+]
+
 export async function loadLibrary(scope) {
   const collegeId = requireId(scope.collegeId, 'college')
   const { values, resourceErrors } = await readModuleResources({
@@ -123,8 +135,30 @@ export async function loadLibrary(scope) {
 }
 
 export async function saveBook(form, old, scope, categories) {
-  const category = categories.find(row => String(row.categoryId) === String(form.categoryId) ||
+  let category = categories.find(row => String(row.categoryId) === String(form.categoryId) ||
     (!form.categoryId && form.category && row.categoryName === form.category))
+  const defaultCategory = LIBRARY_DEFAULT_CATEGORIES.find(row => form.categoryId === `default:${row.categoryCode}`)
+  if (!category && defaultCategory) {
+    const matchesDefault = row => String(row.categoryCode || '').toLowerCase() === defaultCategory.categoryCode.toLowerCase() ||
+      String(row.categoryName || '').trim().toLowerCase() === defaultCategory.categoryName.toLowerCase()
+    category = categories.find(row => matchesDefault(row) && ![false, 0, '0'].includes(row.status))
+    if (!category) {
+      const collegeId = requireId(scope.collegeId, 'college')
+      try {
+        category = record(unwrap(await call('library/categories', {
+          method: 'POST',
+          body: { collegeId, ...defaultCategory, status: true },
+        })))
+      } catch (error) {
+        const existing = (await list('library/categories', { collegeId })).find(matchesDefault)
+        if (!existing || [false, 0, '0'].includes(existing.status)) throw error
+        category = existing
+      }
+      if (!category?.categoryId) {
+        category = (await list('library/categories', { collegeId })).find(row => matchesDefault(row) && ![false, 0, '0'].includes(row.status))
+      }
+    }
+  }
   const body = {
     collegeId: requireId(scope.collegeId, 'college'), categoryId: requireId(category?.categoryId, 'library category'),
     accessionNo: String(form.accessionNo || old?.accessionNo || '').trim(),

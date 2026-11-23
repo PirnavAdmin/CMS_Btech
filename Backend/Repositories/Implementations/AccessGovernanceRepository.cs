@@ -358,7 +358,8 @@ public sealed class AccessGovernanceRepository : IAccessGovernanceRepository
     {
         const string sql = """
             UPDATE designations SET title=@Title,code=@Code,category=@Category,hierarchy_level=@Level,
-                department_scope=@Department,default_role_id=@DefaultRoleId,status=@status,
+                department_scope=@Department,
+                default_role_id=IF(@PreserveDefaultRole,default_role_id,@DefaultRoleId),status=@status,
                 updated_at=CURRENT_TIMESTAMP,updated_by=@actorUserId
             WHERE designation_id=@designationId AND college_id=@collegeId AND deleted_at IS NULL;
             """;
@@ -366,7 +367,7 @@ public sealed class AccessGovernanceRepository : IAccessGovernanceRepository
         var affected = await connection.ExecuteAsync(sql, new
         {
             designationId, collegeId, Title=request.Title.Trim(), Code=request.Code.Trim().ToUpperInvariant(),
-            request.Category, Level=request.Level, Department=request.Department, request.DefaultRoleId, status, actorUserId
+            request.Category, Level=request.Level, Department=request.Department, request.DefaultRoleId, request.PreserveDefaultRole, status, actorUserId
         });
         return affected > 0;
     }

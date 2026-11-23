@@ -125,8 +125,14 @@ public sealed class AttendanceCompatibilityController : ControllerBase
                 return BadRequest(new { success = false, message = "The selected attendance context does not match the section." });
 
             var subjectId = await connection.ExecuteScalarAsync<long?>(@"
-                SELECT subject_id FROM subjects WHERE status = 1 AND (subject_code = @subject OR subject_name = @subject)
-                LIMIT 1;", new { subject = request.Subject.Trim() }, transaction);
+                SELECT s.subject_id FROM subjects s
+                JOIN vw_sm_subject_mappings m ON m.subject_id = s.subject_id
+                JOIN courses c ON c.course_id = m.course_id
+                WHERE s.status = 1 AND s.deleted_at IS NULL AND m.mapping_status = 1
+                  AND c.college_id = @CollegeId AND m.semester_id = @SemesterId
+                  AND (s.subject_code = @subject OR s.subject_name = @subject)
+                ORDER BY (s.subject_code = @subject) DESC, s.subject_id
+                LIMIT 1;", new { context.CollegeId, context.SemesterId, subject = request.Subject.Trim() }, transaction);
             if (!subjectId.HasValue)
                 return BadRequest(new { success = false, message = "The selected subject was not found. Use a valid subject name or code." });
 

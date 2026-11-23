@@ -200,14 +200,15 @@ public sealed class ExamsController : ControllerBase
         [FromQuery] long? academicYearId,
         [FromQuery] long? courseId,
         [FromQuery] long? branchId,
-        [FromQuery] long? semesterId) => Execute(async () =>
+        [FromQuery] long? semesterId,
+        [FromQuery] bool includeSubjects = true) => Execute(async () =>
     {
         collegeId = CollegeDataScope.Resolve(HttpContext, collegeId);
         return Ok(new
         {
             success = true,
             message = "Exam lookups retrieved successfully.",
-            data = await _repository.LookupsAsync(collegeId, academicYearId, courseId, branchId, semesterId, Cancellation)
+            data = await _repository.LookupsAsync(collegeId, academicYearId, courseId, branchId, semesterId, includeSubjects, Cancellation)
         });
     });
 
