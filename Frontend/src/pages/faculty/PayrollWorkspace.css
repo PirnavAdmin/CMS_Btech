@@ -152,6 +152,14 @@
 .payroll-hold-form { display: grid; gap: 12px; }
 .payroll-hold-form textarea { min-height: 80px; }
 .payroll-hold-form .payroll-row-actions { justify-content: flex-end; }
+.payroll-salary-form input, .payroll-salary-form select {
+  min-height: 40px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-primary);
+}
 
 @media (max-width: 720px) {
   .payroll-filters .filter-disclosure__bar { padding: 9px 10px; }

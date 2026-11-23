@@ -1921,6 +1921,7 @@ export const facultyPayrollApi = {
   getAll: async (params, requestOptions) => listData(await request(withQuery(API_ENDPOINTS.facultyPayroll.list, params), requestOptions)),
   getById: async id => normalizeRecord(await request(API_ENDPOINTS.facultyPayroll.detail(requiredId(id, 'Payroll ID')))),
   getSalaryRecords: async params => listData(await request(withQuery(API_ENDPOINTS.facultyPayroll.salaries, params))),
+  createSalary: async data => normalizeRecord(await jsonRequest(withQuery(API_ENDPOINTS.facultyPayroll.salaries, { collegeId: data.collegeId }), 'POST', data)),
   getPayslips: async params => listData(await request(withQuery(API_ENDPOINTS.facultyPayroll.payslips, params))),
   hold: async (id, reason) => jsonRequest(API_ENDPOINTS.facultyPayroll.hold(requiredId(id, 'Payroll ID')), 'PUT', { reason }),
   export: async params => blobRequest(withQuery(API_ENDPOINTS.facultyPayroll.export, params)),
