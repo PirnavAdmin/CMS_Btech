@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   FiAlertCircle, FiArrowUpRight, FiCalendar, FiCheckCircle,
-  FiChevronLeft, FiChevronRight, FiClock, FiDownload, FiExternalLink,
-  FiFileText, FiRefreshCw, FiSearch, FiX,
+  FiChevronDown, FiChevronLeft, FiChevronRight, FiClock, FiDownload,
+  FiFileText, FiFilter, FiSearch, FiX,
 } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout.jsx'
 import PageHeader from '../../components/PageHeader.jsx'
+import ExportMenu from '../../components/ExportMenu.jsx'
 import { useScreenAccess } from '../../auth/ScreenAccess.jsx'
 import { subscriptionsApi, userDirectoryApi } from '../../api/apiEndpoints.js'
 import { fetchCollegeLogo, getCollegeLogoUrl, getColleges, isBackendCollegeLogo, unwrapCollegeRecord } from '../../auth/collegeApi.js'
@@ -19,14 +20,27 @@ const TABS = [
   ['accounts', 'College Accounts'],
   ['renewals', 'Renewals'],
   ['payments', 'Payments & Invoices'],
-  ['usage', 'Usage & Limits'],
   ['reports', 'Reports'],
   ['audit', 'Audit History'],
 ]
-const PAGE_SIZE = 10
+const PAGE_SIZE = 5
 const USER_PAGE_SIZE = 200
 const MAX_USER_PAGES = 100
-const DEFAULT_FILTERS = Object.freeze({ search: '', college: 'all', plan: 'all', status: 'all', payment: 'all', expiry: 'all', cycle: 'all', sort: 'name', direction: 'asc' })
+const DEFAULT_FILTERS = Object.freeze({ search: '', college: 'all', plan: 'all', status: 'all', expiry: 'all', cycle: 'all', sort: 'name', direction: 'asc' })
+const ACCOUNT_EXPORT_COLUMNS = [
+  { label: 'College', value: account => account.name },
+  { label: 'College code', value: account => account.code },
+  { label: 'Assigned admin', value: account => account.admin?.name || 'Not assigned' },
+  { label: 'Admin email', value: account => account.admin?.email },
+  { label: 'Plan', value: account => account.subscription?.planName || 'No plan' },
+  { label: 'Billing cycle', value: account => account.subscription?.billingCycle },
+  { label: 'Renewal date', value: account => account.subscription ? dateLabel(account.subscription.endDate) : 'Not set' },
+  { label: 'Days remaining', value: account => account.subscription ? daysLabel(account.daysRemaining) : 'Not set' },
+  { label: 'Status', value: account => account.subscription?.status || 'No subscription' },
+  { label: 'Active users', value: account => account.activeUserCount },
+  { label: 'User limit', value: account => account.subscription?.maximumUsers },
+  { label: 'Usage', value: account => account.usagePercentage == null ? 'Unavailable' : `${account.usagePercentage}%` },
+]
 
 function listFrom(response) {
   let current = response
@@ -116,38 +130,6 @@ function subscriptionExplanation(account) {
   return `The status “${subscription.status}” comes from the saved subscription record.`
 }
 
-function DataCoverage({ sources, lastRefreshed }) {
-  const rows = [
-    ['Organizations', sources.organizations, 'College identity and contact details'],
-    ['Subscriptions', sources.subscriptions, 'Plan, cycle, price, user cap, dates, and saved status'],
-    ['User directory', sources.users, 'Administrator assignments and active account counts'],
-    ['Payments and invoices', 'unavailable', 'No invoice, transaction, balance, or tax endpoint is connected'],
-    ['Storage and entitlements', 'unavailable', 'No storage meter or effective module entitlement endpoint is connected'],
-    ['Renewal and billing audit', 'unavailable', 'No reminder, grace-period, confirmation, or billing audit endpoint is connected'],
-  ]
-  return <section className="ab-coverage" aria-label="Data coverage and freshness">
-    <header><div><span className="ab-eyebrow">Data coverage</span><h2>What this dashboard can verify</h2><p>Every value below is tied to a connected platform record or identified as unavailable.</p></div><span className="ab-refreshed">{lastRefreshed ? `Last checked ${lastRefreshed.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}` : 'Loading source status'}</span></header>
-    <div className="ab-coverage__grid">{rows.map(([name, status, detail]) => <article key={name} className={`ab-coverage-item ab-coverage-item--${status}`}>
-      <span className="ab-coverage-item__status"><i aria-hidden="true" />{status === 'available' ? 'Connected' : status === 'partial' ? 'Partial' : status === 'error' ? 'Unavailable' : 'Not connected'}</span>
-      <strong>{name}</strong><p>{detail}</p>
-    </article>)}</div>
-  </section>
-}
-
-function MetricGuide() {
-  return <details className="ab-metric-guide">
-    <summary>How to interpret the figures and statuses</summary>
-    <div className="ab-metric-guide__grid">
-      <article><strong>Active subscriptions</strong><p>Counts organizations whose effective subscription status is Active. It does not mean a payment was received; payment records are not connected.</p></article>
-      <article><strong>Expiry windows</strong><p>The 7-day and 30-day KPIs count Active subscriptions with a recorded end date from today through each window. Trial accounts appear in renewal alerts, but not in these Active subscription KPIs.</p></article>
-      <article><strong>Expired</strong><p>Derived from the saved end date when it is before today. Cancelled and suspended records keep their saved status.</p></article>
-      <article><strong>User capacity</strong><p>Active user-directory accounts divided by the subscription’s maximum user count. Student and Faculty values are role counts; separate role limits are not exposed.</p></article>
-      <article><strong>Revenue and balances</strong><p>The period selector chooses a requested revenue window, but revenue, pending payments, and balances remain unavailable without a payment ledger. Plan price is saved metadata, not revenue.</p></article>
-      <article><strong>Unavailable values</strong><p>A blank or unavailable figure means the required backend source is missing. It is never treated as zero or estimated.</p></article>
-    </div>
-  </details>
-}
-
 function SnapshotCharts({ summary, loading }) {
   const metrics = [
     { key: 'totalAccounts', label: ['College', 'accounts'], value: summary.totalAccounts, color: 'var(--ab-chart-account)' },
@@ -227,24 +209,79 @@ function AnalyticsCharts({ accounts, usersUnavailable, usersTruncated, loading }
   const plans = [...planCounts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
   const usage = accounts.filter(account => account.usagePercentage != null && account.subscription?.maximumUsers)
     .sort((a, b) => b.usagePercentage - a.usagePercentage).slice(0, 8)
+  const shownPlans = plans.slice(0, 7)
   const total = Math.max(accounts.length, 1)
+  const planChart = { width: 720, height: 256, left: 44, right: 14, top: 22, bottom: 183 }
+  const planTick = Math.max(1, Math.ceil(Math.max(...plans.map(([, count]) => count), 1) / 4))
+  const planAxisMax = planTick * 4
+  const planPlotHeight = planChart.bottom - planChart.top
+  const planSlotWidth = (planChart.width - planChart.left - planChart.right) / Math.max(shownPlans.length, 1)
+  const planBarWidth = Math.min(48, planSlotWidth * 0.52)
+  const capacityChart = { width: 760, left: 178, right: 112, top: 28, rowHeight: 38 }
+  const capacityPlotWidth = capacityChart.width - capacityChart.left - capacityChart.right
+  const capacityPlotBottom = capacityChart.top + usage.length * capacityChart.rowHeight
+  const capacityChartHeight = capacityPlotBottom + 30
+  const capacityTicks = [0, 25, 50, 75, 100]
 
   return <div className="ab-dashboard-secondary-grid">
       <article className="ab-dark-chart-card">
-        <header><div><h3>Plan mix</h3><p>Organizations by their current plan; percentages use all organizations as the denominator.</p></div></header>
-        {loading ? <div className="ab-chart-loading" role="status">Loading organization records…</div> : plans.length ? <>{plans.length > 7 && <p className="ab-chart-note">Showing the 7 most common plans.</p>}<ul className="ab-chart-bars">{plans.slice(0, 7).map(([plan, count]) => <li key={plan}>
-          <div><span title={plan}>{plan}</span><strong>{count} · {Math.round(count / total * 100)}%</strong></div>
-          <i role="img" aria-label={`${count} of ${accounts.length} organizations, ${Math.round(count / total * 100)} percent`}><b style={{ width: `${count / total * 100}%` }} /></i>
-        </li>)}</ul></> : <EmptyState title="No organization records">Plan mix will appear when organization records are available.</EmptyState>}
+        <header><div><h3>Plan mix</h3><p>Organizations by plan, with each plan’s share of all accounts.</p></div></header>
+        {loading ? <div className="ab-chart-loading" role="status">Loading organization records…</div> : plans.length ? <>
+          {plans.length > 7 && <p className="ab-chart-note">Showing the 7 most common plans.</p>}
+          <div className="ab-plan-chart-wrap">
+            <svg viewBox={`0 0 ${planChart.width} ${planChart.height}`} role="img" aria-labelledby="ab-plan-chart-title ab-plan-chart-description">
+              <title id="ab-plan-chart-title">Organizations by subscription plan</title>
+              <desc id="ab-plan-chart-description">A column chart showing the count and percentage of organizations in each plan.</desc>
+              {Array.from({ length: 5 }, (_, index) => {
+                const value = planTick * (4 - index)
+                const y = planChart.top + (index / 4) * planPlotHeight
+                return <g key={value}><line x1={planChart.left} x2={planChart.width - planChart.right} y1={y} y2={y} className="ab-snapshot-gridline" /><text x={planChart.left - 9} y={y + 4} textAnchor="end" className="ab-snapshot-axis-label">{value}</text></g>
+              })}
+              {shownPlans.map(([plan, count], index) => {
+                const centerX = planChart.left + planSlotWidth * (index + 0.5)
+                const barHeight = count / planAxisMax * planPlotHeight
+                const barY = planChart.bottom - barHeight
+                const percentage = Math.round(count / total * 100)
+                const displayName = plan.length > 14 ? `${plan.slice(0, 13)}…` : plan
+                return <g key={plan}>
+                  <title>{`${plan}: ${count} organizations (${percentage}%)`}</title>
+                  <rect x={centerX - planBarWidth / 2} y={barY} width={planBarWidth} height={Math.max(barHeight, 2)} rx="5" fill="var(--ab-chart-account)" />
+                  <text x={centerX} y={Math.max(planChart.top - 6, barY - 7)} textAnchor="middle" className="ab-snapshot-value">{count}</text>
+                  <text x={centerX} y={planChart.bottom + 19} textAnchor="middle" className="ab-snapshot-category">{displayName}</text>
+                  <text x={centerX} y={planChart.bottom + 34} textAnchor="middle" className="ab-plan-chart-percent">{percentage}%</text>
+                </g>
+              })}
+            </svg>
+          </div>
+        </> : <EmptyState title="No organization records">Plan mix will appear when organization records are available.</EmptyState>}
       </article>
       <article className="ab-dark-chart-card">
-        <header><div><h3>Highest user-cap usage</h3><p>Active directory users compared with each subscription’s maximum user limit.</p></div></header>
+        <header><div><h3>Highest user-cap usage</h3><p>Ranked against a 0–100% scale of each subscription’s user limit.</p></div></header>
         {loading ? <div className="ab-chart-loading" role="status">Loading directory and subscription records…</div> : usersUnavailable ? <EmptyState title="Usage data unavailable">The user directory could not be loaded, so capacity cannot be calculated.</EmptyState> : usage.length ? <>
           {usersTruncated && <p className="ab-chart-note">Directory paging was incomplete; these counts may be understated.</p>}
-          <ul className="ab-chart-bars ab-chart-bars--usage">{usage.map(account => <li key={account.id}>
-            <div><span title={account.name}>{account.name}</span><strong>{account.activeUserCount} / {account.subscription.maximumUsers} · {account.usagePercentage}%</strong></div>
-            <i role="img" aria-label={`${account.name}: ${account.activeUserCount} of ${account.subscription.maximumUsers} active users, ${account.usagePercentage} percent`}><b className={account.usagePercentage >= 90 ? 'is-warning' : ''} style={{ width: `${account.usagePercentage}%` }} /></i>
-          </li>)}</ul>
+          <div className="ab-capacity-chart-wrap">
+            <svg viewBox={`0 0 ${capacityChart.width} ${capacityChartHeight}`} role="img" aria-labelledby="ab-capacity-chart-title ab-capacity-chart-description">
+              <title id="ab-capacity-chart-title">Colleges with the highest user-cap usage</title>
+              <desc id="ab-capacity-chart-description">A ranked horizontal bar chart comparing active users to each college’s maximum user limit, on a scale from zero to one hundred percent.</desc>
+              {capacityTicks.map(tick => {
+                const x = capacityChart.left + capacityPlotWidth * tick / 100
+                return <g key={tick}><line x1={x} x2={x} y1={capacityChart.top - 10} y2={capacityPlotBottom} className="ab-snapshot-gridline" /><text x={x} y={capacityPlotBottom + 19} textAnchor="middle" className="ab-snapshot-axis-label">{tick}%</text></g>
+              })}
+              {usage.map((account, index) => {
+                const centerY = capacityChart.top + capacityChart.rowHeight * (index + 0.5)
+                const percentage = account.usagePercentage
+                const limit = Number(account.subscription.maximumUsers)
+                const displayName = account.name.length > 24 ? `${account.name.slice(0, 23)}…` : account.name
+                return <g key={account.id}>
+                  <title>{`${account.name}: ${account.activeUserCount} of ${limit} active users (${percentage}%)`}</title>
+                  <text x={capacityChart.left - 12} y={centerY + 4} textAnchor="end" className="ab-capacity-chart-label">{displayName}</text>
+                  <rect x={capacityChart.left} y={centerY - 5} width={capacityPlotWidth} height="10" rx="5" fill="var(--surface-soft)" />
+                  <rect x={capacityChart.left} y={centerY - 5} width={Math.max(capacityPlotWidth * percentage / 100, 2)} height="10" rx="5" fill={percentage >= 90 ? 'var(--ab-chart-expired)' : 'var(--ab-chart-active)'} />
+                  <text x={capacityChart.width - capacityChart.right + 12} y={centerY + 4} className="ab-capacity-chart-value">{account.activeUserCount}/{limit} · {percentage}%</text>
+                </g>
+              })}
+            </svg>
+          </div>
         </> : <EmptyState title="No configured user caps">A capacity graph needs a subscription maximum-user limit and directory user data.</EmptyState>}
       </article>
   </div>
@@ -321,18 +358,16 @@ function AccountsTable({ accounts, onOpen, page, setPage, loading, usersUnavaila
     <div className="ab-table-scroll" role="region" aria-label="College accounts table" tabIndex={0}>
       <table className="ab-table">
         <thead><tr>
-          <th>College</th><th>Code</th><th>Assigned admin</th><th>Plan</th><th>Cycle</th><th>Start date</th><th>Expiry date</th><th>Days remaining</th><th>Status</th><th>Usage</th><th>Payment</th><th>Actions</th>
+          <th>College</th><th>Code</th><th>Assigned admin</th><th>Plan</th><th>Renewal</th><th>Status</th><th>Usage</th><th>Actions</th>
         </tr></thead>
         <tbody>{rows.map(account => <tr key={account.id}>
           <td><button type="button" className="ab-college-cell" onClick={() => onOpen(account)}><CollegeLogo account={account} /><span><strong>{account.name}</strong><small>{account.email || 'College details'}</small></span></button></td>
           <td>{account.code || '—'}</td>
           <td>{account.admin ? <><strong>{account.admin.name}</strong><small>{account.admin.email || 'Email not available'}</small></> : <span className="ab-muted">Not assigned</span>}</td>
-          <td>{account.subscription?.planName || 'No plan'}</td><td>{account.subscription?.billingCycle || '—'}</td>
-          <td>{dateLabel(account.subscription?.startDate)}</td><td>{dateLabel(account.subscription?.endDate)}</td>
-          <td className={account.daysRemaining != null && account.daysRemaining <= 7 ? 'ab-days--urgent' : ''}>{account.subscription ? daysLabel(account.daysRemaining) : '—'}</td>
+          <td>{account.subscription ? <><strong>{account.subscription.planName || 'Plan not named'}</strong><small>{account.subscription.billingCycle || 'Cycle not set'}</small></> : <span className="ab-muted">No plan</span>}</td>
+          <td>{account.subscription ? <><strong>{dateLabel(account.subscription.endDate)}</strong><small className={account.daysRemaining != null && account.daysRemaining <= 7 ? 'ab-days--urgent' : ''}>{daysLabel(account.daysRemaining)}</small></> : <span className="ab-muted">Not set</span>}</td>
           <td><StatusBadge value={account.subscription?.status || 'No subscription'} /></td>
           <td>{usersUnavailable || account.usagePercentage == null ? <span className="ab-muted">{usersUnavailable ? 'Unavailable' : '—'}</span> : <div className="ab-usage-cell"><span>{account.usagePercentage}%</span><i><b style={{ width: `${account.usagePercentage}%` }} /></i><small>{account.activeUserCount} / {account.subscription.maximumUsers}</small></div>}</td>
-          <td><span className="ab-status ab-status--unknown">Not tracked</span></td>
           <td><button type="button" className="ab-button ab-button--quiet" onClick={() => onOpen(account)}>View details <FiArrowUpRight /></button></td>
         </tr>)}</tbody>
       </table>
@@ -361,7 +396,7 @@ export default function AccountsBilling() {
   const [activeTab, setActiveTab] = useState('overview')
   const [selectedAccount, setSelectedAccount] = useState(null)
   const [filters, setFilters] = useState(DEFAULT_FILTERS)
-  const [dataSources, setDataSources] = useState({ organizations: 'loading', subscriptions: 'loading', users: 'loading' })
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [lastRefreshed, setLastRefreshed] = useState(null)
   const [page, setPage] = useState(1)
   const [reportPeriod, setReportPeriod] = useState('month')
@@ -372,11 +407,6 @@ export default function AccountsBilling() {
     Promise.allSettled([getColleges(), subscriptionsApi.list(), loadUsers()]).then(results => {
       if (!active) return
       const [organizationResult, subscriptionResult, userResult] = results
-      setDataSources({
-        organizations: organizationResult.status === 'fulfilled' ? 'available' : 'error',
-        subscriptions: subscriptionResult.status === 'fulfilled' ? 'available' : 'error',
-        users: userResult.status !== 'fulfilled' ? 'error' : userResult.value.truncated ? 'partial' : 'available',
-      })
       if (organizationResult.status === 'fulfilled') {
         const rows = listFrom(organizationResult.value).map(unwrapCollegeRecord)
         setOrganizations(rows)
@@ -400,10 +430,7 @@ export default function AccountsBilling() {
 
   const accounts = useMemo(() => buildBillingAccounts(organizations, subscriptions, users), [organizations, subscriptions, users])
   const summary = useMemo(() => summarizeBillingAccounts(accounts), [accounts])
-  const visibleAccounts = useMemo(() => filterBillingAccounts(accounts, filters).filter(() => {
-    if (filters.payment === 'all') return true
-    return filters.payment === 'unavailable'
-  }), [accounts, filters])
+  const visibleAccounts = useMemo(() => filterBillingAccounts(accounts, filters), [accounts, filters])
   const plans = useMemo(() => [...new Set(accounts.map(account => account.subscription?.planName).filter(Boolean))].sort(), [accounts])
   const cycles = useMemo(() => [...new Set(accounts.map(account => account.subscription?.billingCycle).filter(Boolean))].sort(), [accounts])
   const statusCounts = useMemo(() => {
@@ -424,11 +451,9 @@ export default function AccountsBilling() {
     setFilters(current => ({ ...current, [name]: value }))
   }
   const clearFilters = () => { setPage(1); setFilters(DEFAULT_FILTERS) }
-  const hasActiveFilters = Object.keys(DEFAULT_FILTERS).some(key => filters[key] !== DEFAULT_FILTERS[key])
   const refresh = () => {
     setLoading(true)
     setError('')
-    setDataSources({ organizations: 'loading', subscriptions: 'loading', users: 'loading' })
     setRefreshKey(value => value + 1)
   }
   const openAccount = account => setSelectedAccount(account)
@@ -449,10 +474,7 @@ export default function AccountsBilling() {
   const showLoading = accessLoading || permitted && loading
   return <DashboardLayout>
     <main className="accounts-billing">
-      <PageHeader title="Accounts & Billing" subtitle="Review college subscriptions, renewal timing, and plan capacity across the platform."
-        breadcrumb={[{ label: 'Platform', link: '/dashboard' }, 'Accounts & Billing']}
-        secondaryActions={<button type="button" className="ab-button" onClick={refresh} disabled={showLoading}><FiRefreshCw className={showLoading ? 'ab-spin' : ''} /> Refresh</button>}
-        primaryAction={<button type="button" className="ab-button ab-button--primary" onClick={goManageSubscription}>Manage subscriptions <FiExternalLink /></button>} />
+      <PageHeader title="Accounts & Billing" />
 
       {!accessLoading && !permitted && <section className="ab-alert ab-alert--error" role="alert">This platform dashboard is available to verified Super Admins only.</section>}
       {error && <section className="ab-alert ab-alert--error" role="alert"><FiAlertCircle />{error}<button type="button" className="ab-alert__action" onClick={refresh}>Retry</button></section>}
@@ -473,26 +495,12 @@ export default function AccountsBilling() {
                 <div><small>{lastRefreshed ? `Updated ${lastRefreshed.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}` : 'Loading data'}</small><button type="button" className="ab-dashboard-export" onClick={exportReport}><FiDownload /> Export</button></div>
               </div>
             </header>
-            <div className="ab-portfolio-kpis">
-              <article><span>Total college accounts</span><strong>{showLoading && !accounts.length ? '—' : summary.totalAccounts}</strong><small>Organizations in directory</small></article>
-              <article className="ab-portfolio-kpi--green"><span>Active subscriptions</span><strong>{showLoading && !accounts.length ? '—' : summary.activeSubscriptions}</strong><small>Payment status is not connected</small></article>
-              <article className="ab-portfolio-kpi--blue"><span>Expiring in 30 days</span><strong>{showLoading && !accounts.length ? '—' : summary.expiring30}</strong><small>{summary.expiring7} within 7 days</small></article>
-              <article className="ab-portfolio-kpi--orange"><span>Expired subscriptions</span><strong>{showLoading && !accounts.length ? '—' : summary.expired}</strong><small>Based on recorded expiry dates</small></article>
-            </div>
             <div className="ab-dashboard-primary-grid">
               <SnapshotCharts summary={summary} loading={showLoading && !accounts.length} />
               <SubscriptionDonut statusCounts={statusCounts} totalAccounts={accounts.length} loading={showLoading && !accounts.length} />
             </div>
             <AnalyticsCharts accounts={accounts} usersUnavailable={usersUnavailable} usersTruncated={usersTruncated} loading={showLoading && !accounts.length} />
-            <div className="ab-dashboard-financials"><div className="ab-dashboard-financials__heading"><strong>Billing ledger metrics</strong><span>Unavailable values are not treated as zero.</span></div><div>
-              <article><span>Pending payments</span><strong>Unavailable</strong><small>Payment ledger not connected</small></article>
-              <article><span>Outstanding amount</span><strong>Unavailable</strong><small>Payment ledger not connected</small></article>
-              <article><span>Revenue · {reportPeriod === 'month' ? 'this month' : reportPeriod === 'quarter' ? 'this quarter' : 'this year'}</span><strong>Unavailable</strong><small>Payment ledger not connected</small></article>
-            </div></div>
-            <p className="ab-dashboard-footnote">Current records only · Historical trends, payments, and invoices aren’t available from the connected services.</p>
           </section>
-          <MetricGuide />
-          <DataCoverage sources={dataSources} lastRefreshed={lastRefreshed} />
           <div className="ab-overview-grid">
             <section className="ab-card">
               <div className="ab-card__heading"><div><h2>Renewal alerts</h2><p>Expired and active subscriptions expiring within 30 days.</p></div><FiCalendar aria-hidden="true" /></div>
@@ -502,9 +510,10 @@ export default function AccountsBilling() {
           </div>
         </>}
 
-        {activeTab === 'accounts' && <section className="ab-card">
+        {activeTab === 'accounts' && <section className="ab-card ab-card--directory">
           <div className="ab-card__heading"><div><h2>College accounts</h2><p>Search and compare organization plans, renewals, and user limits.</p></div><span className="ab-count">{visibleAccounts.length} accounts</span></div>
-          <FilterBar filters={filters} setFilter={setFilter} accounts={accounts} plans={plans} cycles={cycles} onClear={clearFilters} hasActiveFilters={hasActiveFilters} />
+          <TableControls filters={filters} setFilter={setFilter} rows={visibleAccounts} loading={showLoading} filtersOpen={filtersOpen} onToggleFilters={() => setFiltersOpen(value => !value)} activeFilterCount={activeDropdownFilterCount(filters)} filterPanelId="ab-account-filter-panel" />
+          {filtersOpen && <div className="ab-filter-panel" id="ab-account-filter-panel" role="region" aria-label="College account filters"><FilterPanelHeader activeCount={activeDropdownFilterCount(filters)} onClear={clearFilters} /><FilterBar filters={filters} setFilter={setFilter} accounts={accounts} plans={plans} cycles={cycles} oneLine /></div>}
           <AccountsTable accounts={visibleAccounts} onOpen={openAccount} page={page} setPage={setPage} loading={showLoading} usersUnavailable={usersUnavailable} />
         </section>}
 
@@ -519,17 +528,11 @@ export default function AccountsBilling() {
           <EmptyState icon={FiFileText} title="No payment or invoice records are connected">The backend currently provides subscription plan records only. Invoice numbers, payment status, amounts paid, balances, transaction references, tax, and downloadable invoices are unavailable.</EmptyState>
         </section>}
 
-        {activeTab === 'usage' && <section className="ab-card">
-          <div className="ab-card__heading"><div><h2>Usage & limits</h2><p>Active user counts are compared with subscription limits. Module counts show explicit admin overrides only.</p></div></div>
-          {usersUnavailable && <div className="ab-alert ab-alert--inline"><FiAlertCircle />User counts could not be loaded.</div>}
-          <div className="ab-usage-explanation"><strong>What these usage figures mean</strong><p><b>Active users</b> includes directory accounts marked Active or Profile Pending. Pending invitations and suspended accounts are excluded. The percentage is active users divided by the subscription’s maximum users, capped at 100%; an unset cap means no percentage can be calculated.</p><p><b>Students and Faculty</b> are counts by directory role and have no separate quota in the connected API. <b>Admin permission overrides</b> counts explicit per-user permission records with <code>canView</code>; it does not calculate effective access from inherited roles. <b>Storage</b> and effective module entitlements are not exposed by the available services.</p></div>
-          <UsageTable accounts={accounts} usersUnavailable={usersUnavailable} onOpen={openAccount} />
-        </section>}
-
-        {activeTab === 'reports' && <section className="ab-card">
-          <div className="ab-card__heading"><div><h2>Accounts report</h2><p>Export organization, subscription, expiry, and usage fields available from connected APIs.</p></div><button type="button" className="ab-button ab-button--primary" onClick={exportReport}><FiDownload /> Export CSV</button></div>
+        {activeTab === 'reports' && <section className="ab-card ab-card--directory">
+          <div className="ab-card__heading"><div><h2>Accounts report</h2><p>Export organization, subscription, expiry, and usage fields available from connected APIs.</p></div></div>
           <div className="ab-report-controls"><label><span>Revenue period</span><select value={reportPeriod} onChange={event => setReportPeriod(event.target.value)}><option value="month">This month</option><option value="quarter">This quarter</option><option value="year">This year</option></select></label><p><FiAlertCircle />Revenue for {reportPeriod === 'month' ? 'this month' : reportPeriod === 'quarter' ? 'this quarter' : 'this year'} is unavailable because payment records are not connected.</p></div>
-          <FilterBar filters={filters} setFilter={setFilter} accounts={accounts} plans={plans} cycles={cycles} compact onClear={clearFilters} hasActiveFilters={hasActiveFilters} />
+          <TableControls filters={filters} setFilter={setFilter} rows={visibleAccounts} loading={showLoading} filtersOpen={filtersOpen} onToggleFilters={() => setFiltersOpen(value => !value)} activeFilterCount={activeDropdownFilterCount(filters)} filterPanelId="ab-report-filter-panel" />
+          {filtersOpen && <div className="ab-filter-panel" id="ab-report-filter-panel" role="region" aria-label="College account filters"><FilterPanelHeader activeCount={activeDropdownFilterCount(filters)} onClear={clearFilters} /><FilterBar filters={filters} setFilter={setFilter} accounts={accounts} plans={plans} cycles={cycles} oneLine /></div>}
           <AccountsTable accounts={visibleAccounts} onOpen={openAccount} page={page} setPage={setPage} loading={showLoading} usersUnavailable={usersUnavailable} />
         </section>}
 
@@ -544,30 +547,37 @@ export default function AccountsBilling() {
   </DashboardLayout>
 }
 
-function FilterBar({ filters, setFilter, accounts, plans, cycles, compact = false, onClear, hasActiveFilters }) {
-  return <div className={`ab-filters ${compact ? 'ab-filters--compact' : ''}`}>
-    <label className="ab-search"><FiSearch aria-hidden="true" /><span className="ab-sr-only">Search accounts</span><input value={filters.search} onChange={event => setFilter('search', event.target.value)} placeholder="Search college, code, admin, or plan" /></label>
+function activeDropdownFilterCount(filters) {
+  return Object.keys(DEFAULT_FILTERS).filter(key => key !== 'search' && filters[key] !== DEFAULT_FILTERS[key]).length
+}
+
+function TableControls({ filters, setFilter, rows, loading, filtersOpen, onToggleFilters, activeFilterCount, filterPanelId }) {
+  return <div className="ab-table-toolbar">
+    <label className="ab-table-search"><FiSearch aria-hidden="true" /><span className="ab-sr-only">Search accounts</span><input value={filters.search} onChange={event => setFilter('search', event.target.value)} placeholder="Search college, code, admin, or plan" />{filters.search && <button type="button" className="ab-table-search__clear" onClick={() => setFilter('search', '')} aria-label="Clear search"><FiX /></button>}</label>
+    <div className="ab-table-toolbar__actions">
+      <ExportMenu rows={rows} columns={ACCOUNT_EXPORT_COLUMNS} title="College Accounts" filename="college-accounts" loading={loading} scope="Current filtered results" />
+      <button type="button" className={`ab-filters-btn ${filtersOpen ? 'is-active' : ''} ${activeFilterCount > 0 ? 'has-active' : ''}`} onClick={onToggleFilters} aria-expanded={filtersOpen} aria-controls={filterPanelId}>
+        <FiFilter aria-hidden="true" /><span>Filters</span>{activeFilterCount > 0 && <span className="ab-filter-count">{activeFilterCount}</span>}<FiChevronDown className={`ab-filter-chevron ${filtersOpen ? 'is-rotated' : ''}`} aria-hidden="true" />
+      </button>
+    </div>
+  </div>
+}
+
+function FilterPanelHeader({ activeCount, onClear }) {
+  return <div className="ab-filter-panel__header">
+    <div><FiFilter aria-hidden="true" /><strong>College account filters</strong>{activeCount > 0 && <span>{activeCount} active</span>}</div>
+    {activeCount > 0 && <button type="button" onClick={onClear}><FiX aria-hidden="true" /> Reset filters</button>}
+  </div>
+}
+
+function FilterBar({ filters, setFilter, accounts, plans, cycles, oneLine = false }) {
+  return <div className={`ab-filters ${oneLine ? 'ab-filters--one-line' : ''}`}>
     <label><span>College</span><select value={filters.college} onChange={event => setFilter('college', event.target.value)}><option value="all">All colleges</option>{accounts.map(account => <option key={account.id} value={account.id}>{account.name}</option>)}</select></label>
     <label><span>Plan</span><select value={filters.plan} onChange={event => setFilter('plan', event.target.value)}><option value="all">All plans</option>{plans.map(plan => <option key={plan}>{plan}</option>)}</select></label>
     <label><span>Status</span><select value={filters.status} onChange={event => setFilter('status', event.target.value)}><option value="all">All statuses</option>{['Active', 'Trial', 'Scheduled', 'Expired', 'Suspended', 'Cancelled', 'No subscription'].map(status => <option key={status}>{status}</option>)}</select></label>
-    <label><span>Payment</span><select value={filters.payment} onChange={event => setFilter('payment', event.target.value)}><option value="all">All payment data</option><option value="unavailable">Not tracked</option></select></label>
     <label><span>Expiry</span><select value={filters.expiry} onChange={event => setFilter('expiry', event.target.value)}><option value="all">Any expiry</option><option value="7">Within 7 days</option><option value="30">Within 30 days</option><option value="expired">Expired</option><option value="no-plan">No subscription</option></select></label>
     <label><span>Cycle</span><select value={filters.cycle} onChange={event => setFilter('cycle', event.target.value)}><option value="all">All cycles</option>{cycles.map(cycle => <option key={cycle}>{cycle}</option>)}</select></label>
     <label><span>Sort by</span><select value={filters.sort} onChange={event => setFilter('sort', event.target.value)}><option value="name">College name</option><option value="plan">Plan</option><option value="expiry">Expiry</option><option value="usage">Usage</option></select></label>
     <label><span>Order</span><select value={filters.direction} onChange={event => setFilter('direction', event.target.value)}><option value="asc">Ascending</option><option value="desc">Descending</option></select></label>
-    <button type="button" className="ab-button ab-filter-clear" onClick={onClear} disabled={!hasActiveFilters}>Clear filters</button>
   </div>
 }
-
-function UsageTable({ accounts, usersUnavailable, onOpen }) {
-  return <div className="ab-usage-list">{accounts.length ? accounts.map(account => <article key={account.id}>
-    <div className="ab-usage-list__college"><CollegeLogo account={account} /><span><strong>{account.name}</strong><small>{account.subscription?.planName || 'No plan'} · {account.subscription?.status || 'No subscription'}</small></span><button type="button" className="ab-button ab-button--quiet" onClick={() => onOpen(account)}>Details <FiArrowUpRight /></button></div>
-    <div className="ab-usage-metrics"><UsageMetric label="Active users" used={usersUnavailable ? null : account.activeUserCount} limit={account.subscription?.maximumUsers} /><UsageMetric label="Students" used={usersUnavailable ? null : account.studentCount} /><UsageMetric label="Faculty" used={usersUnavailable ? null : account.facultyCount} /><UsageMetric label="Admin permission overrides" used={account.enabledModuleCount} /><div className="ab-usage-metric"><span>Storage</span><strong>Unavailable</strong><small>No storage API</small></div></div>
-  </article>) : <EmptyState title="No accounts found">College usage will appear when organization records are available.</EmptyState>}</div>
-}
-
-function UsageMetric({ label, used, limit }) {
-  const percentage = used != null && limit ? Math.min(100, Math.round(used / limit * 100)) : null
-  return <div className="ab-usage-metric"><span>{label}</span><strong>{used == null ? 'Unavailable' : limit ? `${used} / ${limit}` : used}</strong>{percentage == null ? <small>{used == null ? 'No user data' : 'No configured limit'}</small> : <><i role="progressbar" aria-label={`${label} usage`} aria-valuemin="0" aria-valuemax="100" aria-valuenow={percentage}><b className={percentage >= 90 ? 'is-warning' : ''} style={{ width: `${percentage}%` }} /></i><small>{percentage}% of limit{percentage >= 90 ? ' · near capacity' : ''}</small></>}</div>
-}
-

@@ -25,9 +25,16 @@ public static class FeePlanRules
 
     public static void ValidateScope(AdmissionFeePlanQuery q, bool requireSemester = false)
     {
-        Require(q.CollegeId > 0 && q.AcademicYearId > 0 && q.CourseId > 0 && q.BranchId > 0 &&
-            (!q.SemesterId.HasValue || q.SemesterId > 0) && (!requireSemester || q.SemesterId > 0),
-            "collegeId, academicYearId, courseId and branchId must be positive server IDs; semesterId, when required or supplied, must be positive.");
+        // Report the specific invalid field instead of one combined scope error.
+        // Never substitute a selected-college query value or guess a database ID.
+        Require(q.CollegeId > 0, "collegeId must be a positive server ID.");
+        Require(q.AcademicYearId > 0, "academicYearId must be a positive server ID.");
+        Require(q.CourseId > 0, "courseId must be a positive server ID.");
+        Require(q.BranchId > 0, "branchId must be a positive server ID.");
+        Require(!q.SemesterId.HasValue || q.SemesterId.Value > 0,
+            "semesterId, when supplied, must be a positive server ID.");
+        Require(!requireSemester || q.SemesterId > 0,
+            "semesterId is required and must be a positive server ID for this billing cycle.");
         Require(Clean(q.Batch) is { Length: <= 50 }, "batch is required and must be at most 50 characters.");
         Require(q.Quota?.Length is not > 100 && q.StudentCategory?.Length is not > 100, "quota and studentCategory must be at most 100 characters.");
     }

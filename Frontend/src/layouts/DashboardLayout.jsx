@@ -18,6 +18,7 @@ import { dismissToast, getToasts, subscribeToToasts } from '../utils/toast'
 import { CAMPUS_SELECTION_EVENT } from '../utils/campusSelection'
 import './DashboardLayout.css'
 import './AccountMenu.css'
+import './SuperAdminExperience.css'
 import '../styles/error-notices.css'
 
 const empty = {
@@ -118,6 +119,7 @@ export default function DashboardLayout({ children }) {
     role: getUserRoleDisplayName(),
   }))
   const { canView, access: accountAccess, status: accountAccessStatus } = useScreenAccess()
+  const platformMode = accountAccessStatus === 'ready' && accountAccess?.isSuperAdmin === true
 
   useEffect(() => {
     const handleCampusChange = () => setCampusGeneration(current => current + 1)
@@ -346,8 +348,8 @@ export default function DashboardLayout({ children }) {
   )
 
   return (
-    <div className={`dashboard-layout ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed(value => { const next = !value; localStorage.setItem('pirnav-sidebar-collapsed', String(next)); return next })} />
+    <div className={`dashboard-layout ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${platformMode ? 'dashboard-layout--platform' : ''}`}>
+      <Sidebar platformMode={platformMode} open={sidebarOpen} onClose={() => setSidebarOpen(false)} collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed(value => { const next = !value; localStorage.setItem('pirnav-sidebar-collapsed', String(next)); return next })} />
 
       <main>
         <header className="dashboard-header">
@@ -409,7 +411,7 @@ export default function DashboardLayout({ children }) {
           </div>
         </header>
 
-        <section className="page-content" key={campusGeneration}><PageErrorNotices pathname={pathname} />{!(pathname === '/faculty' || pathname.startsWith('/faculty/')) && <nav className="app-breadcrumb" aria-label="Breadcrumb"><Link to="/dashboard">Home</Link>{financeBreadcrumbs ? financeBreadcrumbs.map((crumb, index) => <span className="app-breadcrumb__item" key={`${crumb.label}:${index}`}><span aria-hidden="true">/</span>{index === financeBreadcrumbs.length - 1 ? <strong>{crumb.label}</strong> : crumb.to ? <Link to={crumb.to}>{crumb.label}</Link> : <span>{crumb.label}</span>}</span>) : <><span aria-hidden="true">/</span><span>{breadcrumbSection}</span>{pageName !== breadcrumbSection && <><span aria-hidden="true">/</span><strong>{pageName}</strong></>}</>}</nav>}{children}</section>
+        <section className="page-content" key={`${pathname}:${campusGeneration}`}><PageErrorNotices pathname={pathname} />{!(pathname === '/faculty' || pathname.startsWith('/faculty/')) && <nav className="app-breadcrumb" aria-label="Breadcrumb"><Link to="/dashboard">Home</Link>{financeBreadcrumbs ? financeBreadcrumbs.map((crumb, index) => <span className="app-breadcrumb__item" key={`${crumb.label}:${index}`}><span aria-hidden="true">/</span>{index === financeBreadcrumbs.length - 1 ? <strong>{crumb.label}</strong> : crumb.to ? <Link to={crumb.to}>{crumb.label}</Link> : <span>{crumb.label}</span>}</span>) : <><span aria-hidden="true">/</span><span>{breadcrumbSection}</span>{pageName !== breadcrumbSection && <><span aria-hidden="true">/</span><strong>{pageName}</strong></>}</>}</nav>}{children}</section>
         <DeactivationBlockedDialog />
 
         {/* Logout Confirmation Modal */}

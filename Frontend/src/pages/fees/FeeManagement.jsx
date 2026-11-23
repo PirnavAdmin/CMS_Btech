@@ -42,6 +42,20 @@ import * as collegeApiModule from '../../auth/collegeApi';
 import * as authModule from '../../auth/auth';
 import * as collegeScopeModule from '../../utils/collegeScope';
 
+function academicFeeSaveError(error) {
+  const fallback = {
+    400: "Check the fee plan details and try again.",
+    401: "Your session has expired. Please sign in again.",
+    403: "You do not have permission to save this fee plan.",
+    404: "The fee plan or a referenced academic record could not be found.",
+    409: "This fee configuration conflicts with a saved plan.",
+  }[error.status] || "Unable to save the fee plan.";
+  const message = error.message && error.message !== "Something went wrong. Please try again." ? error.message : fallback;
+  const reference = typeof error.correlationId === "string" && /^[a-zA-Z0-9:_-]{1,100}$/.test(error.correlationId)
+    ? ` Reference: ${error.correlationId}.` : "";
+  return (error.status >= 500 ? "The fee plan service could not complete the request. Please try again." : message) + reference;
+}
+
 async function loadAcademicPlans(collegeId) {
   const plans = new Map();
   for (let page = 1; ; page += 1) {
@@ -828,56 +842,41 @@ export const FeeStructureWizardModule = (() => {
       return () => { active = false; };
     }, [s.courseId]);
 
-    // Semester lookup is dependent on the selected branch and year. The global
-    // semester list can be stale or unscoped, so ask the existing semester API
-    // for this exact academic mapping and retain the page's lookup list as a
-    // fallback when the endpoint omits optional filters.
+    const semesterRequired = s.cycle === "Semester-wise";
+    const semesterScope = collegeId && s.academicYearId && s.courseId && s.branchId
+      ? [collegeId, s.academicYearId, s.courseId, s.branchId].join(":") : "";
+    const semesterPending = semesterRequired && Boolean(semesterScope)
+      && (semesterLookup.scope !== semesterScope || semesterLookup.loading);
+    const semesterError = semesterLookup.scope === semesterScope ? semesterLookup.error : "";
+    const semesters = semesterRequired && semesterLookup.scope === semesterScope ? semesterLookup.rows : [];
+    const selectedSemester = semesters.find(row => String(row.id) === String(s.semesterId));
+
     useEffect(() => {
-      const courseId = String(s.courseId || "");
-      const branchId = String(s.branchId || "");
-      const academicYearId = String(s.academicYearId || "");
-      const scope = [courseId, branchId, academicYearId].join(":");
-      if (!courseId || !branchId || !academicYearId) {
-        setSemesterLookup({ scope: "", rows: [], loading: false });
-        return undefined;
-      }
+      if (!semesterRequired || !semesterScope || academicContext.loading) return undefined;
+      const [collegeId, academicYearId, courseId, branchId] = semesterScope.split(":").map(Number);
+      if (![collegeId, academicYearId, courseId, branchId].every(id => Number.isSafeInteger(id) && id > 0)) return undefined;
       let active = true;
-      setSemesterLookup({ scope, rows: [], loading: true });
-      const read = (row, ...keys) => Object.entries(row || {}).find(([field, fieldValue]) =>
-        keys.some(key => field.replaceAll("_", "").toLowerCase() === key.replaceAll("_", "").toLowerCase()) && fieldValue != null
-      )?.[1];
-      collegeApiModule.getSemesters({ courseId, branchId, academicYearId })
+      setSemesterLookup({ scope: semesterScope, rows: [], loading: true });
+      collegeApiModule.getSemesters({ collegeId, academicYearId, courseId, branchId, status: 1 })
         .then(response => {
           if (!active) return;
-          let current = response;
-          let list = null;
-          for (let depth = 0; depth < 6; depth += 1) {
-            if (Array.isArray(current)) { list = current; break; }
-            if (!current || typeof current !== "object") break;
-            list = [current.items, current.content, current.records, current.results, current.semesters, current.rows]
-              .find(Array.isArray) || null;
-            if (list) break;
-            current = current.data ?? current.result ?? current.payload;
-          }
-          const rows = (list || []).map(row => {
-            const id = collegeScopeModule.collegeField(row, "semester") ?? read(row, "semesterId", "id");
-            const name = read(row, "semesterName", "name") || `Semester ${read(row, "semesterNumber") || ""}`;
-            const rowCourseId = collegeScopeModule.collegeField(row, "course") ?? read(row, "courseId");
-            const rowBranchId = collegeScopeModule.collegeField(row, "branch") ?? read(row, "branchId");
-            const rowYearId = collegeScopeModule.collegeField(row, "academicYear") ?? read(row, "academicYearId");
-            if (id == null || (rowCourseId != null && String(rowCourseId) !== courseId)
-              || (rowBranchId != null && String(rowBranchId) !== branchId)
-              || (rowYearId != null && String(rowYearId) !== academicYearId)) return null;
-            return { ...row, id, name: String(name).trim(), courseId: rowCourseId ?? courseId,
-              branchId: rowBranchId ?? branchId, academicYearId: rowYearId ?? academicYearId };
-          }).filter(Boolean);
-          setSemesterLookup({ scope, rows, loading: false });
+          // Axios wraps the semester endpoint's { success, data } envelope.
+          const rows = Array.isArray(response) ? response : response?.data?.data ?? response?.data;
+          if (!Array.isArray(rows)) throw new Error("The semester lookup returned an unexpected response.");
+          const scoped = rows.filter(row =>
+            Number.isSafeInteger(Number(row.semesterId)) && Number(row.semesterId) > 0 &&
+            [1, true, "1", "active"].includes(typeof row.status === "string" ? row.status.toLowerCase() : row.status) &&
+            ![1, true, "1", "true"].includes(row.isArchived) &&
+            Number(row.collegeId) === collegeId && Number(row.academicYearId) === academicYearId &&
+            Number(row.courseId) === courseId && Number(row.branchId) === branchId && row.semesterName?.trim()
+          ).map(row => ({ id: String(row.semesterId), name: row.semesterName.trim() }));
+          setSemesterLookup({ scope: semesterScope, rows: scoped, loading: false });
         })
         .catch(() => {
-          if (active) setSemesterLookup({ scope, rows: [], loading: false });
+          if (active) setSemesterLookup({ scope: semesterScope, rows: [], loading: false, error: "Unable to load semesters. Reopen the form or change the academic selection to retry." });
         });
       return () => { active = false; };
-    }, [s.courseId, s.branchId, s.academicYearId]);
+    }, [semesterScope, semesterRequired, academicContext.loading]);
 
     const previewConfig = configurations.find(row => row.id === previewConfigId) || configurations[0];
     const configPatch = (id, change) => {
@@ -947,42 +946,6 @@ export const FeeStructureWizardModule = (() => {
       ? courseBranchLookup.rows
       : [];
     const branches = [...new Map([...fetchedBranches, ...localBranches].map(branch => [String(branch.id ?? branch.branchId), branch])).values()];
-    const semesterScope = [String(s.courseId || ""), String(s.branchId || ""), String(s.academicYearId || "")].join(":");
-    const fetchedSemesters = semesterLookup.scope === semesterScope ? semesterLookup.rows : [];
-    const semesterSource = fetchedSemesters.length ? fetchedSemesters : masters.semesters;
-    const semesters = semesterSource.filter(
-      (semester) => {
-        const semesterCourseId = collegeScopeModule.collegeField(semester, "course") ?? semester.courseId;
-        const semesterBranchId = collegeScopeModule.collegeField(semester, "branch") ?? semester.branchId;
-        const semesterYearId = collegeScopeModule.collegeField(semester, "academicYear") ?? semester.academicYearId;
-        return (!semesterCourseId || String(semesterCourseId) === String(s.courseId)) &&
-          (!semesterBranchId || String(semesterBranchId) === String(s.branchId)) &&
-          (!semesterYearId || String(semesterYearId) === String(s.academicYearId));
-      }
-    );
-    // Derive the API mapping from saved cohort records or the current schedule.
-    useEffect(() => {
-      if (!legacyLocalEdit || !s.branchId || !s.batch || semesterLookup.loading) return;
-      const read = (row, ...keys) => Object.entries(row || {}).find(([key, value]) => value != null && keys.some(name => key.replaceAll('_', '').toLowerCase() === name.toLowerCase()))?.[1];
-      const cohort = (students || []).filter(row =>
-        String(collegeScopeModule.collegeField(row, 'course')) === String(s.courseId) &&
-        String(collegeScopeModule.collegeField(row, 'branch')) === String(s.branchId) &&
-        String(row.batch ?? row.admissionBatch ?? row.batchName ?? row.admission?.batch ?? '') === String(s.batch));
-      const ids = [...new Set(cohort.map(row => read(row, 'currentSemesterId', 'semesterId')).filter(Boolean).map(String))];
-      const today = new Date();
-      const date = [today.getFullYear(), String(today.getMonth() + 1).padStart(2, '0'), String(today.getDate()).padStart(2, '0')].join('-');
-      const dated = semesters.filter(row => {
-        const from = String(read(row, 'startDate', 'semesterStartDate') || '').slice(0, 10);
-        const to = String(read(row, 'endDate', 'semesterEndDate') || '').slice(0, 10);
-        return from && to && from <= date && date <= to;
-      });
-      const marked = semesters.filter(row => read(row, 'isCurrent', 'isCurrentSemester') === true);
-      const semesterId = ids.length === 1 && semesters.some(row => String(row.id) === ids[0]) ? ids[0]
-        : dated.length === 1 ? String(dated[0].id)
-        : marked.length === 1 ? String(marked[0].id)
-        : semesters.length === 1 ? String(semesters[0].id) : '';
-      if (semesterId) set(current => String(current.semesterId) === semesterId ? current : { ...current, semesterId });
-    }, [s.courseId, s.branchId, s.batch, semesterLookup.loading, students, semesters]);
     // Admissions creates a batch from the selected academic year and course,
     // so a new cohort must be selectable before students or fee plans exist.
     // Keep persisted batches for legacy cohorts, but scope them to this year.
@@ -1029,12 +992,12 @@ export const FeeStructureWizardModule = (() => {
           : current.courseId && !masters.courses.some(row => String(row.id) === String(current.courseId)) ? "courseId"
           : current.branchId && !branches.some(row => String(row.id) === String(current.branchId)) ? "branchId"
           : plansLoaded && current.batch && !batches.includes(current.batch) ? "batch"
-          : current.semesterId && !semesters.some(row => String(row.id) === String(current.semesterId)) ? "semesterId" : "";
+          : "";
         if (!invalid || !current[invalid]) return current;
         const hierarchy = ["academicYearId", "courseId", "branchId", "batch", "semesterId"];
         return { ...current, ...Object.fromEntries(hierarchy.slice(hierarchy.indexOf(invalid)).map(key => [key, ""])) };
       });
-    }, [academicContext.loading, collegeId, masters.years, masters.courses, branches, batches, semesters, plansLoaded, legacyLocalEdit]);
+    }, [academicContext.loading, collegeId, masters.years, masters.courses, branches, batches, plansLoaded, legacyLocalEdit]);
 
     const total = legacyLocalEdit ? feeTotal(s) : totalFor(configurations[0]);
     const previewHeads = legacyLocalEdit ? s.components : headsFor(previewConfig);
@@ -1047,16 +1010,29 @@ export const FeeStructureWizardModule = (() => {
     );
     const remaining = total - scheduled;
 
+    const feePlanCode = config => {
+      const scopeHash = [...s.batch.trim().toLowerCase()].reduce((hash, character) => ((hash * 31) + character.charCodeAt(0)) >>> 0, 7).toString(36).toUpperCase();
+      const slug = text => String(text || "").normalize("NFKD").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "").toUpperCase();
+      const pairHash = [...`${config.quota.trim().toLowerCase()}|${config.studentCategory.trim().toLowerCase()}`].reduce((hash, character) => ((hash * 31) + character.charCodeAt(0)) >>> 0, 7).toString(36).toUpperCase();
+      const code = `AFP-${slug(s.academicYearId).slice(-5)}-${slug(s.courseId).slice(0, 5)}-${slug(s.branchId).slice(0, 5)}-${slug(selectedSemester?.id).slice(-4)}-${slug(config.quota).slice(0, 12)}-${slug(config.studentCategory).slice(0, 12)}-${pairHash}-${planBatchTokenRef.current}-${scopeHash}`.slice(0, 80);
+      return code;
+    };
+
     const validate = (targetStatus, step = "schedule") => {
+      if (!Number.isSafeInteger(Number(collegeId)) || Number(collegeId) <= 0) return "Select an authorized college.";
       if (!s.academicYearId || !masters.years.some(year => String(year.id) === String(s.academicYearId))) return "Select an active academic year.";
       if (academicContext.loading || academicContext.error) return academicContext.error || "Academic options are loading.";
       if (!s.name?.trim()) return "Enter a fee plan name.";
       if (!masters.courses.some(row => String(row.id) === String(s.courseId))) return "Select a valid course.";
       if (!s.branchId || !branches.some(row => String(row.id) === String(s.branchId))) return "Select a valid branch.";
       if (!s.batch?.trim() || (!legacyLocalEdit && !batches.includes(s.batch))) return "Select a valid admission batch.";
+      if (![s.academicYearId, s.courseId, s.branchId].every(id => Number.isSafeInteger(Number(id)) && Number(id) > 0)) return "Select valid academic records.";
+      if (semesterRequired && (semesterPending || !selectedSemester)) {
+        return semesterPending ? "Wait for semesters to load." : semesterError ||
+          (semesters.length ? "Select an applicable semester." : "No active semesters are available for this academic configuration.");
+      }
       if (legacyLocalEdit) {
         if (s.applicableTo === "Selected Category" && !s.category) return "Select a student category / quota.";
-        if (step === "schedule" && s.cycle === "Semester-wise" && !s.semesterId) return "Select a semester.";
         if (step === "applicability") return "";
         const oldBreakdownError = feeHeadsError(s.components);
         if (oldBreakdownError) return oldBreakdownError;
@@ -1084,18 +1060,18 @@ export const FeeStructureWizardModule = (() => {
           String(plan.academicYearId || "") === String(s.academicYearId) &&
           String(plan.courseId || "") === String(s.courseId) &&
           String(plan.branchId || "") === String(s.branchId) &&
-          String(plan.semesterId || "") === String(s.semesterId) &&
+          String(plan.semesterId || "") === String(selectedSemester?.id || "") &&
           String(plan.batch || "").trim().toLowerCase() === String(s.batch || "").trim().toLowerCase() &&
           String(plan.quota || "").trim().toLowerCase() === key.split("|")[0] &&
           String(plan.studentCategory || "").trim().toLowerCase() === key.split("|")[1] &&
-          !["ARCHIVED", "Archived"].includes(plan.status) && String(plan.feeStructureId || plan.id || "") !== String(value.id || "")
+          plan.code !== feePlanCode(config) && !["ARCHIVED", "Archived"].includes(plan.status) && String(plan.feeStructureId || plan.id || "") !== String(value.id || "")
         );
-        if (matched && !completedSavesRef.current[config.id]) return `A fee plan already exists for ${config.quota} + ${config.studentCategory} in this academic scope.`;
+        if (matched && !completedSavesRef.current[feePlanCode(config)]) return `A fee plan already exists for ${config.quota} + ${config.studentCategory} in this academic scope.`;
       }
-      if (!s.feeCategoryId || !feeCategories.some(row => String(row.id) === String(s.feeCategoryId))) return "Add at least one configured fee type in Fee Breakdown.";
       if (Number(s.discount || 0) > 0) return "The current academic fee-plan API does not support concession amounts. Remove the concession before saving.";
       for (const config of configurations) {
-        if (!headsFor(config).length) return "Add at least one fee head for every quota / category configuration.";
+        const categoryId = Number(headsFor(config)[0]?.masterId);
+        if (!Number.isSafeInteger(categoryId) || categoryId <= 0 || !feeCategories.some(row => Number(row.id) === categoryId)) return "Add a configured fee type for every quota / category combination.";
         const headError = headsFor(config).some(head => head.amount === "" || head.amount == null || !Number.isFinite(Number(head.amount)) || Number(head.amount) < 0 || Number(head.amount) > 100000000 || Math.abs(Number(head.amount) * 100 - cents(head.amount)) > 0.00001) ? "Enter nonnegative fee amounts with at most two decimal places." : "";
         if (headError) return headError;
         const amount = totalFor(config);
@@ -1168,18 +1144,16 @@ export const FeeStructureWizardModule = (() => {
         const results = [];
         const livePlans = await loadAcademicPlans(collegeId);
         setServerPlans(Array.isArray(livePlans) ? livePlans : []);
-        for (const [index, config] of configurations.entries()) {
-          let saved = completedSavesRef.current[config.id];
+        for (const config of configurations) {
+          const code = feePlanCode(config);
+          let saved = completedSavesRef.current[code];
           try {
             if (!saved) {
-              const slug = text => String(text || "").normalize("NFKD").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "").toUpperCase();
-              const pairHash = [...`${config.quota.trim().toLowerCase()}|${config.studentCategory.trim().toLowerCase()}`].reduce((hash, character) => ((hash * 31) + character.charCodeAt(0)) >>> 0, 7).toString(36).toUpperCase();
-              const code = `AFP-${slug(s.academicYearId).slice(-5)}-${slug(s.courseId).slice(0, 5)}-${slug(s.branchId).slice(0, 5)}-${slug(s.semesterId).slice(-4)}-${slug(config.quota).slice(0, 12)}-${slug(config.studentCategory).slice(0, 12)}-${pairHash}-${planBatchTokenRef.current}-${index + 1}`.slice(0, 80);
-              const sameScope = row => String(row.academicYearId || "") === String(s.academicYearId) && String(row.courseId || "") === String(s.courseId) && String(row.branchId || "") === String(s.branchId) && String(row.semesterId || "") === String(s.semesterId) && String(row.batch || "").trim().toLowerCase() === String(s.batch || "").trim().toLowerCase() && String(row.quota || "").trim().toLowerCase() === config.quota.trim().toLowerCase() && String(row.studentCategory || "").trim().toLowerCase() === config.studentCategory.trim().toLowerCase() && !["ARCHIVED", "Archived"].includes(row.status);
+              const sameScope = row => String(row.academicYearId || "") === String(s.academicYearId) && String(row.courseId || "") === String(s.courseId) && String(row.branchId || "") === String(s.branchId) && String(row.semesterId || "") === String(selectedSemester?.id || "") && String(row.batch || "").trim().toLowerCase() === String(s.batch || "").trim().toLowerCase() && String(row.quota || "").trim().toLowerCase() === config.quota.trim().toLowerCase() && String(row.studentCategory || "").trim().toLowerCase() === config.studentCategory.trim().toLowerCase() && !["ARCHIVED", "Archived"].includes(row.status);
               const existingSameCode = livePlans.find(row => row.code === code && sameScope(row));
               if (existingSameCode) {
                 saved = existingSameCode;
-                completedSavesRef.current[config.id] = saved;
+                completedSavesRef.current[code] = saved;
               } else if (livePlans.some(sameScope)) {
                 throw new Error(`A fee plan already exists for ${config.quota} + ${config.studentCategory}; it was not duplicated.`);
               }
@@ -1193,9 +1167,9 @@ export const FeeStructureWizardModule = (() => {
                 : schedule.installments.map((row, installmentIndex) => ({ number: installmentIndex + 1, dueDate: row.dueDate, amount: Number(row.amount) }));
               const body = {
                 collegeId: Number(collegeId), code, name: `${planNameBase} · ${config.quota} · ${config.studentCategory}`.slice(0, 150),
-                academicYearId: Number(s.academicYearId), courseId: Number(s.courseId), branchId: Number(s.branchId), semesterId: null,
-                feeCategoryId: Number(headsFor(config)[0]?.masterId || s.feeCategoryId), batch: s.batch.trim(), quota: config.quota.trim(), studentCategory: config.studentCategory.trim(),
-                cycle: s.cycle === "Semester-wise" ? "SEMESTER" : "ANNUAL", paymentMode: schedule.plan === "Installment Plan" ? "INSTALLMENTS" : "FULL_PAYMENT", currencyCode: "INR",
+                academicYearId: Number(s.academicYearId), courseId: Number(s.courseId), branchId: Number(s.branchId), semesterId: selectedSemester ? Number(selectedSemester.id) : null,
+                feeCategoryId: Number(headsFor(config)[0].masterId), batch: s.batch.trim(), quota: config.quota.trim(), studentCategory: config.studentCategory.trim(),
+                cycle: semesterRequired ? "SEMESTER" : "ANNUAL", paymentMode: schedule.plan === "Installment Plan" ? "INSTALLMENTS" : "FULL_PAYMENT", currencyCode: "INR",
                 effectiveFrom: s.effectiveFrom, effectiveTo: s.effectiveTo, dueDate: schedule.plan === "Full Payment" ? schedule.dueDate : installmentRows.at(-1)?.dueDate,
                 totalAmount: configTotal.toFixed(2),
                 components: headsFor(config).map((component, componentIndex) => ({
@@ -1206,7 +1180,7 @@ export const FeeStructureWizardModule = (() => {
               };
               saved = await apiEndpointsModule.academicFeePlanApi.create(body);
               if (!Number(saved?.feeStructureId) || !saved?.status || !Number(saved?.revision)) throw new Error("The backend did not return a saved fee plan ID, status and revision. Check saved plans before retrying.");
-              completedSavesRef.current[config.id] = saved;
+              completedSavesRef.current[code] = saved;
               }
             }
             if (saved?.feeStructureId) {
@@ -1215,11 +1189,11 @@ export const FeeStructureWizardModule = (() => {
             }
             if (targetStatus !== "Draft" && String(saved.status || "").toUpperCase() === "DRAFT") {
               saved = await apiEndpointsModule.academicFeePlanApi.submit(saved.feeStructureId, collegeId, saved.revision);
-              completedSavesRef.current[config.id] = saved;
+              completedSavesRef.current[code] = saved;
             }
             results.push({ configuration: `${config.quota} + ${config.studentCategory}`, feeStructureId: saved.feeStructureId, status: saved.status, success: true });
           } catch (reason) {
-            results.push({ configuration: `${config.quota} + ${config.studentCategory}`, success: false, message: reason.message || "Save failed." });
+            results.push({ configuration: `${config.quota} + ${config.studentCategory}`, success: false, message: academicFeeSaveError(reason) });
           }
         }
         setSaveResults(results);
@@ -1227,18 +1201,18 @@ export const FeeStructureWizardModule = (() => {
         if (failed.length) { const reason = new Error(`${failed.length} of ${configurations.length} fee configurations failed. Successful records are listed below; retry to continue without recreating them.`); reason.saveResults = results; throw reason; }
         setPendingStatus(targetStatus);
         setSubmissionComplete(true);
-        await save({ ...s, ...payloadNames() }, targetStatus, configurations, configurations.map(config => completedSavesRef.current[config.id]).filter(Boolean));
+        await save({ ...s, ...payloadNames() }, targetStatus, configurations, configurations.map(config => completedSavesRef.current[feePlanCode(config)]).filter(Boolean));
       }
       catch (reason) {
         if (reason.saveResults) setSaveResults(reason.saveResults);
-        setError(reason.message || "Unable to save the fee plan.");
+        setError(academicFeeSaveError(reason));
       } finally { submissionLock.current = false; setSaving(false); }
     };
 
     const finishSubmission = async () => {
       if (!submissionComplete || saving) return;
       setSaving(true);
-      try { await save({ ...s, ...payloadNames() }, pendingStatus, configurations, configurations.map(config => completedSavesRef.current[config.id]).filter(Boolean)); }
+      try { await save({ ...s, ...payloadNames() }, pendingStatus, configurations, configurations.map(config => completedSavesRef.current[feePlanCode(config)]).filter(Boolean)); }
       catch (reason) { setError(reason.message || "The fee plans were saved, but the local list could not be refreshed."); }
       finally { setSaving(false); }
     };
@@ -1317,13 +1291,23 @@ export const FeeStructureWizardModule = (() => {
               />
 
               <FeeSelect label="Fee Applicability Period *" value={s.cycle} options={legacyLocalEdit ? [{ id: "Yearly", name: "Annual" }, { id: "Semester-wise", name: "Semester" }] : [{ id: "Yearly", name: "Annual" }, { id: "Semester-wise", name: "Semester" }]} onChange={cycle => patch({ cycle })} />
+              {semesterRequired && <div>
+                <FeeSelect label="Applicable Semester *" value={selectedSemester?.id || ""}
+                  disabled={!semesterScope || semesterPending || !semesters.length}
+                  options={[{ id: "", name: semesterPending ? "Loading semesters?" : "Select Semester" }, ...semesters]}
+                  onChange={semesterId => patch({ semesterId })} />
+                {semesterPending && <p role="status">Loading semesters?</p>}
+                {semesterError && <p role="alert">{semesterError}</p>}
+                {semesterScope && !semesterPending && !semesterError && !semesters.length &&
+                  <p role="status">No active semesters are available for this course, branch, and academic year.</p>}
+              </div>}
               <FeeInput label="Fee Plan Name *" value={s.name || ""} maxLength={100} placeholder="Suggested from academic details" onChange={name => { setNameEdited(Boolean(name)); patch({ name }); }} />
 
             </div>
             <p className="fm-contract-note" role="note">The fee plan applies to the selected program, branch and admission batch. Configure payment installments in Step 3.</p>
             {academicContext.loading && <p role="status">Loading academic options…</p>}
             {academicContext.error && <p role="alert" className="fm-error-banner">{academicContext.error}</p>}
-            {!academicContext.loading && <p className="fm-scope-status" role="status">{!masters.years.length ? "No active academic years for this college." : s.academicYearId && !masters.courses.length ? "No courses available." : s.courseId && !courseBranchLookup.loading && !branches.length ? "No branches found for this course in the selected college." : s.branchId && plansLoaded && !batches.length ? "No admission batch is available for this course and branch yet." : s.branchId && !semesterLookup.loading && !semesters.length ? "No semester is configured for this course, branch, and academic year." : ""}</p>}
+            {!academicContext.loading && <p className="fm-scope-status" role="status">{!masters.years.length ? "No active academic years for this college." : s.academicYearId && !masters.courses.length ? "No courses available." : s.courseId && !courseBranchLookup.loading && !branches.length ? "No branches found for this course in the selected college." : s.branchId && plansLoaded && !batches.length ? "No admission batch is available for this course and branch yet." : ""}</p>}
             {legacyLocalEdit && <div className="fm-form-grid"><FeeInput label="Student Category / Quota" value={s.category || ""} placeholder="Leave blank for all students" onChange={category => patch({ category, applicableTo: category ? "Selected Category" : "All Students" })} /></div>}
           </section>
 
@@ -1443,7 +1427,7 @@ export const FeeStructureWizardModule = (() => {
           </section>
           <section className="fm-form-section fm-plan-final-review" hidden={formTab !== 'review'} role="tabpanel" id={formTabId + "-panel-review"} aria-labelledby={formTabId + "-tab-review"} tabIndex={0} aria-label="Fee plan review">
             <div className="fm-review-heading"><h3>Review Fee Plan</h3><button type="button" className="erp-btn erp-btn--secondary" onClick={() => setFormTab('applicability')}>Edit Scope</button><button type="button" className="erp-btn erp-btn--secondary" onClick={() => setFormTab('breakdown')}>Edit Breakdown</button></div>
-            <dl className="fm-review-scope">{[['Academic Year', selectedYear?.name], ['Program', course?.name], ['Branch', selectedBranch?.name], ['Batch', s.batch], ['Status', submissionComplete ? saveResults.map(row => row.status).filter(Boolean).join(', ') : 'Draft until saved and submitted']].map(([label, text]) => <div key={label}><dt>{label}</dt><dd>{text || '—'}</dd></div>)}</dl>
+            <dl className="fm-review-scope">{[['Academic Year', selectedYear?.name], ['Program', course?.name], ['Branch', selectedBranch?.name], ['Batch', s.batch], ['Billing Cycle', semesterRequired ? 'Semester' : 'Annual'], ...(semesterRequired ? [['Semester', selectedSemester?.name]] : []), ['Status', submissionComplete ? saveResults.map(row => row.status).filter(Boolean).join(', ') : 'Draft until saved and submitted']].map(([label, text]) => <div key={label}><dt>{label}</dt><dd>{text || '—'}</dd></div>)}</dl>
             {configurations.map((config, index) => { const schedule = config.schedule || s; const installments = schedule.plan === 'Full Payment' ? [{ number: 1, dueDate: schedule.dueDate, amount: totalFor(config) }] : schedule.installments.map((row, i) => ({ ...row, number: i + 1 })); return <div className="fm-review-combination" key={config.id}><h4>{config.quota || 'All quotas'} / {config.studentCategory || 'All categories'} — {feeMoney(totalFor(config))}</h4><p>{headsFor(config).map(head => head.name + ': ' + feeMoney(configAmount(config, head))).join(' · ')}</p><ol>{installments.map((row, i) => <li key={i}>Installment {row.number || i + 1} · {row.dueDate || 'Choose due date'} · {feeMoney(row.amount)}</li>)}</ol></div> })}
             <p className="fm-contract-note">Published plans are available for matching student admissions.</p>
           </section>

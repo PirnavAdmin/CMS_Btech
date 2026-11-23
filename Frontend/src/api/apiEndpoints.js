@@ -450,8 +450,20 @@ const request = async (url, options = {}, retried = false, bypassDedupe = false,
       422: 'Some submitted values are invalid.',
       500: genericMsg,
     }[response.status] || 'The request could not be completed.'
-    const backendMessage = validationMessage(body) || fallback
-    const error = new Error(url.includes('/api/v1/timetable-management') ? backendMessage : (typeof userErrorMessage === 'function' ? userErrorMessage(backendMessage, response.status) : backendMessage))
+    const academicFeeRequest = url.includes('/api/v1/academic-fee-plans')
+    const academicFeeFallback = academicFeeRequest ? {
+      403: 'You do not have permission to manage this fee plan.',
+      404: 'The fee plan or a referenced academic record could not be found.',
+      409: 'This fee configuration conflicts with a saved plan.',
+    }[response.status] : undefined
+    const backendMessage = validationMessage(body) || academicFeeFallback || fallback
+    // "Server ID" in an academic validation message describes the expected identifier.
+    const validationText = academicFeeRequest && [400, 409, 422].includes(response.status)
+      ? backendMessage.replace(/\bserver IDs?\b/gi, match => match.endsWith('s') ? 'record IDs' : 'record ID')
+      : backendMessage
+    const sanitized = typeof userErrorMessage === 'function' ? userErrorMessage(validationText, response.status) : validationText
+    const safeMessage = academicFeeRequest && sanitized === validationText ? backendMessage : sanitized
+    const error = new Error(url.includes('/api/v1/timetable-management') ? backendMessage : safeMessage)
     error.status = response.status
     error.validationErrors = body?.errors && typeof body.errors === 'object' ? body.errors : undefined
     error.code = typeof body?.code === 'string' ? body.code : undefined
@@ -772,7 +784,8 @@ export const profileApi = {
     if (!response?.data) throw new Error('We couldn’t load your profile right now. Please try again.')
     return { ...normalizeProfile(response.data), profileCompleted: response.data.profileCompleted ?? response.data.isProfileCompleted }
   },
-  updateProfile: async (profile) => {
+  updateProfile: async (profile, { clearBlankAddresses = false } = {}) => {
+    const addressValue = (value) => String(value || '').trim() || (clearBlankAddresses ? '' : null)
     const response = await request(API_ENDPOINTS.profile.update, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -797,19 +810,19 @@ export const profileApi = {
         collegeCountry: String(profile.collegeCountry || '').trim() || null,
         collegePincode: String(profile.collegePincode || '').trim() || null,
         collegeWebsite: String(profile.collegeWebsite || '').trim() || null,
-        houseNumber: String(profile.houseNumber || '').trim() || null,
-        address: String(profile.address || '').trim() || null,
-        permanentHouseNumber: String(profile.permanentHouseNumber || '').trim() || null,
-        permanentAddress: String(profile.permanentAddress || '').trim() || null,
-        permanentPincode: String(profile.permanentPincode || '').trim() || null,
-        permanentCity: String(profile.permanentCity || '').trim() || null,
-        permanentDistrict: String(profile.permanentDistrict || '').trim() || null,
-        permanentState: String(profile.permanentState || '').trim() || null,
+        houseNumber: addressValue(profile.houseNumber),
+        address: addressValue(profile.address),
+        permanentHouseNumber: addressValue(profile.permanentHouseNumber),
+        permanentAddress: addressValue(profile.permanentAddress),
+        permanentPincode: addressValue(profile.permanentPincode),
+        permanentCity: addressValue(profile.permanentCity),
+        permanentDistrict: addressValue(profile.permanentDistrict),
+        permanentState: addressValue(profile.permanentState),
         permanentCountry: String(profile.permanentCountry || '').trim() || null,
-        pincode: String(profile.pincode || profile.postalCode || '').trim() || null,
-        city: String(profile.city || '').trim() || null,
-        district: String(profile.district || '').trim() || null,
-        state: String(profile.state || '').trim() || null,
+        pincode: addressValue(profile.pincode || profile.postalCode),
+        city: addressValue(profile.city),
+        district: addressValue(profile.district),
+        state: addressValue(profile.state),
         aboutMe: String(profile.bio || profile.aboutMe || '').trim() || null,
       }),
     })
@@ -1610,7 +1623,7 @@ export const academicFeePlanApi = {
     return dataResponse(await request(withQuery(endpoint(`/api/v1/academic-fee-plans/${encodeURIComponent(id)}/${action}`), { collegeId }), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ expectedRevision, ...(action === 'return-to-draft' ? { reason: 'Returned to draft from Fee Management.' } : {}) }) }))
   },
   list: async (collegeId, params = {}) => listData(await request(withQuery(API_ENDPOINTS.academicFeePlans.list, { collegeId, page: 1, pageSize: 100, ...params }))),
-  create: async body => dataResponse(await request(API_ENDPOINTS.academicFeePlans.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })),
+  create: async body => dataResponse(await request(withQuery(API_ENDPOINTS.academicFeePlans.create, { collegeId: body.collegeId }), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })),
   submit: async (id, collegeId, expectedRevision) => dataResponse(await request(API_ENDPOINTS.academicFeePlans.submit(id, collegeId), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ expectedRevision }) })),
 }
 
@@ -2028,7 +2041,7 @@ export const roomApi = {
   getById: async (classroomId) => (await request(API_ENDPOINTS.rooms.detail(requiredId(classroomId, 'Room ID'))))?.data,
   create: async (payload) => (await jsonRequest(API_ENDPOINTS.rooms.create, 'POST', payload))?.data,
   update: async (classroomId, payload) => (await jsonRequest(API_ENDPOINTS.rooms.update(requiredId(classroomId, 'Room ID')), 'PUT', payload))?.data,
-  allocate: async (classroomId, payload) => {
+  allocate: async (classroomId, payload, collegeId) => {
     let body = {}
     if (typeof payload === 'number') {
       body = { sectionId: Number(payload) }
@@ -2043,9 +2056,10 @@ export const roomApi = {
     } else {
       body = payload
     }
-    return (await jsonRequest(API_ENDPOINTS.rooms.allocation(requiredId(classroomId, 'Room ID')), 'PUT', body))?.data
+    return (await jsonRequest(withQuery(API_ENDPOINTS.rooms.allocation(requiredId(classroomId, 'Room ID')), { collegeId }), 'PUT', body))?.data
   },
-  deallocate: async (classroomId) => request(API_ENDPOINTS.rooms.allocation(requiredId(classroomId, 'Room ID')), { method: 'DELETE' }),
+  delete: async (classroomId, collegeId) => request(withQuery(API_ENDPOINTS.rooms.delete(requiredId(classroomId, 'Room ID')), { collegeId }), { method: 'DELETE' }),
+  deallocate: async (classroomId, collegeId) => request(withQuery(API_ENDPOINTS.rooms.allocation(requiredId(classroomId, 'Room ID')), { collegeId }), { method: 'DELETE' }),
 }
 export const roomsApi = roomApi
 

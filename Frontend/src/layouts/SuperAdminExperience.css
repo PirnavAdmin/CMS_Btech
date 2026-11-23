@@ -1,0 +1,220 @@
+/* A shared motion and surface system for the verified platform administrator. */
+.dashboard-layout--platform {
+  --platform-accent: var(--brand, #257b73);
+  --platform-accent-soft: color-mix(in srgb, var(--platform-accent) 12%, var(--surface));
+  --platform-line: color-mix(in srgb, var(--platform-accent) 15%, var(--border));
+  --platform-shadow: 0 14px 36px color-mix(in srgb, var(--cms-sidebar-bg) 9%, transparent);
+  background: var(--main-bg);
+}
+
+.dashboard-layout--platform > main {
+  background:
+    radial-gradient(ellipse at 92% 0%, color-mix(in srgb, var(--platform-accent) 10%, transparent), transparent 34rem),
+    radial-gradient(ellipse at 0% 60%, color-mix(in srgb, var(--platform-accent) 5%, transparent), transparent 30rem),
+    var(--main-bg);
+}
+
+.sidebar--platform {
+  color: var(--text-secondary);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--sidebar-bg) 94%, var(--platform-accent)), var(--sidebar-bg) 46%);
+  border-color: color-mix(in srgb, var(--platform-accent) 18%, var(--border));
+  box-shadow: 10px 0 34px color-mix(in srgb, var(--cms-sidebar-bg) 8%, transparent);
+}
+
+.sidebar--platform .sidebar-brand {
+  position: relative;
+  background: linear-gradient(115deg, color-mix(in srgb, var(--platform-accent) 16%, transparent), transparent 78%);
+}
+
+.sidebar--platform .sidebar-brand__mark {
+  color: var(--text-on-dark);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--platform-accent) 88%, white), var(--brand-solid));
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--platform-accent) 27%, transparent);
+  transition: transform .32s cubic-bezier(.2,.8,.2,1), box-shadow .32s ease;
+}
+
+.sidebar--platform .sidebar-brand:hover .sidebar-brand__mark {
+  transform: rotate(-5deg) translateY(-1px) scale(1.04);
+  box-shadow: 0 11px 28px color-mix(in srgb, var(--platform-accent) 34%, transparent);
+}
+
+.sidebar--platform .sidebar-brand__copy strong { color: var(--text-primary); }
+.sidebar--platform .sidebar-section-label { color: var(--text-muted); }
+.sidebar--platform .sidebar-link {
+  position: relative;
+  min-height: 43px;
+  transition: color .2s ease, background .2s ease, transform .2s ease, box-shadow .2s ease;
+}
+.sidebar--platform .sidebar-link:hover:not([aria-disabled="true"]) {
+  transform: translateX(3px);
+  background: color-mix(in srgb, var(--platform-accent) 13%, var(--surface));
+}
+.sidebar--platform .sidebar-link.active,
+.sidebar--platform .sidebar-link.is-module-active {
+  background: linear-gradient(105deg, var(--brand-solid), color-mix(in srgb, var(--brand-solid) 80%, var(--platform-accent)));
+  box-shadow: 0 7px 18px color-mix(in srgb, var(--platform-accent) 22%, transparent);
+}
+
+.dashboard-layout--platform .dashboard-header {
+  background: color-mix(in srgb, var(--header-bg) 86%, transparent);
+  border-color: var(--platform-line);
+  box-shadow: 0 5px 22px color-mix(in srgb, var(--cms-sidebar-bg) 5%, transparent);
+  backdrop-filter: blur(18px) saturate(1.18);
+}
+
+.dashboard-layout--platform .global-search {
+  border-radius: 12px;
+  transition: border-color .2s ease, box-shadow .2s ease, background .2s ease, transform .2s ease;
+}
+.dashboard-layout--platform .global-search:focus-within {
+  transform: translateY(-1px);
+  border-color: var(--platform-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--platform-accent) 15%, transparent), 0 8px 20px color-mix(in srgb, var(--platform-accent) 8%, transparent);
+}
+.dashboard-layout--platform .account-menu summary,
+.dashboard-layout--platform .theme-toggle,
+.dashboard-layout--platform .mobile-navigation-toggle {
+  border-radius: 12px;
+  transition: transform .2s ease, border-color .2s ease, background .2s ease, box-shadow .2s ease;
+}
+.dashboard-layout--platform .account-menu summary:hover,
+.dashboard-layout--platform .theme-toggle:hover,
+.dashboard-layout--platform .mobile-navigation-toggle:hover {
+  transform: translateY(-2px);
+  border-color: var(--platform-line);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--cms-sidebar-bg) 9%, transparent);
+}
+
+.dashboard-layout--platform .page-content {
+  gap: 16px;
+  padding: clamp(16px, 2.1vw, 28px) clamp(16px, 2.4vw, 34px) 38px;
+}
+.dashboard-layout--platform .app-breadcrumb {
+  width: fit-content;
+  max-width: 100%;
+  padding: 7px 11px;
+  border: 1px solid var(--platform-line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 78%, transparent);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--cms-sidebar-bg) 4%, transparent);
+}
+.dashboard-layout--platform .app-breadcrumb strong { color: var(--text-primary); font-weight: 700; }
+
+.dashboard-layout--platform .page-content > :not(.app-breadcrumb):not(.page-error-notices) {
+  animation: platform-screen-enter .48s cubic-bezier(.2,.72,.25,1) both;
+}
+
+.dashboard-layout--platform .erp-page-header,
+.dashboard-layout--platform .user-directory__header,
+.dashboard-layout--platform .college-config-heading,
+.dashboard-layout--platform .ac-page-header,
+.dashboard-layout--platform .ab-portfolio-header {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid var(--platform-line);
+  border-radius: 20px;
+  padding: clamp(17px, 2vw, 25px);
+  background:
+    radial-gradient(circle at 94% 0%, color-mix(in srgb, var(--platform-accent) 12%, transparent), transparent 19rem),
+    linear-gradient(120deg, color-mix(in srgb, var(--surface) 96%, var(--platform-accent)), var(--surface));
+  box-shadow: var(--platform-shadow);
+}
+.dashboard-layout--platform :is(.erp-page-header__title, .user-directory__header h1, .college-config-heading h1, .ac-page-header h1) {
+  letter-spacing: -.04em;
+}
+.dashboard-layout--platform .erp-page-header__title { font-size: clamp(22px, 2.3vw, 30px); }
+.dashboard-layout--platform :is(.erp-page-header__subtitle, .user-directory__header p, .college-config-heading p) { max-width: 68ch; line-height: 1.55; }
+
+.dashboard-layout--platform :is(.platform-management__card, .ab-card, .user-directory__panel, .college-config-directory, .ac-panel, .ac-section, .global-settings-card, .settings-card, .college-config-detail, .cm-settings, .rbac-panel, .rbac-card) {
+  border-color: var(--platform-line);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--cms-sidebar-bg) 6%, transparent);
+  transition: border-color .22s ease, box-shadow .22s ease, transform .22s ease;
+}
+.dashboard-layout--platform :is(.platform-management__card, .ab-card, .user-directory__panel, .college-config-directory, .ac-panel, .ac-section, .global-settings-card, .settings-card, .college-config-detail, .cm-settings, .rbac-panel, .rbac-card):hover {
+  border-color: color-mix(in srgb, var(--platform-accent) 30%, var(--border));
+  box-shadow: 0 15px 32px color-mix(in srgb, var(--cms-sidebar-bg) 10%, transparent);
+  transform: translateY(-2px);
+}
+
+.dashboard-layout--platform :is(.compact-summary, .user-directory__stats, .college-config-stats) {
+  border-color: var(--platform-line);
+  border-radius: 14px;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--cms-sidebar-bg) 7%, transparent);
+}
+.dashboard-layout--platform :is(.compact-summary__item, .user-directory__stats article, .college-config-stats > *) {
+  transition: background .2s ease, transform .2s ease;
+}
+.dashboard-layout--platform :is(.compact-summary__item, .user-directory__stats article, .college-config-stats > *):hover {
+  z-index: 1;
+  transform: translateY(-2px);
+  background: color-mix(in srgb, var(--platform-accent) 8%, var(--surface));
+}
+
+.dashboard-layout--platform :is(.platform-management__toolbar, .ab-card__heading, .user-directory__panel-heading, .college-config-directory-header) {
+  background: linear-gradient(110deg, color-mix(in srgb, var(--platform-accent) 7%, var(--surface)), var(--surface) 70%);
+}
+.dashboard-layout--platform :is(.platform-management__table, .ab-table, .user-directory table, .cm-table) thead th {
+  background: color-mix(in srgb, var(--platform-accent) 9%, var(--table-head, var(--surface-soft)));
+}
+.dashboard-layout--platform :is(.platform-management__table, .ab-table, .user-directory table, .cm-table) tbody tr {
+  transition: background-color .18s ease;
+}
+.dashboard-layout--platform :is(.platform-management__table, .ab-table, .user-directory table, .cm-table) tbody tr:hover {
+  background: color-mix(in srgb, var(--platform-accent) 7%, var(--surface));
+}
+
+.dashboard-layout--platform .page-content :is(button, a[role="button"], .erp-btn, .user-directory__button, .ab-button, .cm-primary-btn, .cm-secondary-btn, .platform-management__form-actions button) {
+  transition: color .18s ease, background .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+.dashboard-layout--platform .page-content :is(button, a[role="button"], .erp-btn, .user-directory__button, .ab-button, .cm-primary-btn, .cm-secondary-btn, .platform-management__form-actions button):hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--cms-sidebar-bg) 10%, transparent);
+}
+.dashboard-layout--platform .page-content :is(button, a[role="button"], .erp-btn, .user-directory__button, .ab-button, .cm-primary-btn, .cm-secondary-btn, .platform-management__form-actions button):active:not(:disabled) {
+  transform: translateY(0) scale(.985);
+}
+.dashboard-layout--platform .page-content :is(input, select, textarea, [contenteditable="true"]) {
+  transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+.dashboard-layout--platform .page-content :is(input, select, textarea, [contenteditable="true"]):focus-visible {
+  border-color: var(--platform-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--platform-accent) 16%, transparent);
+}
+
+.dashboard-layout--platform .platform-management__status,
+.dashboard-layout--platform .platform-management__count,
+.dashboard-layout--platform .platform-subscriptions__cycle {
+  border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+}
+.dashboard-layout--platform .ab-button--primary,
+.dashboard-layout--platform .ab-tabs button.is-active {
+  border-color: var(--brand-solid);
+  background: var(--brand-solid);
+}
+.dashboard-layout--platform .ab-button--primary:hover:not(:disabled) {
+  border-color: var(--brand-solid-hover);
+  background: var(--brand-solid-hover);
+}
+.dashboard-layout--platform .ab-tabs button.is-active { color: var(--text-on-dark); }
+
+@keyframes platform-screen-enter {
+  from { opacity: 0; transform: translateY(12px) scale(.995); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 720px) {
+  .dashboard-layout--platform .page-content { gap: 13px; padding: 14px 12px 28px; }
+  .dashboard-layout--platform :is(.erp-page-header, .user-directory__header, .college-config-heading, .ac-page-header, .ab-portfolio-header) { border-radius: 15px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-layout--platform *,
+  .sidebar--platform * {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
