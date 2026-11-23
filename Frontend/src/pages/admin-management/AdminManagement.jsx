@@ -6899,6 +6899,28 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
     return map
   }, [sections])
 
+  // Older section saves can contain a room label without a classroom allocation.
+  const pendingSectionByRoom = useMemo(() => {
+    const linkedSectionIds = new Set(rooms.filter(room => room.sectionId).map(room => String(room.sectionId)))
+    const sectionByRoom = new Map()
+    for (const section of sections) {
+      const id = section.sectionId ?? section.id
+      const name = section.sectionName ?? section.name
+      const label = String(section.room ?? section.classRoom ?? '').trim().toLowerCase()
+      if (!id || !name || !label || linkedSectionIds.has(String(id)) || ['false', '0', 'inactive'].includes(String(section.status).toLowerCase())) continue
+      const matches = rooms.filter(room => {
+        const code = String(room.roomNumber || room.roomName || room.id).trim().toLowerCase()
+        const path = [room.buildingBlock, room.floor, code].join(' / ').toLowerCase()
+        return path === label || code === label
+      })
+      if (matches.length === 1 && !matches[0].assignedSection && !matches[0].sectionId) {
+        const roomId = matches[0].id
+        sectionByRoom.set(roomId, sectionByRoom.has(roomId) ? null : { id, name })
+      }
+    }
+    return sectionByRoom
+  }, [rooms, sections])
+
   // Filtered Records
   const filteredRooms = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -6927,10 +6949,15 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filteredRooms.length / PAGE_SIZE))
+  const visiblePage = Math.min(currentPage, totalPages)
   const paginatedRooms = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE
+    const start = (visiblePage - 1) * PAGE_SIZE
     return filteredRooms.slice(start, start + PAGE_SIZE)
-  }, [filteredRooms, currentPage])
+  }, [filteredRooms, visiblePage])
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages)
+  }, [currentPage, totalPages])
 
   // Reset page when filters change
   useEffect(() => {
@@ -7175,6 +7202,7 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
   // Delete Room via Modal
   const handleConfirmDeleteRoom = async () => {
     if (!deletingRoom) return
+    if (pendingSectionByRoom.get(deletingRoom.id)) return showError('Remove the room from its section before deleting it.')
     if (deletingRoom.assignedSection && deletingRoom.assignedSection.trim()) {
       const studentCount = sectionStudentCountMap.get(deletingRoom.assignedSection) || 0
       return showError(
@@ -7184,9 +7212,9 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
     try {
       const targetRoomId = deletingRoom.classroomId || deletingRoom.id
       await roomService.deleteRoom(targetRoomId)
-      showSuccess(`Room "${deletingRoom.roomNumber} - ${deletingRoom.roomName}" deleted successfully.`)
       setDeletingRoom(null)
       await loadRooms()
+      showSuccess(`Room "${deletingRoom.roomNumber} - ${deletingRoom.roomName}" deleted successfully.`)
     } catch (err) {
       showError(err.message || 'Failed to delete room.')
     }
@@ -8070,6 +8098,7 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
                 ) : (
                   paginatedRooms.map((room) => {
                     const RoomIcon = getRoomIcon(room.roomType)
+                    const pendingSection = pendingSectionByRoom.get(room.id)
                     const assignedStudentsCount = room.assignedSection ? (sectionStudentCountMap.get(room.assignedSection) || 0) : 0
                     const sectionMeta = room.assignedSection ? sectionMetaMap.get(room.assignedSection.toLowerCase()) : null
 
@@ -8156,6 +8185,13 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
                                 <FiUnlock /> Free
                               </button>
                             </div>
+                          ) : pendingSection ? (
+                            <div className="rooms-allocated-details">
+                              <span className="rooms-allocated-badge">{pendingSection.name}</span>
+                              <button type="button" className="rooms-deallocate-link" onClick={() => navigate(`/section-management/${pendingSection.id}/edit`)}>
+                                Confirm allocation in Sections
+                              </button>
+                            </div>
                           ) : (
                             <button
                               type="button"
@@ -8169,7 +8205,7 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
 
                         {/* Status */}
                         <td className="table-center">
-                          <StatusBadge status={room.status} />
+                          <StatusBadge status={pendingSection && room.status === 'Available' ? 'Pending' : room.status} />
                         </td>
 
                         {/* Actions */}
@@ -8203,7 +8239,7 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
 
           {/* Table Pagination */}
           <TablePagination
-            currentPage={currentPage}
+            currentPage={visiblePage}
             totalPages={totalPages}
             totalRecords={filteredRooms.length}
             onPageChange={setCurrentPage}

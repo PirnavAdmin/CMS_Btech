@@ -156,7 +156,7 @@ namespace BTech.Services
                 var employeeProfile = await _employeeProfileRepository.GetByUserIdAsync(user.user_id);
                 user.ProfileCompleted = employeeProfile is { Status: 1 } &&
                     EmployeeProfileCompletion.IsComplete(
-                        user.FullName, user.Email, user.Mobile, employeeProfile.HouseNumber);
+                        user.FullName, user.Email, user.Mobile, employeeProfile.HouseNumber, roles);
             }
 
             // Generate JWT Tokens

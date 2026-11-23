@@ -60,7 +60,7 @@ public sealed class AccountReadinessMiddleware(RequestDelegate next, IConfigurat
                 """, new { userId }, cancellationToken: cancellationToken));
             if (EmployeeProfileCompletion.AppliesTo(roles))
                 row.Completed = row.EmployeeStatus == 1 && EmployeeProfileCompletion.IsComplete(
-                    row.FullName, row.Email, row.Mobile, row.HouseNumber);
+                    row.FullName, row.Email, row.Mobile, row.HouseNumber, roles);
             return row;
         }
         catch (MySqlException ex)

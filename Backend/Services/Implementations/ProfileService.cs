@@ -303,7 +303,7 @@ namespace BTech.Services
                 {
                     response.ProfileCompleted = employeeProfile is { Status: 1 } &&
                         EmployeeProfileCompletion.IsComplete(
-                            user.FullName, user.Email, user.Mobile, employeeProfile.HouseNumber);
+                            user.FullName, user.Email, user.Mobile, employeeProfile.HouseNumber, roles);
                 }
 
                 return response;
@@ -576,7 +576,7 @@ namespace BTech.Services
                 // Preserve fields that were not supplied in PATCH.
                 // ============================================================
 
-                if (hasEmployeeProfileData)
+                if (hasEmployeeProfileData || (beforeProfile.Roles.Any(role => CanonicalRoleCode.Normalize(role) == "COLLEGE_ADMIN") && !beforeProfile.Roles.Any(role => CanonicalRoleCode.Normalize(role) == "STUDENT")))
                 {
                     // First profile saves may have no employee_profiles row yet.
                     // Create only the current active user's row; never revive deleted rows.
@@ -588,6 +588,8 @@ namespace BTech.Services
                             WHERE u.user_id={userId} AND u.status=1 AND u.deleted_at IS NULL
                             ON DUPLICATE KEY UPDATE user_id=VALUES(user_id)");
                     }
+                    if (hasEmployeeProfileData)
+                    {
                     var updated =
                         await _employeeProfileRepository.UpdateAsync(
                             userId,
@@ -631,6 +633,7 @@ namespace BTech.Services
                             false,
                             "Employee profile update failed.",
                             null);
+                    }
                     }
                 }
 

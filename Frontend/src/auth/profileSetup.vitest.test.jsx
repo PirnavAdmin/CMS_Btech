@@ -42,10 +42,20 @@ test('Super Admin profile shows only core identity fields', async () => {
  expect(screen.getByText('ID')).toBeTruthy()
  expect(screen.getByText('Role')).toBeTruthy()
 })
-test('successful setup saves through the existing profile API and advances only after server completion', async () => {
+test('college admin setup saves blank addresses and advances after server completion', async () => {
  localStorage.setItem('btech-authenticated', 'true')
- profileApi.getProfile.mockResolvedValueOnce({ ...profile }).mockResolvedValueOnce({ ...profile, profileCompleted: true }); mount(); await screen.findByRole('dialog')
- fireEvent.click(screen.getByRole('button', { name: 'Save Changes' })); await screen.findByRole('heading', { name: 'Dashboard reached' }); expect(profileApi.updateProfile).toHaveBeenCalledTimes(1); expect(profileApi.updateProfile.mock.calls[0][0]).toMatchObject({ fullName: profile.fullName, email: profile.email, houseNumber: '12' }); expect(localStorage.getItem('btech-profile-completed')).toBe('true')
+ const { id, identifier, fullName, email, mobile, collegeId, collegeName, role } = profile
+ const profileWithoutAddresses = { id, identifier, fullName, email, mobile, collegeId, collegeName, role, profileCompleted: false }
+ profileApi.getProfile.mockResolvedValueOnce(profileWithoutAddresses).mockResolvedValueOnce({ ...profileWithoutAddresses, profileCompleted: true })
+ mount()
+ const dialog = await screen.findByRole('dialog')
+ const addressFields = ['houseNumber', 'address', 'pincode', 'city', 'district', 'state',
+   'permanentHouseNumber', 'permanentAddress', 'permanentPincode', 'permanentCity', 'permanentDistrict', 'permanentState']
+ for (const field of addressFields) {
+   const label = dialog.querySelector(`[name="${field}"]`).closest('label')
+   expect(label.querySelector('.profile-required')).toBeNull()
+ }
+ fireEvent.click(screen.getByRole('button', { name: 'Save Changes' })); await screen.findByRole('heading', { name: 'Dashboard reached' }); expect(profileApi.updateProfile).toHaveBeenCalledTimes(1); expect(profileApi.updateProfile.mock.calls[0][0]).toMatchObject({ fullName: profile.fullName, email: profile.email, houseNumber: '', address: '', pincode: '', permanentHouseNumber: '', permanentAddress: '', permanentPincode: '' }); expect(localStorage.getItem('btech-profile-completed')).toBe('true')
 })
 test('an incomplete server response does not bypass the profile setup gate', async () => {
  mount(); await screen.findByRole('dialog'); fireEvent.click(screen.getByRole('button', { name: 'Save Changes' })); await waitFor(() => expect(profileApi.getProfile).toHaveBeenCalledTimes(2)); expect(screen.queryByRole('heading', { name: 'Dashboard reached' })).toBeNull(); expect(localStorage.getItem('btech-profile-completed')).not.toBe('true')
