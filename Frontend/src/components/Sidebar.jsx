@@ -12,7 +12,7 @@ import { collegeLogoValue } from '../utils/collegeLogo'
 import { useAcademic } from '../context/AcademicContext'
 import './Sidebar.css'
 
-export default function Sidebar({ open = false, onClose = () => {}, collapsed = false, onToggleCollapse = () => {} }) {
+export default function Sidebar({ open = false, onClose = () => {}, collapsed = false, onToggleCollapse = () => {}, platformMode = false }) {
   const userRole = getUserRole()
   const { pathname } = useLocation()
   const navigationRef = useRef(null)
@@ -91,7 +91,7 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
 
   return <>
     <button className={`sidebar-scrim ${open ? 'is-visible' : ''}`} onClick={onClose} aria-label="Close navigation" tabIndex={open ? 0 : -1} />
-    <aside className={`sidebar sidebar--module-icons ${open ? 'is-open' : ''} ${collapsed ? 'is-collapsed' : ''}`} aria-label="Primary navigation">
+    <aside className={`sidebar sidebar--module-icons ${platformMode ? 'sidebar--platform' : ''} ${open ? 'is-open' : ''} ${collapsed ? 'is-collapsed' : ''}`} aria-label="Primary navigation">
       <div className="sidebar-brand">
         <span className="sidebar-brand__mark" aria-hidden="true">
           {showCollegeBrand
