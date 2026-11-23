@@ -6156,10 +6156,9 @@ function RolesAndDesignationsWorkspace() {
                     </ProjectSelect>
                   </div>
 
-                  <div className="sa-field">
+                  {isSuperAdmin && <div className="sa-field">
                     <label>Default / Recommended Role</label>
                     <ProjectSelect
-                      disabled={!isSuperAdmin}
                       aria-label="Default / Recommended Role"
                       value={editingDesignation.defaultRole}
                       onChange={(e) => setEditingDesignation({ ...editingDesignation, defaultRole: e.target.value })}
@@ -6172,9 +6171,9 @@ function RolesAndDesignationsWorkspace() {
                       ))}
                     </ProjectSelect>
                     <small style={{ color: '#64748B', fontSize: '11px', marginTop: '4px', display: 'block' }}>
-                      {isSuperAdmin ? 'Recommended access profile. Can be overridden during staff access assignment.' : 'Only a Super Admin can configure the recommended role.'}
+                      Recommended access profile. Can be overridden during staff access assignment.
                     </small>
-                  </div>
+                  </div>}
 
                   <div className={`sa-field ${desFieldErrors.status ? 'has-error' : ''}`}>
                     <label>Status <b>*</b></label>
