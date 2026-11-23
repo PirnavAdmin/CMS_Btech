@@ -8010,6 +8010,9 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
                 filename="rooms_directory"
                 title="Classrooms & Spatial Directory"
               />
+              <button type="button" className="rooms-add-btn" onClick={handleOpenCreate}>
+                <FiPlus aria-hidden="true" /> Add Room
+              </button>
             </div>
           </div>
 
