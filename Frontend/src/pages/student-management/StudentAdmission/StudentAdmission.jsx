@@ -1096,8 +1096,10 @@ function ApplicantFeeStructure({ data, update, error }) {
             <p>{serverPlanState.loading ? 'Checking for fee plans that match this admission.' :
               serverPlanState.error ? serverPlanState.error :
               !hasAcademicScope ? 'Check the college, academic year, program, branch, batch and semester in Academic Details.' :
-              'Check that a published plan is currently effective and matches the admission batch, semester, quota and student category.'}</p>
-            <p>Batch {display(batch)} ? Semester {display(data.academic?.semester || semesterId)}</p>
+              'Only currently effective, published plans are available here. A matching plan in Pending Approval or Approved status must be approved and published in Fee Structure before it can be assigned.'}</p>
+            {!serverPlanState.loading && !serverPlanState.error && hasAcademicScope && <p>
+              Searched for: {display(data.academic?.course)} · {display(data.academic?.branch)} · Batch {display(batch)} · {display(data.academic?.semester || semesterId)} · {display(quota)} quota · {display(studentCategory)} category.
+            </p>}
             <label className="sa-field">
               <span>Admission Quota</span>
               <ProjectSelect value={data.academic?.quota || ''} onChange={event => update('academic.quota', event.target.value)}>

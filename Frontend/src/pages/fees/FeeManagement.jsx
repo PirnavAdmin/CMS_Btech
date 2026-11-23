@@ -10,7 +10,6 @@ import SharedFeeHeader from '../../components/PageHeader'
 import FeeTypesConfiguration from './FeeTypesConfiguration'
 import FeeTypeCreateDialog from './FeeTypeCreateDialog'
 import FeeWorkspaceTabs from './FeeWorkspaceTabs'
-import { approveForAdmission } from '../../services/academicFeePlanApproval.js'
 import '../admin-management/AdminManagement.css'
 import './fees.css'
 import './fees-advanced.css'
@@ -2668,7 +2667,7 @@ export const FeeStructureModule = (() => {
                           {canEditPlan && r.workflowStructure && (feeStructureServiceModule.feeTransitions[r.workflowStructure.status] || []).map(status => (
                             <button key={status} type="button"
                               disabled={Boolean(workflow.transitioning)}
-                              title={status === "Pending Approval" ? "Submit for Approval" : status === "Approved" || status === "Published" ? "Approve Plan" : status === "Archived" ? "Archive Plan" : "Return to Draft"}
+                              title={status === "Pending Approval" ? "Submit for Approval" : status === "Approved" ? "Approve Plan" : status === "Published" ? "Publish Plan" : status === "Archived" ? "Archive Plan" : "Return to Draft"}
                               onClick={() => workflow.transition(r.id, status)}><FiCheck /></button>
                           ))}
                           {canCreatePlan && ["Published", "Archived"].includes(r.status) && <button type="button" onClick={()=>navigate("/fees/structures/create?revisionOf="+encodeURIComponent(r.id))}>New revision</button>}
@@ -6575,10 +6574,15 @@ export const FeeManagementModule = (() => {
                       setTransitioningPlan(true);
                       try {
                         if (status === "Approved" || status === "Published") {
-                          const saved = await approveForAdmission(apiEndpointsModule.academicFeePlanApi, id, academic.selectedCollegeId);
-                          if(!saved?.revision)throw new Error("The fee plan revision was not confirmed. Refresh before retrying.");
+                          const current = await apiEndpointsModule.academicFeePlanApi.get(id, academic.selectedCollegeId);
+                          const target = status.toUpperCase();
+                          const action = target === "APPROVED" ? "approve" : "publish";
+                          const saved = String(current.status).toUpperCase() === target
+                            ? current
+                            : await apiEndpointsModule.academicFeePlanApi.transition(id, academic.selectedCollegeId, action, current.revision);
+                          if(!saved?.revision || String(saved.status).toUpperCase() !== target)throw new Error(`The fee plan ${target === "APPROVED" ? "approval" : "publication"} was not confirmed. Refresh before retrying.`);
                           setPlanAttempt(value=>value+1);
-                          showSuccess("Fee plan approved and available for Student Admission.");
+                          showSuccess(target === "APPROVED" ? "Fee plan approved." : "Fee plan published and available for Student Admission.");
                         } else if (/^[1-9]\d*$/.test(String(id))) {
                           const actions = { "Pending Approval": "submit", Draft: "return-to-draft", Archived: "archive" };
                           const current = await apiEndpointsModule.academicFeePlanApi.get(id, academic.selectedCollegeId);
