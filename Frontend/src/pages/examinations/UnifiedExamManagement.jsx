@@ -83,6 +83,7 @@ export default function UnifiedExamManagement() {
   const [draft, setDraft] = useState(() => initialDraft(academic))
   const [subjects, setSubjects] = useState([])
   const [editingSubject, setEditingSubject] = useState(null)
+  const [subjectLookup, setSubjectLookup] = useState(null)
   const [roomExam, setRoomExam] = useState(null)
   const [roomForm, setRoomForm] = useState({ scheduleId: '', buildingId: '', classroomId: '', students: '', invigilatorFacultyId: '' })
   const [editingAllocation, setEditingAllocation] = useState(null)
@@ -109,7 +110,7 @@ export default function UnifiedExamManagement() {
       collegeId = requireId(academic.selectedCollegeId, 'college')
       academicYearId = academic.selectedAcademicYearId ? requireId(academic.selectedAcademicYearId, 'academic year') : undefined
       const [lookupResponse, examRows, typeRows] = await Promise.all([
-        related('Academic lookups', () => call('exams/lookups', { query: { collegeId, academicYearId } }), { data: {} }),
+        related('Academic lookups', () => call('exams/lookups', { query: { collegeId, academicYearId, includeSubjects: false } }), { data: {} }),
         list('exams', { collegeId, academicYearId }),
         related('Examination types', () => list('exam-types', { collegeId }), []),
       ])
@@ -288,7 +289,28 @@ export default function UnifiedExamManagement() {
   const filteredBranches = lookups.branches.filter(row => !draft.courseId || String(row.courseId) === String(draft.courseId))
   const filteredSemesters = lookups.semesters.filter(row => (!draft.courseId || !row.courseId || String(row.courseId) === String(draft.courseId)) && (!draft.branchId || !row.branchId || String(row.branchId) === String(draft.branchId)))
   const filteredSections = lookups.sections.filter(row => (!draft.courseId || !row.courseId || String(row.courseId) === String(draft.courseId)) && (!draft.branchId || !row.branchId || String(row.branchId) === String(draft.branchId)) && (!draft.semesterId || !row.semesterId || String(row.semesterId) === String(draft.semesterId)))
-  const filteredSubjects = lookups.subjects.filter(row => (!draft.courseId || !row.courseId || String(row.courseId) === String(draft.courseId)) && (!draft.branchId || !row.branchId || String(row.branchId) === String(draft.branchId)) && (!draft.semesterId || !row.semesterId || String(row.semesterId) === String(draft.semesterId)))
+  const subjectCollegeId = academic.selectedCollegeId
+  const { academicYearId, courseId, branchId, semesterId } = draft
+  const subjectScope = [subjectCollegeId, academicYearId, courseId, branchId, semesterId].join('/')
+  const subjectEditorOpen = Boolean(editingSubject)
+  const canLoadSubjects = Boolean(subjectCollegeId && academicYearId && courseId && branchId && semesterId)
+  const currentSubjectLookup = subjectLookup?.scope === subjectScope ? subjectLookup : null
+  const filteredSubjects = currentSubjectLookup?.rows ?? []
+  useEffect(() => {
+    if (!subjectEditorOpen || !canLoadSubjects) return
+    const request = new AbortController()
+    call('exams/lookups', {
+      query: { collegeId: subjectCollegeId, academicYearId, courseId, branchId, semesterId },
+      signal: request.signal,
+    }).then(response => {
+      const result = unwrap(response)?.subjects
+      if (!Array.isArray(result)) throw new Error('The server returned an invalid subject list.')
+      if (!request.signal.aborted) setSubjectLookup({ scope: subjectScope, rows: result.map(record) })
+    }).catch(error => {
+      if (!request.signal.aborted) setSubjectLookup({ scope: subjectScope, error: error.message || 'Unable to load subjects.' })
+    })
+    return () => request.abort()
+  }, [subjectEditorOpen, canLoadSubjects, subjectScope, subjectCollegeId, academicYearId, courseId, branchId, semesterId])
   const examTypeOptions = [
     ...predefinedExamTypes.filter(name => name !== 'Others').map(name => {
       const found = lookups.examTypes.find(row => String(row.name || '').trim().toLowerCase() === name.toLowerCase())
@@ -384,7 +406,10 @@ export default function UnifiedExamManagement() {
       setSubjects([])
     }
   }
-  function openSubject(subject = emptySubject()) { setEditingSubject({ ...subject, key: subject.key || crypto.randomUUID() }) }
+  function openSubject(subject = emptySubject()) {
+    setSubjectLookup(null)
+    setEditingSubject({ ...subject, key: subject.key || crypto.randomUUID() })
+  }
   function removeSubject(subject) {
     if (subject.scheduleId) setRemovedScheduleIds(ids => ids.includes(subject.scheduleId) ? ids : [...ids, subject.scheduleId])
     setSubjects(items => items.filter(item => item.key !== subject.key))
@@ -548,10 +573,10 @@ export default function UnifiedExamManagement() {
         </div>
       </section>
       <section className="uem-form-section">
-        <div className="uem-form-section__heading"><div><h2>Academic Information</h2><p>Choose the department, course and student group.</p></div></div>
+        <div className="uem-form-section__heading"><div><h2>Academic Information</h2><p>Choose the course, then select its department or branch and student group.</p></div></div>
         <div className="uem-grid">
-          <label className="uem-field"><span>Department <b>*</b></span><select required aria-invalid={Boolean(fieldErrors.branchId)} aria-describedby={fieldErrors.branchId ? 'uem-error-branchId' : undefined} value={draft.branchId} onChange={e => setDetail('branchId', e.target.value)}><option value="">Select department</option>{filteredBranches.map(row => <option key={row.id ?? row.branchId} value={row.id ?? row.branchId}>{row.name || row.branchName}</option>)}</select>{fieldErrors.branchId && <small id="uem-error-branchId" className="uem-field-error" role="alert">{fieldErrors.branchId}</small>}</label>
           <label className="uem-field"><span>Course <b>*</b></span><select required aria-invalid={Boolean(fieldErrors.courseId)} aria-describedby={fieldErrors.courseId ? 'uem-error-courseId' : undefined} value={draft.courseId} onChange={e => setDetail('courseId', e.target.value)}><option value="">Select course</option>{lookups.courses.map(row => <option key={row.id ?? row.courseId} value={row.id ?? row.courseId}>{row.name || row.courseName}</option>)}</select>{fieldErrors.courseId && <small id="uem-error-courseId" className="uem-field-error" role="alert">{fieldErrors.courseId}</small>}</label>
+          <label className="uem-field"><span>Department <b>*</b></span><select required disabled={!draft.courseId} aria-invalid={Boolean(fieldErrors.branchId)} aria-describedby={fieldErrors.branchId ? 'uem-error-branchId' : undefined} value={draft.branchId} onChange={e => setDetail('branchId', e.target.value)}><option value="">Select department</option>{draft.courseId && filteredBranches.map(row => <option key={row.id ?? row.branchId} value={row.id ?? row.branchId}>{row.name || row.branchName}</option>)}</select>{fieldErrors.branchId && <small id="uem-error-branchId" className="uem-field-error" role="alert">{fieldErrors.branchId}</small>}</label>
           <label className="uem-field"><span>Year</span><select value={draft.year} onChange={e => setDetail('year', e.target.value)}><option value="">Select year</option>{[1,2,3,4].map(year => <option key={year} value={year}>{year}{year===1?'st':year===2?'nd':year===3?'rd':'th'} Year</option>)}</select></label>
           <label className="uem-field"><span>Semester <b>*</b></span><select required aria-invalid={Boolean(fieldErrors.semesterId)} aria-describedby={fieldErrors.semesterId ? 'uem-error-semesterId' : undefined} value={draft.semesterId} onChange={e => setDetail('semesterId', e.target.value)}><option value="">Select semester</option>{filteredSemesters.map(row => <option key={row.id ?? row.semesterId} value={row.id ?? row.semesterId}>{row.name || row.semesterName}</option>)}</select>{fieldErrors.semesterId && <small id="uem-error-semesterId" className="uem-field-error" role="alert">{fieldErrors.semesterId}</small>}</label>
           <label className="uem-field"><span>Section</span><select value={draft.sectionId} onChange={e => setDetail('sectionId', e.target.value)}><option value="">Select section</option>{filteredSections.map(row => <option key={row.id ?? row.sectionId} value={row.id ?? row.sectionId}>{row.name || row.sectionName}</option>)}</select></label>
@@ -565,7 +590,7 @@ export default function UnifiedExamManagement() {
         </div>
       </section>
       <section className="uem-subject-section">
-        <div className="uem-section-heading"><div className="uem-form-section__heading"><div><h2>Allocate Subjects &amp; Set Timetable</h2><p>Add subjects with an individual exam date and time.</p></div></div><button className="erp-btn erp-btn--secondary" type="button" onClick={() => openSubject()} disabled={!draft.courseId || !draft.semesterId}><FiPlus aria-hidden="true" />Add Subject</button></div>
+        <div className="uem-section-heading"><div className="uem-form-section__heading"><div><h2>Allocate Subjects &amp; Set Timetable</h2><p>Add subjects with an individual exam date and time.</p></div></div><button className="erp-btn erp-btn--secondary" type="button" onClick={() => openSubject()} disabled={!canLoadSubjects}><FiPlus aria-hidden="true" />Add Subject</button></div>
         {fieldErrors.subjects && <p className="uem-field-error uem-subject-error" role="alert">{fieldErrors.subjects}</p>}
         <div className="uem-table-wrap uem-subject-table-wrap"><table><thead><tr><th>Subject</th><th>Code</th><th>Faculty</th><th>Max Marks</th><th>Pass Marks</th><th>Exam Date</th><th>Time</th><th>Duration</th><th>Actions</th></tr></thead><tbody>{subjects.map((row, index) => <Fragment key={row.key}><tr className={fieldErrors[`subject.${index}`] ? 'uem-invalid-row' : ''}><td data-label="Subject">{row.subjectName}</td><td data-label="Code">{row.subjectCode}</td><td data-label="Faculty">{row.faculty || '—'}</td><td data-label="Max Marks">{row.maximumMarks}</td><td data-label="Pass Marks">{row.passingMarks}</td><td data-label="Exam Date">{dateOnly(row.examDate)}</td><td data-label="Time">{row.startTime}–{row.endTime}</td><td data-label="Duration">{row.duration} min</td><td data-label="Actions"><div className="uem-row-actions"><button className="uem-icon-button" type="button" title="Edit subject" aria-label="Edit subject" onClick={() => openSubject(row)}><FiEdit2 /></button><button className="uem-icon-button uem-icon-button--danger" type="button" title="Remove subject" aria-label="Remove subject" onClick={() => removeSubject(row)}><FiTrash2 /></button></div></td></tr>{fieldErrors[`subject.${index}`] && <tr><td colSpan="9" className="uem-field-error uem-subject-row-error" role="alert">{fieldErrors[`subject.${index}`]}</td></tr>}</Fragment>)}{!subjects.length && <tr><td colSpan="9" className="uem-empty"><span className="uem-empty-icon"><FiBookOpen /></span><strong>No subjects added yet</strong><span>Add subjects to build this examination’s timetable.</span></td></tr>}</tbody></table></div>
       </section>
@@ -615,7 +640,8 @@ export default function UnifiedExamManagement() {
       </>}
     </section>
     {editingSubject && <ViewDialog title="Subject & Timetable" subtitle="Set subject and session details" onClose={()=>setEditingSubject(null)} hideFooter showExport={false}><form className="uem-grid uem-subject-form" onSubmit={saveSubject}>
-      <label>Subject Name<select required value={editingSubject.subjectId} onChange={e=>{const found=filteredSubjects.find(row=>String(row.id ?? row.subjectId)===e.target.value);setEditingSubject(v=>({...v,subjectId:e.target.value,subjectName:found?.name,subjectCode:found?.code}))}}><option value="">Select subject</option>{filteredSubjects.map(row=><option key={row.id ?? row.subjectId} value={row.id ?? row.subjectId}>{row.name || row.subjectName}</option>)}</select></label>
+      <label>Subject Name<select required disabled={!filteredSubjects.length} value={editingSubject.subjectId} onChange={e=>{const found=filteredSubjects.find(row=>String(row.id ?? row.subjectId)===e.target.value);setEditingSubject(v=>({...v,subjectId:e.target.value,subjectName:found?.name,subjectCode:found?.code}))}}><option value="">{!currentSubjectLookup && canLoadSubjects ? "Loading subjects…" : filteredSubjects.length ? "Select subject" : "No subjects available"}</option>{filteredSubjects.map(row=><option key={row.id ?? row.subjectId} value={row.id ?? row.subjectId}>{row.name || row.subjectName}</option>)}</select></label>
+      {currentSubjectLookup?.error && <p className="uem-alert" role="alert">{currentSubjectLookup.error}</p>}
       <label>Subject Code<input readOnly value={editingSubject.subjectCode || filteredSubjects.find(row=>String(row.id ?? row.subjectId)===String(editingSubject.subjectId))?.code || ''}/></label>
       <label>Faculty<ProjectSelect value={editingSubject.faculty} onChange={e=>setEditingSubject(v=>({...v,faculty:e.target.value}))}><option value="">Select faculty</option>{faculty.map(person => { const name = person.fullName || person.facultyName || person.name || ''; return <option key={person.facultyId ?? person.id} value={name}>{name}{person.employeeId || person.facultyCode ? ` · ${person.employeeId || person.facultyCode}` : ''}</option> })}</ProjectSelect></label>
       <label>Maximum Marks<input type="number" min="1" value={editingSubject.maximumMarks} onChange={e=>setEditingSubject(v=>({...v,maximumMarks:e.target.value}))}/></label>
@@ -623,7 +649,7 @@ export default function UnifiedExamManagement() {
       <label>Exam Date<input required type="date" min={draft.startDate} max={draft.endDate} value={editingSubject.examDate} onChange={e=>setEditingSubject(v=>({...v,examDate:e.target.value}))}/></label>
       <label>Start Time<input required type="time" value={editingSubject.startTime} onChange={e=>setEditingSubject(v=>({...v,startTime:e.target.value}))}/></label><label>End Time<input required type="time" value={editingSubject.endTime} onChange={e=>setEditingSubject(v=>({...v,endTime:e.target.value}))}/></label>
       <label>Duration (minutes)<input readOnly value={editingSubject.startTime && editingSubject.endTime ? Math.max(0,(new Date(`1970-01-01T${editingSubject.endTime}:00`)-new Date(`1970-01-01T${editingSubject.startTime}:00`))/60000) : ''}/></label>
-      <footer><button className="uem-primary" type="submit">Save Subject</button></footer>
+      <footer><button className="uem-primary" type="submit" disabled={!filteredSubjects.length}>Save Subject</button></footer>
     </form></ViewDialog>}
     {roomExam && <ViewDialog title="Allocate Examination Rooms" subtitle={roomExam.examName} onClose={() => { setRoomExam(null); setEditingAllocation(null); setRoomError(''); setRoomNotice('') }} showExport={false} busy={roomSaving} maxWidth="90vw" className="uem-room-dialog" footerContent={<><button className="uem-secondary" type="button" onClick={() => { setRoomExam(null); setEditingAllocation(null); setRoomError(''); setRoomNotice('') }} disabled={roomSaving}>Cancel</button><button className="uem-primary" type="submit" form="room-allocation-form" disabled={roomSaving || !roomForm.scheduleId}>{roomSaving ? 'Saving…' : editingAllocation ? 'Update Allocation' : 'Allocate Room'}</button></>}>
       <div className="uem-room-workspace">
