@@ -153,6 +153,7 @@ public sealed class AccessGovernanceController : ControllerBase
         try { collegeId = ResolveCollegeId(request.CollegeId); }
         catch (UnauthorizedAccessException) { return Forbid(); }
         var actor = GetUserId();
+        request.PreserveDefaultRole = !actorContext.IsSuperAdmin;
         var data = await _service.UpdateDesignationAsync(designationId, collegeId, request, actor);
         return Ok(new { success = true, message = "Designation updated successfully.", data });
     }

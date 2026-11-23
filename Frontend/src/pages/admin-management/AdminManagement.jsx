@@ -5099,11 +5099,17 @@ function RolesAndDesignationsWorkspace() {
 
     governanceLock.current = true; setGovernanceBusy(true)
     try {
-      const saved = await accessGovernance.saveDesignation({...editingDesignation,code:normalizedCode}, selectedCollegeId)
+      const saved = await accessGovernance.saveDesignation({
+        ...editingDesignation,
+        code: normalizedCode,
+        defaultRole: isSuperAdmin ? editingDesignation.defaultRole : '',
+      }, selectedCollegeId)
       if (!saved?.id && !saved?.designationId) throw new Error('The server did not return the saved designation identity. Refresh before trying again.')
       setEditingDesignation({...editingDesignation,...saved,id:String(saved.id ?? saved.designationId)})
       await loadRoles(); setIsDesModalOpen(false); showSuccess('Designation saved.')
-    } catch(error) {showError(error.message)} finally {governanceLock.current = false; setGovernanceBusy(false)}
+    } catch(error) {
+      setDesFieldErrors(prev => ({ ...prev, save: error.message || 'Designation could not be saved.' }))
+    } finally {governanceLock.current = false; setGovernanceBusy(false)}
   }
 
   const handleDeleteDesignation = (des) => {
@@ -6153,6 +6159,8 @@ function RolesAndDesignationsWorkspace() {
                   <div className="sa-field">
                     <label>Default / Recommended Role</label>
                     <ProjectSelect
+                      disabled={!isSuperAdmin}
+                      aria-label="Default / Recommended Role"
                       value={editingDesignation.defaultRole}
                       onChange={(e) => setEditingDesignation({ ...editingDesignation, defaultRole: e.target.value })}
                     >
@@ -6164,7 +6172,7 @@ function RolesAndDesignationsWorkspace() {
                       ))}
                     </ProjectSelect>
                     <small style={{ color: '#64748B', fontSize: '11px', marginTop: '4px', display: 'block' }}>
-                      Recommended access profile. Can be overridden during staff access assignment.
+                      {isSuperAdmin ? 'Recommended access profile. Can be overridden during staff access assignment.' : 'Only a Super Admin can configure the recommended role.'}
                     </small>
                   </div>
 
@@ -6190,11 +6198,12 @@ function RolesAndDesignationsWorkspace() {
                   </div>
                 </div>
 
+                {desFieldErrors.save && <p className="rbac-field-error" role="alert">{desFieldErrors.save}</p>}
                 <footer className="rbac-modal-footer">
                   <button type="button" className="sa-secondary" onClick={() => setIsDesModalOpen(false)}>
                     Cancel
                   </button>
-                  <button type="submit" className="sa-primary">
+                  <button type="submit" className="sa-primary" disabled={governanceBusy}>
                     <FiCheck /> Save Designation
                   </button>
                 </footer>
