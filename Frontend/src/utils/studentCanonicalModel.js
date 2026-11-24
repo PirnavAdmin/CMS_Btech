@@ -892,9 +892,20 @@ export const normalizeCanonicalStudent = (source = {}) => {
  */
 export const studentFullName = (student) => {
   if (!student) return ''
-  const p = student.personal || {}
+  const p = student.personal || student.personalInformation || {}
   const nameParts = [p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')
-  return nameParts || p.fullName || student.studentName || student.fullName || ''
+  return (
+    nameParts ||
+    p.fullName ||
+    p.studentName ||
+    p.name ||
+    student.studentName ||
+    student.fullName ||
+    student.name ||
+    student.applicantName ||
+    student.header?.studentName ||
+    ''
+  )
 }
 
 export const studentInitials = (student) => {
