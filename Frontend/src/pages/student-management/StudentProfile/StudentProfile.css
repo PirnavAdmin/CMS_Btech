@@ -1430,3 +1430,70 @@ main.student-profile .sp-directory-table tbody td:first-child {
   color: var(--danger);
   border-color: var(--danger);
 }
+
+/* ==========================================================================
+   Student Profiles Directory Pagination Bar
+   ========================================================================== */
+.student-profile .sp-pagination {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  min-height: 52px !important;
+  padding: 10px 18px !important;
+  color: var(--text-secondary, #475569) !important;
+  background: var(--surface-soft, #f8fafc) !important;
+  border-top: 1px solid var(--border, #e2e8f0) !important;
+  font-size: 12px !important;
+}
+
+.student-profile .sp-pagination span {
+  font-size: 12px !important;
+  color: var(--text-secondary, #475569) !important;
+  font-weight: 600 !important;
+}
+
+.student-profile .sp-pagination div {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.student-profile .sp-pagination button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 34px !important;
+  height: 34px !important;
+  border: 1px solid var(--border, #cbd5e1) !important;
+  border-radius: 8px !important;
+  color: var(--brand, #2563eb) !important;
+  background: var(--surface, #ffffff) !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+  font-size: 14px !important;
+}
+
+.student-profile .sp-pagination button:hover:not(:disabled) {
+  border-color: var(--brand, #2563eb) !important;
+  background: var(--brand-soft, #eff6ff) !important;
+  color: var(--brand, #1d4ed8) !important;
+  transform: translateY(-1px) !important;
+}
+
+.student-profile .sp-pagination button:disabled {
+  opacity: 0.38 !important;
+  cursor: not-allowed !important;
+  border-color: var(--border, #e2e8f0) !important;
+  background: var(--surface-soft, #f1f5f9) !important;
+  color: var(--text-muted, #94a3b8) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.student-profile .sp-pagination b {
+  font-size: 12px !important;
+  font-weight: 750 !important;
+  color: var(--text-primary, #0f172a) !important;
+  padding: 0 4px !important;
+}

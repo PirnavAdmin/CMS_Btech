@@ -137,7 +137,7 @@ import { useAcademic } from "../../../context/AcademicContext";
 import "./StudentProfile.css";
 
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 5;
 const TABS = [
   ["personal", "Personal & Contact", FiUser],
   ["parent", "Parent / Guardian", FiUsers],
@@ -239,6 +239,64 @@ const profileFromApi = (x) => {
     documentError: x.documentError,
     fees: x.fees?.source === "backend" || x.fees?.error ? x.fees : { ...normalized.fees, ...studentIntegrationFees(x.feeSummary, x.feeStructure) }
   };
+};
+
+const deduplicateProfiles = (profiles = []) => {
+  if (!Array.isArray(profiles)) return [];
+  const seen = new Map();
+  for (const p of profiles) {
+    if (!p) continue;
+    const email = String(p.contact?.email || p.personal?.email || p.email || '').trim().toLowerCase();
+    const mobile = String(p.contact?.mobile || p.personal?.mobile || p.mobile || '').replace(/\D/g, '').slice(-10);
+    const sName = String(studentFullName(p) || p.studentName || p.fullName || (p.personal?.firstName ? [p.personal.firstName, p.personal.lastName].join(' ') : '')).trim().toLowerCase();
+    const branch = String(p.academic?.branch || p.academic?.branchName || '').trim().toLowerCase();
+
+    let key = '';
+    if (email && email.includes('@')) {
+      key = `email:${email}`;
+    } else if (mobile && mobile.length === 10) {
+      key = `mobile:${mobile}`;
+    } else if (sName && branch) {
+      key = `name_branch:${sName}_${branch}`;
+    } else {
+      key = `id:${p.studentId || p.id || p.admissionId || Math.random()}`;
+    }
+
+    if (!seen.has(key)) {
+      seen.set(key, p);
+    } else {
+      const existing = seen.get(key);
+      const higherComp = Math.max(Number(existing.completion || 0), Number(p.completion || 0));
+      const photo = p.personal?.photo || existing.personal?.photo || '';
+      const admNo = p.application?.admissionNumber || existing.application?.admissionNumber || p.admissionNumber || existing.admissionNumber || '';
+
+      seen.set(key, {
+        ...existing,
+        ...p,
+        personal: {
+          ...(existing.personal || {}),
+          ...(p.personal || {}),
+          photo,
+          photoUrl: photo,
+        },
+        contact: {
+          ...(existing.contact || {}),
+          ...(p.contact || {}),
+        },
+        academic: {
+          ...(existing.academic || {}),
+          ...(p.academic || {}),
+        },
+        application: {
+          ...(existing.application || {}),
+          ...(p.application || {}),
+          admissionNumber: admNo,
+        },
+        completion: higherComp,
+      });
+    }
+  }
+  return Array.from(seen.values());
 };
 
 const profileAdmissionId = (source) =>
@@ -658,6 +716,7 @@ export default function StudentProfile() {
           exportVerified: isApiResult(allAdmissions),
         })),
       ];
+      rows = deduplicateProfiles(rows);
       if (requestedId && !selectedStudent) {
         const found = rows.find(r => String(r.id) === String(requestedId) || String(r.studentId) === String(requestedId) || String(r.admissionId) === String(requestedId));
         if (found) {
@@ -717,9 +776,10 @@ export default function StudentProfile() {
         yearMatches = Boolean(matchById || matchByName)
       }
 
-      return collegeMatches && yearMatches
-    })
-  }, [students, selectedCollegeId, selectedCollege, selectedAcademicYearId, selectedAcademicYear])
+      return collegeMatches && yearMatches;
+    });
+    return deduplicateProfiles(list);
+  }, [students, selectedCollegeId, selectedCollege, selectedAcademicYearId, selectedAcademicYear]);
 
   const options = (key) =>
     [
@@ -801,6 +861,16 @@ export default function StudentProfile() {
     return String(adm).trim();
   };
 
+  const getStudentSortBranch = (s) => {
+    if (!s) return "";
+    const a = s.academic || {};
+    return String(a.branch || a.branchName || "").trim().toLowerCase();
+  };
+
+  const getStudentSortCompletion = (s) => {
+    return Number(s.completion ?? 0);
+  };
+
   const sortedFiltered = useMemo(() => {
     const list = [...filtered];
     if (sort === "name" || sort === "name_asc") {
@@ -831,6 +901,18 @@ export default function StudentProfile() {
           numeric: true,
           sensitivity: "base",
         }),
+      );
+    }
+    if (sort === "branch_asc") {
+      return list.sort((a, b) =>
+        getStudentSortBranch(a).localeCompare(getStudentSortBranch(b), undefined, {
+          sensitivity: "base",
+        }),
+      );
+    }
+    if (sort === "completion_desc") {
+      return list.sort(
+        (a, b) => getStudentSortCompletion(b) - getStudentSortCompletion(a),
       );
     }
     return list;
@@ -1351,6 +1433,8 @@ export default function StudentProfile() {
                     <option value="name_desc">Student Name (Z → A)</option>
                     <option value="admission_asc">Admission No (Ascending)</option>
                     <option value="admission_desc">Admission No (Descending)</option>
+                    <option value="branch_asc">Branch (A → Z)</option>
+                    <option value="completion_desc">Completion (High → Low)</option>
                   </select>
                 </label>
               </div>
@@ -1474,22 +1558,31 @@ export default function StudentProfile() {
             )}
             <footer className="sp-pagination">
               <span>
-                Showing {filtered.length ? (page - 1) * PAGE_SIZE + 1 : 0}-
-                {Math.min(page * PAGE_SIZE, filtered.length)} of{" "}
-                {filtered.length}
+                Showing {sortedFiltered.length ? (page - 1) * PAGE_SIZE + 1 : 0}–
+                {Math.min(page * PAGE_SIZE, sortedFiltered.length)} of{" "}
+                {sortedFiltered.length}
               </span>
               <div>
-                <button disabled={page === 1} onClick={() => setPage(page - 1)}>
-                  <FiChevronLeft />
+                <button
+                  type="button"
+                  disabled={page <= 1}
+                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                  aria-label="Previous page"
+                  title="Previous page"
+                >
+                  <FiChevronLeft aria-hidden="true" />
                 </button>
                 <b>
                   {page} / {pages}
                 </b>
                 <button
-                  disabled={page === pages}
-                  onClick={() => setPage(page + 1)}
+                  type="button"
+                  disabled={page >= pages}
+                  onClick={() => setPage((prev) => Math.min(pages, prev + 1))}
+                  aria-label="Next page"
+                  title="Next page"
                 >
-                  <FiChevronRight />
+                  <FiChevronRight aria-hidden="true" />
                 </button>
               </div>
             </footer>
