@@ -559,7 +559,7 @@ function EmptyState({ hasRows = false, filtered = false, onCreate, onClear }) {
   )
 }
 
-function PassportPhotoModal({ student, onClose, onPhotoUpload }) {
+export function PassportPhotoModal({ student, onClose, onPhotoUpload }) {
   if (!student) return null
   const [currentPhoto, setCurrentPhoto] = useState(student.personal?.photo || student.personal?.photoUrl || '')
   const sName = studentName(student)

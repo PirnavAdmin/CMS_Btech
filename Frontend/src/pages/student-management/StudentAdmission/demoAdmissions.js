@@ -350,7 +350,9 @@ export const DEMO_ADMISSIONS = [
       admissionType: 'Regular / Counselling',
       academicYear: '2026-27',
       quota: 'Convenor',
-      semester: 'Semester 1'
+      semester: 'Semester 1',
+      section: 'Section A',
+      rollNumber: '2601A0501'
     },
     application: {
       number: 'REG-2026-441920',
@@ -406,7 +408,9 @@ export const DEMO_ADMISSIONS = [
       admissionType: 'Regular / Counselling',
       academicYear: '2026-27',
       quota: 'Convenor',
-      semester: 'Semester 1'
+      semester: 'Semester 1',
+      section: 'Section A',
+      rollNumber: '2601A5402'
     },
     application: {
       number: 'REG-2026-552834',
@@ -462,7 +466,9 @@ export const DEMO_ADMISSIONS = [
       admissionType: 'Management',
       academicYear: '2026-27',
       quota: 'Management',
-      semester: 'Semester 1'
+      semester: 'Semester 1',
+      section: 'Section B',
+      rollNumber: '2601A0301'
     },
     application: {
       number: 'REG-2026-663748',
@@ -518,7 +524,9 @@ export const DEMO_ADMISSIONS = [
       admissionType: 'Regular / Counselling',
       academicYear: '2026-27',
       quota: 'Convenor',
-      semester: 'Semester 1'
+      semester: 'Semester 1',
+      section: 'Section A',
+      rollNumber: '2601A0401'
     },
     application: {
       number: 'REG-2026-774859',

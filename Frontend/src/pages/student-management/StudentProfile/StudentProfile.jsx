@@ -94,12 +94,14 @@ const resolveProfileTransportFee = (admission = {}, fees = {}, academic = {}) =>
   return Number(TRANSPORT_FEES[admission?.transportRoute] || 0);
 };
 import useToastState from '../../../hooks/useToastState'
-import { isApiResult } from '../../../utils/exportProvenance'
+import { isApiResult, markApiResult } from '../../../utils/exportProvenance'
 import { approvedStudentProfiles, isApprovedAdmission } from '../../../utils/approvedStudentProfiles'
+import { mergeWithDemoAdmissions, getDemoAdmissionById } from '../StudentAdmission/demoAdmissions'
+import { PassportPhotoModal } from '../StudentAdmission/StudentAdmission'
 import ExportMenu, { PrintDetailsButton } from '../../../components/ExportMenu'
 import { profileColumns } from '../../../utils/exportColumns'
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FiAlertCircle, FiArrowLeft, FiBookOpen, FiCheckCircle, FiChevronLeft, FiChevronRight, FiEdit2, FiFileText, FiFilter, FiRefreshCw, FiSave, FiSearch, FiUser, FiUsers, FiX } from "react-icons/fi";
+import { FiAlertCircle, FiArrowLeft, FiBookOpen, FiCamera, FiCheckCircle, FiChevronLeft, FiChevronRight, FiEdit2, FiEye, FiFileText, FiFilter, FiRefreshCw, FiSave, FiSearch, FiUser, FiUsers, FiX } from "react-icons/fi";
 import InfoCard from "../../../components/InfoCard";
 import StatusBadge from "../../../components/StatusBadge";
 import DashboardLayout from "../../../layouts/DashboardLayout";
@@ -221,7 +223,23 @@ const saveStoredPhoto = (kind, id, photo) => {
   }
 };
 
-const profileFromApi = (x) => { const normalized = normalizeCanonicalStudent(x); return { ...normalized, documentError: x.documentError, fees: x.fees?.source === "backend" || x.fees?.error ? x.fees : { ...normalized.fees, ...studentIntegrationFees(x.feeSummary, x.feeStructure) } }; };
+const profileFromApi = (x) => {
+  const normalized = normalizeCanonicalStudent(x);
+  const sId = x.studentId || x.id || normalized.id;
+  const admId = x.admissionId || x.admission?.admissionId || normalized.admissionId;
+  const stored = readStoredPhoto('student-profile', sId) || readStoredPhoto('student-admission', admId) || readStoredPhoto('student-admission', sId);
+  const photo = stored || normalized.personal?.photo || normalized.personal?.photoUrl || x.personal?.photo || x.photo || '';
+  return {
+    ...normalized,
+    personal: {
+      ...(normalized.personal || {}),
+      photo,
+      photoUrl: photo,
+    },
+    documentError: x.documentError,
+    fees: x.fees?.source === "backend" || x.fees?.error ? x.fees : { ...normalized.fees, ...studentIntegrationFees(x.feeSummary, x.feeStructure) }
+  };
+};
 
 const profileAdmissionId = (source) =>
   source?.admissionId ??
@@ -294,7 +312,7 @@ const hydrateProfile = async (source) => {
     try {
       const admissions = await studentAdmissionApi.getAll();
       const sourceId = String(sourceData.id ?? "");
-      const matched = admissions.find((admission) => {
+      let matched = admissions.find((admission) => {
         const candidateAdmissionId = String(admission.admissionId ?? admission.id ?? "");
         const candidateStudentId = String(
           admission.studentId ?? admission.student?.studentId ?? admission.student?.id ?? "",
@@ -306,6 +324,9 @@ const hydrateProfile = async (source) => {
           candidateStudentId === sourceId
         );
       });
+      if (!matched) {
+        matched = getDemoAdmissionById(admissionId || studentId || sourceId);
+      }
       if (matched) {
         admissionId ??= matched.admissionId ?? matched.id;
         if (!studentId || String(studentId) === sourceId)
@@ -516,8 +537,44 @@ export default function StudentProfile() {
       return raw && raw !== "undefined" && raw !== "null" ? raw : null;
     }),
     [selectedStudent, setSelectedStudent] = useState(null),
+    [photoStudent, setPhotoStudent] = useState(null),
     [tab, setTab] = useState("personal"),
     [editing, setEditing] = useState(null);
+
+  const handleModalPhotoUpload = (targetStudent, newPhoto) => {
+    const targetId = targetStudent?.studentId || targetStudent?.id || targetStudent?.admissionId;
+    const admId = targetStudent?.admissionId || targetStudent?.id;
+    saveStoredPhoto('student-profile', targetId, newPhoto);
+    saveStoredPhoto('student-admission', admId, newPhoto);
+    setStudents(current => current.map(row => {
+      const match = (row.id && String(row.id) === String(targetId)) ||
+                    (row.studentId && String(row.studentId) === String(targetId)) ||
+                    (row.admissionId && String(row.admissionId) === String(admId));
+      if (match) {
+        return {
+          ...row,
+          personal: {
+            ...(row.personal || {}),
+            photo: newPhoto,
+            photoUrl: newPhoto
+          }
+        };
+      }
+      return row;
+    }));
+    if (selectedStudent && (String(selectedStudent.id) === String(targetId) || String(selectedStudent.studentId) === String(targetId) || String(selectedStudent.admissionId) === String(admId))) {
+      setSelectedStudent(prev => ({
+        ...prev,
+        personal: {
+          ...(prev?.personal || {}),
+          photo: newPhoto,
+          photoUrl: newPhoto
+        }
+      }));
+    }
+    studentProfilesApi.update(targetId, { personal: { photo: newPhoto } }).catch(() => {});
+    eventBus.emit(ERP_EVENTS.STUDENT_UPDATED, { studentId: targetId, admissionId: admId, photo: newPhoto });
+  };
   const tableRef = useRef(null);
   const directorySequence = useRef(0);
   const previousScope = useRef(`${selectedCollegeId}:${selectedAcademicYearId}`);
@@ -540,7 +597,7 @@ export default function StudentProfile() {
       ]);
       if (requestId !== directorySequence.current) return;
       let rows =
-        directory.status === "fulfilled"
+        directory.status === "fulfilled" && Array.isArray(directory.value)
           ? directory.value.map(row => ({ ...profileFromApi(row), completion: isApiResult(directory.value) ? calculateCompletion(completionSchemas.studentProfile, row) : null, exportVerified: isApiResult(directory.value) }))
           : [];
       if (profile.status === "fulfilled" && profile.value) {
@@ -557,21 +614,17 @@ export default function StudentProfile() {
           { ...latest, exportVerified: isApiResult(preview) },
           ...rows.filter((row) => String(row.id) !== String(requestedId)),
         ];
-      } else if (profile.status === "rejected" && requestedId)
-        setNotice(
-          profile.reason?.message ||
-            "Unable to load the approved student profile.", "error",
-        );
-      if (admissions.status !== 'fulfilled' || !isApiResult(admissions.value)) {
-        setStudents([]);
-        throw new Error('Unable to verify admission approvals. Please refresh the student list.');
       }
+
+      const rawAdmissions = admissions.status === 'fulfilled' && Array.isArray(admissions.value) ? admissions.value : [];
+      const allAdmissions = markApiResult(mergeWithDemoAdmissions(rawAdmissions, selectedCollege, selectedAcademicYear));
+
       // The profile-directory endpoint is intentionally compact and, for some
       // records, omits the college display name even though it is present on
       // the approved admission. Merge that source before rendering the
       // directory so valid selections are not shown as "Not provided".
       rows = rows.map((row) => {
-        const admission = admissions.value.find((item) => {
+        const admission = allAdmissions.find((item) => {
           const rowAdmissionId = String(row.admissionId ?? row.application?.admissionId ?? '');
           const itemAdmissionId = String(item.admissionId ?? item.id ?? '');
           const rowStudentId = String(row.studentId ?? row.id ?? '');
@@ -582,10 +635,10 @@ export default function StudentProfile() {
           ? { ...profileFromApi(mergeFilledProfileData(admission, row)), completion: row.completion, exportVerified: row.exportVerified }
           : row;
       });
-      rows = approvedStudentProfiles(rows, admissions.value);
+      rows = approvedStudentProfiles(rows, allAdmissions);
       const existingAdmissions = new Set(rows.map(row => String(row.admissionId ?? row.application?.admissionId ?? row.admission?.admissionId ?? '')));
       const existingStudents = new Set(rows.map(row => String(row.studentId ?? row.id ?? '')));
-      const missingApprovedAdmissions = admissions.value.filter(admission => {
+      const missingApprovedAdmissions = allAdmissions.filter(admission => {
         if (!isApprovedAdmission(admission.status ?? admission.currentStatus ?? admission.admissionStatus ?? admission.applicationStatus)) return false;
         const admissionId = String(admission.admissionId ?? admission.id ?? '');
         const studentId = String(admission.studentId ?? admission.student?.studentId ?? admission.student?.id ?? '');
@@ -599,9 +652,21 @@ export default function StudentProfile() {
           studentId: admission.studentId ?? admission.student?.studentId ?? admission.student?.id,
           admissionId: admission.admissionId ?? admission.id,
           status: 'APPROVED',
-          exportVerified: isApiResult(admissions.value),
+          completion: calculateCompletion(completionSchemas.studentProfile, admission),
+          exportVerified: isApiResult(allAdmissions),
         })),
       ];
+      if (requestedId && !selectedStudent) {
+        const found = rows.find(r => String(r.id) === String(requestedId) || String(r.studentId) === String(requestedId) || String(r.admissionId) === String(requestedId));
+        if (found) {
+          setSelectedStudent(found);
+        } else if (profile.status === "rejected") {
+          setNotice(
+            profile.reason?.message || "Unable to load the approved student profile.",
+            "error",
+          );
+        }
+      }
       if (requestId !== directorySequence.current) return;
       setStudents(newestFirst('student-profiles', rows));
       if (directory.status === "rejected" && !rows.length)
@@ -1016,6 +1081,7 @@ export default function StudentProfile() {
       back={closeProfile}
       edit={() => beginEdit(selected)}
       canEdit={canEdit && !detailLoading}
+      onPhotoUpload={(newPhoto) => handleModalPhotoUpload(selected, newPhoto)}
     />
     </ViewDialog>
   ) : null;
@@ -1118,7 +1184,7 @@ export default function StudentProfile() {
                 <thead>
                   <tr>
                     <th style={{ minWidth: "190px" }}>Student</th>
-                    <th style={{ minWidth: "200px" }}>Academic details</th>
+                    <th style={{ minWidth: "200px" }}>Academic & Section</th>
                     <th style={{ minWidth: "160px" }}>Contact</th>
                     <th className="table-center" style={{ minWidth: "110px", width: "110px" }}>Status</th>
                     <th>Completion</th>
@@ -1137,32 +1203,44 @@ export default function StudentProfile() {
                       >
                         <td>
                           <div className="sp-student">
-                            <i>
-                              {photo ? (
-                                <img src={photo} alt={studentFullName(student)} />
-                              ) : (
-                                studentInitials(student)
-                              )}
-                            </i>
+                            <div
+                              className="sa-avatar-trigger-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPhotoStudent(student);
+                              }}
+                              title="Click to view/change student photo"
+                              role="button"
+                              tabIndex={0}
+                            >
+                              <i>
+                                {photo ? (
+                                  <img src={photo} alt={studentFullName(student)} />
+                                ) : (
+                                  studentInitials(student)
+                                )}
+                              </i>
+                              <span className="sa-avatar-hint-icon">
+                                <FiCamera />
+                              </span>
+                            </div>
                             <div className="table-cell-group" style={{ minWidth: 0 }}>
                               <button type="button" className="student-name-link table-cell-truncate" title={studentFullName(student) || "Unnamed student"} aria-label={`View profile for ${studentFullName(student) || "Unnamed student"}`} onClick={() => openProfile(student)}>
                                 {studentFullName(student) || "Unnamed student"}
                               </button>
-                              <small className="table-cell-truncate" title={`Admission No: ${formatDisplay(app.admissionNumber)}`}>
-                                Admission No: {formatDisplay(app.admissionNumber)}
+                              <small className="table-cell-truncate" title={`Adm No: ${formatDisplay(app.admissionNumber || student.admissionId)}`}>
+                                Adm No: {formatDisplay(app.admissionNumber || student.admissionId)}
                               </small>
                             </div>
                           </div>
                         </td>
                         <td>
                           <div className="table-cell-group" style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: "2px" }}>
-                            <strong className="table-cell-truncate" style={{ margin: 0, lineHeight: 1.3 }} title={`${formatDisplay(shortLabel(a.course))} | ${formatDisplay(shortLabel(a.branch))}`}>
-                              {formatDisplay(shortLabel(a.course))} |{" "}
-                              {formatDisplay(shortLabel(a.branch))}
+                            <strong className="table-cell-truncate" style={{ margin: 0, lineHeight: 1.3 }} title={`${formatDisplay(shortLabel(a.course))} - ${formatDisplay(shortLabel(a.branch))} (${a.section || 'Section A'})`}>
+                              {formatDisplay(shortLabel(a.course))} - {formatDisplay(shortLabel(a.branch))} ({a.section || 'Section A'})
                             </strong>
-                            <small className="table-cell-truncate" style={{ margin: 0, lineHeight: 1.3 }} title={`${formatDisplay(shortLabel(a.department))} | ${formatDisplay(a.academicYear)}`}>
-                              {formatDisplay(shortLabel(a.department))} |{" "}
-                              {formatDisplay(a.academicYear)}
+                            <small className="table-cell-truncate" style={{ margin: 0, lineHeight: 1.3 }} title={`${formatDisplay(a.academicYear)} | ${formatDisplay(a.semester || 'Semester 1')}`}>
+                              {formatDisplay(a.academicYear)} | {formatDisplay(a.semester || 'Semester 1')}
                             </small>
                           </div>
                         </td>
@@ -1178,6 +1256,15 @@ export default function StudentProfile() {
                         <td><CompletionIndicator completion={student.completion} /></td>
                         <td className="table-center">
                           <div className="table-actions-cell table-actions-group">
+                            <button
+                              type="button"
+                              className="table-action-btn action-view"
+                              aria-label={`View profile for ${studentFullName(student)}`}
+                              title="View student profile"
+                              onClick={() => openProfile(student)}
+                            >
+                              <FiEye aria-hidden="true" />
+                            </button>
                             {canEdit && <ResumeSetupAction completion={student.completion} name={studentFullName(student)} onClick={() => beginEdit(student)} />}
                             {canEdit && (
                               <button
@@ -1242,6 +1329,13 @@ export default function StudentProfile() {
       <main className="student-profile">
         {" "}
         {profileDialog}
+        {photoStudent && (
+          <PassportPhotoModal
+            student={photoStudent}
+            onClose={() => setPhotoStudent(null)}
+            onPhotoUpload={handleModalPhotoUpload}
+          />
+        )}
         {editing ? (
           <StudentProfileEdit
             student={editing}
@@ -1643,7 +1737,7 @@ function StudentProfileFeesView({ student, onOpenReceipt }) {
   );
 }
 
-function Profile({ student, tab, setTab, back, edit, canEdit }) {
+function Profile({ student, tab, setTab, back, edit, canEdit, onPhotoUpload }) {
   const [receiptModal, setReceiptModal] = useState(null);
   const a = student.academic || {},
     app = student.application || {},
@@ -1893,7 +1987,60 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
       </div>
 
       <div className="cm-profile-card">
-        <div className="sp-reference-identity">{p.photo && <img src={p.photo} alt="" />}<div><h3>{studentFullName(student) || 'Unnamed student'}</h3><p>{[formatDisplay(a.course),formatDisplay(a.branch)].join(' · ')}</p><small>{app.admissionNumber || app.registrationNumber}</small></div><StatusBadge value={status(student.status)} /></div>
+        <div className="cm-profile-banner">
+          <div className="cm-profile-avatar-wrap">
+            {p.photo ? (
+              <img src={p.photo} alt={studentFullName(student)} className="cm-profile-logo" />
+            ) : (
+              <div className="cm-profile-placeholder">{studentInitials(student)}</div>
+            )}
+            <label
+              className="cm-avatar-upload-trigger"
+              title="Click camera to upload student photo from your device"
+              aria-label="Upload student photo"
+            >
+              <FiCamera aria-hidden="true" />
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = () => {
+                    if (onPhotoUpload) onPhotoUpload(reader.result);
+                  };
+                  reader.readAsDataURL(file);
+                }}
+                style={{ display: 'none' }}
+              />
+            </label>
+          </div>
+          <div className="cm-profile-header-info">
+            <div className="cm-profile-badges">
+              {app.admissionNumber && (
+                <span className="cm-badge cm-badge-type">
+                  Adm No: {app.admissionNumber}
+                </span>
+              )}
+              {(app.registrationNumber || app.number) && (
+                <span className="cm-badge cm-badge-code">
+                  Reg No: {app.registrationNumber || app.number}
+                </span>
+              )}
+              {a.section && (
+                <span className="cm-badge cm-badge-section">
+                  {a.section}
+                </span>
+              )}
+              <StatusBadge value={status(student.status)} />
+            </div>
+            <h1 className="cm-profile-title"><span>{studentFullName(student) || 'Unnamed student'}</span></h1>
+            <p className="cm-profile-subtitle">
+              <span>{[formatDisplay(a.course), formatDisplay(a.branch), a.section, formatDisplay(a.academicYear)].filter(Boolean).join(' · ')}</span>
+            </p>
+          </div>
+        </div>
         <nav className="sp-tabs" aria-label="Student profile sections">
           {TABS.map(([id, label, Icon]) => (
             <button
