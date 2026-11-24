@@ -627,6 +627,7 @@ function AdmissionList() {
   return (
     <>
       <PageHeader
+        className="sa-directory-header"
         title="Student Admissions"
         subtitle="Manage registrations, review and approval in the selected college and academic year."
         compactSummary={[

@@ -2692,3 +2692,24 @@ dialog.student-admission.sa-admission-dialog { width: min(940px, calc(100vw - 32
 .student-admission.sa-admission-dialog .sa-wizard-actions { position: static; flex: 0 0 auto; margin: 0; padding: 10px 20px; border-top: 1px solid var(--border); background: var(--surface); }
 .student-admission.sa-admission-dialog .sa-wizard-actions button { min-height: 34px; font-size: 12px; }
 @media(max-width:700px) { .student-admission.sa-admission-dialog .sa-reference-stepper { grid-template-columns: repeat(3,minmax(0,1fr)); } .student-admission.sa-admission-dialog .sa-wizard-content { padding: 12px; } .student-admission.sa-admission-dialog .sa-wizard-actions { padding: 10px 12px; flex-wrap: wrap; } }
+:root #root .sa-directory-header .compact-summary:not([hidden]) > .compact-summary__item {
+  flex-basis: auto;
+}
+
+:root #root .sa-directory-header .compact-summary:not([hidden]) .compact-summary__item small {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 520px) {
+  :root #root .sa-directory-header .compact-summary:not([hidden]) {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  :root #root .sa-directory-header .compact-summary:not([hidden]) > .compact-summary__item {
+    flex-basis: calc(50% - 1px);
+  }
+}
+
