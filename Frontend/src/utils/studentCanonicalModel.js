@@ -599,30 +599,29 @@ export const normalizeCanonicalStudent = (source = {}) => {
 
   // Dates & Registration Numbers
   const regNumber = firstFilled(raw.registrationNumber, raw.application?.registrationNumber, raw.application?.number, summary.registrationNumber, academicRaw.registrationNumber, raw.number, base.application.number)
-  // Profile and admission endpoints use different DTOs for this value.  Read
-  // all supported aliases so the directory never loses an admission number
-  // that is already stored on the approved admission.
-  const admNumber = firstFilled(
+  // Real-world college ERP logic:
+  // 1. Every applicant receives a Registration Number (REG-...) upon registering.
+  // 2. An Admission Number (ADM-...) is strictly allotted ONLY when the admission is officially APPROVED.
+  // For unapproved students (Draft, Submitted, Under Review, Correction Required, Rejected), Admission Number is empty.
+  const isApproved = status === 'APPROVED'
+  let rawAdmNumber = firstFilled(
     raw.admissionNumber,
     raw.admissionNo,
     raw.studentAdmissionNumber,
-    raw.applicationNumber,
-    raw.application?.admissionNumber,
-    raw.application?.admissionNo,
-    raw.application?.applicationNumber,
-    raw.application?.number,
     admissionRaw.admissionNumber,
     admissionRaw.admissionNo,
     admissionRaw.studentAdmissionNumber,
-    admissionRaw.applicationNumber,
-    admissionRaw.number,
     summary.admissionNumber,
     summary.admissionNo,
     summary.studentAdmissionNumber,
     ''
   )
+  if (rawAdmNumber && rawAdmNumber === regNumber && rawAdmNumber.startsWith('REG-')) {
+    rawAdmNumber = isApproved ? rawAdmNumber.replace('REG-', 'ADM-') : ''
+  }
+  const admNumber = isApproved ? (rawAdmNumber || (regNumber ? regNumber.replace('REG-', 'ADM-') : '')) : ''
   const regDate = dateInputValue(firstFilled(raw.registrationDate, raw.applicationDate, raw.application?.date, summary.registrationDate, base.application.date))
-  const admDate = dateInputValue(firstFilled(raw.admissionDate, raw.application?.admissionDate, summary.admissionDate, ''))
+  const admDate = isApproved ? dateInputValue(firstFilled(raw.admissionDate, raw.application?.admissionDate, summary.admissionDate, raw.updatedAt, '')) : ''
 
   // Parents
   const fatherRaw = parentRaw.father ?? {}

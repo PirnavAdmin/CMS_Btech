@@ -980,7 +980,7 @@ function AdmissionList() {
               <caption className="sr-only">Student admission applications</caption>
               <thead>
                 <tr>
-                  <th style={{ width: '130px', minWidth: '115px' }}>Application / Adm. No</th>
+                  <th style={{ width: '130px', minWidth: '115px' }}>Registration / Adm. No</th>
                   <th style={{ width: '170px', minWidth: '150px' }}>Student</th>
                   <th style={{ width: '140px', minWidth: '125px' }}>Academic Enrollment</th>
                   <th style={{ width: '105px', minWidth: '90px' }}>Admission Type</th>
@@ -1007,13 +1007,13 @@ function AdmissionList() {
                     <tr key={item.id}>
                       <td style={{ width: '135px', minWidth: '120px' }}>
                         <div className="table-primary-cell">
-                          <strong title={`Application ID: ${regNo}`}>{regNo}</strong>
+                          <strong title={`Registration Number: ${regNo}`}>{regNo}</strong>
                           {normStat === 'APPROVED' ? (
                             <span
                               className="sa-adm-allotted"
                               title={admNo ? `Official Admission Number: ${admNo}` : 'Admission Approved'}
                             >
-                              Adm: {admNo && admNo !== regNo ? admNo : (admNo || 'Approved')}
+                              Adm No: {admNo && admNo !== regNo ? admNo : (admNo || 'Allotted')}
                             </span>
                           ) : (
                             <span className="sa-adm-pending" title="Admission number will be allotted upon official approval">
@@ -1823,8 +1823,8 @@ function CoreReview({ data, edit }) {
           items={[
             ['Registration Number', data.application?.registrationNumber || data.application?.number],
             ['Registration Date', data.application?.registrationDate || data.application?.date],
-            ['Admission Number', data.application?.admissionNumber, true],
-            ['Admission Date', data.application?.admissionDate, true],
+            ['Admission Number', normalizeStatus(data.status) === 'APPROVED' ? (data.application?.admissionNumber || 'Allotted') : 'Allotted upon approval', true],
+            ['Admission Date', normalizeStatus(data.status) === 'APPROVED' ? (data.application?.admissionDate || data.updatedAt) : 'Recorded upon approval', true],
             ['College', data.admission?.college],
             ['Batch', data.admission?.batch],
             ['Scholarship', data.admission?.scholarship],
@@ -3020,8 +3020,8 @@ function DetailContent({ data, tab }) {
         items={[
           ['Registration Number', data.application?.registrationNumber || data.application?.number],
           ['Registration Date', data.application?.registrationDate || data.application?.date],
-          ['Admission Number', data.application?.admissionNumber],
-          ['Admission Date', data.application?.admissionDate],
+          ['Admission Number', normalizeStatus(data.status) === 'APPROVED' ? (data.application?.admissionNumber || 'Allotted') : 'Pending Approval'],
+          ['Admission Date', normalizeStatus(data.status) === 'APPROVED' ? (data.application?.admissionDate || data.updatedAt) : 'Pending Approval'],
           ['College', data.admission?.college],
           ['Batch', data.admission?.batch],
           ['Scholarship', data.admission?.scholarship],
@@ -3146,8 +3146,8 @@ function DetailContent({ data, tab }) {
       items={[
         ['Registration Number', data.application?.registrationNumber || data.application?.number],
         ['Registration Date', data.application?.registrationDate || data.application?.date],
-        ['Admission Number', data.application?.admissionNumber],
-        ['Admission Date', data.application?.admissionDate],
+        ['Admission Number', normalizeStatus(data.status) === 'APPROVED' ? (data.application?.admissionNumber || 'Allotted') : 'Pending Approval'],
+        ['Admission Date', normalizeStatus(data.status) === 'APPROVED' ? (data.application?.admissionDate || data.updatedAt) : 'Pending Approval'],
         ['College', data.admission?.college],
         ['Academic Year', data.academic?.academicYear],
         ['Admission Type', data.academic?.admissionType],
@@ -3210,10 +3210,10 @@ function StudentHeader({ data, onPhotoUpdate }) {
         <div className="cm-profile-badges">
           {(data.application?.registrationNumber || data.application?.number) && (
             <span className="cm-badge cm-badge-code">
-              App ID: {data.application.registrationNumber || data.application.number}
+              Reg No: {data.application.registrationNumber || data.application.number}
             </span>
           )}
-          {normStat === 'APPROVED' && data.application?.admissionNumber && data.application.admissionNumber !== (data.application.registrationNumber || data.application.number) && (
+          {normStat === 'APPROVED' && data.application?.admissionNumber && (
             <span className="cm-badge cm-badge-type">
               Adm No: {data.application.admissionNumber}
             </span>

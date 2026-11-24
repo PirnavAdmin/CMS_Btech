@@ -55,7 +55,7 @@ export function admissionDetailSections(data) {
     ['Current Address', address(contact.currentAddress)], ['Permanent Address', address(contact.permanentAddress)],
   ] }, { title: 'Admission Details', rows: [
     ['Registration Number', app.registrationNumber || app.number], ['Registration Date', app.registrationDate || app.date],
-    ['Admission Number', app.admissionNumber], ['Admission Date', app.admissionDate],
+    ['Admission Number', (String(data.status).toUpperCase() === 'APPROVED' ? (app.admissionNumber || 'Allotted') : 'Pending Approval')], ['Admission Date', (String(data.status).toUpperCase() === 'APPROVED' ? (app.admissionDate || data.updatedAt) : 'Pending Approval')],
     ['College', admission.college], ['Batch', admission.batch], ['Scholarship', admission.scholarship], ['Hostel', admission.hostel], ['Hostel Preference', admission.hostelPreference], ['Room Type / Beds', admission.hostelRoomType], ['Transportation', admission.transport], ['Transport Route', admission.transportRoute], ['Status', data.status],
   ] }, { title: 'Academic Details', rows: [
     ['Academic Year', academic.academicYear], ['Course', academic.course], ['Course Code', academic.courseCode], ['Department', academic.department], ['Branch', academic.branch], ['Branch Code', academic.branchCode],
