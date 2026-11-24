@@ -1085,10 +1085,10 @@ export default function StudentProfile() {
     }).length;
 
     return [
-      { label: "ENROLLED", value: total, tone: "default" },
-      { label: "ACTIVE", value: approved, tone: "active" },
-      { label: "BOYS", value: maleCount, tone: "default" },
-      { label: "GIRLS", value: femaleCount, tone: "default" },
+      { label: "TOTAL", value: total, tone: "total" },
+      { label: "APPROVED", value: approved, tone: "approved" },
+      { label: "MALE", value: maleCount, tone: "male" },
+      { label: "FEMALE", value: femaleCount, tone: "female" },
     ];
   }, [scopedStudents]);
 
@@ -1297,7 +1297,7 @@ export default function StudentProfile() {
               <table className="sp-directory-table" ref={tableRef}>
                 <thead>
                   <tr>
-                    <th style={{ minWidth: "220px", textAlign: "left" }}>Enrolled Student</th>
+                    <th style={{ minWidth: "210px", textAlign: "left", paddingLeft: "16px" }}>Student</th>
                     <th style={{ minWidth: "200px" }}>Academic & Section</th>
                     <th style={{ minWidth: "160px" }}>Contact</th>
                     <th className="table-center" style={{ minWidth: "110px", width: "110px" }}>Status</th>
@@ -1309,58 +1309,47 @@ export default function StudentProfile() {
                   {shown.map((student) => {
                     const a = student.academic || {},
                       app = student.application || {},
-                      photo = student.personal?.photo,
-                      sName = studentFullName(student) || student.studentName || student.fullName || student.name || 'Unnamed Student',
-                      rollNo = a.rollNumber || student.rollNumber || student.academic?.rollNumber || '',
-                      admNo = formatDisplay(app.admissionNumber || student.admissionNumber || student.admissionId || student.application?.number);
+                      photo = student.personal?.photo;
+                    const sName = studentFullName(student) || student.studentName || student.fullName || student.personal?.fullName || "Unnamed Student";
+                    const admNo = app.admissionNumber || student.admissionId || "Allotted";
                     return (
-                      <tr
-                        key={student.id}
-
-                      >
-                        <td style={{ textAlign: "left" }}>
+                      <tr key={student.id}>
+                        <td className="sp-student-col">
                           <div className="sp-student-cell">
                             <button
                               type="button"
-                              className="sa-avatar-trigger-btn"
+                              className="sp-avatar-btn"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setPhotoStudent(student);
                               }}
-                              title={`Click to view passport photo of ${sName}`}
-                              aria-label={`View passport photo of ${sName}`}
+                              title={`Click to view/change photo of ${sName}`}
+                              aria-label={`Change photo for ${sName}`}
                             >
-                              <i>
+                              <i className="sp-avatar-thumb">
                                 {photo ? (
                                   <img src={photo} alt={sName} />
                                 ) : (
                                   studentInitials(student)
                                 )}
                               </i>
-                              <span className="sa-avatar-hint-icon" aria-hidden="true">
+                              <span className="sp-avatar-cam-badge" aria-hidden="true">
                                 <FiCamera />
                               </span>
                             </button>
-                            <div className="sp-student-info">
+                            <div className="sp-student-meta">
                               <button
                                 type="button"
-                                className="student-name-link"
+                                className="sp-student-name-btn"
                                 title={sName}
                                 aria-label={`View profile for ${sName}`}
                                 onClick={() => openProfile(student)}
                               >
                                 {sName}
                               </button>
-                              <div className="sp-student-subtext">
-                                {rollNo ? (
-                                  <span className="sp-roll-badge" title={`Roll Number: ${rollNo}`}>
-                                    Roll: {rollNo}
-                                  </span>
-                                ) : null}
-                                <span className="sp-adm-text" title={`Admission Number: ${admNo}`}>
-                                  Adm: {admNo}
-                                </span>
-                              </div>
+                              <small className="sp-student-adm-no" title={`Adm No: ${formatDisplay(admNo)}`}>
+                                Adm No: {formatDisplay(admNo)}
+                              </small>
                             </div>
                           </div>
                         </td>
