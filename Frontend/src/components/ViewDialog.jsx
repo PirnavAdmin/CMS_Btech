@@ -47,7 +47,7 @@ export default function ViewDialog({
       className={`shared-view-dialog${isFormDialog ? ' shared-view-dialog--form' : ''} ${className}`.trim()}
       data-export-record
       aria-label={title}
-      style={{ maxWidth }}
+      style={{ maxWidth, width: maxWidth ? `min(${maxWidth}, calc(100vw - 32px))` : undefined }}
       onCancel={(event) => {
         event.preventDefault()
         if (!busy) onClose?.()

@@ -893,7 +893,13 @@ export const normalizeCanonicalStudent = (source = {}) => {
 export const studentFullName = (student) => {
   if (!student) return ''
   const p = student.personal || student.personalInformation || {}
-  const nameParts = [p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')
+  let first = String(p.firstName || '').trim()
+  let middle = String(p.middleName || '').trim()
+  let last = String(p.lastName || '').trim()
+  if (first && middle && (first.toLowerCase() === middle.toLowerCase() || first.toLowerCase().endsWith(' ' + middle.toLowerCase()))) {
+    middle = ''
+  }
+  const nameParts = [first, middle, last].filter(Boolean).join(' ')
   return (
     nameParts ||
     p.fullName ||
@@ -905,7 +911,7 @@ export const studentFullName = (student) => {
     student.applicantName ||
     student.header?.studentName ||
     ''
-  )
+  ).trim()
 }
 
 export const studentInitials = (student) => {

@@ -171,7 +171,16 @@ const shortLabel = (x) => {
   return BRANCH_ABBR[key] || x;
 };
 
-const clone = (x) => structuredClone(x);
+const clone = (x) => {
+  if (x === null || typeof x !== "object") return x;
+  try {
+    return structuredClone(x);
+  } catch {
+    return JSON.parse(
+      JSON.stringify(x, (k, v) => (typeof v === "function" ? undefined : v)),
+    );
+  }
+};
 
 const PROFILE_DOCUMENTS = DOCUMENTS_CONFIG.map((d) => [d.key, d.label]);
 
@@ -1235,7 +1244,7 @@ export default function StudentProfile() {
   }, [scopedStudents]);
 
   const profileDialog = selected ? (
-    <ViewDialog title="Student Details" icon={FiUser} onClose={closeProfile} showExport={false} maxWidth="1120px">
+    <ViewDialog title="Student Details" icon={FiUser} onClose={closeProfile} showExport={false} maxWidth="1140px" hideFooter={true} className="sp-details-view-dialog">
     {detailLoading && <p role="status">Loading complete student details...</p>}
     {detailError && <div role="alert"><p>{detailError}</p><button type="button" onClick={() => openProfile(selected)}>Retry details</button></div>}
     <CompletionSummary completion={selected.completion} name={studentFullName(selected)} onClick={canEdit && !detailLoading ? () => beginEdit(selected) : undefined} />
@@ -2384,7 +2393,16 @@ const StudentProfileEdit = (() => {
 
 
 
-const clone = (value) => structuredClone(value);
+const clone = (value) => {
+  if (value === null || typeof value !== "object") return value;
+  try {
+    return structuredClone(value);
+  } catch {
+    return JSON.parse(
+      JSON.stringify(value, (k, v) => (typeof v === "function" ? undefined : v)),
+    );
+  }
+};
 const setPath = (source, path, value) => {
   const next = clone(source),
     parts = path.split(".");
@@ -2406,7 +2424,15 @@ const validYear = (value) =>
   /^\d{4}$/.test(clean(value)) &&
   Number(value) >= 1950 &&
   Number(value) <= new Date().getFullYear() + 1;
-const initialEditForm = (student) => ({ ...normalizeCanonicalStudent(student), fees: { ...student.fees }, documentUploads: {} });
+const initialEditForm = (student) => {
+  const normalized = normalizeCanonicalStudent(student);
+  delete normalized.completion;
+  return {
+    ...normalized,
+    fees: { ...(student.fees || {}) },
+    documentUploads: {},
+  };
+};
 
 const validateProfileForm = (form, docErrors = {}) => {
   const next = {
