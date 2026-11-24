@@ -257,6 +257,7 @@ const deduplicateProfiles = (profiles = []) => {
     if (!p) continue;
     const email = String(p.contact?.email || p.personal?.email || p.email || '').trim().toLowerCase();
     const mobile = String(p.contact?.mobile || p.personal?.mobile || p.mobile || '').replace(/\D/g, '').slice(-10);
+    const admNo = String(p.application?.admissionNumber || p.admissionNumber || p.admissionId || '').trim().toLowerCase();
     const sName = String(studentFullName(p) || p.studentName || p.fullName || (p.personal?.firstName ? [p.personal.firstName, p.personal.lastName].join(' ') : '')).trim().toLowerCase();
     const branch = String(p.academic?.branch || p.academic?.branchName || '').trim().toLowerCase();
 
@@ -265,6 +266,8 @@ const deduplicateProfiles = (profiles = []) => {
       key = `email:${email}`;
     } else if (mobile && mobile.length === 10) {
       key = `mobile:${mobile}`;
+    } else if (admNo && admNo !== 'allotted') {
+      key = `adm:${admNo}`;
     } else if (sName && branch) {
       key = `name_branch:${sName}_${branch}`;
     } else {
@@ -763,7 +766,7 @@ export default function StudentProfile() {
 
   const normYear = y => String(y || '').replace(/[^0-9]/g, '')
   const scopedStudents = useMemo(() => {
-    return students.filter(item => {
+    const list = students.filter(item => {
       let collegeMatches = true
       if (selectedCollegeId) {
         const itemCollegeId = item.admission?.collegeId ?? item.collegeId ?? item.academic?.collegeId ?? ''
@@ -1005,16 +1008,24 @@ export default function StudentProfile() {
         url.searchParams.set("studentId", resolvedId);
         window.history.replaceState({}, "", url);
       }
-      setStudents((current) => [
-        latest,
-        ...current.filter(
-          (x) =>
-            String(x.id) !== String(resolvedId) &&
-            String(x.studentId) !== String(resolvedId) &&
-            String(x.admissionId) !== String(resolvedId) &&
-            String(x.id) !== String(requestedId),
-        ),
-      ]);
+      setStudents((current) => {
+        let matched = false;
+        const updated = current.map((x) => {
+          const isMatch =
+            (x.id && (String(x.id) === String(resolvedId) || String(x.id) === String(requestedId))) ||
+            (x.studentId && (String(x.studentId) === String(resolvedId) || String(x.studentId) === String(requestedId))) ||
+            (x.admissionId && (String(x.admissionId) === String(resolvedId) || String(x.admissionId) === String(requestedId))) ||
+            (latest.application?.admissionNumber && (x.application?.admissionNumber === latest.application?.admissionNumber || x.admissionNumber === latest.application?.admissionNumber)) ||
+            (latest.contact?.email && (x.contact?.email === latest.contact?.email || x.email === latest.contact?.email));
+          if (isMatch) {
+            matched = true;
+            return { ...x, ...latest };
+          }
+          return x;
+        });
+        const nextList = matched ? updated : [latest, ...current];
+        return deduplicateProfiles(nextList);
+      });
     } catch (previewError) {
       if (requestId !== detailSequence.current) return;
       setDetailError(previewError.message || "Unable to load student details.");
@@ -1237,7 +1248,7 @@ export default function StudentProfile() {
 
     return [
       { label: "TOTAL", value: total, tone: "total" },
-      { label: "BRANCHES", value: branchCount || 1, tone: "branches" },
+      { label: "BRANCHES", value: branchCount, tone: "branches" },
       { label: "MALE", value: maleCount, tone: "male" },
       { label: "FEMALE", value: femaleCount, tone: "female" },
     ];
@@ -1247,7 +1258,7 @@ export default function StudentProfile() {
     <ViewDialog title="Student Details" icon={FiUser} onClose={closeProfile} showExport={false} maxWidth="1140px" hideFooter={true} className="sp-details-view-dialog">
     {detailLoading && <p role="status">Loading complete student details...</p>}
     {detailError && <div role="alert"><p>{detailError}</p><button type="button" onClick={() => openProfile(selected)}>Retry details</button></div>}
-    <CompletionSummary completion={selected.completion} name={studentFullName(selected)} onClick={canEdit && !detailLoading ? () => beginEdit(selected) : undefined} />
+    <CompletionSummary completion={selected.completion} name={studentFullName(selected)} />
     <Profile
       student={selected}
       tab={tab}
@@ -1468,7 +1479,7 @@ export default function StudentProfile() {
                     const sName = studentFullName(student) || student.studentName || student.fullName || student.personal?.fullName || "Unnamed Student";
                     const admNo = app.admissionNumber || student.admissionId || "Allotted";
                     return (
-                      <tr key={student.id}>
+                      <tr key={student.studentId || student.id || student.admissionId || student.application?.admissionNumber || student.contact?.email}>
                         <td className="sp-student-col">
                           <div className="sp-student-cell">
                             <button
@@ -1539,7 +1550,6 @@ export default function StudentProfile() {
                             >
                               <FiEye aria-hidden="true" />
                             </button>
-                            {canEdit && <ResumeSetupAction completion={student.completion} name={studentFullName(student)} onClick={() => beginEdit(student)} />}
                             {canEdit && (
                               <button
                                 type="button"

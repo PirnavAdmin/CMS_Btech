@@ -1503,25 +1503,51 @@ main.student-profile .sp-directory-table tbody td:first-child {
    ========================================================================== */
 
 dialog.sp-details-view-dialog.shared-view-dialog {
+  display: flex !important;
+  flex-direction: column !important;
   width: min(1140px, calc(100vw - 32px)) !important;
   max-width: 1140px !important;
+  height: min(90dvh, 880px) !important;
   max-height: calc(100dvh - 36px) !important;
   border-radius: 16px !important;
   box-shadow: 0 20px 45px rgba(15, 23, 42, 0.22) !important;
   border: 1px solid #cbd5e1 !important;
   background: #ffffff !important;
+  overflow: hidden !important;
 }
 
 dialog.sp-details-view-dialog .shared-view-dialog__header {
+  flex-shrink: 0 !important;
   padding: 16px 24px !important;
   background: #ffffff !important;
   border-bottom: 1px solid #e2e8f0 !important;
 }
 
 dialog.sp-details-view-dialog .shared-view-dialog__body {
-  padding: 0 !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: 100% !important;
   overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding: 0 !important;
   background: #f8fafc !important;
+}
+
+dialog.sp-details-view-dialog .shared-view-dialog__body::-webkit-scrollbar {
+  width: 8px !important;
+}
+
+dialog.sp-details-view-dialog .shared-view-dialog__body::-webkit-scrollbar-track {
+  background: #f1f5f9 !important;
+}
+
+dialog.sp-details-view-dialog .shared-view-dialog__body::-webkit-scrollbar-thumb {
+  background: #cbd5e1 !important;
+  border-radius: 4px !important;
+}
+
+dialog.sp-details-view-dialog .shared-view-dialog__body::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8 !important;
 }
 
 dialog.sp-details-view-dialog .cm-profile-view {
@@ -1544,7 +1570,7 @@ dialog.sp-details-view-dialog .cm-profile-top-bar {
 dialog.sp-details-view-dialog .cm-profile-card {
   border: 1px solid #e2e8f0 !important;
   border-radius: 14px !important;
-  overflow: hidden !important;
+  overflow: visible !important;
   background: #ffffff !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
 }
