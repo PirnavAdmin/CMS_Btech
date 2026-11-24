@@ -56,9 +56,6 @@ export default function UnifiedExamManagement() {
   const [schedules, setSchedules] = useState([])
   const [allocations, setAllocations] = useState([])
   const [roomExamAllocations, setRoomExamAllocations] = useState([])
-  const [roomBuildings, setRoomBuildings] = useState([])
-  const [roomAvailability, setRoomAvailability] = useState([])
-  const [roomAvailabilityLoading, setRoomAvailabilityLoading] = useState(false)
   const [faculty, setFaculty] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -207,49 +204,8 @@ export default function UnifiedExamManagement() {
     loadExamAllocations(roomExam.examId).catch(requestError => {
       if (current) setRoomError(requestError.message || 'Unable to load saved room allocations.')
     })
-    list('exam-schedules/buildings').then(buildings => {
-      if (current) setRoomBuildings(buildings.map(building => ({
-        ...building,
-        buildingId: building.buildingId ?? building.id,
-        buildingName: building.buildingName || building.name || building.blockName || building.buildingCode || 'Building',
-      })))
-    }).catch(requestError => {
-      if (current) setRoomError(requestError.message || 'Unable to load buildings from the Room Master.')
-    })
     return () => { current = false }
   }, [roomExam?.examId, loadExamAllocations])
-
-  useEffect(() => {
-    let current = true
-    if (!roomExam?.examId || !roomForm.scheduleId) { setRoomAvailability([]); setRoomAvailabilityLoading(false); return undefined }
-    setRoomAvailabilityLoading(true)
-    call('exam-schedules/available-rooms', { query: {
-      examScheduleId: roomForm.scheduleId,
-      buildingId: roomForm.buildingId || undefined,
-      excludeAllocationId: editingAllocation?.examHallAllocationId,
-    } }).then(response => {
-      if (current) setRoomAvailability(rows(response).map(room => {
-        const availableValue = room.isAvailable ?? room.available ?? room.roomAvailable
-        const availabilityLabel = String(room.roomStatus ?? room.status ?? '').toLowerCase()
-        return {
-          ...room,
-          classroomId: room.classroomId ?? room.roomId ?? room.id,
-          roomName: room.roomName || room.classroomName || room.name || room.roomNumber || 'Room',
-          roomNumber: room.roomNumber || room.classroomNumber || room.roomCode || '',
-          capacity: room.capacity ?? room.roomCapacity ?? room.classroomCapacity,
-          isAvailable: availableValue != null
-            ? availableValue === true || availableValue === 1 || String(availableValue).toLowerCase() === 'true' || String(availableValue) === '1'
-            : ['available', 'free', 'vacant'].includes(availabilityLabel),
-        }
-      }))
-    }).catch(requestError => {
-      if (current) {
-        setRoomAvailability([])
-        setRoomError(requestError.message || 'Unable to check room availability.')
-      }
-    }).finally(() => { if (current) setRoomAvailabilityLoading(false) })
-    return () => { current = false }
-  }, [roomExam?.examId, roomForm.scheduleId, roomForm.buildingId, editingAllocation?.examHallAllocationId])
 
   const filteredExams = useMemo(() => exams.filter(exam => {
     const matchesQuery = `${exam.examName} ${exam.examCode} ${exam.branchName || ''} ${exam.semesterName || ''}`.toLowerCase().includes(query.toLowerCase())
@@ -284,8 +240,46 @@ export default function UnifiedExamManagement() {
   const examSubjects = schedules.filter(row => String(row.examId ?? row.examinationId) === String(roomExam?.examId ?? roomExam?.id))
   const selectedRoomSchedule = examSubjects.find(row => String(row.scheduleId ?? row.examScheduleId) === String(roomForm.scheduleId))
   const roomAllocations = roomExamAllocations
-  const availableRooms = roomAvailability.filter(room => room.isAvailable)
-  const occupiedRooms = roomAvailability.filter(room => !room.isAvailable)
+  const roomBuildings = [...new Set(lookups.classrooms.map(room => String(room.buildingBlock || room.building || '').trim()).filter(Boolean))]
+  const roomAvailability = useMemo(() => {
+    if (!selectedRoomSchedule || !roomExam) return []
+
+    const date = dateOnly(selectedRoomSchedule.examDate)
+    const toMinutes = value => {
+      const [hours, minutes] = String(value || '').split(':').map(Number)
+      return Number.isFinite(hours) && Number.isFinite(minutes) ? hours * 60 + minutes : null
+    }
+    const start = toMinutes(selectedRoomSchedule.startTime)
+    const end = toMinutes(selectedRoomSchedule.endTime)
+    const conflicts = new Set(allocations.filter(allocation => {
+      if (allocation.status === false || allocation.status === 0 || allocation.status === '0' || allocation.status === 'Inactive') return false
+      if (String(allocation.examHallAllocationId) === String(editingAllocation?.examHallAllocationId)) return false
+      if (dateOnly(allocation.examDate ?? allocation.schedule?.examDate) !== date) return false
+      const otherStart = toMinutes(allocation.startTime ?? allocation.schedule?.startTime)
+      const otherEnd = toMinutes(allocation.endTime ?? allocation.schedule?.endTime)
+      return start != null && end != null && otherStart != null && otherEnd != null && start < otherEnd && otherStart < end
+    }).map(allocation => String(allocation.classroomId ?? allocation.roomId)))
+
+    return lookups.classrooms.map(room => {
+      const classroomId = room.classroomId ?? room.id
+      const roomNumber = room.roomNumber ?? room.roomCode ?? room.classroomCode ?? room.code ?? ''
+      const roomName = room.roomName ?? room.classroomName ?? room.name ?? roomNumber ?? 'Room'
+      const buildingBlock = String(room.buildingBlock ?? room.building ?? '').trim()
+      const conflict = conflicts.has(String(classroomId))
+      return {
+        ...room,
+        classroomId,
+        roomNumber,
+        roomName,
+        buildingBlock,
+        capacity: room.capacity ?? room.roomCapacity,
+        isAvailable: !conflict,
+        unavailableReason: conflict ? 'Booked for an overlapping examination.' : '',
+      }
+    }).filter(room => room.classroomId != null)
+  }, [selectedRoomSchedule, roomExam, lookups.classrooms, allocations, editingAllocation?.examHallAllocationId])
+  const availableRooms = roomAvailability.filter(room => room.isAvailable && (!roomForm.buildingId || room.buildingBlock === roomForm.buildingId))
+  const occupiedRooms = roomAvailability.filter(room => !room.isAvailable && (!roomForm.buildingId || room.buildingBlock === roomForm.buildingId))
   const filteredBranches = lookups.branches.filter(row => !draft.courseId || String(row.courseId) === String(draft.courseId))
   const filteredSemesters = lookups.semesters.filter(row => (!draft.courseId || !row.courseId || String(row.courseId) === String(draft.courseId)) && (!draft.branchId || !row.branchId || String(row.branchId) === String(draft.branchId)))
   const filteredSections = lookups.sections.filter(row => (!draft.courseId || !row.courseId || String(row.courseId) === String(draft.courseId)) && (!draft.branchId || !row.branchId || String(row.branchId) === String(draft.branchId)) && (!draft.semesterId || !row.semesterId || String(row.semesterId) === String(draft.semesterId)))
@@ -296,6 +290,7 @@ export default function UnifiedExamManagement() {
   const canLoadSubjects = Boolean(subjectCollegeId && academicYearId && courseId && branchId && semesterId)
   const currentSubjectLookup = subjectLookup?.scope === subjectScope ? subjectLookup : null
   const filteredSubjects = currentSubjectLookup?.rows ?? []
+
   useEffect(() => {
     if (!subjectEditorOpen || !canLoadSubjects) return
     const request = new AbortController()
@@ -661,8 +656,8 @@ export default function UnifiedExamManagement() {
           <label>Select Subject<select required value={roomForm.scheduleId} onChange={e => setRoomForm(value => ({ ...value, scheduleId: e.target.value, classroomId: '' }))}><option value="">Select scheduled subject</option>{examSubjects.map(row => <option key={row.scheduleId ?? row.examScheduleId} value={row.scheduleId ?? row.examScheduleId}>{row.subjectName} ({row.subjectCode}) · {dateOnly(row.examDate)} · {row.startTime}–{row.endTime}</option>)}</select></label>
           <label>Exam Date<input readOnly value={dateOnly(selectedRoomSchedule?.examDate)}/></label>
           <label>Start Time<input readOnly value={selectedRoomSchedule?.startTime || ''}/></label><label>End Time<input readOnly value={selectedRoomSchedule?.endTime || ''}/></label>
-          <label>Building<select value={roomForm.buildingId} onChange={e => setRoomForm(value => ({ ...value, buildingId: e.target.value, classroomId: '' }))} disabled={!roomForm.scheduleId}><option value="">All buildings</option>{roomBuildings.map(building => <option key={building.buildingId} value={building.buildingId}>{building.buildingName}</option>)}</select></label>
-          <label>Room / Hall<select required value={roomForm.classroomId} onChange={e => setRoomForm(value => ({ ...value, classroomId: e.target.value }))} disabled={!roomForm.scheduleId || roomAvailabilityLoading}><option value="">{roomAvailabilityLoading ? 'Checking room availability…' : 'Choose an available room'}</option>{availableRooms.map(room => <option key={room.classroomId} value={room.classroomId}>{room.roomNumber} · {room.roomName} · capacity {room.capacity ?? 'not set'}</option>)}</select><small>{roomForm.scheduleId ? `${availableRooms.length} available room(s) for this session.` : 'Select a subject to check room availability.'}</small></label>
+          <label>Building<select value={roomForm.buildingId} onChange={e => setRoomForm(value => ({ ...value, buildingId: e.target.value, classroomId: '' }))} disabled={!roomForm.scheduleId}><option value="">All buildings</option>{roomBuildings.map(building => <option key={building} value={building}>{building}</option>)}</select></label>
+          <label>Room / Hall<select required value={roomForm.classroomId} onChange={e => setRoomForm(value => ({ ...value, classroomId: e.target.value }))} disabled={!roomForm.scheduleId}><option value="">{!roomForm.scheduleId ? 'Choose a scheduled subject first' : availableRooms.length ? 'Choose an available room' : 'No rooms available for this time'}</option>{availableRooms.map(room => <option key={room.classroomId} value={room.classroomId}>{room.roomNumber ? `${room.roomNumber} · ` : ''}{room.roomName} · capacity {room.capacity ?? 'not set'}</option>)}</select><small>{roomForm.scheduleId ? `${availableRooms.length} available room(s) for this session${roomForm.buildingId ? ' in this building' : ''}.` : 'Select a subject to load available rooms.'}</small></label>
           <label>Room Capacity<input readOnly value={roomAvailability.find(room => String(room.classroomId) === String(roomForm.classroomId))?.capacity ?? ''}/></label>
           <label>Number of Students<input required type="number" min="1" max={roomAvailability.find(room => String(room.classroomId) === String(roomForm.classroomId))?.capacity || undefined} value={roomForm.students} onChange={e => setRoomForm(value => ({ ...value, students: e.target.value }))}/></label>
           <label>Invigilator<select value={roomForm.invigilatorFacultyId} onChange={e => setRoomForm(value => ({ ...value, invigilatorFacultyId: e.target.value }))}><option value="">Select invigilator</option>{faculty.map(person => <option key={person.facultyId ?? person.id} value={person.facultyId ?? person.id}>{person.fullName || person.facultyName || person.name}{person.employeeId || person.facultyCode ? ` · ${person.employeeId || person.facultyCode}` : ''}</option>)}</select></label>
