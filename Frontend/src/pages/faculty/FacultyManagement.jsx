@@ -2128,7 +2128,7 @@ function FacultyDocumentsForm({ documents = {}, onChange }) {
     </div>
   )
 }
-function Field({ field, data, errors, update, native = false, collegeOptions = [], departmentOptions = [], touched = {}, liveErrors = {}, markTouched }) {
+function Field({ field, data, errors, update, native = false, collegeOptions = [], departmentOptions = [], departmentLoading = false, departmentLoadError = '', touched = {}, liveErrors = {}, markTouched }) {
   const [key, label, type, required] = field
   const id = 'fm-' + key
   const isNonTeaching = data.employeeCategory === 'Non-Teaching'
@@ -2173,7 +2173,7 @@ function Field({ field, data, errors, update, native = false, collegeOptions = [
   return (
     <>
       <div className={'fm-field ' + (type === 'textarea' ? 'fm-wide' : '') + (key === 'gender' ? ' fm-gender' : '')}><label htmlFor={Array.isArray(type) && !native ? undefined : id}>{displayLabel}{required && <span className="fm-required" aria-hidden="true"> *</span>}</label>
-        {type === 'college' || type === 'department' ? <SearchableSelect placement="bottom" label={displayLabel} value={data[key] || ''} options={type === 'college' ? collegeOptions : departmentOptions} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={'Select ' + displayLabel.toLowerCase()} /> : Array.isArray(type) ? (() => {
+        {type === 'college' || type === 'department' ? <SearchableSelect menuPlacement="bottom" label={displayLabel} value={data[key] || ''} options={type === 'college' ? collegeOptions : departmentOptions} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={departmentLoading && type === 'department' ? 'Loading departments...' : 'Select ' + displayLabel.toLowerCase()} noOptionsMessage={type === 'department' ? (departmentLoading ? 'Loading departments...' : departmentLoadError || 'No active departments are available for this college.') : 'No matching options found.'} /> : Array.isArray(type) ? (() => {
           const effectiveOptions = key === 'designation' ? getDesignationOptions(data.employeeCategory) : type
           return native ? <ProjectSelect {...props}><option value="">Select {displayLabel.toLowerCase()}</option>{effectiveOptions.map(value => <option key={value}>{value}</option>)}</ProjectSelect> : <SearchableSelect placement="bottom" label={displayLabel} value={data[key] || ''} options={effectiveOptions} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={'Select ' + displayLabel.toLowerCase()} hideSearch />
         })() : type === 'textarea' ? <textarea {...props} rows={2} /> : <input {...props} type={type === 'readonly' ? 'text' : type} readOnly={type === 'readonly'} max={type === 'date' ? today() : key === 'passingYear' ? new Date().getFullYear() : key === 'weeklyHours' ? 60 : type === 'number' ? 80 : undefined} min={key === 'joiningDate' ? joiningDateMinimum(data.dob) : key === 'passingYear' ? 1950 : type === 'number' ? 0 : undefined} step={key === 'passingYear' ? 1 : type === 'number' ? 0.5 : undefined} inputMode={type === 'tel' || key === 'pincode' ? 'numeric' : undefined} />}
@@ -2320,7 +2320,7 @@ const getNextFacultyCode = (list = [], collegeId, collegeOptions = [], isNonTeac
   return `${prefix}${String(nextSeq).padStart(3, '0')}`
 }
 
-function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], departmentOptions = [], selectedCollegeId = '', saving, saveError = '' }) {
+function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], departmentOptions = [], departmentLoading = false, departmentLoadError = '', selectedCollegeId = '', saving, saveError = '' }) {
   const defaultCollegeId = initial?.collegeId || selectedCollegeId || collegeOptions[0]?.value || ''
   const isInitialNonTeaching = (initial?.employeeCategory || initial?.employee_category) === 'Non-Teaching'
   const [data, setData] = useState(() => {
@@ -2493,7 +2493,7 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], 
             {section ? (
               <div className="fm-form-grid">
                 {section.fields.filter(([key]) => !(data.employeeCategory === 'Non-Teaching' && key === 'teachingExperience')).map(field => (
-                  <Field key={field[0]} field={field[0] === 'employeeCategory' && ['Teaching', 'Non-Teaching'].includes(initial.employeeCategory) ? [field[0], field[1], 'readonly', field[3]] : field} data={data} errors={errors} update={update} collegeOptions={collegeOptions} departmentOptions={departmentOptions} touched={touched} liveErrors={liveErrors} markTouched={markTouched} />
+                  <Field key={field[0]} field={field[0] === 'employeeCategory' && ['Teaching', 'Non-Teaching'].includes(initial.employeeCategory) ? [field[0], field[1], 'readonly', field[3]] : field} data={data} errors={errors} update={update} collegeOptions={collegeOptions} departmentOptions={departmentOptions} departmentLoading={departmentLoading} departmentLoadError={departmentLoadError} touched={touched} liveErrors={liveErrors} markTouched={markTouched} />
                 ))}
               </div>
             ) : (
@@ -2582,6 +2582,8 @@ function FacultyManagement() {
   const [assignmentId, setAssignmentId] = useState(null)
   const [collegeOptions, setCollegeOptions] = useState([])
   const [departmentOptions, setDepartmentOptions] = useState([])
+  const [departmentLoading, setDepartmentLoading] = useState(true)
+  const [departmentLoadError, setDepartmentLoadError] = useState('')
   const [saving, setSaving] = useState(false)
   const [loadError, setLoadError] = useState('')
   const [detail, setDetail] = useState(null)
@@ -2616,25 +2618,47 @@ function FacultyManagement() {
   }, [selectedCollegeId, reloadDirectory, scopeRecords, setFaculty])
   useEffect(() => {
     let active = true
+    setDepartmentLoading(true)
+    setDepartmentLoadError('')
     Promise.all([
       facultyMasterApi.getColleges().catch(() => []),
-      departmentApi.getAll().catch(() => [])
-    ]).then(([colleges, departments]) => {
+      departmentApi.getAll().then(departments => ({ departments })).catch(error => ({ error }))
+    ]).then(([colleges, departmentResult]) => {
       if (!active) return
-      const isEntryActive = row => row && row.status !== 'Inactive' && row.status !== 0 && row.status !== false && row.isActive !== false
+      const isEntryActive = row => {
+        if (!row) return false
+        const status = row.status ?? row.Status ?? row.isActive ?? row.IsActive
+        if (status == null) return true
+        return status === true || status === 1 || ['active', '1', 'true'].includes(String(status).trim().toLowerCase())
+      }
       setCollegeOptions((colleges || []).filter(row => String(row.collegeId ?? row.CollegeId ?? row.id) === String(selectedCollegeId)).filter(isEntryActive).map(row => ({
         value: String(row.collegeId ?? row.CollegeId ?? row.id ?? row.Id ?? ''),
         label: row.collegeName ?? row.CollegeName ?? row.name ?? row.Name ?? '',
         code: row.collegeCode ?? row.CollegeCode ?? row.code ?? row.Code ?? '',
       })))
-      setDepartmentOptions(scopeRecords(departments).filter(isEntryActive).map(row => ({
+      if (departmentResult.error) {
+        setDepartmentOptions([])
+        setDepartmentLoadError(departmentResult.error.message || 'Unable to load departments.')
+        return
+      }
+      setDepartmentLoadError('')
+      // The API scopes this list to the authenticated college. Trust that scope
+      // here; a second client-side college filter can hide valid records when
+      // the header context ID is temporarily unavailable or differently shaped.
+      setDepartmentOptions((departmentResult.departments || []).filter(isEntryActive).map(row => ({
         value: String(row.departmentId ?? row.DepartmentId ?? row.id ?? row.Id ?? ''),
         label: row.departmentName ?? row.DepartmentName ?? row.name ?? row.Name ?? '',
         collegeId: row.collegeId ?? row.CollegeId,
-      })))
-    }).catch(() => {})
+      })).filter(option => option.value && option.value !== 'undefined' && option.label))
+    }).catch(error => {
+      if (active) {
+        setDepartmentOptions([])
+        setDepartmentLoadError(error.message || 'Unable to load departments.')
+      }
+    })
+      .finally(() => { if (active) setDepartmentLoading(false) })
     return () => { active = false }
-  }, [scopeRecords, selectedCollegeId])
+  }, [selectedCollegeId])
   const notify = useCallback(message => {
     clearTimeout(toastTimer.current)
     setToast(message)
@@ -2832,6 +2856,8 @@ function FacultyManagement() {
           faculty={faculty}
           collegeOptions={collegeOptions}
           departmentOptions={departmentOptions}
+          departmentLoading={departmentLoading}
+          departmentLoadError={departmentLoadError}
           selectedCollegeId={selectedCollegeId}
           saving={saving}
           saveError={loadError}

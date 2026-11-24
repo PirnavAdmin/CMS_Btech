@@ -7144,12 +7144,22 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
   const handleSaveRoom = async (e) => {
     e.preventDefault()
     if (saving) return
-    if (!editingRoom.roomNumber?.trim()) return showError('Please enter a room number or code.')
-    if (!editingRoom.roomName?.trim()) return showError('Please enter a room display name.')
     if (!editingRoom.buildingBlock?.trim()) return showError(customBuildingBlock ? 'Please enter the building block.' : 'Please select a building block.')
     if (!editingRoom.floor) return showError('Please select a floor.')
     if (!editingRoom.roomType?.trim()) return showError(customRoomType ? 'Please enter the room type.' : 'Please select a room type.')
     if (!editingRoom.status) return showError('Please select room availability status.')
+
+    const roomToSave = editingRoom.id ? editingRoom : (() => {
+      const existingCodes = new Set(rooms.map(room => String(room.roomNumber || '').trim().toUpperCase()))
+      let sequence = 1
+      let roomNumber = ''
+      do {
+        roomNumber = `ROOM-${String(sequence).padStart(3, '0')}`
+        sequence += 1
+      } while (existingCodes.has(roomNumber))
+      const suffix = String(sequence - 1).padStart(3, '0')
+      return { ...editingRoom, roomNumber, roomName: `${editingRoom.roomType} ${suffix}` }
+    })()
 
     // Rule 1: Prevent double allocation of the same section to multiple rooms
     if (editingRoom.assignedSection) {
@@ -7180,9 +7190,9 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
     try {
       let savedRoom = null
       if (editingRoom.id) {
-        savedRoom = await roomService.updateRoom(editingRoom.id, editingRoom)
+        savedRoom = await roomService.updateRoom(editingRoom.id, roomToSave)
       } else {
-        savedRoom = await roomService.createRoom(editingRoom)
+        savedRoom = await roomService.createRoom(roomToSave)
       }
 
       const targetRoomId = savedRoom?.classroomId || savedRoom?.id || editingRoom.id
@@ -7197,7 +7207,7 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
         }
       }
 
-      showSuccess(`Room "${editingRoom.roomNumber}" saved successfully.`)
+      showSuccess(`Room "${roomToSave.roomNumber}" saved successfully.`)
       await loadRooms()
       closeForm()
     } catch (err) {
@@ -7877,15 +7887,6 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
               <form id="room-editor-form" className="rooms-compact-form" onSubmit={handleSaveRoom}>
                 <div className="rooms-modal-body">
                     <div className="rooms-form-grid">
-                      <div className="rooms-form-group">
-                        <label>Room Code / Number <span className="req-mark">*</span></label>
-                        <input type="text" className="rooms-input" placeholder="e.g. LH-101, CSE-LAB-1" value={editingRoom.roomNumber} onChange={(e) => setEditingRoom({ ...editingRoom, roomNumber: e.target.value })} required />
-                        <small className="rooms-form-hint">Use the code shown on room signage.</small>
-                      </div>
-                      <div className="rooms-form-group">
-                        <label>Room Display Name <span className="req-mark">*</span></label>
-                        <input type="text" className="rooms-input" placeholder="e.g. Lecture Hall 101" value={editingRoom.roomName} onChange={(e) => setEditingRoom({ ...editingRoom, roomName: e.target.value })} required />
-                      </div>
                       <div className="rooms-form-group">
                         <label>Room Type <span className="req-mark">*</span></label>
                         <SearchableSelect label="Room Type" value={customRoomType ? '__other__' : editingRoom.roomType} options={[...ROOM_TYPES, { value: '__other__', label: 'Others' }]} placeholder="Select Room Type" searchPlaceholder="Search room types..." noOptionsMessage="No matching room types. Select Others to enter a custom type." onChange={(value) => {

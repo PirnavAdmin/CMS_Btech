@@ -147,13 +147,16 @@
 
 :root :is(#root, [role="dialog"]) .compact-summary:not([hidden]) > :is(article, div, a, button):not([hidden]) {
   flex: 1 1 0;
-  min-width: 64px;
+  min-width: 0;
 }
 
 :root :is(#root, [role="dialog"]) .compact-summary:not([hidden]) .compact-summary__item small {
-  max-width: none;
+  max-width: 100%;
   overflow-wrap: normal;
-  white-space: nowrap;
+  word-break: normal;
+  hyphens: none;
+  white-space: normal;
+  text-align: center;
   letter-spacing: 0;
   font-size: .6rem;
 }
