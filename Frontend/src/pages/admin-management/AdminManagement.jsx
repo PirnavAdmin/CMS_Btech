@@ -550,9 +550,7 @@ function AcademicYear() {
                   icon={FiClock}
                   items={[
                     { label: 'Status', value: selected.status },
-                    { label: 'Auto Activation', value: selected.autoActivate ? 'Enabled' : 'Manual' },
                     { label: 'Present Active Cycle', value: isPresentYear(selected) ? 'Yes (Current Ongoing)' : 'No' },
-                    { label: 'Historical Record', value: isPastYear(selected) ? 'Yes (Past Cycle)' : 'No' },
                   ]}
                 /></>}</div></ViewDialog>}
           <>
