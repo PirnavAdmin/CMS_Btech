@@ -538,6 +538,8 @@ export default function StudentProfile() {
     }),
     [selectedStudent, setSelectedStudent] = useState(null),
     [photoStudent, setPhotoStudent] = useState(null),
+    [branchTab, setBranchTab] = useState("ALL"),
+    [showFilters, setShowFilters] = useState(false),
     [tab, setTab] = useState("personal"),
     [editing, setEditing] = useState(null);
 
@@ -727,6 +729,24 @@ export default function StudentProfile() {
           .filter(Boolean),
       ),
     ].sort();
+  const availableBranches = useMemo(() => {
+    const map = new Map();
+    scopedStudents.forEach((s) => {
+      const b = s.academic?.branch;
+      if (!b) return;
+      const key = String(b).trim();
+      const label = shortLabel(key);
+      const existing = map.get(key) || { key, label, count: 0 };
+      existing.count += 1;
+      map.set(key, existing);
+    });
+    return Array.from(map.values());
+  }, [scopedStudents]);
+
+  const activeFilterCount =
+    Object.values(filters).filter(Boolean).length +
+    (branchTab !== "ALL" ? 1 : 0);
+
   const filtered = useMemo(
     () =>
       scopedStudents.filter((x) => {
@@ -743,16 +763,19 @@ export default function StudentProfile() {
           ]
             .join(" ")
             .toLowerCase();
-        return (
-          needle.includes(query.trim().toLowerCase()) &&
-          Object.entries(filters).every(
-            ([key, selected]) =>
-              !selected ||
-              (key === "status" ? status(x.status) : a[key]) === selected,
-          )
+        const matchesQuery = needle.includes(query.trim().toLowerCase());
+        const matchesBranch =
+          branchTab === "ALL" ||
+          a.branch === branchTab ||
+          shortLabel(a.branch) === branchTab;
+        const matchesFilters = Object.entries(filters).every(
+          ([key, selected]) =>
+            !selected ||
+            (key === "status" ? status(x.status) : a[key]) === selected,
         );
+        return matchesQuery && matchesBranch && matchesFilters;
       }),
-    [scopedStudents, query, filters],
+    [scopedStudents, query, filters, branchTab],
   );
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)),
     shown = [...filtered].sort((a,b) => sort === 'name' ? name(a).localeCompare(name(b)) : sort === 'admission' ? String(a.application?.admissionNumber || '').localeCompare(String(b.application?.admissionNumber || ''), undefined, { numeric:true }) : 0).slice((Math.min(page, pages) - 1) * PAGE_SIZE, Math.min(page,pages) * PAGE_SIZE),
@@ -767,7 +790,7 @@ export default function StudentProfile() {
         String(x.admissionId) === String(selectedId)
       )
     ) : null);
-  useEffect(() => setPage(1), [query, filters]);
+  useEffect(() => setPage(1), [query, filters, branchTab]);
 
   const updateFilter = (key, next) =>
     setFilters((current) => {
@@ -1089,53 +1112,86 @@ export default function StudentProfile() {
     <>
       <PageHeader
         className="student-profile-page-header"
-        title="Student Management"
-        subtitle="Find and manage approved students in the selected college and academic year."
+        title="Student Profiles"
+        subtitle="Official directory of enrolled students with roll numbers, classroom sections, academic branches, and fee records."
         compactSummary={studentSummaryItems}
       />
       {error ? (
         <State error={error} onRetry={load} />
       ) : (
         <>
-          <section className="sp-directory cm-panel">
-            <header className="course-directory-heading">
-              <div>
-                <span className="cm-eyebrow">Student Profile Directory</span>
-                <p>
-                  {filtered.length} records
-                </p>
+          <section className="sp-directory sa-directory cm-panel">
+            <header className="sa-directory-header course-directory-heading">
+              <div className="sa-header-title-block">
+                <div className="sa-header-icon-badge">
+                  <FiBookOpen aria-hidden="true" />
+                </div>
+                <div className="sa-header-text-wrap">
+                  <div className="sa-header-headline-row">
+                    <h2 className="sa-header-title">Student Profiles Directory</h2>
+                    <span className="sa-header-records-pill">
+                      <span className="sa-records-pulse-dot" aria-hidden="true" />
+                      <strong>{filtered.length}</strong> {filtered.length === 1 ? 'Enrolled Student' : 'Enrolled Students'}
+                      {scopedStudents.length !== filtered.length && (
+                        <span className="sa-records-filtered-hint">(filtered from {scopedStudents.length})</span>
+                      )}
+                    </span>
+                  </div>
+                  <p className="sa-header-desc">
+                    Verified student directory with roll numbers, sections, contacts, and fee status
+                  </p>
+                </div>
+              </div>
+              <div className="directory-export-actions">
+                <ExportMenu
+                  rows={filtered.filter(row => row.exportVerified)}
+                  columns={profileColumns}
+                  title="Student Profiles"
+                  filename="student-profiles"
+                  loading={loading || Boolean(error)}
+                  scope="Current filtered API results"
+                />
+                <button
+                  type="button"
+                  className={`sa-secondary sa-filter-toggle ${showFilters ? 'is-open' : ''} ${activeFilterCount ? 'has-filters' : ''}`}
+                  aria-expanded={showFilters}
+                  aria-controls="profile-filters"
+                  onClick={() => setShowFilters(value => !value)}
+                >
+                  <FiFilter aria-hidden="true" />
+                  {showFilters ? 'Hide filters' : 'Filters'}
+                  {activeFilterCount > 0 && <span className="sa-filter-count">{activeFilterCount}</span>}
+                </button>
               </div>
             </header>
-            <FilterPanel
-              active={Boolean(query || Object.values(filters).some(Boolean))}
-              leadingActions={
-                <div className="directory-export-actions">
-                  <ExportMenu rows={filtered.filter(row => row.exportVerified)} columns={profileColumns} title="Student Profiles" filename="student-profiles" loading={loading || Boolean(error)} scope="Current filtered API results (offline records excluded)" />
+            <section id="profile-filters" className="sa-admission-filters sp-profile-filters" aria-label="Search and filter student profiles" hidden={!showFilters}>
+              <div className="sa-direct-filter-box">
+                <div className="sa-filter-search-row">
+                  <label className="sa-search">
+                    <FiSearch aria-hidden="true" />
+                    <input
+                      value={query}
+                      onChange={event => setQuery(event.target.value)}
+                      title="Search by name, roll number, admission number, registration number, mobile or email"
+                      placeholder="Search name, roll number, admission number, mobile or email..."
+                    />
+                  </label>
+                  {Boolean(query || activeFilterCount > 0) && (
+                    <button
+                      type="button"
+                      className="sa-clear-filters"
+                      onClick={() => {
+                        setQuery('');
+                        setFilters({ department: '', course: '', branch: '', status: '' });
+                        setBranchTab('ALL');
+                        setPage(1);
+                      }}
+                    >
+                      <FiX aria-hidden="true" /> Clear filters
+                    </button>
+                  )}
                 </div>
-              }
-              onClear={() => {
-                setQuery("");
-                setFilters({
-                  department: "",
-                  course: "",
-                  branch: "",
-                  status: "",
-                });
-                setPage(1);
-              }}
-            >
-              <div className="sp-toolbar">
-                <label>
-                  <FiSearch />
-                  <input
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search name, registration, admission, mobile or email"
-                  />
-                </label>
-                <FiFilter />
-              </div>
-              <div className="sp-filters">
+                <div className="sa-filter-grid sp-filter-grid">
                 {[
                   ["department", "Department"],
                   ["course", "Course"],
@@ -1176,9 +1232,67 @@ export default function StudentProfile() {
                     </ProjectSelect>
                   </label>
                 ))}
+                </div>
               </div>
-            </FilterPanel>
-            <label className="sp-sort">Sort by <select aria-label="Sort students" value={sort} onChange={event => { setSort(event.target.value); setPage(1) }}><option value="recent">Recently added</option><option value="name">Student name</option><option value="admission">Admission number</option></select></label>
+            </section>
+
+            <div className="sa-quick-filter-bar">
+              <div className="sa-status-tabs" role="tablist" aria-label="Filter by branch">
+                <button
+                  type="button"
+                  className={`sa-status-tab ${branchTab === 'ALL' ? 'is-active' : ''}`}
+                  onClick={() => { setBranchTab('ALL'); setPage(1); }}
+                >
+                  All ({scopedStudents.length})
+                </button>
+                {availableBranches.map(b => (
+                  <button
+                    key={b.key}
+                    type="button"
+                    className={`sa-status-tab ${branchTab === b.key ? 'is-active' : ''}`}
+                    onClick={() => { setBranchTab(b.key); setPage(1); }}
+                  >
+                    {b.label} ({b.count})
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: 'auto' }}>
+                {!showFilters && (
+                  <label className="sa-search" style={{ height: '34px', minWidth: '220px', maxWidth: '300px' }}>
+                    <FiSearch aria-hidden="true" />
+                    <input
+                      value={query}
+                      onChange={event => setQuery(event.target.value)}
+                      placeholder="Quick search name, roll no..."
+                    />
+                    {query && (
+                      <button
+                        type="button"
+                        onClick={() => setQuery('')}
+                        style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '0 4px', color: 'var(--text-muted)' }}
+                      >
+                        <FiX />
+                      </button>
+                    )}
+                  </label>
+                )}
+                <label className="sa-sort">
+                  Sort by{" "}
+                  <select
+                    aria-label="Sort students"
+                    value={sort}
+                    onChange={(event) => {
+                      setSort(event.target.value);
+                      setPage(1);
+                    }}
+                  >
+                    <option value="recent">Recently added</option>
+                    <option value="name">Student name</option>
+                    <option value="admission">Admission number</option>
+                  </select>
+                </label>
+              </div>
+            </div>
             <div className="sp-table-wrap" tabIndex={0} role="region" aria-label="Student directory">
               <table className="sp-directory-table" ref={tableRef}>
                 <thead>
