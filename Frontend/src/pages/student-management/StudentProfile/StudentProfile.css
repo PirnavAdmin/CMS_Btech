@@ -1113,23 +1113,27 @@ main.student-profile .sp-directory-table tbody td:first-child {
   color: #475569 !important;
 }
 
-/* Card 2: APPROVED */
+/* Card 2: BRANCHES */
+#root main.student-profile .student-profile-page-header .compact-summary > .compact-summary__item--branches,
 #root main.student-profile .student-profile-page-header .compact-summary > .compact-summary__item--approved,
 #root main.student-profile .student-profile-page-header .compact-summary > .compact-summary__item--active,
 #root main.student-profile .student-profile-page-header .compact-summary > .compact-summary__item:nth-child(2) {
   border-color: #a7f3d0 !important;
   background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%) !important;
 }
+#root main.student-profile .student-profile-page-header .compact-summary > .compact-summary__item--branches::before,
 #root main.student-profile .student-profile-page-header .compact-summary > .compact-summary__item--approved::before,
 #root main.student-profile .student-profile-page-header .compact-summary > .compact-summary__item--active::before,
 #root main.student-profile .student-profile-page-header .compact-summary > .compact-summary__item:nth-child(2)::before {
   background: linear-gradient(90deg, #10b981, #34d399) !important;
 }
+#root main.student-profile .student-profile-page-header .compact-summary > .compact-summary__item--branches strong,
 #root main.student-profile .student-profile-page-header .compact-summary > .compact-summary__item--approved strong,
 #root main.student-profile .student-profile-page-header .compact-summary > .compact-summary__item--active strong,
 #root main.student-profile .student-profile-page-header .compact-summary > .compact-summary__item:nth-child(2) strong {
   color: #059669 !important;
 }
+#root main.student-profile .student-profile-page-header .compact-summary > .compact-summary__item--branches small,
 #root main.student-profile .student-profile-page-header .compact-summary > .compact-summary__item--approved small,
 #root main.student-profile .student-profile-page-header .compact-summary > .compact-summary__item--active small,
 #root main.student-profile .student-profile-page-header .compact-summary > .compact-summary__item:nth-child(2) small {

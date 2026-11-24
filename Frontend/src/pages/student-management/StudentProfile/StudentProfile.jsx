@@ -137,7 +137,7 @@ import { useAcademic } from "../../../context/AcademicContext";
 import "./StudentProfile.css";
 
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 10;
 const TABS = [
   ["personal", "Personal & Contact", FiUser],
   ["parent", "Parent / Guardian", FiUsers],
@@ -777,8 +777,67 @@ export default function StudentProfile() {
       }),
     [scopedStudents, query, filters, branchTab],
   );
-  const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)),
-    shown = [...filtered].sort((a,b) => sort === 'name' ? name(a).localeCompare(name(b)) : sort === 'admission' ? String(a.application?.admissionNumber || '').localeCompare(String(b.application?.admissionNumber || ''), undefined, { numeric:true }) : 0).slice((Math.min(page, pages) - 1) * PAGE_SIZE, Math.min(page,pages) * PAGE_SIZE),
+  const getStudentSortName = (s) => {
+    if (!s) return "";
+    const n =
+      studentFullName(s) ||
+      s.studentName ||
+      s.fullName ||
+      s.name ||
+      s.personal?.fullName ||
+      (s.personal?.firstName
+        ? [s.personal.firstName, s.personal.middleName, s.personal.lastName]
+            .filter(Boolean)
+            .join(" ")
+        : "") ||
+      "";
+    return String(n).trim().toLowerCase();
+  };
+
+  const getStudentSortAdmNo = (s) => {
+    if (!s) return "";
+    const app = s.application || {};
+    const adm = app.admissionNumber || s.admissionNumber || s.admissionId || s.id || "";
+    return String(adm).trim();
+  };
+
+  const sortedFiltered = useMemo(() => {
+    const list = [...filtered];
+    if (sort === "name" || sort === "name_asc") {
+      return list.sort((a, b) =>
+        getStudentSortName(a).localeCompare(getStudentSortName(b), undefined, {
+          sensitivity: "base",
+        }),
+      );
+    }
+    if (sort === "name_desc") {
+      return list.sort((a, b) =>
+        getStudentSortName(b).localeCompare(getStudentSortName(a), undefined, {
+          sensitivity: "base",
+        }),
+      );
+    }
+    if (sort === "admission" || sort === "admission_asc") {
+      return list.sort((a, b) =>
+        getStudentSortAdmNo(a).localeCompare(getStudentSortAdmNo(b), undefined, {
+          numeric: true,
+          sensitivity: "base",
+        }),
+      );
+    }
+    if (sort === "admission_desc") {
+      return list.sort((a, b) =>
+        getStudentSortAdmNo(b).localeCompare(getStudentSortAdmNo(a), undefined, {
+          numeric: true,
+          sensitivity: "base",
+        }),
+      );
+    }
+    return list;
+  }, [filtered, sort]);
+
+  const pages = Math.max(1, Math.ceil(sortedFiltered.length / PAGE_SIZE)),
+    shown = sortedFiltered.slice((Math.min(page, pages) - 1) * PAGE_SIZE, Math.min(page, pages) * PAGE_SIZE),
     selected = selectedStudent || (selectedId ? (
       scopedStudents.find((x) =>
         String(x.id) === String(selectedId) ||
@@ -790,7 +849,7 @@ export default function StudentProfile() {
         String(x.admissionId) === String(selectedId)
       )
     ) : null);
-  useEffect(() => setPage(1), [query, filters, branchTab]);
+  useEffect(() => setPage(1), [query, filters, branchTab, sort]);
 
   const updateFilter = (key, next) =>
     setFilters((current) => {
@@ -1071,10 +1130,11 @@ export default function StudentProfile() {
   };
   const studentSummaryItems = useMemo(() => {
     const total = scopedStudents.length;
-    const approved = scopedStudents.filter((s) => {
-      const st = String(status(s.status) || s.status || s.academic?.status || "").toLowerCase();
-      return st === "approved" || st === "active" || isApprovedAdmission(s);
-    }).length;
+    const branchCount = new Set(
+      scopedStudents
+        .map((s) => s.academic?.branch || s.academic?.branchName)
+        .filter(Boolean),
+    ).size;
     const maleCount = scopedStudents.filter((s) => {
       const g = String(s.personal?.gender || s.gender || "").trim().toLowerCase();
       return g === "male" || g === "m";
@@ -1086,7 +1146,7 @@ export default function StudentProfile() {
 
     return [
       { label: "TOTAL", value: total, tone: "total" },
-      { label: "APPROVED", value: approved, tone: "approved" },
+      { label: "BRANCHES", value: branchCount || 1, tone: "branches" },
       { label: "MALE", value: maleCount, tone: "male" },
       { label: "FEMALE", value: femaleCount, tone: "female" },
     ];
@@ -1287,8 +1347,10 @@ export default function StudentProfile() {
                     }}
                   >
                     <option value="recent">Recently added</option>
-                    <option value="name">Student name</option>
-                    <option value="admission">Admission number</option>
+                    <option value="name_asc">Student Name (A → Z)</option>
+                    <option value="name_desc">Student Name (Z → A)</option>
+                    <option value="admission_asc">Admission No (Ascending)</option>
+                    <option value="admission_desc">Admission No (Descending)</option>
                   </select>
                 </label>
               </div>
