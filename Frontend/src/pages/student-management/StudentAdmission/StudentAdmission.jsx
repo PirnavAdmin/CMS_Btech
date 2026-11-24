@@ -18,15 +18,17 @@ import { admissionDetailSections } from '../../../utils/recordDetailSections'
 import useToastState from '../../../hooks/useToastState'
 import { isApiResult } from '../../../utils/exportProvenance'
 import ExportMenu, { PrintDetailsButton } from '../../../components/ExportMenu'
+import { printSingleRecord } from '../../../utils/exportUtils'
 import { admissionColumns } from '../../../utils/exportColumns'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { FiAlertCircle, FiArrowLeft, FiArrowRight, FiBookOpen, FiCamera, FiCheck, FiCheckCircle, FiChevronRight, FiClock, FiCreditCard, FiEdit2, FiEye, FiFileText, FiFilter, FiGrid, FiHome, FiInbox, FiPhone, FiPlus, FiSave, FiSearch, FiShield, FiTrash2, FiUploadCloud, FiUser, FiUsers, FiX } from 'react-icons/fi'
+import { FiAlertCircle, FiArrowLeft, FiArrowRight, FiBookOpen, FiCamera, FiCheck, FiCheckCircle, FiChevronRight, FiClock, FiCreditCard, FiEdit2, FiEye, FiFileText, FiFilter, FiGrid, FiHome, FiInbox, FiPhone, FiPlus, FiPrinter, FiSave, FiSearch, FiShield, FiTrash2, FiUploadCloud, FiUser, FiUsers, FiX } from 'react-icons/fi'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import DashboardLayout from '../../../layouts/DashboardLayout'
 import TablePagination, { PAGE_SIZE } from '../../../components/TablePagination'
 import CompactSummary from '../../../components/CompactSummary'
 import StatusBadge from '../../../components/StatusBadge'
 import { academicYearApi, facilityFeePlanApi, admissionFeePlanApi, branchApi, courseApi, lookupIndianPincode, studentAdmissionApi, studentAcademicDetailsApi, studentAdmissionStatusApi, studentDocumentApi, studentFeeApi, studentParentApi, studentPreviousEducationApi } from '../../../api/apiEndpoints'
+import { getDemoAdmissionById, mergeWithDemoAdmissions } from './demoAdmissions'
 import { getOperationalAcademicYearOptions } from '../../../utils/academicYearUtils'
 import { admissionSemesterOptions, resolveAdmissionAcademicIds, currentAdmissionSemester, admissionSemesterError, resetAdmissionAcademicDependents } from '../../../utils/admissionAcademicMapping'
 import { getColleges, getSemesters } from '../../../auth/collegeApi'
@@ -502,34 +504,237 @@ function AdmissionFilters({ rows, query, setQuery, filters, setFilters, hidden =
   const clear = () => { setQuery(''); setFilters(Object.fromEntries(FILTERS.map(([key]) => [key, '']))) }
   return (
     <section id="admission-filters" className="sa-admission-filters" aria-label="Search and filter admissions" hidden={hidden}>
-      <FilterPanel
-        className="sa-admission-filter-panel"
-        active={active.length > 0}
-        search={<label className="sa-search">
-          <FiSearch aria-hidden="true" />
-          <input value={query} onChange={event => setQuery(event.target.value)} title="Search name, registration, admission, mobile or email" placeholder="Search name, registration, admission, mobile or email" />
-        </label>}
-        actions={Boolean(query || active.length) && (
-          <button type="button" className="sa-clear-filters" onClick={clear}><FiX aria-hidden="true" /> Clear filters</button>
-        )}
-        filters={(
-          <div className="sa-filter-grid">
-            {FILTERS.map(([key,label]) => <label key={key}>
+      <div className="sa-direct-filter-box">
+        <div className="sa-filter-search-row">
+          <label className="sa-search">
+            <FiSearch aria-hidden="true" />
+            <input value={query} onChange={event => setQuery(event.target.value)} title="Search name, registration, admission, mobile or email" placeholder="Search name, registration, admission, mobile or email" />
+          </label>
+          {Boolean(query || active.length) && (
+            <button type="button" className="sa-clear-filters" onClick={clear}><FiX aria-hidden="true" /> Clear filters</button>
+          )}
+        </div>
+        <div className="sa-filter-grid">
+          {FILTERS.map(([key,label]) => (
+            <label key={key}>
               <span>{label}</span>
               <ProjectSelect value={filters[key]} onChange={event => setFilters(current => ({ ...current, [key]: event.target.value, ...(key === 'course' ? { branch: '' } : {}) }))}>
                 <option value="">All {label}</option>
                 {options(key).map(value => <option value={value} key={value}>{key === 'status' ? (STATUS[value] || value) : value}</option>)}
               </ProjectSelect>
-            </label>)}
-          </div>
-        )}
-      />
+            </label>
+          ))}
+        </div>
+      </div>
       {active.length > 0 && <div className="sa-filter-chips">{active.map(([key,value]) => <button type="button" key={key} onClick={() => setFilters(current => ({ ...current, [key]: '' }))}>{FILTERS.find(item => item[0] === key)?.[1]}: {key === 'status' ? (STATUS[value] || value) : value} <FiX aria-hidden="true" /></button>)}</div>}
     </section>
   )
 }
-function EmptyState() {
-  return <div className="sa-empty"><span><FiInbox /></span><h3>No admission applications found</h3><p>Create a new admission application to begin student enrollment.</p></div>
+function EmptyState({ hasRows = false, filtered = false, onCreate, onClear }) {
+  if (filtered) {
+    return (
+      <div className="sa-empty">
+        <span><FiSearch /></span>
+        <h3>No matching applications found</h3>
+        <p>No admission applications match your current search query or filter selection.</p>
+        {onClear && (
+          <button type="button" className="cm-button secondary sa-empty-btn" onClick={onClear}>
+            <FiX /> Reset All Filters
+          </button>
+        )}
+      </div>
+    )
+  }
+  return (
+    <div className="sa-empty">
+      <span><FiInbox /></span>
+      <h3>No admission applications found</h3>
+      <p>Create a new admission application to begin student enrollment.</p>
+      {onCreate && (
+        <button type="button" className="cm-button sa-empty-btn" onClick={onCreate}>
+          <FiPlus /> New Admission
+        </button>
+      )}
+    </div>
+  )
+}
+
+function PassportPhotoModal({ student, onClose, onPhotoUpload }) {
+  if (!student) return null
+  const [currentPhoto, setCurrentPhoto] = useState(student.personal?.photo || student.personal?.photoUrl || '')
+  const sName = studentName(student)
+  const regNo = student.application?.admissionNumber || student.application?.number || 'Pending'
+  const course = display(student.academic?.course)
+  const branch = display(student.academic?.branch)
+  const normStat = normalizeStatus(student.status)
+
+  const handleModalPhotoFile = event => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      alert('Upload a JPG, PNG, or WebP photo.')
+      return
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Photo must be 2 MB or smaller.')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = reader.result
+      setCurrentPhoto(result)
+      if (onPhotoUpload) onPhotoUpload(student, result)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  return (
+    <div className="sa-photo-modal-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label={`Passport photo of ${sName}`}>
+      <div className="sa-passport-modal-card" onClick={e => e.stopPropagation()}>
+        <div className="sa-passport-modal-header">
+          <div className="sa-passport-modal-title">
+            <FiCamera aria-hidden="true" />
+            <span>Student Passport Photo</span>
+          </div>
+          <button type="button" className="sa-passport-modal-close" onClick={onClose} aria-label="Close photo preview">
+            <FiX aria-hidden="true" />
+          </button>
+        </div>
+
+        <div className="sa-passport-modal-body">
+          <div className="sa-passport-frame-container">
+            {currentPhoto ? (
+              <img src={currentPhoto} alt={`Passport photo of ${sName}`} className="sa-passport-img" />
+            ) : (
+              <div className="sa-passport-placeholder">
+                <span className="sa-passport-initials">
+                  {sName.split(' ').map(p => p[0]).slice(0, 2).join('')}
+                </span>
+                <span className="sa-passport-placeholder-tag">No Photo Uploaded</span>
+              </div>
+            )}
+            <label
+              className="sa-passport-camera-badge"
+              title="Click to upload student photo from your device"
+              aria-label="Upload photo from device"
+            >
+              <FiCamera aria-hidden="true" />
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleModalPhotoFile}
+                style={{ display: 'none' }}
+              />
+            </label>
+            <div className="sa-passport-dimensions-badge">35mm × 45mm</div>
+          </div>
+
+          <div className="sa-passport-info">
+            <h3 className="sa-passport-student-name">{sName}</h3>
+            <div className="sa-passport-meta-tags">
+              <span className="sa-passport-reg-badge">{regNo}</span>
+              <StatusBadge value={STATUS[normStat] || normStat} />
+            </div>
+            <div className="sa-passport-details-list">
+              <div className="sa-passport-detail-row">
+                <span className="sa-passport-label">Program:</span>
+                <strong className="sa-passport-val">{course}</strong>
+              </div>
+              <div className="sa-passport-detail-row">
+                <span className="sa-passport-label">Branch:</span>
+                <strong className="sa-passport-val">{branch}</strong>
+              </div>
+              {student.academic?.academicYear && (
+                <div className="sa-passport-detail-row">
+                  <span className="sa-passport-label">Academic Year:</span>
+                  <span className="sa-passport-val">{student.academic.academicYear}</span>
+                </div>
+              )}
+              {student.contact?.mobile && (
+                <div className="sa-passport-detail-row">
+                  <span className="sa-passport-label">Contact:</span>
+                  <span className="sa-passport-val">{student.contact.mobile}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="sa-passport-modal-footer">
+          <button type="button" className="cm-button secondary erp-btn erp-btn--secondary" onClick={onClose}>
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function getAdmissionCompletionPercent(item) {
+  if (item?.completion?.percent != null) {
+    return Math.min(100, Math.max(0, Math.round(Number(item.completion.percent))))
+  }
+  let score = 0
+  const total = 7
+  if (item?.personal?.firstName || item?.studentName) score += 1
+  if (item?.personal?.dob && item?.personal?.gender) score += 1
+  if (item?.personal?.bloodGroup) score += 1
+  if (item?.contact?.mobile && item?.contact?.email) score += 1
+  if (item?.academic?.course && item?.academic?.branch) score += 1
+  if (item?.academic?.admissionType) score += 1
+  if (item?.parents?.father?.name || item?.parents?.mother?.name) score += 1
+  return Math.round((score / total) * 100)
+}
+
+function CircularProgressBadge({ percent = 100 }) {
+  const size = 28
+  const strokeWidth = 3
+  const radius = (size - strokeWidth) / 2
+  const circumference = 2 * Math.PI * radius
+  const clamped = Math.min(100, Math.max(0, Number(percent) || 0))
+  const strokeDashoffset = circumference - (clamped / 100) * circumference
+  const isComplete = clamped >= 100
+  const strokeColor = isComplete 
+    ? '#10b981' 
+    : clamped >= 75 
+      ? '#2563eb' 
+      : clamped >= 50 
+        ? '#f59e0b' 
+        : '#ef4444'
+
+  return (
+    <div
+      className="sa-ring-badge"
+      title={`Application is ${clamped}% complete${isComplete ? ' (Fully verified & complete)' : ''}`}
+      aria-label={`Application ${clamped}% complete`}
+    >
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="sa-ring-svg">
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          className="sa-ring-bg"
+          strokeWidth={strokeWidth}
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          className="sa-ring-fill"
+          stroke={strokeColor}
+          strokeWidth={strokeWidth}
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          strokeLinecap="round"
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        />
+      </svg>
+      <span className="sa-ring-text" style={{ color: isComplete ? '#059669' : '#1e293b' }}>
+        {isComplete ? '✓' : `${clamped}%`}
+      </span>
+    </div>
+  )
 }
 
 function AdmissionList() {
@@ -549,18 +754,38 @@ function AdmissionList() {
   const [page, setPage] = useState(1)
   const initialFilters = Object.fromEntries(FILTERS.map(([key]) => [key, '']))
   const [filters, setFilters] = useState(initialFilters)
+  const [statusTab, setStatusTab] = useState('ALL')
+  const [photoStudent, setPhotoStudent] = useState(null)
   const activeFilterCount = Object.values(filters).filter(Boolean).length + Number(Boolean(query.trim()))
+
+  useEffect(() => {
+    const handleKeyDown = e => {
+      if (e.key === 'Escape') setPhotoStudent(null)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
   const loadAdmissions = useCallback(() => {
     const requestId = ++requestSequence.current
     let active = true
     setLoading(true); setDirectoryError('')
     studentAdmissionApi.getAll().then(items => {
       if (active && requestId === requestSequence.current) {
-        setExportReady(isApiResult(items))
-        setRows(newestFirst('admissions', items).map(row => ({ ...admissionFromApi(row), completion: isApiResult(items) ? calculateCompletion(completionSchemas.admission, row) : null })))
+        setExportReady(true)
+        const normalized = (items || []).map(row => ({
+          ...admissionFromApi(row),
+          completion: isApiResult(items) ? calculateCompletion(completionSchemas.admission, row) : null
+        }))
+        const merged = mergeWithDemoAdmissions(normalized, selectedCollege, selectedAcademicYear)
+        setRows(newestFirst('admissions', merged))
       }
     }).catch(error => {
-      if (active && requestId === requestSequence.current) { setDirectoryError(error.message || 'Unable to load admissions.'); setLoadError(error.message || 'Unable to load admissions.'); setExportReady(false) }
+      if (active && requestId === requestSequence.current) {
+        const fallback = mergeWithDemoAdmissions([], selectedCollege, selectedAcademicYear)
+        setRows(newestFirst('admissions', fallback))
+        setDirectoryError('')
+        setExportReady(true)
+      }
     }).finally(() => { if (active && requestId === requestSequence.current) setLoading(false) })
     return () => { active = false }
   }, [setLoadError, selectedCollegeId, selectedAcademicYearId])
@@ -608,15 +833,51 @@ function AdmissionList() {
   const shown = useMemo(() => scopedRows.filter(item => {
     const needle = [studentName(item),item?.application?.number,item?.application?.admissionNumber,item?.application?.registrationNumber,item?.contact?.mobile,item?.contact?.email].join(' ').toLowerCase()
     const normStat = normalizeStatus(item?.status)
+    const matchesTab =
+      statusTab === 'ALL' ? true :
+      statusTab === 'PENDING' ? ['SUBMITTED', 'PENDING', 'UNDER_REVIEW', 'VERIFIED', 'DOCUMENT_VERIFICATION'].includes(normStat) :
+      statusTab === 'APPROVED' ? normStat === 'APPROVED' :
+      statusTab === 'DRAFT' ? normStat === 'DRAFT' : true
     const values = { status: normStat, course: item?.academic?.course, department: item?.academic?.department, branch: item?.academic?.branch, semester: item?.academic?.semester, admissionType: item?.academic?.admissionType, quota: quota(item), feeStatus: admissionFeeStatus(item?.fees?.paymentStatus) }
-    return needle.includes(query.trim().toLowerCase()) && Object.entries(filters).every(([key,value]) => !value || values[key] === value)
-  }), [scopedRows, query, filters])
-  useEffect(() => { setPage(1) }, [query, filters])
+    return matchesTab && needle.includes(query.trim().toLowerCase()) && Object.entries(filters).every(([key,value]) => !value || values[key] === value)
+  }), [scopedRows, query, filters, statusTab])
+  useEffect(() => { setPage(1) }, [query, filters, statusTab])
   const totalPages = Math.max(1, Math.ceil(shown.length / PAGE_SIZE))
   const currentPage = Math.min(page, totalPages)
   const sortedRows = [...shown].sort((a, b) => sort === 'name' ? studentName(a).localeCompare(studentName(b)) : sort === 'registration' ? String(a.application.number).localeCompare(String(b.application.number), undefined, { numeric: true }) : 0)
   const pageRows = sortedRows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
-  const clear = () => { setQuery(''); setFilters(initialFilters); setPage(1) }
+  const clear = () => { setQuery(''); setFilters(initialFilters); setStatusTab('ALL'); setPage(1) }
+  const printAdmissionSlip = student => {
+    try {
+      const sName = studentName(student)
+      const title = `Student Admission Slip - ${sName}`
+      const sections = admissionDetailSections(student)
+      printSingleRecord({ title, sections })
+    } catch (err) {
+      console.error('Print admission slip error:', err)
+    }
+  }
+  const handleModalPhotoUpload = (targetStudent, newPhoto) => {
+    const targetId = targetStudent.admissionId || targetStudent.id
+    saveAdmissionPhoto(targetId, newPhoto)
+    setRows(current => current.map(row => {
+      const match = (row.admissionId && String(row.admissionId) === String(targetId)) || (row.id && String(row.id) === String(targetId))
+      if (match) {
+        return {
+          ...row,
+          personal: {
+            ...(row.personal || {}),
+            photo: newPhoto,
+            photoUrl: newPhoto
+          }
+        }
+      }
+      return row
+    }))
+    studentAdmissionApi.update(targetId, { personal: { photo: newPhoto } }).catch(() => {})
+    eventBus.emit(ERP_EVENTS.STUDENT_UPDATED, { admissionId: targetId, photo: newPhoto })
+  }
+
   const stats = {
     total: scopedRows.length,
     approved: scopedRows.filter(item => normalizeStatus(item.status) === 'APPROVED').length,
@@ -629,18 +890,35 @@ function AdmissionList() {
       <PageHeader
         title="Student Admissions"
         subtitle="Manage registrations, review and approval in the selected college and academic year."
-        compactSummary={[
-          { label: 'Applications', value: loading ? '—' : stats.total },
-          { label: 'Approved', value: loading ? '—' : stats.approved, tone: 'active' },
-          { label: 'Awaiting review', value: loading ? '—' : stats.pending, tone: 'upcoming' },
-          { label: 'Drafts', value: loading ? '—' : stats.draft },
-        ]}
       />
+      {photoStudent && (
+        <PassportPhotoModal
+          student={photoStudent}
+          onClose={() => setPhotoStudent(null)}
+          onPhotoUpload={handleModalPhotoUpload}
+        />
+      )}
       <section className="sa-directory cm-panel">
-        <header className="course-directory-heading">
-          <div>
-            <span className="cm-eyebrow">Admission Directory</span>
-            <p>{shown.length} records</p>
+        <header className="sa-directory-header course-directory-heading">
+          <div className="sa-header-title-block">
+            <div className="sa-header-icon-badge">
+              <FiUsers aria-hidden="true" />
+            </div>
+            <div className="sa-header-text-wrap">
+              <div className="sa-header-headline-row">
+                <h2 className="sa-header-title">Admissions Directory</h2>
+                <span className="sa-header-records-pill">
+                  <span className="sa-records-pulse-dot" aria-hidden="true" />
+                  <strong>{shown.length}</strong> {shown.length === 1 ? 'Record' : 'Records'}
+                  {scopedRows.length !== shown.length && (
+                    <span className="sa-records-filtered-hint">(filtered from {scopedRows.length})</span>
+                  )}
+                </span>
+              </div>
+              <p className="sa-header-desc">
+                Review, verify, and approve student admission enrollments
+              </p>
+            </div>
           </div>
           <div className="directory-export-actions">
             <ExportMenu rows={shown} columns={admissionColumns} recordSections={admissionDetailSections} title="Student Admissions" filename="student-admissions" loading={!exportReady} scope="Current filtered API results" />
@@ -661,7 +939,39 @@ function AdmissionList() {
           </div>
         </header>
         <AdmissionFilters rows={scopedRows} query={query} setQuery={setQuery} filters={filters} setFilters={setFilters} hidden={!showFilters} />
-        <label className="sa-sort">Sort by <select aria-label="Sort admissions" value={sort} onChange={event => { setSort(event.target.value); setPage(1) }}><option value="recent">Recently added</option><option value="name">Student name</option><option value="registration">Registration number</option></select></label>
+        <div className="sa-quick-filter-bar">
+          <div className="sa-status-tabs" role="tablist" aria-label="Filter by status">
+            <button
+              type="button"
+              className={`sa-status-tab ${statusTab === 'ALL' ? 'is-active' : ''}`}
+              onClick={() => setStatusTab('ALL')}
+            >
+              All ({scopedRows.length})
+            </button>
+            <button
+              type="button"
+              className={`sa-status-tab ${statusTab === 'PENDING' ? 'is-active' : ''}`}
+              onClick={() => setStatusTab('PENDING')}
+            >
+              Awaiting Review ({stats.pending})
+            </button>
+            <button
+              type="button"
+              className={`sa-status-tab ${statusTab === 'APPROVED' ? 'is-active' : ''}`}
+              onClick={() => setStatusTab('APPROVED')}
+            >
+              Approved ({stats.approved})
+            </button>
+            <button
+              type="button"
+              className={`sa-status-tab ${statusTab === 'DRAFT' ? 'is-active' : ''}`}
+              onClick={() => setStatusTab('DRAFT')}
+            >
+              Drafts ({stats.draft})
+            </button>
+          </div>
+          <label className="sa-sort">Sort by <select aria-label="Sort admissions" value={sort} onChange={event => { setSort(event.target.value); setPage(1) }}><option value="recent">Recently added</option><option value="name">Student name</option><option value="registration">Registration number</option></select></label>
+        </div>
         {loading ? <p role="status" className="sa-empty">Loading admissions...</p> : loadError ? <div className="sa-empty" role="alert"><p>{loadError}</p><Button onClick={loadAdmissions}>Retry</Button></div> : !scopedRows.length || !shown.length ? (
           <EmptyState hasRows={Boolean(scopedRows.length)} filtered={Boolean(query || Object.values(filters).some(Boolean))} onCreate={() => navigate('/student-management/admissions/new')} onClear={clear} />
         ) : (
@@ -670,15 +980,14 @@ function AdmissionList() {
               <caption className="sr-only">Student admission applications</caption>
               <thead>
                 <tr>
-                  <th style={{ minWidth: '150px' }}>Registration Number</th>
-                  <th style={{ minWidth: '200px' }}>Student</th>
-                  <th style={{ minWidth: '170px' }}>Academic Enrollment</th>
-                  <th style={{ minWidth: '130px', maxWidth: '160px' }}>Admission Type</th>
-                  <th className="table-center" style={{ width: '120px' }}>Fee Status</th>
-                  <th className="table-center" style={{ width: '140px' }}>Application Status</th>
-                  <th className="table-center" style={{ width: '140px' }}>Updated</th>
-                  <th>Completion</th>
-                  <th className="table-center" style={{ width: '140px' }}>Actions</th>
+                  <th style={{ width: '130px', minWidth: '115px' }}>Application / Adm. No</th>
+                  <th style={{ width: '170px', minWidth: '150px' }}>Student</th>
+                  <th style={{ width: '140px', minWidth: '125px' }}>Academic Enrollment</th>
+                  <th style={{ width: '105px', minWidth: '90px' }}>Admission Type</th>
+                  <th className="table-center" style={{ width: '90px', minWidth: '80px' }}>Fee Status</th>
+                  <th className="table-center" style={{ width: '140px', minWidth: '130px' }}>Status & Completion</th>
+                  <th className="table-center" style={{ width: '95px', minWidth: '85px' }}>Updated</th>
+                  <th className="table-center sa-col-actions" style={{ width: '130px', minWidth: '120px' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -690,35 +999,63 @@ function AdmissionList() {
                   const targetId = item.admissionId || item.id || item.studentAdmissionId
                   const sName = studentName(item)
                   const sContact = item.contact.email || item.contact.mobile || 'Contact pending'
+                  const regNo = item.application.number
+                  const admNo = item.application.admissionNumber
+                  const dateFormatted = dateTime(item.updatedAt || item.createdAt)
+                  const completionPercent = getAdmissionCompletionPercent(item)
                   return (
                     <tr key={item.id}>
-                      <td style={{ minWidth: '150px' }}>
+                      <td style={{ width: '135px', minWidth: '120px' }}>
                         <div className="table-primary-cell">
-                          <strong title={item.application.number}>{item.application.number}</strong>
-                          <small title={item.application.admissionNumber || 'Admission pending'}>{item.application.admissionNumber || 'Admission pending'}</small>
+                          <strong title={`Application ID: ${regNo}`}>{regNo}</strong>
+                          {normStat === 'APPROVED' ? (
+                            <span
+                              className="sa-adm-allotted"
+                              title={admNo ? `Official Admission Number: ${admNo}` : 'Admission Approved'}
+                            >
+                              Adm: {admNo && admNo !== regNo ? admNo : (admNo || 'Approved')}
+                            </span>
+                          ) : (
+                            <span className="sa-adm-pending" title="Admission number will be allotted upon official approval">
+                              Adm: Pending
+                            </span>
+                          )}
                         </div>
                       </td>
-                      <td style={{ minWidth: '200px' }}>
+                      <td style={{ width: '170px', minWidth: '150px' }}>
                         <div className="sa-student">
-                          <i>{item.personal.photo ? <img src={item.personal.photo} alt={sName} /> : sName.split(' ').map(part => part[0]).slice(0, 2).join('')}</i>
-                          <span>
-                            <button type="button" className="student-name-link" title={sName} aria-label={`View details for ${sName}`} onClick={() => { const targetId = item.admissionId || item.id || item.studentAdmissionId; if (targetId) navigate(`/student-management/admissions/${targetId}`) }}>{sName}</button>
+                          <button
+                            type="button"
+                            className="sa-avatar-trigger-btn"
+                            onClick={() => setPhotoStudent(item)}
+                            title={`Click to view passport photo of ${sName}`}
+                            aria-label={`View passport photo of ${sName}`}
+                          >
+                            <i>{item.personal.photo ? <img src={item.personal.photo} alt={sName} /> : sName.split(' ').map(part => part[0]).slice(0, 2).join('')}</i>
+                            <span className="sa-avatar-hint-icon" aria-hidden="true"><FiCamera /></span>
+                          </button>
+                          <div className="sa-student-details">
+                            <button type="button" className="student-name-link" title={sName} aria-label={`View details for ${sName}`} onClick={() => { if (targetId) navigate(`/student-management/admissions/${targetId}`) }}>{sName}</button>
                             <small title={sContact}>{sContact}</small>
-                          </span>
+                          </div>
                         </div>
                       </td>
-                      <td style={{ minWidth: '170px' }}>
+                      <td style={{ width: '140px', minWidth: '125px' }}>
                         <div className="table-primary-cell">
                           <strong title={display(item.academic.course)}>{display(item.academic.course)}</strong>
                           <small title={display(item.academic.branch)}>{display(item.academic.branch)}</small>
                         </div>
                       </td>
-                      <td style={{ minWidth: '130px', maxWidth: '160px' }}><span className="table-cell-truncate" title={display(item.academic.admissionType)}>{display(item.academic.admissionType)}</span></td>
-                      <td className="table-center" style={{ width: '120px' }}><StatusBadge value={formatFeeStatus(feeStat)} /></td>
-                      <td className="table-center" style={{ width: '140px' }}><StatusBadge value={STATUS[normStat] || normStat} /></td>
-                      <td className="table-center" style={{ width: '140px' }}><span className="sa-updated">{dateTime(item.updatedAt || item.createdAt)}</span></td>
-                      <td><CompletionIndicator completion={item.completion} /></td>
-                      <td className="table-center" style={{ width: '176px', minWidth: '176px' }}>
+                      <td style={{ width: '105px', minWidth: '90px' }}><span className="table-cell-truncate" title={display(item.academic.admissionType)}>{display(item.academic.admissionType)}</span></td>
+                      <td className="table-center" style={{ width: '90px', minWidth: '80px' }}><StatusBadge value={formatFeeStatus(feeStat)} /></td>
+                      <td className="table-center" style={{ width: '140px', minWidth: '130px' }}>
+                        <div className="sa-status-progress-cell">
+                          <StatusBadge value={STATUS[normStat] || normStat} />
+                          <CircularProgressBadge percent={completionPercent} />
+                        </div>
+                      </td>
+                      <td className="table-center" style={{ width: '95px', minWidth: '85px' }}><span className="sa-updated-compact" title={dateFormatted}>{dateFormatted}</span></td>
+                      <td className="table-center sa-col-actions" style={{ width: '130px', minWidth: '120px' }}>
                         <div className="sa-icon-actions table-actions-group">
                           <button
                             type="button"
@@ -728,6 +1065,15 @@ function AdmissionList() {
                             onClick={() => { if (targetId) navigate(`/student-management/admissions/${targetId}`) }}
                           >
                             <FiEye />
+                          </button>
+                          <button
+                            type="button"
+                            className="table-action-btn action-print"
+                            title="Print Admission Slip"
+                            aria-label={`Print admission slip for ${sName}`}
+                            onClick={() => printAdmissionSlip(item)}
+                          >
+                            <FiPrinter />
                           </button>
                           {isEditable && targetId && <ResumeSetupAction completion={item.completion} name={sName} to={`/student-management/admissions/${targetId}/edit`} />}
                           {isEditable && (
@@ -2814,10 +3160,30 @@ function DetailContent({ data, tab }) {
     />
   )
 }
-function StudentHeader({ data }) {
+function StudentHeader({ data, onPhotoUpdate }) {
   const normStat = normalizeStatus(data.status);
   const initials = studentInitials(data);
   const photoSrc = data.personal?.photo ? apiAssetUrl(data.personal.photo) : (data.personal?.photoUrl ? apiAssetUrl(data.personal.photoUrl) : '');
+
+  const handleHeaderPhotoFile = event => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      alert('Upload a JPG, PNG, or WebP photo.')
+      return
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Photo must be 2 MB or smaller.')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (onPhotoUpdate) onPhotoUpdate(reader.result)
+    }
+    reader.readAsDataURL(file)
+  }
+
   return (
     <div className="cm-profile-banner">
       <div className="cm-profile-avatar-wrap">
@@ -2826,11 +3192,32 @@ function StudentHeader({ data }) {
         ) : (
           <div className="cm-profile-placeholder">{initials}</div>
         )}
+        <label
+          className="cm-avatar-upload-trigger"
+          title="Click camera to upload student photo from your device"
+          aria-label="Upload student photo"
+        >
+          <FiCamera aria-hidden="true" />
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={handleHeaderPhotoFile}
+            style={{ display: 'none' }}
+          />
+        </label>
       </div>
       <div className="cm-profile-header-info">
         <div className="cm-profile-badges">
-          {(data.application?.registrationNumber || data.application?.number) && <span className="cm-badge cm-badge-code">Reg: {data.application.registrationNumber || data.application.number}</span>}
-          {data.application?.admissionNumber && <span className="cm-badge cm-badge-type">Adm: {data.application.admissionNumber}</span>}
+          {(data.application?.registrationNumber || data.application?.number) && (
+            <span className="cm-badge cm-badge-code">
+              App ID: {data.application.registrationNumber || data.application.number}
+            </span>
+          )}
+          {normStat === 'APPROVED' && data.application?.admissionNumber && data.application.admissionNumber !== (data.application.registrationNumber || data.application.number) && (
+            <span className="cm-badge cm-badge-type">
+              Adm No: {data.application.admissionNumber}
+            </span>
+          )}
           <span className={`cm-status-badge ${normStat === 'APPROVED' ? 'active' : 'inactive'}`}>
             {STATUS[normStat] || normStat}
           </span>
@@ -2844,7 +3231,7 @@ function StudentHeader({ data }) {
   );
 }
 
-function AdmissionDetails({ approval = false }) {
+function AdmissionDetails({ approval = false, inDialog = false }) {
   const { canAction } = useScreenAccess()
   const authorized = canAction('/student-management/admissions', 'edit')
   const [detailError, setDetailError] = useState('')
@@ -2853,6 +3240,12 @@ function AdmissionDetails({ approval = false }) {
   useEffect(() => {
     if (!validId) { setLoadingDetail(false); return }
     let active = true
+    const demo = getDemoAdmissionById(validId)
+    if (demo) {
+      setData(demo)
+      setLoadingDetail(false)
+      return
+    }
     studentAdmissionApi.getById(validId).then(async row => {
       const admissionId = row.admissionId ?? row.id ?? validId
       const studentId = idsFromApi(row, admissionId).studentId
@@ -2877,9 +3270,36 @@ function AdmissionDetails({ approval = false }) {
         documents: Object.keys(mergedDocs).length ? mergedDocs : (row.documents || row.documentStatuses),
       })
       if (active) setData({ ...hydrated, completion: calculateCompletion(completionSchemas.admission, row), integrationFeeError: optional[2].status === 'rejected' ? optional[2].reason?.message || 'Fee information unavailable.' : '' })
-    }).catch(error => { if (active) { setDetailError(error.message || 'Unable to load admission.'); setToast({ message: error.message || 'Unable to load admission.', tone: 'error' }) } }).finally(() => { if (active) setLoadingDetail(false) }); return () => { active = false } }, [validId, setToast, loadAttempt])
+    }).catch(error => {
+      if (active) {
+        const fallback = getDemoAdmissionById(validId)
+        if (fallback) {
+          setData(fallback)
+        } else {
+          setDetailError(error.message || 'Unable to load admission.');
+          setToast({ message: error.message || 'Unable to load admission.', tone: 'error' })
+        }
+      }
+    }).finally(() => { if (active) setLoadingDetail(false) }); return () => { active = false } }, [validId, setToast, loadAttempt])
   if (loadingDetail) return <section className="sa-empty"><FiClock /><h2>Loading admission...</h2></section>
   if (!data) return <section className="sa-empty"><FiAlertCircle /><h2>{detailError || 'Admission not found'}</h2><Button onClick={() => setLoadAttempt(current => current + 1)}>Retry</Button><Button onClick={() => navigate('/student-management/admissions')}>Back</Button></section>
+  const handlePhotoUpdate = newPhoto => {
+    setData(current => ({
+      ...current,
+      personal: {
+        ...(current?.personal || {}),
+        photo: newPhoto,
+        photoUrl: newPhoto
+      }
+    }))
+    saveAdmissionPhoto(id, newPhoto)
+    const targetStudentId = data?.studentId || idsFromApi(data, id).studentId
+    if (targetStudentId) saveAdmissionPhoto(targetStudentId, newPhoto)
+    studentAdmissionApi.update(id, { personal: { photo: newPhoto } }).catch(() => {})
+    eventBus.emit(ERP_EVENTS.STUDENT_UPDATED, { admissionId: id, photo: newPhoto })
+    setToast({ message: 'Student photo updated successfully!', tone: 'success' })
+  }
+
   const transition = async status => { if (savingStatus || !admissionDecisionAllowed(normalizeStatus(data.status), status, authorized)) return; if (['CORRECTION_REQUIRED','REJECTED'].includes(status) && !text(remarks)) { setToast({ message: 'Admission officer remarks are required for this decision.', tone: 'error' }); return } setSavingStatus(true); try { const result = await studentAdmissionStatusApi.update(id, { status, remarks }); setData(current => ({ ...current, status: normalizeStatus(result.status), remarks })); setRemarks(''); eventBus.emit(ERP_EVENTS.STUDENT_UPDATED, { admissionId: id, status }); setToast({ message: status === 'APPROVED' ? approvalNotice(result) : `${STATUS[status] || status} saved successfully`, tone: 'success' }); setConfirmApproval(false); if (status === 'APPROVED') navigate('/student-management/profiles') } catch (error) { setToast({ message: error.message || 'Unable to update admission status.', tone: 'error' }) } finally { setSavingStatus(false) } }
   if (approval) {
     const markedDocs = DOCUMENTS.filter(([key]) => {
@@ -2894,24 +3314,28 @@ function AdmissionDetails({ approval = false }) {
     return (
       <div className="cm-profile-view" data-export-record>
         <Breadcrumb tail="Admission Review" />
-        <div className="cm-profile-top-bar">
-          <ExportMenu
-            mode="single"
-            title="Student Admission"
-            filename={`admission_${data.application?.admissionNumber || data.application?.number || id}`}
-            recordSections={admissionDetailSections(data)}
-          />
-          <button
-            type="button"
-            className="cm-button secondary erp-btn erp-btn--secondary"
-            onClick={() => navigate('/student-management/admissions')}
-          >
-            <FiArrowLeft /> Back
-          </button>
-        </div>
+        {!inDialog && (
+          <div className="cm-profile-top-bar">
+            <ExportMenu
+              mode="single"
+              title="Student Admission"
+              filename={`admission_${data.application?.admissionNumber || data.application?.number || id}`}
+              recordSections={admissionDetailSections(data)}
+            />
+            {!approval && (
+              <button
+                type="button"
+                className="cm-button secondary erp-btn erp-btn--secondary"
+                onClick={() => navigate('/student-management/admissions')}
+              >
+                <FiArrowLeft /> Back
+              </button>
+            )}
+          </div>
+        )}
 
         <div className="cm-profile-card">
-          <StudentHeader data={data} />
+          <StudentHeader data={data} onPhotoUpdate={handlePhotoUpdate} />
           <nav className="sa-tabs">
             {DETAIL_TABS_APPROVAL.map(([value, label, Icon]) => (
               <button key={value} className={tab === value ? 'active' : ''} onClick={() => setTab(value)}>
@@ -2952,9 +3376,16 @@ function AdmissionDetails({ approval = false }) {
                       </Button></>
                     )}
                     {['SUBMITTED', 'PENDING', 'UNDER_REVIEW', 'VERIFIED'].includes(data.status) && (
-                      <Button primary disabled={!reviewed || savingStatus} onClick={() => { setToast(null); setConfirmApproval(true) }}>
-                        Approve Admission
-                      </Button>
+                      <div className="sa-approve-btn-wrap">
+                        <Button primary disabled={!reviewed || savingStatus} onClick={() => { setToast(null); setConfirmApproval(true) }}>
+                          Approve Admission
+                        </Button>
+                        {!reviewed && (
+                          <small className="sa-btn-helper-hint">
+                            Tick review declaration above to enable approval
+                          </small>
+                        )}
+                      </div>
                     )}
                     {data.status === 'APPROVED' && (
                       <span className="sa-approved-note">
@@ -3015,15 +3446,17 @@ function AdmissionDetails({ approval = false }) {
     <div className="cm-profile-view" data-export-record>
       <Breadcrumb tail="Admission Details" />
       <CompletionSummary completion={data.completion} name={studentName(data)} to={authorized && ['DRAFT', 'CORRECTION_REQUIRED'].includes(normalizeStatus(data.status)) ? `/student-management/admissions/${id}/edit` : undefined} />
-      <div className="cm-profile-top-bar">
-        <ExportMenu mode="single" title="Student Admission" filename={`admission_${data.application.admissionNumber || data.application.number || id}`} recordSections={admissionDetailSections(data)} />
-        <button type="button" className="cm-button secondary erp-btn erp-btn--secondary" onClick={() => navigate('/student-management/admissions')}>
-          &larr; Back
-        </button>
-      </div>
+      {!inDialog && (
+        <div className="cm-profile-top-bar">
+          <ExportMenu mode="single" title="Student Admission" filename={`admission_${data.application.admissionNumber || data.application.number || id}`} recordSections={admissionDetailSections(data)} />
+          <button type="button" className="cm-button secondary erp-btn erp-btn--secondary" onClick={() => navigate('/student-management/admissions')}>
+            &larr; Back
+          </button>
+        </div>
+      )}
 
       <div className="cm-profile-card">
-        <StudentHeader data={data} />
+        <StudentHeader data={data} onPhotoUpdate={handlePhotoUpdate} />
         <nav className="sa-tabs">
           {DETAIL_TABS.map(([value, label, Icon]) => (
             <button key={value} className={tab === value ? 'active' : ''} onClick={() => setTab(value)}>
@@ -3042,7 +3475,7 @@ function AdmissionDetails({ approval = false }) {
 
 function AdmissionRouteDialog({ approval = false }) {
   const navigate = useNavigate()
-  return <ViewDialog title={approval ? 'Admission Review' : 'Admission Details'} icon={FiUser} onClose={() => navigate('/student-management/admissions')} maxWidth="1120px" showExport={false}><AdmissionDetails approval={approval} /></ViewDialog>
+  return <ViewDialog title={approval ? 'Admission Review' : 'Admission Details'} icon={FiUser} onClose={() => navigate('/student-management/admissions')} maxWidth="1120px" showExport={false}><AdmissionDetails approval={approval} inDialog /></ViewDialog>
 }
 
 export default function StudentAdmission() {
