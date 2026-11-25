@@ -253,14 +253,62 @@ const APPROVED_PORTRAITS = {
   ],
 };
 
+const CANONICAL_APPROVED_PORTRAITS = {
+  // Pravallika Chinnaluru (Female, CSE) - original Unsplash photo-1534528741775
+  pravallika: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=380&fit=crop&crop=face',
+  // Pooja Ramakrishnan (Female, EEE) - original Unsplash photo-1567532939604
+  pooja: 'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?w=300&h=380&fit=crop&crop=face',
+  // Divya Sri Mandava (Female, AI & DS) - original Unsplash photo-1544005313
+  divya: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=380&fit=crop&crop=face',
+  // Surya Vamsi (Male, CSE)
+  surya: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=380&fit=crop&crop=face',
+  // Naidu Bangaru (Male, Concrete Management)
+  naidu: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&h=380&fit=crop&crop=face',
+  // Kiran Kumar Yadav (Male, ME) - original Unsplash photo-1519085360753
+  kiran: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=300&h=380&fit=crop&crop=face',
+  // Aditya Vikram Raju (Male, CSE) - original Unsplash photo-1492562080023
+  aditya: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=300&h=380&fit=crop&crop=face',
+  // Additional student roster mappings:
+  rahul: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=300&h=380&fit=crop&crop=face',
+  sneha: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=300&h=380&fit=crop&crop=face',
+  ananya: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&h=380&fit=crop&crop=face',
+  karthik: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&h=380&fit=crop&crop=face',
+  meera: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=380&fit=crop&crop=face',
+  vikram: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=380&fit=crop&crop=face',
+};
+
 const getApprovedStudentPhoto = (student) => {
+  if (student?.personal?.photo?.startsWith?.('data:')) return student.personal.photo;
+  if (student?.personal?.photoUrl?.startsWith?.('data:')) return student.personal.photoUrl;
+  if (student?.photo?.startsWith?.('data:')) return student.photo;
+
+  const sName = String(
+    studentFullName(student) ||
+    student?.studentName ||
+    student?.fullName ||
+    student?.personal?.fullName ||
+    student?.personal?.firstName ||
+    ''
+  ).toLowerCase();
+
+  const email = String(
+    student?.contact?.email ||
+    student?.personal?.email ||
+    student?.email ||
+    ''
+  ).toLowerCase();
+
+  for (const [key, url] of Object.entries(CANONICAL_APPROVED_PORTRAITS)) {
+    if (sName.includes(key) || email.includes(key)) return url;
+  }
+
   if (student?.personal?.photo) return student.personal.photo;
   if (student?.personal?.photoUrl) return student.personal.photoUrl;
   if (student?.photo) return student.photo;
+
   const gender = String(student?.personal?.gender || student?.gender || '').toLowerCase();
   const list = gender === 'female' ? APPROVED_PORTRAITS.female : APPROVED_PORTRAITS.male;
-  const sName = studentFullName(student) || student?.studentName || student?.fullName || '';
-  const seed = String(student?.studentId || student?.id || student?.admissionId || sName || 'student');
+  const seed = sName || String(student?.studentId || student?.id || student?.admissionId || 'student');
   let hash = 0;
   for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) & 0x7fffffff;
   return list[hash % list.length];
@@ -271,7 +319,10 @@ const profileFromApi = (x) => {
   const sId = x.studentId || x.id || normalized.id;
   const admId = x.admissionId || x.admission?.admissionId || normalized.admissionId;
   const stored = readStoredPhoto('student-profile', sId) || readStoredPhoto('student-admission', admId) || readStoredPhoto('student-admission', sId);
-  const photo = stored || normalized.personal?.photo || normalized.personal?.photoUrl || x.personal?.photo || x.photo || getApprovedStudentPhoto({ ...normalized, ...x });
+  const canonicalPhoto = getApprovedStudentPhoto({ ...normalized, ...x });
+  const photo = (stored && String(stored).startsWith('data:'))
+    ? stored
+    : (canonicalPhoto || stored || normalized.personal?.photo || normalized.personal?.photoUrl || x.personal?.photo || x.photo || '');
   return {
     ...normalized,
     personal: {
@@ -337,7 +388,7 @@ const deduplicateProfiles = (profiles = []) => {
 
       if (existing) {
         const higherComp = Math.max(Number(existing.completion || 0), Number(p.completion || 0));
-        const photo = p.personal?.photo || existing.personal?.photo || getApprovedStudentPhoto(p) || '';
+        const photo = getApprovedStudentPhoto(p) || p.personal?.photo || existing.personal?.photo || '';
         const effectiveAdmNo = p.application?.admissionNumber || existing.application?.admissionNumber || p.admissionNumber || existing.admissionNumber || '';
         Object.assign(existing, {
           ...p,
@@ -1430,7 +1481,7 @@ export default function StudentProfile() {
                   {shown.map((student, idx) => {
                     const a = student.academic || {},
                       app = student.application || {},
-                      photo = student.personal?.photo || getApprovedStudentPhoto(student);
+                      photo = getApprovedStudentPhoto(student) || student.personal?.photo;
                     const sName = studentFullName(student) || student.studentName || student.fullName || student.personal?.fullName || "Unnamed Student";
                     const admNo = app.admissionNumber || student.admissionId || "Allotted";
                     const rowKey = `sp-page${page}-${student.studentId || student.id || student.admissionId || app.admissionNumber || student.contact?.email || idx}`;

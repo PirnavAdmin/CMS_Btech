@@ -2174,23 +2174,25 @@
   }
 }
 
-/* Keep admission rows visually balanced and action controls centered. */
-:root:not([data-theme="dark"]) .student-admission .sa-admission-table thead th,
-:root:not([data-theme="dark"]) .student-admission .sa-admission-table tbody td,
-:root[data-theme="dark"] .student-admission .sa-admission-table thead th,
-:root[data-theme="dark"] .student-admission .sa-admission-table tbody td {
-  text-align: center !important;
+/* Table alignment rules: data columns neatly left-aligned, status/actions centered. */
+.student-admission .sa-admission-table thead th,
+.student-admission .sa-admission-table tbody td {
   vertical-align: middle !important;
 }
 
-.student-admission .sa-admission-table .sa-student {
-  justify-content: center;
-  text-align: center;
+:root:not([data-theme="dark"]) .student-admission .sa-admission-table th.table-center,
+:root:not([data-theme="dark"]) .student-admission .sa-admission-table td.table-center,
+:root[data-theme="dark"] .student-admission .sa-admission-table th.table-center,
+:root[data-theme="dark"] .student-admission .sa-admission-table td.table-center {
+  text-align: center !important;
 }
 
-.student-admission .sa-admission-table .sa-student > span {
-  justify-items: center;
-  text-align: center;
+:root:not([data-theme="dark"]) .student-admission .sa-admission-table th.sa-col-student,
+:root:not([data-theme="dark"]) .student-admission .sa-admission-table td.sa-col-student,
+:root[data-theme="dark"] .student-admission .sa-admission-table th.sa-col-student,
+:root[data-theme="dark"] .student-admission .sa-admission-table td.sa-col-student {
+  text-align: left !important;
+  padding-left: 18px !important;
 }
 
 .student-admission .sa-admission-table .table-primary-cell {
@@ -2265,30 +2267,61 @@
   .student-admission .sa-reference-summary article:hover, .student-admission .sa-icon-actions > button:hover:not(:disabled) { transform: none; }
 }
 
-/* Keep admission values centered and render the student name as a text link. */
+/* Keep status, dates, and action columns centered; keep data columns neatly left-aligned. */
 .student-admission .sa-admission-table thead th,
-.student-admission .sa-admission-table tbody td { text-align: center !important; vertical-align: middle !important; }
-.student-admission .sa-admission-table .sa-student { justify-content: center; }
-.student-admission .sa-admission-table .sa-student > span { align-items: center; text-align: center; }
+.student-admission .sa-admission-table tbody td { vertical-align: middle !important; }
+.student-admission .sa-admission-table thead th.table-center,
+.student-admission .sa-admission-table tbody td.table-center { text-align: center !important; }
+
+/* Student column: clean, left-aligned, strictly stacked name and contact without initials badge */
+.student-admission .sa-admission-table th.sa-col-student,
+.student-admission .sa-admission-table td.sa-col-student {
+  text-align: left !important;
+  padding-left: 16px !important;
+}
+.student-admission .sa-admission-table .sa-student-cell {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  text-align: left !important;
+  gap: 2px !important;
+}
 .student-admission .sa-admission-table .student-name-link {
-  appearance: none;
-  display: inline-block;
-  max-width: 100%;
-  margin: 0 auto;
-  padding: 0;
+  appearance: none !important;
+  display: inline-block !important;
+  text-align: left !important;
+  margin: 0 !important;
+  padding: 0 !important;
   border: 0 !important;
-  border-radius: 0;
-  color: var(--text-primary);
+  border-radius: 0 !important;
+  color: var(--text-primary) !important;
   background: transparent !important;
   box-shadow: none !important;
-  font: inherit;
-  font-weight: 750;
-  text-align: center;
-  text-decoration: none;
-  cursor: pointer;
+  font: inherit !important;
+  font-size: 13px !important;
+  font-weight: 750 !important;
+  line-height: 1.35 !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
 }
-.student-admission .sa-admission-table .student-name-link:hover { color: var(--brand); text-decoration: underline; }
-.student-admission .sa-admission-table .student-name-link:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; border-radius: 2px; }
+.student-admission .sa-admission-table .student-name-link:hover {
+  color: var(--brand) !important;
+  text-decoration: underline !important;
+}
+.student-admission .sa-admission-table .student-name-link:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+.student-admission .sa-admission-table .sa-student-cell small {
+  display: block !important;
+  text-align: left !important;
+  margin: 0 !important;
+  color: var(--text-muted) !important;
+  font-size: 11.5px !important;
+  line-height: 1.3 !important;
+}
 
 /* Compact, toggleable admission filters. */
 .student-admission .sa-directory > .course-directory-heading {

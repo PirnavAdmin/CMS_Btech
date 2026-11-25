@@ -981,7 +981,7 @@ function AdmissionList() {
               <thead>
                 <tr>
                   <th style={{ width: '130px', minWidth: '115px' }}>Registration / Adm. No</th>
-                  <th style={{ width: '170px', minWidth: '150px' }}>Student</th>
+                  <th className="sa-col-student" style={{ width: '190px', minWidth: '170px' }}>Student</th>
                   <th style={{ width: '140px', minWidth: '125px' }}>Academic Enrollment</th>
                   <th style={{ width: '105px', minWidth: '90px' }}>Admission Type</th>
                   <th className="table-center" style={{ width: '90px', minWidth: '80px' }}>Fee Status</th>
@@ -1022,15 +1022,18 @@ function AdmissionList() {
                           )}
                         </div>
                       </td>
-                      <td style={{ width: '170px', minWidth: '150px' }}>
-                        <div className="sa-student">
-                          <i title={sName} aria-hidden="true">
-                            {studentInitials(item) || sName.split(' ').map(part => part[0]).slice(0, 2).join('').toUpperCase()}
-                          </i>
-                          <div className="sa-student-details">
-                            <button type="button" className="student-name-link" title={sName} aria-label={`View details for ${sName}`} onClick={() => { if (targetId) navigate(`/student-management/admissions/${targetId}`) }}>{sName}</button>
-                            <small title={sContact}>{sContact}</small>
-                          </div>
+                      <td className="sa-col-student" style={{ width: '190px', minWidth: '170px' }}>
+                        <div className="sa-student-cell">
+                          <button
+                            type="button"
+                            className="student-name-link"
+                            title={sName}
+                            aria-label={`View details for ${sName}`}
+                            onClick={() => { if (targetId) navigate(`/student-management/admissions/${targetId}`) }}
+                          >
+                            {sName}
+                          </button>
+                          <small title={sContact}>{sContact}</small>
                         </div>
                       </td>
                       <td style={{ width: '140px', minWidth: '125px' }}>
