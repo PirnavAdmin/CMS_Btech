@@ -40,6 +40,22 @@
 :root[data-theme="dark"] #root .section-table thead tr th { border-color:#9aac35!important; background:var(--table-head)!important; background-color:var(--table-head)!important; color:var(--text-secondary)!important; }
 .section-table td { padding:11px 12px; text-align:left; color:var(--text-secondary); font-size:12px; border-bottom:1px solid var(--border); }
 .section-table tbody tr:hover { background:var(--cms-hover); }
+.section-management > .erp-page-header { margin-bottom:0; }
+.section-management > .sections-rooms-navigation { justify-self:start; }
+.section-table-card .section-reference-heading { padding-block:10px; }
+.section-directory-filters .filter-disclosure__bar { padding-block:8px; }
+.section-table-card .section-table { min-width:1050px; }
+#root .section-table-card .section-table thead tr th {
+  padding:8px 10px!important;
+  text-align:center!important;
+  white-space:normal!important;
+}
+#root .section-table-card .section-table tbody tr td {
+  padding:8px 10px;
+  text-align:center;
+  vertical-align:middle;
+}
+.section-table-card .section-actions { justify-content:center; }
 .section-reference-detail-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
 .section-assignment-panel { width:100%; min-width:0; color:var(--text-primary); background:transparent; }
 .section-assignment-context { margin:0 0 12px; color:var(--text-muted); font-size:12px; }
@@ -174,7 +190,7 @@
 .section-status.inactive{color:var(--danger);background:var(--cms-red-soft)}
 .section-back-button{display:inline-flex;min-width:92px;align-items:center;justify-content:center;border:1px solid var(--border)!important;color:var(--brand)!important;background:var(--surface, #fff)!important;box-shadow:0 2px 6px rgba(16, 42, 76,.06)}
 .section-back-button:hover{border-color:var(--brand)!important;background:var(--surface-soft)!important}
-.section-pagination{justify-content:center!important}.section-pagination>p{order:2;margin:0}.section-pagination>div{display:contents}.section-pagination>div>button:first-child{order:1}.section-pagination>div>button:last-child{order:3}.section-pagination>div>button:not(:first-child):not(:last-child){display:none}
+.section-pagination>p{order:2;margin:0}.section-pagination>div{display:contents}.section-pagination>div>button:first-child{order:1}.section-pagination>div>button:last-child{order:3}.section-pagination>div>button:not(:first-child):not(:last-child){display:none}
 
 /* Section statistics use the people/capacity orange accent. */
 .section-stat-card .cm-kpi-icon{color:#c2410c;background:#fff1e8}
