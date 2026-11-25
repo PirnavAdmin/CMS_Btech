@@ -1027,12 +1027,14 @@ function AdmissionList() {
                           <button
                             type="button"
                             className="sa-avatar-trigger-btn"
-                            onClick={() => setPhotoStudent(item)}
-                            title={`Click to view passport photo of ${sName}`}
-                            aria-label={`View passport photo of ${sName}`}
+                            onClick={() => {
+                              if (item.status === 'APPROVED' || item.personal?.photo) setPhotoStudent(item);
+                            }}
+                            title={item.status === 'APPROVED' && item.personal?.photo ? `Click to view passport photo of ${sName}` : `${sName}`}
+                            aria-label={`Applicant ${sName}`}
                           >
-                            <i>{item.personal.photo ? <img src={item.personal.photo} alt={sName} /> : sName.split(' ').map(part => part[0]).slice(0, 2).join('')}</i>
-                            <span className="sa-avatar-hint-icon" aria-hidden="true"><FiCamera /></span>
+                            <i>{item.status === 'APPROVED' && item.personal?.photo ? <img src={item.personal.photo} alt={sName} /> : sName.split(' ').map(part => part[0]).slice(0, 2).join('')}</i>
+                            {item.status === 'APPROVED' && <span className="sa-avatar-hint-icon" aria-hidden="true"><FiCamera /></span>}
                           </button>
                           <div className="sa-student-details">
                             <button type="button" className="student-name-link" title={sName} aria-label={`View details for ${sName}`} onClick={() => { if (targetId) navigate(`/student-management/admissions/${targetId}`) }}>{sName}</button>

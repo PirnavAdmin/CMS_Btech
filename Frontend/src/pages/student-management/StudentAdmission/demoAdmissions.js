@@ -11,8 +11,7 @@ export const DEMO_ADMISSIONS = [
       dob: '2008-04-12',
       gender: 'Male',
       bloodGroup: 'O+',
-      nationality: 'Indian',
-      photo: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=300&h=380&fit=crop&crop=face'
+      nationality: 'Indian'
     },
     contact: {
       mobile: '+91 98480 12345',
@@ -64,8 +63,7 @@ export const DEMO_ADMISSIONS = [
       dob: '2008-08-19',
       gender: 'Female',
       bloodGroup: 'B+',
-      nationality: 'Indian',
-      photo: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=380&fit=crop&crop=face'
+      nationality: 'Indian'
     },
     contact: {
       mobile: '+91 94401 56789',
@@ -117,8 +115,7 @@ export const DEMO_ADMISSIONS = [
       dob: '2007-11-05',
       gender: 'Male',
       bloodGroup: 'A+',
-      nationality: 'Indian',
-      photo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&h=380&fit=crop&crop=face'
+      nationality: 'Indian'
     },
     contact: {
       mobile: '+91 99890 34120',
@@ -170,8 +167,7 @@ export const DEMO_ADMISSIONS = [
       dob: '2008-01-22',
       gender: 'Female',
       bloodGroup: 'B-',
-      nationality: 'Indian',
-      photo: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&h=380&fit=crop&crop=face'
+      nationality: 'Indian'
     },
     contact: {
       mobile: '+91 98855 43210',
@@ -224,8 +220,7 @@ export const DEMO_ADMISSIONS = [
       dob: '2007-09-14',
       gender: 'Male',
       bloodGroup: 'O-',
-      nationality: 'Indian',
-      photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=380&fit=crop&crop=face'
+      nationality: 'Indian'
     },
     contact: {
       mobile: '+91 97012 34567',
@@ -278,8 +273,7 @@ export const DEMO_ADMISSIONS = [
       dob: '2008-03-30',
       gender: 'Female',
       bloodGroup: 'AB+',
-      nationality: 'Indian',
-      photo: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=300&h=380&fit=crop&crop=face'
+      nationality: 'Indian'
     },
     contact: {
       mobile: '+91 91234 56789',

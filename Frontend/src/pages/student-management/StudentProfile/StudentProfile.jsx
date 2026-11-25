@@ -236,12 +236,42 @@ const saveStoredPhoto = (kind, id, photo) => {
   }
 };
 
+const APPROVED_PORTRAITS = {
+  male: [
+    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=380&fit=crop&crop=face',
+    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&h=380&fit=crop&crop=face',
+    'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=300&h=380&fit=crop&crop=face',
+    'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=300&h=380&fit=crop&crop=face',
+    'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=300&h=380&fit=crop&crop=face',
+  ],
+  female: [
+    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=380&fit=crop&crop=face',
+    'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?w=300&h=380&fit=crop&crop=face',
+    'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=380&fit=crop&crop=face',
+    'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&h=380&fit=crop&crop=face',
+    'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=300&h=380&fit=crop&crop=face',
+  ],
+};
+
+const getApprovedStudentPhoto = (student) => {
+  if (student?.personal?.photo) return student.personal.photo;
+  if (student?.personal?.photoUrl) return student.personal.photoUrl;
+  if (student?.photo) return student.photo;
+  const gender = String(student?.personal?.gender || student?.gender || '').toLowerCase();
+  const list = gender === 'female' ? APPROVED_PORTRAITS.female : APPROVED_PORTRAITS.male;
+  const sName = studentFullName(student) || student?.studentName || student?.fullName || '';
+  const seed = String(student?.studentId || student?.id || student?.admissionId || sName || 'student');
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) & 0x7fffffff;
+  return list[hash % list.length];
+};
+
 const profileFromApi = (x) => {
   const normalized = normalizeCanonicalStudent(x);
   const sId = x.studentId || x.id || normalized.id;
   const admId = x.admissionId || x.admission?.admissionId || normalized.admissionId;
   const stored = readStoredPhoto('student-profile', sId) || readStoredPhoto('student-admission', admId) || readStoredPhoto('student-admission', sId);
-  const photo = stored || normalized.personal?.photo || normalized.personal?.photoUrl || x.personal?.photo || x.photo || '';
+  const photo = stored || normalized.personal?.photo || normalized.personal?.photoUrl || x.personal?.photo || x.photo || getApprovedStudentPhoto({ ...normalized, ...x });
   return {
     ...normalized,
     personal: {
@@ -307,7 +337,7 @@ const deduplicateProfiles = (profiles = []) => {
 
       if (existing) {
         const higherComp = Math.max(Number(existing.completion || 0), Number(p.completion || 0));
-        const photo = p.personal?.photo || existing.personal?.photo || '';
+        const photo = p.personal?.photo || existing.personal?.photo || getApprovedStudentPhoto(p) || '';
         const effectiveAdmNo = p.application?.admissionNumber || existing.application?.admissionNumber || p.admissionNumber || existing.admissionNumber || '';
         Object.assign(existing, {
           ...p,
@@ -1400,7 +1430,7 @@ export default function StudentProfile() {
                   {shown.map((student, idx) => {
                     const a = student.academic || {},
                       app = student.application || {},
-                      photo = student.personal?.photo;
+                      photo = student.personal?.photo || getApprovedStudentPhoto(student);
                     const sName = studentFullName(student) || student.studentName || student.fullName || student.personal?.fullName || "Unnamed Student";
                     const admNo = app.admissionNumber || student.admissionId || "Allotted";
                     const rowKey = `sp-page${page}-${student.studentId || student.id || student.admissionId || app.admissionNumber || student.contact?.email || idx}`;
@@ -2208,8 +2238,8 @@ function Profile({ student, tab, setTab, back, edit, canEdit, onPhotoUpload }) {
       <div className="cm-profile-card">
         <div className="cm-profile-banner">
           <div className="cm-profile-avatar-wrap">
-            {p.photo ? (
-              <img src={p.photo} alt={studentFullName(student)} className="cm-profile-logo" />
+            {p.photo || getApprovedStudentPhoto(student) ? (
+              <img src={p.photo || getApprovedStudentPhoto(student)} alt={studentFullName(student)} className="cm-profile-logo" />
             ) : (
               <div className="cm-profile-placeholder">{studentInitials(student)}</div>
             )}
