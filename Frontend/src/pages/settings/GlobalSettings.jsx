@@ -18,7 +18,7 @@ export default function GlobalSettings() {
     <section className="configuration-context-card" aria-labelledby="working-context-heading">
       <header><Settings2 aria-hidden="true" /><h2 id="working-context-heading">Working Context</h2></header>
       {loading ? <AsyncState status="loading" title="Loading authorized academic context…" /> : error ? <AsyncState status="error" message={error} onRetry={refreshHierarchy} /> : <>
-        <div className="configuration-context"><AcademicContextSelect kind="college" /><AcademicContextSelect kind="academicYear" /></div>
+        <div className="configuration-context"><AcademicContextSelect kind="college" /><AcademicContextSelect kind="academicYear" activeOnly /></div>
         <p>Selected: {selectedCollege?.name || selectedCollege?.collegeName || 'No college'} · {selectedAcademicYear?.name || selectedAcademicYear?.academicYearName || 'No academic year'}</p>
         <small>Your working selection is saved in this browser. Changing it does not activate or deactivate an academic year.</small>
       </>}
