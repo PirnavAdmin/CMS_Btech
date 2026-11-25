@@ -13,7 +13,7 @@ import { FiUploadCloud, FiInbox } from 'react-icons/fi'
 import { academicYearApi, branchApi, courseApi, lookupIndianPincode } from '../../../api/apiEndpoints'
 import { getColleges } from '../../../auth/collegeApi'
 import { getOperationalAcademicYearOptions } from '../../../utils/academicYearUtils'
-import { REQUIRED_FIELDS, HOSTEL_FEES, TRANSPORT_FEES } from '../../../utils/studentCanonicalModel'
+import { REQUIRED_FIELDS, HOSTEL_FEES, TRANSPORT_FEES, generateCanonicalRollNumber } from '../../../utils/studentCanonicalModel'
 import { ProjectSelect } from '../../../components/SearchableSelect'
 import { Link } from 'react-router-dom'
 import { readFeeWorkspace, feeLedger, feeMoney, readHostelStructures, readTransportStructures } from '../../../services/feeStructureService'
@@ -596,7 +596,7 @@ const hydrateProfile = async (source) => {
       paymentHistory: historyItems,
       historyError: feeHistory.status === "rejected" ? feeHistory.reason?.message || "Payment history unavailable." : "",
     },
-    documentError: documents.status === "rejected" ? documents.reason?.message || "Saved documents could not be loaded. Close and retry this student." : "",
+    documentError: documents.status === "rejected" && !documents.reason?.message?.toLowerCase().includes("not found") ? documents.reason?.message || "Saved documents could not be loaded. Close and retry this student." : "",
     documents: documents.status === "fulfilled" && documents.value
       ? mergeFilledProfileData(combinedSource.documents, documentsFromApi(documents.value))
       : combinedSource.documents,
@@ -837,6 +837,7 @@ export default function StudentProfile() {
       );
 
       // 3. Construct student profile rows strictly for approved scoped admissions
+      const branchCounters = new Map();
       const profileRows = approvedScopedAdmissions.map(admission => {
         const fallbackId = String(admission.studentId ?? admission.student?.studentId ?? admission.student?.id ?? admission.admissionId ?? admission.id ?? '');
         const admId = String(admission.admissionId ?? admission.id ?? fallbackId);
@@ -858,6 +859,24 @@ export default function StudentProfile() {
         const effectiveYrId = selectedAcademicYearId || admission.academic?.academicYearId || selectedAcademicYear?.academicYearId || selectedAcademicYear?.id || 1;
         const effectiveYrName = selectedAcademicYear?.name || admission.academic?.academicYear || '2026-27';
 
+        const branchKey = shortLabel(merged.academic?.branch || merged.branch || 'CSE');
+        const bCount = (branchCounters.get(branchKey) || 0) + 1;
+        branchCounters.set(branchKey, bCount);
+
+        const assignedRoll = merged.academic?.rollNumber || existing?.academic?.rollNumber || merged.rollNumber || existing?.rollNumber || '';
+        const finalRoll = (assignedRoll && !String(assignedRoll).startsWith('ADM-'))
+          ? String(assignedRoll)
+          : generateCanonicalRollNumber({
+              academicYear: effectiveYrName,
+              collegeName: effectiveColName,
+              branch: branchKey,
+              branchCode: merged.academic?.branchCode || existing?.academic?.branchCode,
+              sequenceIndex: bCount,
+              admissionNumber: admId,
+              registrationNumber: admission.application?.registrationNumber || admission.registrationNumber,
+              id: resolvedId,
+            });
+
         const synthesized = profileFromApi({
           ...merged,
           id: resolvedId,
@@ -865,6 +884,7 @@ export default function StudentProfile() {
           admissionId: admId,
           collegeId: effectiveColId,
           status: 'APPROVED',
+          rollNumber: finalRoll,
           completion: merged.completion?.percent != null ? merged.completion : calculateCompletion(completionSchemas.studentProfile, merged),
           exportVerified: isApiResult(allAdmissions),
         });
@@ -873,10 +893,14 @@ export default function StudentProfile() {
         synthesized.studentId = resolvedId;
         synthesized.admissionId = admId;
         synthesized.collegeId = effectiveColId;
+        synthesized.rollNumber = finalRoll;
         if (!synthesized.academic) synthesized.academic = {};
         synthesized.academic.collegeId = effectiveColId;
         synthesized.academic.academicYearId = effectiveYrId;
         synthesized.academic.academicYear = effectiveYrName;
+        synthesized.academic.rollNumber = finalRoll;
+        if (!synthesized.application) synthesized.application = {};
+        synthesized.application.rollNumber = finalRoll;
         if (!synthesized.admission) synthesized.admission = {};
         synthesized.admission.collegeId = effectiveColId;
         synthesized.admission.college = effectiveColName;
@@ -1018,10 +1042,10 @@ export default function StudentProfile() {
     return String(adm).trim();
   };
 
-  const getStudentSortBranch = (s) => {
+  const getStudentSortRollNo = (s) => {
     if (!s) return "";
     const a = s.academic || {};
-    return String(a.branch || a.branchName || "").trim().toLowerCase();
+    return String(a.rollNumber || s.rollNumber || s.roll || "").trim();
   };
 
   const getStudentSortCompletion = (s) => {
@@ -1030,16 +1054,17 @@ export default function StudentProfile() {
 
   const sortedFiltered = useMemo(() => {
     const list = deduplicateProfiles([...filtered]);
-    if (sort === "name" || sort === "name_asc") {
+    if (sort === "roll_asc") {
       return list.sort((a, b) =>
-        getStudentSortName(a).localeCompare(getStudentSortName(b), undefined, {
+        getStudentSortRollNo(a).localeCompare(getStudentSortRollNo(b), undefined, {
+          numeric: true,
           sensitivity: "base",
         }),
       );
     }
-    if (sort === "name_desc") {
+    if (sort === "name" || sort === "name_asc") {
       return list.sort((a, b) =>
-        getStudentSortName(b).localeCompare(getStudentSortName(a), undefined, {
+        getStudentSortName(a).localeCompare(getStudentSortName(b), undefined, {
           sensitivity: "base",
         }),
       );
@@ -1052,19 +1077,9 @@ export default function StudentProfile() {
         }),
       );
     }
-    if (sort === "admission_desc") {
-      return list.sort((a, b) =>
-        getStudentSortAdmNo(b).localeCompare(getStudentSortAdmNo(a), undefined, {
-          numeric: true,
-          sensitivity: "base",
-        }),
-      );
-    }
-    if (sort === "branch_asc") {
-      return list.sort((a, b) =>
-        getStudentSortBranch(a).localeCompare(getStudentSortBranch(b), undefined, {
-          sensitivity: "base",
-        }),
+    if (sort === "completion_asc") {
+      return list.sort(
+        (a, b) => getStudentSortCompletion(a) - getStudentSortCompletion(b),
       );
     }
     if (sort === "completion_desc") {
@@ -1286,6 +1301,7 @@ export default function StudentProfile() {
       section: student.academic?.section,
       sectionId: student.academic?.sectionId,
       regulation: student.academic?.regulation,
+      rollNumber: student.academic?.rollNumber || student.rollNumber || '',
       quota: student.academic?.quota,
       quotaOther: student.academic?.quotaOther,
       studentCategory: student.academic?.studentCategory,
@@ -1499,12 +1515,10 @@ export default function StudentProfile() {
                     }}
                   >
                     <option value="recent">Recently added</option>
+                    <option value="roll_asc">Roll Number (Ascending)</option>
                     <option value="name_asc">Student Name (A → Z)</option>
-                    <option value="name_desc">Student Name (Z → A)</option>
                     <option value="admission_asc">Admission No (Ascending)</option>
-                    <option value="admission_desc">Admission No (Descending)</option>
-                    <option value="branch_asc">Branch (A → Z)</option>
-                    <option value="completion_desc">Completion (High → Low)</option>
+                    <option value="completion_asc">Pending Profile / KYC First</option>
                   </select>
                 </label>
               </div>
@@ -1528,6 +1542,7 @@ export default function StudentProfile() {
                       photo = getApprovedStudentPhoto(student) || student.personal?.photo;
                     const sName = studentFullName(student) || student.studentName || student.fullName || student.personal?.fullName || "Unnamed Student";
                     const admNo = app.admissionNumber || student.admissionId || "Allotted";
+                    const rollNo = a.rollNumber || student.rollNumber || student.studentCode || app.rollNumber || "";
                     const rowKey = `sp-page${page}-${student.studentId || student.id || student.admissionId || app.admissionNumber || student.contact?.email || idx}`;
                     return (
                       <tr key={rowKey}>
@@ -1564,9 +1579,16 @@ export default function StudentProfile() {
                               >
                                 {sName}
                               </button>
-                              <small className="sp-student-adm-no" title={`Adm No: ${formatDisplay(admNo)}`}>
-                                Adm No: {formatDisplay(admNo)}
-                              </small>
+                              <div className="sp-student-sub-ids">
+                                {rollNo ? (
+                                  <span className="sp-student-roll-no" title={`Roll Number: ${rollNo}`}>
+                                    Roll: <strong className="sp-roll-val">{rollNo}</strong>
+                                  </span>
+                                ) : null}
+                                <span className="sp-student-adm-no" title={`Admission Ledger No: ${formatDisplay(admNo)}`}>
+                                  Adm: {formatDisplay(admNo)}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </td>
@@ -1693,22 +1715,31 @@ export default function StudentProfile() {
 }
 
 function ProfileCard({ title, icon: Icon, rows = [] }) {
+  const validRows = rows.filter(([, val]) => {
+    const v = String(val ?? '').trim().toLowerCase();
+    return v !== '' && v !== 'not provided' && v !== '-' && v !== 'n/a';
+  });
+  if (validRows.length === 0) return null;
+
   return (
     <section className="sp-profile-panel">
       {(Icon || title) && (
         <header className="sp-panel-header">
-          {Icon && <Icon aria-hidden="true" />}
-          {title && <h2>{title}</h2>}
+          <div className="sp-panel-title-wrap">
+            {Icon && <span className="sp-panel-icon"><Icon aria-hidden="true" /></span>}
+            {title && <h2>{title}</h2>}
+          </div>
+          <span className="sp-card-count-badge">{validRows.length} items</span>
         </header>
       )}
-      <dl className="sp-panel-grid">
-        {rows.map(([label, val], idx) => (
+      <div className="sp-panel-grid">
+        {validRows.map(([label, val], idx) => (
           <div className="sp-panel-item" key={label || idx}>
-            <dt className="sp-panel-label">{label}</dt>
-            <dd className="sp-panel-val">{formatDisplay(val)}</dd>
+            <span className="sp-panel-label">{label}</span>
+            <strong className="sp-panel-val">{formatDisplay(val)}</strong>
           </div>
         ))}
-      </dl>
+      </div>
     </section>
   );
 }
@@ -2083,6 +2114,9 @@ function StudentProfileFeesView({ student, onOpenReceipt }) {
 
 function Profile({ student, tab, setTab, back, edit, canEdit, onPhotoUpload }) {
   const [receiptModal, setReceiptModal] = useState(null);
+  const currentTabIndex = TABS.findIndex(([id]) => id === tab);
+  const prevTab = currentTabIndex > 0 ? TABS[currentTabIndex - 1] : null;
+  const nextTab = currentTabIndex >= 0 && currentTabIndex < TABS.length - 1 ? TABS[currentTabIndex + 1] : null;
   const a = student.academic || {},
     app = student.application || {},
     p = student.personal || {},
@@ -2091,7 +2125,8 @@ function Profile({ student, tab, setTab, back, edit, canEdit, onPhotoUpload }) {
     previous = student.previousEducation || {},
     admission = student.admission || {},
     fees = student.fees || {},
-    documents = student.documents || {};
+    documents = student.documents || {},
+    rollNo = a.rollNumber || student.rollNumber || student.studentCode || app.rollNumber || "";
 
   const relationship =
     parents.guardian?.relationship === "Other"
@@ -2104,10 +2139,7 @@ function Profile({ student, tab, setTab, back, edit, canEdit, onPhotoUpload }) {
         title: "Personal Information",
         icon: FiUser,
         rows: [
-          ["Student Full Name", studentFullName(student)],
-          ["First Name", p.firstName],
-          ["Middle Name", p.middleName],
-          ["Last Name", p.lastName],
+          ["Full Name", studentFullName(student)],
           ["Gender", p.gender],
           ["Date of Birth", p.dob],
           ["Blood Group", p.bloodGroup],
@@ -2120,8 +2152,8 @@ function Profile({ student, tab, setTab, back, edit, canEdit, onPhotoUpload }) {
         icon: FiUser,
         rows: [
           ["Student Mobile", c.mobile],
-          ["Alternate Mobile", c.alternateMobile],
           ["Student Email", c.email],
+          ["Alternate Mobile", c.alternateMobile],
           ["Alternate Email", c.alternateEmail],
         ],
       },
@@ -2180,19 +2212,18 @@ function Profile({ student, tab, setTab, back, edit, canEdit, onPhotoUpload }) {
         title: "Academic Enrollment",
         icon: FiBookOpen,
         rows: [
+          ["Roll Number", a.rollNumber || student.rollNumber || app.rollNumber],
+          ["Admission Number", app.admissionNumber || student.admissionNumber],
           ["Academic Year", a.academicYear],
-          ["Joining College", admission.college],
-          ["Admission Type", a.admissionType],
-          ["Quota", studentQuotaDisplay(student)],
           ["Course", a.course],
-          ["Course Code", a.courseCode],
           ["Department", a.department],
           ["Branch", a.branch],
-          ["Branch Code", a.branchCode],
-          ["Student Category", a.studentCategory],
+          ["Section", a.section],
+          ["Year of Study", a.yearOfStudy ? (String(a.yearOfStudy).toLowerCase().includes('year') ? a.yearOfStudy : `${a.yearOfStudy} Year`) : (a.semester ? (String(a.semester).toLowerCase().includes('semester') ? a.semester : `Semester ${a.semester}`) : "")],
+          ["Admission Type", a.admissionType],
+          ["Quota", studentQuotaDisplay(student)],
+          ["Joining College", admission.college || a.collegeName],
           ["Regulation", a.regulation],
-          ["Year of Study", a.yearOfStudy],
-          ["Roll Number", a.rollNumber],
         ],
       },
     ],
@@ -2362,13 +2393,18 @@ function Profile({ student, tab, setTab, back, edit, canEdit, onPhotoUpload }) {
           </div>
           <div className="cm-profile-header-info">
             <div className="cm-profile-badges">
+              {rollNo && (
+                <span className="cm-badge cm-badge-roll" title={`Official Academic Roll Number: ${rollNo}`}>
+                  Roll No: {rollNo}
+                </span>
+              )}
               {app.admissionNumber && (
-                <span className="cm-badge cm-badge-type">
+                <span className="cm-badge cm-badge-type" title={`Admission Ledger Number: ${app.admissionNumber}`}>
                   Adm No: {app.admissionNumber}
                 </span>
               )}
               {(app.registrationNumber || app.number) && (
-                <span className="cm-badge cm-badge-code">
+                <span className="cm-badge cm-badge-code" title={`Application Registration Number: ${app.registrationNumber || app.number}`}>
                   Reg No: {app.registrationNumber || app.number}
                 </span>
               )}
@@ -2400,24 +2436,34 @@ function Profile({ student, tab, setTab, back, edit, canEdit, onPhotoUpload }) {
           ))}
         </nav>
       {tab === "documents" ? (
-        <section className="sp-panel">
-          <header>
-            <h2>Submitted documents</h2>
-            {student.documentError && <p role="alert">{student.documentError}</p>}
-          </header>
-          <div className="sp-document-list">
-            {documentRows.map(([label, document], index) => (
-              <article key={document?.id || label + index}>
-                <FiFileText />
-                <div>
-                  <strong>{label}</strong>
-                  <span>{document?.name || document?.status || "Not uploaded"}</span>
-                </div>
-<StudentDocumentActions document={document} studentId={profileStudentId(student)} />
-              </article>
-            ))}
-          </div>
-        </section>
+        <div className="sp-profile-cards-container">
+          <section className="sp-profile-panel">
+            <header className="sp-panel-header">
+              <div className="sp-panel-title-wrap">
+                <span className="sp-panel-icon"><FiFileText aria-hidden="true" /></span>
+                <h2>Submitted Documents</h2>
+              </div>
+              <span className="sp-card-count-badge">{documentRows.length} files</span>
+            </header>
+            {student.documentError && !student.documentError.toLowerCase().includes("not found") && (
+              <div style={{ margin: '14px 18px', padding: '10px 14px', background: '#fee2e2', color: '#b91c1c', borderRadius: '8px', fontSize: '13px' }} role="alert">
+                {student.documentError}
+              </div>
+            )}
+            <div className="sp-document-list" style={{ padding: '16px' }}>
+              {documentRows.map(([label, document], index) => (
+                <article key={document?.id || label + index}>
+                  <FiFileText />
+                  <div>
+                    <strong>{label}</strong>
+                    <span>{document?.name || document?.status || "Not uploaded"}</span>
+                  </div>
+                  <StudentDocumentActions document={document} studentId={profileStudentId(student)} />
+                </article>
+              ))}
+            </div>
+          </section>
+        </div>
       ) : tab === "fees" ? (
         <StudentProfileFeesView student={student} onOpenReceipt={setReceiptModal} />
       ) : sectionsByTab[tab] ? (
@@ -2436,6 +2482,33 @@ function Profile({ student, tab, setTab, back, edit, canEdit, onPhotoUpload }) {
           No admission information is available for this section.
         </Empty>
       )}
+
+        <footer className="sp-view-tab-nav-footer">
+          {prevTab ? (
+            <button
+              type="button"
+              className="cm-button secondary erp-btn erp-btn--secondary"
+              onClick={() => {
+                setTab(prevTab[0]);
+                document.querySelector('.shared-view-dialog__body')?.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            >
+              &larr; {prevTab[1]}
+            </button>
+          ) : <span />}
+          {nextTab && (
+            <button
+              type="button"
+              className="cm-button primary erp-btn erp-btn--primary"
+              onClick={() => {
+                setTab(nextTab[0]);
+                document.querySelector('.shared-view-dialog__body')?.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            >
+              {nextTab[1]} &rarr;
+            </button>
+          )}
+        </footer>
       </div>
 
       {receiptModal && (
@@ -2806,6 +2879,110 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
       tabs.findIndex(([id]) => id === tab),
     ),
     lastStep = stepIndex === tabs.length - 1;
+
+  const validateCurrentStep = (stepId) => {
+    const allErrors = validateProfileForm(form, errors);
+    const p = form.personal || {};
+    const c = form.contact || {};
+    const a = form.academic || {};
+    const f = form.parents?.father || {};
+    const m = form.parents?.mother || {};
+    const g = form.parents?.guardian || {};
+    const tenth = form.previousEducation?.tenth || {};
+    const admission = form.admission || {};
+
+    const stepErrors = {};
+
+    if (stepId === "personal") {
+      if (!clean(p.firstName) || !validName(p.firstName)) {
+        stepErrors["personal.firstName"] = allErrors["personal.firstName"] || "First name is required.";
+      }
+      if (!clean(p.gender)) {
+        stepErrors["personal.gender"] = "Please select gender.";
+      }
+      if (!clean(p.dob) || allErrors["personal.dob"]) {
+        stepErrors["personal.dob"] = allErrors["personal.dob"] || "Date of birth is required.";
+      }
+      if (clean(p.aadhaar) && allErrors["personal.aadhaar"]) {
+        stepErrors["personal.aadhaar"] = allErrors["personal.aadhaar"];
+      }
+      ["personal.middleName", "personal.lastName", "personal.nationality"].forEach((k) => {
+        if (allErrors[k]) stepErrors[k] = allErrors[k];
+      });
+    } else if (stepId === "contact") {
+      if (!clean(c.mobile) || !validMobile(c.mobile)) {
+        stepErrors["contact.mobile"] = allErrors["contact.mobile"] || "Valid 10-digit Indian mobile number is required.";
+      }
+      if (!clean(c.email) || !validEmail(c.email)) {
+        stepErrors["contact.email"] = allErrors["contact.email"] || "Valid email address is required.";
+      }
+      const curr = c.currentAddress || {};
+      if (!clean(curr.line1)) stepErrors["contact.currentAddress.line1"] = "Address line 1 is required.";
+      if (!clean(curr.city)) stepErrors["contact.currentAddress.city"] = "City is required.";
+      if (!clean(curr.state)) stepErrors["contact.currentAddress.state"] = "State is required.";
+      if (!clean(curr.pincode) || !/^\d{6}$/.test(clean(curr.pincode))) {
+        stepErrors["contact.currentAddress.pincode"] = "Valid 6-digit PIN code is required.";
+      }
+      if (!c.sameAddress) {
+        const perm = c.permanentAddress || {};
+        if (clean(perm.pincode) && !/^\d{6}$/.test(clean(perm.pincode))) {
+          stepErrors["contact.permanentAddress.pincode"] = "Valid 6-digit PIN code is required.";
+        }
+      }
+      ["contact.alternateMobile", "contact.alternateEmail"].forEach((k) => {
+        if (allErrors[k]) stepErrors[k] = allErrors[k];
+      });
+    } else if (stepId === "parents") {
+      const hasParent = clean(f.name) || clean(m.name) || clean(g.name);
+      const hasPhone = clean(f.mobile) || clean(m.mobile) || clean(form.parents?.emergencyMobile);
+      if (!hasParent) {
+        stepErrors["parents.father.name"] = "Please provide father, mother, or guardian name.";
+      }
+      if (!hasPhone) {
+        stepErrors["parents.emergencyMobile"] = "Please provide an emergency contact mobile number.";
+      }
+      if (g.relationship === "Other" && !clean(g.relationshipOther)) {
+        stepErrors["parents.guardian.relationshipOther"] = "Specify the guardian relationship.";
+      }
+      Object.keys(allErrors).filter((k) => k.startsWith("parents.")).forEach((k) => {
+        stepErrors[k] = allErrors[k];
+      });
+    } else if (stepId === "academic") {
+      if (!clean(a.academicYear)) stepErrors["academic.academicYear"] = "Academic year is required.";
+      if (!clean(admission.college)) stepErrors["admission.college"] = "Joining college is required.";
+      if (!clean(a.course)) stepErrors["academic.course"] = "Course is required.";
+      if (!clean(a.branch)) stepErrors["academic.branch"] = "Branch is required.";
+      if (!clean(a.admissionType)) stepErrors["academic.admissionType"] = "Admission type is required.";
+      if (a.admissionType === "Lateral Entry" && !clean(a.quota)) {
+        stepErrors["academic.quota"] = "Admission quota is required for Lateral Entry.";
+      }
+      Object.keys(allErrors).filter((k) => k.startsWith("academic.") || k.startsWith("admission.college")).forEach((k) => {
+        stepErrors[k] = allErrors[k];
+      });
+    } else if (stepId === "education") {
+      if (!clean(tenth.board)) stepErrors["previousEducation.tenth.board"] = "10th Board is required.";
+      if (!clean(tenth.passingYear) || !validYear(tenth.passingYear)) {
+        stepErrors["previousEducation.tenth.passingYear"] = "Valid 10th passing year is required.";
+      }
+      if (!clean(tenth.score) || allErrors["previousEducation.tenth.score"]) {
+        stepErrors["previousEducation.tenth.score"] = allErrors["previousEducation.tenth.score"] || "10th score is required.";
+      }
+      Object.keys(allErrors).filter((k) => k.startsWith("previousEducation.")).forEach((k) => {
+        stepErrors[k] = allErrors[k];
+      });
+    } else if (stepId === "services") {
+      if (admission.hostel === "Yes") {
+        if (!clean(admission.hostelPreference)) stepErrors["admission.hostelPreference"] = "Hostel preference is required.";
+        if (!clean(admission.hostelRoomType)) stepErrors["admission.hostelRoomType"] = "Room type is required.";
+      }
+      if (admission.transport === "Yes") {
+        if (!clean(admission.transportRoute)) stepErrors["admission.transportRoute"] = "Transportation route is required.";
+      }
+    }
+
+    return stepErrors;
+  };
+
   const moveStep = (direction) => {
     const next = Math.min(tabs.length - 1, Math.max(0, stepIndex + direction));
     setTab(tabs[next][0]);
@@ -2816,6 +2993,44 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
           ?.scrollTo({ top: 0, behavior: "smooth" }),
       0,
     );
+  };
+
+  const handleNextStep = () => {
+    const stepErrors = validateCurrentStep(tab);
+    if (Object.keys(stepErrors).length > 0) {
+      setErrors((prev) => ({ ...prev, ...stepErrors }));
+      setTouched((prev) => {
+        const nextTouched = { ...prev };
+        Object.keys(stepErrors).forEach((k) => { nextTouched[k] = true; });
+        return nextTouched;
+      });
+      showWarning("Please complete all mandatory fields in this section before proceeding.");
+      const firstErrorField = Object.keys(stepErrors)[0];
+      const el = document.querySelector(`[name="${firstErrorField}"]`) || document.getElementById(`${firstErrorField}-error`);
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+
+    moveStep(1);
+  };
+
+  const handleTabClick = (targetId, targetIndex) => {
+    if (targetIndex <= stepIndex) {
+      setTab(targetId);
+      return;
+    }
+    const stepErrors = validateCurrentStep(tab);
+    if (Object.keys(stepErrors).length > 0) {
+      setErrors((prev) => ({ ...prev, ...stepErrors }));
+      setTouched((prev) => {
+        const nextTouched = { ...prev };
+        Object.keys(stepErrors).forEach((k) => { nextTouched[k] = true; });
+        return nextTouched;
+      });
+      showWarning("Please complete the required fields in the current section first.");
+      return;
+    }
+    setTab(targetId);
   };
   const update = (path, value) => {
       setForm((current) => {
@@ -3050,7 +3265,7 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
         ["town", "Village / Town"],
         ["city", "City", { required: isRequired }],
         ["district", "District"],
-        ["state", "State"],
+        ["state", "State", { required: isRequired }],
         ["country", "Country"],
         ["pincode", "PIN code", { required: isRequired }],
       ].map(([key, label, opts]) => [`${prefix}.${key}`, label, opts]),
@@ -3190,7 +3405,7 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
               type="button"
               key={id}
               className={`${tab === id ? "active" : ""} ${index < stepIndex ? "complete" : ""}`}
-              onClick={() => setTab(id)}
+              onClick={() => handleTabClick(id, index)}
               aria-current={tab === id ? "step" : undefined}
             >
               <span>{index + 1}</span>
@@ -3387,6 +3602,14 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
                 Academic placement details.
               </p>
               {fields([
+                [
+                  "academic.rollNumber",
+                  "Roll number (Hall ticket / PIN)",
+                  {
+                    placeholder: "e.g. 26REC0501",
+                    title: "Official classroom and examination roll number allotted upon enrollment",
+                  },
+                ],
                 [
                   "academic.academicYear",
                   "Academic year",
@@ -3868,38 +4091,42 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
               {errors.form}
             </p>
           )}
-          <footer>
+          <footer className="sp-edit-footer">
             <button
               type="button"
-              className="sp-button secondary"
+              className="sp-button secondary sp-btn-cancel"
               onClick={close}
               disabled={saving}
             >
               Cancel
             </button>
             <span className="sp-edit-action-spacer" />
-            {stepIndex > 0 && (
-              <button
-                type="button"
-                className="sp-button secondary"
-                onClick={() => moveStep(-1)}
-                disabled={saving}
-              >
-                Previous
-              </button>
-            )}
+            <button
+              type="button"
+              className="sp-button secondary sp-btn-back"
+              onClick={() => {
+                if (stepIndex > 0) {
+                  moveStep(-1);
+                } else {
+                  close();
+                }
+              }}
+              disabled={saving}
+            >
+              &larr; Back
+            </button>
             {!lastStep ? (
               <button
                 type="button"
-                className="sp-button"
-                onClick={() => moveStep(1)}
+                className="sp-button primary sp-btn-next"
+                onClick={handleNextStep}
               >
-                Continue
+                Next &rarr;
               </button>
             ) : (
               <button
                 type="submit"
-                className="sp-button"
+                className="sp-button primary sp-btn-save"
                 disabled={!dirty || saving}
               >
                 {saving ? (

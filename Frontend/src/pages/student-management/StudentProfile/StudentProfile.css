@@ -1000,8 +1000,37 @@ main.student-profile .sp-directory-table tbody td:first-child {
   border-radius: 2px !important;
 }
 
+.sp-student-sub-ids {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 5px !important;
+  margin-top: 3px !important;
+}
+
+.sp-student-roll-no {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 3px !important;
+  font-size: 10.5px !important;
+  font-weight: 600 !important;
+  color: #047857 !important;
+  background: #ecfdf5 !important;
+  padding: 1.5px 6px !important;
+  border-radius: 4px !important;
+  border: 1px solid #a7f3d0 !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+}
+
+.sp-student-roll-no .sp-roll-val {
+  font-weight: 700 !important;
+  color: #065f46 !important;
+}
+
 .sp-student-adm-no {
-  display: block !important;
+  display: inline-block !important;
   font-size: 11px !important;
   font-weight: 600 !important;
   color: var(--brand, #2563eb) !important;
@@ -1252,6 +1281,16 @@ main.student-profile .sp-directory-table tbody td:first-child {
   background: color-mix(in srgb, var(--brand, #2563eb) 12%, transparent);
 }
 
+/* Roll badge in Hero Banner */
+.student-profile .cm-badge-roll,
+dialog.sp-details-view-dialog .cm-profile-badges .cm-badge-roll {
+  background: rgba(254, 240, 138, 0.28) !important;
+  color: #fef08a !important;
+  border: 1px solid rgba(254, 240, 138, 0.55) !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.02em !important;
+}
+
 /* Section badge in Hero Banner */
 .student-profile .cm-badge-section {
   color: #0369a1 !important;
@@ -1469,21 +1508,27 @@ dialog.sp-details-view-dialog.shared-view-dialog {
   border: 1px solid #cbd5e1 !important;
   background: #ffffff !important;
   overflow: hidden !important;
+  padding: 0 !important;
 }
 
 dialog.sp-details-view-dialog .shared-view-dialog__header {
   flex-shrink: 0 !important;
+  flex-grow: 0 !important;
   padding: 16px 24px !important;
   background: #ffffff !important;
   border-bottom: 1px solid #e2e8f0 !important;
 }
 
 dialog.sp-details-view-dialog .shared-view-dialog__body {
+  display: block !important;
   flex: 1 1 auto !important;
   min-height: 0 !important;
-  height: 100% !important;
+  height: auto !important;
+  max-height: none !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
+  overscroll-behavior: contain !important;
+  -webkit-overflow-scrolling: touch !important;
   padding: 0 !important;
   background: #f8fafc !important;
 }
@@ -1506,11 +1551,13 @@ dialog.sp-details-view-dialog .shared-view-dialog__body::-webkit-scrollbar-thumb
 }
 
 dialog.sp-details-view-dialog .cm-profile-view {
-  padding: 20px 24px 28px !important;
+  padding: 16px 20px 24px !important;
   display: flex !important;
   flex-direction: column !important;
-  gap: 16px !important;
+  gap: 14px !important;
   background: transparent !important;
+  min-height: max-content !important;
+  height: auto !important;
 }
 
 dialog.sp-details-view-dialog .cm-profile-top-bar {
@@ -1665,10 +1712,10 @@ dialog.sp-details-view-dialog .sp-tabs button.active {
 }
 
 dialog.sp-details-view-dialog .sp-profile-cards-container {
-  padding: 20px 24px !important;
+  padding: 16px 20px 24px !important;
   display: flex !important;
   flex-direction: column !important;
-  gap: 18px !important;
+  gap: 14px !important;
 }
 
 dialog.sp-details-view-dialog .sp-profile-panel {
@@ -1685,10 +1732,23 @@ dialog.sp-details-view-dialog .sp-panel-header {
   border-bottom: 1px solid #e2e8f0 !important;
   display: flex !important;
   align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+}
+
+dialog.sp-details-view-dialog .sp-panel-title-wrap {
+  display: flex !important;
+  align-items: center !important;
   gap: 9px !important;
-  font-size: 14px !important;
-  font-weight: 750 !important;
-  color: #1e293b !important;
+  min-width: 0 !important;
+}
+
+dialog.sp-details-view-dialog .sp-panel-icon {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #2563eb !important;
+  font-size: 16px !important;
 }
 
 dialog.sp-details-view-dialog .sp-panel-header h2 {
@@ -1698,12 +1758,38 @@ dialog.sp-details-view-dialog .sp-panel-header h2 {
   color: #1e293b !important;
 }
 
+dialog.sp-details-view-dialog .sp-card-count-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 3px 9px !important;
+  border-radius: 999px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  background: #e2e8f0 !important;
+  color: #475569 !important;
+  flex-shrink: 0 !important;
+}
+
 dialog.sp-details-view-dialog .sp-panel-grid {
   display: grid !important;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)) !important;
-  gap: 12px 14px !important;
-  padding: 16px 18px !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  padding: 14px 16px !important;
   background: #ffffff !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+@media (max-width: 900px) {
+  dialog.sp-details-view-dialog .sp-panel-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 600px) {
+  dialog.sp-details-view-dialog .sp-panel-grid {
+    grid-template-columns: 1fr !important;
+  }
 }
 
 dialog.sp-details-view-dialog .sp-panel-item {
@@ -1734,4 +1820,114 @@ dialog.sp-details-view-dialog .sp-panel-val {
   line-height: 1.4 !important;
   word-break: break-word !important;
   overflow-wrap: anywhere !important;
+}
+
+dialog.sp-details-view-dialog .sp-document-list {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  padding: 16px !important;
+  background: #ffffff !important;
+}
+
+@media (max-width: 700px) {
+  dialog.sp-details-view-dialog .sp-document-list {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+dialog.sp-details-view-dialog .sp-document-list article {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 12px 16px !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  background: #f8fafc !important;
+}
+
+dialog.sp-details-view-dialog .sp-document-list article strong {
+  font-size: 13px !important;
+  color: #0f172a !important;
+}
+
+dialog.sp-details-view-dialog .sp-document-list article span {
+  font-size: 11px !important;
+  color: #64748b !important;
+}
+
+dialog.sp-details-view-dialog .sp-view-tab-nav-footer {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  padding: 14px 20px !important;
+  background: #ffffff !important;
+  border-top: 1px solid #e2e8f0 !important;
+  border-radius: 0 0 14px 14px !important;
+  margin-top: 4px !important;
+}
+
+dialog.sp-details-view-dialog .sp-view-tab-nav-footer button {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  padding: 8px 18px !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  transition: all 0.16s ease !important;
+}
+
+dialog.sp-details-view-dialog .sp-view-tab-nav-footer button.primary {
+  background: var(--brand-solid, #2563eb) !important;
+  color: #ffffff !important;
+  border: 1px solid transparent !important;
+}
+
+dialog.sp-details-view-dialog .sp-view-tab-nav-footer button.primary:hover {
+  background: #1d4ed8 !important;
+}
+
+dialog.sp-details-view-dialog .sp-view-tab-nav-footer button.secondary {
+  background: #f1f5f9 !important;
+  color: #334155 !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+dialog.sp-details-view-dialog .sp-view-tab-nav-footer button.secondary:hover {
+  background: #e2e8f0 !important;
+}
+
+.sp-edit-footer {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 12px !important;
+  padding: 16px 20px !important;
+  border-top: 1px solid var(--border) !important;
+  background: var(--surface-soft, #f8fafc) !important;
+  margin-top: 20px !important;
+  border-radius: 0 0 12px 12px !important;
+}
+
+.sp-edit-footer .sp-btn-back {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #334155 !important;
+  font-weight: 700 !important;
+}
+
+.sp-edit-footer .sp-btn-next,
+.sp-edit-footer .sp-btn-save {
+  background: var(--brand-solid, #2563eb) !important;
+  color: #ffffff !important;
+  border: 1px solid transparent !important;
+  font-weight: 700 !important;
+}
+
+.sp-edit-footer .sp-btn-next:hover,
+.sp-edit-footer .sp-btn-save:hover {
+  background: #1d4ed8 !important;
 }

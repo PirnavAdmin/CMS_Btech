@@ -21,7 +21,7 @@ import ExportMenu, { PrintDetailsButton } from '../../../components/ExportMenu'
 import { printSingleRecord } from '../../../utils/exportUtils'
 import { admissionColumns } from '../../../utils/exportColumns'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { FiAlertCircle, FiArrowLeft, FiArrowRight, FiBookOpen, FiCamera, FiCheck, FiCheckCircle, FiChevronRight, FiClock, FiCreditCard, FiEdit2, FiEye, FiFileText, FiFilter, FiGrid, FiHome, FiInbox, FiPhone, FiPlus, FiPrinter, FiSave, FiSearch, FiShield, FiTrash2, FiUploadCloud, FiUser, FiUsers, FiX } from 'react-icons/fi'
+import { FiAlertCircle, FiArrowLeft, FiArrowRight, FiBookOpen, FiCamera, FiCheck, FiCheckCircle, FiChevronLeft, FiChevronRight, FiClock, FiCreditCard, FiEdit2, FiEye, FiFileText, FiFilter, FiGrid, FiHome, FiInbox, FiPhone, FiPlus, FiPrinter, FiSave, FiSearch, FiShield, FiTrash2, FiUploadCloud, FiUser, FiUsers, FiX } from 'react-icons/fi'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import DashboardLayout from '../../../layouts/DashboardLayout'
 import TablePagination, { PAGE_SIZE } from '../../../components/TablePagination'
@@ -375,7 +375,6 @@ const validate = data => {
   if (data.academic.admissionType === 'Lateral Entry' && data.academic.quota === 'Other' && !text(data.academic.quotaOther)) errors['academic.quotaOther'] = 'Enter the admission quota.'
   if (data.previousEducation.intermediate.stream === 'Other' && !text(data.previousEducation.intermediate.streamOther)) errors['previousEducation.intermediate.streamOther'] = 'Enter the stream name.'
   if (data.admission.hostel === 'Yes' && !text(data.admission.hostelPreference)) errors['admission.hostelPreference'] = 'Select a hostel preference.'
-  if (data.admission.hostel === 'Yes' && !text(data.admission.hostelRoomType)) errors['admission.hostelRoomType'] = 'Select a room type / number of beds.'
   if (data.admission.transport === 'Yes' && !text(data.admission.transportRoute)) errors['admission.transportRoute'] = 'Select a transport route.'
   ;['tuitionFee','admissionFee','scholarshipAmount','hostelFee','transportFee'].forEach(key => { if (text(data.fees[key]) && Number(data.fees[key]) < 0) errors[`fees.${key}`] = 'Amount cannot be negative.' })
   const grossFee = ['tuitionFee','admissionFee','hostelFee','transportFee'].reduce((sum,key) => sum + Number(data.fees[key] || 0), 0)
@@ -1675,6 +1674,17 @@ function ReviewSection({ title, icon: Icon, step, edit, items }) {
 }
 function CoreReview({ data, edit }) {
   const address = value => formatAddress(value)
+  const parentName = data.parents?.father?.name || data.parents?.guardian?.name || data.parents?.mother?.name || ''
+  const parentMobile = data.parents?.father?.mobile || data.parents?.guardian?.mobile || data.parents?.mother?.mobile || ''
+  const parentRel = data.parents?.guardian?.relationship === 'Other'
+    ? data.parents?.guardian?.relationshipOther
+    : (data.parents?.guardian?.relationship || (data.parents?.father?.name ? 'Father' : data.parents?.mother?.name ? 'Mother' : (data.parents?.primaryContact || 'Parent / Guardian')))
+  const familyIncome = data.parents?.father?.income || data.parents?.mother?.income || data.parents?.guardian?.income || ''
+  const inter = data.previousEducation?.intermediate || {}
+  const tenth = data.previousEducation?.tenth || {}
+  const interScore = inter.score ? `${inter.score} ${inter.scoreType || '%'}` : ''
+  const tenthScore = tenth.score ? `${tenth.score} ${tenth.scoreType || '%'}` : ''
+
   return (
     <div className="sa-review-columns">
       <div className="sa-review-col">
@@ -1685,13 +1695,8 @@ function CoreReview({ data, edit }) {
           edit={edit}
           items={[
             ['Student Name', studentName(data)],
-            ['First Name', data.personal?.firstName],
-            ['Middle Name', data.personal?.middleName, true],
-            ['Last Name', data.personal?.lastName],
             ['Gender', data.personal?.gender],
             ['Date of Birth', data.personal?.dob],
-            ['Blood Group', data.personal?.bloodGroup, true],
-            ['Nationality', data.personal?.nationality],
             ['Aadhaar Number', data.personal?.aadhaar],
           ]}
         />
@@ -1702,11 +1707,8 @@ function CoreReview({ data, edit }) {
           edit={edit}
           items={[
             ['Student Mobile', data.contact?.mobile],
-            ['Alternate Mobile', data.contact?.alternateMobile, true],
             ['Student Email', data.contact?.email],
-            ['Alternate Email', data.contact?.alternateEmail, true],
             ['Current Address', address(data.contact?.currentAddress), false, true],
-            ['Permanent Address', address(data.contact?.permanentAddress) || address(data.contact?.currentAddress), false, true],
           ]}
         />
         <ReviewSection
@@ -1715,27 +1717,11 @@ function CoreReview({ data, edit }) {
           step={2}
           edit={edit}
           items={[
-            ['Father Name', data.parents?.father?.name, true],
-            ['Father Mobile', data.parents?.father?.mobile, true],
-            ['Father Email', data.parents?.father?.email, true],
-            ['Father Occupation', data.parents?.father?.occupation, true],
-            ['Father Qualification', data.parents?.father?.qualification, true],
-            ['Annual Income', data.parents?.father?.income, true],
-            ['Mother Name', data.parents?.mother?.name, true],
-            ['Mother Mobile', data.parents?.mother?.mobile, true],
-            ['Mother Email', data.parents?.mother?.email, true],
-            ['Mother Occupation', data.parents?.mother?.occupation, true],
-            ['Mother Qualification', data.parents?.mother?.qualification, true],
-            ['Mother Annual Income', data.parents?.mother?.income, true],
-            ['Guardian Name', data.parents?.guardian?.name, true],
-            ['Guardian Relationship', data.parents?.guardian?.relationship === 'Other' ? data.parents?.guardian?.relationshipOther : data.parents?.guardian?.relationship, true],
-            ['Guardian Mobile', data.parents?.guardian?.mobile, true],
-            ['Guardian Email', data.parents?.guardian?.email, true],
-            ['Guardian Occupation', data.parents?.guardian?.occupation, true],
-            ['Guardian Qualification', data.parents?.guardian?.qualification, true],
-            ['Guardian Annual Income', data.parents?.guardian?.income, true],
-            ['Primary Contact', data.parents?.primaryContact, true],
-            ['Emergency Contact', data.parents?.emergencyMobile, true],
+            ['Parent / Guardian Name', parentName || 'Not provided'],
+            ['Relationship', parentRel || 'Parent'],
+            ['Parent Mobile', parentMobile || 'Not provided'],
+            ['Annual Family Income', familyIncome ? money(familyIncome) : 'Not specified', true],
+            ['Emergency Contact', data.parents?.emergencyMobile || parentMobile || data.contact?.mobile || 'Not provided'],
           ]}
         />
         {(() => {
@@ -1752,15 +1738,14 @@ function CoreReview({ data, edit }) {
             <ReviewSection
               title="Fee Summary"
               icon={FiCreditCard}
-              step={6}
+              step={4}
               edit={edit}
               items={[
                 ['Tuition Fee (per year)', money(rTuition)],
                 ['Admission Fee (one-time)', money(rAdmission)],
                 ['Scholarship Deduction', rScholarship ? `- ${money(rScholarship)}` : '', true],
-                ['Hostel Room Type', data.admission?.hostelRoomType, true],
-                ['Hostel Fee (per year)', money(rHostel), data.admission?.hostel !== 'Yes'],
-                ['Transportation Fee (per year)', money(rTransport), data.admission?.transport !== 'Yes'],
+                ...(data.admission?.hostel === 'Yes' ? [['Hostel Fee (per year)', money(rHostel)]] : []),
+                ...(data.admission?.transport === 'Yes' ? [['Transportation Fee (per year)', money(rTransport)]] : []),
                 ['Estimated First-Year Total', money(rTotal)],
                 ['Estimated Entire 4-Year Total', money(Math.max(0, (rTuition + rHostel + rTransport) * 4 + rAdmission - rScholarship))],
                 ['Payment Preference', rPlan],
@@ -1774,61 +1759,50 @@ function CoreReview({ data, edit }) {
         <ReviewSection
           title="Academic Enrollment"
           icon={FiBookOpen}
-          step={3}
+          step={1}
           edit={edit}
           items={[
             ['Academic Year', data.academic?.academicYear],
-            ['Joining College', data.admission?.college],
             ['Admission Type', data.academic?.admissionType],
             ['Quota', quota(data), true],
-            ['Course', data.academic?.course],
-            ['Course Code', data.academic?.courseCode, true],
+            ['Course / Program', data.academic?.course],
             ['Department', data.academic?.department, true],
-            ['Branch', data.academic?.branch],
-            ['Branch Code', data.academic?.branchCode, true],
+            ['Branch / Specialization', data.academic?.branch],
             ['Student Category', data.academic?.studentCategory, true],
-            ['Regulation', data.academic?.regulation, true],
           ]}
         />
         <ReviewSection
           title="Previous Education"
           icon={FiFileText}
-          step={4}
+          step={1}
           edit={edit}
           items={[
-            ['10th Board', data.previousEducation?.tenth?.board, true],
-            ['10th School Name', data.previousEducation?.tenth?.institution, true],
-            ['10th Roll Number', data.previousEducation?.tenth?.rollNumber, true],
-            ['10th Passing Year', data.previousEducation?.tenth?.passingYear, true],
-            ['10th Score Type', data.previousEducation?.tenth?.score ? data.previousEducation?.tenth?.scoreType : '', true],
-            ['10th Score', data.previousEducation?.tenth?.score, true],
-            ['Qualification', data.previousEducation?.intermediate?.qualification === 'Intermediate / 12th' ? '' : data.previousEducation?.intermediate?.qualification, true],
-            ['Board / University', data.previousEducation?.intermediate?.board, true],
-            ['College Name', data.previousEducation?.intermediate?.institution, true],
-            ['Passing Year', data.previousEducation?.intermediate?.passingYear, true],
-            ['Stream', data.previousEducation?.intermediate?.stream === 'Other' ? data.previousEducation?.intermediate?.streamOther : data.previousEducation?.intermediate?.stream, true],
-            ['Score Type', data.previousEducation?.intermediate?.score ? data.previousEducation?.intermediate?.scoreType : '', true],
-            ['Score', data.previousEducation?.intermediate?.score, true],
+            ['Qualifying Examination', inter.qualification === 'Intermediate / 12th' ? 'Intermediate / 12th' : (inter.qualification || 'Intermediate / 12th'), true],
+            ['Board / University', inter.board, true],
+            ['College Name', inter.institution, true],
+            ['Passing Year', inter.passingYear, true],
+            ['Stream / Group', inter.stream === 'Other' ? inter.streamOther : inter.stream, true],
+            ['Aggregate Score', interScore || '—', true],
+            ['10th Board', tenth.board, true],
+            ['10th School Name', tenth.institution, true],
+            ['10th Passing Year & Score', [tenth.passingYear, tenthScore].filter(Boolean).join(' | ') || '—', true],
           ]}
         />
         <ReviewSection
           title="Admission & Services"
           icon={FiHome}
-          step={5}
+          step={1}
           edit={edit}
           items={[
             ['Registration Number', data.application?.registrationNumber || data.application?.number],
             ['Registration Date', data.application?.registrationDate || data.application?.date],
             ['Admission Number', normalizeStatus(data.status) === 'APPROVED' ? (data.application?.admissionNumber || 'Allotted') : 'Allotted upon approval', true],
             ['Admission Date', normalizeStatus(data.status) === 'APPROVED' ? (data.application?.admissionDate || data.updatedAt) : 'Recorded upon approval', true],
-            ['College', data.admission?.college],
             ['Batch', data.admission?.batch],
-            ['Scholarship', data.admission?.scholarship],
-            ['Hostel', data.admission?.hostel],
-            ['Hostel Preference', data.admission?.hostelPreference, true],
-            ['Room Type / Beds', data.admission?.hostelRoomType, true],
-            ['Transportation', data.admission?.transport],
-            ['Transport Route', data.admission?.transportRoute, true],
+            ['Hostel Required', data.admission?.hostel || 'No'],
+            ...(data.admission?.hostel === 'Yes' ? [['Hostel Preference', data.admission?.hostelPreference, true]] : []),
+            ['Transportation Required', data.admission?.transport || 'No'],
+            ...(data.admission?.transport === 'Yes' ? [['Transport Route', data.admission?.transportRoute, true]] : []),
           ]}
         />
       </div>
@@ -1892,11 +1866,10 @@ function PreviewHeader({ data }) {
     const status = documentStatus(doc)
     return status && status !== 'Not Submitted'
   }).length
-  const photoSrc = data.personal?.photo ? apiAssetUrl(data.personal.photo) : (data.personal?.photoUrl ? apiAssetUrl(data.personal.photoUrl) : '')
   return (
     <section className="sa-preview-header">
       <div className="sa-preview-photo">
-        {photoSrc ? <img src={photoSrc} alt={studentName(data)} /> : <FiUser />}
+        <FiUser />
       </div>
       <div className="sa-preview-identity">
         <span>Admission Preview</span>
@@ -2425,12 +2398,12 @@ function AdmissionForm() {
     return <label className={`sa-field ${masterError?'invalid':''}`} htmlFor={id}><span>{label}<b> *</b></span><ProjectSelect id={id} value={read(data,idPath)||''} disabled={disabled || (branchField && branchLoading)} onChange={event=>{setSaveError('');markTouched(namePath);markTouched(idPath);const option=options.find(item=>same(item.id,event.target.value));setData(current=>{let next=setPath(current,idPath,event.target.value);if(current.previewEditedFields)next.previewEditedFields={...current.previewEditedFields,[idPath]:true,[namePath]:true};next=setPath(next,namePath,option?.name||'');if(idPath==='academic.courseId')next=setPath(next,'academic.courseCode',option?.code||courseCodeFallback(option?.name));if(idPath==='academic.branchId')next=setPath(next,'academic.branchCode',option?.code||branchCodeFallback(option?.name));resets.forEach(([resetId,resetName])=>{next=setPath(next,resetId,'');next=setPath(next,resetName,'')});return resetAdmissionAcademicDependents(next,current,idPath)});setErrors(current=>({...current,[namePath]:''}))}} onBlur={() => { markTouched(namePath); markTouched(idPath) }}><option value="">{placeholder}</option>{options.map(option=><option key={option.id} value={option.id}>{option.name}{option.code ? ` (${option.code})` : ''}</option>)}</ProjectSelect>{branchField && !branchLoading && !options.length && <small role={branchLoadError?'alert':'status'}>{branchLoadError || 'Ask an administrator to add an active branch under this course.'}</small>}{masterError&&<small role="alert">{masterError}</small>}</label>
   }
   const screens = [
-    <Section key="identity" title="Student Identity" icon={FiUser} hint="Core identity and government identification details"><PhotoUpload data={data} update={update} notify={notify} />{field('personal.firstName','First Name')}{field('personal.middleName','Middle Name')}{field('personal.lastName','Last Name')}{field('personal.gender','Gender',['Female','Male','Non-binary'])}{field('personal.dob','Date of Birth',null,'date')}{field('personal.bloodGroup','Blood Group',['A+','A-','B+','B-','AB+','AB-','O+','O-'])}{field('personal.nationality','Nationality')}{field('personal.aadhaar','Aadhaar Number')}</Section>,
-    <><Section title="Contact Information" icon={FiPhone}>{field('contact.mobile','Student Mobile')}{field('contact.alternateMobile','Alternate Mobile')}{field('contact.email','Student Email',null,'email')}{field('contact.alternateEmail','Alternate Email',null,'email')}</Section><Section title="Current Address" icon={FiHome}><AddressFields data={data} prefix="contact.currentAddress" update={update} errors={effectiveAddressErrors} markTouched={markTouched} />{pinStatus.current && <p className={`sa-pincode-status ${pinStatus.current.includes('filled') ? 'success' : ''}`}>{pinStatus.current}</p>}</Section><Section title="Permanent Address" icon={FiHome} action={<label className="sa-same-addr-check" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 650, color: 'var(--brand, #125AA8)' }}><input type="checkbox" checked={Boolean(data.contact.sameAddress)} onChange={event => update('contact.sameAddress', event.target.checked)} style={{ width: '15px', height: '15px', accentColor: 'var(--brand, #125AA8)', cursor: 'pointer' }} /><span>Same as current address</span></label>}>{!data.contact.sameAddress && <><AddressFields data={data} prefix="contact.permanentAddress" update={update} errors={effectiveAddressErrors} markTouched={markTouched} />{pinStatus.permanent && <p className={`sa-pincode-status ${pinStatus.permanent.includes('filled') ? 'success' : ''}`}>{pinStatus.permanent}</p>}</>}</Section></>,
-    <><Section title="Father Details" icon={FiUsers} hint="Optional parent or guardian contact information.">{field('parents.father.name','Father Name')}{field('parents.father.mobile','Father Mobile')}{field('parents.father.email','Father Email',null,'email')}{field('parents.father.occupation','Father Occupation')}{field('parents.father.qualification','Father Qualification')}{field('parents.father.income','Father Annual Income',null,'number')}</Section><Section title="Mother Details" icon={FiUsers}>{field('parents.mother.name','Mother Name')}{field('parents.mother.mobile','Mother Mobile')}{field('parents.mother.email','Mother Email',null,'email')}{field('parents.mother.occupation','Mother Occupation')}{field('parents.mother.qualification','Mother Qualification')}{field('parents.mother.income','Mother Annual Income',null,'number')}</Section><Section title="Guardian Details" icon={FiUsers}>{field('parents.guardian.name','Guardian Name')}{field('parents.guardian.relationship','Relationship',['Father','Mother','Guardian','Other'])}{data.parents.guardian.relationship === 'Other' && field('parents.guardian.relationshipOther','Specify Relationship')}{field('parents.guardian.mobile','Guardian Mobile')}{field('parents.guardian.email','Guardian Email',null,'email')}{field('parents.guardian.occupation','Guardian Occupation')}{field('parents.guardian.qualification','Guardian Qualification')}{field('parents.guardian.income','Guardian Annual Income',null,'number')}{field('parents.primaryContact','Primary Contact',['Father','Mother','Guardian'])}{field('parents.emergencyMobile','Emergency Contact Mobile')}</Section></>,
-    <Section key="academic" title="Academic Enrollment" icon={FiBookOpen} hint="Review the working college and academic year, then select the matching academic placement.">{field('academic.academicYear','Academic Year',null,'text',true)}{field('admission.college','Joining College',null,'text',true)}{field('academic.admissionType','Admission Type',ADMISSION_TYPES)}{field('academic.quota','Admission Quota',ADMISSION_QUOTAS)}{data.academic.quota === 'Other' && field('academic.quotaOther','Specify Admission Quota')}{departmentOptions.length > 0 && masterField('academic.department','academic.departmentId','Department',departmentOptions,!selectedCollegeId,[['academic.courseId','academic.course'],['academic.branchId','academic.branch']])}{masterField('academic.course','academic.courseId','Program',courseOptions,!selectedCollegeId,[['academic.branchId','academic.branch']])}{field('academic.courseCode','Program Code',null,'text',true)}{masterField('academic.branch','academic.branchId','Branch',branchOptions,!data.academic.courseId)}{field('academic.branchCode','Branch Code',null,'text',true)}<label className={`sa-field ${getFieldError('academic.semester') ? 'invalid' : ''}`}><span>Semester{data.academic.requiresSemesterSelection && <b> *</b>}</span><ProjectSelect value={data.academic.semesterId || ''} disabled={!masters.loaded || !data.academic.courseId || !data.academic.branchId} onChange={event => update('academic.semesterId', event.target.value)}><option value="">Select Semester</option>{data.academic.semesterId && !semesterOptions.some(item => same(item.id, data.academic.semesterId)) && <option value={data.academic.semesterId} disabled>{data.academic.semester || 'Saved semester'} (unavailable)</option>}{semesterOptions.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</ProjectSelect>{getFieldError('academic.semester') && <small role="alert">{getFieldError('academic.semester')}</small>}{masters.loaded && data.academic.branchId && !semesterOptions.length && <small>No matching semesters are configured. Ask an administrator to configure a semester for this program, branch and academic year.</small>}</label>{field('academic.studentCategory','Student Category',['General','SC','ST','BC','EWS','Other'])}{field('academic.regulation','Regulation')}</Section>,
-    <><Section title="10th / SSC" icon={FiBookOpen} hint="Enter only the essential school details.">{field('previousEducation.tenth.board','Board')}{field('previousEducation.tenth.institution','School Name')}{field('previousEducation.tenth.passingYear','Year of Passing')}{field('previousEducation.tenth.score','Percentage (0-100)',null,'number')}</Section><Section title="Intermediate / Diploma" icon={FiBookOpen} hint="Enter only the essential qualifying-education details.">{field('previousEducation.intermediate.board','Board / University')}{field('previousEducation.intermediate.institution','College Name')}{field('previousEducation.intermediate.passingYear','Year of Passing')}{field('previousEducation.intermediate.stream','Stream',['MPC','Other'])}{data.previousEducation.intermediate.stream === 'Other' && field('previousEducation.intermediate.streamOther','Specify Stream')}{field('previousEducation.intermediate.score','Percentage (0-100)',null,'number')}</Section></>,
-    <><Section title="Application Information" icon={FiFileText} hint="Registration details.">{field('application.number','Registration Number',null,'text',true)}{field('application.date','Registration Date',null,'date',false)}{field('admission.batch','Batch')}</Section><Section title="Student Services" icon={FiHome}>{facilityPlans.error && <p role="alert">{facilityPlans.error}</p>}{field('admission.hostel','Hostel Required',['No','Yes'])}{data.admission.hostel === 'Yes' && <>{field('admission.hostelPreference','Hostel Preference',data.personal.gender === 'Male' ? ['Boys Hostel'] : data.personal.gender === 'Female' ? ['Girls Hostel'] : ['Boys Hostel','Girls Hostel'],undefined,data.personal.gender === 'Male' || data.personal.gender === 'Female')}{field('admission.hostelRoomType','Room Type / Beds',roomTypeOptions)}</>}{field('admission.transport','Transportation Required',['No','Yes'])}{data.admission.transport === 'Yes' && field('admission.transportRoute','Transport Route',transportRouteOptions)}</Section></>,
+    <Section key="identity" title="Student Identity" icon={FiUser} hint="Essential candidate identity and government ID details.">{field('personal.firstName','First Name')}{field('personal.middleName','Middle Name (Optional)')}{field('personal.lastName','Last Name')}{field('personal.gender','Gender',['Female','Male','Non-binary'])}{field('personal.dob','Date of Birth',null,'date')}{field('personal.aadhaar','Aadhaar Number')}</Section>,
+    <><Section title="Contact Information" icon={FiPhone}>{field('contact.mobile','Student Mobile')}{field('contact.email','Student Email',null,'email')}</Section><Section title="Current Address" icon={FiHome}><AddressFields data={data} prefix="contact.currentAddress" update={update} errors={effectiveAddressErrors} markTouched={markTouched} />{pinStatus.current && <p className={`sa-pincode-status ${pinStatus.current.includes('filled') ? 'success' : ''}`}>{pinStatus.current}</p>}</Section><Section title="Permanent Address" icon={FiHome} action={<label className="sa-same-addr-check" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 650, color: 'var(--brand, #125AA8)' }}><input type="checkbox" checked={Boolean(data.contact.sameAddress)} onChange={event => update('contact.sameAddress', event.target.checked)} style={{ width: '15px', height: '15px', accentColor: 'var(--brand, #125AA8)', cursor: 'pointer' }} /><span>Same as current address</span></label>}>{!data.contact.sameAddress && <><AddressFields data={data} prefix="contact.permanentAddress" update={update} errors={effectiveAddressErrors} markTouched={markTouched} />{pinStatus.permanent && <p className={`sa-pincode-status ${pinStatus.permanent.includes('filled') ? 'success' : ''}`}>{pinStatus.permanent}</p>}</>}</Section></>,
+    <Section title="Parent / Guardian Contact" icon={FiUsers} hint="Essential parent or guardian details for admission records and emergency communication.">{field('parents.primaryContact','Primary Contact',['Father','Mother','Guardian'])}{field('parents.father.name', data.parents?.primaryContact === 'Mother' ? 'Mother Name' : data.parents?.primaryContact === 'Guardian' ? 'Guardian Name' : 'Father / Parent Name')}{field('parents.father.mobile','Parent Mobile Number')}{field('parents.father.income','Annual Family Income',null,'number')}{field('parents.emergencyMobile','Emergency Contact Mobile')}</Section>,
+    <Section key="academic" title="Academic Enrollment" icon={FiBookOpen} hint="Select the academic program and branch placement for this student.">{field('academic.academicYear','Academic Year',null,'text',true)}{field('academic.admissionType','Admission Type',ADMISSION_TYPES)}{field('academic.quota','Admission Quota',ADMISSION_QUOTAS)}{data.academic.quota === 'Other' && field('academic.quotaOther','Specify Admission Quota')}{departmentOptions.length > 0 && masterField('academic.department','academic.departmentId','Department',departmentOptions,!selectedCollegeId,[['academic.courseId','academic.course'],['academic.branchId','academic.branch']])}{masterField('academic.course','academic.courseId','Program',courseOptions,!selectedCollegeId,[['academic.branchId','academic.branch']])}{masterField('academic.branch','academic.branchId','Branch',branchOptions,!data.academic.courseId)}<label className={`sa-field ${getFieldError('academic.semester') ? 'invalid' : ''}`}><span>Semester{data.academic.requiresSemesterSelection && <b> *</b>}</span><ProjectSelect value={data.academic.semesterId || ''} disabled={!masters.loaded || !data.academic.courseId || !data.academic.branchId} onChange={event => update('academic.semesterId', event.target.value)}><option value="">Select Semester</option>{data.academic.semesterId && !semesterOptions.some(item => same(item.id, data.academic.semesterId)) && <option value={data.academic.semesterId} disabled>{data.academic.semester || 'Saved semester'} (unavailable)</option>}{semesterOptions.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</ProjectSelect>{getFieldError('academic.semester') && <small role="alert">{getFieldError('academic.semester')}</small>}{masters.loaded && data.academic.branchId && !semesterOptions.length && <small>No matching semesters are configured. Ask an administrator to configure a semester for this program, branch and academic year.</small>}</label>{field('academic.studentCategory','Student Category',['General','SC','ST','BC','EWS','Other'])}</Section>,
+    <><Section title="10th / SSC" icon={FiBookOpen} hint="Enter the secondary school verification details.">{field('previousEducation.tenth.board','Board')}{field('previousEducation.tenth.institution','School Name')}{field('previousEducation.tenth.passingYear','Year of Passing')}{field('previousEducation.tenth.score','Percentage (0-100)',null,'number')}</Section><Section title="Intermediate / Diploma" icon={FiBookOpen} hint="Enter qualifying-education details for eligibility verification.">{field('previousEducation.intermediate.board','Board / University')}{field('previousEducation.intermediate.institution','College Name')}{field('previousEducation.intermediate.passingYear','Year of Passing')}{field('previousEducation.intermediate.stream','Stream',['MPC','Other'])}{data.previousEducation.intermediate.stream === 'Other' && field('previousEducation.intermediate.streamOther','Specify Stream')}{field('previousEducation.intermediate.score','Percentage (0-100)',null,'number')}</Section></>,
+    <><Section title="Application Information" icon={FiFileText} hint="Registration details.">{field('application.number','Registration Number',null,'text',true)}{field('application.date','Registration Date',null,'date',false)}{field('admission.batch','Batch')}</Section><Section title="Student Services" icon={FiHome}>{facilityPlans.error && <p role="alert">{facilityPlans.error}</p>}{field('admission.hostel','Hostel Required',['No','Yes'])}{data.admission.hostel === 'Yes' && field('admission.hostelPreference','Hostel Preference',data.personal.gender === 'Male' ? ['Boys Hostel'] : data.personal.gender === 'Female' ? ['Girls Hostel'] : ['Boys Hostel','Girls Hostel'],undefined,data.personal.gender === 'Male' || data.personal.gender === 'Female')}{field('admission.transport','Transportation Required',['No','Yes'])}{data.admission.transport === 'Yes' && field('admission.transportRoute','Transport Route',transportRouteOptions)}</Section></>,
     <div key="fees"><ApplicantFeeStructure data={data} update={update} error={errors['fees.paymentPlan']} /></div>,
     <DocumentsUpload key="documents" data={data} update={update} errors={errors} notify={notify} />,
   ]
@@ -2896,6 +2869,16 @@ function Timeline({ activity = [] }) {
 function DetailContent({ data, tab }) {
   const address = value => formatAddress(value)
   if (tab === 'personal') {
+    const parentName = data.parents?.father?.name || data.parents?.guardian?.name || data.parents?.mother?.name || ''
+    const parentMobile = data.parents?.father?.mobile || data.parents?.guardian?.mobile || data.parents?.mother?.mobile || ''
+    const parentRel = data.parents?.guardian?.relationship === 'Other'
+      ? data.parents?.guardian?.relationshipOther
+      : (data.parents?.guardian?.relationship || (data.parents?.father?.name ? 'Father' : data.parents?.mother?.name ? 'Mother' : (data.parents?.primaryContact || 'Parent / Guardian')))
+    const familyIncome = data.parents?.father?.income || data.parents?.mother?.income || data.parents?.guardian?.income || ''
+    const currentAddr = address(data.contact?.currentAddress)
+    const permAddr = address(data.contact?.permanentAddress)
+    const showPermAddr = permAddr && !data.contact?.sameAddress && permAddr !== currentAddr
+
     return (
       <div className="sa-detail-grid-layout">
         <InfoGrid
@@ -2903,13 +2886,8 @@ function DetailContent({ data, tab }) {
           icon={FiUser}
           items={[
             ['Student Name', studentName(data)],
-            ['First Name', data.personal?.firstName],
-            ['Middle Name', data.personal?.middleName],
-            ['Last Name', data.personal?.lastName],
             ['Gender', data.personal?.gender],
             ['Date of Birth', data.personal?.dob],
-            ['Blood Group', data.personal?.bloodGroup],
-            ['Nationality', data.personal?.nationality],
             ['Aadhaar Number', data.personal?.aadhaar],
           ]}
         />
@@ -2918,38 +2896,20 @@ function DetailContent({ data, tab }) {
           icon={FiPhone}
           items={[
             ['Student Mobile', data.contact?.mobile],
-            ['Alternate Mobile', data.contact?.alternateMobile],
             ['Student Email', data.contact?.email],
-            ['Alternate Email', data.contact?.alternateEmail],
-            ['Current Address', address(data.contact?.currentAddress), true],
-            ['Permanent Address', address(data.contact?.permanentAddress) || address(data.contact?.currentAddress), true],
+            ['Current Address', currentAddr, true],
+            ...(showPermAddr ? [['Permanent Address', permAddr, true]] : []),
           ]}
         />
         <InfoGrid
           title="Parent / Guardian"
           icon={FiUsers}
           items={[
-            ['Father Name', data.parents?.father?.name],
-            ['Father Mobile', data.parents?.father?.mobile],
-            ['Father Email', data.parents?.father?.email],
-            ['Father Occupation', data.parents?.father?.occupation],
-            ['Father Qualification', data.parents?.father?.qualification],
-            ['Father Annual Income', data.parents?.father?.income],
-            ['Mother Name', data.parents?.mother?.name],
-            ['Mother Mobile', data.parents?.mother?.mobile],
-            ['Mother Email', data.parents?.mother?.email],
-            ['Mother Occupation', data.parents?.mother?.occupation],
-            ['Mother Qualification', data.parents?.mother?.qualification],
-            ['Mother Annual Income', data.parents?.mother?.income],
-            ['Guardian Name', data.parents?.guardian?.name],
-            ['Guardian Relationship', data.parents?.guardian?.relationship === 'Other' ? data.parents?.guardian?.relationshipOther : data.parents?.guardian?.relationship],
-            ['Guardian Mobile', data.parents?.guardian?.mobile],
-            ['Guardian Email', data.parents?.guardian?.email],
-            ['Guardian Occupation', data.parents?.guardian?.occupation],
-            ['Guardian Qualification', data.parents?.guardian?.qualification],
-            ['Guardian Annual Income', data.parents?.guardian?.income],
-            ['Primary Contact', data.parents?.primaryContact],
-            ['Emergency Contact', data.parents?.emergencyMobile],
+            ['Parent / Guardian Name', parentName || 'Not provided'],
+            ['Relationship', parentRel || 'Parent'],
+            ['Parent Mobile', parentMobile || 'Not provided'],
+            ['Annual Family Income', familyIncome ? money(familyIncome) : 'Not specified'],
+            ['Emergency Contact', data.parents?.emergencyMobile || parentMobile || data.contact?.mobile || 'Not provided'],
           ]}
         />
       </div>
@@ -2962,47 +2922,46 @@ function DetailContent({ data, tab }) {
         icon={FiBookOpen}
         items={[
           ['Academic Year', data.academic?.academicYear],
-          ['Joining College', data.admission?.college],
           ['Admission Type', data.academic?.admissionType],
-          ['Quota', quota(data)],
-          ['Course', data.academic?.course],
-          ['Course Code', data.academic?.courseCode],
+          ['Admission Quota', quota(data)],
+          ['Course / Program', data.academic?.course],
           ['Department', data.academic?.department],
-          ['Branch', data.academic?.branch],
-          ['Branch Code', data.academic?.branchCode],
-          ['Student Category', data.academic?.studentCategory],
-          ['Regulation', data.academic?.regulation],
+          ['Branch / Specialization', data.academic?.branch],
+          ['Student Category', data.academic?.studentCategory || 'General'],
         ]}
       />
     )
   }
   if (tab === 'education') {
+    const inter = data.previousEducation?.intermediate || {}
+    const tenth = data.previousEducation?.tenth || {}
+    const interScore = inter.score ? `${inter.score} ${inter.scoreType || '%'}` : ''
+    const tenthScore = tenth.score ? `${tenth.score} ${tenth.scoreType || '%'}` : ''
+
     return (
       <div className="sa-detail-grid-layout">
         <InfoGrid
-          title="10th / SSC"
+          title="Qualifying Examination (10+2 / Intermediate / Diploma)"
           icon={FiFileText}
           items={[
-            ['Board', data.previousEducation?.tenth?.board],
-            ['School', data.previousEducation?.tenth?.institution],
-            ['Roll Number', data.previousEducation?.tenth?.rollNumber],
-            ['Passing Year', data.previousEducation?.tenth?.passingYear],
-            ['Score Type', data.previousEducation?.tenth?.score ? data.previousEducation?.tenth?.scoreType : ''],
-            ['Score', data.previousEducation?.tenth?.score],
+            ['Qualifying Examination', inter.qualification === 'Intermediate / 12th' ? 'Intermediate / 12th' : (inter.qualification || 'Intermediate / 12th')],
+            ['Board / University', inter.board],
+            ['College / Institution', inter.institution],
+            ['Hall Ticket / Roll No', inter.rollNumber],
+            ['Year of Passing', inter.passingYear],
+            ['Stream / Group', inter.stream === 'Other' ? inter.streamOther : inter.stream],
+            ['Aggregate Score', interScore || '—'],
           ]}
         />
         <InfoGrid
-          title="Intermediate / Diploma"
+          title="Secondary School (10th / SSC)"
           icon={FiFileText}
           items={[
-            ['Qualification', data.previousEducation?.intermediate?.qualification === 'Intermediate / 12th' ? '' : data.previousEducation?.intermediate?.qualification],
-            ['Board / University', data.previousEducation?.intermediate?.board],
-            ['College', data.previousEducation?.intermediate?.institution],
-            ['Roll Number', data.previousEducation?.intermediate?.rollNumber],
-            ['Passing Year', data.previousEducation?.intermediate?.passingYear],
-            ['Stream', data.previousEducation?.intermediate?.stream === 'Other' ? data.previousEducation?.intermediate?.streamOther : data.previousEducation?.intermediate?.stream],
-            ['Score Type', data.previousEducation?.intermediate?.score ? data.previousEducation?.intermediate?.scoreType : ''],
-            ['Score', data.previousEducation?.intermediate?.score],
+            ['Board', tenth.board],
+            ['School Name', tenth.institution],
+            ['Hall Ticket / Roll No', tenth.rollNumber],
+            ['Year of Passing', tenth.passingYear],
+            ['Score / Percentage', tenthScore || '—'],
           ]}
         />
       </div>
@@ -3018,14 +2977,11 @@ function DetailContent({ data, tab }) {
           ['Registration Date', data.application?.registrationDate || data.application?.date],
           ['Admission Number', normalizeStatus(data.status) === 'APPROVED' ? (data.application?.admissionNumber || 'Allotted') : 'Pending Approval'],
           ['Admission Date', normalizeStatus(data.status) === 'APPROVED' ? (data.application?.admissionDate || data.updatedAt) : 'Pending Approval'],
-          ['College', data.admission?.college],
           ['Batch', data.admission?.batch],
-          ['Scholarship', data.admission?.scholarship],
-          ['Hostel', data.admission?.hostel],
-          ['Hostel Preference', data.admission?.hostelPreference],
-          ['Room Type / Beds', data.admission?.hostelRoomType],
-          ['Transportation', data.admission?.transport],
-          ['Transport Route', data.admission?.transportRoute],
+          ['Hostel Required', data.admission?.hostel || 'No'],
+          ...(data.admission?.hostel === 'Yes' ? [['Hostel Preference', data.admission?.hostelPreference]] : []),
+          ['Transportation Required', data.admission?.transport || 'No'],
+          ...(data.admission?.transport === 'Yes' ? [['Transport Route', data.admission?.transportRoute]] : []),
         ]}
       />
     )
@@ -3118,9 +3074,8 @@ function DetailContent({ data, tab }) {
               ['Tuition Fee (per year)', money(data.fees?.tuitionFee)],
               ['Admission Fee (one-time)', money(data.fees?.admissionFee)],
               ['Scholarship Deduction', data.fees?.scholarshipAmount ? `- ${money(data.fees?.scholarshipAmount)}` : 'None'],
-              ['Hostel Room Type', data.admission?.hostelRoomType || 'Not selected'],
-              ['Hostel Fee (per year)', data.admission?.hostel === 'Yes' ? money(resolvedH) : 'Not selected'],
-              ['Transportation Fee (per year)', data.admission?.transport === 'Yes' ? money(resolvedT) : 'Not selected'],
+              ...(data.admission?.hostel === 'Yes' ? [['Hostel Fee (per year)', money(resolvedH)]] : []),
+              ...(data.admission?.transport === 'Yes' ? [['Transportation Fee (per year)', money(resolvedT)]] : []),
               ['Estimated First-Year Total', money(totalFee)],
               ['Estimated Entire 4-Year Total', money(Math.max(0, (tuition + resolvedH + resolvedT) * 4 + admissionFee - scholarship))],
               ['Payment Preference', formattedPaymentPlan],
@@ -3144,13 +3099,12 @@ function DetailContent({ data, tab }) {
         ['Registration Date', data.application?.registrationDate || data.application?.date],
         ['Admission Number', normalizeStatus(data.status) === 'APPROVED' ? (data.application?.admissionNumber || 'Allotted') : 'Pending Approval'],
         ['Admission Date', normalizeStatus(data.status) === 'APPROVED' ? (data.application?.admissionDate || data.updatedAt) : 'Pending Approval'],
-        ['College', data.admission?.college],
         ['Academic Year', data.academic?.academicYear],
         ['Admission Type', data.academic?.admissionType],
-        ['Course', data.academic?.course],
-        ['Branch', data.academic?.branch],
-        ['Quota', quota(data)],
-        ['Fee Status', data.fees?.paymentStatus],
+        ['Course / Program', data.academic?.course],
+        ['Branch / Specialization', data.academic?.branch],
+        ['Admission Quota', quota(data)],
+        ['Fee Status', data.fees?.paymentStatus || 'Pending'],
         ['Admission Status', STATUS[data.status] || data.status],
       ]}
     />
@@ -3380,21 +3334,48 @@ function AdmissionDetails({ approval = false, inDialog = false }) {
             {(() => {
               const tabs = DETAIL_TABS_APPROVAL.map(([v]) => v)
               const idx = tabs.indexOf(tab)
-              const prevTab = idx > 0 ? tabs[idx - 1] : null
-              const nextTab = idx < tabs.length - 1 ? tabs[idx + 1] : null
+              const prevTabVal = idx > 0 ? tabs[idx - 1] : null
+              const nextTabVal = idx < tabs.length - 1 ? tabs[idx + 1] : null
+              const prevItem = prevTabVal ? DETAIL_TABS_APPROVAL.find(([v]) => v === prevTabVal) : null
+              const nextItem = nextTabVal ? DETAIL_TABS_APPROVAL.find(([v]) => v === nextTabVal) : null
               return (
-                <div className="sa-tab-nav-footer">
-                  {prevTab ? (
-                    <button type="button" className="cm-button secondary" onClick={() => setTab(prevTab)}>
-                      &larr; Previous
+                <footer className="sa-tab-nav-footer sa-view-tab-nav-footer">
+                  {prevItem ? (
+                    <button
+                      type="button"
+                      className="cm-button secondary erp-btn erp-btn--secondary sa-nav-btn sa-nav-btn--prev"
+                      onClick={() => {
+                        setTab(prevItem[0]);
+                        document.querySelector('.shared-view-dialog__body, .cm-profile-view')?.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                    >
+                      <FiChevronLeft aria-hidden="true" />
+                      <span>&larr; {prevItem[1]}</span>
                     </button>
                   ) : <span />}
-                  {nextTab && (
-                    <button type="button" className="cm-button" onClick={() => setTab(nextTab)}>
-                      Next &rarr;
+                  {inDialog && (
+                    <button
+                      type="button"
+                      className="cm-button secondary erp-btn erp-btn--secondary sa-nav-btn sa-nav-btn--close"
+                      onClick={() => navigate('/student-management/admissions')}
+                    >
+                      Close
                     </button>
                   )}
-                </div>
+                  {nextItem && (
+                    <button
+                      type="button"
+                      className="cm-button primary erp-btn erp-btn--primary sa-nav-btn sa-nav-btn--next"
+                      onClick={() => {
+                        setTab(nextItem[0]);
+                        document.querySelector('.shared-view-dialog__body, .cm-profile-view')?.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                    >
+                      <span>{nextItem[1]} &rarr;</span>
+                      <FiChevronRight aria-hidden="true" />
+                    </button>
+                  )}
+                </footer>
               )
             })()}
           </section>
@@ -3421,6 +3402,10 @@ function AdmissionDetails({ approval = false, inDialog = false }) {
       </div>
     )
   }
+  const currentTabIndex = DETAIL_TABS.findIndex(([v]) => v === tab);
+  const prevTab = currentTabIndex > 0 ? DETAIL_TABS[currentTabIndex - 1] : null;
+  const nextTab = currentTabIndex >= 0 && currentTabIndex < DETAIL_TABS.length - 1 ? DETAIL_TABS[currentTabIndex + 1] : null;
+
   return (
     <div className="cm-profile-view" data-export-record>
       <Breadcrumb tail="Admission Details" />
@@ -3447,6 +3432,44 @@ function AdmissionDetails({ approval = false, inDialog = false }) {
         <section className="sa-detail-card">
           <DetailContent data={data} tab={tab} />
         </section>
+
+        <footer className="sa-view-tab-nav-footer">
+          {prevTab ? (
+            <button
+              type="button"
+              className="cm-button secondary erp-btn erp-btn--secondary sa-nav-btn sa-nav-btn--prev"
+              onClick={() => {
+                setTab(prevTab[0]);
+                document.querySelector('.shared-view-dialog__body, .cm-profile-view')?.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            >
+              <FiChevronLeft aria-hidden="true" />
+              <span>&larr; {prevTab[1]}</span>
+            </button>
+          ) : <span />}
+          {inDialog && (
+            <button
+              type="button"
+              className="cm-button secondary erp-btn erp-btn--secondary sa-nav-btn sa-nav-btn--close"
+              onClick={() => navigate('/student-management/admissions')}
+            >
+              Close
+            </button>
+          )}
+          {nextTab ? (
+            <button
+              type="button"
+              className="cm-button primary erp-btn erp-btn--primary sa-nav-btn sa-nav-btn--next"
+              onClick={() => {
+                setTab(nextTab[0]);
+                document.querySelector('.shared-view-dialog__body, .cm-profile-view')?.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            >
+              <span>{nextTab[1]} &rarr;</span>
+              <FiChevronRight aria-hidden="true" />
+            </button>
+          ) : <span />}
+        </footer>
       </div>
     </div>
   );
@@ -3454,7 +3477,19 @@ function AdmissionDetails({ approval = false, inDialog = false }) {
 
 function AdmissionRouteDialog({ approval = false }) {
   const navigate = useNavigate()
-  return <ViewDialog title={approval ? 'Admission Review' : 'Admission Details'} icon={FiUser} onClose={() => navigate('/student-management/admissions')} maxWidth="1120px" showExport={false}><AdmissionDetails approval={approval} inDialog /></ViewDialog>
+  return (
+    <ViewDialog
+      title={approval ? 'Admission Review' : 'Admission Details'}
+      icon={FiUser}
+      onClose={() => navigate('/student-management/admissions')}
+      maxWidth="1120px"
+      showExport={false}
+      hideFooter={true}
+      className="sa-details-view-dialog"
+    >
+      <AdmissionDetails approval={approval} inDialog />
+    </ViewDialog>
+  );
 }
 
 export default function StudentAdmission() {

@@ -516,6 +516,50 @@ export const createEmptyCanonicalStudent = () => {
   }
 }
 
+export const generateCanonicalRollNumber = ({
+  rollNumber,
+  academicYear,
+  collegeName,
+  branch,
+  branchCode,
+  admissionNumber,
+  registrationNumber,
+  id,
+  sequenceIndex,
+} = {}) => {
+  if (rollNumber && String(rollNumber).trim() && !String(rollNumber).trim().toUpperCase().startsWith('ADM-') && !String(rollNumber).trim().toUpperCase().startsWith('REG-')) {
+    return String(rollNumber).trim();
+  }
+  const yrMatch = String(academicYear || '2026').match(/\b(20)?(\d{2})\b/);
+  const yr = yrMatch ? yrMatch[2] : '26';
+
+  let coll = 'REC';
+  if (collegeName) {
+    const letters = String(collegeName).trim().split(/\s+/).map((w) => w[0]).join('').toUpperCase();
+    if (letters.length >= 2 && letters.length <= 4) coll = letters;
+  }
+
+  const b = String(branch || branchCode || '').toLowerCase();
+  let bCode = '05';
+  if (b.includes('civil') || b.includes('concret') || b.includes('ce') || b.includes('construction')) bCode = '01';
+  else if (b.includes('eee') || b.includes('electrical')) bCode = '02';
+  else if (b.includes('mech') || b.includes('me')) bCode = '03';
+  else if (b.includes('ece') || b.includes('communicat')) bCode = '04';
+  else if (b.includes('cse') || b.includes('comp') || b.includes('cs')) bCode = '05';
+  else if (b.includes('it') || b.includes('information tech')) bCode = '12';
+  else if (b.includes('ai') && (b.includes('ds') || b.includes('data'))) bCode = '54';
+  else if (b.includes('ai') && (b.includes('ml') || b.includes('machine'))) bCode = '61';
+
+  let seq = Number(sequenceIndex);
+  if (!seq || isNaN(seq) || seq <= 0) {
+    const seed = String(admissionNumber || registrationNumber || id || '1').replace(/\D/g, '');
+    seq = seed ? (parseInt(seed.slice(-2), 10) || 1) : 1;
+  }
+  const seqStr = String(seq).padStart(2, '0');
+
+  return `${yr}${coll}${bCode}${seqStr}`;
+};
+
 export const normalizeCanonicalStudent = (source = {}) => {
   if (!source || typeof source !== 'object') return createEmptyCanonicalStudent()
   const base = createEmptyCanonicalStudent()
@@ -626,6 +670,36 @@ export const normalizeCanonicalStudent = (source = {}) => {
   const regDate = dateInputValue(firstFilled(raw.registrationDate, raw.applicationDate, raw.application?.date, summary.registrationDate, base.application.date))
   const admDate = isApproved ? dateInputValue(firstFilled(raw.admissionDate, raw.application?.admissionDate, summary.admissionDate, raw.updatedAt, '')) : ''
 
+  // 3. Roll Number (Hall ticket / Examination PIN):
+  // Allotted when the student's admission is APPROVED and they are officially enrolled into academic branches.
+  const explicitRoll = firstFilled(
+    academicRaw.rollNumber,
+    academicRaw.rollNo,
+    raw.rollNumber,
+    raw.rollNo,
+    raw.studentRollNumber,
+    raw.studentCode,
+    summary.rollNumber,
+    summary.rollNo,
+    header.rollNumber,
+    header.rollNo,
+    ''
+  )
+  const resolvedRollNumber = (explicitRoll && !String(explicitRoll).toUpperCase().startsWith('ADM-') && !String(explicitRoll).toUpperCase().startsWith('REG-'))
+    ? String(explicitRoll)
+    : (isApproved
+        ? generateCanonicalRollNumber({
+            rollNumber: explicitRoll,
+            academicYear: firstFilled(academicRaw.academicYear, raw.academicYear, ''),
+            collegeName: firstFilled(admissionRaw.college, raw.college, ''),
+            branch: referenceLabel(academicRaw.branch, raw.branch),
+            branchCode: firstFilled(academicRaw.branchCode, raw.branchCode, ''),
+            admissionNumber: admNumber,
+            registrationNumber: regNumber,
+            id: raw.id,
+          })
+        : '')
+
   // Parents
   const fatherRaw = parentRaw.father ?? {}
   const motherRaw = parentRaw.mother ?? {}
@@ -725,6 +799,7 @@ export const normalizeCanonicalStudent = (source = {}) => {
     admissionId: (admissionId && admissionId !== 'undefined') ? admissionId : '',
     studentId: (studentId && studentId !== 'undefined') ? studentId : '',
     studentCode: raw.studentCode ?? '',
+    rollNumber: resolvedRollNumber,
     status,
     createdAt: raw.createdAt ?? raw.createdDate ?? base.createdAt,
     updatedAt: raw.updatedAt ?? raw.updatedDate ?? base.updatedAt,
@@ -733,6 +808,7 @@ export const normalizeCanonicalStudent = (source = {}) => {
       number: regNumber,
       registrationNumber: regNumber,
       admissionNumber: admNumber,
+      rollNumber: resolvedRollNumber,
       date: regDate,
       registrationDate: regDate,
       admissionDate: admDate,
@@ -827,7 +903,7 @@ export const normalizeCanonicalStudent = (source = {}) => {
       regulation: firstFilled(academicRaw.regulation, raw.regulation, '') ?? '',
       entryType: firstFilled(academicRaw.entryType, raw.entryType, '') ?? '',
       yearOfStudy: firstFilled(academicRaw.yearOfStudy, raw.yearOfStudy, '') ?? '',
-      rollNumber: firstFilled(academicRaw.rollNumber, raw.rollNumber, '') ?? '',
+      rollNumber: resolvedRollNumber,
     },
     previousEducation: {
       tenth,

@@ -1697,14 +1697,58 @@
 }
 
 /* Tab Next/Previous navigation footer */
-.student-admission .sa-tab-nav-footer {
+.student-admission .sa-tab-nav-footer,
+.sa-view-tab-nav-footer {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
-  padding: 16px 20px !important;
-  margin-top: 8px !important;
-  border-top: 1px solid var(--border, var(--border)) !important;
-  background: var(--surface-soft, var(--surface-soft)) !important;
+  gap: 12px !important;
+  padding: 14px 20px !important;
+  margin-top: 12px !important;
+  border-top: 1px solid var(--border, #e2e8f0) !important;
+  background: var(--surface, #ffffff) !important;
+  border-radius: 0 0 12px 12px !important;
+}
+
+.sa-view-tab-nav-footer .sa-nav-btn,
+.student-admission .sa-tab-nav-footer .sa-nav-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  padding: 8px 18px !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  transition: all 0.16s ease !important;
+}
+
+.sa-view-tab-nav-footer .sa-nav-btn--next,
+.student-admission .sa-tab-nav-footer .sa-nav-btn--next {
+  background: var(--brand-solid, #2563eb) !important;
+  color: #ffffff !important;
+  border: 1px solid transparent !important;
+}
+
+.sa-view-tab-nav-footer .sa-nav-btn--next:hover,
+.student-admission .sa-tab-nav-footer .sa-nav-btn--next:hover {
+  background: #1d4ed8 !important;
+}
+
+.sa-view-tab-nav-footer .sa-nav-btn--prev,
+.sa-view-tab-nav-footer .sa-nav-btn--close,
+.student-admission .sa-tab-nav-footer .sa-nav-btn--prev,
+.student-admission .sa-tab-nav-footer .sa-nav-btn--close {
+  background: #f1f5f9 !important;
+  color: #334155 !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+.sa-view-tab-nav-footer .sa-nav-btn--prev:hover,
+.sa-view-tab-nav-footer .sa-nav-btn--close:hover,
+.student-admission .sa-tab-nav-footer .sa-nav-btn--prev:hover,
+.student-admission .sa-tab-nav-footer .sa-nav-btn--close:hover {
+  background: #e2e8f0 !important;
 }
 
 
