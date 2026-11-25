@@ -5878,6 +5878,17 @@
   padding: 20px 22px;
   overscroll-behavior: contain;
 }
+.college-workspace-dialog:has(.college-config-detail-grid) .shared-view-dialog__body {
+  padding-block: 12px;
+}
+.college-workspace-dialog .college-config-detail-identity {
+  margin-bottom: 10px;
+  padding-block: 12px;
+}
+.college-workspace-dialog .college-config-detail-grid {
+  align-items: start;
+  gap: 10px;
+}
 .college-form-dialog {
   --college-control-border: color-mix(in srgb, var(--border-strong) 58%, var(--border));
   width: min(860px, 95vw);

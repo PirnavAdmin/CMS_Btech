@@ -2731,7 +2731,7 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
 
         {collegeForm && <AddCollegeScreen.CollegeForm editId={collegeForm.editId} resumeDraft={collegeForm.resumeDraft} onDismiss={closeCollegeForm} onSaved={afterCollegeSave} />}
         {viewMode === 'details' && activeCollege && <ViewDialog className="college-workspace-dialog" title="Organization Details" subtitle={activeCollege.name} onClose={backToList} maxWidth="920px" exportFilename={`organization_${activeCollege.code || activeCollege.id}`} footerActions={canEditCollege && canManageCollege(activeCollege) ? <button className="erp-btn erp-btn--primary" onClick={() => openEdit(activeCollege)}>Edit organization</button> : null}>
-          {isCollegeDetailsLoading ? <AsyncState status="loading" title="Loading college details…" /> : collegeError ? <AsyncState status="error" message={collegeError} onRetry={() => openDetails(activeCollege)} /> : <><CompletionSummary completion={activeCollege.completion} name={activeCollege.name} onClick={canEditCollege && canManageCollege(activeCollege) ? () => openEdit(activeCollege) : undefined} /><div className="college-config-detail-identity"><CollegeLogoImage src={activeCollege.logo} fallbackSrc={getCollegeLogoEndpoint(activeCollege.id)} alt="" code={activeCollege.code} className="college-config-logo" /><div><h3>{activeCollege.name}</h3><p>{activeCollege.code} · {activeCollege.university}</p></div><StatusBadge value={activeCollege.status === 'active' ? 'Active' : 'Inactive'} /></div><div className="college-config-detail-grid">
+          {isCollegeDetailsLoading ? <AsyncState status="loading" title="Loading college details…" /> : collegeError ? <AsyncState status="error" message={collegeError} onRetry={() => openDetails(activeCollege)} /> : <><CompletionSummary completion={activeCollege.completion} name={activeCollege.name} onClick={canEditCollege && canManageCollege(activeCollege) ? () => openEdit(activeCollege) : undefined} /><div className="college-config-detail-identity"><CollegeLogoImage src={activeCollege.logo} fallbackSrc={getCollegeLogoEndpoint(activeCollege.id)} alt="" code={activeCollege.code} className="college-config-logo" /><div><h3>{activeCollege.name}</h3><p>{[activeCollege.code, activeCollege.university].filter(value => value && !/^(null|undefined)$/i.test(String(value).trim())).join(' · ')}</p></div><StatusBadge value={activeCollege.status === 'active' ? 'Active' : 'Inactive'} /></div><div className="college-config-detail-grid">
                 <InfoCard
                   title="Basic Organization Information"
                   icon={AcademicIcon}
@@ -2747,24 +2747,10 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
                 />
 
                 <InfoCard
-                  title="Address Details"
-                  icon={ContactIcon}
-                  items={[
-                    { label: 'Address Line 1', value: activeCollege.addressLine1 },
-                    { label: 'Address Line 2', value: activeCollege.addressLine2 },
-                    { label: 'Area', value: activeCollege.area },
-                    { label: 'District', value: activeCollege.district },
-                    { label: 'City', value: activeCollege.city },
-                    { label: 'State', value: activeCollege.state },
-                    { label: 'Pincode', value: activeCollege.pincode },
-                    { label: 'Country', value: activeCollege.country },
-                  ]}
-                />
-
-                <InfoCard
                   title="Contact Details"
                   icon={ContactIcon}
                   items={[
+                    { label: 'Contact Person', value: activeCollege.principal },
                     { label: 'Contact Number', value: activeCollege.contact },
                     { label: 'Alternate Contact Number', value: activeCollege.alternateContact },
                     { label: 'Email', value: activeCollege.email },
@@ -2776,7 +2762,6 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
                   title="Administration"
                   icon={AcademicIcon}
                   items={[
-                    { label: 'Principal Name', value: activeCollege.principal },
                     { label: 'Principal Email', value: activeCollege.principalEmail },
                     { label: 'Principal Contact', value: activeCollege.principalContact },
                   ]}
