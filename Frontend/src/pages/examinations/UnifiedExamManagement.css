@@ -201,17 +201,21 @@
 .uem-subject-form footer, .uem-room-form footer { grid-column: 1 / -1; display: flex; justify-content: flex-end; padding-top: 10px; }
 
 /* Room allocation dialog: only the shared dialog body scrolls. */
-.shared-view-dialog.uem-room-dialog { width: min(90vw, 1440px); height: 86dvh; max-height: 90dvh; }
+.shared-view-dialog.uem-room-dialog { width: min(78vw, 1240px); height: min(76dvh, 820px); max-height: calc(100dvh - 36px); }
 .uem-room-dialog > .shared-view-dialog__header, .uem-room-dialog > .shared-view-dialog__footer { position: relative; z-index: 1; flex: none; background: var(--surface); }
-.uem-room-dialog > .shared-view-dialog__body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 18px 22px; background: var(--surface); }
+.uem-room-dialog > .shared-view-dialog__body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; padding: 14px 20px; background: var(--surface); }
 .uem-room-dialog > .shared-view-dialog__footer { justify-content: flex-end; gap: 10px; }
-.uem-room-workspace { display: grid; gap: 16px; min-width: 0; padding: 0; overflow: visible; }
-.uem-exam-meta { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin: 0; padding: 14px; border: 1px solid var(--uem-border); border-radius: 10px; background: var(--surface-soft); }
+.uem-room-workspace { display: grid; gap: 12px; min-width: 0; padding: 0; overflow: visible; }
+.uem-exam-meta { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 11px 12px; border: 1px solid var(--uem-border); border-radius: 10px; background: var(--surface-soft); }
 .uem-exam-meta div { min-width: 0; }
 .uem-exam-meta dt { color: var(--uem-muted); font-size: .69rem; font-weight: 650; }
-.uem-exam-meta dd { margin: 4px 0 0; color: var(--uem-ink); font-size: .8rem; font-weight: 720; overflow-wrap: anywhere; }
-.uem-room-form { gap: 13px 18px; }
-.uem-room-form small { color: var(--text-muted); font-size: .72rem; font-weight: 500; line-height: 1.4; }
+.uem-exam-meta dd { margin: 3px 0 0; color: var(--uem-ink); font-size: .78rem; font-weight: 720; overflow-wrap: anywhere; }
+.uem-room-form { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 10px; padding: 0; }
+.uem-room-form > .uem-room-field--subject,
+.uem-room-form > .uem-room-field--room { grid-column: span 2; }
+.uem-room-form label { gap: 3px; font-size: .76rem; }
+.uem-room-form :is(input, select) { height: 36px; padding-inline: 9px; font-size: .8rem; }
+.uem-room-form small { color: var(--text-muted); font-size: .68rem; font-weight: 500; line-height: 1.25; }
 .uem-allocation-list { display: grid; gap: 10px; min-width: 0; }
 .uem-allocation-list h3 { margin: 0; color: var(--uem-ink); font-size: .98rem; }
 .uem-room-table-wrap { overflow-x: auto; overscroll-behavior-x: contain; }
@@ -247,8 +251,12 @@
 @media (max-width: 1100px) {
   .uem-stats { gap: 12px; }
   .uem-stat-card { min-height: 98px; padding: 15px; }
+  .shared-view-dialog.uem-room-dialog { width: min(92vw, 1040px); height: min(82dvh, 820px); }
   .uem-room-dialog > .shared-view-dialog__body { padding: 15px; }
   .uem-exam-meta { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .uem-room-form { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; }
+  .uem-room-form > .uem-room-field--subject,
+  .uem-room-form > .uem-room-field--room { grid-column: span 2; }
   .uem-room-table-wrap th, .uem-room-table-wrap td { padding: 7px 5px; font-size: .7rem; }
 }
 @media (max-width: 760px) {
@@ -305,6 +313,8 @@
   .uem-pagination > div { width: 100%; justify-content: space-between; }
   .uem-exam-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .uem-room-form { grid-template-columns: 1fr; }
+  .uem-room-form > .uem-room-field--subject,
+  .uem-room-form > .uem-room-field--room { grid-column: auto; }
   .uem-subject-form footer, .uem-room-form footer { grid-column: 1; }
   .shared-view-dialog.uem-room-dialog { width: calc(100vw - 14px); height: calc(100dvh - 14px); max-height: calc(100dvh - 14px); }
   .uem-room-dialog > .shared-view-dialog__header { padding: 12px 14px; }

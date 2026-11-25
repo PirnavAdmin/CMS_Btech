@@ -44,6 +44,29 @@ test('working selectors update without reload and stay separate from backend act
   await waitFor(() => expect(screen.getByText(/Selected: College B · No academic year/)).toBeTruthy())
   expect(screen.getByText(/does not activate or deactivate/)).toBeTruthy()
 })
+test('college and academic year selectors render one option per unique record ID', () => {
+  render(<Harness overrides={{
+    activeColleges: [...colleges, { id: '7', name: 'College A duplicate payload' }],
+    academicYears: [...years, { id: '9', name: 'Configured year A duplicate payload' }],
+  }} />)
+  const collegeSelect = screen.getByLabelText('Change college')
+  const yearSelect = screen.getByLabelText('Change academic year')
+  const collegeOptions = Array.from(collegeSelect.options).filter(option => option.value)
+  const yearOptions = Array.from(yearSelect.options).filter(option => option.value)
+  expect(collegeSelect.options[0].hidden).toBe(true)
+  expect(yearSelect.options[0].hidden).toBe(true)
+  expect(collegeOptions.map(option => option.value)).toEqual(['7', '8'])
+  expect(yearOptions.map(option => option.value)).toEqual(['9', '10'])
+})
+test('Global Settings academic year selector lists active years only', () => {
+  render(<Harness overrides={{ academicYears: [
+    { id: '9', name: '2026-27', status: 'Active' },
+    { id: '10', name: '2027-28', status: 'Upcoming' },
+    { id: '11', name: '2025-26', status: 'Archived' },
+  ] }} />)
+  const yearSelect = screen.getByLabelText('Change academic year')
+  expect(Array.from(yearSelect.options).filter(option => option.value).map(option => option.value)).toEqual(['9'])
+})
 test('configuration links and create actions respect supplied permissions', () => {
   const { rerender } = render(<Harness />)
   expect(screen.getByRole('link', { name: 'View college profile' }).getAttribute('href')).toBe('/college-profile')

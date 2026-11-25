@@ -4549,3 +4549,20 @@
 .fm-plan-editor-dialog .erp-btn--primary:hover:not(:disabled), .fm-plan-editor-dialog .erp-btn--primary:focus-visible { background: var(--brand-solid-hover); border-color: var(--brand-solid-hover); color: var(--text-on-brand); }
 .fm-plan-editor-dialog .erp-btn--secondary { background: var(--surface); color: var(--text-primary); border-color: var(--border); }
 .fm-plan-editor-dialog .erp-btn--secondary:hover:not(:disabled), .fm-plan-editor-dialog .erp-btn--secondary:focus-visible { background: var(--brand-soft); color: var(--text-primary); border-color: var(--brand); }
+
+/* Keep the leave-confirmation inside the fee-plan flow, with a clear summary
+   and actions that match the rest of the finance workspace. */
+.fm-discard-confirm-dialog { width: min(480px, calc(100vw - 24px)); max-height: min(82dvh, 520px); }
+.fm-discard-confirm-dialog .shared-view-dialog__icon-badge { color: var(--warning); background: var(--warning-soft); }
+.fm-discard-confirm-dialog > .shared-view-dialog__body { padding: 18px 20px; background: var(--surface); }
+.fm-discard-confirm-dialog > .shared-view-dialog__footer { justify-content: flex-end; flex-wrap: wrap; gap: 8px; padding: 12px 20px; background: var(--surface); }
+.fm-discard-confirm-content { display: grid; gap: 14px; }
+.fm-discard-confirm-content > p { margin: 0; color: var(--text-secondary); font-size: .88rem; line-height: 1.55; }
+.fm-discard-confirm-step { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-soft); font-size: .78rem; }
+.fm-discard-confirm-step span { color: var(--text-muted); }
+.fm-discard-confirm-step strong { color: var(--text-primary); text-align: right; }
+.fm-discard-confirm-dialog .fm-discard-confirm-action { border-color: var(--danger); background: var(--danger); color: #fff; }
+.fm-discard-confirm-dialog .fm-discard-confirm-action:hover:not(:disabled), .fm-discard-confirm-dialog .fm-discard-confirm-action:focus-visible { border-color: var(--danger); background: var(--danger); color: #fff; filter: brightness(.94); }
+@media (max-width: 520px) {
+  .fm-discard-confirm-dialog > .shared-view-dialog__footer > button { flex: 1 1 100%; }
+}

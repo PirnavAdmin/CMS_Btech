@@ -8,6 +8,7 @@ import { createEmptyCanonicalStudent } from '../utils/studentCanonicalModel'
 import { uploadAdmissionDocuments, admissionDecisionAllowed } from '../utils/admissionDocumentWorkflow'
 import { studentIntegrationFees } from '../utils/studentIntegrationFees'
 import { resetAdmissionAcademicDependents } from '../utils/admissionAcademicMapping'
+import { calculateCompletion, completionSchemas } from '../utils/recordCompletion'
 import StudentDocumentActions from './StudentDocumentActions'
 import { studentDocumentApi } from '../api/apiEndpoints'
 const state = vi.hoisted(() => ({ edit: true, rows: [] }))
@@ -126,6 +127,47 @@ test('student directory opens details without dropping the directory and closes 
   const dialog = await screen.findByRole('dialog', { name: 'Student Details' })
   expect(screen.getByRole('region', { name: 'Student directory' })).toBeTruthy()
   fireEvent(dialog, new Event('cancel', { cancelable: true })); expect(screen.queryByRole('dialog')).toBeNull()
+})
+
+test('student profile edit excludes completion validators and keeps cancel/save working', async () => {
+  const profile = record(1, 'APPROVED')
+  profile.personal = { ...profile.personal, firstName: 'Student' }
+  state.rows = [profile]
+
+  const missingCourse = calculateCompletion(completionSchemas.studentProfile, profile)
+    .sections.flatMap(section => section.missing).find(field => field.key === 'courseId')
+  expect(missingCourse.validate).toBeTypeOf('function')
+
+  mount('/student-management/profiles')
+  fireEvent.click(await screen.findByRole('button', { name: 'Edit student profile' }))
+  await screen.findByRole('heading', { name: 'Edit Student Profile' })
+
+  fireEvent.click(screen.getByRole('button', { name: /Supporting Documents/ }))
+  const save = screen.getByRole('button', { name: 'Save Changes' })
+  expect(save.disabled).toBe(true)
+  fireEvent.click(screen.getByRole('button', { name: /Basic Information/ }))
+  const firstName = screen.getByLabelText(/First name/i)
+  fireEvent.change(firstName, { target: { value: 'Updated' } })
+  expect(firstName.value).toBe('Updated')
+  expect(screen.getByLabelText(/Last name/i).value).toBe('Kumar')
+  expect(save.disabled).toBe(false)
+
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+  const discardDialog = await screen.findByRole('dialog', { name: 'Discard unsaved changes?' })
+  fireEvent.click(within(discardDialog).getByRole('button', { name: 'Discard Changes' }))
+  await screen.findByRole('button', { name: 'Edit student profile' })
+
+  fireEvent.click(screen.getByRole('button', { name: 'Edit student profile' }))
+  await screen.findByRole('heading', { name: 'Edit Student Profile' })
+  fireEvent.change(screen.getByLabelText(/First name/i), { target: { value: 'Updated' } })
+  fireEvent.click(screen.getByRole('button', { name: /Supporting Documents/ }))
+  fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }))
+
+  await waitFor(() => expect(studentProfilesApi.update).toHaveBeenCalledWith(
+    '11',
+    expect.objectContaining({ firstName: 'Updated', mobile: '9876543210' }),
+  ))
+  await screen.findByRole('button', { name: 'Edit student profile' })
 })
 
 test('parent changes clear invalid semester and section placement without altering personal values', () => {
