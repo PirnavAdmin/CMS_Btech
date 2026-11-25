@@ -7,15 +7,17 @@ const source = (await readFile(new URL('./apiEndpoints.js', import.meta.url), 'u
 const { sectionApi, sectionAssignmentApi } = await import(`data:text/javascript;base64,${Buffer.from(`const getAccessToken = () => 'test'; const collegeRequest = (url, options) => ({ url, options });\n${source}`).toString('base64')}`)
 const section = { collegeId: 1, academicYearId: 2, courseId: 3, branchId: 4, semesterId: 5, name: 'Section A', code: 'CSE-A', capacity: 60 }
 
-test('section creation sends an explicit numeric department ID', async () => {
+test('section creation sends numeric department and faculty advisor IDs', async () => {
   const previous = globalThis.fetch
   try {
     globalThis.fetch = async (url, options) => {
       assert.equal(options.method, 'POST')
-      assert.equal(JSON.parse(options.body).departmentId, 7)
+      const body = JSON.parse(options.body)
+      assert.equal(body.departmentId, 7)
+      assert.equal(body.facultyAdvisorEmployeeProfileId, 42)
       return Response.json({ data: { sectionId: 9 } })
     }
-    assert.equal((await sectionApi.create({ ...section, departmentId: '7' })).id, 9)
+    assert.equal((await sectionApi.create({ ...section, departmentId: '7', facultyAdvisorEmployeeProfileId: '42' })).id, 9)
   } finally { globalThis.fetch = previous }
 })
 

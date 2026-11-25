@@ -379,6 +379,7 @@ function SectionForm({ editMode = false }) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState({})
+  const compactFormRef = useRef(null)
   const [notice, setNotice] = useState('')
   const [masters, setMasters] = useState({ courses: [], branches: [], years: [], semesters: [] }), [sections, setSections] = useState([]), [assignments, setAssignments] = useState([]), [faculty, setFaculty] = useState([]), [rooms, setRooms] = useState([])
   const semesterRequest = useRef(0)
@@ -501,9 +502,17 @@ function SectionForm({ editMode = false }) {
     setForm(current => ({ ...current, [key]: key === 'code' ? value.toUpperCase() : value }))
     setErrors(current => ({ ...current, [key]: key === 'capacity' ? capacityErrorFor(value) : '' }))
   }
+  const revealFormIssue = () => {
+    window.setTimeout(() => {
+      const issue = compactFormRef.current?.querySelector('.section-field.invalid [role="alert"]')
+        || compactFormRef.current?.querySelector('[role="alert"]')
+      issue?.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
+    }, 0)
+  }
   const validate = () => {
     const next = {}
-    ['courseId', 'branchId', 'semesterId', 'name', 'code', 'status'].forEach(key => { if (!String(form[key] || '').trim()) next[key] = 'Required.' })
+    const requiredFields = ['courseId', 'branchId', 'semesterId', 'name', 'code', 'status']
+    requiredFields.forEach(key => { if (!String(form[key] || '').trim()) next[key] = 'Required.' })
     if (!editMode && !String(form.room || '').trim()) next.room = 'Create and select a room before creating a section.'
     if (!form.academicYearId && !selectedAcademicYearId) next.academicYearId = yearWarning || 'An academic year is required.'
     if (!editMode && !semester) next.semesterId = 'Select a configured semester.'
@@ -515,7 +524,10 @@ function SectionForm({ editMode = false }) {
     if (sections.some(item => String(item.id) !== String(id) && sameMapping(item, mapping) && item.name.trim().toLowerCase() === form.name.trim().toLowerCase())) next.name = 'This section already exists for this academic mapping.'
     if (sections.some(item => String(item.id) !== String(id) && sameMapping(item, mapping) && item.code.trim().toLowerCase() === form.code.trim().toLowerCase())) next.code = 'This section code already exists for this academic mapping.'
     setErrors(next)
-    if (Object.keys(next).length) showWarning('Correct the highlighted fields before saving the section.')
+    if (Object.keys(next).length) {
+      showWarning('Correct the highlighted fields before saving the section.')
+      revealFormIssue()
+    }
     return !Object.keys(next).length
   }
   const submit = async (event) => {
@@ -579,6 +591,8 @@ function SectionForm({ editMode = false }) {
     } catch (error) {
       const message = apiError(error, 'Unable to save section.')
       setErrors(current => ({ ...current, form: message, ...(/academic year.*(?:inactive|exist)/i.test(message) ? { academicYearId: 'Choose an active academic year.' } : {}) }))
+      showError(message)
+      revealFormIssue()
       if (/academic year.*(?:inactive|exist)/i.test(message)) setFormTab('mapping')
     } finally {
       setSaving(false)
@@ -620,9 +634,9 @@ function SectionForm({ editMode = false }) {
         busy={saving}
         className="section-compact-dialog"
         onClose={() => navigate('/section-management')}
-        footerContent={<><button type="button" className="erp-btn erp-btn--secondary" onClick={() => navigate('/section-management')} disabled={saving}>Cancel</button><button type="submit" form="section-compact-form" className="erp-btn erp-btn--primary" disabled={saving}>{saving ? 'Saving...' : editMode ? 'Save Changes' : 'Create Section'}</button></>}
+        footerContent={<><button type="button" className="erp-btn erp-btn--secondary" onClick={() => navigate('/section-management')} disabled={saving}>Cancel</button><button type="button" className="erp-btn erp-btn--primary" onClick={() => compactFormRef.current?.requestSubmit()} disabled={saving}>{saving ? 'Saving...' : editMode ? 'Save Changes' : 'Create Section'}</button></>}
       >
-        <form id="section-compact-form" className="section-compact-form" onSubmit={submit} noValidate>
+        <form ref={compactFormRef} id="section-compact-form" className="section-compact-form" onSubmit={submit} noValidate>
           {errors.form && <div className="section-form-error" role="alert">{errors.form}</div>}
           {yearWarning && <div className="section-form-warning" role="alert">{yearWarning}</div>}
 

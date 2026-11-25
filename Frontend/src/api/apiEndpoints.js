@@ -1079,7 +1079,7 @@ const sectionPayload = (section) => ({
   sectionCode: String(section.code || section.sectionCode || '').trim().toUpperCase(),
   sectionName: String(section.name || section.sectionName || '').trim(),
   capacity: Number(section.capacity),
-  facultyAdvisorEmployeeProfileId: section.facultyAdvisorEmployeeProfileId || null,
+  facultyAdvisorEmployeeProfileId: nullableNumericId(section.facultyAdvisorEmployeeProfileId) ?? null,
   room: String(section.room || '').trim() || null,
   shift: section.shift || 'Morning',
   sectionType: section.type || section.sectionType || 'Regular',
