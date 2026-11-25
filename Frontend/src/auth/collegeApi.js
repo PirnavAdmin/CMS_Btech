@@ -482,7 +482,13 @@ export const createCollege = (collegeData) => {
 };
 
 export const updateCollege = (id, collegeData) => {
-  return API.put(`/colleges/${id}`, buildCollegePayload(collegeData));
+  const payload = buildCollegePayload(collegeData);
+  if (Object.hasOwn(collegeData, 'contactPerson')) {
+    delete payload.principal;
+    delete payload.principalName;
+    payload.contactPerson = collegeData.contactPerson;
+  }
+  return API.put(`/colleges/${id}`, payload);
 };
 
 // College Admin profile edits are scoped to the assigned college. Identity

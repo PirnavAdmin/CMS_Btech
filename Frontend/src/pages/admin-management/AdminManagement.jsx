@@ -1895,6 +1895,7 @@ const mapCollege = (record) => {
   website: record.website ?? record.Website ?? contact.website ?? contact.Website ?? '',
   logo: getCollegeLogoUrl(id, logoValue || cachedLogo, [code, name, record.collegeCode, record.collegeName]),
   principal: record.principal ?? record.principalName ?? administration.principalName ?? record.PrincipalName ?? '',
+  contactPerson: record.contactPerson ?? record.ContactPerson ?? '',
   principalEmail: record.principalEmail ?? administration.principalEmail ?? extended.principalEmail ?? '',
   principalContact: record.principalContact ?? record.principalPhone ?? administration.principalContact ?? extended.principalContact ?? '',
   accreditation: extended.accreditationSummary ?? '',
@@ -2581,7 +2582,7 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
                 <DataTable caption="Organizations" tableClassName="college-config-table" rows={filteredColleges} pagination={{ page: currentPage, pageSize: itemsPerPage, onPageChange: setCurrentPage }} columns={[
                   { key:'name', label:'Organization Name', className:'college-col-identity', render:college => <div className="college-config-identity"><div className="college-config-identity-details"><button type="button" className="college-config-name" title={college.name} aria-label={`View details for ${college.name}`} onClick={() => openDetails(college)}>{college.name}</button><small title={college.type}>{college.type}</small></div></div> },
                   { key:'code', label:'Organization Code', className:'college-col-code', render:college => <code className="college-config-truncate" title={college.code}>{college.code}</code> },
-                  { key:'principal', label:'Contact Person', className:'college-col-contact-person', render:college => <span className="college-config-truncate" title={college.principal}>{college.principal || '—'}</span> },
+                  { key:'contactPerson', label:'Contact Person', className:'college-col-contact-person', render:college => <span className="college-config-truncate" title={college.contactPerson}>{college.contactPerson || '—'}</span> },
                   { key:'contact', label:'Contact', className:'college-col-contact', render:college => <div><span className="college-config-truncate" title={college.contact}>{college.contact || '—'}</span><small className="college-config-email college-config-truncate" title={college.email}>{college.email || '—'}</small></div> },
                   { key:'status', label:'Status', className:'college-col-status', render:college => <StatusBadge value={college.status === 'active' ? 'Active' : 'Inactive'} /> },
                   completionColumn,
@@ -2750,7 +2751,7 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
                   title="Contact Details"
                   icon={ContactIcon}
                   items={[
-                    { label: 'Contact Person', value: activeCollege.principal },
+                    { label: 'Contact Person', value: activeCollege.contactPerson },
                     { label: 'Contact Number', value: activeCollege.contact },
                     { label: 'Alternate Contact Number', value: activeCollege.alternateContact },
                     { label: 'Email', value: activeCollege.email },
