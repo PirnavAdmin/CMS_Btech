@@ -281,6 +281,19 @@ function ApiAssignmentDialog({ faculty, onClose, onChanged }) {
     return () => { active = false }
   }, [attempt, faculty.collegeId])
 
+  const subjectIdOf = row => row.subjectId ?? row.id ?? row.subjectMasterId ?? row.courseSubjectId
+  const subjectNameOf = row => row.subjectName ?? row.name ?? row.subject ?? row.title ?? row.subjectTitle ?? row.subject_name ?? row.courseName
+  const allocatedSubjectName = row => {
+    if (row.subjectName?.trim()) return row.subjectName
+    if (!row.subjectId) return row.assignmentType
+
+    const subject = masters?.subjects.find(subject =>
+      String(subjectIdOf(subject)) === String(row.subjectId) &&
+      (subject.collegeId == null || String(subject.collegeId) === String(faculty.collegeId))
+    )
+    return (subject && subjectNameOf(subject)) || row.assignmentType
+  }
+
   const optionsFor = (collection) => (masters?.[collection] || []).filter(row => {
     if (row.collegeId != null && String(row.collegeId) !== String(faculty.collegeId)) return false
     if (collection === 'branches') return form.courseId && String(row.courseId) === String(form.courseId)
@@ -382,9 +395,9 @@ function ApiAssignmentDialog({ faculty, onClose, onChanged }) {
                   >
                     <option value="">Select {label}</option>
                     {optionsFor(collection).map(row => {
-                      const optionId = row[idKey] ?? row.id ?? (key === 'subjectId' ? row.subjectMasterId ?? row.courseSubjectId : undefined)
+                      const optionId = key === 'subjectId' ? subjectIdOf(row) : row[idKey] ?? row.id
                       const optionLabel = key === 'subjectId'
-                        ? [row.subjectCode ?? row.code ?? row.subject_code, row.subjectName ?? row.name ?? row.subject ?? row.title ?? row.subjectTitle ?? row.subject_name ?? row.courseName].filter(value => value !== undefined && value !== null && String(value).trim() !== '').join(' - ') || 'Unnamed subject'
+                        ? [row.subjectCode ?? row.code ?? row.subject_code, subjectNameOf(row)].filter(value => value !== undefined && value !== null && String(value).trim() !== '').join(' - ') || 'Unnamed subject'
                         : row[nameKey] ?? row.name ?? row.code ?? 'Unnamed option'
                       return optionId == null ? null : <option key={optionId} value={optionId}>{optionLabel}</option>
                     })}
@@ -431,7 +444,7 @@ function ApiAssignmentDialog({ faculty, onClose, onChanged }) {
               {faculty.assignments.map(row => (
                 <article key={row.id} className="fm-assignment-card">
                   <div>
-                    <strong>{row.subjectName || row.assignmentType}</strong>
+                    <strong>{allocatedSubjectName(row)}</strong>
                     <p>{row.course || '—'} | {row.branch || faculty.department} | {row.semester} | {row.section}</p>
                     <p className="fm-muted">{row.assignmentType}</p>
                   </div>
@@ -1557,6 +1570,18 @@ const workload = row => {
 const exportColumns = [['employeeId', 'Employee ID'], ['fullName', 'Faculty Name'], ['department', 'Department'], ['designation', 'Designation'], ['qualification', 'Qualification'], ['experience', 'Experience'], ['mobile', 'Mobile'], ['email', 'Email'], ['employmentType', 'Employment Type'], ['employmentStatus', 'Employment Status']].map(([value, label]) => ({ label, value: value === 'experience' ? row => years(row.experience) : value }))
 
 const optionalTeachingCreateFields = new Set(['gender', 'dob', 'designation', 'employmentType', 'joiningDate'])
+const validEmail = value => {
+  const email = String(value ?? '').trim()
+  if (email.length > 254) return false
+  const [localPart, domain, ...extra] = email.split('@')
+  if (!localPart || !domain || extra.length || localPart.length > 64 || domain.length > 253) return false
+  if (!/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+$/.test(localPart) || localPart.startsWith('.') || localPart.endsWith('.') || localPart.includes('..')) return false
+  const labels = domain.split('.')
+  return labels.length > 1
+    && labels.every(label => label.length <= 63 && /^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$/.test(label))
+    && /^[a-zA-Z]{2,63}$/.test(labels[labels.length - 1])
+    && !['co', 'cm'].includes(labels[labels.length - 1].toLowerCase())
+}
 
 function validateFaculty(data, rows, basicTeaching = false) {
   const errors = {}
@@ -1569,7 +1594,7 @@ function validateFaculty(data, rows, basicTeaching = false) {
   if (!data.fullName?.trim()) errors.fullName = 'Faculty full name is required.'
   else if (data.fullName.trim().length < 2 || !/^[\p{L}\p{M} .?'-]+$/u.test(data.fullName.trim())) errors.fullName = 'Enter a valid name using letters (at least 2 characters).'
   if (data.departmentId && (!Number.isSafeInteger(Number(data.departmentId)) || Number(data.departmentId) <= 0)) errors.departmentId = 'Select a valid department.'
-  for (const key of ['email', 'personalEmail']) if (data[key] && !/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z]{2,})+$/.test(data[key].trim())) errors[key] = 'Enter a valid email address.'
+  for (const key of ['email', 'personalEmail']) if (data[key] && !validEmail(data[key])) errors[key] = 'Please enter a valid email format'
   if (rows.some(row => row.id !== data.id && String(row.email || '').trim().toLowerCase() === data.email?.trim().toLowerCase())) errors.email = 'A faculty member with this email already exists.'
   for (const key of ['mobile', 'alternateMobile', 'emergencyMobile']) {
     const number = String(data[key] ?? '').trim()
@@ -2115,12 +2140,13 @@ function FacultyDocumentsForm({ documents = {}, onChange }) {
     </div>
   )
 }
-function Field({ field, data, errors, update, native = false, collegeOptions = [], departmentOptions = [], touched = {}, liveErrors = {}, markTouched }) {
+function Field({ field, data, errors, update, native = false, collegeOptions = [], departmentOptions = [], departmentLoading = false, departmentLoadError = '', touched = {}, liveErrors = {}, markTouched }) {
   const [key, label, type, required] = field
   const id = 'fm-' + key
   const isNonTeaching = data.employeeCategory === 'Non-Teaching'
   const displayLabel = key === 'employeeId' ? (isNonTeaching ? 'Staff ID' : 'Faculty ID') : (key === 'fullName' ? (isNonTeaching ? 'Staff Full Name' : 'Faculty Full Name') : label)
-  const props = { id, value: data[key] ?? '', onChange: event => update(key, event.target.value), 'aria-invalid': Boolean(errors[key]), 'aria-describedby': errors[key] ? id + '-error' : undefined, required: Boolean(required) }
+  const fieldError = errors[key] || (['email', 'personalEmail'].includes(key) && touched[key] ? liveErrors[key] : '')
+  const props = { id, value: data[key] ?? '', onChange: event => update(key, event.target.value), onBlur: () => { if (['email', 'personalEmail'].includes(key)) markTouched?.(key) }, 'aria-invalid': Boolean(fieldError), 'aria-describedby': fieldError ? id + '-error' : undefined, required: Boolean(required) }
 
   if (key === 'employeeId') {
     return (
@@ -2160,11 +2186,11 @@ function Field({ field, data, errors, update, native = false, collegeOptions = [
   return (
     <>
       <div className={'fm-field ' + (type === 'textarea' ? 'fm-wide' : '') + (key === 'gender' ? ' fm-gender' : '')}><label htmlFor={Array.isArray(type) && !native ? undefined : id}>{displayLabel}{required && <span className="fm-required" aria-hidden="true"> *</span>}</label>
-        {type === 'college' || type === 'department' ? <SearchableSelect placement="bottom" label={displayLabel} value={data[key] || ''} options={type === 'college' ? collegeOptions : departmentOptions} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={'Select ' + displayLabel.toLowerCase()} /> : Array.isArray(type) ? (() => {
+        {type === 'college' || type === 'department' ? <SearchableSelect menuPlacement="bottom" label={displayLabel} value={data[key] || ''} options={type === 'college' ? collegeOptions : departmentOptions} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={departmentLoading && type === 'department' ? 'Loading departments...' : 'Select ' + displayLabel.toLowerCase()} noOptionsMessage={type === 'department' ? (departmentLoading ? 'Loading departments...' : departmentLoadError || 'No active departments are available for this college.') : 'No matching options found.'} /> : Array.isArray(type) ? (() => {
           const effectiveOptions = key === 'designation' ? getDesignationOptions(data.employeeCategory) : type
           return native ? <ProjectSelect {...props}><option value="">Select {displayLabel.toLowerCase()}</option>{effectiveOptions.map(value => <option key={value}>{value}</option>)}</ProjectSelect> : <SearchableSelect placement="bottom" label={displayLabel} value={data[key] || ''} options={effectiveOptions} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={'Select ' + displayLabel.toLowerCase()} hideSearch />
-        })() : type === 'textarea' ? <textarea {...props} rows={2} /> : <input {...props} type={type === 'readonly' ? 'text' : type} readOnly={type === 'readonly'} max={type === 'date' ? today() : key === 'passingYear' ? new Date().getFullYear() : key === 'weeklyHours' ? 60 : type === 'number' ? 80 : undefined} min={key === 'joiningDate' ? joiningDateMinimum(data.dob) : key === 'passingYear' ? 1950 : type === 'number' ? 0 : undefined} step={key === 'passingYear' ? 1 : type === 'number' ? 0.5 : undefined} inputMode={type === 'tel' || key === 'pincode' ? 'numeric' : undefined} />}
-        {errors[key] && <small id={id + '-error'} className="fm-error">{errors[key]}</small>}
+        })() : type === 'textarea' ? <textarea {...props} rows={2} /> : <input {...props} type={type === 'readonly' ? 'text' : type} placeholder={['email', 'personalEmail'].includes(key) ? 'name@gmail.com' : undefined} readOnly={type === 'readonly'} max={type === 'date' ? today() : key === 'passingYear' ? new Date().getFullYear() : key === 'weeklyHours' ? 60 : type === 'number' ? 80 : undefined} min={key === 'joiningDate' ? joiningDateMinimum(data.dob) : key === 'passingYear' ? 1950 : type === 'number' ? 0 : undefined} step={key === 'passingYear' ? 1 : type === 'number' ? 0.5 : undefined} inputMode={type === 'tel' || key === 'pincode' ? 'numeric' : undefined} />}
+        {fieldError && <small id={id + '-error'} className="fm-field-error" role="alert">{fieldError}</small>}
       </div>
       {key === 'employeeCategory' && ['Others', 'Other'].includes(data.employeeCategory) && (
         <div className="fm-field">
@@ -2307,7 +2333,7 @@ const getNextFacultyCode = (list = [], collegeId, collegeOptions = [], isNonTeac
   return `${prefix}${String(nextSeq).padStart(3, '0')}`
 }
 
-function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], departmentOptions = [], selectedCollegeId = '', saving, saveError = '' }) {
+function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], departmentOptions = [], departmentLoading = false, departmentLoadError = '', selectedCollegeId = '', saving, saveError = '' }) {
   const defaultCollegeId = initial?.collegeId || selectedCollegeId || collegeOptions[0]?.value || ''
   const isInitialNonTeaching = (initial?.employeeCategory || initial?.employee_category) === 'Non-Teaching'
   const [data, setData] = useState(() => {
@@ -2480,7 +2506,7 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], 
             {section ? (
               <div className="fm-form-grid">
                 {section.fields.filter(([key]) => !(data.employeeCategory === 'Non-Teaching' && key === 'teachingExperience')).map(field => (
-                  <Field key={field[0]} field={field[0] === 'employeeCategory' && ['Teaching', 'Non-Teaching'].includes(initial.employeeCategory) ? [field[0], field[1], 'readonly', field[3]] : field} data={data} errors={errors} update={update} collegeOptions={collegeOptions} departmentOptions={departmentOptions} touched={touched} liveErrors={liveErrors} markTouched={markTouched} />
+                  <Field key={field[0]} field={field[0] === 'employeeCategory' && ['Teaching', 'Non-Teaching'].includes(initial.employeeCategory) ? [field[0], field[1], 'readonly', field[3]] : field} data={data} errors={errors} update={update} collegeOptions={collegeOptions} departmentOptions={departmentOptions} departmentLoading={departmentLoading} departmentLoadError={departmentLoadError} touched={touched} liveErrors={liveErrors} markTouched={markTouched} />
                 ))}
               </div>
             ) : (
@@ -2569,6 +2595,8 @@ function FacultyManagement() {
   const [assignmentId, setAssignmentId] = useState(null)
   const [collegeOptions, setCollegeOptions] = useState([])
   const [departmentOptions, setDepartmentOptions] = useState([])
+  const [departmentLoading, setDepartmentLoading] = useState(true)
+  const [departmentLoadError, setDepartmentLoadError] = useState('')
   const [saving, setSaving] = useState(false)
   const [loadError, setLoadError] = useState('')
   const [detail, setDetail] = useState(null)
@@ -2603,25 +2631,47 @@ function FacultyManagement() {
   }, [selectedCollegeId, reloadDirectory, scopeRecords, setFaculty])
   useEffect(() => {
     let active = true
+    setDepartmentLoading(true)
+    setDepartmentLoadError('')
     Promise.all([
       facultyMasterApi.getColleges().catch(() => []),
-      departmentApi.getAll().catch(() => [])
-    ]).then(([colleges, departments]) => {
+      departmentApi.getAll().then(departments => ({ departments })).catch(error => ({ error }))
+    ]).then(([colleges, departmentResult]) => {
       if (!active) return
-      const isEntryActive = row => row && row.status !== 'Inactive' && row.status !== 0 && row.status !== false && row.isActive !== false
+      const isEntryActive = row => {
+        if (!row) return false
+        const status = row.status ?? row.Status ?? row.isActive ?? row.IsActive
+        if (status == null) return true
+        return status === true || status === 1 || ['active', '1', 'true'].includes(String(status).trim().toLowerCase())
+      }
       setCollegeOptions((colleges || []).filter(row => String(row.collegeId ?? row.CollegeId ?? row.id) === String(selectedCollegeId)).filter(isEntryActive).map(row => ({
         value: String(row.collegeId ?? row.CollegeId ?? row.id ?? row.Id ?? ''),
         label: row.collegeName ?? row.CollegeName ?? row.name ?? row.Name ?? '',
         code: row.collegeCode ?? row.CollegeCode ?? row.code ?? row.Code ?? '',
       })))
-      setDepartmentOptions(scopeRecords(departments).filter(isEntryActive).map(row => ({
+      if (departmentResult.error) {
+        setDepartmentOptions([])
+        setDepartmentLoadError(departmentResult.error.message || 'Unable to load departments.')
+        return
+      }
+      setDepartmentLoadError('')
+      // The API scopes this list to the authenticated college. Trust that scope
+      // here; a second client-side college filter can hide valid records when
+      // the header context ID is temporarily unavailable or differently shaped.
+      setDepartmentOptions((departmentResult.departments || []).filter(isEntryActive).map(row => ({
         value: String(row.departmentId ?? row.DepartmentId ?? row.id ?? row.Id ?? ''),
         label: row.departmentName ?? row.DepartmentName ?? row.name ?? row.Name ?? '',
         collegeId: row.collegeId ?? row.CollegeId,
-      })))
-    }).catch(() => {})
+      })).filter(option => option.value && option.value !== 'undefined' && option.label))
+    }).catch(error => {
+      if (active) {
+        setDepartmentOptions([])
+        setDepartmentLoadError(error.message || 'Unable to load departments.')
+      }
+    })
+      .finally(() => { if (active) setDepartmentLoading(false) })
     return () => { active = false }
-  }, [scopeRecords, selectedCollegeId])
+  }, [selectedCollegeId])
   const notify = useCallback(message => {
     clearTimeout(toastTimer.current)
     setToast(message)
@@ -2819,6 +2869,8 @@ function FacultyManagement() {
           faculty={faculty}
           collegeOptions={collegeOptions}
           departmentOptions={departmentOptions}
+          departmentLoading={departmentLoading}
+          departmentLoadError={departmentLoadError}
           selectedCollegeId={selectedCollegeId}
           saving={saving}
           saveError={loadError}

@@ -27,7 +27,7 @@ import DashboardLayout from '../../../layouts/DashboardLayout'
 import TablePagination, { PAGE_SIZE } from '../../../components/TablePagination'
 import CompactSummary from '../../../components/CompactSummary'
 import StatusBadge from '../../../components/StatusBadge'
-import { academicYearApi, facilityFeePlanApi, admissionFeePlanApi, branchApi, courseApi, lookupIndianPincode, studentAdmissionApi, studentAcademicDetailsApi, studentAdmissionStatusApi, studentDocumentApi, studentFeeApi, studentParentApi, studentPreviousEducationApi } from '../../../api/apiEndpoints'
+import { academicYearApi, facilityFeePlanApi, admissionFeePlanApi, branchApi, courseApi, departmentApi, lookupIndianPincode, studentAdmissionApi, studentAcademicDetailsApi, studentAdmissionStatusApi, studentDocumentApi, studentFeeApi, studentParentApi, studentPreviousEducationApi } from '../../../api/apiEndpoints'
 import { getDemoAdmissionById, mergeWithDemoAdmissions } from './demoAdmissions'
 import { getOperationalAcademicYearOptions } from '../../../utils/academicYearUtils'
 import { admissionSemesterOptions, resolveAdmissionAcademicIds, currentAdmissionSemester, admissionSemesterError, resetAdmissionAcademicDependents } from '../../../utils/admissionAcademicMapping'
@@ -887,6 +887,7 @@ function AdmissionList() {
   return (
     <>
       <PageHeader
+        className="sa-directory-header"
         title="Student Admissions"
         subtitle="Manage registrations, review and approval in the selected college and academic year."
       />
@@ -1437,8 +1438,10 @@ function ApplicantFeeStructure({ data, update, error }) {
             <p>{serverPlanState.loading ? 'Checking for fee plans that match this admission.' :
               serverPlanState.error ? serverPlanState.error :
               !hasAcademicScope ? 'Check the college, academic year, program, branch, batch and semester in Academic Details.' :
-              'Check that a published plan is currently effective and matches the admission batch, semester, quota and student category.'}</p>
-            <p>Batch {display(batch)} ? Semester {display(data.academic?.semester || semesterId)}</p>
+              'Only currently effective, published plans are available here. A matching plan in Pending Approval or Approved status must be approved and published in Fee Structure before it can be assigned.'}</p>
+            {!serverPlanState.loading && !serverPlanState.error && hasAcademicScope && <p>
+              Searched for: {display(data.academic?.course)} · {display(data.academic?.branch)} · Batch {display(batch)} · {display(data.academic?.semester || semesterId)} · {display(quota)} quota · {display(studentCategory)} category.
+            </p>}
             <label className="sa-field">
               <span>Admission Quota</span>
               <ProjectSelect value={data.academic?.quota || ''} onChange={event => update('academic.quota', event.target.value)}>
@@ -1939,7 +1942,7 @@ function AdmissionForm() {
     wizardContentRef.current?.focus({ preventScroll: true })
   }, [step])
   const markTouched = (path) => setTouched(current => ({ ...current, [path]: true }))
-  const [masters,setMasters]=useState({years:[],courses:[],branches:[],colleges:[],semesters:[]})
+  const [masters,setMasters]=useState({years:[],courses:[],branches:[],departments:[],colleges:[],semesters:[]})
   const [courseBranches, setCourseBranches] = useState([])
   const [branchLoading, setBranchLoading] = useState(false)
   const [branchLoadError, setBranchLoadError] = useState('')
@@ -1981,7 +1984,7 @@ function AdmissionForm() {
     if (preference && data.admission.hostelPreference !== preference) setData(current => ({ ...current, admission: { ...current.admission, hostelPreference: preference } }))
   }, [data.admission.hostel, data.admission.hostelPreference, data.personal.gender])
   const notify = (message, tone = 'success') => setToast({ message, tone })
-  useEffect(()=>{let active=true;Promise.all([academicYearApi.getAll(),courseApi.getAll(),branchApi.getAll(),getColleges(),getSemesters()]).then(([years,courses,branches,collegeResponse,semesterResponse])=>{if(!active)return;const list=response=>{let value=response;for(let depth=0;depth<5&&value&&typeof value==='object';depth+=1){if(Array.isArray(value))return value;const rows=value.items??value.content??value.results??value.records;if(Array.isArray(rows))return rows;value=value.data}return[]};const operationalYears = getOperationalAcademicYearOptions(years);setMasters({loaded: true, years: operationalYears, courses, branches, colleges:list(collegeResponse), semesters:list(semesterResponse)})}).catch(error=>{ if(active) {setMasters(current=>({...current,loaded:false,error:error.message||'Unable to load admission selections.'}));notify(error.message||'Unable to load admission selections.','error')} });return()=>{active=false}},[masterAttempt, globalCollegeId])
+  useEffect(()=>{let active=true;Promise.all([academicYearApi.getAll(),courseApi.getAll(),branchApi.getAll(),departmentApi.getAll(),getColleges(),getSemesters()]).then(([years,courses,branches,departments,collegeResponse,semesterResponse])=>{if(!active)return;const list=response=>{let value=response;for(let depth=0;depth<5&&value&&typeof value==='object';depth+=1){if(Array.isArray(value))return value;const rows=value.items??value.content??value.results??value.records;if(Array.isArray(rows))return rows;value=value.data}return[]};const operationalYears = getOperationalAcademicYearOptions(years);setMasters({loaded: true, years: operationalYears, courses, branches, departments:list(departments), colleges:list(collegeResponse), semesters:list(semesterResponse)})}).catch(error=>{ if(active) {setMasters(current=>({...current,loaded:false,error:error.message||'Unable to load admission selections.'}));notify(error.message||'Unable to load admission selections.','error')} });return()=>{active=false}},[masterAttempt, globalCollegeId])
   useEffect(() => {
     const courseId = data.academic.courseId
     let active = true
@@ -2282,7 +2285,11 @@ function AdmissionForm() {
   const academicOption=(item,idKeys,nameKeys)=>({id:idKeys.map(key=>read(item,key)).find(value=>value!=null&&value!==''),name:nameKeys.map(key=>read(item,key)).find(Boolean)||''})
   const yearOptions=masters.years.filter(isItemActive).map(item=>academicOption(item,['academicYearId','id'],['academicYearName','name'])).filter(item=>item.id)
   const selectedCollegeId = data.admission.collegeId
-  const departmentOptions = [...new Map(masters.courses.filter(item => isItemActive(item) && (!item.collegeId || same(item.collegeId,selectedCollegeId))).filter(item => item.departmentId).map(item => [String(item.departmentId), { id:item.departmentId,name:item.departmentName || item.department?.departmentName || item.department?.name || String(item.departmentId) }])).values()]
+  const departmentOptions = [...new Map(masters.departments.filter(isItemActive).map(item => ({
+    id: item.departmentId ?? item.id,
+    name: item.departmentName ?? item.name ?? item.deptName ?? item.department?.departmentName ?? item.department?.name ?? '',
+    collegeId: item.collegeId ?? item.college?.collegeId ?? item.college?.id,
+  })).filter(item => item.id && item.name && (!item.collegeId || same(item.collegeId, selectedCollegeId))).map(item => [String(item.id), item])).values()]
   const courseOptions=masters.courses.filter(isItemActive).map(item=>{
     const opt = academicOption(item,['courseId','id'],['courseName','name'])
     const code = item.courseCode || item.code || item.shortName || item.courseShortName || courseCodeFallback(opt.name)
@@ -2394,7 +2401,8 @@ function AdmissionForm() {
     const id=`sa-${idPath.replaceAll('.','-')}`;
     const masterError = errors[namePath] || ((touched[namePath] || touched[idPath] || read(data, idPath)) ? allErrors[namePath] : '');
     const branchField = idPath === 'academic.branchId'
-    const placeholder = disabled ? 'Select Course first' : branchField && branchLoading ? 'Loading branches...' : branchField && !options.length ? branchLoadError ? 'Branches unavailable' : 'No branches configured' : `Select ${label}`
+    const departmentField = idPath === 'academic.departmentId'
+    const placeholder = departmentField && !masters.loaded ? 'Loading departments...' : departmentField && !selectedCollegeId ? 'Select College first' : departmentField && !options.length ? 'No departments configured' : disabled ? 'Select Course first' : branchField && branchLoading ? 'Loading branches...' : branchField && !options.length ? branchLoadError ? 'Branches unavailable' : 'No branches configured' : `Select ${label}`
     return <label className={`sa-field ${masterError?'invalid':''}`} htmlFor={id}><span>{label}<b> *</b></span><ProjectSelect id={id} value={read(data,idPath)||''} disabled={disabled || (branchField && branchLoading)} onChange={event=>{setSaveError('');markTouched(namePath);markTouched(idPath);const option=options.find(item=>same(item.id,event.target.value));setData(current=>{let next=setPath(current,idPath,event.target.value);if(current.previewEditedFields)next.previewEditedFields={...current.previewEditedFields,[idPath]:true,[namePath]:true};next=setPath(next,namePath,option?.name||'');if(idPath==='academic.courseId')next=setPath(next,'academic.courseCode',option?.code||courseCodeFallback(option?.name));if(idPath==='academic.branchId')next=setPath(next,'academic.branchCode',option?.code||branchCodeFallback(option?.name));resets.forEach(([resetId,resetName])=>{next=setPath(next,resetId,'');next=setPath(next,resetName,'')});return resetAdmissionAcademicDependents(next,current,idPath)});setErrors(current=>({...current,[namePath]:''}))}} onBlur={() => { markTouched(namePath); markTouched(idPath) }}><option value="">{placeholder}</option>{options.map(option=><option key={option.id} value={option.id}>{option.name}{option.code ? ` (${option.code})` : ''}</option>)}</ProjectSelect>{branchField && !branchLoading && !options.length && <small role={branchLoadError?'alert':'status'}>{branchLoadError || 'Ask an administrator to add an active branch under this course.'}</small>}{masterError&&<small role="alert">{masterError}</small>}</label>
   }
   const screens = [

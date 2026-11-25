@@ -5,8 +5,12 @@
 .dashboard-header { position:sticky; top:0; z-index:40; box-sizing:border-box; min-height:var(--header-height); display:flex; flex-wrap:wrap; align-items:center; gap:14px; padding:8px var(--space-5); background:var(--header-bg); backdrop-filter:blur(8px); border-bottom:1px solid var(--border); }
 .dashboard-header__actions { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin-left:auto; min-width:0; }
 .dashboard-header__academic-context { display:flex; align-items:center; gap:8px; min-width:0; }
-.dashboard-header__academic-context .workspace-context-select--college { flex:0 1 230px; width:230px; min-width:150px; }
-.dashboard-header__academic-context .workspace-context-select--college .searchable-select__trigger { min-height:48px; }
+.dashboard-header__academic-context .workspace-context-select--college { flex:0 1 250px; width:250px; min-width:0; }
+.dashboard-header__academic-context .workspace-context-select--college .searchable-select,
+.dashboard-header__academic-context .workspace-context-select--college .searchable-select__trigger { box-sizing:border-box; width:100%; min-width:0; }
+.dashboard-header__academic-context .workspace-context-select--college .searchable-select__trigger { height:48px; min-height:48px; align-items:center; }
+.dashboard-header__academic-context .workspace-context-select--college .searchable-select__trigger-text { flex:1 1 auto; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; line-height:1.25; }
+.dashboard-header__academic-context .workspace-context-select--college .searchable-select__caret { flex:0 0 auto; }
 .dashboard-header__academic-context .header-academic-year { flex:0 1 270px; width:270px; min-width:190px; }
 .dashboard-header__academic-context .header-academic-year > summary { width:100%; }
 .global-search { position:relative; box-sizing:border-box; display:flex; align-items:center; gap:8px; flex:1; height:48px; max-width:380px; min-width:100px; padding:7px 12px; background:var(--input-bg); border:1px solid var(--border); border-radius:9px; color:var(--text-muted); }

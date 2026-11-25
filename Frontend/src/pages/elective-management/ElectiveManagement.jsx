@@ -222,8 +222,8 @@ export default function ElectiveManagement() {
   const pending = report.filter(row => String(approvalStatus(row)).toLowerCase() === 'pending'); const approved = report.filter(row => String(approvalStatus(row)).toLowerCase() === 'approved'); const pageRows = rows => rows.slice((page - 1) * size, page * size)
   const filteredGroups = useMemo(() => displayGroups.filter(row => !search.trim() || [row.groupCode, row.groupName].some(value => String(value || '').toLowerCase().includes(search.trim().toLowerCase()))), [displayGroups, search])
   const electiveFiltersActive = hasAcademicFilter(filters) || filters.status !== 'All'
-  const hasSubjectFilter = hasAcademicFilter(filters) || filters.status !== 'All' || Boolean(search.trim())
-  const electiveTableRows = useMemo(() => hasSubjectFilter ? workflowRows.filter(subject => isElectiveSubject(subject) && matchesSubject(subject, filters, search)) : [], [workflowRows, filters, search, hasSubjectFilter])
+  const hasSubjectFilter = electiveFiltersActive || Boolean(search.trim())
+  const electiveTableRows = useMemo(() => workflowRows.filter(subject => isElectiveSubject(subject) && matchesSubject(subject, filters, search)), [workflowRows, filters, search])
   const electiveTablePageSize = 5
   const electiveTablePageRows = electiveTableRows.slice((page - 1) * electiveTablePageSize, page * electiveTablePageSize)
   const electiveTableExportColumns = [
@@ -623,7 +623,7 @@ export default function ElectiveManagement() {
               ) : directoryError || mastersError ? (
                 <div className="em-alert" role="alert">{directoryError || mastersError}<button type="button" onClick={() => { loadDirectory(); loadMasters() }}>Retry</button></div>
               ) : !electiveTableRows.length ? (
-                <EmptyState className="em-subject-empty" icon={FiBookOpen} title={hasSubjectFilter ? 'No matching elective subjects' : 'Find elective subjects'} description={hasSubjectFilter ? 'Try a different search or adjust the filters.' : 'Search by subject code or name, or open Filters to narrow the directory.'} />
+                <EmptyState className="em-subject-empty" icon={FiBookOpen} title={hasSubjectFilter ? 'No matching elective subjects' : 'No elective subjects found'} description={hasSubjectFilter ? 'Try a different search or adjust the filters.' : 'Subjects marked Elective in Subject Management appear here.'} />
               ) : (
                 <table className="em-table em-group-table">
                   <thead>

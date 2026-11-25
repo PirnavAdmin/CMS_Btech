@@ -84,7 +84,7 @@ public sealed class TimetableRepository : ITimetableRepository
             p_end_time = TimeSpan.Parse(r.EndTime),
             p_duration_minutes = r.PeriodDurationMinutes,
             p_working_days_json = Json(r.WorkingDays),
-            p_breaks_json = Json(r.Breaks),
+            p_breaks_json = JsonSerializer.Serialize(r.Breaks),
             p_actor_id = actorId
         }));
         return rows.AsList();
@@ -150,7 +150,7 @@ public sealed class TimetableRepository : ITimetableRepository
             p_academic_year_id = r.AcademicYearId,
             p_reviewed = r.Reviewed ? 1 : 0,
             p_working_days_json = Json(r.WorkingDays),
-            p_holidays_json = Json(r.Holidays),
+            p_holidays_json = JsonSerializer.Serialize(r.Holidays),
             p_actor_id = actorId
         }));
         return await GetCalendarAsync(r.AcademicYearId);
@@ -278,7 +278,8 @@ public sealed class TimetableRepository : ITimetableRepository
     public async Task<IReadOnlyList<TimetableRequirementDto>> SaveRequirementsAsync(long id, SaveTimetableRequirementsRequest r, long? actor, long? college, bool superAdmin)
     {
         await using var c=CreateConnection();
-        await WithTimetableLockAsync(c,id,tx => c.ExecuteAsync(Cmd("sp_tt_requirements_save",new {p_timetable_id=id,p_requirements_json=Json(r.Requirements),p_actor_id=actor,p_college_id=college,p_is_super_admin=superAdmin?1:0},tx)));
+        // The stored procedure's JSON paths use the DTO property names verbatim.
+        await WithTimetableLockAsync(c,id,tx => c.ExecuteAsync(Cmd("sp_tt_requirements_save",new {p_timetable_id=id,p_requirements_json=JsonSerializer.Serialize(r.Requirements),p_actor_id=actor,p_college_id=college,p_is_super_admin=superAdmin?1:0},tx)));
         return await GetRequirementsAsync(id,college,superAdmin);
     }
 

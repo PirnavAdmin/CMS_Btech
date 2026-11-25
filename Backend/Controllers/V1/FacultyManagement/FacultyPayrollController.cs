@@ -67,8 +67,8 @@ public sealed class FacultyPayrollController : ControllerBase
                 return BadRequest(new{success=false,message="Valid faculty, payday and amounts are required."});
             var college=College(request.CollegeId);if(college is null)return BadRequest(new{success=false,message="Select a college."});
             await using var c=Db();await c.OpenAsync();
-            var result=await c.QuerySingleAsync("sp_payroll_save",new{p_id=id,p_college=college,p_faculty=request.FacultyId,p_month=m,p_gross=request.GrossSalary,p_deductions=request.Deductions,p_payday=request.PayDate.Date,p_revision=request.RevisionNo,p_actor=CollegeDataScope.Actor(HttpContext)},commandType:CommandType.StoredProcedure);
-            var row=(await Read(null,"DETAIL",Convert.ToInt64(result.payrollId))).First();
+            var payrollId=await c.QuerySingleAsync<long>("sp_payroll_save",new{p_id=id,p_college=college,p_faculty=request.FacultyId,p_month=m,p_gross=request.GrossSalary,p_deductions=request.Deductions,p_payday=request.PayDate.Date,p_revision=request.RevisionNo,p_actor=CollegeDataScope.Actor(HttpContext)},commandType:CommandType.StoredProcedure);
+            var row=(await Read(null,"DETAIL",payrollId)).First();
             return StatusCode(id.HasValue?200:201,new{success=true,message=id.HasValue?"Salary updated successfully.":"Salary created successfully.",data=row});
         }
         catch(ArgumentException ex){return BadRequest(new{success=false,message=ex.Message});}

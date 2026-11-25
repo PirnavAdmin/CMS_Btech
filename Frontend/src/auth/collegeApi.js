@@ -5,7 +5,7 @@ import { collegeRequest } from '../utils/collegeRequest.js'
 import { createApiUnavailableError, notifyApiUnavailable } from '../api/apiFailureNotice'
 import { selectedCollegeId } from '../utils/collegeScope.js'
 const cleanUrl = (url) => (url || "").replace(/\/+$/, "");
-const DEFAULT_API_BASE_URL = "https://simplified-commission-presents-doctrine.trycloudflare.com"
+const DEFAULT_API_BASE_URL = "https://vaguely-citric-fragrant.ngrok-free.dev"
 const friendlyValidationMessage = (errors) => {
   if (!errors || typeof errors !== "object") return "";
   const fields = Object.keys(errors);
@@ -482,7 +482,13 @@ export const createCollege = (collegeData) => {
 };
 
 export const updateCollege = (id, collegeData) => {
-  return API.put(`/colleges/${id}`, buildCollegePayload(collegeData));
+  const payload = buildCollegePayload(collegeData);
+  if (Object.hasOwn(collegeData, 'contactPerson')) {
+    delete payload.principal;
+    delete payload.principalName;
+    payload.contactPerson = collegeData.contactPerson;
+  }
+  return API.put(`/colleges/${id}`, payload);
 };
 
 // College Admin profile edits are scoped to the assigned college. Identity

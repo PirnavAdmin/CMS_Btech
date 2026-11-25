@@ -8,6 +8,7 @@ import PageHeader from '../../components/PageHeader.jsx'
 import AsyncState from '../../components/AsyncState.jsx'
 import { useAcademic } from '../../context/AcademicContext.jsx'
 import { useScreenAccess } from '../../auth/ScreenAccess.jsx'
+import { lookupIndianPincode } from '../../api/apiEndpoints.js'
 import { getCollegeById, unwrapCollegeRecord, getCollegeLogoUrl } from '../../auth/collegeApi.js'
 import './CollegeProfile.css'
 
@@ -118,11 +119,37 @@ const campusFields = [
 function AddCampusDialog({ collegeId, isSuperAdmin, onClose, onSaved }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [values, setValues] = useState(() => Object.fromEntries(campusFields.map(([key]) => [key, ''])))
+  const [pinStatus, setPinStatus] = useState('')
+
+  useEffect(() => {
+    const pin = String(values.postalCode || '')
+    if (!/^\d{6}$/.test(pin)) return undefined
+    let active = true
+    const timer = window.setTimeout(async () => {
+      setPinStatus('Looking up PIN code…')
+      try {
+        const location = await lookupIndianPincode(pin)
+        if (!active) return
+        setValues(current => current.postalCode !== pin ? current : ({
+          ...current,
+          city: location.city || current.city,
+          district: location.district || current.district,
+          state: location.state || current.state,
+        }))
+        setPinStatus('City, district, and state filled automatically.')
+      } catch (lookupError) {
+        if (active) setPinStatus(lookupError.message || 'Could not find this PIN code. Enter the location manually.')
+      }
+    }, 350)
+    return () => { active = false; window.clearTimeout(timer) }
+  }, [values.postalCode])
+
   async function save(event) {
     event.preventDefault()
     if (busy) return
     const data = new FormData(event.currentTarget)
-    const fields = Object.fromEntries(campusFields.map(([key]) => [key, String(data.get(key) || '').trim() || null]))
+    const fields = Object.fromEntries(campusFields.map(([key]) => [key, String(values[key] || '').trim() || null]))
     if (!fields.name || !fields.code) {
       setError('Enter the campus name and code.')
       return
@@ -143,7 +170,15 @@ function AddCampusDialog({ collegeId, isSuperAdmin, onClose, onSaved }) {
     <form id="campus-create-form" className="college-campus-form" onSubmit={save}>
       {error && <p role="alert">{error}</p>}
       {campusFields.map(([key, label, maxLength, type = 'text']) => <label key={key}>
-        {label}<input name={key} type={type} maxLength={maxLength} required={key === 'name' || key === 'code'} />
+        {label}<input name={key} type={type} inputMode={key === 'postalCode' ? 'numeric' : undefined}
+          maxLength={key === 'postalCode' ? 6 : maxLength} value={values[key] || ''}
+          onChange={event => {
+            const nextValue = key === 'postalCode' ? event.target.value.replace(/\D/g, '').slice(0, 6) : event.target.value
+            setValues(current => ({ ...current, [key]: nextValue }))
+            if (key === 'postalCode') setPinStatus(nextValue.length === 6 ? 'Looking up PIN code…' : '')
+          }}
+          required={key === 'name' || key === 'code'} />
+        {key === 'postalCode' && pinStatus && <small className="college-campus-pin-status" role="status">{pinStatus}</small>}
       </label>)}
       <label className="college-campus-main"><input name="isMainCampus" type="checkbox" /> Main campus</label>
     </form>

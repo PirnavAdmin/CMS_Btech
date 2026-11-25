@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import PlatformLogo from './PlatformLogo.jsx'
 import { useLocation } from 'react-router-dom'
 import { FiChevronLeft, FiChevronRight, FiX } from 'react-icons/fi'
 import { navigationGroups, unavailableNavigationGroups, activeSidebarEntry } from '../config/sidebarNavigation.js'
@@ -11,6 +12,14 @@ import { fetchCollegeLogo, getCollegeLogoUrl, isBackendCollegeLogo } from '../au
 import { collegeLogoValue } from '../utils/collegeLogo'
 import { useAcademic } from '../context/AcademicContext'
 import './Sidebar.css'
+
+function PlatformBrandMark({ platformMode }) {
+  const fallback = <svg viewBox="0 0 36 36" focusable="false">
+    <path d="M10 29V8h9.1c6.1 0 9.4 3.1 9.4 8s-3.3 8-9.4 8H15v5h-5Zm5-9h4c3.1 0 4.6-1.3 4.6-4s-1.5-4-4.6-4h-4v8Z" fill="currentColor" />
+    <circle cx="27.5" cy="27.5" r="2.5" fill="currentColor" />
+  </svg>
+  return platformMode ? <PlatformLogo fallback={fallback} /> : fallback
+}
 
 export default function Sidebar({ open = false, onClose = () => {}, collapsed = false, onToggleCollapse = () => {}, platformMode = false }) {
   const userRole = getUserRole()
@@ -25,6 +34,7 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
   const collegeCode = selectedCollege?.collegeCode || selectedCollege?.code || selectedCollege?.CollegeCode || ''
   const collegeLogoUrl = getCollegeLogoUrl(selectedCollegeId, collegeLogoValue(selectedCollege), [collegeCode, collegeName])
   const collegeInitial = collegeName.trim().charAt(0).toUpperCase() || 'C'
+
 
   useEffect(() => {
     setCollegeBrandLogo('')
@@ -98,10 +108,7 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
             ? collegeBrandLogo
               ? <img src={collegeBrandLogo} alt="" onError={() => setCollegeBrandLogo('')} />
               : <b className="sidebar-brand__initial">{collegeInitial}</b>
-            : <svg viewBox="0 0 36 36" focusable="false">
-            <path d="M10 29V8h9.1c6.1 0 9.4 3.1 9.4 8s-3.3 8-9.4 8H15v5h-5Zm5-9h4c3.1 0 4.6-1.3 4.6-4s-1.5-4-4.6-4h-4v8Z" fill="currentColor" />
-            <circle cx="27.5" cy="27.5" r="2.5" fill="currentColor" />
-          </svg>}
+            : <PlatformBrandMark platformMode={platformMode} />}
         </span>
         <div className="sidebar-brand__copy">
           <strong title={showCollegeBrand ? collegeName : 'Pirnav Group of Institutions'}>{showCollegeBrand ? collegeName : 'Pirnav'}</strong>

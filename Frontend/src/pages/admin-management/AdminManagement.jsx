@@ -550,9 +550,7 @@ function AcademicYear() {
                   icon={FiClock}
                   items={[
                     { label: 'Status', value: selected.status },
-                    { label: 'Auto Activation', value: selected.autoActivate ? 'Enabled' : 'Manual' },
                     { label: 'Present Active Cycle', value: isPresentYear(selected) ? 'Yes (Current Ongoing)' : 'No' },
-                    { label: 'Historical Record', value: isPastYear(selected) ? 'Yes (Past Cycle)' : 'No' },
                   ]}
                 /></>}</div></ViewDialog>}
           <>
@@ -1897,6 +1895,7 @@ const mapCollege = (record) => {
   website: record.website ?? record.Website ?? contact.website ?? contact.Website ?? '',
   logo: getCollegeLogoUrl(id, logoValue || cachedLogo, [code, name, record.collegeCode, record.collegeName]),
   principal: record.principal ?? record.principalName ?? administration.principalName ?? record.PrincipalName ?? '',
+  contactPerson: record.contactPerson ?? record.ContactPerson ?? '',
   principalEmail: record.principalEmail ?? administration.principalEmail ?? extended.principalEmail ?? '',
   principalContact: record.principalContact ?? record.principalPhone ?? administration.principalContact ?? extended.principalContact ?? '',
   accreditation: extended.accreditationSummary ?? '',
@@ -2581,9 +2580,9 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
             ) : (
               <>
                 <DataTable caption="Organizations" tableClassName="college-config-table" rows={filteredColleges} pagination={{ page: currentPage, pageSize: itemsPerPage, onPageChange: setCurrentPage }} columns={[
-                  { key:'name', label:'Organization Name', className:'college-col-identity', render:college => <div className="college-config-identity"><CollegeLogoImage src={college.logo} fallbackSrc={getCollegeLogoEndpoint(college.id)} alt="" code={college.code} className="college-config-logo" /><div className="college-config-identity-details"><button type="button" className="college-config-name" title={college.name} aria-label={`View details for ${college.name}`} onClick={() => openDetails(college)}>{college.name}</button><small title={college.type}>{college.type}</small></div></div> },
+                  { key:'name', label:'Organization Name', className:'college-col-identity', render:college => <div className="college-config-identity"><div className="college-config-identity-details"><button type="button" className="college-config-name" title={college.name} aria-label={`View details for ${college.name}`} onClick={() => openDetails(college)}>{college.name}</button><small title={college.type}>{college.type}</small></div></div> },
                   { key:'code', label:'Organization Code', className:'college-col-code', render:college => <code className="college-config-truncate" title={college.code}>{college.code}</code> },
-                  { key:'principal', label:'Contact Person', className:'college-col-contact-person', render:college => <span className="college-config-truncate" title={college.principal}>{college.principal || '—'}</span> },
+                  { key:'contactPerson', label:'Contact Person', className:'college-col-contact-person', render:college => <span className="college-config-truncate" title={college.contactPerson}>{college.contactPerson || '—'}</span> },
                   { key:'contact', label:'Contact', className:'college-col-contact', render:college => <div><span className="college-config-truncate" title={college.contact}>{college.contact || '—'}</span><small className="college-config-email college-config-truncate" title={college.email}>{college.email || '—'}</small></div> },
                   { key:'status', label:'Status', className:'college-col-status', render:college => <StatusBadge value={college.status === 'active' ? 'Active' : 'Inactive'} /> },
                   completionColumn,
@@ -2733,7 +2732,7 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
 
         {collegeForm && <AddCollegeScreen.CollegeForm editId={collegeForm.editId} resumeDraft={collegeForm.resumeDraft} onDismiss={closeCollegeForm} onSaved={afterCollegeSave} />}
         {viewMode === 'details' && activeCollege && <ViewDialog className="college-workspace-dialog" title="Organization Details" subtitle={activeCollege.name} onClose={backToList} maxWidth="920px" exportFilename={`organization_${activeCollege.code || activeCollege.id}`} footerActions={canEditCollege && canManageCollege(activeCollege) ? <button className="erp-btn erp-btn--primary" onClick={() => openEdit(activeCollege)}>Edit organization</button> : null}>
-          {isCollegeDetailsLoading ? <AsyncState status="loading" title="Loading college details…" /> : collegeError ? <AsyncState status="error" message={collegeError} onRetry={() => openDetails(activeCollege)} /> : <><CompletionSummary completion={activeCollege.completion} name={activeCollege.name} onClick={canEditCollege && canManageCollege(activeCollege) ? () => openEdit(activeCollege) : undefined} /><div className="college-config-detail-identity"><CollegeLogoImage src={activeCollege.logo} fallbackSrc={getCollegeLogoEndpoint(activeCollege.id)} alt="" code={activeCollege.code} className="college-config-logo" /><div><h3>{activeCollege.name}</h3><p>{activeCollege.code} · {activeCollege.university}</p></div><StatusBadge value={activeCollege.status === 'active' ? 'Active' : 'Inactive'} /></div><div className="college-config-detail-grid">
+          {isCollegeDetailsLoading ? <AsyncState status="loading" title="Loading college details…" /> : collegeError ? <AsyncState status="error" message={collegeError} onRetry={() => openDetails(activeCollege)} /> : <><CompletionSummary completion={activeCollege.completion} name={activeCollege.name} onClick={canEditCollege && canManageCollege(activeCollege) ? () => openEdit(activeCollege) : undefined} /><div className="college-config-detail-identity"><CollegeLogoImage src={activeCollege.logo} fallbackSrc={getCollegeLogoEndpoint(activeCollege.id)} alt="" code={activeCollege.code} className="college-config-logo" /><div><h3>{activeCollege.name}</h3><p>{[activeCollege.code, activeCollege.university].filter(value => value && !/^(null|undefined)$/i.test(String(value).trim())).join(' · ')}</p></div><StatusBadge value={activeCollege.status === 'active' ? 'Active' : 'Inactive'} /></div><div className="college-config-detail-grid">
                 <InfoCard
                   title="Basic Organization Information"
                   icon={AcademicIcon}
@@ -2749,24 +2748,10 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
                 />
 
                 <InfoCard
-                  title="Address Details"
-                  icon={ContactIcon}
-                  items={[
-                    { label: 'Address Line 1', value: activeCollege.addressLine1 },
-                    { label: 'Address Line 2', value: activeCollege.addressLine2 },
-                    { label: 'Area', value: activeCollege.area },
-                    { label: 'District', value: activeCollege.district },
-                    { label: 'City', value: activeCollege.city },
-                    { label: 'State', value: activeCollege.state },
-                    { label: 'Pincode', value: activeCollege.pincode },
-                    { label: 'Country', value: activeCollege.country },
-                  ]}
-                />
-
-                <InfoCard
                   title="Contact Details"
                   icon={ContactIcon}
                   items={[
+                    { label: 'Contact Person', value: activeCollege.contactPerson },
                     { label: 'Contact Number', value: activeCollege.contact },
                     { label: 'Alternate Contact Number', value: activeCollege.alternateContact },
                     { label: 'Email', value: activeCollege.email },
@@ -2778,7 +2763,6 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
                   title="Administration"
                   icon={AcademicIcon}
                   items={[
-                    { label: 'Principal Name', value: activeCollege.principal },
                     { label: 'Principal Email', value: activeCollege.principalEmail },
                     { label: 'Principal Contact', value: activeCollege.principalContact },
                   ]}
@@ -3789,7 +3773,7 @@ function DepartmentManagement({ inlineCreate = false, onCreated, onDismiss } = {
                 columns={[
                   { key: 'name', label: 'Department', sortable: true, render: item => <div className="as-directory-record"><strong>{item.name}</strong><small>{item.code}</small></div> },
                   { key: 'hod', label: 'HOD', sortable: true, render: item => <span title={item.hod || 'Unassigned'}>{item.hod || 'Unassigned'}</span> },
-                  { key: 'branches', label: 'Linked Branches', render: item => linkedBranches(item.id)?.length ?? 'Unavailable' },
+                  { key: 'branches', label: 'Linked Branches', className: 'table-center', render: item => linkedBranches(item.id)?.length ?? 'Unavailable' },
                   completionColumn,
                   { key: 'status', label: 'Status', sortable: true, render: item => <StatusBadge value={item.status} /> },
                 ]}
@@ -5099,11 +5083,17 @@ function RolesAndDesignationsWorkspace() {
 
     governanceLock.current = true; setGovernanceBusy(true)
     try {
-      const saved = await accessGovernance.saveDesignation({...editingDesignation,code:normalizedCode}, selectedCollegeId)
+      const saved = await accessGovernance.saveDesignation({
+        ...editingDesignation,
+        code: normalizedCode,
+        defaultRole: isSuperAdmin ? editingDesignation.defaultRole : '',
+      }, selectedCollegeId)
       if (!saved?.id && !saved?.designationId) throw new Error('The server did not return the saved designation identity. Refresh before trying again.')
       setEditingDesignation({...editingDesignation,...saved,id:String(saved.id ?? saved.designationId)})
       await loadRoles(); setIsDesModalOpen(false); showSuccess('Designation saved.')
-    } catch(error) {showError(error.message)} finally {governanceLock.current = false; setGovernanceBusy(false)}
+    } catch(error) {
+      setDesFieldErrors(prev => ({ ...prev, save: error.message || 'Designation could not be saved.' }))
+    } finally {governanceLock.current = false; setGovernanceBusy(false)}
   }
 
   const handleDeleteDesignation = (des) => {
@@ -6150,9 +6140,10 @@ function RolesAndDesignationsWorkspace() {
                     </ProjectSelect>
                   </div>
 
-                  <div className="sa-field">
+                  {isSuperAdmin && <div className="sa-field">
                     <label>Default / Recommended Role</label>
                     <ProjectSelect
+                      aria-label="Default / Recommended Role"
                       value={editingDesignation.defaultRole}
                       onChange={(e) => setEditingDesignation({ ...editingDesignation, defaultRole: e.target.value })}
                     >
@@ -6166,7 +6157,7 @@ function RolesAndDesignationsWorkspace() {
                     <small style={{ color: '#64748B', fontSize: '11px', marginTop: '4px', display: 'block' }}>
                       Recommended access profile. Can be overridden during staff access assignment.
                     </small>
-                  </div>
+                  </div>}
 
                   <div className={`sa-field ${desFieldErrors.status ? 'has-error' : ''}`}>
                     <label>Status <b>*</b></label>
@@ -6190,11 +6181,12 @@ function RolesAndDesignationsWorkspace() {
                   </div>
                 </div>
 
+                {desFieldErrors.save && <p className="rbac-field-error" role="alert">{desFieldErrors.save}</p>}
                 <footer className="rbac-modal-footer">
                   <button type="button" className="sa-secondary" onClick={() => setIsDesModalOpen(false)}>
                     Cancel
                   </button>
-                  <button type="submit" className="sa-primary">
+                  <button type="submit" className="sa-primary" disabled={governanceBusy}>
                     <FiCheck /> Save Designation
                   </button>
                 </footer>
@@ -6790,6 +6782,14 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
 
   // Modals state
   const [editingRoom, setEditingRoom] = useState(null)
+  const roomCapacityValue = Number(editingRoom?.capacity)
+  const roomCapacityError = editingRoom?.capacity === '' || editingRoom?.capacity == null
+    ? ''
+    : roomCapacityValue > 60
+      ? 'Seating capacity cannot exceed 60 seats.'
+      : (!Number.isInteger(roomCapacityValue) || roomCapacityValue < 1)
+        ? 'Enter a positive whole number of seats.'
+        : ''
   const [customRoomType, setCustomRoomType] = useState(false)
   const [customBuildingBlock, setCustomBuildingBlock] = useState(false)
   const [viewingRoom, setViewingRoom] = useState(null)
@@ -7136,12 +7136,23 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
   const handleSaveRoom = async (e) => {
     e.preventDefault()
     if (saving) return
-    if (!editingRoom.roomNumber?.trim()) return showError('Please enter a room number or code.')
-    if (!editingRoom.roomName?.trim()) return showError('Please enter a room display name.')
+    if (!editingRoom.capacity || roomCapacityError) return showError(roomCapacityError || 'Please enter a seating capacity between 1 and 60.')
     if (!editingRoom.buildingBlock?.trim()) return showError(customBuildingBlock ? 'Please enter the building block.' : 'Please select a building block.')
     if (!editingRoom.floor) return showError('Please select a floor.')
     if (!editingRoom.roomType?.trim()) return showError(customRoomType ? 'Please enter the room type.' : 'Please select a room type.')
     if (!editingRoom.status) return showError('Please select room availability status.')
+
+    const roomToSave = editingRoom.id ? editingRoom : (() => {
+      const existingCodes = new Set(rooms.map(room => String(room.roomNumber || '').trim().toUpperCase()))
+      let sequence = 1
+      let roomNumber = ''
+      do {
+        roomNumber = `ROOM-${String(sequence).padStart(3, '0')}`
+        sequence += 1
+      } while (existingCodes.has(roomNumber))
+      const suffix = String(sequence - 1).padStart(3, '0')
+      return { ...editingRoom, roomNumber, roomName: `${editingRoom.roomType} ${suffix}` }
+    })()
 
     // Rule 1: Prevent double allocation of the same section to multiple rooms
     if (editingRoom.assignedSection) {
@@ -7172,9 +7183,9 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
     try {
       let savedRoom = null
       if (editingRoom.id) {
-        savedRoom = await roomService.updateRoom(editingRoom.id, editingRoom)
+        savedRoom = await roomService.updateRoom(editingRoom.id, roomToSave)
       } else {
-        savedRoom = await roomService.createRoom(editingRoom)
+        savedRoom = await roomService.createRoom(roomToSave)
       }
 
       const targetRoomId = savedRoom?.classroomId || savedRoom?.id || editingRoom.id
@@ -7189,7 +7200,7 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
         }
       }
 
-      showSuccess(`Room "${editingRoom.roomNumber}" saved successfully.`)
+      showSuccess(`Room "${roomToSave.roomNumber}" saved successfully.`)
       await loadRooms()
       closeForm()
     } catch (err) {
@@ -7870,15 +7881,6 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
                 <div className="rooms-modal-body">
                     <div className="rooms-form-grid">
                       <div className="rooms-form-group">
-                        <label>Room Code / Number <span className="req-mark">*</span></label>
-                        <input type="text" className="rooms-input" placeholder="e.g. LH-101, CSE-LAB-1" value={editingRoom.roomNumber} onChange={(e) => setEditingRoom({ ...editingRoom, roomNumber: e.target.value })} required />
-                        <small className="rooms-form-hint">Use the code shown on room signage.</small>
-                      </div>
-                      <div className="rooms-form-group">
-                        <label>Room Display Name <span className="req-mark">*</span></label>
-                        <input type="text" className="rooms-input" placeholder="e.g. Lecture Hall 101" value={editingRoom.roomName} onChange={(e) => setEditingRoom({ ...editingRoom, roomName: e.target.value })} required />
-                      </div>
-                      <div className="rooms-form-group">
                         <label>Room Type <span className="req-mark">*</span></label>
                         <SearchableSelect label="Room Type" value={customRoomType ? '__other__' : editingRoom.roomType} options={[...ROOM_TYPES, { value: '__other__', label: 'Others' }]} placeholder="Select Room Type" searchPlaceholder="Search room types..." noOptionsMessage="No matching room types. Select Others to enter a custom type." onChange={(value) => {
                           const other = value === '__other__'
@@ -7911,7 +7913,8 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
                       </div>
                       <div className="rooms-form-group">
                         <label>Seating Capacity <span className="req-mark">*</span></label>
-                        <div className="rooms-capacity-input"><input type="number" min="1" max="500" className="rooms-input" placeholder="e.g. 60" value={editingRoom.capacity} onChange={(e) => setEditingRoom({ ...editingRoom, capacity: Number(e.target.value) || '' })} required /><span>seats</span></div>
+                        <div className="rooms-capacity-input"><input type="number" min="1" max="60" step="1" className="rooms-input" placeholder="e.g. 60" value={editingRoom.capacity} aria-invalid={Boolean(roomCapacityError)} aria-describedby={roomCapacityError ? 'room-capacity-error' : undefined} onChange={(e) => setEditingRoom({ ...editingRoom, capacity: e.target.value === '' ? '' : Number(e.target.value) })} required /><span>seats</span></div>
+                        {roomCapacityError && <small id="room-capacity-error" className="cm-field-error" role="alert">{roomCapacityError}</small>}
                       </div>
                       <div className="rooms-form-group">
                         <label>Availability Status <span className="req-mark">*</span></label>
@@ -8001,6 +8004,9 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
                 filename="rooms_directory"
                 title="Classrooms & Spatial Directory"
               />
+              <button type="button" className="rooms-add-btn" onClick={handleOpenCreate}>
+                <FiPlus aria-hidden="true" /> Add Room
+              </button>
             </div>
           </div>
 

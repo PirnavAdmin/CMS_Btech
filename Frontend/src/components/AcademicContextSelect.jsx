@@ -2,16 +2,23 @@ import { ProjectSelect } from './SearchableSelect'
 import { useState, useMemo } from 'react'
 import SearchableSelect from './SearchableSelect'
 import { useAcademic } from '../context/AcademicContext'
+import { normalizeAcademicYear } from '../utils/academicYearUtils'
 import './AcademicContextSelect.css'
 
-export default function AcademicContextSelect({ kind, compact = false }) {
+export default function AcademicContextSelect({ kind, compact = false, activeOnly = false }) {
   const context = useAcademic()
   const [applying, setApplying] = useState(false)
   const [error, setError] = useState('')
   const isCollege = kind === 'college'
   const label = isCollege ? 'College' : 'Academic year'
-  const rawItems = isCollege ? (context.activeColleges || []) : (context.academicYears || [])
-  const idOf = item => String(item.id ?? (isCollege ? item.collegeId : item.academicYearId))
+  const sourceItems = isCollege ? (context.activeColleges || []) : (context.academicYears || [])
+  const rawItems = !isCollege && activeOnly
+    ? sourceItems.map(normalizeAcademicYear).filter(item => item.status === 'ACTIVE')
+    : sourceItems
+  const idOf = item => {
+    const id = item.id ?? (isCollege ? item.collegeId : item.academicYearId)
+    return id == null ? '' : String(id)
+  }
   const nameOf = item => item.name || item.collegeName || item.academicYearName || label
 
   const items = useMemo(() => {
@@ -60,7 +67,7 @@ export default function AcademicContextSelect({ kind, compact = false }) {
     /> : <label>
       <span>{label}</span>
       <ProjectSelect title={selectedLabel} aria-label={`Change ${label.toLowerCase()}`} value={value || ''} onChange={change} disabled={disabled}>
-        <option value="" disabled>{selectedLabel}</option>
+        <option value="" disabled hidden>{`Select ${label.toLowerCase()}`}</option>
         {items.map(item => <option key={idOf(item)} value={idOf(item)}>{nameOf(item)}</option>)}
       </ProjectSelect>
     </label>}
@@ -68,7 +75,7 @@ export default function AcademicContextSelect({ kind, compact = false }) {
       <summary aria-label={`${label} selection help`} title={error || context.error}>!</summary>
       <div role="alert"><strong>{isCollege ? 'College selection unavailable' : 'Academic year unavailable'}</strong><p>{error || context.error}</p></div>
     </details>}
-    {!context.loading && !context.error && !items.length && <small>No {isCollege ? 'colleges' : 'academic years'} available.</small>}
+    {!context.loading && !context.error && !items.length && <small>{!isCollege && activeOnly ? 'No active academic years available.' : `No ${isCollege ? 'colleges' : 'academic years'} available.`}</small>}
     {applying && <small role="status">Updating...</small>}
   </div>
 }

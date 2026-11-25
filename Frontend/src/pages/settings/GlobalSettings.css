@@ -10,6 +10,12 @@
 .configuration-card footer { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-top:12px; }
 .configuration-card small { margin-top:6px; color:var(--text-muted); font-size:11px; }
 .configuration-card footer svg { width:14px; height:14px; }
+.configuration-card input[type="file"] { max-width:100%; min-width:0; color:var(--text-primary); }
+.configuration-card form > small { display:block; }
+.configuration-recipient { display:grid; gap:6px; margin-top:10px; }
+.configuration-recipient label { font-size:12px; font-weight:600; }
+.configuration-recipient input { width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text-primary); }
+.configuration-recipient footer { margin-top:2px; }
 .configuration-card footer .erp-btn--primary:is(:hover, :focus-visible, :active) {
   color:var(--text-on-dark);
 }

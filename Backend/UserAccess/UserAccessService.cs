@@ -112,10 +112,10 @@ public sealed partial class UserAccessService
             var roleId=await c.ExecuteScalarAsync<long?>("SELECT role_id FROM roles WHERE role_code='COLLEGE_ADMIN' AND college_id IS NULL AND status=1 AND deleted_at IS NULL LIMIT 1",transaction:tx);
             if(roleId is null) throw new AccessSetupException("An active global COLLEGE_ADMIN role is required. Configure it before onboarding.");
             await c.ExecuteAsync("""
-                INSERT INTO colleges(college_code,college_name,college_type,university_name,email,mobile,address_line1,city,state,pincode,country,status,created_by)
-                VALUES(@code,@name,@type,@UniversityName,@email,@Mobile,@AddressLine1,@City,@State,@Pincode,@Country,1,@actor)
+                INSERT INTO colleges(college_code,college_name,college_type,university_name,contact_person,email,mobile,address_line1,city,state,pincode,country,status,created_by)
+                VALUES(@code,@name,@type,@UniversityName,@contactPerson,@email,@Mobile,@AddressLine1,@City,@State,@Pincode,@Country,1,@actor)
                 """,new{code=request.CollegeCode.Trim(),name=request.CollegeName.Trim(),type=request.CollegeType,
-                request.UniversityName,email=string.IsNullOrWhiteSpace(request.Email)?request.AdminEmail.Trim():request.Email.Trim(),
+                request.UniversityName,contactPerson=request.AdminName.Trim(),email=string.IsNullOrWhiteSpace(request.Email)?request.AdminEmail.Trim():request.Email.Trim(),
                 request.Mobile,request.AddressLine1,request.City,request.State,request.Pincode,request.Country,actor},tx);
             collegeId=await c.ExecuteScalarAsync<long>("SELECT LAST_INSERT_ID()",transaction:tx);
             userId=await InsertUser(c,tx,request.AdminName,request.AdminEmail,collegeId,actor,request.AdminMobile);

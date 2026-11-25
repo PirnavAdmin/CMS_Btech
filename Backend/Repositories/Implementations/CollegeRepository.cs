@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 namespace BTech.Repositories.Implementations
 {
     /// <summary>
-    /// All College database operations use MySQL stored procedures.
+    /// College profiles use the existing MySQL procedures, with a separate organization contact field.
     /// </summary>
     public class CollegeRepository : ICollegeRepository
     {
@@ -34,7 +34,9 @@ namespace BTech.Repositories.Implementations
             long collegeId)
         {
             var result = await ExecuteSingleAsync("sp_College_GetById", ("p_college_id", collegeId));
-            return result != null && Scope.CanAccess(result) ? result : null;
+            if (result == null || !Scope.CanAccess(result)) return null;
+            await LoadContactPeopleAsync([result]);
+            return result;
         }
 
         // =====================================================
@@ -84,6 +86,7 @@ namespace BTech.Repositories.Implementations
                     }
                 });
 
+            await LoadContactPeopleAsync(items);
             return items;
         }
 
@@ -174,6 +177,7 @@ namespace BTech.Repositories.Implementations
                     }
                 });
 
+            await LoadContactPeopleAsync(items);
             return (
                 items,
                 totalCount);
@@ -214,9 +218,10 @@ namespace BTech.Repositories.Implementations
         // =====================================================
 
         public async Task UpdateAsync(
-            College college)
+            College college, bool updateContactPerson = false)
         {
             if (!Scope.CanAccess(college)) throw new UnauthorizedAccessException();
+            await using var transaction = updateContactPerson ? await _context.Database.BeginTransactionAsync() : null;
             var updated =
                 await ExecuteSingleAsync(
                     "sp_College_Update",
@@ -230,9 +235,32 @@ namespace BTech.Repositories.Implementations
                     $"College with ID {college.CollegeId} was not found.");
             }
 
-            CopyValues(
-                updated,
-                college);
+            if (transaction != null)
+            {
+                await _context.Database.ExecuteSqlInterpolatedAsync(
+                    $"UPDATE colleges SET contact_person = {college.ContactPerson} WHERE college_id = {college.CollegeId} AND deleted_at IS NULL");
+                await transaction.CommitAsync();
+            }
+            updated.ContactPerson = college.ContactPerson;
+            CopyValues(updated, college);
+        }
+
+        private async Task LoadContactPeopleAsync(IReadOnlyCollection<College> colleges)
+        {
+            if (colleges.Count == 0) return;
+            var ids = colleges.Select(college => college.CollegeId).ToArray();
+            var contacts = await _context.Database.SqlQueryRaw<OrganizationContact>(
+                    "SELECT college_id AS CollegeId, contact_person AS ContactPerson FROM colleges")
+                .Where(row => ids.Contains(row.CollegeId))
+                .ToDictionaryAsync(row => row.CollegeId, row => row.ContactPerson);
+            foreach (var college in colleges)
+                college.ContactPerson = contacts.GetValueOrDefault(college.CollegeId);
+        }
+
+        public sealed class OrganizationContact
+        {
+            public long CollegeId { get; set; }
+            public string? ContactPerson { get; set; }
         }
 
         // =====================================================

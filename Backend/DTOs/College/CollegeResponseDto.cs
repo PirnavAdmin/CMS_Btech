@@ -14,6 +14,7 @@ namespace BTech.DTOs.College
         public string? Mobile { get; set; }
         public string? Phone { get; set; }
         public string? Principal { get; set; }
+        public string? ContactPerson { get; set; }
         public string? PrincipalEmail { get; set; }
         public string? PrincipalContact { get; set; }
         public string? AlternateContactNumber { get; set; }

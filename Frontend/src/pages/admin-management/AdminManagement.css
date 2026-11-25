@@ -5878,6 +5878,17 @@
   padding: 20px 22px;
   overscroll-behavior: contain;
 }
+.college-workspace-dialog:has(.college-config-detail-grid) .shared-view-dialog__body {
+  padding-block: 12px;
+}
+.college-workspace-dialog .college-config-detail-identity {
+  margin-bottom: 10px;
+  padding-block: 12px;
+}
+.college-workspace-dialog .college-config-detail-grid {
+  align-items: start;
+  gap: 10px;
+}
 .college-form-dialog {
   --college-control-border: color-mix(in srgb, var(--border-strong) 58%, var(--border));
   width: min(860px, 95vw);
@@ -5942,33 +5953,41 @@
 
 /* Keep Organization Directory columns readable and scroll as one table on narrow screens. */
 .college-management .college-config-directory .erp-data-table {
-  width: 100%;
+  box-sizing: border-box;
+  width: min(calc(100% - 24px), 1280px) !important;
+  max-width: min(calc(100% - 24px), 1280px) !important;
+  margin: 10px auto 12px !important;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-width: thin;
   scrollbar-color: var(--border-strong) var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 8px;
 }
 .college-management .college-config-directory .college-config-table {
   width: 100%;
   min-width: 980px;
   table-layout: fixed;
+  border-collapse: collapse;
+  border-spacing: 0;
 }
 #root .college-management .college-config-directory .college-config-table thead tr th {
-  padding-inline: 8px !important;
+  padding-inline: 0 !important;
   text-align: center;
 }
 .college-management .college-config-directory .college-config-table td {
-  padding: 8px;
+  padding: 7px 0;
   line-height: 1.3;
   text-align: center;
   vertical-align: middle;
 }
-.college-management .college-config-directory .college-config-table .college-col-identity { width: 24%; }
-.college-management .college-config-directory .college-config-identity { display: grid; grid-template-columns: var(--directory-logo-size) minmax(0, 1fr) var(--directory-logo-size); width: 100%; max-width: 100%; vertical-align: middle; }
-.college-management .college-config-directory .college-config-identity-details { align-items: center; text-align: center; }
-.college-management .college-config-directory .college-config-identity > .college-config-logo { flex: 0 0 var(--directory-logo-size); }
-.college-management .college-config-directory .college-config-table .college-col-contact-person { width: 13%; }
-.college-management .college-config-directory .college-config-table .college-col-code { display: table-cell !important; width: 11%; }
+.college-management .college-config-directory .college-config-table .college-col-identity { width: 22%; }
+.college-management .college-config-directory .college-config-identity { display: flex; align-items: center; justify-content: center; width: 100%; max-width: 100%; min-width: 0; vertical-align: middle; }
+.college-management .college-config-directory .college-config-identity-details { width: 100%; min-width: 0; align-items: center; text-align: center; }
+.college-management .college-config-directory .college-config-identity .college-config-name { text-align: center; }
+.college-management .college-config-directory .college-config-table td.college-col-identity { text-align: center; }
+.college-management .college-config-directory .college-config-table .college-col-contact-person { width: 10%; }
+.college-management .college-config-directory .college-config-table .college-col-code { display: table-cell !important; width: 9%; }
 .college-config-identity > .college-config-logo {
   box-sizing:border-box;
   width:var(--directory-logo-size);
@@ -5977,11 +5996,19 @@
 }
 .college-config-identity > .college-config-logo .cm-emblem-icon { width:12px; height:12px; }
 .college-config-identity > .college-config-logo .cm-emblem-code { max-width:100%; letter-spacing:0; }
-.college-management .college-config-directory .college-config-table .college-col-contact { display: table-cell !important; width: 20%; }
-.college-management .college-config-directory .college-config-table .college-col-status { display: table-cell !important; width: 9%; }
-.college-management .college-config-directory .college-config-table .record-completion-cell { width: 9%; }
-.college-management .college-config-directory .college-config-table .col-actions { width: 14%; }
-.college-management .college-config-directory .college-config-row-actions { justify-content: center; gap: 4px; }
+.college-management .college-config-directory .college-config-table .college-col-contact { display: table-cell !important; width: 15%; }
+.college-management .college-config-directory .college-config-table .college-col-status { display: table-cell !important; width: 11%; }
+.college-management .college-config-directory .college-config-table .record-completion-cell { width: 11%; }
+.college-management .college-config-directory .college-config-table .col-actions { width: 22%; }
+.college-management .college-config-directory .college-config-table :is(th, td).college-col-contact,
+.college-management .college-config-directory .college-config-table :is(th, td).college-col-status { text-align: center !important; }
+.college-management .college-config-directory .college-config-table td:is(.college-col-contact, .college-col-status) { padding-inline: 4px; }
+#root .college-management .college-config-directory .college-config-table thead th:is(.college-col-contact, .college-col-status) { padding-inline: 4px !important; }
+.college-management .college-config-directory .college-config-table td.college-col-code { padding-right: 8px; }
+.college-management .college-config-directory .college-config-table td.college-col-contact-person { padding-left: 8px; }
+#root .college-management .college-config-directory .college-config-table thead th.college-col-code { padding-right: 8px !important; }
+#root .college-management .college-config-directory .college-config-table thead th.college-col-contact-person { padding-left: 8px !important; }
+.college-management .college-config-directory .college-config-row-actions { justify-content: center; gap: 8px; }
 
 @media (max-width: 640px) {
   .college-config-search-row { align-items:stretch; flex-wrap:wrap; }

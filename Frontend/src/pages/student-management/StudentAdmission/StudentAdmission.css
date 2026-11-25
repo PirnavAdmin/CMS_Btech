@@ -3418,3 +3418,23 @@ dialog.student-admission.sa-admission-dialog { width: min(940px, calc(100vw - 32
 
 
 
+:root #root .sa-directory-header .compact-summary:not([hidden]) > .compact-summary__item {
+  flex-basis: auto;
+}
+
+:root #root .sa-directory-header .compact-summary:not([hidden]) .compact-summary__item small {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 520px) {
+  :root #root .sa-directory-header .compact-summary:not([hidden]) {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  :root #root .sa-directory-header .compact-summary:not([hidden]) > .compact-summary__item {
+    flex-basis: calc(50% - 1px);
+  }
+}

@@ -19,7 +19,12 @@ public sealed class SubjectManagementRepository
     {
         var scope=Scope();
         if(id<=0||!scope.HasValue)return;
-        var owners=(await c.QueryAsync<long>(new CommandDefinition("SELECT DISTINCT college_id FROM vw_sm_subject_mappings WHERE subject_id=@id",new{id},cancellationToken:ct))).ToList();
+        var owners=(await c.QueryAsync<long>(new CommandDefinition("""
+            SELECT DISTINCT c.college_id
+            FROM vw_sm_subject_mappings m
+            JOIN courses c ON c.course_id=m.course_id
+            WHERE m.subject_id=@id AND c.college_id IS NOT NULL
+            """,new{id},cancellationToken:ct))).ToList();
         if(!owners.Contains(scope.Value))throw new ContractException(404,"RECORD_NOT_FOUND","Subject not found.");
         if(owners.Any(x=>x!=scope.Value))throw new ContractException(403,"SHARED_SUBJECT_REQUIRES_SUPER_ADMIN","Only Super Admin can change a subject shared by multiple colleges.");
     }
@@ -73,7 +78,7 @@ public sealed class SubjectManagementRepository
             p_type=r.NormalizedSubjectType,p_description=r.NormalizedDescription,
             p_elective = NormalizeElectiveType(r.ElectiveType),
             p_lecture=r.LectureHours,p_tutorial=r.TutorialHours,p_practical=r.PracticalHours,
-            p_internal=r.InternalMarks,p_external=r.ExternalMarks,p_status=r.Status,p_actor=actor
+            p_internal=r.InternalMarks,p_external=r.ExternalMarks,p_status=r.Status,p_actor=actor,p_college=Scope()
         }, ct));
     }
     public async Task StatusAsync(long id, byte status, bool delete, long? actor, CancellationToken ct)

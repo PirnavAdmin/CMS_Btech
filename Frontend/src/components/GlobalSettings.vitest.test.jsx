@@ -6,10 +6,15 @@ import AcademicContext from '../context/AcademicContext'
 import GlobalSettings from '../pages/settings/GlobalSettings.jsx'
 import AcademicContextSelect from './AcademicContextSelect.jsx'
 import HeaderAcademicYear from './HeaderAcademicYear.jsx'
-const access = vi.hoisted(() => ({ view: true, create: false, apply: vi.fn(), retry: vi.fn() }))
+import { demoRequestsApi, uploadPlatformLogo } from '../api/apiEndpoints.js'
+const access = vi.hoisted(() => ({ view: true, create: false, isSuperAdmin: false, apply: vi.fn(), retry: vi.fn() }))
 vi.mock('../layouts/DashboardLayout', () => ({ default: ({ children }) => children }))
 vi.mock('../context/AcademicContext', async () => { const { createContext, useContext } = await import('react'); const context = createContext(null); return { default: context, useAcademic: () => useContext(context) } })
-vi.mock('../auth/ScreenAccess', () => ({ useScreenAccess: () => ({ canView: () => access.view, canAction: () => access.create, access: {isSuperAdmin:true} }) }))
+vi.mock('../auth/ScreenAccess', () => ({ useScreenAccess: () => ({ canView: () => access.view, canAction: () => access.create, access: { isSuperAdmin: access.isSuperAdmin } }) }))
+vi.mock('../api/apiEndpoints.js', () => ({
+  uploadPlatformLogo: vi.fn(async () => ({})),
+  demoRequestsApi: { getRecipient: vi.fn(async () => 'old@example.test'), saveRecipient: vi.fn(async email => email) },
+}))
 const colleges = [{ id: '7', name: 'College A' }, { id: '8', name: 'College B' }]
 const years = [{ id: '9', name: 'Configured year A' }, { id: '10', name: 'Configured year B' }]
 function Harness({ overrides = {}, withHeader = false }) {
@@ -18,8 +23,28 @@ function Harness({ overrides = {}, withHeader = false }) {
     applyAcademicContext: async (collegeId, yearId) => { access.apply(collegeId, yearId); setSelection({ selectedCollegeId: collegeId, selectedAcademicYearId: collegeId === selection.selectedCollegeId ? yearId : '' }) }, ...overrides }
   return <MemoryRouter><AcademicContext.Provider value={value}>{withHeader && <header aria-label="Application context"><AcademicContextSelect kind="college" compact /><HeaderAcademicYear /></header>}<GlobalSettings /></AcademicContext.Provider></MemoryRouter>
 }
-beforeEach(() => { vi.clearAllMocks(); access.view = true; access.create = false })
+beforeEach(() => { vi.clearAllMocks(); access.view = true; access.create = false; access.isSuperAdmin = false })
 afterEach(cleanup)
+
+test('Super Admin settings uploads a platform logo and saves the demo recipient in place', async () => {
+  access.isSuperAdmin = true
+  render(<Harness />)
+  expect(screen.getByRole('heading', { name: 'Global Settings' })).toBeTruthy()
+  expect(within(screen.getByRole('main')).getAllByRole('heading')).toHaveLength(3)
+  expect(screen.queryByRole('heading', { name: 'Working Context' })).toBeNull()
+  expect(screen.queryByRole('link', { name: 'View demo requests' })).toBeNull()
+  const recipient = screen.getByLabelText('Recipient email')
+  await waitFor(() => expect(recipient.value).toBe('old@example.test'))
+  fireEvent.change(recipient, { target: { value: 'demos@example.test' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Save recipient' }))
+  expect(await screen.findByText('Demo request recipient saved.')).toBeTruthy()
+  expect(demoRequestsApi.saveRecipient).toHaveBeenCalledWith('demos@example.test')
+  const file = new File(['logo'], 'logo.png', { type: 'image/png' })
+  fireEvent.change(screen.getByLabelText('Platform logo'), { target: { files: [file] } })
+  fireEvent.click(screen.getByRole('button', { name: 'Upload logo' }))
+  expect(await screen.findByText('Platform logo saved.')).toBeTruthy()
+  expect(uploadPlatformLogo).toHaveBeenCalledWith(file)
+})
 
 test('settings and header selectors share changes in both directions', async () => {
   render(<Harness withHeader />)
@@ -43,6 +68,29 @@ test('working selectors update without reload and stay separate from backend act
   fireEvent.change(screen.getByLabelText('Change college'), { target: { value: '8' } })
   await waitFor(() => expect(screen.getByText(/Selected: College B · No academic year/)).toBeTruthy())
   expect(screen.getByText(/does not activate or deactivate/)).toBeTruthy()
+})
+test('college and academic year selectors render one option per unique record ID', () => {
+  render(<Harness overrides={{
+    activeColleges: [...colleges, { id: '7', name: 'College A duplicate payload' }],
+    academicYears: [...years, { id: '9', name: 'Configured year A duplicate payload' }],
+  }} />)
+  const collegeSelect = screen.getByLabelText('Change college')
+  const yearSelect = screen.getByLabelText('Change academic year')
+  const collegeOptions = Array.from(collegeSelect.options).filter(option => option.value)
+  const yearOptions = Array.from(yearSelect.options).filter(option => option.value)
+  expect(collegeSelect.options[0].hidden).toBe(true)
+  expect(yearSelect.options[0].hidden).toBe(true)
+  expect(collegeOptions.map(option => option.value)).toEqual(['7', '8'])
+  expect(yearOptions.map(option => option.value)).toEqual(['9', '10'])
+})
+test('Global Settings academic year selector lists active years only', () => {
+  render(<Harness overrides={{ academicYears: [
+    { id: '9', name: '2026-27', status: 'Active' },
+    { id: '10', name: '2027-28', status: 'Upcoming' },
+    { id: '11', name: '2025-26', status: 'Archived' },
+  ] }} />)
+  const yearSelect = screen.getByLabelText('Change academic year')
+  expect(Array.from(yearSelect.options).filter(option => option.value).map(option => option.value)).toEqual(['9'])
 })
 test('configuration links and create actions respect supplied permissions', () => {
   const { rerender } = render(<Harness />)
@@ -74,7 +122,7 @@ test('loading, empty and failed context are distinct and failed context can retr
   expect(screen.queryByLabelText('Change college')).toBeNull()
   rerender(<Harness overrides={{ activeColleges: [], academicYears: [] }} />)
   expect(screen.getByText('No colleges available.')).toBeTruthy()
-  expect(screen.getByText('No academic years available.')).toBeTruthy()
+  expect(screen.getByText('No active academic years available.')).toBeTruthy()
   rerender(<Harness overrides={{ error: 'Context unavailable' }} />)
   fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
   expect(access.retry).toHaveBeenCalledOnce()

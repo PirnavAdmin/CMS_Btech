@@ -7,7 +7,10 @@ import { showSuccess } from '../../utils/toast'
 vi.mock('../../layouts/DashboardLayout', () => ({ default: ({ children }) => <>{children}</> }))
 vi.mock('../../components/PageHeader', () => ({ default: ({ title, subtitle, primaryAction }) => <header><h1>{title}</h1><p>{subtitle}</p>{primaryAction}</header> }))
 vi.mock('../../components/ViewDialog', () => ({ default: ({ title, subtitle, children, footerContent, onClose }) => <section role="dialog" aria-label={title}><header><h2>{title}</h2><p>{subtitle}</p><button type="button" aria-label="Close details" onClick={onClose}>Close</button></header><div>{children}</div>{footerContent && <footer>{footerContent}</footer>}</section> }))
-vi.mock('../../context/AcademicContext', () => ({ useAcademic: () => ({ selectedCollegeId: 8, selectedAcademicYearId: 1, academicYears: [], loading: false }) }))
+vi.mock('../../context/AcademicContext', () => {
+  const academic = { selectedCollegeId: 8, selectedAcademicYearId: 1, academicYears: [], loading: false }
+  return { useAcademic: () => academic }
+})
 vi.mock('../../auth/ScreenAccess', () => ({ useScreenAccess: () => ({ canAction: () => true }) }))
 vi.mock('../../services/examinationWorkspaceService', () => ({ predefinedExamTypes: ['Mid Term Examination', 'Others'], ensureExamTypeId: vi.fn(async () => 9) }))
 vi.mock('../../utils/toast', () => ({ showSuccess: vi.fn() }))
@@ -28,7 +31,9 @@ const lookups = {
 
 beforeEach(() => {
   call.mockImplementation(async (path, options = {}) => {
-    if (path === 'exams/lookups') return { data: lookups }
+    if (path === 'exams/lookups') return { data: options.query?.semesterId
+      ? { subjects: lookups.subjects }
+      : { ...lookups, subjects: [{ id: 99, name: 'Outside this semester' }] } }
     if (path === 'faculty') return []
     if (path === 'exams' && options.method === 'POST') return { data: { examId: 100 } }
     if (path === 'exams/100/schedules' && options.method === 'POST') return { data: { examScheduleId: 501 } }
@@ -53,6 +58,10 @@ test('shows the form in a modal and only creates after confirmation', async () =
   const formDialog = screen.getByRole('dialog', { name: 'Create Examination' })
   expect(within(formDialog).getByText('Examination Information')).toBeTruthy()
   expect(within(formDialog).getByText('Academic Information')).toBeTruthy()
+  const course = within(formDialog).getByLabelText(/Course/)
+  const department = within(formDialog).getByLabelText(/Department/)
+  expect(course.compareDocumentPosition(department) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(department.disabled).toBe(true)
   expect(within(formDialog).getByText('Examination Schedule')).toBeTruthy()
   expect(within(formDialog).getByText('Allocate Subjects & Set Timetable')).toBeTruthy()
 
@@ -64,6 +73,7 @@ test('shows the form in a modal and only creates after confirmation', async () =
   fireEvent.change(within(formDialog).getByLabelText(/Academic Year/), { target: { value: '1' } })
   fireEvent.change(within(formDialog).getByLabelText(/Examination Type/), { target: { value: '__predefined__:Mid Term Examination' } })
   fireEvent.change(within(formDialog).getByLabelText(/Course/), { target: { value: '2' } })
+  expect(department.disabled).toBe(false)
   fireEvent.change(within(formDialog).getByLabelText(/Department/), { target: { value: '3' } })
   fireEvent.change(within(formDialog).getByLabelText(/Semester/), { target: { value: '4' } })
   fireEvent.change(within(formDialog).getByLabelText(/Examination Start Date/), { target: { value: '2026-12-01' } })
@@ -71,6 +81,11 @@ test('shows the form in a modal and only creates after confirmation', async () =
   fireEvent.click(within(formDialog).getByRole('button', { name: 'Add Subject' }))
 
   const subjectDialog = screen.getByRole('dialog', { name: 'Subject & Timetable' })
+  await within(subjectDialog).findByRole('option', { name: 'Data Structures' })
+  expect(within(subjectDialog).queryByRole('option', { name: 'Outside this semester' })).toBeNull()
+  expect(call).toHaveBeenCalledWith('exams/lookups', expect.objectContaining({
+    query: { collegeId: 8, academicYearId: '1', courseId: '2', branchId: '3', semesterId: '4' },
+  }))
   fireEvent.change(within(subjectDialog).getByLabelText(/Subject Name/), { target: { value: '5' } })
   fireEvent.change(within(subjectDialog).getByLabelText(/Exam Date/), { target: { value: '2026-12-03' } })
   fireEvent.change(within(subjectDialog).getByLabelText(/Start Time/), { target: { value: '09:00' } })

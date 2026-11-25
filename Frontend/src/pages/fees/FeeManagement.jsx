@@ -10,7 +10,6 @@ import SharedFeeHeader from '../../components/PageHeader'
 import FeeTypesConfiguration from './FeeTypesConfiguration'
 import FeeTypeCreateDialog from './FeeTypeCreateDialog'
 import FeeWorkspaceTabs from './FeeWorkspaceTabs'
-import { approveForAdmission } from '../../services/academicFeePlanApproval.js'
 import '../admin-management/AdminManagement.css'
 import './fees.css'
 import './fees-advanced.css'
@@ -750,10 +749,14 @@ export const FeeStructureWizardModule = (() => {
     const [previewConfigId, setPreviewConfigId] = useState("");
     const [scheduleTarget, setScheduleTarget] = useState("common");
     const [feeCategories, setFeeCategories] = useState([]);
+    const selectableFeeCategories = feeCategories.filter(row => String(row.name || "").trim().toLowerCase() !== "hostel");
     const [serverPlans, setServerPlans] = useState([]);
+    const lastBatchBranchRef = useRef("");
+    const pendingBatchAutoFillRef = useRef("");
     const [saveResults, setSaveResults] = useState([]);
     const [saving, setSaving] = useState(false);
     const [submissionComplete, setSubmissionComplete] = useState(false);
+    const [confirmDiscard, setConfirmDiscard] = useState(false);
     const [pendingStatus, setPendingStatus] = useState("Draft");
     const completedSavesRef = useRef({});
     const planBatchTokenRef = useRef(null);
@@ -978,6 +981,29 @@ export const FeeStructureWizardModule = (() => {
       .filter(row => s.courseId && s.branchId && String(row.courseId) === String(s.courseId) && String(row.branchId) === String(s.branchId)
         && (!row.academicYearId || String(row.academicYearId) === String(s.academicYearId)))
       .map(row => String(row.batch || "").trim()).filter(Boolean))];
+    useEffect(() => {
+      if (legacyLocalEdit) return;
+      const branchId = String(s.branchId || "");
+      if (lastBatchBranchRef.current !== branchId) {
+        lastBatchBranchRef.current = branchId;
+        pendingBatchAutoFillRef.current = branchId;
+      }
+      if (!branchId) {
+        pendingBatchAutoFillRef.current = "";
+        return;
+      }
+      if (s.batch) {
+        pendingBatchAutoFillRef.current = "";
+        return;
+      }
+      if (pendingBatchAutoFillRef.current !== branchId) return;
+      const batch = derivedBatch && batches.includes(derivedBatch)
+        ? derivedBatch
+        : batches.length === 1 ? batches[0] : "";
+      if (!batch) return;
+      pendingBatchAutoFillRef.current = "";
+      set(current => String(current.branchId || "") === branchId && !current.batch ? { ...current, batch } : current);
+    }, [legacyLocalEdit, s.branchId, s.batch, derivedBatch, batches]);
     const suggestedName = [masters.courses.find(row => String(row.id) === String(s.courseId))?.name,
       branches.find(row => String(row.id) === String(s.branchId))?.name, s.batch,
       semesters.find(row => String(row.id) === String(s.semesterId))?.name,
@@ -1217,6 +1243,16 @@ export const FeeStructureWizardModule = (() => {
       finally { setSaving(false); }
     };
 
+    const requestClose = () => {
+      if (saving) return;
+      if (submissionComplete) close();
+      else setConfirmDiscard(true);
+    };
+    const discardAndClose = () => {
+      setConfirmDiscard(false);
+      close();
+    };
+
     const payloadNames = () => ({
       academicYearName: masters.years.find(y => String(y.id) === String(s.academicYearId))?.name,
       courseName: masters.courses.find(c => String(c.id) === String(s.courseId))?.name,
@@ -1224,11 +1260,14 @@ export const FeeStructureWizardModule = (() => {
       name: s.name?.trim() || `${masters.courses.find(c => String(c.id) === String(s.courseId))?.name || "Program"} ${masters.branches.find(b => String(b.id) === String(s.branchId))?.name || "Branch"} ${s.batch || ""}`.trim(),
     });
 
-    return (
+    const savedSomeConfigurations = saveResults.some(row => row.success);
+    const currentStepLabel = formTabs.find(([key]) => key === formTab)?.[1] || "Fee plan setup";
+
+    return (<>
       <SharedFeeDialog
         title={s.id ? "Edit Academic Fee Plan" : "Create Academic Fee Plan"}
         subtitle="Set charges and payment dates for a course, branch and batch."
-        onClose={() => { if (submissionComplete || window.confirm('Discard unsaved fee plan changes?')) close(); }}
+        onClose={requestClose}
         busy={saving}
         showExport={false}
         hideFooter
@@ -1323,11 +1362,11 @@ export const FeeStructureWizardModule = (() => {
               {!quotaValues.length && <p role="status">No admission quotas are available yet. Add admission quota data before configuring quota-specific fees.</p>}
 
               <div className="fm-component-toolbar">
-                <FeeSelect label="Fee Type" value={selectedFeeType} options={[{ id: "", name: "Select configured fee type" }, ...feeCategories.map(row => ({ id: String(row.id), name: row.name }))]} onChange={setSelectedFeeType} disabled={!plansLoaded || !feeCategories.length} />
+                <FeeSelect label="Fee Type" value={selectedFeeType} options={[{ id: "", name: "Select configured fee type" }, ...selectableFeeCategories.map(row => ({ id: String(row.id), name: row.name }))]} onChange={setSelectedFeeType} disabled={!plansLoaded || !selectableFeeCategories.length} />
                 <button type="button" className="erp-btn erp-btn--secondary" disabled={!selectedFeeType} onClick={addFeeComponent}><FiPlus /> Add Component</button>
                 {canFeeAction('/fees/types', 'create') && <button type="button" className="erp-btn erp-btn--secondary" onClick={() => setAddingFeeType(true)}>Add Fee Type</button>}
               </div>
-              {!feeCategories.length && plansLoaded && <p role="status">No configured fee types. Add a fee type before creating a plan.</p>}
+              {!selectableFeeCategories.length && plansLoaded && <p role="status">No selectable fee types are configured. Add a fee type before creating a plan.</p>}
               <div className="fm-matrix-scroll"><table className="fm-table" aria-label="Fee components"><thead><tr><th>Fee Type</th><th>Fee Amount</th><th>Actions</th></tr></thead><tbody>
                 {defaultHeads.length ? defaultHeads.map((head, index) => <tr key={head.masterId || index}><td>{head.name}</td><td><input aria-label={head.name + ' amount'} type="number" min="0" step="0.01" value={head.amount} onChange={event => setDefaultHeads(defaultHeads.map((row, i) => i === index ? { ...row, amount: event.target.value } : row))} /></td><td><button type="button" className="erp-btn erp-btn--secondary" aria-label={'Remove ' + head.name} onClick={() => setDefaultHeads(defaultHeads.filter((_, i) => i !== index))}>Remove</button></td></tr>) : <tr><td colSpan={3}>Add configured fee types to build the breakdown.</td></tr>}
               </tbody><tfoot><tr><th scope="row">Academic Fee Total</th><td colSpan={2}><strong>{feeMoney(totalFor(editingConfig))}</strong></td></tr></tfoot></table></div>
@@ -1439,7 +1478,7 @@ export const FeeStructureWizardModule = (() => {
             type="button"
             className="erp-btn erp-btn--secondary"
             disabled={saving}
-            onClick={() => { if (submissionComplete || window.confirm('Discard unsaved fee plan changes?')) close(); }}
+            onClick={requestClose}
           >
             Cancel
           </button>
@@ -1469,7 +1508,27 @@ export const FeeStructureWizardModule = (() => {
         </div>
         {addingFeeType && <FeeTypeCreateDialog rows={feeCategories} onClose={() => setAddingFeeType(false)} onSaved={async () => { const categories = await apiEndpointsModule.feeConfigurationApi.categories(); setFeeCategories(categories.filter(academicFeeComponent)); setAddingFeeType(false); }} />}
       </SharedFeeDialog>
-    );
+      {confirmDiscard && <SharedFeeDialog
+        title="Leave fee plan setup?"
+        subtitle={savedSomeConfigurations ? "Some fee plans have already been saved." : "Your fee plan changes have not been saved."}
+        icon={external3.FiAlertTriangle}
+        onClose={() => setConfirmDiscard(false)}
+        showExport={false}
+        maxWidth="480px"
+        className="fm-discard-confirm-dialog"
+        footerContent={<>
+          <button type="button" className="erp-btn erp-btn--secondary" onClick={() => setConfirmDiscard(false)}>Continue editing</button>
+          <button type="button" className="erp-btn erp-btn--primary fm-discard-confirm-action" onClick={discardAndClose}>{savedSomeConfigurations ? "Leave setup" : "Discard changes"}</button>
+        </>}
+      >
+        <div className="fm-discard-confirm-content">
+          <p>{savedSomeConfigurations
+            ? "Saved fee plans will remain in the system. Unsaved configurations and edits in this form will be lost if you leave."
+            : "Leaving now will discard the changes in this fee plan. You can return to the form and keep editing instead."}</p>
+          <div className="fm-discard-confirm-step"><span>Current step</span><strong>{currentStepLabel}</strong></div>
+        </div>
+      </SharedFeeDialog>}
+    </>);
   }
 
   return {
@@ -2668,7 +2727,7 @@ export const FeeStructureModule = (() => {
                           {canEditPlan && r.workflowStructure && (feeStructureServiceModule.feeTransitions[r.workflowStructure.status] || []).map(status => (
                             <button key={status} type="button"
                               disabled={Boolean(workflow.transitioning)}
-                              title={status === "Pending Approval" ? "Submit for Approval" : status === "Approved" || status === "Published" ? "Approve Plan" : status === "Archived" ? "Archive Plan" : "Return to Draft"}
+                              title={status === "Pending Approval" ? "Submit for Approval" : status === "Approved" ? "Approve Plan" : status === "Published" ? "Publish Plan" : status === "Archived" ? "Archive Plan" : "Return to Draft"}
                               onClick={() => workflow.transition(r.id, status)}><FiCheck /></button>
                           ))}
                           {canCreatePlan && ["Published", "Archived"].includes(r.status) && <button type="button" onClick={()=>navigate("/fees/structures/create?revisionOf="+encodeURIComponent(r.id))}>New revision</button>}
@@ -6575,10 +6634,15 @@ export const FeeManagementModule = (() => {
                       setTransitioningPlan(true);
                       try {
                         if (status === "Approved" || status === "Published") {
-                          const saved = await approveForAdmission(apiEndpointsModule.academicFeePlanApi, id, academic.selectedCollegeId);
-                          if(!saved?.revision)throw new Error("The fee plan revision was not confirmed. Refresh before retrying.");
+                          const current = await apiEndpointsModule.academicFeePlanApi.get(id, academic.selectedCollegeId);
+                          const target = status.toUpperCase();
+                          const action = target === "APPROVED" ? "approve" : "publish";
+                          const saved = String(current.status).toUpperCase() === target
+                            ? current
+                            : await apiEndpointsModule.academicFeePlanApi.transition(id, academic.selectedCollegeId, action, current.revision);
+                          if(!saved?.revision || String(saved.status).toUpperCase() !== target)throw new Error(`The fee plan ${target === "APPROVED" ? "approval" : "publication"} was not confirmed. Refresh before retrying.`);
                           setPlanAttempt(value=>value+1);
-                          showSuccess("Fee plan approved and available for Student Admission.");
+                          showSuccess(target === "APPROVED" ? "Fee plan approved." : "Fee plan published and available for Student Admission.");
                         } else if (/^[1-9]\d*$/.test(String(id))) {
                           const actions = { "Pending Approval": "submit", Draft: "return-to-draft", Archived: "archive" };
                           const current = await apiEndpointsModule.academicFeePlanApi.get(id, academic.selectedCollegeId);

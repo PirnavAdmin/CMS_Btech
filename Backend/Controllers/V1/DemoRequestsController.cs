@@ -1,10 +1,13 @@
 using BTech.Data;
 using BTech.DTOs.DemoRequest;
+using BTech.Middleware;
 using BTech.Models;
 using BTech.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
+using System.Text.Encodings.Web;
 
 namespace BTech.Controllers
 {
@@ -14,13 +17,86 @@ namespace BTech.Controllers
     {
         private readonly ApplicationDbContext _db;
         private readonly IEmailService _emailService;
+        private readonly ILogger<DemoRequestsController> _logger;
+        private readonly string _recipientPath;
 
         public DemoRequestsController(
             ApplicationDbContext db,
-            IEmailService emailService)
+            IEmailService emailService,
+            IWebHostEnvironment environment,
+            ILogger<DemoRequestsController> logger)
         {
             _db = db;
             _emailService = emailService;
+            _logger = logger;
+            _recipientPath = Path.Combine(environment.ContentRootPath, "App_Data", "demo-request-recipient");
+        }
+
+        public sealed record RecipientSettings([Required, EmailAddress, StringLength(254)] string Email);
+
+        [Authorize]
+        [HttpGet("recipient")]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public async Task<IActionResult> GetRecipient(CancellationToken cancellationToken)
+        {
+            if (HttpContext.Items[ModulePermissionMiddleware.SuperAdminItem] is not true) return Forbid();
+            return Ok(new { data = new { email = await ReadRecipientAsync(cancellationToken) } });
+        }
+
+        [Authorize]
+        [HttpPut("recipient")]
+        public async Task<IActionResult> SaveRecipient(RecipientSettings settings, CancellationToken cancellationToken)
+        {
+            if (HttpContext.Items[ModulePermissionMiddleware.SuperAdminItem] is not true) return Forbid();
+            var email = settings.Email.Trim();
+            Directory.CreateDirectory(Path.GetDirectoryName(_recipientPath)!);
+            var temporaryPath = _recipientPath + "." + Guid.NewGuid().ToString("N");
+            try
+            {
+                await System.IO.File.WriteAllTextAsync(temporaryPath, email, cancellationToken);
+                System.IO.File.Move(temporaryPath, _recipientPath, overwrite: true);
+            }
+            finally
+            {
+                System.IO.File.Delete(temporaryPath);
+            }
+            return Ok(new { data = new { email } });
+        }
+
+        private async Task<string?> ReadRecipientAsync(CancellationToken cancellationToken)
+        {
+            try
+            {
+                await using var stream = new FileStream(_recipientPath, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete);
+                using var reader = new StreamReader(stream);
+                return await reader.ReadToEndAsync(cancellationToken);
+            }
+            catch (FileNotFoundException) { return null; }
+            catch (DirectoryNotFoundException) { return null; }
+        }
+
+        private async Task NotifyRecipientAsync(DemoRequest request)
+        {
+            try
+            {
+                var recipient = await ReadRecipientAsync(CancellationToken.None);
+                if (string.IsNullOrWhiteSpace(recipient)) return;
+                var fields = new (string Label, string? Value)[]
+                {
+                    ("Name", request.FullName), ("Email", request.Email), ("Phone", request.Mobile),
+                    ("Organization", request.InstitutionName), ("Role", request.Role),
+                    ("City", request.City), ("State", request.State),
+                    ("Number of students", request.NumberOfStudents?.ToString())
+                };
+                var items = string.Concat(fields.Where(field => !string.IsNullOrWhiteSpace(field.Value))
+                    .Select(field => $"<li><strong>{field.Label}:</strong> {HtmlEncoder.Default.Encode(field.Value!)}</li>"));
+                await _emailService.SendEmailAsync(recipient, $"New demo request #{request.DemoRequestId}",
+                    $"<h2>New demo request #{request.DemoRequestId}</h2><ul>{items}</ul>");
+            }
+            catch (Exception error)
+            {
+                _logger.LogWarning("Demo request recipient notification failed. RequestId={RequestId}, ErrorType={ErrorType}", request.DemoRequestId, error.GetType().Name);
+            }
         }
 
         // =========================================================
@@ -197,6 +273,8 @@ Regards,<br/>
                 {
                     // Email failure should not undo DB request
                 }
+
+                await NotifyRecipientAsync(demoRequest);
 
                 return Ok(new
                 {

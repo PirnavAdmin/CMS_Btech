@@ -293,6 +293,9 @@ test('multiple subject creation handles partial failure and retries only failed 
   fireEvent.change(form.getAllByLabelText(/Subject Name/)[1], { target: { value: 'Physics I' } })
   fireEvent.change(form.getAllByLabelText(/Subject Code/)[1], { target: { value: 'PH101' } })
   fireEvent.click(form.getByRole('button', { name: /Continue/ }))
+  subjectService.getSubjects.mockResolvedValue([subject, {
+    ...subject, id: '201', subjectName: 'Math I', subjectCode: 'MA101',
+  }])
   fireEvent.click(form.getByRole('button', { name: 'Save All Subjects' }))
 
   await waitFor(() => {
@@ -301,6 +304,10 @@ test('multiple subject creation handles partial failure and retries only failed 
   expect(form.getByText(/Failed: Network error on Subject 2/i)).toBeTruthy()
   expect(form.getByRole('button', { name: 'Retry Failed Subjects' })).toBeTruthy()
 
+  await screen.findByRole('button', { name: 'View MA101' })
+  fireEvent.click(form.getByRole('button', { name: /Previous/ }))
+  fireEvent.click(form.getByRole('button', { name: /Continue/ }))
+  expect(form.queryByText(/already exists in the system/i)).toBeNull()
   fireEvent.click(form.getByRole('button', { name: 'Retry Failed Subjects' }))
 
   await waitFor(() => {

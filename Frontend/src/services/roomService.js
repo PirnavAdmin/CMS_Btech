@@ -6,7 +6,6 @@ const STORAGE_KEY_ROOMS = 'pirnav_academic_rooms'
 
 export const ROOM_TYPES = [
   'Classroom',
-  'Laboratory',
   'Seminar Hall',
   'Staff Room',
   'Lecture Hall',
@@ -14,7 +13,6 @@ export const ROOM_TYPES = [
   'Electronics Lab',
   'Mechanical Workshop',
   'Physics / Chemistry Lab',
-  'Seminar Hall',
   'Tutorial Room',
   'Auditorium',
   'Drawing Hall',
