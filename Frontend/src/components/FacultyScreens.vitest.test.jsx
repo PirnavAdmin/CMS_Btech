@@ -66,6 +66,26 @@ test('faculty registration validates before creating an employee', async () => {
   expect(facultyService.create).not.toHaveBeenCalled()
 })
 
+test('faculty email validation rejects .co and .cm with inline guidance', async () => {
+  mount('/faculty/new?category=Teaching')
+  const dialogElement = await screen.findByRole('dialog', { name: 'Add Teaching Faculty' })
+  const dialog = within(dialogElement)
+  const email = dialog.getByLabelText(/^Email/)
+  const emailField = email.closest('.fm-field')
+  expect(within(emailField).getByText(/Example: name@gmail\.com/)).toBeTruthy()
+
+  for (const address of ['sandy@pirnav.co', 'sandy@pirnav.cm']) {
+    fireEvent.change(email, { target: { value: address } })
+    fireEvent.blur(email)
+    expect(within(emailField).getByRole('alert').textContent).toMatch(/ending in \.co or \.cm are not accepted/i)
+    expect(dialogElement.querySelector('.fm-registration-notice')).toBeNull()
+  }
+
+  fireEvent.change(email, { target: { value: 'sandy@college.edu' } })
+  fireEvent.blur(email)
+  expect(within(emailField).queryByRole('alert')).toBeNull()
+})
+
 test('teaching registration exposes all steps and can skip optional details', async () => {
   mount('/faculty/new?category=Teaching')
   const dialog = within(await screen.findByRole('dialog', { name: 'Add Teaching Faculty' }))

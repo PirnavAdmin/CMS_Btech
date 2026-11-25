@@ -1570,6 +1570,18 @@ const workload = row => {
 const exportColumns = [['employeeId', 'Employee ID'], ['fullName', 'Faculty Name'], ['department', 'Department'], ['designation', 'Designation'], ['qualification', 'Qualification'], ['experience', 'Experience'], ['mobile', 'Mobile'], ['email', 'Email'], ['employmentType', 'Employment Type'], ['employmentStatus', 'Employment Status']].map(([value, label]) => ({ label, value: value === 'experience' ? row => years(row.experience) : value }))
 
 const optionalTeachingCreateFields = new Set(['gender', 'dob', 'designation', 'employmentType', 'joiningDate'])
+const validEmail = value => {
+  const email = String(value ?? '').trim()
+  if (email.length > 254) return false
+  const [localPart, domain, ...extra] = email.split('@')
+  if (!localPart || !domain || extra.length || localPart.length > 64 || domain.length > 253) return false
+  if (!/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+$/.test(localPart) || localPart.startsWith('.') || localPart.endsWith('.') || localPart.includes('..')) return false
+  const labels = domain.split('.')
+  return labels.length > 1
+    && labels.every(label => label.length <= 63 && /^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$/.test(label))
+    && /^[a-zA-Z]{2,63}$/.test(labels[labels.length - 1])
+    && !['co', 'cm'].includes(labels[labels.length - 1].toLowerCase())
+}
 
 function validateFaculty(data, rows, basicTeaching = false) {
   const errors = {}
@@ -1582,7 +1594,7 @@ function validateFaculty(data, rows, basicTeaching = false) {
   if (!data.fullName?.trim()) errors.fullName = 'Faculty full name is required.'
   else if (data.fullName.trim().length < 2 || !/^[\p{L}\p{M} .?'-]+$/u.test(data.fullName.trim())) errors.fullName = 'Enter a valid name using letters (at least 2 characters).'
   if (data.departmentId && (!Number.isSafeInteger(Number(data.departmentId)) || Number(data.departmentId) <= 0)) errors.departmentId = 'Select a valid department.'
-  for (const key of ['email', 'personalEmail']) if (data[key] && !/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z]{2,})+$/.test(data[key].trim())) errors[key] = 'Enter a valid email address.'
+  for (const key of ['email', 'personalEmail']) if (data[key] && !validEmail(data[key])) errors[key] = 'Enter a valid email address (e.g., name@gmail.com). Addresses ending in .co or .cm are not accepted.'
   if (rows.some(row => row.id !== data.id && String(row.email || '').trim().toLowerCase() === data.email?.trim().toLowerCase())) errors.email = 'A faculty member with this email already exists.'
   for (const key of ['mobile', 'alternateMobile', 'emergencyMobile']) {
     const number = String(data[key] ?? '').trim()
@@ -2133,7 +2145,8 @@ function Field({ field, data, errors, update, native = false, collegeOptions = [
   const id = 'fm-' + key
   const isNonTeaching = data.employeeCategory === 'Non-Teaching'
   const displayLabel = key === 'employeeId' ? (isNonTeaching ? 'Staff ID' : 'Faculty ID') : (key === 'fullName' ? (isNonTeaching ? 'Staff Full Name' : 'Faculty Full Name') : label)
-  const props = { id, value: data[key] ?? '', onChange: event => update(key, event.target.value), 'aria-invalid': Boolean(errors[key]), 'aria-describedby': errors[key] ? id + '-error' : undefined, required: Boolean(required) }
+  const fieldError = errors[key] || (['email', 'personalEmail'].includes(key) && touched[key] ? liveErrors[key] : '')
+  const props = { id, value: data[key] ?? '', onChange: event => update(key, event.target.value), onBlur: () => { if (['email', 'personalEmail'].includes(key)) markTouched?.(key) }, 'aria-invalid': Boolean(fieldError), 'aria-describedby': fieldError ? id + '-error' : undefined, required: Boolean(required) }
 
   if (key === 'employeeId') {
     return (
@@ -2177,7 +2190,8 @@ function Field({ field, data, errors, update, native = false, collegeOptions = [
           const effectiveOptions = key === 'designation' ? getDesignationOptions(data.employeeCategory) : type
           return native ? <ProjectSelect {...props}><option value="">Select {displayLabel.toLowerCase()}</option>{effectiveOptions.map(value => <option key={value}>{value}</option>)}</ProjectSelect> : <SearchableSelect placement="bottom" label={displayLabel} value={data[key] || ''} options={effectiveOptions} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={'Select ' + displayLabel.toLowerCase()} hideSearch />
         })() : type === 'textarea' ? <textarea {...props} rows={2} /> : <input {...props} type={type === 'readonly' ? 'text' : type} readOnly={type === 'readonly'} max={type === 'date' ? today() : key === 'passingYear' ? new Date().getFullYear() : key === 'weeklyHours' ? 60 : type === 'number' ? 80 : undefined} min={key === 'joiningDate' ? joiningDateMinimum(data.dob) : key === 'passingYear' ? 1950 : type === 'number' ? 0 : undefined} step={key === 'passingYear' ? 1 : type === 'number' ? 0.5 : undefined} inputMode={type === 'tel' || key === 'pincode' ? 'numeric' : undefined} />}
-        {errors[key] && <small id={id + '-error'} className="fm-error">{errors[key]}</small>}
+        {['email', 'personalEmail'].includes(key) && <small className="fm-muted">Example: name@gmail.com. Addresses ending in .co or .cm are not accepted.</small>}
+        {fieldError && <small id={id + '-error'} className="fm-error" role="alert">{fieldError}</small>}
       </div>
       {key === 'employeeCategory' && ['Others', 'Other'].includes(data.employeeCategory) && (
         <div className="fm-field">
