@@ -45,6 +45,9 @@ namespace BTech.Models
         [Column("principal")]
         public string? Principal { get; set; }
 
+        [NotMapped]
+        public string? ContactPerson { get; set; }
+
         [MaxLength(150)]
         [Column("principal_email")]
         public string? PrincipalEmail { get; set; }
