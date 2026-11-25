@@ -176,9 +176,13 @@ const clone = (x) => {
   try {
     return structuredClone(x);
   } catch {
-    return JSON.parse(
-      JSON.stringify(x, (k, v) => (typeof v === "function" ? undefined : v)),
-    );
+    try {
+      return JSON.parse(
+        JSON.stringify(x, (k, v) => (typeof v === "function" ? undefined : v)),
+      );
+    } catch {
+      return Array.isArray(x) ? [...x] : { ...x };
+    }
   }
 };
 
@@ -252,63 +256,98 @@ const profileFromApi = (x) => {
 
 const deduplicateProfiles = (profiles = []) => {
   if (!Array.isArray(profiles)) return [];
-  const seen = new Map();
+  const result = [];
+  const seenIds = new Set();
+  const seenEmails = new Set();
+  const seenMobiles = new Set();
+  const seenAdmNos = new Set();
+  const seenNames = new Set();
+
   for (const p of profiles) {
     if (!p) continue;
+    const sId = p.studentId ? String(p.studentId) : '';
+    const id = p.id ? String(p.id) : '';
+    const admId = p.admissionId ? String(p.admissionId) : '';
     const email = String(p.contact?.email || p.personal?.email || p.email || '').trim().toLowerCase();
     const mobile = String(p.contact?.mobile || p.personal?.mobile || p.mobile || '').replace(/\D/g, '').slice(-10);
-    const admNo = String(p.application?.admissionNumber || p.admissionNumber || p.admissionId || '').trim().toLowerCase();
+    const admNo = String(p.application?.admissionNumber || p.admissionNumber || p.application?.registrationNumber || p.registrationNumber || '').trim().toLowerCase();
     const sName = String(studentFullName(p) || p.studentName || p.fullName || (p.personal?.firstName ? [p.personal.firstName, p.personal.lastName].join(' ') : '')).trim().toLowerCase();
     const branch = String(p.academic?.branch || p.academic?.branchName || '').trim().toLowerCase();
+    const nameBranchKey = sName && branch ? `${sName}_${branch}` : '';
 
-    let key = '';
-    if (email && email.includes('@')) {
-      key = `email:${email}`;
-    } else if (mobile && mobile.length === 10) {
-      key = `mobile:${mobile}`;
-    } else if (admNo && admNo !== 'allotted') {
-      key = `adm:${admNo}`;
-    } else if (sName && branch) {
-      key = `name_branch:${sName}_${branch}`;
-    } else {
-      key = `id:${p.studentId || p.id || p.admissionId || Math.random()}`;
-    }
+    const isDuplicate =
+      (sId && seenIds.has(`sid:${sId}`)) ||
+      (id && seenIds.has(`id:${id}`)) ||
+      (admId && seenIds.has(`admid:${admId}`)) ||
+      (email && email.includes('@') && seenEmails.has(email)) ||
+      (mobile && mobile.length === 10 && seenMobiles.has(mobile)) ||
+      (admNo && admNo !== 'allotted' && seenAdmNos.has(admNo)) ||
+      (nameBranchKey && seenNames.has(nameBranchKey));
 
-    if (!seen.has(key)) {
-      seen.set(key, p);
-    } else {
-      const existing = seen.get(key);
-      const higherComp = Math.max(Number(existing.completion || 0), Number(p.completion || 0));
-      const photo = p.personal?.photo || existing.personal?.photo || '';
-      const admNo = p.application?.admissionNumber || existing.application?.admissionNumber || p.admissionNumber || existing.admissionNumber || '';
+    if (isDuplicate) {
+      const existing = result.find((x) => {
+        const xSid = x.studentId ? String(x.studentId) : '';
+        const xId = x.id ? String(x.id) : '';
+        const xAdmId = x.admissionId ? String(x.admissionId) : '';
+        const xEmail = String(x.contact?.email || x.personal?.email || x.email || '').trim().toLowerCase();
+        const xMobile = String(x.contact?.mobile || x.personal?.mobile || x.mobile || '').replace(/\D/g, '').slice(-10);
+        const xAdmNo = String(x.application?.admissionNumber || x.admissionNumber || x.application?.registrationNumber || x.registrationNumber || '').trim().toLowerCase();
+        const xName = String(studentFullName(x) || x.studentName || x.fullName || '').trim().toLowerCase();
 
-      seen.set(key, {
-        ...existing,
-        ...p,
-        personal: {
-          ...(existing.personal || {}),
-          ...(p.personal || {}),
-          photo,
-          photoUrl: photo,
-        },
-        contact: {
-          ...(existing.contact || {}),
-          ...(p.contact || {}),
-        },
-        academic: {
-          ...(existing.academic || {}),
-          ...(p.academic || {}),
-        },
-        application: {
-          ...(existing.application || {}),
-          ...(p.application || {}),
-          admissionNumber: admNo,
-        },
-        completion: higherComp,
+        return (
+          (sId && xSid === sId) ||
+          (id && xId === id) ||
+          (admId && xAdmId === admId) ||
+          (email && email.includes('@') && xEmail === email) ||
+          (mobile && mobile.length === 10 && xMobile === mobile) ||
+          (admNo && admNo !== 'allotted' && xAdmNo === admNo) ||
+          (nameBranchKey && xName === sName)
+        );
       });
+
+      if (existing) {
+        const higherComp = Math.max(Number(existing.completion || 0), Number(p.completion || 0));
+        const photo = p.personal?.photo || existing.personal?.photo || '';
+        const effectiveAdmNo = p.application?.admissionNumber || existing.application?.admissionNumber || p.admissionNumber || existing.admissionNumber || '';
+        Object.assign(existing, {
+          ...p,
+          ...existing,
+          personal: {
+            ...(p.personal || {}),
+            ...(existing.personal || {}),
+            photo,
+            photoUrl: photo,
+          },
+          contact: {
+            ...(p.contact || {}),
+            ...(existing.contact || {}),
+          },
+          academic: {
+            ...(p.academic || {}),
+            ...(existing.academic || {}),
+          },
+          application: {
+            ...(p.application || {}),
+            ...(existing.application || {}),
+            admissionNumber: effectiveAdmNo,
+          },
+          completion: higherComp,
+        });
+      }
+      continue;
     }
+
+    if (sId) seenIds.add(`sid:${sId}`);
+    if (id) seenIds.add(`id:${id}`);
+    if (admId) seenIds.add(`admid:${admId}`);
+    if (email && email.includes('@')) seenEmails.add(email);
+    if (mobile && mobile.length === 10) seenMobiles.add(mobile);
+    if (admNo && admNo !== 'allotted') seenAdmNos.add(admNo);
+    if (nameBranchKey) seenNames.add(nameBranchKey);
+
+    result.push(p);
   }
-  return Array.from(seen.values());
+  return result;
 };
 
 const profileAdmissionId = (source) =>
@@ -724,7 +763,7 @@ export default function StudentProfile() {
           studentId: admission.studentId ?? admission.student?.studentId ?? admission.student?.id,
           admissionId: admission.admissionId ?? admission.id,
           status: 'APPROVED',
-          completion: calculateCompletion(completionSchemas.studentProfile, admission),
+          completion: admission.completion?.percent != null ? admission.completion : calculateCompletion(completionSchemas.studentProfile, admission),
           exportVerified: isApiResult(allAdmissions),
         })),
       ];
@@ -820,8 +859,8 @@ export default function StudentProfile() {
     (branchTab !== "ALL" ? 1 : 0);
 
   const filtered = useMemo(
-    () =>
-      scopedStudents.filter((x) => {
+    () => {
+      const list = scopedStudents.filter((x) => {
         const a = x.academic || {},
           app = x.application || {},
           c = x.contact || {},
@@ -846,7 +885,9 @@ export default function StudentProfile() {
             (key === "status" ? status(x.status) : a[key]) === selected,
         );
         return matchesQuery && matchesBranch && matchesFilters;
-      }),
+      });
+      return deduplicateProfiles(list);
+    },
     [scopedStudents, query, filters, branchTab],
   );
   const getStudentSortName = (s) => {
@@ -884,7 +925,7 @@ export default function StudentProfile() {
   };
 
   const sortedFiltered = useMemo(() => {
-    const list = [...filtered];
+    const list = deduplicateProfiles([...filtered]);
     if (sort === "name" || sort === "name_asc") {
       return list.sort((a, b) =>
         getStudentSortName(a).localeCompare(getStudentSortName(b), undefined, {
@@ -1472,14 +1513,15 @@ export default function StudentProfile() {
                   </tr>
                 </thead>
                 <tbody>
-                  {shown.map((student) => {
+                  {shown.map((student, idx) => {
                     const a = student.academic || {},
                       app = student.application || {},
                       photo = student.personal?.photo;
                     const sName = studentFullName(student) || student.studentName || student.fullName || student.personal?.fullName || "Unnamed Student";
                     const admNo = app.admissionNumber || student.admissionId || "Allotted";
+                    const rowKey = `sp-page${page}-${student.studentId || student.id || student.admissionId || app.admissionNumber || student.contact?.email || idx}`;
                     return (
-                      <tr key={student.studentId || student.id || student.admissionId || student.application?.admissionNumber || student.contact?.email}>
+                      <tr key={rowKey}>
                         <td className="sp-student-col">
                           <div className="sp-student-cell">
                             <button
@@ -2408,9 +2450,13 @@ const clone = (value) => {
   try {
     return structuredClone(value);
   } catch {
-    return JSON.parse(
-      JSON.stringify(value, (k, v) => (typeof v === "function" ? undefined : v)),
-    );
+    try {
+      return JSON.parse(
+        JSON.stringify(value, (k, v) => (typeof v === "function" ? undefined : v)),
+      );
+    } catch {
+      return Array.isArray(value) ? [...value] : { ...value };
+    }
   }
 };
 const setPath = (source, path, value) => {

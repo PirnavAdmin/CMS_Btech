@@ -900,7 +900,7 @@ export const studentFullName = (student) => {
     middle = ''
   }
   const nameParts = [first, middle, last].filter(Boolean).join(' ')
-  return (
+  const rawName = (
     nameParts ||
     p.fullName ||
     p.studentName ||
@@ -912,6 +912,9 @@ export const studentFullName = (student) => {
     student.header?.studentName ||
     ''
   ).trim()
+  const tokens = rawName.split(/\s+/).filter(Boolean)
+  const dedupedTokens = tokens.filter((t, i) => i === 0 || t.toLowerCase() !== tokens[i - 1].toLowerCase())
+  return dedupedTokens.join(' ')
 }
 
 export const studentInitials = (student) => {

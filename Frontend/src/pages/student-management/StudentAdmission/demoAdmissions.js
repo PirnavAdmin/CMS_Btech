@@ -361,6 +361,26 @@ export const DEMO_ADMISSIONS = [
       date: '2026-11-22',
       updatedAt: '22 Nov 2026, 2:30 pm'
     },
+    previousEducation: {
+      tenth: {
+        board: 'BSE Telangana / SSC',
+        institution: 'Kendriya Vidyalaya, Bolarum, Secunderabad',
+        rollNumber: '2410182901',
+        passingYear: '2024',
+        scoreType: 'CGPA',
+        score: '9.6'
+      },
+      intermediate: {
+        qualification: 'Intermediate',
+        board: 'Telangana State Board of Intermediate Education (TSBIE)',
+        institution: 'Chaitanya Junior College, ECIL',
+        rollNumber: '2612049182',
+        passingYear: '2026',
+        stream: 'MPC',
+        scoreType: 'Percentage',
+        score: '95.8'
+      }
+    },
     fees: {
       paymentStatus: 'Paid',
       totalAmount: 85000,
@@ -418,6 +438,26 @@ export const DEMO_ADMISSIONS = [
       admissionNumber: 'ADM-2026-218743',
       date: '2026-11-21',
       updatedAt: '21 Nov 2026, 4:10 pm'
+    },
+    previousEducation: {
+      tenth: {
+        board: 'BSE Andhra Pradesh / SSC',
+        institution: 'Little Flower High School, Guntur',
+        rollNumber: '2410394851',
+        passingYear: '2024',
+        scoreType: 'CGPA',
+        score: '9.9'
+      },
+      intermediate: {
+        qualification: 'Intermediate',
+        board: 'Andhra Pradesh Board of Intermediate Education (BIEAP)',
+        institution: 'Sri Chaitanya Junior College, Vijayawada',
+        rollNumber: '2612394819',
+        passingYear: '2026',
+        stream: 'MPC',
+        scoreType: 'Percentage',
+        score: '97.2'
+      }
     },
     fees: {
       paymentStatus: 'Paid',
@@ -477,6 +517,26 @@ export const DEMO_ADMISSIONS = [
       date: '2026-11-20',
       updatedAt: '20 Nov 2026, 11:20 am'
     },
+    previousEducation: {
+      tenth: {
+        board: 'BSE Telangana / SSC',
+        institution: 'Gowtham Model School, Nizampet',
+        rollNumber: '2410492817',
+        passingYear: '2024',
+        scoreType: 'CGPA',
+        score: '9.4'
+      },
+      intermediate: {
+        qualification: 'Intermediate',
+        board: 'Telangana State Board of Intermediate Education (TSBIE)',
+        institution: 'Narayana Junior College, Kukatpally',
+        rollNumber: '2612491028',
+        passingYear: '2026',
+        stream: 'MPC',
+        scoreType: 'Percentage',
+        score: '92.5'
+      }
+    },
     fees: {
       paymentStatus: 'Paid',
       totalAmount: 95000,
@@ -534,6 +594,26 @@ export const DEMO_ADMISSIONS = [
       admissionNumber: 'ADM-2026-482190',
       date: '2026-11-19',
       updatedAt: '19 Nov 2026, 10:45 am'
+    },
+    previousEducation: {
+      tenth: {
+        board: 'CBSE',
+        institution: 'Delhi Public School, Khajaguda, Hyderabad',
+        rollNumber: '2410592810',
+        passingYear: '2024',
+        scoreType: 'CGPA',
+        score: '9.8'
+      },
+      intermediate: {
+        qualification: '12th Standard',
+        board: 'CBSE',
+        institution: 'Delhi Public School, Khajaguda, Hyderabad',
+        rollNumber: '2612591021',
+        passingYear: '2026',
+        stream: 'MPC',
+        scoreType: 'Percentage',
+        score: '96.4'
+      }
     },
     fees: {
       paymentStatus: 'Paid',
