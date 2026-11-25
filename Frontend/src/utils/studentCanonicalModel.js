@@ -542,8 +542,9 @@ export const normalizeCanonicalStudent = (source = {}) => {
   const parsedName = splitFullName(firstFilled(raw.studentName, raw.fullName, personalRaw.fullName, header.studentName, ''))
   const firstName = firstFilled(personalRaw.firstName, raw.firstName, parsedName.firstName) ?? ''
   const middleName = firstFilled(personalRaw.middleName, raw.middleName, parsedName.middleName) ?? ''
+  const effectiveMiddleName = (firstName && middleName && firstName.toLowerCase().includes(middleName.toLowerCase())) ? '' : middleName
   const lastName = firstFilled(personalRaw.lastName, raw.lastName, parsedName.lastName) ?? ''
-  const fullName = [firstName, middleName, lastName].filter(Boolean).join(' ') || firstFilled(personalRaw.fullName, raw.fullName, raw.studentName, '')
+  const fullName = firstFilled(raw.studentName, raw.fullName, personalRaw.fullName) || [firstName, effectiveMiddleName, lastName].filter(Boolean).join(' ')
 
   // Photo resolution
   const photo = firstPhoto(

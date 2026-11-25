@@ -781,7 +781,7 @@ export default function StudentProfile() {
         studentAdmissionApi.getAll(),
       ]);
       if (requestId !== directorySequence.current) return;
-      let rows =
+      let rawDirectoryRows =
         directory.status === "fulfilled" && Array.isArray(directory.value)
           ? directory.value.map(row => ({ ...profileFromApi(row), completion: isApiResult(directory.value) ? calculateCompletion(completionSchemas.studentProfile, row) : null, exportVerified: isApiResult(directory.value) }))
           : [];
@@ -795,9 +795,9 @@ export default function StudentProfile() {
         if (requestId !== directorySequence.current) return;
         latest.completion = calculateCompletion(completionSchemas.studentProfile, preview);
         setSelectedStudent(latest);
-        rows = [
+        rawDirectoryRows = [
           { ...latest, exportVerified: isApiResult(preview) },
-          ...rows.filter((row) => String(row.id) !== String(requestedId)),
+          ...rawDirectoryRows.filter((row) => String(row.id) !== String(requestedId)),
         ];
       }
 
@@ -806,60 +806,66 @@ export default function StudentProfile() {
       const effectiveYear = selectedAcademicYear || { id: selectedAcademicYearId || 1, academicYearId: selectedAcademicYearId || 1, name: '2026-27' };
       const allAdmissions = markApiResult(mergeWithDemoAdmissions(rawAdmissions, effectiveCollege, effectiveYear));
 
-      // The profile-directory endpoint is intentionally compact and, for some
-      // records, omits the college display name even though it is present on
-      // the approved admission. Merge that source before rendering the
-      // directory so valid selections are not shown as "Not provided".
-      rows = rows.map((row) => {
-        const admission = allAdmissions.find((item) => {
-          const rowAdmissionId = String(row.admissionId ?? row.application?.admissionId ?? '');
-          const itemAdmissionId = String(item.admissionId ?? item.id ?? '');
-          const rowStudentId = String(row.studentId ?? row.id ?? '');
-          const itemStudentId = String(item.studentId ?? item.student?.studentId ?? item.student?.id ?? '');
-          const rowName = String(studentFullName(row) || row.studentName || row.fullName || '').trim().toLowerCase();
-          const itemName = String(studentFullName(item) || item.studentName || item.fullName || (item.personal?.firstName ? [item.personal.firstName, item.personal.lastName].join(' ') : '')).trim().toLowerCase();
-          return (rowAdmissionId && rowAdmissionId !== 'undefined' && rowAdmissionId === itemAdmissionId) ||
-                 (rowStudentId && rowStudentId !== 'undefined' && rowStudentId === itemStudentId) ||
-                 (rowName && itemName && rowName === itemName);
-        });
-        return admission
-          ? { ...profileFromApi(mergeFilledProfileData(admission, row)), completion: row.completion, exportVerified: row.exportVerified }
-          : row;
-      });
-      rows = approvedStudentProfiles(rows, allAdmissions);
-      const existingAdmissions = new Set(rows.map(row => String(row.admissionId ?? row.application?.admissionId ?? row.admission?.admissionId ?? '')).filter(v => v && v !== 'undefined'));
-      const existingStudents = new Set(rows.map(row => String(row.studentId ?? row.id ?? '')).filter(v => v && v !== 'undefined'));
-      const existingNames = new Set(rows.map(row => String(studentFullName(row) || row.studentName || row.fullName || '').trim().toLowerCase()).filter(Boolean));
-
-      const missingApprovedAdmissions = allAdmissions.filter(admission => {
-        if (!isApprovedAdmission(admission.status ?? admission.currentStatus ?? admission.admissionStatus ?? admission.applicationStatus)) return false;
-        const admissionId = String(admission.admissionId ?? admission.id ?? '');
-        const studentId = String(admission.studentId ?? admission.student?.studentId ?? admission.student?.id ?? '');
-        const sName = String(studentFullName(admission) || admission.studentName || admission.fullName || (admission.personal?.firstName ? [admission.personal.firstName, admission.personal.lastName].join(' ') : '')).trim().toLowerCase();
-
-        const hasAdm = admissionId && admissionId !== 'undefined' && existingAdmissions.has(admissionId);
-        const hasStudent = studentId && studentId !== 'undefined' && existingStudents.has(studentId);
-        const hasName = sName && existingNames.has(sName);
-        return !hasAdm && !hasStudent && !hasName;
+      // 1. Scoped admissions matching current college and academic year (matching StudentAdmission.jsx scopedRows)
+      const normScopeYear = y => String(y || '').replace(/[^0-9]/g, '');
+      const scopedAdmissions = allAdmissions.filter(item => {
+        let collegeMatches = true;
+        if (selectedCollegeId) {
+          const itemCollegeId = item.admission?.collegeId ?? item.collegeId ?? item.academic?.collegeId ?? '';
+          const itemCollegeName = item.admission?.college ?? item.college ?? '';
+          const matchById = itemCollegeId && String(itemCollegeId) === String(selectedCollegeId);
+          const matchByName = selectedCollege?.name && itemCollegeName && itemCollegeName.trim().toLowerCase() === selectedCollege.name.trim().toLowerCase();
+          collegeMatches = Boolean(matchById || matchByName);
+        }
+        let yearMatches = true;
+        if (selectedAcademicYearId) {
+          const itemYearId = item.academic?.academicYearId ?? item.academicYearId ?? '';
+          const itemYearName = item.academic?.academicYear ?? item.academicYear ?? '';
+          const matchById = itemYearId && String(itemYearId) === String(selectedAcademicYearId);
+          const matchByName = selectedAcademicYear?.name && itemYearName && (
+            normScopeYear(itemYearName) === normScopeYear(selectedAcademicYear.name) ||
+            itemYearName.trim().toLowerCase() === selectedAcademicYear.name.trim().toLowerCase()
+          );
+          yearMatches = Boolean(matchById || matchByName);
+        }
+        return collegeMatches && yearMatches;
       });
 
-      const synthesizedProfiles = missingApprovedAdmissions.map(admission => {
+      // 2. ONLY students whose admission is APPROVED in the scoped admissions can appear in Student Profiles!
+      const approvedScopedAdmissions = scopedAdmissions.filter(admission =>
+        isApprovedAdmission(admission.status ?? admission.currentStatus ?? admission.admissionStatus ?? admission.applicationStatus)
+      );
+
+      // 3. Construct student profile rows strictly for approved scoped admissions
+      const profileRows = approvedScopedAdmissions.map(admission => {
         const fallbackId = String(admission.studentId ?? admission.student?.studentId ?? admission.student?.id ?? admission.admissionId ?? admission.id ?? '');
         const admId = String(admission.admissionId ?? admission.id ?? fallbackId);
         const resolvedId = fallbackId || admId;
+        const sName = String(studentFullName(admission) || admission.studentName || admission.fullName || (admission.personal?.firstName ? [admission.personal.firstName, admission.personal.lastName].join(' ') : '')).trim().toLowerCase();
+
+        const existing = rawDirectoryRows.find(r => {
+          const rAdmId = String(r.admissionId ?? r.application?.admissionId ?? r.admission?.admissionId ?? '');
+          const rStuId = String(r.studentId ?? r.id ?? '');
+          const rName = String(studentFullName(r) || r.studentName || r.fullName || '').trim().toLowerCase();
+          return (admId && admId !== 'undefined' && rAdmId === admId) ||
+                 (resolvedId && resolvedId !== 'undefined' && rStuId === resolvedId) ||
+                 (sName && rName === sName);
+        });
+
+        const merged = existing ? mergeFilledProfileData(admission, existing) : admission;
         const effectiveColId = selectedCollegeId || admission.collegeId || selectedCollege?.collegeId || selectedCollege?.id || 1;
         const effectiveColName = selectedCollege?.name || admission.admission?.college || 'raghavendra engineering college';
         const effectiveYrId = selectedAcademicYearId || admission.academic?.academicYearId || selectedAcademicYear?.academicYearId || selectedAcademicYear?.id || 1;
         const effectiveYrName = selectedAcademicYear?.name || admission.academic?.academicYear || '2026-27';
 
         const synthesized = profileFromApi({
-          ...admission,
+          ...merged,
           id: resolvedId,
           studentId: resolvedId,
           admissionId: admId,
           collegeId: effectiveColId,
           status: 'APPROVED',
-          completion: admission.completion?.percent != null ? admission.completion : calculateCompletion(completionSchemas.studentProfile, admission),
+          completion: merged.completion?.percent != null ? merged.completion : calculateCompletion(completionSchemas.studentProfile, merged),
           exportVerified: isApiResult(allAdmissions),
         });
 
@@ -877,8 +883,7 @@ export default function StudentProfile() {
         return synthesized;
       });
 
-      rows = [...rows, ...synthesizedProfiles];
-      rows = deduplicateProfiles(rows);
+      let rows = deduplicateProfiles(profileRows);
       if (requestedId && !selectedStudent) {
         const found = rows.find(r => String(r.id) === String(requestedId) || String(r.studentId) === String(requestedId) || String(r.admissionId) === String(requestedId));
         if (found) {
@@ -923,7 +928,7 @@ export default function StudentProfile() {
         const itemCollegeName = item.admission?.college ?? item.college ?? ''
         const matchById = itemCollegeId && String(itemCollegeId) === String(selectedCollegeId)
         const matchByName = selectedCollege?.name && itemCollegeName && itemCollegeName.trim().toLowerCase() === selectedCollege.name.trim().toLowerCase()
-        collegeMatches = Boolean(matchById || matchByName || !itemCollegeId)
+        collegeMatches = Boolean(matchById || matchByName)
       }
 
       let yearMatches = true
@@ -935,7 +940,7 @@ export default function StudentProfile() {
           normYear(itemYearName) === normYear(selectedAcademicYear.name) ||
           itemYearName.trim().toLowerCase() === selectedAcademicYear.name.trim().toLowerCase()
         )
-        yearMatches = Boolean(matchById || matchByName || !itemYearId)
+        yearMatches = Boolean(matchById || matchByName)
       }
 
       return collegeMatches && yearMatches;
@@ -946,10 +951,10 @@ export default function StudentProfile() {
   const availableBranches = useMemo(() => {
     const map = new Map();
     scopedStudents.forEach((s) => {
-      const b = s.academic?.branch;
+      const b = s.academic?.branch || s.academic?.branchName;
       if (!b) return;
-      const key = String(b).trim();
-      const label = shortLabel(key);
+      const label = shortLabel(b);
+      const key = label;
       const existing = map.get(key) || { key, label, count: 0 };
       existing.count += 1;
       map.set(key, existing);
@@ -977,10 +982,12 @@ export default function StudentProfile() {
             .join(" ")
             .toLowerCase();
         const matchesQuery = !query.trim() || needle.includes(query.trim().toLowerCase());
+        const studentBranch = shortLabel(a.branch || a.branchName || '');
         const matchesBranch =
           branchTab === "ALL" ||
           a.branch === branchTab ||
-          shortLabel(a.branch) === branchTab;
+          shortLabel(a.branch) === branchTab ||
+          studentBranch === branchTab;
         return matchesQuery && matchesBranch;
       });
       return deduplicateProfiles(list);
@@ -1359,7 +1366,7 @@ export default function StudentProfile() {
     const total = scopedStudents.length;
     const branchCount = new Set(
       scopedStudents
-        .map((s) => s.academic?.branch || s.academic?.branchName)
+        .map((s) => shortLabel(s.academic?.branch || s.academic?.branchName))
         .filter(Boolean),
     ).size;
     const maleCount = scopedStudents.filter((s) => {
