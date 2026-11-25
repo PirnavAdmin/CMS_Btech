@@ -2776,6 +2776,8 @@
 .lp-page .lp-brand > i { background: var(--brand-dark); color: var(--brand); box-shadow: var(--shadow-sm); }
 .lp-public .lp-footer-brand .lp-brand > i { display: grid; flex: 0 0 40px; color: #fff; background: var(--brand-dark); }
 .lp-public .lp-footer-brand .lp-brand > i svg { display: block; width: 20px; height: 20px; }
+.lp-page .lp-brand > i:has(.lp-platform-logo) { display: grid; flex: 0 0 40px; overflow: hidden; background: var(--surface); }
+.lp-platform-logo { display: block; width: 100%; height: 100%; object-fit: contain; }
 :root:not([data-theme="dark"]) .lp-page .lp-nav { border-color: var(--border); background: var(--header-bg); }
 :root[data-theme="dark"] .lp-page :is(.lp-overview, .lp-workflow, .lp-about) { background: var(--surface-soft); }
 
