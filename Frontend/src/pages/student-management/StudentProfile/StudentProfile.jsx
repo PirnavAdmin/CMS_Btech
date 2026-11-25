@@ -101,7 +101,7 @@ import { PassportPhotoModal } from '../StudentAdmission/StudentAdmission'
 import ExportMenu, { PrintDetailsButton } from '../../../components/ExportMenu'
 import { profileColumns } from '../../../utils/exportColumns'
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FiAlertCircle, FiArrowLeft, FiBookOpen, FiCamera, FiCheckCircle, FiChevronLeft, FiChevronRight, FiEdit2, FiEye, FiFileText, FiFilter, FiRefreshCw, FiSave, FiSearch, FiUser, FiUsers, FiX } from "react-icons/fi";
+import { FiAlertCircle, FiArrowLeft, FiBookOpen, FiCamera, FiCheckCircle, FiChevronLeft, FiChevronRight, FiEdit2, FiEye, FiFileText, FiRefreshCw, FiSave, FiSearch, FiUser, FiUsers, FiX } from "react-icons/fi";
 import InfoCard from "../../../components/InfoCard";
 import StatusBadge from "../../../components/StatusBadge";
 import DashboardLayout from "../../../layouts/DashboardLayout";
@@ -634,12 +634,6 @@ export default function StudentProfile() {
     [error, setError] = useToastState("", 'error'),
     [, setNotice] = useToastState("", 'success'),
     [query, setQuery] = useState(""),
-    [filters, setFilters] = useState({
-      department: "",
-      course: "",
-      branch: "",
-      status: "",
-    }),
     [page, setPage] = useState(1),
     [selectedId, setSelectedId] = useState(() => {
       const raw = new URLSearchParams(window.location.search).get("studentId");
@@ -648,7 +642,6 @@ export default function StudentProfile() {
     [selectedStudent, setSelectedStudent] = useState(null),
     [photoStudent, setPhotoStudent] = useState(null),
     [branchTab, setBranchTab] = useState("ALL"),
-    [showFilters, setShowFilters] = useState(false),
     [tab, setTab] = useState("personal"),
     [editing, setEditing] = useState(null);
 
@@ -832,14 +825,6 @@ export default function StudentProfile() {
     return deduplicateProfiles(list);
   }, [students, selectedCollegeId, selectedCollege, selectedAcademicYearId, selectedAcademicYear]);
 
-  const options = (key) =>
-    [
-      ...new Set(
-        scopedStudents
-          .map((x) => key === "status" ? status(x.status) : x.academic?.[key])
-          .filter(Boolean),
-      ),
-    ].sort();
   const availableBranches = useMemo(() => {
     const map = new Map();
     scopedStudents.forEach((s) => {
@@ -854,10 +839,6 @@ export default function StudentProfile() {
     return Array.from(map.values());
   }, [scopedStudents]);
 
-  const activeFilterCount =
-    Object.values(filters).filter(Boolean).length +
-    (branchTab !== "ALL" ? 1 : 0);
-
   const filtered = useMemo(
     () => {
       const list = scopedStudents.filter((x) => {
@@ -869,26 +850,24 @@ export default function StudentProfile() {
             a.rollNumber,
             app.registrationNumber,
             app.admissionNumber,
+            a.section,
+            a.semester,
             c.mobile,
             c.email,
           ]
+            .filter(Boolean)
             .join(" ")
             .toLowerCase();
-        const matchesQuery = needle.includes(query.trim().toLowerCase());
+        const matchesQuery = !query.trim() || needle.includes(query.trim().toLowerCase());
         const matchesBranch =
           branchTab === "ALL" ||
           a.branch === branchTab ||
           shortLabel(a.branch) === branchTab;
-        const matchesFilters = Object.entries(filters).every(
-          ([key, selected]) =>
-            !selected ||
-            (key === "status" ? status(x.status) : a[key]) === selected,
-        );
-        return matchesQuery && matchesBranch && matchesFilters;
+        return matchesQuery && matchesBranch;
       });
       return deduplicateProfiles(list);
     },
-    [scopedStudents, query, filters, branchTab],
+    [scopedStudents, query, branchTab],
   );
   const getStudentSortName = (s) => {
     if (!s) return "";
@@ -984,20 +963,7 @@ export default function StudentProfile() {
         String(x.admissionId) === String(selectedId)
       )
     ) : null);
-  useEffect(() => setPage(1), [query, filters, branchTab, sort]);
-
-  const updateFilter = (key, next) =>
-    setFilters((current) => {
-      const updated = { ...current, [key]: next };
-      if (key === "department")
-        Object.assign(updated, {
-          course: "",
-          branch: "",
-        });
-      if (key === "course")
-        Object.assign(updated, { branch: "" });
-      return updated;
-    });
+  useEffect(() => setPage(1), [query, branchTab, sort]);
   const openProfile = async (studentOrId) => {
     const requestId = ++detailSequence.current;
     setDetailLoading(true); setDetailError('');
@@ -1354,90 +1320,8 @@ export default function StudentProfile() {
                   loading={loading || Boolean(error)}
                   scope="Current filtered API results"
                 />
-                <button
-                  type="button"
-                  className={`sa-secondary sa-filter-toggle ${showFilters ? 'is-open' : ''} ${activeFilterCount ? 'has-filters' : ''}`}
-                  aria-expanded={showFilters}
-                  aria-controls="profile-filters"
-                  onClick={() => setShowFilters(value => !value)}
-                >
-                  <FiFilter aria-hidden="true" />
-                  {showFilters ? 'Hide filters' : 'Filters'}
-                  {activeFilterCount > 0 && <span className="sa-filter-count">{activeFilterCount}</span>}
-                </button>
               </div>
             </header>
-            <section id="profile-filters" className="sa-admission-filters sp-profile-filters" aria-label="Search and filter student profiles" hidden={!showFilters}>
-              <div className="sa-direct-filter-box">
-                <div className="sa-filter-search-row">
-                  <label className="sa-search">
-                    <FiSearch aria-hidden="true" />
-                    <input
-                      value={query}
-                      onChange={event => setQuery(event.target.value)}
-                      title="Search by name, roll number, admission number, registration number, mobile or email"
-                      placeholder="Search name, roll number, admission number, mobile or email..."
-                    />
-                  </label>
-                  {Boolean(query || activeFilterCount > 0) && (
-                    <button
-                      type="button"
-                      className="sa-clear-filters"
-                      onClick={() => {
-                        setQuery('');
-                        setFilters({ department: '', course: '', branch: '', status: '' });
-                        setBranchTab('ALL');
-                        setPage(1);
-                      }}
-                    >
-                      <FiX aria-hidden="true" /> Clear filters
-                    </button>
-                  )}
-                </div>
-                <div className="sa-filter-grid sp-filter-grid">
-                {[
-                  ["department", "Department"],
-                  ["course", "Course"],
-                  ["branch", "Branch"],
-                  ["status", "Status"],
-                ].map(([key, label]) => (
-                  <label key={key}>
-                    <span>{label}</span>
-                    <ProjectSelect
-                      value={filters[key]}
-                      onChange={(e) => updateFilter(key, e.target.value)}
-                    >
-                      <option value="">All</option>
-                      {options(key)
-                        .filter(
-                          (o) =>
-                            key !== "course" ||
-                            !filters.department ||
-                            scopedStudents.some(
-                              (x) =>
-                                x.academic?.department === filters.department &&
-                                x.academic?.course === o,
-                            ),
-                        )
-                        .filter(
-                          (o) =>
-                            key !== "branch" ||
-                            !filters.course ||
-                            scopedStudents.some(
-                              (x) =>
-                                x.academic?.course === filters.course &&
-                                x.academic?.branch === o,
-                            ),
-                        )
-                        .map((o) => (
-                          <option key={o}>{o}</option>
-                        ))}
-                    </ProjectSelect>
-                  </label>
-                ))}
-                </div>
-              </div>
-            </section>
 
             <div className="sa-quick-filter-bar">
               <div className="sa-status-tabs" role="tablist" aria-label="Filter by branch">
@@ -1460,25 +1344,25 @@ export default function StudentProfile() {
                 ))}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: 'auto' }}>
-                {!showFilters && (
-                  <label className="sa-search" style={{ height: '34px', minWidth: '220px', maxWidth: '300px' }}>
-                    <FiSearch aria-hidden="true" />
-                    <input
-                      value={query}
-                      onChange={event => setQuery(event.target.value)}
-                      placeholder="Quick search name, roll no..."
-                    />
-                    {query && (
-                      <button
-                        type="button"
-                        onClick={() => setQuery('')}
-                        style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '0 4px', color: 'var(--text-muted)' }}
-                      >
-                        <FiX />
-                      </button>
-                    )}
-                  </label>
-                )}
+                <label className="sa-search" style={{ height: '34px', minWidth: '240px', maxWidth: '340px' }}>
+                  <FiSearch aria-hidden="true" />
+                  <input
+                    value={query}
+                    onChange={event => { setQuery(event.target.value); setPage(1); }}
+                    placeholder="Quick search name, roll no, mobile..."
+                    title="Search by student name, roll number, admission number, mobile or email"
+                  />
+                  {query && (
+                    <button
+                      type="button"
+                      onClick={() => { setQuery(''); setPage(1); }}
+                      style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '0 4px', color: 'var(--text-muted)' }}
+                      title="Clear search"
+                    >
+                      <FiX />
+                    </button>
+                  )}
+                </label>
                 <label className="sa-sort">
                   Sort by{" "}
                   <select
