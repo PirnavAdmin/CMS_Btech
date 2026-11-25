@@ -72,18 +72,42 @@ test('faculty email validation rejects .co and .cm with inline guidance', async 
   const dialog = within(dialogElement)
   const email = dialog.getByLabelText(/^Email/)
   const emailField = email.closest('.fm-field')
-  expect(within(emailField).getByText(/Example: name@gmail\.com/)).toBeTruthy()
+  expect(email.getAttribute('placeholder')).toBe('name@gmail.com')
 
   for (const address of ['sandy@pirnav.co', 'sandy@pirnav.cm']) {
     fireEvent.change(email, { target: { value: address } })
     fireEvent.blur(email)
-    expect(within(emailField).getByRole('alert').textContent).toMatch(/ending in \.co or \.cm are not accepted/i)
+    const warning = within(emailField).getByRole('alert')
+    expect(warning.textContent).toBe('Please enter a valid email format')
+    expect(warning.classList.contains('fm-field-error')).toBe(true)
+    expect(email.getAttribute('aria-invalid')).toBe('true')
     expect(dialogElement.querySelector('.fm-registration-notice')).toBeNull()
   }
 
   fireEvent.change(email, { target: { value: 'sandy@college.edu' } })
   fireEvent.blur(email)
   expect(within(emailField).queryByRole('alert')).toBeNull()
+  expect(email.getAttribute('aria-invalid')).toBe('false')
+})
+
+test('edit faculty email validation shows the inline error and clears it for valid input', async () => {
+  fixture.rows[0].email = 'sandy@gmail.com'
+  mount('/faculty/1/edit?category=Teaching')
+  const dialog = within(await screen.findByRole('dialog', { name: 'Edit Teaching Faculty' }))
+  const email = dialog.getByLabelText(/^Email/)
+  const emailField = email.closest('.fm-field')
+
+  fireEvent.change(email, { target: { value: 'sandy@@gmail.com' } })
+  fireEvent.blur(email)
+  const warning = within(emailField).getByRole('alert')
+  expect(warning.textContent).toBe('Please enter a valid email format')
+  expect(warning.classList.contains('fm-field-error')).toBe(true)
+  expect(email.getAttribute('aria-invalid')).toBe('true')
+
+  fireEvent.change(email, { target: { value: 'sandy@gmail.com' } })
+  fireEvent.blur(email)
+  expect(within(emailField).queryByRole('alert')).toBeNull()
+  expect(email.getAttribute('aria-invalid')).toBe('false')
 })
 
 test('teaching registration exposes all steps and can skip optional details', async () => {
