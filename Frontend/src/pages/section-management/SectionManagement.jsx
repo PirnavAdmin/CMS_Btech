@@ -36,6 +36,13 @@ import '../../styles/directory-search.css'
 
 const PAGE_SIZE = 5
 const emptyForm = { name: '', code: '', courseId: '', branchId: '', semesterId: '', academicYearId: '', capacity: '', facultyAdvisorEmployeeProfileId: '', advisor: '', room: '', status: '', startDate: '', endDate: '' }
+const capacityErrorFor = value => {
+  const text = String(value ?? '').trim()
+  if (!text) return 'Capacity is required.'
+  if (!/^\d+$/.test(text) || Number(text) < 1) return 'Capacity must be a positive whole number.'
+  if (Number(text) > 60) return 'Capacity cannot exceed 60 students.'
+  return ''
+}
 const clean = (value) => value !== null && value !== undefined && !['', 'null', 'undefined', 'not provided', 'not set', '?'].includes(String(value).trim().toLowerCase())
 const idOf = (item = {}, ...keys) => keys.map((key) => item?.[key]).find((value) => clean(value)) ?? ''
 const sem = (value) => /^\d+$/.test(String(value)) ? `Semester ${value}` : String(value || '')
@@ -490,8 +497,27 @@ function SectionForm({ editMode = false }) {
     })
     setErrors((current) => ({ ...current, semesterId: '', name: '', code: '' }))
   }
-  const setField = (key, value) => { setForm((current) => ({ ...current, [key]: key === 'code' ? value.toUpperCase() : value })); setErrors((current) => ({ ...current, [key]: '' })) }
-  const validate = () => { const next = {}; ['courseId', 'branchId', 'semesterId', 'name', 'code', 'status'].forEach((key) => { if (!String(form[key] || '').trim()) next[key] = 'Required.' }); if (!editMode && !String(form.room || '').trim()) next.room = 'Create and select a room before creating a section.'; if (!form.academicYearId && !selectedAcademicYearId) next.academicYearId = yearWarning || 'An academic year is required.'; if (!editMode && !semester) next.semesterId = 'Select a configured semester.'; if (!Number.isInteger(Number(form.capacity)) || Number(form.capacity) < 1 || Number(form.capacity) > 120) next.capacity = 'Capacity must be a whole number from 1 to 120.'; if (editMode && Number(form.capacity) < assignedCount) next.capacity = `Capacity cannot be below the ${assignedCount} assigned students.`; if (!/^[A-Z0-9]+(?:-[A-Z0-9]+)*$/.test(String(form.code || '').trim().toUpperCase())) next.code = 'Use uppercase letters, numbers, and single hyphens only.'; const mapping = { ...form, academicYearId: form.academicYearId || selectedAcademicYearId || activeYear?.id }; if (sections.some((item) => String(item.id) !== String(id) && sameMapping(item, mapping) && item.name.trim().toLowerCase() === form.name.trim().toLowerCase())) next.name = 'This section already exists for this academic mapping.'; if (sections.some((item) => String(item.id) !== String(id) && sameMapping(item, mapping) && item.code.trim().toLowerCase() === form.code.trim().toLowerCase())) next.code = 'This section code already exists for this academic mapping.'; setErrors(next); if (Object.keys(next).length) showWarning('Correct the highlighted fields before saving the section.'); return !Object.keys(next).length }
+  const setField = (key, value) => {
+    setForm(current => ({ ...current, [key]: key === 'code' ? value.toUpperCase() : value }))
+    setErrors(current => ({ ...current, [key]: key === 'capacity' ? capacityErrorFor(value) : '' }))
+  }
+  const validate = () => {
+    const next = {}
+    ['courseId', 'branchId', 'semesterId', 'name', 'code', 'status'].forEach(key => { if (!String(form[key] || '').trim()) next[key] = 'Required.' })
+    if (!editMode && !String(form.room || '').trim()) next.room = 'Create and select a room before creating a section.'
+    if (!form.academicYearId && !selectedAcademicYearId) next.academicYearId = yearWarning || 'An academic year is required.'
+    if (!editMode && !semester) next.semesterId = 'Select a configured semester.'
+    const capacityError = capacityErrorFor(form.capacity)
+    if (capacityError) next.capacity = capacityError
+    else if (editMode && Number(form.capacity) < assignedCount) next.capacity = `Capacity cannot be below the ${assignedCount} assigned students.`
+    if (!/^[A-Z0-9]+(?:-[A-Z0-9]+)*$/.test(String(form.code || '').trim().toUpperCase())) next.code = 'Use uppercase letters, numbers, and single hyphens only.'
+    const mapping = { ...form, academicYearId: form.academicYearId || selectedAcademicYearId || activeYear?.id }
+    if (sections.some(item => String(item.id) !== String(id) && sameMapping(item, mapping) && item.name.trim().toLowerCase() === form.name.trim().toLowerCase())) next.name = 'This section already exists for this academic mapping.'
+    if (sections.some(item => String(item.id) !== String(id) && sameMapping(item, mapping) && item.code.trim().toLowerCase() === form.code.trim().toLowerCase())) next.code = 'This section code already exists for this academic mapping.'
+    setErrors(next)
+    if (Object.keys(next).length) showWarning('Correct the highlighted fields before saving the section.')
+    return !Object.keys(next).length
+  }
   const submit = async (event) => {
     event.preventDefault()
     if (saving || !validate()) return
@@ -608,7 +634,7 @@ function SectionForm({ editMode = false }) {
               <Field label="Semester *" error={errors.semesterId}><ProjectSelect aria-label="Semester" value={form.semesterId} onChange={(event) => setSemester(event.target.value)} disabled={editMode || !form.branchId || !form.academicYearId}><option value="">{form.branchId ? (semesterOptions.length ? 'Select semester' : 'No saved semesters') : 'Select branch first'}</option>{semesterOptions.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</ProjectSelect>{form.branchId && !semesterOptions.length && <small>Create the semester definition in Program Configuration first.</small>}</Field>
               <Field label="Section Name *" error={errors.name}><input value={form.name} onChange={(event) => setField('name', event.target.value)} placeholder="e.g. Section A" /></Field>
               <Field label="Section Code *" error={errors.code}><input value={form.code} onChange={(event) => setField('code', event.target.value)} placeholder="e.g. CSE-S1-A" /></Field>
-              <Field label="Capacity *" error={errors.capacity}><input type="number" min="1" max="120" value={form.capacity} onChange={(event) => setField('capacity', event.target.value)} placeholder="e.g. 60" /></Field>
+              <Field label="Capacity *" error={errors.capacity}><input type="number" min="1" max="60" step="1" value={form.capacity} onChange={(event) => setField('capacity', event.target.value)} placeholder="e.g. 60" /></Field>
               <Field label="Status *" error={errors.status}><ProjectSelect value={form.status} onChange={(event) => setField('status', event.target.value)}><option value="" disabled>Select status</option><option value="Active">Active</option><option value="Inactive">Inactive</option></ProjectSelect></Field>
               <Field label="Academic Block"><ProjectSelect aria-label="Academic block" value={roomBuilding} onChange={(event) => { setRoomBuilding(event.target.value); setRoomFloor(''); setField('room', '') }}><option value="">Select block</option>{roomBuildings.map((building) => <option key={building} value={building}>{building}</option>)}</ProjectSelect></Field>
               <Field label="Floor"><ProjectSelect aria-label="Room floor" value={roomFloor} onChange={(event) => { setRoomFloor(event.target.value); setField('room', '') }} disabled={!roomBuilding}><option value="">{roomBuilding ? 'Select floor' : 'Select block first'}</option>{roomFloors.map((floor) => <option key={floor} value={floor}>{floor}</option>)}</ProjectSelect></Field>
@@ -762,7 +788,7 @@ function SectionForm({ editMode = false }) {
                     <input value={form.code} onChange={(event) => setField('code', event.target.value)} placeholder="Enter section code" />
                   </Field>
                   <Field label="Capacity *" error={errors.capacity}>
-                    <input type="number" min="1" max="120" placeholder="Enter capacity" value={form.capacity} onChange={(event) => setField('capacity', event.target.value)} />
+                    <input type="number" min="1" max="60" step="1" placeholder="Enter capacity" value={form.capacity} onChange={(event) => setField('capacity', event.target.value)} />
                   </Field>
                   <Field label="Faculty Advisor" error={errors.facultyAdvisorEmployeeProfileId}>
                     <SearchableSelect label="Faculty Advisor" value={form.facultyAdvisorEmployeeProfileId} options={teacherCandidates.map((item) => ({ id: item.employeeProfileId, value: item.employeeProfileId, name: item.fullName, code: [item.employeeCode, item.designation].filter(clean).join(' / ') }))} onChange={(value) => { const teacher = teacherCandidates.find((item) => String(item.employeeProfileId) === String(value)); setForm((current) => ({ ...current, facultyAdvisorEmployeeProfileId: value, advisor: teacher?.fullName || '' })) }} placeholder="Select Faculty Advisor" searchPlaceholder="Search faculty..." noOptionsMessage="No faculty candidates found." />

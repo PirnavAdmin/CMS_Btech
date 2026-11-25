@@ -132,7 +132,7 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
         setValues({
           name: String(college.name ?? college.collegeName ?? ''),
           code: String(college.code ?? college.collegeCode ?? '').toUpperCase(),
-          contactPerson: String(college.contactPerson ?? college.principalName ?? college.principal ?? ''),
+          contactPerson: String(college.contactPerson ?? ''),
           email: String(college.email ?? college.collegeEmail ?? ''),
           phone: String(college.contactNumber ?? college.phoneNumber ?? college.contact ?? ''),
           status,
@@ -327,8 +327,7 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
           phoneNumber: values.phone.trim(),
           email: values.email.trim(),
           collegeEmail: values.email.trim(),
-          principal: values.contactPerson.trim(),
-          principalName: values.contactPerson.trim(),
+          contactPerson: values.contactPerson.trim(),
         }
         const response = await updateCollege(editId, organization)
         const updated = unwrapCollegeRecord(response)
@@ -416,6 +415,7 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
           collegeName: values.name.trim(),
           code: organizationCode,
           collegeCode: organizationCode,
+          contactPerson: primaryAdmin.fullName,
           email: values.email.trim(),
           contactNumber: values.phone.trim(),
           status: 'Active',
@@ -570,7 +570,7 @@ export default function CreateCollegeForm({ editId, onDismiss, onSaved }) {
         {field('Phone Number', 'phone', 'tel', { required: true, inputMode: 'numeric', maxLength: 10, onChange: event => updateValue('phone', event.target.value.replace(/\D/g, '').slice(0, 10)), onBlur: validatePhone, hint: '10-digit Indian mobile number starting with 6-9.' })}
         {field('Status', 'status', 'text', { required: true, select: [{ value: '1', label: 'Active' }, { value: '0', label: 'Inactive' }] })}
       </div>
-      <p className="college-create-note">{editId ? "Contact Person is saved to the organization's existing Principal field." : `A College Admin account will be created using this email. Its setup link will be sent to ${values.email || 'the email entered above'}.`}</p>
+      {!editId && <p className="college-create-note">A College Admin account will be created using this email. Its setup link will be sent to {values.email || 'the email entered above'}.</p>}
 
     </section>
 

@@ -2744,7 +2744,7 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
                   "personal.bloodGroup",
                   "Blood group",
                   {
-                    options: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
+                    options: ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"],
                   },
                 ],
                 ["personal.nationality", "Nationality"],
