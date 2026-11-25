@@ -749,6 +749,7 @@ export const FeeStructureWizardModule = (() => {
     const [previewConfigId, setPreviewConfigId] = useState("");
     const [scheduleTarget, setScheduleTarget] = useState("common");
     const [feeCategories, setFeeCategories] = useState([]);
+    const selectableFeeCategories = feeCategories.filter(row => String(row.name || "").trim().toLowerCase() !== "hostel");
     const [serverPlans, setServerPlans] = useState([]);
     const [saveResults, setSaveResults] = useState([]);
     const [saving, setSaving] = useState(false);
@@ -1322,11 +1323,11 @@ export const FeeStructureWizardModule = (() => {
               {!quotaValues.length && <p role="status">No admission quotas are available yet. Add admission quota data before configuring quota-specific fees.</p>}
 
               <div className="fm-component-toolbar">
-                <FeeSelect label="Fee Type" value={selectedFeeType} options={[{ id: "", name: "Select configured fee type" }, ...feeCategories.map(row => ({ id: String(row.id), name: row.name }))]} onChange={setSelectedFeeType} disabled={!plansLoaded || !feeCategories.length} />
+                <FeeSelect label="Fee Type" value={selectedFeeType} options={[{ id: "", name: "Select configured fee type" }, ...selectableFeeCategories.map(row => ({ id: String(row.id), name: row.name }))]} onChange={setSelectedFeeType} disabled={!plansLoaded || !selectableFeeCategories.length} />
                 <button type="button" className="erp-btn erp-btn--secondary" disabled={!selectedFeeType} onClick={addFeeComponent}><FiPlus /> Add Component</button>
                 {canFeeAction('/fees/types', 'create') && <button type="button" className="erp-btn erp-btn--secondary" onClick={() => setAddingFeeType(true)}>Add Fee Type</button>}
               </div>
-              {!feeCategories.length && plansLoaded && <p role="status">No configured fee types. Add a fee type before creating a plan.</p>}
+              {!selectableFeeCategories.length && plansLoaded && <p role="status">No selectable fee types are configured. Add a fee type before creating a plan.</p>}
               <div className="fm-matrix-scroll"><table className="fm-table" aria-label="Fee components"><thead><tr><th>Fee Type</th><th>Fee Amount</th><th>Actions</th></tr></thead><tbody>
                 {defaultHeads.length ? defaultHeads.map((head, index) => <tr key={head.masterId || index}><td>{head.name}</td><td><input aria-label={head.name + ' amount'} type="number" min="0" step="0.01" value={head.amount} onChange={event => setDefaultHeads(defaultHeads.map((row, i) => i === index ? { ...row, amount: event.target.value } : row))} /></td><td><button type="button" className="erp-btn erp-btn--secondary" aria-label={'Remove ' + head.name} onClick={() => setDefaultHeads(defaultHeads.filter((_, i) => i !== index))}>Remove</button></td></tr>) : <tr><td colSpan={3}>Add configured fee types to build the breakdown.</td></tr>}
               </tbody><tfoot><tr><th scope="row">Academic Fee Total</th><td colSpan={2}><strong>{feeMoney(totalFor(editingConfig))}</strong></td></tr></tfoot></table></div>
