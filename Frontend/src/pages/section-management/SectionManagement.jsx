@@ -294,17 +294,17 @@ function SectionList({ initialViewId = null }) {
             <table className="section-table">
               <thead>
                 <tr>
-                  <th style={{ minWidth: '150px' }}>Section</th>
-                  <th style={{ minWidth: '150px' }}>Course</th>
-                  <th style={{ minWidth: '150px' }}>Branch</th>
-                  <th className="table-center" style={{ width: '100px' }}>Semester</th>
-                  <th className="table-center" style={{ width: '130px' }}>Academic Year</th>
-                  <th className="table-center" style={{ width: '150px' }}>Strength / Capacity</th>
-                  <th className="table-center" style={{ minWidth: '170px', maxWidth: '220px' }}>Faculty Advisor</th>
-                  <th style={{ minWidth: '130px' }}>Room</th>
-                  <th className="table-center" style={{ width: '115px' }}>Completion</th>
-                  <th className="table-center" style={{ width: '120px' }}>Status</th>
-                  <th className="table-center" style={{ width: '170px' }}>Actions</th>
+                  <th>Section</th>
+                  <th>Course</th>
+                  <th>Branch</th>
+                  <th className="table-center">Semester</th>
+                  <th className="table-center">Academic Year</th>
+                  <th className="table-center">Strength / Capacity</th>
+                  <th className="table-center">Faculty Advisor</th>
+                  <th>Room</th>
+                  <th className="table-center">Completion</th>
+                  <th className="table-center">Status</th>
+                  <th className="table-center">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -312,40 +312,40 @@ function SectionList({ initialViewId = null }) {
                   const assigned = Math.max(count(section.id), Number(section.currentStrength || 0))
                   return (
                     <tr key={section.id}>
-                      <td style={{ minWidth: '150px' }}>
+                      <td>
                         <div className="table-primary-cell">
                           <strong className="table-cell-truncate" title={section.name}>{section.name}</strong>
                           <small>{section.code}</small>
                         </div>
                       </td>
-                      <td style={{ minWidth: '150px' }}>
+                      <td>
                         <div className="table-primary-cell">
                           <strong title={section.course}>{section.course}</strong>
                           {section.courseCode && <small title={section.courseCode}>{section.courseCode}</small>}
                         </div>
                       </td>
-                      <td style={{ minWidth: '150px' }}>
+                      <td>
                         <div className="table-primary-cell">
                           <strong title={section.branch}>{section.branch}</strong>
                           {section.branchCode && <small title={section.branchCode}>{section.branchCode}</small>}
                         </div>
                       </td>
-                      <td className="table-center" style={{ width: '100px' }}>{section.semester}</td>
-                      <td className="table-center" style={{ width: '130px' }}>{section.academicYear}</td>
-                      <td className="table-center" style={{ width: '150px' }}>
+                      <td className="table-center">{section.semester}</td>
+                      <td className="table-center">{section.academicYear}</td>
+                      <td className="table-center">
                         <strong>{assigned} / {section.capacity}</strong>
                       </td>
-                      <td className="table-center" style={{ minWidth: '170px', maxWidth: '220px' }}>
+                      <td className="table-center">
                         {section.advisor ? (
                           <strong className="table-cell-truncate" title={section.advisor}>{section.advisor}</strong>
                         ) : (
                           <span className="section-unassigned">Unassigned</span>
                         )}
                       </td>
-                      <td style={{ minWidth: '130px' }}>{section.room ? <span className="table-cell-truncate" title={section.room}>{section.room}</span> : <span className="section-unassigned">Not assigned</span>}</td>
-                      <td className="table-center" style={{ width: '115px' }}><div className="section-completion"><strong>{section.completion.percent ?? 0}%</strong><small>{section.completion.complete ? 'Complete' : 'In progress'}</small></div></td>
-                      <td className="table-center" style={{ width: '120px' }}><StatusBadge value={section.status} /></td>
-                      <td className="table-center" style={{ width: '170px' }}>
+                      <td>{section.room ? <span className="table-cell-truncate" title={section.room}>{section.room}</span> : <span className="section-unassigned">Not assigned</span>}</td>
+                      <td className="table-center"><div className="section-completion"><strong>{section.completion.percent ?? 0}%</strong><small>{section.completion.complete ? 'Complete' : 'In progress'}</small></div></td>
+                      <td className="table-center"><StatusBadge value={section.status} /></td>
+                      <td className="table-center">
                         <div className="section-actions table-actions-group">
                           <Link className="table-action-btn action-edit" title={`Edit ${section.name}`} aria-label={`Edit ${section.name}`} to={`/section-management/${section.id}/edit`}><FiEdit2 /></Link>
                           <button type="button" className="table-action-btn action-assign section-assign-action" title={`Assign Students / Faculty to ${section.name}`} aria-label={`Assign Students to ${section.name}`} onClick={() => openAssign(section)}><FiUserPlus /></button>
