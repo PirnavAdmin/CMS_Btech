@@ -169,8 +169,6 @@ const shortLabel = (x) => {
   return BRANCH_ABBR[key] || x;
 };
 
-const clone = (x) => structuredClone(x);
-
 const PROFILE_DOCUMENTS = DOCUMENTS_CONFIG.map((d) => [d.key, d.label]);
 
 const documentsFromApi = (rows) => {
@@ -397,17 +395,6 @@ const detail = (label, content) => (
     <dd>{value(content)}</dd>
   </div>
 );
-const setPath = (data, path, value) => {
-  const next = clone(data),
-    parts = path.split(".");
-  let at = next;
-  parts.slice(0, -1).forEach((key) => {
-    at[key] ??= {};
-    at = at[key];
-  });
-  at[parts.at(-1)] = value;
-  return next;
-};
 const clean = (x) => String(x || "").trim(),
   validName = (x) => /^[A-Za-z][A-Za-z .'-]{1,79}$/.test(clean(x)),
   validMobile = (x) => /^[6-9]\d{9}$/.test(String(x || "").replace(/\s/g, "")),
@@ -1963,16 +1950,31 @@ const StudentProfileEdit = (() => {
 
 
 
-const clone = (value) => structuredClone(value);
 const setPath = (source, path, value) => {
-  const next = clone(source),
-    parts = path.split(".");
-  let cursor = next;
-  parts.slice(0, -1).forEach((key) => {
-    if (!cursor[key]) cursor[key] = {};
-    cursor = cursor[key];
+  const parts = path.split(".");
+  const copyContainer = (current) =>
+    Array.isArray(current)
+      ? current.slice()
+      : current && typeof current === "object"
+        ? { ...current }
+        : {};
+  const next = copyContainer(source);
+  let sourceCursor = source;
+  let nextCursor = next;
+
+  parts.forEach((key, index) => {
+    if (index === parts.length - 1) {
+      nextCursor[key] = value;
+      return;
+    }
+
+    const sourceChild = sourceCursor?.[key];
+    const nextChild = copyContainer(sourceChild);
+    nextCursor[key] = nextChild;
+    sourceCursor = sourceChild;
+    nextCursor = nextChild;
   });
-  cursor[parts.at(-1)] = value;
+
   return next;
 };
 const studentName = (student) => studentFullName(student);
@@ -1985,7 +1987,18 @@ const validYear = (value) =>
   /^\d{4}$/.test(clean(value)) &&
   Number(value) >= 1950 &&
   Number(value) <= new Date().getFullYear() + 1;
-const initialEditForm = (student) => ({ ...normalizeCanonicalStudent(student), fees: { ...student.fees }, documentUploads: {} });
+const EDITOR_METADATA_FIELDS = new Set(["completion", "exportVerified", "documentError"]);
+const initialEditForm = (student) => {
+  const profileData = Object.fromEntries(
+    Object.entries(student || {}).filter(([key]) => !EDITOR_METADATA_FIELDS.has(key)),
+  );
+  const normalized = normalizeCanonicalStudent(profileData);
+  return {
+    ...normalized,
+    fees: { ...(profileData.fees || normalized.fees || {}) },
+    documentUploads: {},
+  };
+};
 
 const validateProfileForm = (form, docErrors = {}) => {
   const next = {
@@ -2120,7 +2133,8 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
     ["fees", "Fee Structure & Payment"],
     ["documents", "Supporting Documents"],
   ];
-  const [form, setForm] = useState(() => initialEditForm(student)),
+  const initialForm = useMemo(() => initialEditForm(student), [student]);
+  const [form, setForm] = useState(initialForm),
     [errors, setErrors] = useToastState({}, 'error'),
     [touched, setTouched] = useState({}),
     [saving, setSaving] = useState(false),
@@ -2133,7 +2147,7 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
     [branches, setBranches] = useState([]),
     [academicYears, setAcademicYears] = useState([]),
     tabNavRef = useRef(null),
-    original = useMemo(() => JSON.stringify(student), [student]),
+    original = useMemo(() => JSON.stringify(initialForm), [initialForm]),
     dirty = JSON.stringify(form) !== original;
   const markTouched = (path) => setTouched((prev) => ({ ...prev, [path]: true }));
   const liveErrors = useMemo(() => validateProfileForm(form, errors), [form, errors]);
@@ -2308,65 +2322,70 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
   const update = (path, value) => {
       setForm((current) => {
         let next = setPath(current, path, value);
+        const assign = (fieldPath, fieldValue) => {
+          next = setPath(next, fieldPath, fieldValue);
+        };
         if (path === "personal.gender") {
           if (next.admission?.hostel === "Yes") {
-            next.admission.hostelPreference =
-              value === "Male" ? "Boys Hostel" : value === "Female" ? "Girls Hostel" : next.admission.hostelPreference || "Boys Hostel";
+            assign("admission.hostelPreference",
+              value === "Male" ? "Boys Hostel" : value === "Female" ? "Girls Hostel" : next.admission.hostelPreference || "Boys Hostel",
+            );
           }
         }
         if (path === "contact.sameAddress" && value) {
-          next.contact.permanentAddress = clone(next.contact.currentAddress || {});
+          assign("contact.permanentAddress", { ...(next.contact.currentAddress || {}) });
         }
         if (path.startsWith("contact.currentAddress.") && next.contact?.sameAddress) {
-          next.contact.permanentAddress = clone(next.contact.currentAddress || {});
+          assign("contact.permanentAddress", { ...(next.contact.currentAddress || {}) });
         }
         if (path === "parents.guardian.relationship" && value !== "Other") {
-          next.parents.guardian.relationshipOther = "";
+          assign("parents.guardian.relationshipOther", "");
         }
         if (path === "previousEducation.intermediate.stream" && value !== "Other") {
-          next.previousEducation.intermediate.streamOther = "";
+          assign("previousEducation.intermediate.streamOther", "");
         }
         if (path === "academic.admissionType" && value !== "Lateral Entry") {
-          next.academic.quota = "";
-          next.academic.quotaOther = "";
+          assign("academic.quota", "");
+          assign("academic.quotaOther", "");
         }
         if (path === "academic.quota" && value !== "Other") {
-          next.academic.quotaOther = "";
+          assign("academic.quotaOther", "");
         }
         if (path === "admission.scholarship" && value === "No") {
-          next.admission.scholarshipType = "";
-          next.fees.scholarshipAmount = 0;
+          assign("admission.scholarshipType", "");
+          assign("fees.scholarshipAmount", 0);
         }
         if (path === "admission.hostel") {
           if (value === "No") {
-            next.admission.hostelPreference = "";
-            next.admission.hostelRoomType = "";
-            next.fees.hostelFee = 0;
+            assign("admission.hostelPreference", "");
+            assign("admission.hostelRoomType", "");
+            assign("fees.hostelFee", 0);
           } else if (value === "Yes") {
-            next.admission.hostelPreference =
+            assign("admission.hostelPreference",
               current.personal?.gender === "Male"
                 ? "Boys Hostel"
                 : current.personal?.gender === "Female"
                   ? "Girls Hostel"
-                  : "Boys Hostel";
+                  : "Boys Hostel",
+            );
             if (next.admission?.hostelRoomType) {
-              next.fees.hostelFee = resolveProfileHostelFee(next.admission, next.fees, next.academic);
+              assign("fees.hostelFee", resolveProfileHostelFee(next.admission, next.fees, next.academic));
             }
           }
         }
         if (path === "admission.hostelRoomType" || path === "admission.hostelPreference") {
-          next.fees.hostelFee = resolveProfileHostelFee(next.admission, next.fees, next.academic);
+          assign("fees.hostelFee", resolveProfileHostelFee(next.admission, next.fees, next.academic));
         }
         if (path === "admission.transport") {
           if (value === "No") {
-            next.admission.transportRoute = "";
-            next.fees.transportFee = 0;
+            assign("admission.transportRoute", "");
+            assign("fees.transportFee", 0);
           } else if (next.admission?.transportRoute) {
-            next.fees.transportFee = resolveProfileTransportFee(next.admission, next.fees, next.academic);
+            assign("fees.transportFee", resolveProfileTransportFee(next.admission, next.fees, next.academic));
           }
         }
         if (path === "admission.transportRoute") {
-          next.fees.transportFee = resolveProfileTransportFee(next.admission, next.fees, next.academic);
+          assign("fees.transportFee", resolveProfileTransportFee(next.admission, next.fees, next.academic));
         }
         const tuition = Number(next.fees?.tuitionFee) > 0 ? Number(next.fees.tuitionFee) : 0;
         const admission = Number(next.fees?.admissionFee !== undefined && next.fees?.admissionFee !== "" ? next.fees.admissionFee : 0);
@@ -2374,12 +2393,11 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
         const transport = next.admission?.transport === "Yes" ? Number(next.fees?.transportFee || resolveProfileTransportFee(next.admission, next.fees, next.academic) || 0) : 0;
         const scholarship = Number(next.fees?.scholarshipAmount || 0);
         const total = Math.max(0, tuition + admission + hostel + transport - scholarship);
-        if (!next.fees) next.fees = {};
-        next.fees.tuitionFee = tuition;
-        next.fees.admissionFee = admission;
-        next.fees.hostelFee = hostel;
-        next.fees.transportFee = transport;
-        next.fees.totalFee = total;
+        assign("fees.tuitionFee", tuition);
+        assign("fees.admissionFee", admission);
+        assign("fees.hostelFee", hostel);
+        assign("fees.transportFee", transport);
+        assign("fees.totalFee", total);
         return next;
       });
       markTouched(path);
@@ -2593,9 +2611,9 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
                 prefix === "contact.currentAddress" &&
                 next.contact.sameAddress
               )
-                next.contact.permanentAddress = {
+                next = setPath(next, "contact.permanentAddress", {
                   ...next.contact.currentAddress,
-                };
+                });
               return next;
             });
             setPinStatus((status) => ({
@@ -2783,13 +2801,14 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
                     onChange={(event) => {
                       const checked = event.target.checked;
                       setForm((current) => {
-                        const next = clone(current);
-                        if (!next.contact) next.contact = {};
-                        next.contact.sameAddress = checked;
-                        if (checked)
-                          next.contact.permanentAddress = clone(
-                            next.contact.currentAddress || {},
+                        let next = setPath(current, "contact.sameAddress", checked);
+                        if (checked) {
+                          next = setPath(
+                            next,
+                            "contact.permanentAddress",
+                            { ...(next.contact.currentAddress || {}) },
                           );
+                        }
                         return resetAdmissionAcademicDependents(next, current, 'admission.collegeId');
                       });
                     }}

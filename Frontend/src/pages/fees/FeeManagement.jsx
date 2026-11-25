@@ -753,6 +753,7 @@ export const FeeStructureWizardModule = (() => {
     const [saveResults, setSaveResults] = useState([]);
     const [saving, setSaving] = useState(false);
     const [submissionComplete, setSubmissionComplete] = useState(false);
+    const [confirmDiscard, setConfirmDiscard] = useState(false);
     const [pendingStatus, setPendingStatus] = useState("Draft");
     const completedSavesRef = useRef({});
     const planBatchTokenRef = useRef(null);
@@ -1216,6 +1217,16 @@ export const FeeStructureWizardModule = (() => {
       finally { setSaving(false); }
     };
 
+    const requestClose = () => {
+      if (saving) return;
+      if (submissionComplete) close();
+      else setConfirmDiscard(true);
+    };
+    const discardAndClose = () => {
+      setConfirmDiscard(false);
+      close();
+    };
+
     const payloadNames = () => ({
       academicYearName: masters.years.find(y => String(y.id) === String(s.academicYearId))?.name,
       courseName: masters.courses.find(c => String(c.id) === String(s.courseId))?.name,
@@ -1223,11 +1234,14 @@ export const FeeStructureWizardModule = (() => {
       name: s.name?.trim() || `${masters.courses.find(c => String(c.id) === String(s.courseId))?.name || "Program"} ${masters.branches.find(b => String(b.id) === String(s.branchId))?.name || "Branch"} ${s.batch || ""}`.trim(),
     });
 
-    return (
+    const savedSomeConfigurations = saveResults.some(row => row.success);
+    const currentStepLabel = formTabs.find(([key]) => key === formTab)?.[1] || "Fee plan setup";
+
+    return (<>
       <SharedFeeDialog
         title={s.id ? "Edit Academic Fee Plan" : "Create Academic Fee Plan"}
         subtitle="Set charges and payment dates for a course, branch and batch."
-        onClose={() => { if (submissionComplete || window.confirm('Discard unsaved fee plan changes?')) close(); }}
+        onClose={requestClose}
         busy={saving}
         showExport={false}
         hideFooter
@@ -1438,7 +1452,7 @@ export const FeeStructureWizardModule = (() => {
             type="button"
             className="erp-btn erp-btn--secondary"
             disabled={saving}
-            onClick={() => { if (submissionComplete || window.confirm('Discard unsaved fee plan changes?')) close(); }}
+            onClick={requestClose}
           >
             Cancel
           </button>
@@ -1468,7 +1482,27 @@ export const FeeStructureWizardModule = (() => {
         </div>
         {addingFeeType && <FeeTypeCreateDialog rows={feeCategories} onClose={() => setAddingFeeType(false)} onSaved={async () => { const categories = await apiEndpointsModule.feeConfigurationApi.categories(); setFeeCategories(categories.filter(academicFeeComponent)); setAddingFeeType(false); }} />}
       </SharedFeeDialog>
-    );
+      {confirmDiscard && <SharedFeeDialog
+        title="Leave fee plan setup?"
+        subtitle={savedSomeConfigurations ? "Some fee plans have already been saved." : "Your fee plan changes have not been saved."}
+        icon={external3.FiAlertTriangle}
+        onClose={() => setConfirmDiscard(false)}
+        showExport={false}
+        maxWidth="480px"
+        className="fm-discard-confirm-dialog"
+        footerContent={<>
+          <button type="button" className="erp-btn erp-btn--secondary" onClick={() => setConfirmDiscard(false)}>Continue editing</button>
+          <button type="button" className="erp-btn erp-btn--primary fm-discard-confirm-action" onClick={discardAndClose}>{savedSomeConfigurations ? "Leave setup" : "Discard changes"}</button>
+        </>}
+      >
+        <div className="fm-discard-confirm-content">
+          <p>{savedSomeConfigurations
+            ? "Saved fee plans will remain in the system. Unsaved configurations and edits in this form will be lost if you leave."
+            : "Leaving now will discard the changes in this fee plan. You can return to the form and keep editing instead."}</p>
+          <div className="fm-discard-confirm-step"><span>Current step</span><strong>{currentStepLabel}</strong></div>
+        </div>
+      </SharedFeeDialog>}
+    </>);
   }
 
   return {
