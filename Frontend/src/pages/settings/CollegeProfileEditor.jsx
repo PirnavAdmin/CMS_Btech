@@ -227,8 +227,13 @@ export default function CollegeProfileEditor({ editId, college, profile, onDismi
     setValues(current => ({
       ...current,
       [key]: value,
+      ...(key === 'pincode' && value !== current.pincode ? { area: '', city: '', district: '', state: '' } : {}),
       ...(key === 'collegeType' && value !== 'Others' ? { collegeTypeOther: '' } : {}),
     }))
+    if (key === 'pincode' && value !== values.pincode) {
+      setPostOffices([])
+      setPincodeStatus('')
+    }
     setErrors(current => ({ ...current, [key]: '' }))
     setServerError('')
     setPartialNotice('')
@@ -237,6 +242,26 @@ export default function CollegeProfileEditor({ editId, college, profile, onDismi
       next.delete(activeStep)
       return next
     })
+  }
+
+  const selectPostOffice = name => {
+    const selected = postOffices.find(office => office.name === name)
+    if (!selected) {
+      setValue('area', name)
+      return
+    }
+    setValues(current => ({
+      ...current,
+      area: selected.name,
+      city: selected.city || selected.district || selected.town || '',
+      district: selected.district || '',
+      state: selected.state || '',
+      country: selected.country || 'India',
+    }))
+    setErrors(current => ({ ...current, area: '', city: '', district: '', state: '', country: '' }))
+    setPincodeStatus('Location details filled from ' + selected.name + '.')
+    setServerError('')
+    setPartialNotice('')
   }
 
   const validate = () => {
@@ -391,8 +416,7 @@ export default function CollegeProfileEditor({ editId, college, profile, onDismi
       readOnly: !editable && options.control !== 'select',
       'aria-invalid': Boolean(errors[key]),
       'aria-describedby': describedBy,
-      list: options.datalist?.length ? id + '-options' : undefined,
-      onChange: event => editable && setValue(key, event.target.value),
+      onChange: event => editable && (options.onChange ? options.onChange(event.target.value) : setValue(key, event.target.value)),
     }
     return <label key={key} className={'college-profile-editor__field' + (options.wide ? ' is-wide' : '') + (!editable ? ' is-readonly' : '')} htmlFor={id}>
       <span>{label}{options.required && <b aria-hidden="true"> *</b>}{!editable && <em title={options.managed ? 'Managed by the Super Admin' : 'Editing is not available'}>{options.managed ? 'Managed' : 'Locked'}</em>}</span>
@@ -401,7 +425,6 @@ export default function CollegeProfileEditor({ editId, college, profile, onDismi
         : options.control === 'select'
           ? <select {...common}>{(options.options || []).map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select>
           : <input {...common} type={options.type || 'text'} maxLength={options.maxLength} inputMode={options.inputMode} autoComplete={options.autoComplete} />}
-      {options.datalist?.length > 0 && <datalist id={id + '-options'}>{options.datalist.map(office => <option key={office.name + '-' + office.district} value={office.name}>{[office.city, office.district, office.state].filter(Boolean).join(', ')}</option>)}</datalist>}
       {message && <small id={describedBy} className={errors[key] ? 'is-error' : ''} role={errors[key] ? 'alert' : undefined}>{message}</small>}
     </label>
   }
@@ -460,7 +483,17 @@ export default function CollegeProfileEditor({ editId, college, profile, onDismi
         {field('state', 'State', { maxLength: 100, autoComplete: 'address-level1' })}
         {field('pincode', 'Pincode', { maxLength: 10, inputMode: 'numeric', autoComplete: 'postal-code', hint: pincodeLoading ? 'Looking up post offices…' : pincodeStatus || '' })}
         {field('country', 'Country', { maxLength: 100, autoComplete: 'country-name' })}
-        {field('area', 'Area / Post Office', { maxLength: 150, datalist: postOffices, hint: pincodeLoading ? 'Looking up post offices…' : pincodeStatus || 'Enter pincode first' })}
+        {postOffices.length > 1
+          ? field('area', 'Area / Post Office', {
+            control: 'select',
+            options: [
+              { value: '', label: 'Select post office' },
+              ...postOffices.map(office => ({ value: office.name, label: office.name })),
+            ],
+            onChange: selectPostOffice,
+            hint: pincodeLoading ? 'Looking up post offices…' : pincodeStatus || 'Select a post office for this pincode',
+          })
+          : field('area', 'Area / Post Office', { maxLength: 150, hint: pincodeLoading ? 'Looking up post offices…' : pincodeStatus || 'Enter pincode first' })}
         {field('district', 'District', { maxLength: 100 })}
       </div>
     </>
