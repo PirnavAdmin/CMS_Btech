@@ -6782,6 +6782,14 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
 
   // Modals state
   const [editingRoom, setEditingRoom] = useState(null)
+  const roomCapacityValue = Number(editingRoom?.capacity)
+  const roomCapacityError = editingRoom?.capacity === '' || editingRoom?.capacity == null
+    ? ''
+    : roomCapacityValue > 60
+      ? 'Seating capacity cannot exceed 60 seats.'
+      : (!Number.isInteger(roomCapacityValue) || roomCapacityValue < 1)
+        ? 'Enter a positive whole number of seats.'
+        : ''
   const [customRoomType, setCustomRoomType] = useState(false)
   const [customBuildingBlock, setCustomBuildingBlock] = useState(false)
   const [viewingRoom, setViewingRoom] = useState(null)
@@ -7128,6 +7136,7 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
   const handleSaveRoom = async (e) => {
     e.preventDefault()
     if (saving) return
+    if (!editingRoom.capacity || roomCapacityError) return showError(roomCapacityError || 'Please enter a seating capacity between 1 and 60.')
     if (!editingRoom.buildingBlock?.trim()) return showError(customBuildingBlock ? 'Please enter the building block.' : 'Please select a building block.')
     if (!editingRoom.floor) return showError('Please select a floor.')
     if (!editingRoom.roomType?.trim()) return showError(customRoomType ? 'Please enter the room type.' : 'Please select a room type.')
@@ -7904,7 +7913,8 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
                       </div>
                       <div className="rooms-form-group">
                         <label>Seating Capacity <span className="req-mark">*</span></label>
-                        <div className="rooms-capacity-input"><input type="number" min="1" max="500" className="rooms-input" placeholder="e.g. 60" value={editingRoom.capacity} onChange={(e) => setEditingRoom({ ...editingRoom, capacity: Number(e.target.value) || '' })} required /><span>seats</span></div>
+                        <div className="rooms-capacity-input"><input type="number" min="1" max="60" step="1" className="rooms-input" placeholder="e.g. 60" value={editingRoom.capacity} aria-invalid={Boolean(roomCapacityError)} aria-describedby={roomCapacityError ? 'room-capacity-error' : undefined} onChange={(e) => setEditingRoom({ ...editingRoom, capacity: e.target.value === '' ? '' : Number(e.target.value) })} required /><span>seats</span></div>
+                        {roomCapacityError && <small id="room-capacity-error" className="cm-field-error" role="alert">{roomCapacityError}</small>}
                       </div>
                       <div className="rooms-form-group">
                         <label>Availability Status <span className="req-mark">*</span></label>
