@@ -346,9 +346,9 @@ const deduplicateProfiles = (profiles = []) => {
 
   for (const p of profiles) {
     if (!p) continue;
-    const sId = p.studentId ? String(p.studentId) : '';
-    const id = p.id ? String(p.id) : '';
-    const admId = p.admissionId ? String(p.admissionId) : '';
+    const sId = p.studentId && String(p.studentId) !== 'undefined' ? String(p.studentId) : '';
+    const id = p.id && String(p.id) !== 'undefined' ? String(p.id) : '';
+    const admId = p.admissionId && String(p.admissionId) !== 'undefined' ? String(p.admissionId) : '';
     const email = String(p.contact?.email || p.personal?.email || p.email || '').trim().toLowerCase();
     const mobile = String(p.contact?.mobile || p.personal?.mobile || p.mobile || '').replace(/\D/g, '').slice(-10);
     const admNo = String(p.application?.admissionNumber || p.admissionNumber || p.application?.registrationNumber || p.registrationNumber || '').trim().toLowerCase();
@@ -357,9 +357,9 @@ const deduplicateProfiles = (profiles = []) => {
     const nameBranchKey = sName && branch ? `${sName}_${branch}` : '';
 
     const isDuplicate =
-      (sId && seenIds.has(`sid:${sId}`)) ||
-      (id && seenIds.has(`id:${id}`)) ||
-      (admId && seenIds.has(`admid:${admId}`)) ||
+      (sId && sId !== 'undefined' && seenIds.has(`sid:${sId}`)) ||
+      (id && id !== 'undefined' && seenIds.has(`id:${id}`)) ||
+      (admId && admId !== 'undefined' && seenIds.has(`admid:${admId}`)) ||
       (email && email.includes('@') && seenEmails.has(email)) ||
       (mobile && mobile.length === 10 && seenMobiles.has(mobile)) ||
       (admNo && admNo !== 'allotted' && seenAdmNos.has(admNo)) ||
@@ -367,18 +367,18 @@ const deduplicateProfiles = (profiles = []) => {
 
     if (isDuplicate) {
       const existing = result.find((x) => {
-        const xSid = x.studentId ? String(x.studentId) : '';
-        const xId = x.id ? String(x.id) : '';
-        const xAdmId = x.admissionId ? String(x.admissionId) : '';
+        const xSid = x.studentId && String(x.studentId) !== 'undefined' ? String(x.studentId) : '';
+        const xId = x.id && String(x.id) !== 'undefined' ? String(x.id) : '';
+        const xAdmId = x.admissionId && String(x.admissionId) !== 'undefined' ? String(x.admissionId) : '';
         const xEmail = String(x.contact?.email || x.personal?.email || x.email || '').trim().toLowerCase();
         const xMobile = String(x.contact?.mobile || x.personal?.mobile || x.mobile || '').replace(/\D/g, '').slice(-10);
         const xAdmNo = String(x.application?.admissionNumber || x.admissionNumber || x.application?.registrationNumber || x.registrationNumber || '').trim().toLowerCase();
         const xName = String(studentFullName(x) || x.studentName || x.fullName || '').trim().toLowerCase();
 
         return (
-          (sId && xSid === sId) ||
-          (id && xId === id) ||
-          (admId && xAdmId === admId) ||
+          (sId && sId !== 'undefined' && xSid === sId) ||
+          (id && id !== 'undefined' && xId === id) ||
+          (admId && admId !== 'undefined' && xAdmId === admId) ||
           (email && email.includes('@') && xEmail === email) ||
           (mobile && mobile.length === 10 && xMobile === mobile) ||
           (admNo && admNo !== 'allotted' && xAdmNo === admNo) ||
@@ -418,9 +418,9 @@ const deduplicateProfiles = (profiles = []) => {
       continue;
     }
 
-    if (sId) seenIds.add(`sid:${sId}`);
-    if (id) seenIds.add(`id:${id}`);
-    if (admId) seenIds.add(`admid:${admId}`);
+    if (sId && sId !== 'undefined') seenIds.add(`sid:${sId}`);
+    if (id && id !== 'undefined') seenIds.add(`id:${id}`);
+    if (admId && admId !== 'undefined') seenIds.add(`admid:${admId}`);
     if (email && email.includes('@')) seenEmails.add(email);
     if (mobile && mobile.length === 10) seenMobiles.add(mobile);
     if (admNo && admNo !== 'allotted') seenAdmNos.add(admNo);
@@ -802,7 +802,9 @@ export default function StudentProfile() {
       }
 
       const rawAdmissions = admissions.status === 'fulfilled' && Array.isArray(admissions.value) ? admissions.value : [];
-      const allAdmissions = markApiResult(mergeWithDemoAdmissions(rawAdmissions, selectedCollege, selectedAcademicYear));
+      const effectiveCollege = selectedCollege || { id: selectedCollegeId || 1, collegeId: selectedCollegeId || 1, name: 'raghavendra engineering college' };
+      const effectiveYear = selectedAcademicYear || { id: selectedAcademicYearId || 1, academicYearId: selectedAcademicYearId || 1, name: '2026-27' };
+      const allAdmissions = markApiResult(mergeWithDemoAdmissions(rawAdmissions, effectiveCollege, effectiveYear));
 
       // The profile-directory endpoint is intentionally compact and, for some
       // records, omits the college display name even though it is present on
@@ -814,33 +816,68 @@ export default function StudentProfile() {
           const itemAdmissionId = String(item.admissionId ?? item.id ?? '');
           const rowStudentId = String(row.studentId ?? row.id ?? '');
           const itemStudentId = String(item.studentId ?? item.student?.studentId ?? item.student?.id ?? '');
-          return (rowAdmissionId && rowAdmissionId === itemAdmissionId) || (rowStudentId && rowStudentId === itemStudentId);
+          const rowName = String(studentFullName(row) || row.studentName || row.fullName || '').trim().toLowerCase();
+          const itemName = String(studentFullName(item) || item.studentName || item.fullName || (item.personal?.firstName ? [item.personal.firstName, item.personal.lastName].join(' ') : '')).trim().toLowerCase();
+          return (rowAdmissionId && rowAdmissionId !== 'undefined' && rowAdmissionId === itemAdmissionId) ||
+                 (rowStudentId && rowStudentId !== 'undefined' && rowStudentId === itemStudentId) ||
+                 (rowName && itemName && rowName === itemName);
         });
         return admission
           ? { ...profileFromApi(mergeFilledProfileData(admission, row)), completion: row.completion, exportVerified: row.exportVerified }
           : row;
       });
       rows = approvedStudentProfiles(rows, allAdmissions);
-      const existingAdmissions = new Set(rows.map(row => String(row.admissionId ?? row.application?.admissionId ?? row.admission?.admissionId ?? '')));
-      const existingStudents = new Set(rows.map(row => String(row.studentId ?? row.id ?? '')));
+      const existingAdmissions = new Set(rows.map(row => String(row.admissionId ?? row.application?.admissionId ?? row.admission?.admissionId ?? '')).filter(v => v && v !== 'undefined'));
+      const existingStudents = new Set(rows.map(row => String(row.studentId ?? row.id ?? '')).filter(v => v && v !== 'undefined'));
+      const existingNames = new Set(rows.map(row => String(studentFullName(row) || row.studentName || row.fullName || '').trim().toLowerCase()).filter(Boolean));
+
       const missingApprovedAdmissions = allAdmissions.filter(admission => {
         if (!isApprovedAdmission(admission.status ?? admission.currentStatus ?? admission.admissionStatus ?? admission.applicationStatus)) return false;
         const admissionId = String(admission.admissionId ?? admission.id ?? '');
         const studentId = String(admission.studentId ?? admission.student?.studentId ?? admission.student?.id ?? '');
-        return !existingAdmissions.has(admissionId) && (!studentId || !existingStudents.has(studentId));
+        const sName = String(studentFullName(admission) || admission.studentName || admission.fullName || (admission.personal?.firstName ? [admission.personal.firstName, admission.personal.lastName].join(' ') : '')).trim().toLowerCase();
+
+        const hasAdm = admissionId && admissionId !== 'undefined' && existingAdmissions.has(admissionId);
+        const hasStudent = studentId && studentId !== 'undefined' && existingStudents.has(studentId);
+        const hasName = sName && existingNames.has(sName);
+        return !hasAdm && !hasStudent && !hasName;
       });
-      rows = [
-        ...rows,
-        ...missingApprovedAdmissions.map(admission => profileFromApi({
+
+      const synthesizedProfiles = missingApprovedAdmissions.map(admission => {
+        const fallbackId = String(admission.studentId ?? admission.student?.studentId ?? admission.student?.id ?? admission.admissionId ?? admission.id ?? '');
+        const admId = String(admission.admissionId ?? admission.id ?? fallbackId);
+        const resolvedId = fallbackId || admId;
+        const effectiveColId = selectedCollegeId || admission.collegeId || selectedCollege?.collegeId || selectedCollege?.id || 1;
+        const effectiveColName = selectedCollege?.name || admission.admission?.college || 'raghavendra engineering college';
+        const effectiveYrId = selectedAcademicYearId || admission.academic?.academicYearId || selectedAcademicYear?.academicYearId || selectedAcademicYear?.id || 1;
+        const effectiveYrName = selectedAcademicYear?.name || admission.academic?.academicYear || '2026-27';
+
+        const synthesized = profileFromApi({
           ...admission,
-          id: admission.studentId ?? admission.student?.studentId ?? admission.student?.id ?? admission.admissionId ?? admission.id,
-          studentId: admission.studentId ?? admission.student?.studentId ?? admission.student?.id,
-          admissionId: admission.admissionId ?? admission.id,
+          id: resolvedId,
+          studentId: resolvedId,
+          admissionId: admId,
+          collegeId: effectiveColId,
           status: 'APPROVED',
           completion: admission.completion?.percent != null ? admission.completion : calculateCompletion(completionSchemas.studentProfile, admission),
           exportVerified: isApiResult(allAdmissions),
-        })),
-      ];
+        });
+
+        synthesized.id = resolvedId;
+        synthesized.studentId = resolvedId;
+        synthesized.admissionId = admId;
+        synthesized.collegeId = effectiveColId;
+        if (!synthesized.academic) synthesized.academic = {};
+        synthesized.academic.collegeId = effectiveColId;
+        synthesized.academic.academicYearId = effectiveYrId;
+        synthesized.academic.academicYear = effectiveYrName;
+        if (!synthesized.admission) synthesized.admission = {};
+        synthesized.admission.collegeId = effectiveColId;
+        synthesized.admission.college = effectiveColName;
+        return synthesized;
+      });
+
+      rows = [...rows, ...synthesizedProfiles];
       rows = deduplicateProfiles(rows);
       if (requestedId && !selectedStudent) {
         const found = rows.find(r => String(r.id) === String(requestedId) || String(r.studentId) === String(requestedId) || String(r.admissionId) === String(requestedId));
@@ -886,7 +923,7 @@ export default function StudentProfile() {
         const itemCollegeName = item.admission?.college ?? item.college ?? ''
         const matchById = itemCollegeId && String(itemCollegeId) === String(selectedCollegeId)
         const matchByName = selectedCollege?.name && itemCollegeName && itemCollegeName.trim().toLowerCase() === selectedCollege.name.trim().toLowerCase()
-        collegeMatches = Boolean(matchById || matchByName)
+        collegeMatches = Boolean(matchById || matchByName || !itemCollegeId)
       }
 
       let yearMatches = true
@@ -898,7 +935,7 @@ export default function StudentProfile() {
           normYear(itemYearName) === normYear(selectedAcademicYear.name) ||
           itemYearName.trim().toLowerCase() === selectedAcademicYear.name.trim().toLowerCase()
         )
-        yearMatches = Boolean(matchById || matchByName)
+        yearMatches = Boolean(matchById || matchByName || !itemYearId)
       }
 
       return collegeMatches && yearMatches;

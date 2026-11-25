@@ -631,10 +631,10 @@ export function getDemoAdmissionById(id) {
 }
 
 export function mergeWithDemoAdmissions(apiRows = [], selectedCollege, selectedAcademicYear) {
-  const collegeName = selectedCollege?.name || 'raghavendra engineering college'
-  const collegeId = selectedCollege?.id || 1
-  const yearName = selectedAcademicYear?.name || '2026-27'
-  const yearId = selectedAcademicYear?.id || 1
+  const collegeName = selectedCollege?.name || selectedCollege?.collegeName || 'raghavendra engineering college'
+  const collegeId = selectedCollege?.id ?? selectedCollege?.collegeId ?? 1
+  const yearName = selectedAcademicYear?.name || selectedAcademicYear?.academicYearName || '2026-27'
+  const yearId = selectedAcademicYear?.id ?? selectedAcademicYear?.academicYearId ?? 1
 
   // Extract set of existing registration numbers and IDs from real API records
   const existingSet = new Set(

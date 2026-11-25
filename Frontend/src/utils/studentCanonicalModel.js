@@ -532,8 +532,10 @@ export const normalizeCanonicalStudent = (source = {}) => {
   const admissionRaw = { ...(formDataObj.admission || {}), ...(raw.admissionDetails ?? raw.admission ?? {}) }
   const feeRaw = { ...(formDataObj.fees || {}), ...(raw.feeSummary ?? raw.feeDetails ?? raw.fees ?? {}) }
 
-  const admissionId = String(firstFilled(raw.admissionId, raw.studentAdmissionId, raw.application?.admissionId, admissionRaw.admissionId, raw.id, base.id))
-  const studentId = String(firstFilled(raw.studentId, raw.student?.studentId, raw.student?.id, header.studentId, personalRaw.studentId, ''))
+  const rawAdmissionId = firstFilled(raw.admissionId, raw.studentAdmissionId, raw.application?.admissionId, admissionRaw.admissionId, raw.id, base.id)
+  const admissionId = rawAdmissionId != null && rawAdmissionId !== '' && rawAdmissionId !== 'undefined' ? String(rawAdmissionId) : ''
+  const rawStudentId = firstFilled(raw.studentId, raw.student?.studentId, raw.student?.id, header.studentId, personalRaw.studentId)
+  const studentId = rawStudentId != null && rawStudentId !== '' && rawStudentId !== 'undefined' ? String(rawStudentId) : ''
   const status = normalizeAdmissionStatus(firstFilled(raw.status, raw.admissionStatus, raw.applicationStatus, raw.currentStatus, header.status, summary.studentStatus, 'DRAFT'))
 
   // Names
@@ -718,9 +720,9 @@ export const normalizeCanonicalStudent = (source = {}) => {
 
   return {
     ...raw,
-    id: studentId || admissionId,
-    admissionId,
-    studentId,
+    id: (studentId && studentId !== 'undefined') ? studentId : ((admissionId && admissionId !== 'undefined') ? admissionId : (raw.id != null && raw.id !== '' && raw.id !== 'undefined' ? String(raw.id) : base.id)),
+    admissionId: (admissionId && admissionId !== 'undefined') ? admissionId : '',
+    studentId: (studentId && studentId !== 'undefined') ? studentId : '',
     studentCode: raw.studentCode ?? '',
     status,
     createdAt: raw.createdAt ?? raw.createdDate ?? base.createdAt,
