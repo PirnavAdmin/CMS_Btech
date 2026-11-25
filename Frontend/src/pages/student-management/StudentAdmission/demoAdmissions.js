@@ -325,8 +325,7 @@ export const DEMO_ADMISSIONS = [
       dob: '2007-10-18',
       gender: 'Male',
       bloodGroup: 'O+',
-      nationality: 'Indian',
-      photo: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=300&h=380&fit=crop&crop=face'
+      nationality: 'Indian'
     },
     contact: {
       mobile: '+91 99080 11223',
@@ -403,8 +402,7 @@ export const DEMO_ADMISSIONS = [
       dob: '2008-06-15',
       gender: 'Female',
       bloodGroup: 'A-',
-      nationality: 'Indian',
-      photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=380&fit=crop&crop=face'
+      nationality: 'Indian'
     },
     contact: {
       mobile: '+91 98499 88776',
@@ -481,8 +479,7 @@ export const DEMO_ADMISSIONS = [
       dob: '2007-07-04',
       gender: 'Male',
       bloodGroup: 'B+',
-      nationality: 'Indian',
-      photo: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=300&h=380&fit=crop&crop=face'
+      nationality: 'Indian'
     },
     contact: {
       mobile: '+91 97001 22334',
@@ -559,8 +556,7 @@ export const DEMO_ADMISSIONS = [
       dob: '2008-02-11',
       gender: 'Female',
       bloodGroup: 'O+',
-      nationality: 'Indian',
-      photo: 'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?w=300&h=380&fit=crop&crop=face'
+      nationality: 'Indian'
     },
     contact: {
       mobile: '+91 94901 33445',

@@ -1024,18 +1024,9 @@ function AdmissionList() {
                       </td>
                       <td style={{ width: '170px', minWidth: '150px' }}>
                         <div className="sa-student">
-                          <button
-                            type="button"
-                            className="sa-avatar-trigger-btn"
-                            onClick={() => {
-                              if (item.status === 'APPROVED' || item.personal?.photo) setPhotoStudent(item);
-                            }}
-                            title={item.status === 'APPROVED' && item.personal?.photo ? `Click to view passport photo of ${sName}` : `${sName}`}
-                            aria-label={`Applicant ${sName}`}
-                          >
-                            <i>{item.status === 'APPROVED' && item.personal?.photo ? <img src={item.personal.photo} alt={sName} /> : sName.split(' ').map(part => part[0]).slice(0, 2).join('')}</i>
-                            {item.status === 'APPROVED' && <span className="sa-avatar-hint-icon" aria-hidden="true"><FiCamera /></span>}
-                          </button>
+                          <i title={sName} aria-hidden="true">
+                            {studentInitials(item) || sName.split(' ').map(part => part[0]).slice(0, 2).join('').toUpperCase()}
+                          </i>
                           <div className="sa-student-details">
                             <button type="button" className="student-name-link" title={sName} aria-label={`View details for ${sName}`} onClick={() => { if (targetId) navigate(`/student-management/admissions/${targetId}`) }}>{sName}</button>
                             <small title={sContact}>{sContact}</small>
@@ -3189,24 +3180,7 @@ function StudentHeader({ data, onPhotoUpdate }) {
   return (
     <div className="cm-profile-banner">
       <div className="cm-profile-avatar-wrap">
-        {photoSrc ? (
-          <img src={photoSrc} alt={studentName(data)} className="cm-profile-logo" />
-        ) : (
-          <div className="cm-profile-placeholder">{initials}</div>
-        )}
-        <label
-          className="cm-avatar-upload-trigger"
-          title="Click camera to upload student photo from your device"
-          aria-label="Upload student photo"
-        >
-          <FiCamera aria-hidden="true" />
-          <input
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            onChange={handleHeaderPhotoFile}
-            style={{ display: 'none' }}
-          />
-        </label>
+        <div className="cm-profile-placeholder">{initials}</div>
       </div>
       <div className="cm-profile-header-info">
         <div className="cm-profile-badges">
