@@ -279,6 +279,9 @@ export default function CollegeProfileEditor({ editId, college, profile, onDismi
   }
 
   const skipCurrentStep = () => {
+    // Skip is only for optional sections. Validate the active section first so
+    // required fields (such as College Name and College Code) cannot be bypassed.
+    if (!validateCurrentStep()) return
     setCompletedSteps(current => new Set(current).add(activeStep))
     setActiveStep(index => Math.min(steps.length - 1, index + 1))
   }
