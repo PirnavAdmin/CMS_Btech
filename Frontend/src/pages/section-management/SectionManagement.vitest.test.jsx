@@ -39,7 +39,11 @@ vi.mock('../../services/facultyService', () => ({ default: { list: vi.fn(async (
 vi.mock('../../services/studentService', () => ({ default: {} }))
 vi.mock('../../services/roomService', () => ({ default: { getRooms: vi.fn(async () => data.rooms), allocateRoom: vi.fn(async () => {}) } }))
 afterEach(cleanup)
-beforeEach(() => { vi.clearAllMocks(); data.sections = [] })
+beforeEach(() => {
+  vi.clearAllMocks()
+  data.sections = []
+  data.rooms = [{ id: 'room-1', roomNumber: 'R101', roomName: 'Main Room', capacity: 60, status: 'Available' }]
+})
 import { academicYearApi, sectionApi } from '../../api/apiEndpoints'
 import roomService from '../../services/roomService'
 
@@ -98,6 +102,38 @@ it('saves the active year and allocates the room selected by its full path', asy
   fireEvent.click(screen.getByRole('button', { name: 'Create Section' }))
   await waitFor(() => expect(sectionApi.create).toHaveBeenCalledWith(expect.objectContaining({ academicYearId: '1', academicYear: '2026-2027', semesterId: '101' })))
   await waitFor(() => expect(roomService.allocateRoom).toHaveBeenCalledWith('room-1', expect.any(String), 500))
+})
+
+it('shows an immediate room conflict and blocks section creation until another room is selected', async () => {
+  data.rooms = [
+    { id: 'room-1', roomNumber: 'R101', roomName: 'Main Room', capacity: 60, status: 'Available' },
+    { id: 'room-2', roomNumber: 'R102', roomName: 'Second Room', capacity: 60, status: 'Available' },
+  ]
+  data.sections = [{
+    sectionId: 5, sectionName: 'Section A', sectionCode: 'CSE-S1-A', collegeId: 1,
+    courseId: 10, branchId: 7, semesterId: 101, academicYearId: 1,
+    capacity: 30, room: 'R101', status: 1,
+  }]
+  render(<MemoryRouter><SectionManagement mode="form" /></MemoryRouter>)
+  await screen.findByRole('heading', { name: 'Add Section' })
+  fireEvent.change(screen.getByRole('combobox', { name: 'Course' }), { target: { value: '10' } })
+  fireEvent.change(screen.getByRole('combobox', { name: 'Branch' }), { target: { value: '7' } })
+  const semesterSelect = screen.getByRole('combobox', { name: 'Semester' })
+  await waitFor(() => expect(within(semesterSelect).getByRole('option', { name: 'Semester 1', exact: true }).disabled).toBe(false))
+  fireEvent.change(semesterSelect, { target: { value: '101' } })
+  fireEvent.change(screen.getByLabelText(/Capacity/), { target: { value: '30' } })
+  fireEvent.change(screen.getByLabelText(/Status/), { target: { value: 'Active' } })
+  const roomSelect = screen.getByRole('combobox', { name: 'Room / classroom' })
+  fireEvent.change(roomSelect, { target: { value: 'R101' } })
+  expect(screen.getByText('This room is already assigned to another section. Please select a different room.')).toBeTruthy()
+  expect(roomSelect.closest('.section-field').classList.contains('invalid')).toBe(true)
+
+  fireEvent.click(screen.getByRole('button', { name: 'Create Section' }))
+  expect(sectionApi.create).not.toHaveBeenCalled()
+
+  fireEvent.change(roomSelect, { target: { value: 'R102' } })
+  expect(screen.queryByText('This room is already assigned to another section. Please select a different room.')).toBeNull()
+  expect(roomSelect.closest('.section-field').classList.contains('invalid')).toBe(false)
 })
 
 it('does not offer an inactive academic year for a new section', async () => {

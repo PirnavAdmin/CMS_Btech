@@ -456,6 +456,7 @@
   min-height: 36px;
   background: var(--surface);
 }
+.section-compact-form .section-field.invalid :is(input, select, .project-select, .searchable-select__trigger) { border-color: #f04438; }
 .section-compact-form .section-field > small { margin-top: 2px; font-size: 11px; }
 .section-completion { display: grid; gap: 2px; justify-items: center; }
 .section-completion strong { font-size: 13px; }

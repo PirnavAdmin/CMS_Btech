@@ -35,6 +35,7 @@ import './SectionManagement.css'
 import '../../styles/directory-search.css'
 
 const PAGE_SIZE = 5
+const ROOM_ASSIGNMENT_CONFLICT = 'This room is already assigned to another section. Please select a different room.'
 const emptyForm = { name: '', code: '', courseId: '', branchId: '', semesterId: '', academicYearId: '', capacity: '', facultyAdvisorEmployeeProfileId: '', advisor: '', room: '', status: '', startDate: '', endDate: '' }
 const capacityErrorFor = value => {
   const text = String(value ?? '').trim()
@@ -438,6 +439,25 @@ function SectionForm({ editMode = false }) {
     return key && rooms.find(room => [roomValue(room), room.roomNumber || room.roomName || room.id]
       .some(label => String(label).trim().toLowerCase() === key))
   }
+  const isRoomAssignedInAcademicYear = (room, academicYearId = form.academicYearId) => {
+    if (!room || !academicYearId) return false
+    const labels = [roomValue(room), room.roomNumber, room.roomName, room.id, room.classroomId]
+      .filter(Boolean)
+      .map(value => String(value).trim().toLowerCase())
+    return sections.some(section => {
+      const sectionStatus = String(section.status ?? '').trim().toLowerCase()
+      if (String(section.id) === String(id)
+        || String(section.academicYearId) !== String(academicYearId)
+        || ['inactive', '0', 'false'].includes(sectionStatus)
+        || section.isArchived === true
+        || Number(section.isArchived) === 1) return false
+      const roomName = String(room.assignedSection || '').trim().toLowerCase()
+      return labels.includes(String(section.room || '').trim().toLowerCase())
+        || (room.sectionId && String(section.id) === String(room.sectionId))
+        || (roomName && roomName === String(section.name || '').trim().toLowerCase())
+    })
+  }
+  const roomAssignmentError = value => isRoomAssignedInAcademicYear(findRoom(value)) ? ROOM_ASSIGNMENT_CONFLICT : ''
   useEffect(() => {
     if (!form.room) return
     const selectedRoom = findRoom(form.room)
@@ -513,7 +533,9 @@ function SectionForm({ editMode = false }) {
     const next = {}
     const requiredFields = ['courseId', 'branchId', 'semesterId', 'name', 'code', 'status']
     requiredFields.forEach(key => { if (!String(form[key] || '').trim()) next[key] = 'Required.' })
-    if (!editMode && !String(form.room || '').trim()) next.room = 'Create and select a room before creating a section.'
+    const roomConflict = roomAssignmentError(form.room)
+    if (roomConflict) next.room = roomConflict
+    else if (!editMode && !String(form.room || '').trim()) next.room = 'Create and select a room before creating a section.'
     if (!form.academicYearId && !selectedAcademicYearId) next.academicYearId = yearWarning || 'An academic year is required.'
     if (!editMode && !semester) next.semesterId = 'Select a configured semester.'
     const capacityError = capacityErrorFor(form.capacity)
@@ -616,11 +638,12 @@ function SectionForm({ editMode = false }) {
     const status = String(room.status || '').toLowerCase()
     const alreadyAssigned = room.assignedSection && String(room.assignedSection) !== String(form.name)
     const assignedToAnotherSection = sections.some((section) => String(section.id) !== String(id) && String(section.status || '').toLowerCase() !== 'inactive' && String(section.room || '') === String(roomValue(room)))
+    const assignedInAcademicYear = isRoomAssignedInAcademicYear(room)
     const fitsCapacity = !form.capacity || !room.capacity || Number(room.capacity) >= Number(form.capacity)
     const mappedToSelection = room.buildingBlock === roomBuilding && room.floor === roomFloor
     const legacyUnmapped = (!room.buildingBlock || !room.floor) && !roomBuilding && !roomFloor
     const selectedByCurrentSection = String(roomValue(room)) === String(form.room) || String(label) === String(form.room)
-    return (mappedToSelection || legacyUnmapped) && (selectedByCurrentSection || (!alreadyAssigned && !assignedToAnotherSection && !['inactive', 'maintenance', 'unavailable', 'occupied'].includes(status))) && fitsCapacity
+    return (mappedToSelection || legacyUnmapped) && (selectedByCurrentSection || assignedInAcademicYear || (!alreadyAssigned && !assignedToAnotherSection && !['inactive', 'maintenance', 'unavailable', 'occupied'].includes(status))) && fitsCapacity
   })
 
   return (
@@ -644,7 +667,7 @@ function SectionForm({ editMode = false }) {
             <div className="section-form-grid">
               <Field label="Course *" error={errors.courseId}><SearchableSelect label="Course" value={form.courseId} options={scopedCourses.map(item => ({ id: item.id, value: item.id, name: item.name, code: item.code }))} onChange={setCourse} disabled={editMode} placeholder="Select course" /></Field>
               <Field label="Branch *" error={errors.branchId}><SearchableSelect label="Branch" value={form.branchId} options={branches.filter(item => !form.courseId || String(item.courseId) === String(form.courseId)).map(item => ({ id: item.id, value: item.id, name: item.name, code: item.code }))} onChange={setBranch} disabled={editMode || !form.courseId} placeholder={form.courseId ? 'Select branch' : 'Select course first'} /></Field>
-              <Field label="Academic Year *" error={errors.academicYearId}>{editMode ? <ReadOnly value={form.academicYear || activeYear?.name} /> : <SearchableSelect label="Academic year" value={form.academicYearId || ''} options={academicYearOptions.filter(isSectionYearActive).map(item => ({ id: item.id, name: item.name }))} onChange={(academicYearId) => { const selectedYear = academicYearOptions.find(item => String(item.id) === String(academicYearId)); setForm(current => ({ ...current, academicYearId, academicYear: selectedYear?.name || '', semesterId: '', semester: '' })); setErrors(current => ({ ...current, academicYearId: '', semesterId: '' })) }} placeholder="Select academic year" />}</Field>
+              <Field label="Academic Year *" error={errors.academicYearId}>{editMode ? <ReadOnly value={form.academicYear || activeYear?.name} /> : <SearchableSelect label="Academic year" value={form.academicYearId || ''} options={academicYearOptions.filter(isSectionYearActive).map(item => ({ id: item.id, name: item.name }))} onChange={(academicYearId) => { const selectedYear = academicYearOptions.find(item => String(item.id) === String(academicYearId)); setForm(current => ({ ...current, academicYearId, academicYear: selectedYear?.name || '', semesterId: '', semester: '' })); setErrors(current => ({ ...current, academicYearId: '', semesterId: '', room: '' })) }} placeholder="Select academic year" />}</Field>
               <Field label="Semester *" error={errors.semesterId}><ProjectSelect aria-label="Semester" value={form.semesterId} onChange={(event) => setSemester(event.target.value)} disabled={editMode || !form.branchId || !form.academicYearId}><option value="">{form.branchId ? (semesterOptions.length ? 'Select semester' : 'No saved semesters') : 'Select branch first'}</option>{semesterOptions.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</ProjectSelect>{form.branchId && !semesterOptions.length && <small>Create the semester definition in Program Configuration first.</small>}</Field>
               <Field label="Section Name *" error={errors.name}><input value={form.name} onChange={(event) => setField('name', event.target.value)} placeholder="e.g. Section A" /></Field>
               <Field label="Section Code *" error={errors.code}><input value={form.code} onChange={(event) => setField('code', event.target.value)} placeholder="e.g. CSE-S1-A" /></Field>
@@ -652,7 +675,7 @@ function SectionForm({ editMode = false }) {
               <Field label="Status *" error={errors.status}><ProjectSelect value={form.status} onChange={(event) => setField('status', event.target.value)}><option value="" disabled>Select status</option><option value="Active">Active</option><option value="Inactive">Inactive</option></ProjectSelect></Field>
               <Field label="Academic Block"><ProjectSelect aria-label="Academic block" value={roomBuilding} onChange={(event) => { setRoomBuilding(event.target.value); setRoomFloor(''); setField('room', '') }}><option value="">Select block</option>{roomBuildings.map((building) => <option key={building} value={building}>{building}</option>)}</ProjectSelect></Field>
               <Field label="Floor"><ProjectSelect aria-label="Room floor" value={roomFloor} onChange={(event) => { setRoomFloor(event.target.value); setField('room', '') }} disabled={!roomBuilding}><option value="">{roomBuilding ? 'Select floor' : 'Select block first'}</option>{roomFloors.map((floor) => <option key={floor} value={floor}>{floor}</option>)}</ProjectSelect></Field>
-              <Field label={editMode ? 'Room / Classroom' : 'Room / Classroom *'} error={errors.room}><ProjectSelect aria-label="Room / classroom" value={form.room} onChange={(event) => setField('room', event.target.value)} disabled={!((roomBuilding && roomFloor) || hasLegacyUnmappedRooms)}><option value="">{editMode ? 'Assign later' : roomFloor ? 'Select an available room' : hasLegacyUnmappedRooms && !roomBuilding ? 'Select a room' : 'Select floor first'}</option>{availableRooms.map(room => <option key={room.id} value={roomValue(room)}>{roomLabel(room)}</option>)}</ProjectSelect>{!rooms.length && <small>No rooms configured. <Link to="/rooms-management/add">Add a room first</Link></small>}{((roomBuilding && roomFloor) || hasLegacyUnmappedRooms) && availableRooms.length === 0 && <small>No suitable available rooms for this section capacity.</small>}</Field>
+              <Field label={editMode ? 'Room / Classroom' : 'Room / Classroom *'} error={errors.room || roomAssignmentError(form.room)}><ProjectSelect aria-label="Room / classroom" value={form.room} onChange={(event) => setField('room', event.target.value)} disabled={!((roomBuilding && roomFloor) || hasLegacyUnmappedRooms)}><option value="">{editMode ? 'Assign later' : roomFloor ? 'Select an available room' : hasLegacyUnmappedRooms && !roomBuilding ? 'Select a room' : 'Select floor first'}</option>{availableRooms.map(room => <option key={room.id} value={roomValue(room)}>{roomLabel(room)}</option>)}</ProjectSelect>{!rooms.length && <small>No rooms configured. <Link to="/rooms-management/add">Add a room first</Link></small>}{((roomBuilding && roomFloor) || hasLegacyUnmappedRooms) && availableRooms.length === 0 && <small>No suitable available rooms for this section capacity.</small>}</Field>
               <Field label="Faculty Advisor" error={errors.facultyAdvisorEmployeeProfileId}><SearchableSelect label="Faculty advisor" value={form.facultyAdvisorEmployeeProfileId} options={teacherCandidates.map(item => ({ id: item.employeeProfileId, value: item.employeeProfileId, name: item.fullName, code: [item.employeeCode, item.designation].filter(clean).join(' / ') }))} onChange={(value) => { const teacher = teacherCandidates.find(item => String(item.employeeProfileId) === String(value)); setForm(current => ({ ...current, facultyAdvisorEmployeeProfileId: value, advisor: teacher?.fullName || '' })) }} placeholder="Assign later" noOptionsMessage="No eligible faculty found." /></Field>
             </div>
           </section>
