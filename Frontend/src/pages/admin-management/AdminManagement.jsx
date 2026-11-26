@@ -1895,6 +1895,7 @@ const mapCollege = (record) => {
   website: record.website ?? record.Website ?? contact.website ?? contact.Website ?? '',
   logo: getCollegeLogoUrl(id, logoValue || cachedLogo, [code, name, record.collegeCode, record.collegeName]),
   principal: record.principal ?? record.principalName ?? administration.principalName ?? record.PrincipalName ?? '',
+  contactPerson: record.contactPerson ?? record.ContactPerson ?? '',
   principalEmail: record.principalEmail ?? administration.principalEmail ?? extended.principalEmail ?? '',
   principalContact: record.principalContact ?? record.principalPhone ?? administration.principalContact ?? extended.principalContact ?? '',
   accreditation: extended.accreditationSummary ?? '',
@@ -2581,7 +2582,7 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
                 <DataTable caption="Organizations" tableClassName="college-config-table" rows={filteredColleges} pagination={{ page: currentPage, pageSize: itemsPerPage, onPageChange: setCurrentPage }} columns={[
                   { key:'name', label:'Organization Name', className:'college-col-identity', render:college => <div className="college-config-identity"><div className="college-config-identity-details"><button type="button" className="college-config-name" title={college.name} aria-label={`View details for ${college.name}`} onClick={() => openDetails(college)}>{college.name}</button><small title={college.type}>{college.type}</small></div></div> },
                   { key:'code', label:'Organization Code', className:'college-col-code', render:college => <code className="college-config-truncate" title={college.code}>{college.code}</code> },
-                  { key:'principal', label:'Contact Person', className:'college-col-contact-person', render:college => <span className="college-config-truncate" title={college.principal}>{college.principal || '—'}</span> },
+                  { key:'contactPerson', label:'Contact Person', className:'college-col-contact-person', render:college => <span className="college-config-truncate" title={college.contactPerson}>{college.contactPerson || '—'}</span> },
                   { key:'contact', label:'Contact', className:'college-col-contact', render:college => <div><span className="college-config-truncate" title={college.contact}>{college.contact || '—'}</span><small className="college-config-email college-config-truncate" title={college.email}>{college.email || '—'}</small></div> },
                   { key:'status', label:'Status', className:'college-col-status', render:college => <StatusBadge value={college.status === 'active' ? 'Active' : 'Inactive'} /> },
                   completionColumn,
@@ -2750,7 +2751,7 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
                   title="Contact Details"
                   icon={ContactIcon}
                   items={[
-                    { label: 'Contact Person', value: activeCollege.principal },
+                    { label: 'Contact Person', value: activeCollege.contactPerson },
                     { label: 'Contact Number', value: activeCollege.contact },
                     { label: 'Alternate Contact Number', value: activeCollege.alternateContact },
                     { label: 'Email', value: activeCollege.email },
@@ -3772,7 +3773,7 @@ function DepartmentManagement({ inlineCreate = false, onCreated, onDismiss } = {
                 columns={[
                   { key: 'name', label: 'Department', sortable: true, render: item => <div className="as-directory-record"><strong>{item.name}</strong><small>{item.code}</small></div> },
                   { key: 'hod', label: 'HOD', sortable: true, render: item => <span title={item.hod || 'Unassigned'}>{item.hod || 'Unassigned'}</span> },
-                  { key: 'branches', label: 'Linked Branches', render: item => linkedBranches(item.id)?.length ?? 'Unavailable' },
+                  { key: 'branches', label: 'Linked Branches', className: 'table-center', render: item => linkedBranches(item.id)?.length ?? 'Unavailable' },
                   completionColumn,
                   { key: 'status', label: 'Status', sortable: true, render: item => <StatusBadge value={item.status} /> },
                 ]}
@@ -6781,6 +6782,14 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
 
   // Modals state
   const [editingRoom, setEditingRoom] = useState(null)
+  const roomCapacityValue = Number(editingRoom?.capacity)
+  const roomCapacityError = editingRoom?.capacity === '' || editingRoom?.capacity == null
+    ? ''
+    : roomCapacityValue > 60
+      ? 'Seating capacity cannot exceed 60 seats.'
+      : (!Number.isInteger(roomCapacityValue) || roomCapacityValue < 1)
+        ? 'Enter a positive whole number of seats.'
+        : ''
   const [customRoomType, setCustomRoomType] = useState(false)
   const [customBuildingBlock, setCustomBuildingBlock] = useState(false)
   const [viewingRoom, setViewingRoom] = useState(null)
@@ -7127,6 +7136,7 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
   const handleSaveRoom = async (e) => {
     e.preventDefault()
     if (saving) return
+    if (!editingRoom.capacity || roomCapacityError) return showError(roomCapacityError || 'Please enter a seating capacity between 1 and 60.')
     if (!editingRoom.buildingBlock?.trim()) return showError(customBuildingBlock ? 'Please enter the building block.' : 'Please select a building block.')
     if (!editingRoom.floor) return showError('Please select a floor.')
     if (!editingRoom.roomType?.trim()) return showError(customRoomType ? 'Please enter the room type.' : 'Please select a room type.')
@@ -7903,7 +7913,8 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
                       </div>
                       <div className="rooms-form-group">
                         <label>Seating Capacity <span className="req-mark">*</span></label>
-                        <div className="rooms-capacity-input"><input type="number" min="1" max="500" className="rooms-input" placeholder="e.g. 60" value={editingRoom.capacity} onChange={(e) => setEditingRoom({ ...editingRoom, capacity: Number(e.target.value) || '' })} required /><span>seats</span></div>
+                        <div className="rooms-capacity-input"><input type="number" min="1" max="60" step="1" className="rooms-input" placeholder="e.g. 60" value={editingRoom.capacity} aria-invalid={Boolean(roomCapacityError)} aria-describedby={roomCapacityError ? 'room-capacity-error' : undefined} onChange={(e) => setEditingRoom({ ...editingRoom, capacity: e.target.value === '' ? '' : Number(e.target.value) })} required /><span>seats</span></div>
+                        {roomCapacityError && <small id="room-capacity-error" className="cm-field-error" role="alert">{roomCapacityError}</small>}
                       </div>
                       <div className="rooms-form-group">
                         <label>Availability Status <span className="req-mark">*</span></label>

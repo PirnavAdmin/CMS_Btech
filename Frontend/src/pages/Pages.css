@@ -2034,6 +2034,9 @@
 .ym-campus-art { width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 12px 18px rgba(35,35,90,.18)); animation: ymCampusFloat 5s ease-in-out infinite; }
 @keyframes ymCampusFloat { 0%,100% { transform: translateY(2px); } 50% { transform: translateY(-5px); } }
 .ym-summary-chips.ym-hero-stats { display: grid; grid-template-columns: repeat(4, minmax(125px, 1fr)); gap: 10px; width: 100%; margin-top: 0; }
+:root #root .ym-dashboard-wrapper .ym-summary-chips.ym-hero-stats { border-radius: 18px; }
+:root #root .ym-dashboard-wrapper .ym-summary-chips.ym-hero-stats > .ym-hero-stat:first-child { border-radius: 18px 0 0 18px; }
+:root #root .ym-dashboard-wrapper .ym-summary-chips.ym-hero-stats > .ym-hero-stat:last-child { border-radius: 0 18px 18px 0; }
 .ym-hero-stat { display: flex; min-width: 0; align-items: center; gap: 10px; padding: 11px 13px; text-align: left; border: 1px solid rgba(255,255,255,.22); border-radius: 14px; color: var(--text-on-dark); background: var(--surface); backdrop-filter: blur(8px); cursor: pointer; transition: transform .2s ease, background .2s ease, border-color .2s ease; }
 .ym-hero-stat:hover { transform: translateY(-3px); background: var(--surface-hover); border-color: rgba(255,255,255,.42); }
 .ym-hero-stat > span:last-child { display: grid; gap: 2px; }
@@ -2776,6 +2779,8 @@
 .lp-page .lp-brand > i { background: var(--brand-dark); color: var(--brand); box-shadow: var(--shadow-sm); }
 .lp-public .lp-footer-brand .lp-brand > i { display: grid; flex: 0 0 40px; color: #fff; background: var(--brand-dark); }
 .lp-public .lp-footer-brand .lp-brand > i svg { display: block; width: 20px; height: 20px; }
+.lp-page .lp-brand > i:has(.lp-platform-logo) { display: grid; flex: 0 0 40px; overflow: hidden; background: var(--surface); }
+.lp-platform-logo { display: block; width: 100%; height: 100%; object-fit: contain; }
 :root:not([data-theme="dark"]) .lp-page .lp-nav { border-color: var(--border); background: var(--header-bg); }
 :root[data-theme="dark"] .lp-page :is(.lp-overview, .lp-workflow, .lp-about) { background: var(--surface-soft); }
 

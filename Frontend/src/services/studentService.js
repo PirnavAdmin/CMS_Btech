@@ -168,8 +168,8 @@ class StudentService {
           studentName: finalName,
           fullName: finalName,
           name: finalName,
-          rollNumber: finalAcademic.rollNumber || finalApp.admissionNumber || '',
-          registrationNumber: finalApp.registrationNumber || finalApp.number || finalAcademic.rollNumber || '',
+          rollNumber: (finalAcademic.rollNumber && !String(finalAcademic.rollNumber).startsWith('ADM-')) ? finalAcademic.rollNumber : (canonicalProf.rollNumber || ''),
+          registrationNumber: finalApp.registrationNumber || finalApp.number || '',
           personal: finalPersonal,
           academic: finalAcademic,
           application: finalApp,
@@ -206,8 +206,8 @@ class StudentService {
           studentName: name,
           fullName: name,
           name: name,
-          rollNumber: canonical.academic?.rollNumber || canonical.application?.admissionNumber || a.academic?.rollNumber || '',
-          registrationNumber: canonical.application?.registrationNumber || canonical.application?.number || a.application?.registrationNumber || '',
+          rollNumber: (canonical.academic?.rollNumber && !String(canonical.academic.rollNumber).startsWith('ADM-')) ? canonical.academic.rollNumber : (canonical.rollNumber || ''),
+          registrationNumber: canonical.application?.registrationNumber || canonical.application?.number || '',
           academic: {
             ...a.academic,
             ...canonical.academic,
@@ -269,7 +269,13 @@ class StudentService {
 
     const targetCourseNorm = normalizeAcademicTerm(course || courseCode)
     const targetBranchNorm = normalizeAcademicTerm(branch || branchCode)
-    const termNumber = value => parseNum(value) ?? ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'].indexOf(String(value ?? '').trim().replace(/^semester\s*/i, '').toUpperCase()) + 1
+    const termNumber = (value) => {
+      const n = parseNum(value)
+      if (n !== null && Number.isFinite(n) && n > 0) return n
+      const roman = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII']
+      const idx = roman.indexOf(String(value ?? '').trim().replace(/^semester\s*/i, '').toUpperCase())
+      return idx >= 0 ? idx + 1 : null
+    }
     const targetSemNum = termNumber(semester)
     const targetYearNorm = normYear(academicYear)
 
@@ -330,12 +336,27 @@ class StudentService {
         }
       }
 
-      // Semester matching
-      if (semesterId) {
-        if (String(acad.semesterId ?? '') !== String(semesterId)) return false
-      } else if (semester) {
-        const savedLabel = acad.semester || acad.semesterName
-        if (targetSemNum ? termNumber(savedLabel) !== targetSemNum : normalizeAcademicTerm(savedLabel) !== normalizeAcademicTerm(semester)) return false
+      // Semester matching: ID matching with graceful fallback to semester number & name
+      if (semesterId || semester) {
+        const studentSemId = acad.semesterId ? String(acad.semesterId) : ''
+        const studentSemLabel = acad.semester || acad.semesterName || ''
+        const studentSemNum = termNumber(studentSemLabel) || parseNum(studentSemId)
+
+        if (semesterId && studentSemId && String(semesterId) === studentSemId) {
+          // ID matched directly
+        } else if (targetSemNum && studentSemNum && targetSemNum === studentSemNum) {
+          // Semester number matched (e.g. 1 === 1)
+        } else if (semester && studentSemLabel && (
+          normalizeAcademicTerm(studentSemLabel) === normalizeAcademicTerm(semester) ||
+          String(studentSemLabel).trim().toLowerCase() === String(semester).trim().toLowerCase()
+        )) {
+          // Label matched
+        } else if (!studentSemId && !studentSemLabel) {
+          // Fresh admission without explicit semester defaults to Semester 1
+          if (targetSemNum !== 1) return false
+        } else {
+          return false
+        }
       }
 
       // Section matching

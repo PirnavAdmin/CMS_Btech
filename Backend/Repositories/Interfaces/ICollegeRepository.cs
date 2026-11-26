@@ -12,7 +12,7 @@ namespace BTech.Repositories.Interfaces
         Task<IEnumerable<College>> GetAllAsync(string? search = null, sbyte? status = null);
         Task<(IEnumerable<College> Items, int TotalCount)> SearchAsync(CollegeSearchFilterDto filter);
         Task<College> AddAsync(College college);
-        Task UpdateAsync(College college);
+        Task UpdateAsync(College college, bool updateContactPerson = false);
         Task<College?> UpdateStatusAsync(long collegeId, sbyte status, long? updatedBy);
 
         // Soft-delete a college

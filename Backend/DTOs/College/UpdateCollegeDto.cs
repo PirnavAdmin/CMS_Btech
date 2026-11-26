@@ -46,6 +46,9 @@ namespace BTech.DTOs.College
         [StringLength(200)]
         public string? Principal { get; set; }
 
+        [StringLength(200)]
+        public string? ContactPerson { get; set; }
+
         [EmailAddress]
         [StringLength(150)]
         public string? PrincipalEmail { get; set; }

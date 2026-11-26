@@ -751,6 +751,8 @@ export const FeeStructureWizardModule = (() => {
     const [feeCategories, setFeeCategories] = useState([]);
     const selectableFeeCategories = feeCategories.filter(row => String(row.name || "").trim().toLowerCase() !== "hostel");
     const [serverPlans, setServerPlans] = useState([]);
+    const lastBatchBranchRef = useRef("");
+    const pendingBatchAutoFillRef = useRef("");
     const [saveResults, setSaveResults] = useState([]);
     const [saving, setSaving] = useState(false);
     const [submissionComplete, setSubmissionComplete] = useState(false);
@@ -979,6 +981,29 @@ export const FeeStructureWizardModule = (() => {
       .filter(row => s.courseId && s.branchId && String(row.courseId) === String(s.courseId) && String(row.branchId) === String(s.branchId)
         && (!row.academicYearId || String(row.academicYearId) === String(s.academicYearId)))
       .map(row => String(row.batch || "").trim()).filter(Boolean))];
+    useEffect(() => {
+      if (legacyLocalEdit) return;
+      const branchId = String(s.branchId || "");
+      if (lastBatchBranchRef.current !== branchId) {
+        lastBatchBranchRef.current = branchId;
+        pendingBatchAutoFillRef.current = branchId;
+      }
+      if (!branchId) {
+        pendingBatchAutoFillRef.current = "";
+        return;
+      }
+      if (s.batch) {
+        pendingBatchAutoFillRef.current = "";
+        return;
+      }
+      if (pendingBatchAutoFillRef.current !== branchId) return;
+      const batch = derivedBatch && batches.includes(derivedBatch)
+        ? derivedBatch
+        : batches.length === 1 ? batches[0] : "";
+      if (!batch) return;
+      pendingBatchAutoFillRef.current = "";
+      set(current => String(current.branchId || "") === branchId && !current.batch ? { ...current, batch } : current);
+    }, [legacyLocalEdit, s.branchId, s.batch, derivedBatch, batches]);
     const suggestedName = [masters.courses.find(row => String(row.id) === String(s.courseId))?.name,
       branches.find(row => String(row.id) === String(s.branchId))?.name, s.batch,
       semesters.find(row => String(row.id) === String(s.semesterId))?.name,

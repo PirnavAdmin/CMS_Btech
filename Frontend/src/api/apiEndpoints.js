@@ -16,7 +16,7 @@ if (typeof window !== 'undefined' && window.localStorage) {
 }
 
 const normalizeBaseUrl = (value = '') => value.trim().replace(/\/+$/, '')
-const DEFAULT_API_BASE_URL = 'https://prune-abroad-blemish.ngrok-free.dev'
+const DEFAULT_API_BASE_URL = 'https://vaguely-citric-fragrant.ngrok-free.dev'
 // Results endpoints are optional until the institution's result service is integrated.
 export const RESULTS_API_ENABLED = String(import.meta.env.VITE_RESULTS_API_ENABLED || '').toLowerCase() === 'true'
 
@@ -497,6 +497,15 @@ const withQuery = (url, params = {}) => {
 }
 // Reuse authenticated transport in the campus and examination integrations.
 export { request as authenticatedRequest }
+export const platformLogoUrl = endpoint('/api/platform-branding/logo')
+export const platformLogoUpdated = 'platform-logo-updated'
+export const uploadPlatformLogo = async file => {
+  const form = new FormData()
+  form.append('logo', file)
+  const result = await request(platformLogoUrl, { method: 'POST', body: form })
+  window.dispatchEvent(new Event(platformLogoUpdated))
+  return result
+}
 const dataResponse = (response) => response?.data?.data ?? response?.data ?? response ?? null
 const listData = (response) => listResponse(response)
 
@@ -603,6 +612,12 @@ export const userDirectoryApi = {
 }
 
 export const demoRequestsApi = {
+  getRecipient: async () => (await request(endpoint('/api/v1/demo-requests/recipient')))?.data?.email ?? '',
+  saveRecipient: async email => (await request(endpoint('/api/v1/demo-requests/recipient'), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  }))?.data?.email ?? '',
   list: async params => {
     const rows = extractListResponse(await request(withQuery(API_ENDPOINTS.demoRequests.list, params)))
     if (!rows) throw new Error('The demo request list returned an unexpected response.')
@@ -1064,7 +1079,7 @@ const sectionPayload = (section) => ({
   sectionCode: String(section.code || section.sectionCode || '').trim().toUpperCase(),
   sectionName: String(section.name || section.sectionName || '').trim(),
   capacity: Number(section.capacity),
-  facultyAdvisorEmployeeProfileId: section.facultyAdvisorEmployeeProfileId || null,
+  facultyAdvisorEmployeeProfileId: nullableNumericId(section.facultyAdvisorEmployeeProfileId) ?? null,
   room: String(section.room || '').trim() || null,
   shift: section.shift || 'Morning',
   sectionType: section.type || section.sectionType || 'Regular',

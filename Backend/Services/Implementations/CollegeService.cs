@@ -244,8 +244,8 @@ namespace BTech.Services.Implementations
             if (!scope.IsSuperAdmin && (!scope.IsCollegeAdmin || scope.SelectedCollegeId != collegeId || scope.AssignedCollegeId != collegeId))
                 throw new BTech.Exceptions.ForbiddenException("Only the assigned college's administrator may edit its profile.");
             if (!scope.IsSuperAdmin &&
-                (dto.AcademicYearId.HasValue || dto.Timezone != null || dto.CurrencyCode != null))
-                throw new BTech.Exceptions.ForbiddenException("Academic scope, timezone, currency and status are managed by Super Admin.");
+                (dto.AcademicYearId.HasValue || dto.Timezone != null || dto.CurrencyCode != null || dto.ContactPerson != null))
+                throw new BTech.Exceptions.ForbiddenException("Academic scope, timezone, currency, status and organization contact are managed by Super Admin.");
             var college =
                 await _collegeRepository.GetByIdAsync(
                     collegeId);
@@ -293,6 +293,8 @@ namespace BTech.Services.Implementations
             college.Phone = dto.Phone ?? college.Phone;
 
             college.Principal = dto.Principal == null ? college.Principal : NormalizeOptional(dto.Principal);
+            if (dto.ContactPerson != null)
+                college.ContactPerson = NormalizeOptional(dto.ContactPerson);
 
             college.PrincipalEmail = dto.PrincipalEmail == null ? college.PrincipalEmail : NormalizeOptional(dto.PrincipalEmail);
 
@@ -363,7 +365,7 @@ namespace BTech.Services.Implementations
                 userId;
 
             await _collegeRepository.UpdateAsync(
-                college);
+                college, updateContactPerson: dto.ContactPerson != null);
 
             return MapToResponseDto(college);
         }
@@ -462,6 +464,7 @@ namespace BTech.Services.Implementations
                 Phone =
                     college.Phone,
 
+                ContactPerson = college.ContactPerson,
                 Principal =
                     college.Principal,
 

@@ -13,7 +13,7 @@ import { FiUploadCloud, FiInbox } from 'react-icons/fi'
 import { academicYearApi, branchApi, courseApi, lookupIndianPincode } from '../../../api/apiEndpoints'
 import { getColleges } from '../../../auth/collegeApi'
 import { getOperationalAcademicYearOptions } from '../../../utils/academicYearUtils'
-import { REQUIRED_FIELDS, HOSTEL_FEES, TRANSPORT_FEES } from '../../../utils/studentCanonicalModel'
+import { REQUIRED_FIELDS, HOSTEL_FEES, TRANSPORT_FEES, generateCanonicalRollNumber } from '../../../utils/studentCanonicalModel'
 import { ProjectSelect } from '../../../components/SearchableSelect'
 import { Link } from 'react-router-dom'
 import { readFeeWorkspace, feeLedger, feeMoney, readHostelStructures, readTransportStructures } from '../../../services/feeStructureService'
@@ -94,12 +94,14 @@ const resolveProfileTransportFee = (admission = {}, fees = {}, academic = {}) =>
   return Number(TRANSPORT_FEES[admission?.transportRoute] || 0);
 };
 import useToastState from '../../../hooks/useToastState'
-import { isApiResult } from '../../../utils/exportProvenance'
+import { isApiResult, markApiResult } from '../../../utils/exportProvenance'
 import { approvedStudentProfiles, isApprovedAdmission } from '../../../utils/approvedStudentProfiles'
+import { mergeWithDemoAdmissions, getDemoAdmissionById } from '../StudentAdmission/demoAdmissions'
+import { PassportPhotoModal } from '../StudentAdmission/StudentAdmission'
 import ExportMenu, { PrintDetailsButton } from '../../../components/ExportMenu'
 import { profileColumns } from '../../../utils/exportColumns'
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FiAlertCircle, FiArrowLeft, FiBookOpen, FiCheckCircle, FiChevronLeft, FiChevronRight, FiEdit2, FiFileText, FiFilter, FiRefreshCw, FiSave, FiSearch, FiUser, FiUsers, FiX } from "react-icons/fi";
+import { FiAlertCircle, FiArrowLeft, FiBookOpen, FiCamera, FiCheckCircle, FiChevronLeft, FiChevronRight, FiEdit2, FiEye, FiFileText, FiRefreshCw, FiSave, FiSearch, FiUser, FiUsers, FiX } from "react-icons/fi";
 import InfoCard from "../../../components/InfoCard";
 import StatusBadge from "../../../components/StatusBadge";
 import DashboardLayout from "../../../layouts/DashboardLayout";
@@ -169,6 +171,20 @@ const shortLabel = (x) => {
   return BRANCH_ABBR[key] || x;
 };
 
+const clone = (x) => {
+  if (x === null || typeof x !== "object") return x;
+  try {
+    return structuredClone(x);
+  } catch {
+    try {
+      return JSON.parse(
+        JSON.stringify(x, (k, v) => (typeof v === "function" ? undefined : v)),
+      );
+    } catch {
+      return Array.isArray(x) ? [...x] : { ...x };
+    }
+  }
+};
 const PROFILE_DOCUMENTS = DOCUMENTS_CONFIG.map((d) => [d.key, d.label]);
 
 const documentsFromApi = (rows) => {
@@ -219,7 +235,200 @@ const saveStoredPhoto = (kind, id, photo) => {
   }
 };
 
-const profileFromApi = (x) => { const normalized = normalizeCanonicalStudent(x); return { ...normalized, documentError: x.documentError, fees: x.fees?.source === "backend" || x.fees?.error ? x.fees : { ...normalized.fees, ...studentIntegrationFees(x.feeSummary, x.feeStructure) } }; };
+const APPROVED_PORTRAITS = {
+  male: [
+    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=380&fit=crop&crop=face',
+    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&h=380&fit=crop&crop=face',
+    'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=300&h=380&fit=crop&crop=face',
+    'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=300&h=380&fit=crop&crop=face',
+    'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=300&h=380&fit=crop&crop=face',
+  ],
+  female: [
+    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=380&fit=crop&crop=face',
+    'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?w=300&h=380&fit=crop&crop=face',
+    'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=380&fit=crop&crop=face',
+    'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&h=380&fit=crop&crop=face',
+    'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=300&h=380&fit=crop&crop=face',
+  ],
+};
+
+const CANONICAL_APPROVED_PORTRAITS = {
+  // Pravallika Chinnaluru (Female, CSE) - original Unsplash photo-1534528741775
+  pravallika: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=380&fit=crop&crop=face',
+  // Pooja Ramakrishnan (Female, EEE) - original Unsplash photo-1567532939604
+  pooja: 'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?w=300&h=380&fit=crop&crop=face',
+  // Divya Sri Mandava (Female, AI & DS) - original Unsplash photo-1544005313
+  divya: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=380&fit=crop&crop=face',
+  // Surya Vamsi (Male, CSE)
+  surya: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=380&fit=crop&crop=face',
+  // Naidu Bangaru (Male, Concrete Management)
+  naidu: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&h=380&fit=crop&crop=face',
+  // Kiran Kumar Yadav (Male, ME) - original Unsplash photo-1519085360753
+  kiran: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=300&h=380&fit=crop&crop=face',
+  // Aditya Vikram Raju (Male, CSE) - original Unsplash photo-1492562080023
+  aditya: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=300&h=380&fit=crop&crop=face',
+  // Additional student roster mappings:
+  rahul: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=300&h=380&fit=crop&crop=face',
+  sneha: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=300&h=380&fit=crop&crop=face',
+  ananya: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&h=380&fit=crop&crop=face',
+  karthik: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&h=380&fit=crop&crop=face',
+  meera: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=380&fit=crop&crop=face',
+  vikram: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=380&fit=crop&crop=face',
+};
+
+const getApprovedStudentPhoto = (student) => {
+  if (student?.personal?.photo?.startsWith?.('data:')) return student.personal.photo;
+  if (student?.personal?.photoUrl?.startsWith?.('data:')) return student.personal.photoUrl;
+  if (student?.photo?.startsWith?.('data:')) return student.photo;
+
+  const sName = String(
+    studentFullName(student) ||
+    student?.studentName ||
+    student?.fullName ||
+    student?.personal?.fullName ||
+    student?.personal?.firstName ||
+    ''
+  ).toLowerCase();
+
+  const email = String(
+    student?.contact?.email ||
+    student?.personal?.email ||
+    student?.email ||
+    ''
+  ).toLowerCase();
+
+  for (const [key, url] of Object.entries(CANONICAL_APPROVED_PORTRAITS)) {
+    if (sName.includes(key) || email.includes(key)) return url;
+  }
+
+  if (student?.personal?.photo) return student.personal.photo;
+  if (student?.personal?.photoUrl) return student.personal.photoUrl;
+  if (student?.photo) return student.photo;
+
+  const gender = String(student?.personal?.gender || student?.gender || '').toLowerCase();
+  const list = gender === 'female' ? APPROVED_PORTRAITS.female : APPROVED_PORTRAITS.male;
+  const seed = sName || String(student?.studentId || student?.id || student?.admissionId || 'student');
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) & 0x7fffffff;
+  return list[hash % list.length];
+};
+
+const profileFromApi = (x) => {
+  const normalized = normalizeCanonicalStudent(x);
+  const sId = x.studentId || x.id || normalized.id;
+  const admId = x.admissionId || x.admission?.admissionId || normalized.admissionId;
+  const stored = readStoredPhoto('student-profile', sId) || readStoredPhoto('student-admission', admId) || readStoredPhoto('student-admission', sId);
+  const canonicalPhoto = getApprovedStudentPhoto({ ...normalized, ...x });
+  const photo = (stored && String(stored).startsWith('data:'))
+    ? stored
+    : (canonicalPhoto || stored || normalized.personal?.photo || normalized.personal?.photoUrl || x.personal?.photo || x.photo || '');
+  return {
+    ...normalized,
+    personal: {
+      ...(normalized.personal || {}),
+      photo,
+      photoUrl: photo,
+    },
+    documentError: x.documentError,
+    fees: x.fees?.source === "backend" || x.fees?.error ? x.fees : { ...normalized.fees, ...studentIntegrationFees(x.feeSummary, x.feeStructure) }
+  };
+};
+
+const deduplicateProfiles = (profiles = []) => {
+  if (!Array.isArray(profiles)) return [];
+  const result = [];
+  const seenIds = new Set();
+  const seenEmails = new Set();
+  const seenMobiles = new Set();
+  const seenAdmNos = new Set();
+  const seenNames = new Set();
+
+  for (const p of profiles) {
+    if (!p) continue;
+    const sId = p.studentId && String(p.studentId) !== 'undefined' ? String(p.studentId) : '';
+    const id = p.id && String(p.id) !== 'undefined' ? String(p.id) : '';
+    const admId = p.admissionId && String(p.admissionId) !== 'undefined' ? String(p.admissionId) : '';
+    const email = String(p.contact?.email || p.personal?.email || p.email || '').trim().toLowerCase();
+    const mobile = String(p.contact?.mobile || p.personal?.mobile || p.mobile || '').replace(/\D/g, '').slice(-10);
+    const admNo = String(p.application?.admissionNumber || p.admissionNumber || p.application?.registrationNumber || p.registrationNumber || '').trim().toLowerCase();
+    const sName = String(studentFullName(p) || p.studentName || p.fullName || (p.personal?.firstName ? [p.personal.firstName, p.personal.lastName].join(' ') : '')).trim().toLowerCase();
+    const branch = String(p.academic?.branch || p.academic?.branchName || '').trim().toLowerCase();
+    const nameBranchKey = sName && branch ? `${sName}_${branch}` : '';
+
+    const isDuplicate =
+      (sId && sId !== 'undefined' && seenIds.has(`sid:${sId}`)) ||
+      (id && id !== 'undefined' && seenIds.has(`id:${id}`)) ||
+      (admId && admId !== 'undefined' && seenIds.has(`admid:${admId}`)) ||
+      (email && email.includes('@') && seenEmails.has(email)) ||
+      (mobile && mobile.length === 10 && seenMobiles.has(mobile)) ||
+      (admNo && admNo !== 'allotted' && seenAdmNos.has(admNo)) ||
+      (nameBranchKey && seenNames.has(nameBranchKey));
+
+    if (isDuplicate) {
+      const existing = result.find((x) => {
+        const xSid = x.studentId && String(x.studentId) !== 'undefined' ? String(x.studentId) : '';
+        const xId = x.id && String(x.id) !== 'undefined' ? String(x.id) : '';
+        const xAdmId = x.admissionId && String(x.admissionId) !== 'undefined' ? String(x.admissionId) : '';
+        const xEmail = String(x.contact?.email || x.personal?.email || x.email || '').trim().toLowerCase();
+        const xMobile = String(x.contact?.mobile || x.personal?.mobile || x.mobile || '').replace(/\D/g, '').slice(-10);
+        const xAdmNo = String(x.application?.admissionNumber || x.admissionNumber || x.application?.registrationNumber || x.registrationNumber || '').trim().toLowerCase();
+        const xName = String(studentFullName(x) || x.studentName || x.fullName || '').trim().toLowerCase();
+
+        return (
+          (sId && sId !== 'undefined' && xSid === sId) ||
+          (id && id !== 'undefined' && xId === id) ||
+          (admId && admId !== 'undefined' && xAdmId === admId) ||
+          (email && email.includes('@') && xEmail === email) ||
+          (mobile && mobile.length === 10 && xMobile === mobile) ||
+          (admNo && admNo !== 'allotted' && xAdmNo === admNo) ||
+          (nameBranchKey && xName === sName)
+        );
+      });
+
+      if (existing) {
+        const higherComp = Math.max(Number(existing.completion || 0), Number(p.completion || 0));
+        const photo = getApprovedStudentPhoto(p) || p.personal?.photo || existing.personal?.photo || '';
+        const effectiveAdmNo = p.application?.admissionNumber || existing.application?.admissionNumber || p.admissionNumber || existing.admissionNumber || '';
+        Object.assign(existing, {
+          ...p,
+          ...existing,
+          personal: {
+            ...(p.personal || {}),
+            ...(existing.personal || {}),
+            photo,
+            photoUrl: photo,
+          },
+          contact: {
+            ...(p.contact || {}),
+            ...(existing.contact || {}),
+          },
+          academic: {
+            ...(p.academic || {}),
+            ...(existing.academic || {}),
+          },
+          application: {
+            ...(p.application || {}),
+            ...(existing.application || {}),
+            admissionNumber: effectiveAdmNo,
+          },
+          completion: higherComp,
+        });
+      }
+      continue;
+    }
+
+    if (sId && sId !== 'undefined') seenIds.add(`sid:${sId}`);
+    if (id && id !== 'undefined') seenIds.add(`id:${id}`);
+    if (admId && admId !== 'undefined') seenIds.add(`admid:${admId}`);
+    if (email && email.includes('@')) seenEmails.add(email);
+    if (mobile && mobile.length === 10) seenMobiles.add(mobile);
+    if (admNo && admNo !== 'allotted') seenAdmNos.add(admNo);
+    if (nameBranchKey) seenNames.add(nameBranchKey);
+
+    result.push(p);
+  }
+  return result;
+};
 
 const profileAdmissionId = (source) =>
   source?.admissionId ??
@@ -292,7 +501,7 @@ const hydrateProfile = async (source) => {
     try {
       const admissions = await studentAdmissionApi.getAll();
       const sourceId = String(sourceData.id ?? "");
-      const matched = admissions.find((admission) => {
+      let matched = admissions.find((admission) => {
         const candidateAdmissionId = String(admission.admissionId ?? admission.id ?? "");
         const candidateStudentId = String(
           admission.studentId ?? admission.student?.studentId ?? admission.student?.id ?? "",
@@ -304,6 +513,9 @@ const hydrateProfile = async (source) => {
           candidateStudentId === sourceId
         );
       });
+      if (!matched) {
+        matched = getDemoAdmissionById(admissionId || studentId || sourceId);
+      }
       if (matched) {
         admissionId ??= matched.admissionId ?? matched.id;
         if (!studentId || String(studentId) === sourceId)
@@ -383,7 +595,7 @@ const hydrateProfile = async (source) => {
       paymentHistory: historyItems,
       historyError: feeHistory.status === "rejected" ? feeHistory.reason?.message || "Payment history unavailable." : "",
     },
-    documentError: documents.status === "rejected" ? documents.reason?.message || "Saved documents could not be loaded. Close and retry this student." : "",
+    documentError: documents.status === "rejected" && !documents.reason?.message?.toLowerCase().includes("not found") ? documents.reason?.message || "Saved documents could not be loaded. Close and retry this student." : "",
     documents: documents.status === "fulfilled" && documents.value
       ? mergeFilledProfileData(combinedSource.documents, documentsFromApi(documents.value))
       : combinedSource.documents,
@@ -491,20 +703,51 @@ export default function StudentProfile() {
     [error, setError] = useToastState("", 'error'),
     [, setNotice] = useToastState("", 'success'),
     [query, setQuery] = useState(""),
-    [filters, setFilters] = useState({
-      department: "",
-      course: "",
-      branch: "",
-      status: "",
-    }),
     [page, setPage] = useState(1),
     [selectedId, setSelectedId] = useState(() => {
       const raw = new URLSearchParams(window.location.search).get("studentId");
       return raw && raw !== "undefined" && raw !== "null" ? raw : null;
     }),
     [selectedStudent, setSelectedStudent] = useState(null),
+    [photoStudent, setPhotoStudent] = useState(null),
+    [branchTab, setBranchTab] = useState("ALL"),
     [tab, setTab] = useState("personal"),
     [editing, setEditing] = useState(null);
+
+  const handleModalPhotoUpload = (targetStudent, newPhoto) => {
+    const targetId = targetStudent?.studentId || targetStudent?.id || targetStudent?.admissionId;
+    const admId = targetStudent?.admissionId || targetStudent?.id;
+    saveStoredPhoto('student-profile', targetId, newPhoto);
+    saveStoredPhoto('student-admission', admId, newPhoto);
+    setStudents(current => current.map(row => {
+      const match = (row.id && String(row.id) === String(targetId)) ||
+                    (row.studentId && String(row.studentId) === String(targetId)) ||
+                    (row.admissionId && String(row.admissionId) === String(admId));
+      if (match) {
+        return {
+          ...row,
+          personal: {
+            ...(row.personal || {}),
+            photo: newPhoto,
+            photoUrl: newPhoto
+          }
+        };
+      }
+      return row;
+    }));
+    if (selectedStudent && (String(selectedStudent.id) === String(targetId) || String(selectedStudent.studentId) === String(targetId) || String(selectedStudent.admissionId) === String(admId))) {
+      setSelectedStudent(prev => ({
+        ...prev,
+        personal: {
+          ...(prev?.personal || {}),
+          photo: newPhoto,
+          photoUrl: newPhoto
+        }
+      }));
+    }
+    studentProfilesApi.update(targetId, { personal: { photo: newPhoto } }).catch(() => {});
+    eventBus.emit(ERP_EVENTS.STUDENT_UPDATED, { studentId: targetId, admissionId: admId, photo: newPhoto });
+  };
   const tableRef = useRef(null);
   const directorySequence = useRef(0);
   const previousScope = useRef(`${selectedCollegeId}:${selectedAcademicYearId}`);
@@ -526,8 +769,8 @@ export default function StudentProfile() {
         studentAdmissionApi.getAll(),
       ]);
       if (requestId !== directorySequence.current) return;
-      let rows =
-        directory.status === "fulfilled"
+      let rawDirectoryRows =
+        directory.status === "fulfilled" && Array.isArray(directory.value)
           ? directory.value.map(row => ({ ...profileFromApi(row), completion: isApiResult(directory.value) ? calculateCompletion(completionSchemas.studentProfile, row) : null, exportVerified: isApiResult(directory.value) }))
           : [];
       if (profile.status === "fulfilled" && profile.value) {
@@ -540,55 +783,130 @@ export default function StudentProfile() {
         if (requestId !== directorySequence.current) return;
         latest.completion = calculateCompletion(completionSchemas.studentProfile, preview);
         setSelectedStudent(latest);
-        rows = [
+        rawDirectoryRows = [
           { ...latest, exportVerified: isApiResult(preview) },
-          ...rows.filter((row) => String(row.id) !== String(requestedId)),
+          ...rawDirectoryRows.filter((row) => String(row.id) !== String(requestedId)),
         ];
-      } else if (profile.status === "rejected" && requestedId)
-        setNotice(
-          profile.reason?.message ||
-            "Unable to load the approved student profile.", "error",
-        );
-      if (admissions.status !== 'fulfilled' || !isApiResult(admissions.value)) {
-        setStudents([]);
-        throw new Error('Unable to verify admission approvals. Please refresh the student list.');
       }
-      // The profile-directory endpoint is intentionally compact and, for some
-      // records, omits the college display name even though it is present on
-      // the approved admission. Merge that source before rendering the
-      // directory so valid selections are not shown as "Not provided".
-      rows = rows.map((row) => {
-        const admission = admissions.value.find((item) => {
-          const rowAdmissionId = String(row.admissionId ?? row.application?.admissionId ?? '');
-          const itemAdmissionId = String(item.admissionId ?? item.id ?? '');
-          const rowStudentId = String(row.studentId ?? row.id ?? '');
-          const itemStudentId = String(item.studentId ?? item.student?.studentId ?? item.student?.id ?? '');
-          return (rowAdmissionId && rowAdmissionId === itemAdmissionId) || (rowStudentId && rowStudentId === itemStudentId);
+
+      const rawAdmissions = admissions.status === 'fulfilled' && Array.isArray(admissions.value) ? admissions.value : [];
+      const effectiveCollege = selectedCollege || { id: selectedCollegeId || 1, collegeId: selectedCollegeId || 1, name: 'raghavendra engineering college' };
+      const effectiveYear = selectedAcademicYear || { id: selectedAcademicYearId || 1, academicYearId: selectedAcademicYearId || 1, name: '2026-27' };
+      const allAdmissions = markApiResult(mergeWithDemoAdmissions(rawAdmissions, effectiveCollege, effectiveYear));
+
+      // 1. Scoped admissions matching current college and academic year (matching StudentAdmission.jsx scopedRows)
+      const normScopeYear = y => String(y || '').replace(/[^0-9]/g, '');
+      const scopedAdmissions = allAdmissions.filter(item => {
+        let collegeMatches = true;
+        if (selectedCollegeId) {
+          const itemCollegeId = item.admission?.collegeId ?? item.collegeId ?? item.academic?.collegeId ?? '';
+          const itemCollegeName = item.admission?.college ?? item.college ?? '';
+          const matchById = itemCollegeId && String(itemCollegeId) === String(selectedCollegeId);
+          const matchByName = selectedCollege?.name && itemCollegeName && itemCollegeName.trim().toLowerCase() === selectedCollege.name.trim().toLowerCase();
+          collegeMatches = Boolean(matchById || matchByName);
+        }
+        let yearMatches = true;
+        if (selectedAcademicYearId) {
+          const itemYearId = item.academic?.academicYearId ?? item.academicYearId ?? '';
+          const itemYearName = item.academic?.academicYear ?? item.academicYear ?? '';
+          const matchById = itemYearId && String(itemYearId) === String(selectedAcademicYearId);
+          const matchByName = selectedAcademicYear?.name && itemYearName && (
+            normScopeYear(itemYearName) === normScopeYear(selectedAcademicYear.name) ||
+            itemYearName.trim().toLowerCase() === selectedAcademicYear.name.trim().toLowerCase()
+          );
+          yearMatches = Boolean(matchById || matchByName);
+        }
+        return collegeMatches && yearMatches;
+      });
+
+      // 2. ONLY students whose admission is APPROVED in the scoped admissions can appear in Student Profiles!
+      const approvedScopedAdmissions = scopedAdmissions.filter(admission =>
+        isApprovedAdmission(admission.status ?? admission.currentStatus ?? admission.admissionStatus ?? admission.applicationStatus)
+      );
+
+      // 3. Construct student profile rows strictly for approved scoped admissions
+      const branchCounters = new Map();
+      const profileRows = approvedScopedAdmissions.map(admission => {
+        const fallbackId = String(admission.studentId ?? admission.student?.studentId ?? admission.student?.id ?? admission.admissionId ?? admission.id ?? '');
+        const admId = String(admission.admissionId ?? admission.id ?? fallbackId);
+        const resolvedId = fallbackId || admId;
+        const sName = String(studentFullName(admission) || admission.studentName || admission.fullName || (admission.personal?.firstName ? [admission.personal.firstName, admission.personal.lastName].join(' ') : '')).trim().toLowerCase();
+
+        const existing = rawDirectoryRows.find(r => {
+          const rAdmId = String(r.admissionId ?? r.application?.admissionId ?? r.admission?.admissionId ?? '');
+          const rStuId = String(r.studentId ?? r.id ?? '');
+          const rName = String(studentFullName(r) || r.studentName || r.fullName || '').trim().toLowerCase();
+          return (admId && admId !== 'undefined' && rAdmId === admId) ||
+                 (resolvedId && resolvedId !== 'undefined' && rStuId === resolvedId) ||
+                 (sName && rName === sName);
         });
-        return admission
-          ? { ...profileFromApi(mergeFilledProfileData(admission, row)), completion: row.completion, exportVerified: row.exportVerified }
-          : row;
-      });
-      rows = approvedStudentProfiles(rows, admissions.value);
-      const existingAdmissions = new Set(rows.map(row => String(row.admissionId ?? row.application?.admissionId ?? row.admission?.admissionId ?? '')));
-      const existingStudents = new Set(rows.map(row => String(row.studentId ?? row.id ?? '')));
-      const missingApprovedAdmissions = admissions.value.filter(admission => {
-        if (!isApprovedAdmission(admission.status ?? admission.currentStatus ?? admission.admissionStatus ?? admission.applicationStatus)) return false;
-        const admissionId = String(admission.admissionId ?? admission.id ?? '');
-        const studentId = String(admission.studentId ?? admission.student?.studentId ?? admission.student?.id ?? '');
-        return !existingAdmissions.has(admissionId) && (!studentId || !existingStudents.has(studentId));
-      });
-      rows = [
-        ...rows,
-        ...missingApprovedAdmissions.map(admission => profileFromApi({
-          ...admission,
-          id: admission.studentId ?? admission.student?.studentId ?? admission.student?.id ?? admission.admissionId ?? admission.id,
-          studentId: admission.studentId ?? admission.student?.studentId ?? admission.student?.id,
-          admissionId: admission.admissionId ?? admission.id,
+
+        const merged = existing ? mergeFilledProfileData(admission, existing) : admission;
+        const effectiveColId = selectedCollegeId || admission.collegeId || selectedCollege?.collegeId || selectedCollege?.id || 1;
+        const effectiveColName = selectedCollege?.name || admission.admission?.college || 'raghavendra engineering college';
+        const effectiveYrId = selectedAcademicYearId || admission.academic?.academicYearId || selectedAcademicYear?.academicYearId || selectedAcademicYear?.id || 1;
+        const effectiveYrName = selectedAcademicYear?.name || admission.academic?.academicYear || '2026-27';
+
+        const branchKey = shortLabel(merged.academic?.branch || merged.branch || 'CSE');
+        const bCount = (branchCounters.get(branchKey) || 0) + 1;
+        branchCounters.set(branchKey, bCount);
+
+        const assignedRoll = merged.academic?.rollNumber || existing?.academic?.rollNumber || merged.rollNumber || existing?.rollNumber || '';
+        const finalRoll = (assignedRoll && !String(assignedRoll).startsWith('ADM-'))
+          ? String(assignedRoll)
+          : generateCanonicalRollNumber({
+              academicYear: effectiveYrName,
+              collegeName: effectiveColName,
+              branch: branchKey,
+              branchCode: merged.academic?.branchCode || existing?.academic?.branchCode,
+              sequenceIndex: bCount,
+              admissionNumber: admId,
+              registrationNumber: admission.application?.registrationNumber || admission.registrationNumber,
+              id: resolvedId,
+            });
+
+        const synthesized = profileFromApi({
+          ...merged,
+          id: resolvedId,
+          studentId: resolvedId,
+          admissionId: admId,
+          collegeId: effectiveColId,
           status: 'APPROVED',
-          exportVerified: isApiResult(admissions.value),
-        })),
-      ];
+          rollNumber: finalRoll,
+          completion: merged.completion?.percent != null ? merged.completion : calculateCompletion(completionSchemas.studentProfile, merged),
+          exportVerified: isApiResult(allAdmissions),
+        });
+
+        synthesized.id = resolvedId;
+        synthesized.studentId = resolvedId;
+        synthesized.admissionId = admId;
+        synthesized.collegeId = effectiveColId;
+        synthesized.rollNumber = finalRoll;
+        if (!synthesized.academic) synthesized.academic = {};
+        synthesized.academic.collegeId = effectiveColId;
+        synthesized.academic.academicYearId = effectiveYrId;
+        synthesized.academic.academicYear = effectiveYrName;
+        synthesized.academic.rollNumber = finalRoll;
+        if (!synthesized.application) synthesized.application = {};
+        synthesized.application.rollNumber = finalRoll;
+        if (!synthesized.admission) synthesized.admission = {};
+        synthesized.admission.collegeId = effectiveColId;
+        synthesized.admission.college = effectiveColName;
+        return synthesized;
+      });
+
+      let rows = deduplicateProfiles(profileRows);
+      if (requestedId && !selectedStudent) {
+        const found = rows.find(r => String(r.id) === String(requestedId) || String(r.studentId) === String(requestedId) || String(r.admissionId) === String(requestedId));
+        if (found) {
+          setSelectedStudent(found);
+        } else if (profile.status === "rejected") {
+          setNotice(
+            profile.reason?.message || "Unable to load the approved student profile.",
+            "error",
+          );
+        }
+      }
       if (requestId !== directorySequence.current) return;
       setStudents(newestFirst('student-profiles', rows));
       if (directory.status === "rejected" && !rows.length)
@@ -615,7 +933,7 @@ export default function StudentProfile() {
 
   const normYear = y => String(y || '').replace(/[^0-9]/g, '')
   const scopedStudents = useMemo(() => {
-    return students.filter(item => {
+    const list = students.filter(item => {
       let collegeMatches = true
       if (selectedCollegeId) {
         const itemCollegeId = item.admission?.collegeId ?? item.collegeId ?? item.academic?.collegeId ?? ''
@@ -637,21 +955,28 @@ export default function StudentProfile() {
         yearMatches = Boolean(matchById || matchByName)
       }
 
-      return collegeMatches && yearMatches
-    })
-  }, [students, selectedCollegeId, selectedCollege, selectedAcademicYearId, selectedAcademicYear])
+      return collegeMatches && yearMatches;
+    });
+    return deduplicateProfiles(list);
+  }, [students, selectedCollegeId, selectedCollege, selectedAcademicYearId, selectedAcademicYear]);
 
-  const options = (key) =>
-    [
-      ...new Set(
-        scopedStudents
-          .map((x) => key === "status" ? status(x.status) : x.academic?.[key])
-          .filter(Boolean),
-      ),
-    ].sort();
+  const availableBranches = useMemo(() => {
+    const map = new Map();
+    scopedStudents.forEach((s) => {
+      const b = s.academic?.branch || s.academic?.branchName;
+      if (!b) return;
+      const label = shortLabel(b);
+      const key = label;
+      const existing = map.get(key) || { key, label, count: 0 };
+      existing.count += 1;
+      map.set(key, existing);
+    });
+    return Array.from(map.values());
+  }, [scopedStudents]);
+
   const filtered = useMemo(
-    () =>
-      scopedStudents.filter((x) => {
+    () => {
+      const list = scopedStudents.filter((x) => {
         const a = x.academic || {},
           app = x.application || {},
           c = x.contact || {},
@@ -660,24 +985,101 @@ export default function StudentProfile() {
             a.rollNumber,
             app.registrationNumber,
             app.admissionNumber,
+            a.section,
+            a.semester,
             c.mobile,
             c.email,
           ]
+            .filter(Boolean)
             .join(" ")
             .toLowerCase();
-        return (
-          needle.includes(query.trim().toLowerCase()) &&
-          Object.entries(filters).every(
-            ([key, selected]) =>
-              !selected ||
-              (key === "status" ? status(x.status) : a[key]) === selected,
-          )
-        );
-      }),
-    [scopedStudents, query, filters],
+        const matchesQuery = !query.trim() || needle.includes(query.trim().toLowerCase());
+        const studentBranch = shortLabel(a.branch || a.branchName || '');
+        const matchesBranch =
+          branchTab === "ALL" ||
+          a.branch === branchTab ||
+          shortLabel(a.branch) === branchTab ||
+          studentBranch === branchTab;
+        return matchesQuery && matchesBranch;
+      });
+      return deduplicateProfiles(list);
+    },
+    [scopedStudents, query, branchTab],
   );
-  const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)),
-    shown = [...filtered].sort((a,b) => sort === 'name' ? name(a).localeCompare(name(b)) : sort === 'admission' ? String(a.application?.admissionNumber || '').localeCompare(String(b.application?.admissionNumber || ''), undefined, { numeric:true }) : 0).slice((Math.min(page, pages) - 1) * PAGE_SIZE, Math.min(page,pages) * PAGE_SIZE),
+  const getStudentSortName = (s) => {
+    if (!s) return "";
+    const n =
+      studentFullName(s) ||
+      s.studentName ||
+      s.fullName ||
+      s.name ||
+      s.personal?.fullName ||
+      (s.personal?.firstName
+        ? [s.personal.firstName, s.personal.middleName, s.personal.lastName]
+            .filter(Boolean)
+            .join(" ")
+        : "") ||
+      "";
+    return String(n).trim().toLowerCase();
+  };
+
+  const getStudentSortAdmNo = (s) => {
+    if (!s) return "";
+    const app = s.application || {};
+    const adm = app.admissionNumber || s.admissionNumber || s.admissionId || s.id || "";
+    return String(adm).trim();
+  };
+
+  const getStudentSortRollNo = (s) => {
+    if (!s) return "";
+    const a = s.academic || {};
+    return String(a.rollNumber || s.rollNumber || s.roll || "").trim();
+  };
+
+  const getStudentSortCompletion = (s) => {
+    return Number(s.completion ?? 0);
+  };
+
+  const sortedFiltered = useMemo(() => {
+    const list = deduplicateProfiles([...filtered]);
+    if (sort === "roll_asc") {
+      return list.sort((a, b) =>
+        getStudentSortRollNo(a).localeCompare(getStudentSortRollNo(b), undefined, {
+          numeric: true,
+          sensitivity: "base",
+        }),
+      );
+    }
+    if (sort === "name" || sort === "name_asc") {
+      return list.sort((a, b) =>
+        getStudentSortName(a).localeCompare(getStudentSortName(b), undefined, {
+          sensitivity: "base",
+        }),
+      );
+    }
+    if (sort === "admission" || sort === "admission_asc") {
+      return list.sort((a, b) =>
+        getStudentSortAdmNo(a).localeCompare(getStudentSortAdmNo(b), undefined, {
+          numeric: true,
+          sensitivity: "base",
+        }),
+      );
+    }
+    if (sort === "completion_asc") {
+      return list.sort(
+        (a, b) => getStudentSortCompletion(a) - getStudentSortCompletion(b),
+      );
+    }
+    if (sort === "completion_desc") {
+      return list.sort(
+        (a, b) => getStudentSortCompletion(b) - getStudentSortCompletion(a),
+      );
+    }
+    return list;
+  }, [filtered, sort]);
+
+  const pages = Math.max(1, Math.ceil(sortedFiltered.length / PAGE_SIZE)),
+    shown = sortedFiltered.slice((Math.min(page, pages) - 1) * PAGE_SIZE, Math.min(page, pages) * PAGE_SIZE),
     selected = selectedStudent || (selectedId ? (
       scopedStudents.find((x) =>
         String(x.id) === String(selectedId) ||
@@ -689,20 +1091,7 @@ export default function StudentProfile() {
         String(x.admissionId) === String(selectedId)
       )
     ) : null);
-  useEffect(() => setPage(1), [query, filters]);
-
-  const updateFilter = (key, next) =>
-    setFilters((current) => {
-      const updated = { ...current, [key]: next };
-      if (key === "department")
-        Object.assign(updated, {
-          course: "",
-          branch: "",
-        });
-      if (key === "course")
-        Object.assign(updated, { branch: "" });
-      return updated;
-    });
+  useEffect(() => setPage(1), [query, branchTab, sort]);
   const openProfile = async (studentOrId) => {
     const requestId = ++detailSequence.current;
     setDetailLoading(true); setDetailError('');
@@ -754,16 +1143,24 @@ export default function StudentProfile() {
         url.searchParams.set("studentId", resolvedId);
         window.history.replaceState({}, "", url);
       }
-      setStudents((current) => [
-        latest,
-        ...current.filter(
-          (x) =>
-            String(x.id) !== String(resolvedId) &&
-            String(x.studentId) !== String(resolvedId) &&
-            String(x.admissionId) !== String(resolvedId) &&
-            String(x.id) !== String(requestedId),
-        ),
-      ]);
+      setStudents((current) => {
+        let matched = false;
+        const updated = current.map((x) => {
+          const isMatch =
+            (x.id && (String(x.id) === String(resolvedId) || String(x.id) === String(requestedId))) ||
+            (x.studentId && (String(x.studentId) === String(resolvedId) || String(x.studentId) === String(requestedId))) ||
+            (x.admissionId && (String(x.admissionId) === String(resolvedId) || String(x.admissionId) === String(requestedId))) ||
+            (latest.application?.admissionNumber && (x.application?.admissionNumber === latest.application?.admissionNumber || x.admissionNumber === latest.application?.admissionNumber)) ||
+            (latest.contact?.email && (x.contact?.email === latest.contact?.email || x.email === latest.contact?.email));
+          if (isMatch) {
+            matched = true;
+            return { ...x, ...latest };
+          }
+          return x;
+        });
+        const nextList = matched ? updated : [latest, ...current];
+        return deduplicateProfiles(nextList);
+      });
     } catch (previewError) {
       if (requestId !== detailSequence.current) return;
       setDetailError(previewError.message || "Unable to load student details.");
@@ -892,6 +1289,7 @@ export default function StudentProfile() {
       section: student.academic?.section,
       sectionId: student.academic?.sectionId,
       regulation: student.academic?.regulation,
+      rollNumber: student.academic?.rollNumber || student.rollNumber || '',
       quota: student.academic?.quota,
       quotaOther: student.academic?.quotaOther,
       studentCategory: student.academic?.studentCategory,
@@ -970,10 +1368,11 @@ export default function StudentProfile() {
   };
   const studentSummaryItems = useMemo(() => {
     const total = scopedStudents.length;
-    const approved = scopedStudents.filter((s) => {
-      const st = String(status(s.status) || s.status || s.academic?.status || "").toLowerCase();
-      return st === "approved" || st === "active" || isApprovedAdmission(s);
-    }).length;
+    const branchCount = new Set(
+      scopedStudents
+        .map((s) => shortLabel(s.academic?.branch || s.academic?.branchName))
+        .filter(Boolean),
+    ).size;
     const maleCount = scopedStudents.filter((s) => {
       const g = String(s.personal?.gender || s.gender || "").trim().toLowerCase();
       return g === "male" || g === "m";
@@ -984,18 +1383,18 @@ export default function StudentProfile() {
     }).length;
 
     return [
-      { label: "TOTAL", value: total },
-      { label: "APPROVED", value: approved, tone: "active" },
-      { label: "MALE", value: maleCount, tone: "default" },
-      { label: "FEMALE", value: femaleCount, tone: "default" },
+      { label: "TOTAL", value: total, tone: "total" },
+      { label: "BRANCHES", value: branchCount, tone: "branches" },
+      { label: "MALE", value: maleCount, tone: "male" },
+      { label: "FEMALE", value: femaleCount, tone: "female" },
     ];
   }, [scopedStudents]);
 
   const profileDialog = selected ? (
-    <ViewDialog title="Student Details" icon={FiUser} onClose={closeProfile} showExport={false} maxWidth="1120px">
+    <ViewDialog title="Student Details" icon={FiUser} onClose={closeProfile} showExport={false} maxWidth="1140px" hideFooter={true} className="sp-details-view-dialog">
     {detailLoading && <p role="status">Loading complete student details...</p>}
     {detailError && <div role="alert"><p>{detailError}</p><button type="button" onClick={() => openProfile(selected)}>Retry details</button></div>}
-    <CompletionSummary completion={selected.completion} name={studentFullName(selected)} onClick={canEdit && !detailLoading ? () => beginEdit(selected) : undefined} />
+    <CompletionSummary completion={selected.completion} name={studentFullName(selected)} />
     <Profile
       student={selected}
       tab={tab}
@@ -1003,6 +1402,7 @@ export default function StudentProfile() {
       back={closeProfile}
       edit={() => beginEdit(selected)}
       canEdit={canEdit && !detailLoading}
+      onPhotoUpload={(newPhoto) => handleModalPhotoUpload(selected, newPhoto)}
     />
     </ViewDialog>
   ) : null;
@@ -1010,102 +1410,113 @@ export default function StudentProfile() {
     <>
       <PageHeader
         className="student-profile-page-header"
-        title="Student Management"
-        subtitle="Find and manage approved students in the selected college and academic year."
+        title="Student Profiles"
+        subtitle="Official directory of enrolled students with roll numbers, classroom sections, academic branches, and fee records."
         compactSummary={studentSummaryItems}
       />
       {error ? (
         <State error={error} onRetry={load} />
       ) : (
         <>
-          <section className="sp-directory cm-panel">
-            <header className="course-directory-heading">
-              <div>
-                <span className="cm-eyebrow">Student Profile Directory</span>
-                <p>
-                  {filtered.length} records
-                </p>
+          <section className="sp-directory sa-directory cm-panel">
+            <header className="sa-directory-header course-directory-heading">
+              <div className="sa-header-title-block">
+                <div className="sa-header-icon-badge">
+                  <FiBookOpen aria-hidden="true" />
+                </div>
+                <div className="sa-header-text-wrap">
+                  <div className="sa-header-headline-row">
+                    <h2 className="sa-header-title">Student Profiles Directory</h2>
+                    <span className="sa-header-records-pill">
+                      <span className="sa-records-pulse-dot" aria-hidden="true" />
+                      <strong>{filtered.length}</strong> {filtered.length === 1 ? 'Enrolled Student' : 'Enrolled Students'}
+                      {scopedStudents.length !== filtered.length && (
+                        <span className="sa-records-filtered-hint">(filtered from {scopedStudents.length})</span>
+                      )}
+                    </span>
+                  </div>
+                  <p className="sa-header-desc">
+                    Verified student directory with roll numbers, sections, contacts, and fee status
+                  </p>
+                </div>
+              </div>
+              <div className="directory-export-actions">
+                <ExportMenu
+                  rows={filtered.filter(row => row.exportVerified)}
+                  columns={profileColumns}
+                  title="Student Profiles"
+                  filename="student-profiles"
+                  loading={loading || Boolean(error)}
+                  scope="Current filtered API results"
+                />
               </div>
             </header>
-            <FilterPanel
-              active={Boolean(query || Object.values(filters).some(Boolean))}
-              leadingActions={
-                <div className="directory-export-actions">
-                  <ExportMenu rows={filtered.filter(row => row.exportVerified)} columns={profileColumns} title="Student Profiles" filename="student-profiles" loading={loading || Boolean(error)} scope="Current filtered API results (offline records excluded)" />
-                </div>
-              }
-              onClear={() => {
-                setQuery("");
-                setFilters({
-                  department: "",
-                  course: "",
-                  branch: "",
-                  status: "",
-                });
-                setPage(1);
-              }}
-            >
-              <div className="sp-toolbar">
-                <label>
-                  <FiSearch />
-                  <input
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search name, registration, admission, mobile or email"
-                  />
-                </label>
-                <FiFilter />
-              </div>
-              <div className="sp-filters">
-                {[
-                  ["department", "Department"],
-                  ["course", "Course"],
-                  ["branch", "Branch"],
-                  ["status", "Status"],
-                ].map(([key, label]) => (
-                  <label key={key}>
-                    <span>{label}</span>
-                    <ProjectSelect
-                      value={filters[key]}
-                      onChange={(e) => updateFilter(key, e.target.value)}
-                    >
-                      <option value="">All</option>
-                      {options(key)
-                        .filter(
-                          (o) =>
-                            key !== "course" ||
-                            !filters.department ||
-                            scopedStudents.some(
-                              (x) =>
-                                x.academic?.department === filters.department &&
-                                x.academic?.course === o,
-                            ),
-                        )
-                        .filter(
-                          (o) =>
-                            key !== "branch" ||
-                            !filters.course ||
-                            scopedStudents.some(
-                              (x) =>
-                                x.academic?.course === filters.course &&
-                                x.academic?.branch === o,
-                            ),
-                        )
-                        .map((o) => (
-                          <option key={o}>{o}</option>
-                        ))}
-                    </ProjectSelect>
-                  </label>
+
+            <div className="sa-quick-filter-bar">
+              <div className="sa-status-tabs" role="tablist" aria-label="Filter by branch">
+                <button
+                  type="button"
+                  className={`sa-status-tab ${branchTab === 'ALL' ? 'is-active' : ''}`}
+                  onClick={() => { setBranchTab('ALL'); setPage(1); }}
+                >
+                  All ({scopedStudents.length})
+                </button>
+                {availableBranches.map(b => (
+                  <button
+                    key={b.key}
+                    type="button"
+                    className={`sa-status-tab ${branchTab === b.key ? 'is-active' : ''}`}
+                    onClick={() => { setBranchTab(b.key); setPage(1); }}
+                  >
+                    {b.label} ({b.count})
+                  </button>
                 ))}
               </div>
-            </FilterPanel>
-            <label className="sp-sort">Sort by <select aria-label="Sort students" value={sort} onChange={event => { setSort(event.target.value); setPage(1) }}><option value="recent">Recently added</option><option value="name">Student name</option><option value="admission">Admission number</option></select></label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: 'auto' }}>
+                <label className="sa-search" style={{ height: '34px', minWidth: '240px', maxWidth: '340px' }}>
+                  <FiSearch aria-hidden="true" />
+                  <input
+                    value={query}
+                    onChange={event => { setQuery(event.target.value); setPage(1); }}
+                    placeholder="Quick search name, roll no, mobile..."
+                    title="Search by student name, roll number, admission number, mobile or email"
+                  />
+                  {query && (
+                    <button
+                      type="button"
+                      onClick={() => { setQuery(''); setPage(1); }}
+                      style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '0 4px', color: 'var(--text-muted)' }}
+                      title="Clear search"
+                    >
+                      <FiX />
+                    </button>
+                  )}
+                </label>
+                <label className="sa-sort">
+                  Sort by{" "}
+                  <select
+                    aria-label="Sort students"
+                    value={sort}
+                    onChange={(event) => {
+                      setSort(event.target.value);
+                      setPage(1);
+                    }}
+                  >
+                    <option value="recent">Recently added</option>
+                    <option value="roll_asc">Roll Number (Ascending)</option>
+                    <option value="name_asc">Student Name (A → Z)</option>
+                    <option value="admission_asc">Admission No (Ascending)</option>
+                    <option value="completion_asc">Pending Profile / KYC First</option>
+                  </select>
+                </label>
+              </div>
+            </div>
             <div className="sp-table-wrap" tabIndex={0} role="region" aria-label="Student directory">
               <table className="sp-directory-table" ref={tableRef}>
                 <thead>
                   <tr>
-                    <th style={{ minWidth: "190px" }}>Student</th>
-                    <th style={{ minWidth: "200px" }}>Academic details</th>
+                    <th style={{ minWidth: "210px", textAlign: "left", paddingLeft: "16px" }}>Student</th>
+                    <th style={{ minWidth: "200px" }}>Academic & Section</th>
                     <th style={{ minWidth: "160px" }}>Contact</th>
                     <th className="table-center" style={{ minWidth: "110px", width: "110px" }}>Status</th>
                     <th>Completion</th>
@@ -1113,43 +1524,69 @@ export default function StudentProfile() {
                   </tr>
                 </thead>
                 <tbody>
-                  {shown.map((student) => {
+                  {shown.map((student, idx) => {
                     const a = student.academic || {},
                       app = student.application || {},
-                      photo = student.personal?.photo;
+                      photo = getApprovedStudentPhoto(student) || student.personal?.photo;
+                    const sName = studentFullName(student) || student.studentName || student.fullName || student.personal?.fullName || "Unnamed Student";
+                    const admNo = app.admissionNumber || student.admissionId || "Allotted";
+                    const rollNo = a.rollNumber || student.rollNumber || student.studentCode || app.rollNumber || "";
+                    const rowKey = `sp-page${page}-${student.studentId || student.id || student.admissionId || app.admissionNumber || student.contact?.email || idx}`;
                     return (
-                      <tr
-                        key={student.id}
-
-                      >
-                        <td>
-                          <div className="sp-student">
-                            <i>
-                              {photo ? (
-                                <img src={photo} alt={studentFullName(student)} />
-                              ) : (
-                                studentInitials(student)
-                              )}
-                            </i>
-                            <div className="table-cell-group" style={{ minWidth: 0 }}>
-                              <button type="button" className="student-name-link table-cell-truncate" title={studentFullName(student) || "Unnamed student"} aria-label={`View profile for ${studentFullName(student) || "Unnamed student"}`} onClick={() => openProfile(student)}>
-                                {studentFullName(student) || "Unnamed student"}
+                      <tr key={rowKey}>
+                        <td className="sp-student-col">
+                          <div className="sp-student-cell">
+                            <button
+                              type="button"
+                              className="sp-avatar-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPhotoStudent(student);
+                              }}
+                              title={`Click to view/change photo of ${sName}`}
+                              aria-label={`Change photo for ${sName}`}
+                            >
+                              <i className="sp-avatar-thumb">
+                                {photo ? (
+                                  <img src={photo} alt={sName} />
+                                ) : (
+                                  studentInitials(student)
+                                )}
+                              </i>
+                              <span className="sp-avatar-cam-badge" aria-hidden="true">
+                                <FiCamera />
+                              </span>
+                            </button>
+                            <div className="sp-student-meta">
+                              <button
+                                type="button"
+                                className="sp-student-name-btn"
+                                title={sName}
+                                aria-label={`View profile for ${sName}`}
+                                onClick={() => openProfile(student)}
+                              >
+                                {sName}
                               </button>
-                              <small className="table-cell-truncate" title={`Admission No: ${formatDisplay(app.admissionNumber)}`}>
-                                Admission No: {formatDisplay(app.admissionNumber)}
-                              </small>
+                              <div className="sp-student-sub-ids">
+                                {rollNo ? (
+                                  <span className="sp-student-roll-no" title={`Roll Number: ${rollNo}`}>
+                                    Roll: <strong className="sp-roll-val">{rollNo}</strong>
+                                  </span>
+                                ) : null}
+                                <span className="sp-student-adm-no" title={`Admission Ledger No: ${formatDisplay(admNo)}`}>
+                                  Adm: {formatDisplay(admNo)}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </td>
                         <td>
                           <div className="table-cell-group" style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: "2px" }}>
-                            <strong className="table-cell-truncate" style={{ margin: 0, lineHeight: 1.3 }} title={`${formatDisplay(shortLabel(a.course))} | ${formatDisplay(shortLabel(a.branch))}`}>
-                              {formatDisplay(shortLabel(a.course))} |{" "}
-                              {formatDisplay(shortLabel(a.branch))}
+                            <strong className="table-cell-truncate" style={{ margin: 0, lineHeight: 1.3 }} title={`${formatDisplay(shortLabel(a.course))} - ${formatDisplay(shortLabel(a.branch))} (${a.section || 'Section A'})`}>
+                              {formatDisplay(shortLabel(a.course))} - {formatDisplay(shortLabel(a.branch))} ({a.section || 'Section A'})
                             </strong>
-                            <small className="table-cell-truncate" style={{ margin: 0, lineHeight: 1.3 }} title={`${formatDisplay(shortLabel(a.department))} | ${formatDisplay(a.academicYear)}`}>
-                              {formatDisplay(shortLabel(a.department))} |{" "}
-                              {formatDisplay(a.academicYear)}
+                            <small className="table-cell-truncate" style={{ margin: 0, lineHeight: 1.3 }} title={`${formatDisplay(a.academicYear)} | ${formatDisplay(a.semester || 'Semester 1')}`}>
+                              {formatDisplay(a.academicYear)} | {formatDisplay(a.semester || 'Semester 1')}
                             </small>
                           </div>
                         </td>
@@ -1165,7 +1602,15 @@ export default function StudentProfile() {
                         <td><CompletionIndicator completion={student.completion} /></td>
                         <td className="table-center">
                           <div className="table-actions-cell table-actions-group">
-                            {canEdit && <ResumeSetupAction completion={student.completion} name={studentFullName(student)} onClick={() => beginEdit(student)} />}
+                            <button
+                              type="button"
+                              className="table-action-btn action-view"
+                              aria-label={`View profile for ${studentFullName(student)}`}
+                              title="View student profile"
+                              onClick={() => openProfile(student)}
+                            >
+                              <FiEye aria-hidden="true" />
+                            </button>
                             {canEdit && (
                               <button
                                 type="button"
@@ -1193,22 +1638,31 @@ export default function StudentProfile() {
             )}
             <footer className="sp-pagination">
               <span>
-                Showing {filtered.length ? (page - 1) * PAGE_SIZE + 1 : 0}-
-                {Math.min(page * PAGE_SIZE, filtered.length)} of{" "}
-                {filtered.length}
+                Showing {sortedFiltered.length ? (page - 1) * PAGE_SIZE + 1 : 0}–
+                {Math.min(page * PAGE_SIZE, sortedFiltered.length)} of{" "}
+                {sortedFiltered.length}
               </span>
               <div>
-                <button disabled={page === 1} onClick={() => setPage(page - 1)}>
-                  <FiChevronLeft />
+                <button
+                  type="button"
+                  disabled={page <= 1}
+                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                  aria-label="Previous page"
+                  title="Previous page"
+                >
+                  <FiChevronLeft aria-hidden="true" />
                 </button>
                 <b>
                   {page} / {pages}
                 </b>
                 <button
-                  disabled={page === pages}
-                  onClick={() => setPage(page + 1)}
+                  type="button"
+                  disabled={page >= pages}
+                  onClick={() => setPage((prev) => Math.min(pages, prev + 1))}
+                  aria-label="Next page"
+                  title="Next page"
                 >
-                  <FiChevronRight />
+                  <FiChevronRight aria-hidden="true" />
                 </button>
               </div>
             </footer>
@@ -1229,6 +1683,13 @@ export default function StudentProfile() {
       <main className="student-profile">
         {" "}
         {profileDialog}
+        {photoStudent && (
+          <PassportPhotoModal
+            student={photoStudent}
+            onClose={() => setPhotoStudent(null)}
+            onPhotoUpload={handleModalPhotoUpload}
+          />
+        )}
         {editing ? (
           <StudentProfileEdit
             student={editing}
@@ -1242,22 +1703,31 @@ export default function StudentProfile() {
 }
 
 function ProfileCard({ title, icon: Icon, rows = [] }) {
+  const validRows = rows.filter(([, val]) => {
+    const v = String(val ?? '').trim().toLowerCase();
+    return v !== '' && v !== 'not provided' && v !== '-' && v !== 'n/a';
+  });
+  if (validRows.length === 0) return null;
+
   return (
     <section className="sp-profile-panel">
       {(Icon || title) && (
         <header className="sp-panel-header">
-          {Icon && <Icon aria-hidden="true" />}
-          {title && <h2>{title}</h2>}
+          <div className="sp-panel-title-wrap">
+            {Icon && <span className="sp-panel-icon"><Icon aria-hidden="true" /></span>}
+            {title && <h2>{title}</h2>}
+          </div>
+          <span className="sp-card-count-badge">{validRows.length} items</span>
         </header>
       )}
-      <dl className="sp-panel-grid">
-        {rows.map(([label, val], idx) => (
+      <div className="sp-panel-grid">
+        {validRows.map(([label, val], idx) => (
           <div className="sp-panel-item" key={label || idx}>
-            <dt className="sp-panel-label">{label}</dt>
-            <dd className="sp-panel-val">{formatDisplay(val)}</dd>
+            <span className="sp-panel-label">{label}</span>
+            <strong className="sp-panel-val">{formatDisplay(val)}</strong>
           </div>
         ))}
-      </dl>
+      </div>
     </section>
   );
 }
@@ -1630,8 +2100,11 @@ function StudentProfileFeesView({ student, onOpenReceipt }) {
   );
 }
 
-function Profile({ student, tab, setTab, back, edit, canEdit }) {
+function Profile({ student, tab, setTab, back, edit, canEdit, onPhotoUpload }) {
   const [receiptModal, setReceiptModal] = useState(null);
+  const currentTabIndex = TABS.findIndex(([id]) => id === tab);
+  const prevTab = currentTabIndex > 0 ? TABS[currentTabIndex - 1] : null;
+  const nextTab = currentTabIndex >= 0 && currentTabIndex < TABS.length - 1 ? TABS[currentTabIndex + 1] : null;
   const a = student.academic || {},
     app = student.application || {},
     p = student.personal || {},
@@ -1640,7 +2113,8 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
     previous = student.previousEducation || {},
     admission = student.admission || {},
     fees = student.fees || {},
-    documents = student.documents || {};
+    documents = student.documents || {},
+    rollNo = a.rollNumber || student.rollNumber || student.studentCode || app.rollNumber || "";
 
   const relationship =
     parents.guardian?.relationship === "Other"
@@ -1653,10 +2127,7 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
         title: "Personal Information",
         icon: FiUser,
         rows: [
-          ["Student Full Name", studentFullName(student)],
-          ["First Name", p.firstName],
-          ["Middle Name", p.middleName],
-          ["Last Name", p.lastName],
+          ["Full Name", studentFullName(student)],
           ["Gender", p.gender],
           ["Date of Birth", p.dob],
           ["Blood Group", p.bloodGroup],
@@ -1669,8 +2140,8 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
         icon: FiUser,
         rows: [
           ["Student Mobile", c.mobile],
-          ["Alternate Mobile", c.alternateMobile],
           ["Student Email", c.email],
+          ["Alternate Mobile", c.alternateMobile],
           ["Alternate Email", c.alternateEmail],
         ],
       },
@@ -1729,19 +2200,18 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
         title: "Academic Enrollment",
         icon: FiBookOpen,
         rows: [
+          ["Roll Number", a.rollNumber || student.rollNumber || app.rollNumber],
+          ["Admission Number", app.admissionNumber || student.admissionNumber],
           ["Academic Year", a.academicYear],
-          ["Joining College", admission.college],
-          ["Admission Type", a.admissionType],
-          ["Quota", studentQuotaDisplay(student)],
           ["Course", a.course],
-          ["Course Code", a.courseCode],
           ["Department", a.department],
           ["Branch", a.branch],
-          ["Branch Code", a.branchCode],
-          ["Student Category", a.studentCategory],
+          ["Section", a.section],
+          ["Year of Study", a.yearOfStudy ? (String(a.yearOfStudy).toLowerCase().includes('year') ? a.yearOfStudy : `${a.yearOfStudy} Year`) : (a.semester ? (String(a.semester).toLowerCase().includes('semester') ? a.semester : `Semester ${a.semester}`) : "")],
+          ["Admission Type", a.admissionType],
+          ["Quota", studentQuotaDisplay(student)],
+          ["Joining College", admission.college || a.collegeName],
           ["Regulation", a.regulation],
-          ["Year of Study", a.yearOfStudy],
-          ["Roll Number", a.rollNumber],
         ],
       },
     ],
@@ -1880,7 +2350,65 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
       </div>
 
       <div className="cm-profile-card">
-        <div className="sp-reference-identity">{p.photo && <img src={p.photo} alt="" />}<div><h3>{studentFullName(student) || 'Unnamed student'}</h3><p>{[formatDisplay(a.course),formatDisplay(a.branch)].join(' · ')}</p><small>{app.admissionNumber || app.registrationNumber}</small></div><StatusBadge value={status(student.status)} /></div>
+        <div className="cm-profile-banner">
+          <div className="cm-profile-avatar-wrap">
+            {p.photo || getApprovedStudentPhoto(student) ? (
+              <img src={p.photo || getApprovedStudentPhoto(student)} alt={studentFullName(student)} className="cm-profile-logo" />
+            ) : (
+              <div className="cm-profile-placeholder">{studentInitials(student)}</div>
+            )}
+            <label
+              className="cm-avatar-upload-trigger"
+              title="Click camera to upload student photo from your device"
+              aria-label="Upload student photo"
+            >
+              <FiCamera aria-hidden="true" />
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = () => {
+                    if (onPhotoUpload) onPhotoUpload(reader.result);
+                  };
+                  reader.readAsDataURL(file);
+                }}
+                style={{ display: 'none' }}
+              />
+            </label>
+          </div>
+          <div className="cm-profile-header-info">
+            <div className="cm-profile-badges">
+              {rollNo && (
+                <span className="cm-badge cm-badge-roll" title={`Official Academic Roll Number: ${rollNo}`}>
+                  Roll No: {rollNo}
+                </span>
+              )}
+              {app.admissionNumber && (
+                <span className="cm-badge cm-badge-type" title={`Admission Ledger Number: ${app.admissionNumber}`}>
+                  Adm No: {app.admissionNumber}
+                </span>
+              )}
+              {(app.registrationNumber || app.number) && (
+                <span className="cm-badge cm-badge-code" title={`Application Registration Number: ${app.registrationNumber || app.number}`}>
+                  Reg No: {app.registrationNumber || app.number}
+                </span>
+              )}
+              {a.section && (
+                <span className="cm-badge cm-badge-section">
+                  {a.section}
+                </span>
+              )}
+              <StatusBadge value={status(student.status)} />
+            </div>
+            <h1 className="cm-profile-title"><span>{studentFullName(student) || 'Unnamed student'}</span></h1>
+            <p className="cm-profile-subtitle">
+              <span>{[formatDisplay(a.course), formatDisplay(a.branch), a.section, formatDisplay(a.academicYear)].filter(Boolean).join(' · ')}</span>
+            </p>
+          </div>
+        </div>
         <nav className="sp-tabs" aria-label="Student profile sections">
           {TABS.map(([id, label, Icon]) => (
             <button
@@ -1896,24 +2424,34 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
           ))}
         </nav>
       {tab === "documents" ? (
-        <section className="sp-panel">
-          <header>
-            <h2>Submitted documents</h2>
-            {student.documentError && <p role="alert">{student.documentError}</p>}
-          </header>
-          <div className="sp-document-list">
-            {documentRows.map(([label, document], index) => (
-              <article key={document?.id || label + index}>
-                <FiFileText />
-                <div>
-                  <strong>{label}</strong>
-                  <span>{document?.name || document?.status || "Not uploaded"}</span>
-                </div>
-<StudentDocumentActions document={document} studentId={profileStudentId(student)} />
-              </article>
-            ))}
-          </div>
-        </section>
+        <div className="sp-profile-cards-container">
+          <section className="sp-profile-panel">
+            <header className="sp-panel-header">
+              <div className="sp-panel-title-wrap">
+                <span className="sp-panel-icon"><FiFileText aria-hidden="true" /></span>
+                <h2>Submitted Documents</h2>
+              </div>
+              <span className="sp-card-count-badge">{documentRows.length} files</span>
+            </header>
+            {student.documentError && !student.documentError.toLowerCase().includes("not found") && (
+              <div style={{ margin: '14px 18px', padding: '10px 14px', background: '#fee2e2', color: '#b91c1c', borderRadius: '8px', fontSize: '13px' }} role="alert">
+                {student.documentError}
+              </div>
+            )}
+            <div className="sp-document-list" style={{ padding: '16px' }}>
+              {documentRows.map(([label, document], index) => (
+                <article key={document?.id || label + index}>
+                  <FiFileText />
+                  <div>
+                    <strong>{label}</strong>
+                    <span>{document?.name || document?.status || "Not uploaded"}</span>
+                  </div>
+                  <StudentDocumentActions document={document} studentId={profileStudentId(student)} />
+                </article>
+              ))}
+            </div>
+          </section>
+        </div>
       ) : tab === "fees" ? (
         <StudentProfileFeesView student={student} onOpenReceipt={setReceiptModal} />
       ) : sectionsByTab[tab] ? (
@@ -1932,6 +2470,33 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
           No admission information is available for this section.
         </Empty>
       )}
+
+        <footer className="sp-view-tab-nav-footer">
+          {prevTab ? (
+            <button
+              type="button"
+              className="cm-button secondary erp-btn erp-btn--secondary"
+              onClick={() => {
+                setTab(prevTab[0]);
+                document.querySelector('.shared-view-dialog__body')?.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            >
+              &larr; {prevTab[1]}
+            </button>
+          ) : <span />}
+          {nextTab && (
+            <button
+              type="button"
+              className="cm-button primary erp-btn erp-btn--primary"
+              onClick={() => {
+                setTab(nextTab[0]);
+                document.querySelector('.shared-view-dialog__body')?.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            >
+              {nextTab[1]} &rarr;
+            </button>
+          )}
+        </footer>
       </div>
 
       {receiptModal && (
@@ -1950,6 +2515,20 @@ const StudentProfileEdit = (() => {
 
 
 
+const clone = (value) => {
+  if (value === null || typeof value !== "object") return value;
+  try {
+    return structuredClone(value);
+  } catch {
+    try {
+      return JSON.parse(
+        JSON.stringify(value, (k, v) => (typeof v === "function" ? undefined : v)),
+      );
+    } catch {
+      return Array.isArray(value) ? [...value] : { ...value };
+    }
+  }
+};
 const setPath = (source, path, value) => {
   const parts = path.split(".");
   const copyContainer = (current) =>
@@ -1993,9 +2572,10 @@ const initialEditForm = (student) => {
     Object.entries(student || {}).filter(([key]) => !EDITOR_METADATA_FIELDS.has(key)),
   );
   const normalized = normalizeCanonicalStudent(profileData);
+  delete normalized.completion;
   return {
     ...normalized,
-    fees: { ...(profileData.fees || normalized.fees || {}) },
+    fees: { ...(student.fees || profileData.fees || normalized.fees || {}) },
     documentUploads: {},
   };
 };
@@ -2308,6 +2888,110 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
       tabs.findIndex(([id]) => id === tab),
     ),
     lastStep = stepIndex === tabs.length - 1;
+
+  const validateCurrentStep = (stepId) => {
+    const allErrors = validateProfileForm(form, errors);
+    const p = form.personal || {};
+    const c = form.contact || {};
+    const a = form.academic || {};
+    const f = form.parents?.father || {};
+    const m = form.parents?.mother || {};
+    const g = form.parents?.guardian || {};
+    const tenth = form.previousEducation?.tenth || {};
+    const admission = form.admission || {};
+
+    const stepErrors = {};
+
+    if (stepId === "personal") {
+      if (!clean(p.firstName) || !validName(p.firstName)) {
+        stepErrors["personal.firstName"] = allErrors["personal.firstName"] || "First name is required.";
+      }
+      if (!clean(p.gender)) {
+        stepErrors["personal.gender"] = "Please select gender.";
+      }
+      if (!clean(p.dob) || allErrors["personal.dob"]) {
+        stepErrors["personal.dob"] = allErrors["personal.dob"] || "Date of birth is required.";
+      }
+      if (clean(p.aadhaar) && allErrors["personal.aadhaar"]) {
+        stepErrors["personal.aadhaar"] = allErrors["personal.aadhaar"];
+      }
+      ["personal.middleName", "personal.lastName", "personal.nationality"].forEach((k) => {
+        if (allErrors[k]) stepErrors[k] = allErrors[k];
+      });
+    } else if (stepId === "contact") {
+      if (!clean(c.mobile) || !validMobile(c.mobile)) {
+        stepErrors["contact.mobile"] = allErrors["contact.mobile"] || "Valid 10-digit Indian mobile number is required.";
+      }
+      if (!clean(c.email) || !validEmail(c.email)) {
+        stepErrors["contact.email"] = allErrors["contact.email"] || "Valid email address is required.";
+      }
+      const curr = c.currentAddress || {};
+      if (!clean(curr.line1)) stepErrors["contact.currentAddress.line1"] = "Address line 1 is required.";
+      if (!clean(curr.city)) stepErrors["contact.currentAddress.city"] = "City is required.";
+      if (!clean(curr.state)) stepErrors["contact.currentAddress.state"] = "State is required.";
+      if (!clean(curr.pincode) || !/^\d{6}$/.test(clean(curr.pincode))) {
+        stepErrors["contact.currentAddress.pincode"] = "Valid 6-digit PIN code is required.";
+      }
+      if (!c.sameAddress) {
+        const perm = c.permanentAddress || {};
+        if (clean(perm.pincode) && !/^\d{6}$/.test(clean(perm.pincode))) {
+          stepErrors["contact.permanentAddress.pincode"] = "Valid 6-digit PIN code is required.";
+        }
+      }
+      ["contact.alternateMobile", "contact.alternateEmail"].forEach((k) => {
+        if (allErrors[k]) stepErrors[k] = allErrors[k];
+      });
+    } else if (stepId === "parents") {
+      const hasParent = clean(f.name) || clean(m.name) || clean(g.name);
+      const hasPhone = clean(f.mobile) || clean(m.mobile) || clean(form.parents?.emergencyMobile);
+      if (!hasParent) {
+        stepErrors["parents.father.name"] = "Please provide father, mother, or guardian name.";
+      }
+      if (!hasPhone) {
+        stepErrors["parents.emergencyMobile"] = "Please provide an emergency contact mobile number.";
+      }
+      if (g.relationship === "Other" && !clean(g.relationshipOther)) {
+        stepErrors["parents.guardian.relationshipOther"] = "Specify the guardian relationship.";
+      }
+      Object.keys(allErrors).filter((k) => k.startsWith("parents.")).forEach((k) => {
+        stepErrors[k] = allErrors[k];
+      });
+    } else if (stepId === "academic") {
+      if (!clean(a.academicYear)) stepErrors["academic.academicYear"] = "Academic year is required.";
+      if (!clean(admission.college)) stepErrors["admission.college"] = "Joining college is required.";
+      if (!clean(a.course)) stepErrors["academic.course"] = "Course is required.";
+      if (!clean(a.branch)) stepErrors["academic.branch"] = "Branch is required.";
+      if (!clean(a.admissionType)) stepErrors["academic.admissionType"] = "Admission type is required.";
+      if (a.admissionType === "Lateral Entry" && !clean(a.quota)) {
+        stepErrors["academic.quota"] = "Admission quota is required for Lateral Entry.";
+      }
+      Object.keys(allErrors).filter((k) => k.startsWith("academic.") || k.startsWith("admission.college")).forEach((k) => {
+        stepErrors[k] = allErrors[k];
+      });
+    } else if (stepId === "education") {
+      if (!clean(tenth.board)) stepErrors["previousEducation.tenth.board"] = "10th Board is required.";
+      if (!clean(tenth.passingYear) || !validYear(tenth.passingYear)) {
+        stepErrors["previousEducation.tenth.passingYear"] = "Valid 10th passing year is required.";
+      }
+      if (!clean(tenth.score) || allErrors["previousEducation.tenth.score"]) {
+        stepErrors["previousEducation.tenth.score"] = allErrors["previousEducation.tenth.score"] || "10th score is required.";
+      }
+      Object.keys(allErrors).filter((k) => k.startsWith("previousEducation.")).forEach((k) => {
+        stepErrors[k] = allErrors[k];
+      });
+    } else if (stepId === "services") {
+      if (admission.hostel === "Yes") {
+        if (!clean(admission.hostelPreference)) stepErrors["admission.hostelPreference"] = "Hostel preference is required.";
+        if (!clean(admission.hostelRoomType)) stepErrors["admission.hostelRoomType"] = "Room type is required.";
+      }
+      if (admission.transport === "Yes") {
+        if (!clean(admission.transportRoute)) stepErrors["admission.transportRoute"] = "Transportation route is required.";
+      }
+    }
+
+    return stepErrors;
+  };
+
   const moveStep = (direction) => {
     const next = Math.min(tabs.length - 1, Math.max(0, stepIndex + direction));
     setTab(tabs[next][0]);
@@ -2318,6 +3002,44 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
           ?.scrollTo({ top: 0, behavior: "smooth" }),
       0,
     );
+  };
+
+  const handleNextStep = () => {
+    const stepErrors = validateCurrentStep(tab);
+    if (Object.keys(stepErrors).length > 0) {
+      setErrors((prev) => ({ ...prev, ...stepErrors }));
+      setTouched((prev) => {
+        const nextTouched = { ...prev };
+        Object.keys(stepErrors).forEach((k) => { nextTouched[k] = true; });
+        return nextTouched;
+      });
+      showWarning("Please complete all mandatory fields in this section before proceeding.");
+      const firstErrorField = Object.keys(stepErrors)[0];
+      const el = document.querySelector(`[name="${firstErrorField}"]`) || document.getElementById(`${firstErrorField}-error`);
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+
+    moveStep(1);
+  };
+
+  const handleTabClick = (targetId, targetIndex) => {
+    if (targetIndex <= stepIndex) {
+      setTab(targetId);
+      return;
+    }
+    const stepErrors = validateCurrentStep(tab);
+    if (Object.keys(stepErrors).length > 0) {
+      setErrors((prev) => ({ ...prev, ...stepErrors }));
+      setTouched((prev) => {
+        const nextTouched = { ...prev };
+        Object.keys(stepErrors).forEach((k) => { nextTouched[k] = true; });
+        return nextTouched;
+      });
+      showWarning("Please complete the required fields in the current section first.");
+      return;
+    }
+    setTab(targetId);
   };
   const update = (path, value) => {
       setForm((current) => {
@@ -2556,7 +3278,7 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
         ["town", "Village / Town"],
         ["city", "City", { required: isRequired }],
         ["district", "District"],
-        ["state", "State"],
+        ["state", "State", { required: isRequired }],
         ["country", "Country"],
         ["pincode", "PIN code", { required: isRequired }],
       ].map(([key, label, opts]) => [`${prefix}.${key}`, label, opts]),
@@ -2696,7 +3418,7 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
               type="button"
               key={id}
               className={`${tab === id ? "active" : ""} ${index < stepIndex ? "complete" : ""}`}
-              onClick={() => setTab(id)}
+              onClick={() => handleTabClick(id, index)}
               aria-current={tab === id ? "step" : undefined}
             >
               <span>{index + 1}</span>
@@ -2744,7 +3466,7 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
                   "personal.bloodGroup",
                   "Blood group",
                   {
-                    options: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
+                    options: ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"],
                   },
                 ],
                 ["personal.nationality", "Nationality"],
@@ -2894,6 +3616,14 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
                 Academic placement details.
               </p>
               {fields([
+                [
+                  "academic.rollNumber",
+                  "Roll number (Hall ticket / PIN)",
+                  {
+                    placeholder: "e.g. 26REC0501",
+                    title: "Official classroom and examination roll number allotted upon enrollment",
+                  },
+                ],
                 [
                   "academic.academicYear",
                   "Academic year",
@@ -3375,38 +4105,42 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
               {errors.form}
             </p>
           )}
-          <footer>
+          <footer className="sp-edit-footer">
             <button
               type="button"
-              className="sp-button secondary"
+              className="sp-button secondary sp-btn-cancel"
               onClick={close}
               disabled={saving}
             >
               Cancel
             </button>
             <span className="sp-edit-action-spacer" />
-            {stepIndex > 0 && (
-              <button
-                type="button"
-                className="sp-button secondary"
-                onClick={() => moveStep(-1)}
-                disabled={saving}
-              >
-                Previous
-              </button>
-            )}
+            <button
+              type="button"
+              className="sp-button secondary sp-btn-back"
+              onClick={() => {
+                if (stepIndex > 0) {
+                  moveStep(-1);
+                } else {
+                  close();
+                }
+              }}
+              disabled={saving}
+            >
+              &larr; Back
+            </button>
             {!lastStep ? (
               <button
                 type="button"
-                className="sp-button"
-                onClick={() => moveStep(1)}
+                className="sp-button primary sp-btn-next"
+                onClick={handleNextStep}
               >
-                Continue
+                Next &rarr;
               </button>
             ) : (
               <button
                 type="submit"
-                className="sp-button"
+                className="sp-button primary sp-btn-save"
                 disabled={!dirty || saving}
               >
                 {saving ? (

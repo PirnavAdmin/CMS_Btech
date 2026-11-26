@@ -56,7 +56,8 @@ namespace BTech.Services.Implementations
             var normalized = NormalizeStatus(status);
             return normalized == "Application Submitted"
                 || normalized == "Under Review"
-                || normalized == "Document Verification";
+                || normalized == "Document Verification"
+                || normalized == "Draft";
         }
 
         private static bool CanRejectFrom(string? status)
@@ -64,7 +65,8 @@ namespace BTech.Services.Implementations
             var normalized = NormalizeStatus(status);
             return normalized == "Application Submitted"
                 || normalized == "Under Review"
-                || normalized == "Document Verification";
+                || normalized == "Document Verification"
+                || normalized == "Draft";
         }
 
         private static string BuildAdmissionNumber(long admissionId, DateTime now)
