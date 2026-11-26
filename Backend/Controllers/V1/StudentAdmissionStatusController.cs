@@ -362,6 +362,10 @@ namespace BTech.Controllers.V1
                         "Student admission was approved but account provisioning could not be completed. AdmissionId={AdmissionId}, StudentId={StudentId}",
                         admissionId, generatedStudentId.Value);
                 }
+
+                _logger.LogInformation(
+                    "[CMS ADMISSION APPROVED] Admission #{AdmissionId} successfully approved! Provisioned StudentId={StudentId}, AdmissionNo={AdmissionNo}. Ready for Student Profiles.",
+                    admissionId, generatedStudentId.Value, admission.AdmissionNo);
             }
 
             // -----------------------------------------------------

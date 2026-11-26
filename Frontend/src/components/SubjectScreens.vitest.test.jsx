@@ -122,6 +122,74 @@ test('subject creation preserves engineering fields and uses the existing create
   await waitFor(()=>expect(screen.queryByRole('dialog')).toBeNull())
 })
 
+test('common subject editor loads live branch options, reviews selected mappings, and blocks unsupported creation', async () => {
+  academicService.getBranches.mockResolvedValue([
+    { id: '3', collegeId: 7, courseId: '2', name: 'CSE', status: 'Active' },
+    { id: '9', collegeId: 7, courseId: '2', name: 'ECE', status: 'Active' },
+  ])
+  academicService.getSemesters.mockResolvedValue([
+    { id: '4', collegeId: 7, courseId: '2', branchId: '3', academicYearId: '1', name: 'Semester 1', semesterNumber: 1 },
+    { id: '10', collegeId: 7, courseId: '2', branchId: '9', academicYearId: '1', name: 'Semester 1', semesterNumber: 1 },
+  ])
+  mount()
+  fireEvent.click(await screen.findByRole('button', { name: 'Add Common Subject' }))
+  const dialog = await screen.findByRole('dialog', { name: 'Add Common Subject' })
+  const form = within(dialog)
+
+  await waitFor(() => expect(form.getByLabelText('Program').options.length).toBeGreaterThan(1))
+  fireEvent.change(form.getByLabelText('Program'), { target: { value: '2' } })
+  await waitFor(() => expect(form.getByLabelText('CSE').checked).toBe(true))
+  expect(form.getByLabelText('ECE').checked).toBe(true)
+  expect(form.getByText('2 selected')).toBeTruthy()
+  expect(form.getByLabelText('Regulation').disabled).toBe(true)
+
+  fireEvent.click(form.getByRole('radio', { name: 'Selected Branches' }))
+  fireEvent.click(form.getByRole('button', { name: 'Clear All' }))
+  fireEvent.click(form.getByLabelText('CSE'))
+  expect(form.getByText('1 selected')).toBeTruthy()
+  await waitFor(() => expect(Array.from(form.getByLabelText('Semester').options).some(option => option.value === '4')).toBe(true))
+  fireEvent.change(form.getByLabelText('Semester'), { target: { value: '4' } })
+  fireEvent.click(form.getByRole('button', { name: /Continue/ }))
+
+  fireEvent.change(form.getByLabelText(/Subject Name/), { target: { value: 'Common Programming' } })
+  fireEvent.change(form.getByLabelText(/Subject Code/), { target: { value: 'COM101' } })
+  fireEvent.change(form.getByLabelText('Credits'), { target: { value: '4' } })
+  fireEvent.click(form.getByRole('button', { name: /Continue/ }))
+
+  expect(form.getByText('1 common subject will be mapped to 1 branch.')).toBeTruthy()
+  expect(form.getByText('Backend support is required before this can be created.')).toBeTruthy()
+  fireEvent.click(form.getByRole('button', { name: 'Create Common Subject' }))
+  expect(await form.findByText(/current API accepts one branch per subject/)).toBeTruthy()
+  expect(subjectService.createSubject).not.toHaveBeenCalled()
+})
+
+test('subject directory shows and filters common subjects with branch details', async () => {
+  const common = {
+    ...subject,
+    id: '12',
+    subjectCode: 'COM101',
+    subjectName: 'Common Foundations',
+    isCommonSubject: true,
+    applicableBranches: [
+      { branchId: '3', branchName: 'CSE' },
+      { branchId: '9', branchName: 'ECE' },
+    ],
+    applicableBranchCount: 2,
+  }
+  subjectService.getSubjects.mockResolvedValue([subject, common])
+  mount()
+  expect(await screen.findByRole('button', { name: 'View COM101' })).toBeTruthy()
+  expect(screen.getByText('Common')).toBeTruthy()
+  expect(screen.getByText('Branch-specific')).toBeTruthy()
+  expect(screen.getByText('Common Subjects').parentElement.querySelector('strong').textContent).toBe('1')
+  expect(screen.getAllByTitle('CSE, ECE').length).toBeGreaterThan(0)
+
+  fireEvent.click(screen.getByRole('button', { name: /Filters/ }))
+  fireEvent.change(screen.getByLabelText('Applicability'), { target: { value: 'common' } })
+  expect(screen.getByRole('button', { name: 'View COM101' })).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'View CS101' })).toBeNull()
+})
+
 test('subject status deactivation requires confirmation and propagates through the status service',async()=>{
   subjectService.updateSubjectStatus.mockResolvedValue({})
   mount();fireEvent.click(await screen.findByRole('button',{name:'Deactivate CS101'}))

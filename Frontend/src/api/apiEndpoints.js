@@ -16,7 +16,7 @@ if (typeof window !== 'undefined' && window.localStorage) {
 }
 
 const normalizeBaseUrl = (value = '') => value.trim().replace(/\/+$/, '')
-const DEFAULT_API_BASE_URL = 'https://prune-abroad-blemish.ngrok-free.dev'
+const DEFAULT_API_BASE_URL = 'https://vaguely-citric-fragrant.ngrok-free.dev'
 // Results endpoints are optional until the institution's result service is integrated.
 export const RESULTS_API_ENABLED = String(import.meta.env.VITE_RESULTS_API_ENABLED || '').toLowerCase() === 'true'
 
@@ -1079,7 +1079,7 @@ const sectionPayload = (section) => ({
   sectionCode: String(section.code || section.sectionCode || '').trim().toUpperCase(),
   sectionName: String(section.name || section.sectionName || '').trim(),
   capacity: Number(section.capacity),
-  facultyAdvisorEmployeeProfileId: section.facultyAdvisorEmployeeProfileId || null,
+  facultyAdvisorEmployeeProfileId: nullableNumericId(section.facultyAdvisorEmployeeProfileId) ?? null,
   room: String(section.room || '').trim() || null,
   shift: section.shift || 'Morning',
   sectionType: section.type || section.sectionType || 'Regular',
