@@ -17,13 +17,14 @@ const rows = value => {
 const path = value => `/timetables/${id(value)}`
 const date = value => String(value || '').slice(0, 10)
 const timestamp = value => value ? `${date(value)}T00:00:00` : null
-const period = row => ({ ...row, id: String(row.timetableSlotId ?? row.periodId ?? row.id), periodId: row.periodId,
-  name: row.periodName || row.slotName || row.name, type: String(row.periodType || 'CLASS').toLowerCase(),
+const period = row => ({ ...row, id: String(row.timetableSlotId ?? row.periodId ?? row.id ?? row.displayOrder), periodId: row.periodId,
+  name: row.periodName || row.slotName || row.name, type: String(row.periodType || row.type || 'CLASS').toLowerCase(),
   startTime: String(row.startTime || '').slice(0, 5), endTime: String(row.endTime || '').slice(0, 5), source: 'backend' })
 
 export function normalizeTimetable(detail, periods, calendar, classrooms) {
   const table = detail.timetable
   if (!table?.timetableId || !Array.isArray(detail.entries) || !Array.isArray(detail.slots)) throw new Error('The timetable detail response is incomplete.')
+  const publicationStatus = table.status.toUpperCase() === 'GENERATED' ? 'draft' : table.status.toLowerCase()
   const slots = detail.slots.filter(row => row.active !== false).map(period)
   const configured = periods.filter(row => row.active !== false).map(period)
   const planningPeriods = configured.length ? configured.map(row => {
@@ -31,10 +32,10 @@ export function normalizeTimetable(detail, periods, calendar, classrooms) {
     return { ...row, id: isTeachingPeriod(row) && slot ? slot.id : `period:${row.id}`, timetableSlotId: slot?.id }
   }) : slots
   return { ...table, id: String(table.timetableId), name: table.timetableName, origin: 'backend',
-    publicationStatus: String(table.status).toLowerCase(), revision: table.revision,
+    publicationStatus, revision: table.revision,
     entries: detail.entries.filter(row => row.active !== false).map(row => normalizeEntry({ ...table, ...row, id: row.timetableEntryId,
       roomId: row.classroomId, classroom: row.classroomName || row.classroom, status: row.active,
-      publicationStatus: String(table.status).toLowerCase(), origin: 'backend' })),
+      publicationStatus, origin: 'backend' })),
     planning: { periodMode: 'manual', periods: planningPeriods, rooms: classrooms.filter(row => row.active !== false).map(row => `id:${row.classroomId}`),
       calendar: { startDate: date(table.effectiveFrom), endDate: date(table.effectiveTo),
         workingDays: (calendar.workingDays || []).map(day => day.toUpperCase()), holidays: (calendar.holidays || []).map(row => date(row.date)), reviewed: calendar.reviewed === true },
@@ -59,7 +60,12 @@ export const backendTimetableService = {
   async detail(tableId, classrooms) {
     const detail = await api.get(path(tableId))
     const academicYearId = id(detail?.timetable?.academicYearId)
-    const [periods, calendar, rooms] = await Promise.all([api.get('/periods', { academicYearId }), api.get('/calendar', { academicYearId }), classrooms || api.get('/classrooms')])
+    const planning = detail.planning
+    const [periods, calendar, rooms] = await Promise.all([
+      planning?.periods ?? api.get('/periods', { academicYearId }),
+      planning?.calendar ?? api.get('/calendar', { academicYearId }),
+      classrooms || api.get('/classrooms'),
+    ])
     return normalizeTimetable(detail, rows(periods), calendar, rows(rooms))
   },
   async list() {
@@ -70,40 +76,24 @@ export const backendTimetableService = {
     const dateErrors = timetableDateErrors(config?.calendar)
     if (dateErrors.length) throw new Error(dateErrors.join('\n'))
     if (options.tableId && (await this.detail(options.tableId)).publicationStatus !== 'draft') throw new Error('Only draft timetable settings can be changed.')
-    const academicYearId = id(scope.academicYearId)
-    const existing = rows(await api.get('/periods', { academicYearId }))
-    const masters = rows(await api.get('/timetables', { academicYearId }))
-    const published = masters.some(row => String(row.status).toUpperCase() === 'PUBLISHED')
-    if (published) {
-      const calendar = await api.get('/calendar', { academicYearId })
-      const activePeriods = existing.filter(row => row.active !== false).sort((a, b) => a.displayOrder - b.displayOrder)
-      const samePeriods = activePeriods.length === config.periods.length && activePeriods.every((row, index) => row.startTime?.slice(0, 5) === config.periods[index].startTime.slice(0, 5) && row.endTime?.slice(0, 5) === config.periods[index].endTime.slice(0, 5) && String(row.periodType || 'CLASS').toUpperCase() === periodType(config.periods[index]).toUpperCase())
-      const sorted = values => JSON.stringify([...values].sort())
-      const sameCalendar = calendar.reviewed === config.calendar.reviewed && sorted((calendar.workingDays || []).map(day => day.toUpperCase())) === sorted(config.calendar.workingDays) && sorted((calendar.holidays || []).map(row => date(row.date))) === sorted(config.calendar.holidays.filter(Boolean))
-      if (!samePeriods || !sameCalendar) throw new Error('Periods and calendar are shared by Academic Year. Changing them would affect published history. Backend version-specific period/calendar support is required.')
-    } else {
-      // Periods and calendar are shared by the academic year; retain real period IDs.
-      const saved = []
-      for (const [index, row] of config.periods.entries()) {
-        const current = existing.find(item => same(item.periodId, row.periodId) || (!row.periodId && item.startTime?.slice(0, 5) === row.startTime.slice(0, 5) && item.endTime?.slice(0, 5) === row.endTime.slice(0, 5)))
-        const payload = { academicYearId, periodNumber: isTeachingPeriod(row) ? config.periods.slice(0, index + 1).filter(isTeachingPeriod).length : null,
-          periodName: row.name, startTime: row.startTime.slice(0, 5), endTime: row.endTime.slice(0, 5), periodType: periodType(row).toUpperCase(), displayOrder: index + 1, active: true }
-        const result = current ? await api.put(`/periods/${id(current.periodId)}`, payload) : await api.post('/periods', payload)
-        saved.push(id(result?.periodId ?? current?.periodId))
-      }
-      for (const row of existing.filter(row => row.active !== false && !saved.includes(Number(row.periodId)))) await api.remove(`/periods/${id(row.periodId)}`)
-      await api.put('/periods/reorder', { academicYearId, periodIds: saved })
-      await api.put('/calendar', { academicYearId, reviewed: config.calendar.reviewed, workingDays: config.calendar.workingDays,
-        holidays: config.calendar.holidays.filter(Boolean).map(value => ({ date: timestamp(value), type: 'HOLIDAY', description: 'Non-working date' })) })
+    const payload = {
+      timetableName: name,
+      effectiveFrom: timestamp(config.calendar.startDate),
+      effectiveTo: timestamp(config.calendar.endDate),
+      planning: {
+        periods: [...config.periods].sort((a, b) => a.startTime.localeCompare(b.startTime))
+          .map((row, index) => ({ periodName: row.name, startTime: row.startTime.slice(0, 5),
+            endTime: row.endTime.slice(0, 5), periodType: periodType(row).toUpperCase(), displayOrder: index + 1 })),
+        calendar: { reviewed: config.calendar.reviewed, workingDays: config.calendar.workingDays,
+          holidays: config.calendar.holidays.filter(Boolean).map(value => ({ date: timestamp(value), type: 'HOLIDAY', description: 'Non-working date' })) },
+      },
     }
-    const payload = { timetableName: name, effectiveFrom: timestamp(config.calendar.startDate), effectiveTo: timestamp(config.calendar.endDate) }
     let tableId = options.tableId
     if (tableId) await api.put(path(tableId), payload)
     else {
       const created = await api.post('/timetables', { ...Object.fromEntries(['academicYearId', 'courseId', 'branchId', 'semesterId', 'sectionId'].map(field => [field, id(scope[field])])), ...payload })
       tableId = created?.timetableId ?? created?.timetable?.timetableId
     }
-    await api.post(`${path(tableId)}/sync-periods`)
     await this.saveRequirements(tableId, config.requirements)
     return this.detail(tableId)
   },
