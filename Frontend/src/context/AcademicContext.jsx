@@ -10,6 +10,17 @@ import { getAccessToken, getUserCollegeId, getUserRole } from '../auth/auth'
 
 const CONTEXT_STORAGE_KEY = 'pirnav_academic_context'
 
+const normalizeCollegeDisplayName = (row) => {
+  if (!row || typeof row !== 'object') return row
+  const rawName = String(row.collegeName ?? row.name ?? row.CollegeName ?? '').trim()
+  if (!/raghavendra/i.test(rawName)) return row
+  return {
+    ...row,
+    name: 'Raghavendra Engineering College',
+    collegeName: 'Raghavendra Engineering College',
+  }
+}
+
 const AcademicContext = createContext(null)
 
 const readStoredContext = () => {
@@ -104,7 +115,9 @@ export const AcademicProvider = ({ children }) => {
       }
       if (requestId !== hierarchyRequest.current || storedCollegeId() !== requestedCollegeId || getAccessToken() !== requestToken) return
       if (cols?.loadError) throw new Error('College details could not be loaded. Please retry.')
-      const safeColleges = (cols || []).filter(row => canSelectCollege(authorization, row.id ?? row.collegeId, getUserCollegeId()) && (!assignedCollege || String(row.id ?? row.collegeId) === assignedCollege))
+      const safeColleges = (cols || [])
+        .filter(row => canSelectCollege(authorization, row.id ?? row.collegeId, getUserCollegeId()) && (!assignedCollege || String(row.id ?? row.collegeId) === assignedCollege))
+        .map(normalizeCollegeDisplayName)
       setColleges(safeColleges)
       const available = filterActiveOnly(safeColleges)
       if (!available.length) {
