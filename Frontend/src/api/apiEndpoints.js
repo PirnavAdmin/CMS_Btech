@@ -1642,15 +1642,68 @@ export const academicFeePlanApi = {
   submit: async (id, collegeId, expectedRevision) => dataResponse(await request(API_ENDPOINTS.academicFeePlans.submit(id, collegeId), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ expectedRevision }) })),
 }
 
+export const normalizeFeeCategory = (row) => {
+  if (!row || typeof row !== 'object') return null
+  const id = row.id ?? row.Id ?? row.feeCategoryId ?? row.fee_category_id ?? null
+  const code = String(row.code ?? row.Code ?? row.categoryCode ?? row.category_code ?? '').trim()
+  const name = String(row.name ?? row.Name ?? row.categoryName ?? row.category_name ?? '').trim()
+  const description = row.description ?? row.Description ?? null
+  const status = Number(row.status ?? row.Status ?? 1)
+  if (!code && !name) return null
+  return {
+    id,
+    code,
+    name,
+    description: description ? String(description).trim() : null,
+    status
+  }
+}
+
 export const feeConfigurationApi = {
-  updateCategory: async (id, body) => dataResponse(await request(endpoint('/api/v1/fee-categories/' + encodeURIComponent(id)), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })),
-  createCategory: async body => dataResponse(await request(API_ENDPOINTS.feeConfiguration.categories, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  updateCategory: async (id, body) => {
+    const raw = dataResponse(await request(endpoint('/api/v1/fee-categories/' + encodeURIComponent(id)), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }))
+    return normalizeFeeCategory(raw) || raw
+  },
+  createCategory: async body => {
+    const raw = dataResponse(await request(API_ENDPOINTS.feeConfiguration.categories, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }))
+    return normalizeFeeCategory(raw) || raw
+  },
+  categories: async (params = {}) => {
+    const url = withQuery(API_ENDPOINTS.feeConfiguration.categories, params)
+    const list = listData(await request(url))
+    return list
+      .map(normalizeFeeCategory)
+      .filter(row =>
+        row
+        && !/^DEMO_/i.test(row.code)
+        && !/demonstration\s+category/i.test(row.description || '')
+      )
+  },
+  manageCategories: async (params = { includeInactive: true }) => {
+    const url = withQuery(endpoint('/api/v1/fee-categories/manage'), params)
+    const list = listData(await request(url))
+    return list
+      .map(normalizeFeeCategory)
+      .filter(row =>
+        row
+        && !/^DEMO_/i.test(row.code)
+        && !/demonstration\s+category/i.test(row.description || '')
+      )
+  },
+  toggleStatus: async (id, status) => dataResponse(await request(endpoint(`/api/v1/fee-categories/${encodeURIComponent(id)}/status`), {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status })
   })),
-  categories: async () => listData(await request(API_ENDPOINTS.feeConfiguration.categories)).filter(row =>
-    !/^DEMO_/i.test(String(row?.code ?? '').trim())
-    && !/demonstration\s+category/i.test(String(row?.description ?? ''))
-  ),
+  deleteCategory: async (id) => dataResponse(await request(endpoint('/api/v1/fee-categories/' + encodeURIComponent(id)), {
+    method: 'DELETE'
+  })),
 }
 
 // Contracts: Backend/DTOs/Fees/FeeCollectionDtos.cs. Reuse authentication,
