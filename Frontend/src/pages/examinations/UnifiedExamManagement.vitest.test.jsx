@@ -8,7 +8,7 @@ vi.mock('../../layouts/DashboardLayout', () => ({ default: ({ children }) => <>{
 vi.mock('../../components/PageHeader', () => ({ default: ({ title, subtitle, primaryAction }) => <header><h1>{title}</h1><p>{subtitle}</p>{primaryAction}</header> }))
 vi.mock('../../components/ViewDialog', () => ({ default: ({ title, subtitle, children, footerContent, onClose }) => <section role="dialog" aria-label={title}><header><h2>{title}</h2><p>{subtitle}</p><button type="button" aria-label="Close details" onClick={onClose}>Close</button></header><div>{children}</div>{footerContent && <footer>{footerContent}</footer>}</section> }))
 vi.mock('../../context/AcademicContext', () => {
-  const academic = { selectedCollegeId: 8, selectedAcademicYearId: 1, academicYears: [], loading: false }
+  const academic = { selectedCollegeId: 8, selectedAcademicYearId: 1, currentAcademicYear: { id: 1, name: '2026–27', collegeId: 8, isCurrent: true }, academicYears: [], loading: false }
   return { useAcademic: () => academic }
 })
 vi.mock('../../auth/ScreenAccess', () => ({ useScreenAccess: () => ({ canAction: () => true }) }))
@@ -48,6 +48,40 @@ beforeEach(() => {
   })
 })
 afterEach(() => { cleanup(); vi.clearAllMocks() })
+
+test('offers only the current year of the selected college', async () => {
+  call.mockImplementation(async (path, options = {}) => {
+    if (path === 'exams/lookups') return { data: { ...lookups, academicYears: [{ id: 1, name: '2026–27' }, { id: 2, name: '2027–28' }, { id: 3, name: 'Other college year' }] } }
+    return { data: [] }
+  })
+  render(<UnifiedExamManagement />)
+  await screen.findByRole('heading', { name: 'All Examinations' })
+  fireEvent.click(screen.getByRole('button', { name: 'Create Examination' }))
+  const year = within(screen.getByRole('dialog', { name: 'Create Examination' })).getByLabelText(/Academic Year/)
+  expect(year.value).toBe('1')
+  expect(within(year).getAllByRole('option')).toHaveLength(1)
+  expect(within(year).getByRole('option', { name: '2026–27' }).value).toBe('1')
+})
+
+test('shows each section once from the selected academic scope', async () => {
+  call.mockImplementation(async (path, options = {}) => {
+    if (path === 'exams/lookups' && options.query?.semesterId && options.query?.includeSubjects === false) return { data: { sections: [{ id: 10, name: 'Section A' }, { id: 11, name: ' A ' }, { id: 12, name: 'Section B' }] } }
+    if (path === 'exams/lookups') return { data: lookups }
+    return { data: [] }
+  })
+  render(<UnifiedExamManagement />)
+  await screen.findByRole('heading', { name: 'All Examinations' })
+  fireEvent.click(screen.getByRole('button', { name: 'Create Examination' }))
+  const form = screen.getByRole('dialog', { name: 'Create Examination' })
+  fireEvent.change(within(form).getByLabelText(/Course/), { target: { value: '2' } })
+  fireEvent.change(within(form).getByLabelText(/Department/), { target: { value: '3' } })
+  fireEvent.change(within(form).getByLabelText(/Semester/), { target: { value: '4' } })
+  const section = within(form).getByLabelText('Section')
+  await within(section).findByRole('option', { name: 'Section A' })
+  expect(within(section).getAllByRole('option', { name: 'Section A' })).toHaveLength(1)
+  expect(within(section).getAllByRole('option', { name: 'Section B' })).toHaveLength(1)
+  expect(call).toHaveBeenCalledWith('exams/lookups', expect.objectContaining({ query: { collegeId: 8, academicYearId: '1', courseId: '2', branchId: '3', semesterId: '4', includeSubjects: false } }))
+})
 
 test('shows the form in a modal and only creates after confirmation', async () => {
   render(<UnifiedExamManagement />)
