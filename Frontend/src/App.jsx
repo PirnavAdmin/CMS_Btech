@@ -44,6 +44,7 @@ import SubjectManagement, { SubjectDetailsPage } from './pages/subject-managemen
 import CreditsManagement from './pages/credits-management/CreditsManagement'
 import TimetableManagement from './pages/timetable/TimetableManagement'
 import ElectiveManagement from './pages/elective-management/ElectiveManagement'
+const SyllabusManagement = lazy(() => import('./pages/syllabus-management/SyllabusManagement.jsx'))
 import { AcademicProvider } from './context/AcademicContext'
 import './styles/erp-theme.css'
 import {
@@ -326,6 +327,8 @@ export default function App() {
               <Route path="/rooms/:roomId" element={<RoomsManagement key="room-view-alias" viewMode />} />
               <Route path="/subject-management" element={<SubjectManagement />} />
               <Route path="/subject-management/:id" element={<SubjectDetailsPage />} />
+              <Route path="/syllabus-management" element={<ScreenPermissionBoundary><SyllabusManagement /></ScreenPermissionBoundary>} />
+              <Route path="/syllabus-management/:semesterId" element={<ScreenPermissionBoundary><SyllabusManagement /></ScreenPermissionBoundary>} />
               <Route path="/credits-management" element={<CreditsManagement />} />
               <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.FACULTY]} />}><Route path="/timetable" element={<TimetableManagement />} /></Route>
               <Route path="/elective-management" element={<ElectiveManagement />} />

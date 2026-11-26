@@ -174,6 +174,14 @@ const entries = [
     aliases: [], children: [], prerequisites: ["college"],
   },
   {
+    id: "syllabus_management", label: "Syllabus Management", icon: "book-open-check",
+    path: "/syllabus-management", section: "curriculum", order: 20,
+    permission: {"module":"syllabus_management","action":"view","source":"existing access matrix"}, authorization: "existing-guards-and-permissions",
+    roles: ["admin"], scope: "college", navigation: true,
+    component: "src/pages/syllabus-management/SyllabusManagement.jsx", exportName: "default",
+    aliases: [], children: [], prerequisites: ["college","academicYear","course","branch","semester"],
+  },
+  {
     id: "credits", label: "Credits Management", icon: "award",
     path: "/credits-management", section: "curriculum", order: 20,
     permission: {"module":"credits","action":"view","source":"existing access matrix"}, authorization: "existing-guards-and-permissions",

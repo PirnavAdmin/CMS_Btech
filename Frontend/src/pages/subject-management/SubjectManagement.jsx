@@ -3,7 +3,7 @@ import ViewDialog from '../../components/ViewDialog'
 import { useScreenAccess } from '../../auth/ScreenAccess'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { FiPlus, FiSearch, FiBookOpen, FiTrash2, FiX, FiChevronDown, FiLayers, FiAlertCircle, FiCheckCircle } from 'react-icons/fi'
+import { FiPlus, FiSearch, FiBookOpen, FiTrash2, FiX, FiChevronDown, FiLayers, FiAlertCircle, FiCheckCircle, FiShare2 } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import EmptyState from '../../components/EmptyState'
 import ExportMenu from '../../components/ExportMenu'
@@ -23,7 +23,7 @@ import { classificationOf, enrichSubject } from '../../utils/subjectDirectory'
 import { calculateCompletion, completionSchemas } from '../../utils/recordCompletion'
 import { CompletionIndicator, ResumeSetupAction } from '../../components/RecordCompletion'
 import { subjectTypeOptions } from '../../utils/subjectTypes'
-import { downloadServerExport } from '../../utils/exportUtils'
+import { downloadServerExport, exportToCsv } from '../../utils/exportUtils'
 import './SubjectManagement.css'
 
 // These lookup requests include the selected college on the existing API client.
@@ -147,6 +147,27 @@ const blankMultiSubject = (id = 1) => ({
 })
 const key = v => String(v ?? '')
 const semNo = s => Number(s?.semesterNumber ?? String(s?.semesterName ?? s?.semester ?? s?.name ?? s?.id ?? '').match(/\d+/)?.[0] ?? 0)
+const regulationValue = row => row?.regulationId ?? row?.RegulationId ?? row?.regulation?.id ?? row?.regulationCode ?? (typeof row?.regulation === 'string' || typeof row?.regulation === 'number' ? row.regulation : '')
+const regulationLabel = row => row?.regulationName ?? row?.RegulationName ?? row?.regulation?.name ?? row?.regulation?.regulationName ?? (typeof row?.regulation === 'string' || typeof row?.regulation === 'number' ? row.regulation : '') ?? row?.regulationCode ?? ''
+const subjectBranchDetails = (subject, branchOptions = []) => {
+  const raw = subject?.applicableBranches ?? subject?.subjectBranches ?? subject?.branchMappings ?? subject?.branches ?? subject?.branchIds
+  const rows = Array.isArray(raw) ? raw : subject?.branchId != null ? [subject.branchId] : subject?.branch ? [subject.branch] : []
+  const details = rows.map(item => {
+    const rawId = typeof item === 'object' ? item.branchId ?? item.id ?? item.value : item
+    const named = typeof item === 'object' ? item.branchName ?? item.name ?? item.label : typeof item === 'string' && !/^\d+$/.test(item) ? item : ''
+    const matched = branchOptions.find(branch => key(branch.id) === key(rawId) || (named && String(branch.name).toLowerCase() === String(named).toLowerCase()))
+    const id = rawId ?? matched?.id
+    const fallbackName = rows.length === 1 && typeof subject?.branch === 'string' ? subject.branch : ''
+    return { id: id == null ? '' : key(id), name: named || matched?.name || fallbackName || (id != null ? `Branch ${id}` : '') }
+  }).filter(item => item.name || item.id)
+  return details.filter((item, index) => details.findIndex(other => item.id ? other.id === item.id : other.name === item.name) === index)
+}
+const isCommonSubject = (subject, branchOptions = []) => {
+  const explicit = subject?.isCommonSubject ?? subject?.commonSubject ?? subject?.isCommon
+  const scope = `${subject?.mappingType ?? ''} ${subject?.applicabilityType ?? ''} ${subject?.subjectScope ?? ''}`
+  const explicitlyCommon = explicit === true || explicit === 1 || /^(true|1|yes)$/i.test(String(explicit ?? ''))
+  return explicitlyCommon || /common/i.test(scope) || Number(subject?.applicableBranchCount) > 1 || subjectBranchDetails(subject, branchOptions).length > 1
+}
 export const getAcademicLevelFromSemester = s => {
   const year = Number(s?.yearNumber) || Math.ceil(semNo(s) / 2)
   return year > 0 ? `${year}${year === 1 ? 'st' : year === 2 ? 'nd' : year === 3 ? 'rd' : 'th'} Year` : ''
@@ -168,15 +189,16 @@ export default function SubjectManagement() {
   const { scopeRecords, selectedCollegeId, selectedAcademicYearId, selectedAcademicYear } = useAcademic()
   const [subjects, setSubjects] = useState([]), [loading, setLoading] = useState(true), [loadError, setLoadError] = useState('')
   const [page, setPage] = useState(1)
-  const [filters, updateFilters] = useState({ search: '', academicYearId: '', courseId: '', branchId: '', level: '', semesterId: '', subjectType: '', electiveType: '', status: '' })
+  const [filters, updateFilters] = useState({ search: '', academicYearId: '', courseId: '', branchId: '', level: '', semesterId: '', subjectType: '', electiveType: '', status: '', applicability: 'all' })
   const [form, setForm] = useState(blank), [editing, setEditing] = useState(null), [editorOpen, setEditorOpen] = useState(false), [editorMode, setEditorMode] = useState('single'), [saving, setSaving] = useState(false), [recentId, setRecentId] = useState('')
+  const [commonConfig, setCommonConfig] = useState({ branchMode: 'all', branchIds: [], regulationId: '' })
   const [returnToElectives, setReturnToElectives] = useState(false)
   const [confirmingSubject, setConfirmingSubject] = useState(null), [statusSaving, setStatusSaving] = useState(false)
   const setFilters = next => { setPage(1); updateFilters(next) }
   const loadSubjects = async () => { const requestId=++listRequest.current; setLoading(true); setLoadError(''); try { const rows=await subjectService.getSubjects({ liveOnly: true }); if(requestId===listRequest.current) setSubjects(rows) } catch (e) { if(requestId===listRequest.current) setLoadError(e.message || 'Unable to load subjects.') } finally { if(requestId===listRequest.current) setLoading(false) } }
   useEffect(() => { setEditorOpen(false); setViewing(null); loadSubjects(); return () => { listRequest.current += 1 } }, [selectedCollegeId, selectedAcademicYearId])
   const editorHasCourse = Boolean(editorOpen && form.academicYearId && form.courseId)
-  const editorHasBranch = Boolean(editorHasCourse && form.branchId)
+  const editorHasBranch = Boolean(editorHasCourse && (editorMode === 'common' || form.branchId))
   const { current: lookups, retry: retryMasters } = useSubjectMapping(
     selectedCollegeId,
     editorHasCourse || Boolean(filters.courseId),
@@ -195,6 +217,40 @@ export default function SubjectManagement() {
     ? semestersForYear(filters.courseId, filters.branchId, filters.academicYearId)
     : semesters(filters.courseId, filters.branchId)
   const formSemesters = editorHasBranch ? semestersForYear(form.courseId, form.branchId, form.academicYearId) : []
+  const commonBranchOptions = branches(form.courseId)
+  const commonSelectedBranchIds = commonConfig.branchMode === 'all'
+    ? commonBranchOptions.map(branch => key(branch.id))
+    : commonConfig.branchIds.map(key).filter(id => commonBranchOptions.some(branch => key(branch.id) === id))
+  const regulationOptions = useMemo(() => {
+    const courseRows = [
+      ...masters.courses.filter(row => key(row.id) === key(form.courseId)),
+      ...masters.branches.filter(row => key(row.courseId) === key(form.courseId)),
+      ...masters.semesters.filter(row => key(row.courseId) === key(form.courseId)),
+    ]
+    const options = courseRows.map(row => {
+      const id = regulationValue(row)
+      const name = regulationLabel(row) || (typeof row?.regulation === 'object' ? row.regulation?.code : '') || row?.regulationCode || id
+      return id !== '' && id != null && name ? { id: key(id), name: String(name) } : null
+    }).filter(Boolean)
+    return options.filter((option, index) => options.findIndex(other => key(other.id) === key(option.id)) === index)
+  }, [masters.courses, masters.branches, masters.semesters, form.courseId])
+  const commonSemesterRows = (() => {
+    const selectedBranches = new Set(commonSelectedBranchIds)
+    const candidates = masters.semesters.filter(row => {
+      if (key(row.courseId) !== key(form.courseId)) return false
+      if (row.academicYearId && key(row.academicYearId) !== '0' && key(row.academicYearId) !== key(form.academicYearId)) return false
+      if (commonConfig.regulationId && regulationValue(row) && key(regulationValue(row)) !== key(commonConfig.regulationId)) return false
+      if (row.branchId && selectedBranches.size && !selectedBranches.has(key(row.branchId))) return false
+      return true
+    })
+    const groups = new Map()
+    candidates.forEach(row => {
+      const number = semNo(row)
+      const groupKey = number ? `semester-${number}` : key(row.id)
+      if (!groups.has(groupKey)) groups.set(groupKey, { ...row, id: key(row.id), semesterNumber: number, name: row.semesterName || row.name || `Semester ${number}` })
+    })
+    return [...groups.values()].sort((left, right) => semNo(left) - semNo(right))
+  })()
   const levels = list => [...new Set(list.map(getAcademicLevelFromSemester).filter(Boolean))]
   const subjectLevel = subject => getAcademicLevelFromSemester(
     masters.semesters.find(row => key(row.id) === key(subject.semesterId)) || subject,
@@ -207,7 +263,19 @@ export default function SubjectManagement() {
       : { ...old, academicYearId: key(years.find(year => year.isCurrent)?.id ?? years[0].id), semesterId: '' })
   }, [editorOpen, editing, lookups.years])
   const types = useMemo(() => subjectTypeOptions(subjects), [subjects])
-  const mapping = s => ({ year: entityName(masters.years, s.academicYearId, s.academicYear), course: entityName(masters.courses, s.courseId, s.course), branch: entityName(masters.branches, s.branchId, s.branch), semester: entityName(masters.semesters, s.semesterId, s.semester) })
+  const mapping = s => {
+    const applicable = subjectBranchDetails(s, masters.branches)
+    const common = isCommonSubject(s, masters.branches)
+    return {
+      year: entityName(masters.years, s.academicYearId, s.academicYear),
+      course: entityName(masters.courses, s.courseId, s.course),
+      branch: common ? `${applicable.length || Number(s.applicableBranchCount) || 0} branches` : applicable[0]?.name || entityName(masters.branches, s.branchId, s.branch),
+      branchNames: applicable.map(branch => branch.name).join(', '),
+      applicable,
+      common,
+      semester: entityName(masters.semesters, s.semesterId, s.semester),
+    }
+  }
 
   const scopedSubjects = useMemo(() => {
     return scopeRecords(subjects).filter((s) => {
@@ -220,28 +288,35 @@ export default function SubjectManagement() {
     })
   }, [subjects, scopeRecords, selectedAcademicYearId, selectedCollegeId, masters.courses, masters.branches])
 
-  const records = useMemo(() => scopedSubjects.filter(s => { const q = filters.search.trim().toLowerCase(), isElective = classificationOf(s) === 'Elective'; return (!q || `${s.subjectCode} ${s.subjectName}`.toLowerCase().includes(q)) && (!filters.academicYearId || key(s.academicYearId) === key(filters.academicYearId)) && (!filters.courseId || key(s.courseId) === key(filters.courseId)) && (!filters.branchId || key(s.branchId) === key(filters.branchId)) && (!filters.semesterId || key(s.semesterId) === key(filters.semesterId)) && (!filters.level || subjectLevel(s) === filters.level) && (!filters.subjectType || s.subjectType === filters.subjectType) && (!filters.electiveType || (filters.electiveType === 'Elective' ? isElective : !isElective)) && (!filters.status || s.status === filters.status) }).sort((left, right) => key(left.id) === key(recentId) ? -1 : key(right.id) === key(recentId) ? 1 : 0), [scopedSubjects, filters, recentId, masters.semesters])
+  const records = useMemo(() => scopedSubjects.filter(s => {
+    const q = filters.search.trim().toLowerCase()
+    const subjectBranches = subjectBranchDetails(s, masters.branches)
+    const common = isCommonSubject(s, masters.branches)
+    return (!q || `${s.subjectCode} ${s.subjectName}`.toLowerCase().includes(q)) && (!filters.academicYearId || key(s.academicYearId) === key(filters.academicYearId)) && (!filters.courseId || key(s.courseId) === key(filters.courseId)) && (!filters.branchId || subjectBranches.some(branch => branch.id === key(filters.branchId))) && (!filters.semesterId || key(s.semesterId) === key(filters.semesterId)) && (!filters.level || subjectLevel(s) === filters.level) && (!filters.subjectType || s.subjectType === filters.subjectType) && (!filters.electiveType || classificationOf(s) === filters.electiveType) && (!filters.status || s.status === filters.status) && (filters.applicability === 'all' || (filters.applicability === 'common' ? common : !common))
+  }).sort((left, right) => key(left.id) === key(recentId) ? -1 : key(right.id) === key(recentId) ? 1 : 0), [scopedSubjects, filters, recentId, masters.semesters, masters.branches])
   const totalPages = Math.max(1, Math.ceil(records.length / PAGE_SIZE))
   const currentPage = Math.min(page, totalPages)
   const paginatedRecords = records.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
-  const kpis = useMemo(() => ({ total: records.length, active: records.filter(s => String(s.status).toLowerCase() === 'active').length, theory: records.filter(s => /theory/i.test(s.subjectType)).length, lab: records.filter(s => /lab|practical/i.test(s.subjectType)).length, credits: records.reduce((n, s) => n + Number(s.credits || 0), 0) }), [records])
+  const kpis = useMemo(() => ({ total: records.length, active: records.filter(s => String(s.status).toLowerCase() === 'active').length, theory: records.filter(s => /theory/i.test(s.subjectType)).length, lab: records.filter(s => /lab|practical/i.test(s.subjectType)).length, credits: records.reduce((n, s) => n + Number(s.credits || 0), 0), common: records.filter(s => isCommonSubject(s, masters.branches)).length }), [records, masters.branches])
   const changeFilter = (field, value) => setFilters(old => field === 'courseId' ? { ...old, courseId: value, branchId: '', level: '', semesterId: '' } : field === 'branchId' ? { ...old, branchId: value, level: '', semesterId: '' } : field === 'level' ? { ...old, level: value, semesterId: '' } : { ...old, [field]: value })
-  const changeForm = (field, value) => setForm(old => {
-    if (old[field] === value) return old
-    const next = { ...old, [field]: value }
-    if (field === 'courseId') {
-      next.branchId = ''
-      next.semesterId = ''
-    }
-    if (field === 'branchId') next.semesterId = ''
-    if (field === 'academicYearId' && !semestersForYear(old.courseId, old.branchId, value).some(row => key(row.id) === key(old.semesterId))) {
-      next.semesterId = ''
-    }
-    return next
-  })
+  const changeForm = (field, value) => {
+    if (editorMode === 'common' && field === 'courseId') setCommonConfig(current => ({ ...current, branchIds: [], regulationId: '' }))
+    if (editorMode === 'common' && field === 'academicYearId') setCommonConfig(current => ({ ...current, regulationId: '' }))
+    setForm(old => {
+      if (old[field] === value) return old
+      const next = { ...old, [field]: value }
+      if (field === 'courseId') {
+        next.branchId = ''
+        next.semesterId = ''
+      }
+      if (field === 'branchId') next.semesterId = ''
+      if (field === 'academicYearId' && (editorMode === 'common' || !semestersForYear(old.courseId, old.branchId, value).some(row => key(row.id) === key(old.semesterId)))) next.semesterId = ''
+      return next
+    })
+  }
   const formLevel = getAcademicLevelFromSemester(formSemesters.find(s => key(s.id) === key(form.semesterId)))
-  const openAdd = (mode = 'single') => { if(!canCreate) return; setSaveError(''); setEditorMode(typeof mode === 'string' ? mode : 'single'); const activeYear = masters.years.find(year => year.isCurrent || String(year.status).toLowerCase() === 'active' || String(year.status).toLowerCase() === 'current'); setEditing(null); setForm({ ...blank(), academicYearId: selectedAcademicYearId || (activeYear ? key(activeYear.id) : '') }); setEditorOpen(true) }
-  const closeEditor = (force = false) => { if(saving && force !== true) return; setSaveError(''); setEditing(null); setForm(blank()); setEditorOpen(false); if (returnToElectives) { setReturnToElectives(false); navigate('/elective-management') } }
+  const openAdd = (mode = 'single') => { if(!canCreate) return; setSaveError(''); setEditorMode(typeof mode === 'string' ? mode : 'single'); const activeYear = masters.years.find(year => year.isCurrent || String(year.status).toLowerCase() === 'active' || String(year.status).toLowerCase() === 'current'); setEditing(null); setCommonConfig({ branchMode: 'all', branchIds: [], regulationId: '' }); setForm({ ...blank(), academicYearId: selectedAcademicYearId || (activeYear ? key(activeYear.id) : '') }); setEditorOpen(true) }
+  const closeEditor = (force = false) => { if(saving && force !== true) return; setSaveError(''); setEditing(null); setForm(blank()); setCommonConfig({ branchMode: 'all', branchIds: [], regulationId: '' }); setEditorOpen(false); if (returnToElectives) { setReturnToElectives(false); navigate('/elective-management') } }
   const openEdit = s => { if(!canEdit) return; setSaveError(''); setEditorMode('single'); setEditing(s); setForm({ ...blank(), ...s, departmentId: enrichSubject(s, masters).departmentId, academicYearId: key(s.academicYearId), courseId: key(s.courseId), branchId: key(s.branchId), semesterId: key(s.semesterId) }); setEditorOpen(true) }
   const handledSubjectAction = useRef(null)
   useEffect(() => {
@@ -291,7 +366,7 @@ export default function SubjectManagement() {
     } catch (err) { showError(err.message || 'Unable to update status.') }
     finally { setStatusSaving(false) }
   }
-  const columns = [{ label: 'Subject Code', value: 'subjectCode' }, { label: 'Subject Name', value: 'subjectName' }, { label: 'Academic Year', value: s => mapping(s).year }, { label: 'Course', value: s => mapping(s).course }, { label: 'Branch', value: s => mapping(s).branch }, { label: 'Academic Level', value: subjectLevel }, { label: 'Semester', value: s => mapping(s).semester }, { label: 'Subject Type', value: s => formatSubjectType(s.subjectType) }, { label: 'Credits', value: 'credits' }, { label: 'Status', value: 'status' }]
+  const columns = [{ label: 'Subject Code', value: 'subjectCode' }, { label: 'Subject Name', value: 'subjectName' }, { label: 'Academic Year', value: s => mapping(s).year }, { label: 'Course', value: s => mapping(s).course }, { label: 'Branch', value: s => mapping(s).branch }, { label: 'Applicability', value: s => isCommonSubject(s, masters.branches) ? 'Common' : 'Branch-specific' }, { label: 'Applicable Branch Count', value: s => { const details = subjectBranchDetails(s, masters.branches); return isCommonSubject(s, masters.branches) ? details.length || Number(s.applicableBranchCount) || 0 : 1 } }, { label: 'Applicable Branches', value: s => subjectBranchDetails(s, masters.branches).map(branch => branch.name).join(', ') || s.branch || '' }, { label: 'Academic Level', value: subjectLevel }, { label: 'Semester', value: s => mapping(s).semester }, { label: 'Subject Type', value: s => formatSubjectType(s.subjectType) }, { label: 'Credits', value: 'credits' }, { label: 'Status', value: 'status' }]
   const activeFilters = [
     filters.academicYearId && { label: 'Academic year', value: masters.years.find(row => key(row.id) === key(filters.academicYearId))?.name || filters.academicYearId, field: 'academicYearId' },
     filters.courseId && { label: 'Course', value: masters.courses.find(row => key(row.id) === key(filters.courseId))?.name || filters.courseId, field: 'courseId' },
@@ -301,9 +376,15 @@ export default function SubjectManagement() {
     filters.subjectType && { label: 'Subject type', value: formatSubjectType(filters.subjectType), field: 'subjectType' },
     filters.electiveType && { label: 'Elective classification', value: filters.electiveType, field: 'electiveType' },
     filters.status && { label: 'Status', value: filters.status, field: 'status' },
+    filters.applicability && filters.applicability !== 'all' && { label: 'Applicability', value: filters.applicability === 'common' ? 'Common subjects' : 'Branch-specific subjects', field: 'applicability' },
   ].filter(Boolean)
-  const detailSections = s => { const m = mapping(s); return [{ title: 'Subject Information', rows: [['Subject Code', s.subjectCode], ['Subject Name', s.subjectName], ['Subject Type', formatSubjectType(s.subjectType)], ['Elective Type', s.electiveType], ['Credits', s.credits], ['Status', s.status]] }, { title: 'Academic Mapping', rows: [['Academic Year', m.year], ['Course', m.course], ['Branch', m.branch], ['Academic Level', subjectLevel(s)], ['Semester', m.semester]] }, { title: 'Academic Configuration', rows: [['Lecture Hours', s.lectureHours], ['Tutorial Hours', s.tutorialHours], ['Practical Hours', s.practicalHours], ['Internal Marks', s.internalMarks], ['External Marks', s.externalMarks]].filter(([, v]) => v !== '' && v != null) }].filter(x => x.rows.length) }
-  const editor = editorOpen && <ViewDialog title={editing ? 'Edit Subject' : editorMode === 'multiple' ? 'Add Multiple Subjects' : 'Add Subject'} subtitle={editorMode === 'multiple' ? 'Configure shared academic mapping, then create multiple subjects for the semester.' : 'Map the subject to its academic program, then complete its details and workload.'} icon={editorMode === 'multiple' ? FiLayers : FiBookOpen} onClose={closeEditor} busy={saving} showExport={false} hideFooter maxWidth={editorMode === 'multiple' ? '920px' : '860px'} className="subject-editor-dialog">{saveError && <p role="alert" className="sm-error">{saveError}</p>}<Editor
+  const detailSections = s => { const m = mapping(s); return [{ title: 'Subject Information', rows: [['Subject Code', s.subjectCode], ['Subject Name', s.subjectName], ['Subject Type', formatSubjectType(s.subjectType)], ['Elective Type', s.electiveType], ['Credits', s.credits], ['Status', s.status]] }, { title: 'Academic Mapping', rows: [['Academic Year', m.year], ['Course', m.course], ['Common or Branch-Specific', m.common ? 'Common subject' : 'Branch-specific subject'], ['Applicable Branch Count', m.common ? m.applicable.length || Number(s.applicableBranchCount) || 0 : 1], ['Applicable Branches', m.branchNames || m.branch], ['Academic Level', subjectLevel(s)], ['Semester', m.semester]] }, { title: 'Academic Configuration', rows: [['Lecture Hours', s.lectureHours], ['Tutorial Hours', s.tutorialHours], ['Practical Hours', s.practicalHours], ['Internal Marks', s.internalMarks], ['External Marks', s.externalMarks]].filter(([, v]) => v !== '' && v != null) }].filter(x => x.rows.length) }
+  const rejectCommonCreate = () => {
+    const message = 'Common subject creation is not available yet: the current API accepts one branch per subject and has no multi-branch mapping operation. No data was sent.'
+    setSaveError(message)
+    showError(message)
+  }
+  const editor = editorOpen && <ViewDialog title={editing ? 'Edit Subject' : editorMode === 'multiple' ? 'Add Multiple Subjects' : editorMode === 'common' ? 'Add Common Subject' : 'Add Subject'} subtitle={editorMode === 'multiple' ? 'Configure shared academic mapping, then create multiple subjects for the semester.' : editorMode === 'common' ? 'Create one subject definition and review its branch applicability.' : 'Map the subject to its academic program, then complete its details and workload.'} icon={editorMode === 'multiple' ? FiLayers : editorMode === 'common' ? FiShare2 : FiBookOpen} onClose={closeEditor} busy={saving} showExport={false} hideFooter maxWidth={editorMode === 'multiple' || editorMode === 'common' ? '920px' : '860px'} className="subject-editor-dialog">{saveError && <p role="alert" className="sm-error">{saveError}</p>}<Editor
             form={form}
             editing={editing}
             masters={{ ...masters, courses: scopedCourses }}
@@ -323,6 +404,13 @@ export default function SubjectManagement() {
             setEditorMode={setEditorMode}
             loadSubjects={loadSubjects}
             allSubjects={subjects}
+            commonConfig={commonConfig}
+            setCommonConfig={setCommonConfig}
+            commonBranches={commonBranchOptions}
+            commonSelectedBranchIds={commonSelectedBranchIds}
+            commonRegulations={regulationOptions}
+            commonSemesters={commonSemesterRows}
+            commonCreateBlocked={rejectCommonCreate}
           /></ViewDialog>
 
   return (
@@ -340,6 +428,7 @@ export default function SubjectManagement() {
                 ['Theory Subjects', kpis.theory, 'theory'],
                 ['Practical / Lab', kpis.lab, 'lab'],
                 ['Listed Subject Credits', kpis.credits, 'credits'],
+                ['Common Subjects', kpis.common, 'common'],
               ].map(([label, value, tone]) => (
                 <div className={`sm-summary-item sm-summary-item--${tone}`} key={label}>
                   <strong>{value}</strong>
@@ -360,15 +449,16 @@ export default function SubjectManagement() {
             active={activeFilters.length > 0}
             activeCount={activeFilters.length}
             appliedFilters={[]}
-            onClear={() => setFilters({ search: '', academicYearId: '', courseId: '', branchId: '', level: '', semesterId: '', subjectType: '', electiveType: '', status: '' })}
+            onClear={() => setFilters({ search: '', academicYearId: '', courseId: '', branchId: '', level: '', semesterId: '', subjectType: '', electiveType: '', status: '', applicability: 'all' })}
             hideClear
             className="sm-filter-panel"
             leadingActions={(
-              <ExportMenu rows={records} columns={columns} filename="subject-directory" title="Subject Directory" scope="All matching subjects" onDownload={async () => downloadServerExport(await subjectService.exportSubjects({ search: filters.search, academicYearId: filters.academicYearId, courseId: filters.courseId, branchId: filters.branchId, semesterId: filters.semesterId, subjectType: filters.subjectType, electiveType: filters.electiveType === 'Non-Elective' ? 'Core Subject' : filters.electiveType, status: filters.status }), 'subject-directory')} />
+              <ExportMenu rows={records} columns={columns} filename="subject-directory" title="Subject Directory" scope="All matching subjects" onDownload={async exportOptions => filters.applicability && filters.applicability !== 'all' ? exportToCsv(exportOptions) : downloadServerExport(await subjectService.exportSubjects({ search: filters.search, academicYearId: filters.academicYearId, courseId: filters.courseId, branchId: filters.branchId, semesterId: filters.semesterId, subjectType: filters.subjectType, electiveType: filters.electiveType, status: filters.status }), 'subject-directory')} />
             )}
             actions={(
               <div className="sm-header-actions-group">
                 <button hidden={!canCreate} className="sm-btn sm-btn--primary" onClick={() => openAdd('single')}><FiPlus /> Add Subject</button>
+                <button hidden={!canCreate} className="sm-btn sm-btn--secondary sm-btn--common" onClick={() => openAdd('common')}><FiShare2 aria-hidden="true" /> Add Common Subject</button>
                 <button hidden={!canCreate} className="sm-btn sm-btn--secondary sm-btn--multi" onClick={() => openAdd('multiple')}><FiLayers /> Add Multiple Subjects</button>
               </div>
             )}
@@ -393,7 +483,7 @@ export default function SubjectManagement() {
                           <FiX aria-hidden="true" />
                         </button>
                       ))}
-                      <button type="button" className="sm-filter-clear" onClick={() => setFilters({ search: '', academicYearId: '', courseId: '', branchId: '', level: '', semesterId: '', subjectType: '', electiveType: '', status: '' })}>Clear filters</button>
+                      <button type="button" className="sm-filter-clear" onClick={() => setFilters({ search: '', academicYearId: '', courseId: '', branchId: '', level: '', semesterId: '', subjectType: '', electiveType: '', status: '', applicability: 'all' })}>Clear filters</button>
                     </div>
                   </div>
                 )}
@@ -404,7 +494,8 @@ export default function SubjectManagement() {
                   <Select label="Academic Level" value={filters.level} options={levels(filterSemesters)} onChange={v => changeFilter('level', v)} disabled={!filters.branchId} />
                   <Select label="Semester" value={filters.semesterId} options={getSemestersForAcademicLevel(filterSemesters, filters.level)} onChange={v => changeFilter('semesterId', v)} disabled={!filters.level} semester />
                   <Select label="Subject Type" value={filters.subjectType} options={types} onChange={v => changeFilter('subjectType', v)} />
-                  <Select label="Elective Classification" value={filters.electiveType} options={['Elective', 'Non-Elective']} onChange={v => changeFilter('electiveType', v)} />
+                  <Select label="Applicability" value={filters.applicability || 'all'} options={[{ id: 'all', name: 'All Subjects' }, { id: 'common', name: 'Common Subjects' }, { id: 'branch-specific', name: 'Branch-Specific Subjects' }]} onChange={v => changeFilter('applicability', v)} />
+                  <Select label="Elective Classification" value={filters.electiveType} options={ELECTIVE_TYPES} onChange={v => changeFilter('electiveType', v)} />
                   <Select label="Status" value={filters.status} options={['Active', 'Inactive']} onChange={v => changeFilter('status', v)} />
                 </div>
               </div>
@@ -427,12 +518,13 @@ export default function SubjectManagement() {
               />
             ) : (
               <table className="sm-table">
-                <colgroup>{[8, 13, 13, 6, 7, 7, 6, 9, 8, 7, 16].map((width, index) => <col key={index} style={{ width: `${width}%` }} />)}</colgroup>
+                <colgroup>{[7, 10, 11, 9, 6, 6, 5, 7, 8, 7, 7, 17].map((width, index) => <col key={index} style={{ width: `${width}%` }} />)}</colgroup>
                 <thead>
                   <tr>
                     <th className="table-center">Subject Code</th>
                     <th className="table-center">Subject Name</th>
                     <th className="table-center">Academic Mapping</th>
+                    <th className="table-center">Applicability</th>
                     <th className="table-center">Academic Level</th>
                     <th className="table-center">Semester</th>
                     <th className="table-center">Type</th>
@@ -465,8 +557,15 @@ export default function SubjectManagement() {
                         <td className="table-center">
                           <div className="table-primary-cell">
                             <span>{m.course}</span>
-                            <small>| {m.branch}</small>
+                            <small title={m.branchNames || m.branch}>| {m.branchNames || m.branch}</small>
                             <small>{m.year}</small>
+                          </div>
+                        </td>
+                        <td className="table-center">
+                          <div className="table-primary-cell sm-applicability-cell" title={m.branchNames || m.branch}>
+                            <span className={`sm-applicability-badge ${m.common ? 'is-common' : ''}`}>{m.common ? 'Common' : 'Branch-specific'}</span>
+                            <small>{m.common ? m.applicable.length || Number(s.applicableBranchCount) || 0 : 1} branch{(m.common ? m.applicable.length || Number(s.applicableBranchCount) || 0 : 1) === 1 ? '' : 'es'}</small>
+                            <small className="sm-applicability-names">{m.branchNames || m.branch}</small>
                           </div>
                         </td>
                         <td className="table-center">{subjectLevel(s) || '-'}</td>
@@ -529,8 +628,12 @@ export function SubjectDetailsPage() {
       .finally(() => active && setLoading(false))
     return () => { active = false }
   }, [id, navigate, attempt, scopeRecords])
-  const mapping = s => ({ year: entityName(masters.years, s.academicYearId, s.academicYear), course: entityName(masters.courses, s.courseId, s.course), branch: entityName(masters.branches, s.branchId, s.branch), semester: entityName(masters.semesters, s.semesterId, s.semester) })
-  const sections = subject ? (() => { const m = mapping(subject); return [{ title: 'Subject Information', rows: [['Subject Code', subject.subjectCode], ['Subject Name', subject.subjectName], ['Subject Type', formatSubjectType(subject.subjectType)], ['Elective Type', subject.electiveType], ['Credits', subject.credits], ['Status', subject.status]] }, { title: 'Academic Mapping', rows: [['Academic Year', m.year], ['Course', m.course], ['Branch', m.branch], ['Academic Level', getAcademicLevelFromSemester({ semester: m.semester })], ['Semester', m.semester]] }, { title: 'Academic Configuration', rows: [['Lecture Hours', subject.lectureHours], ['Tutorial Hours', subject.tutorialHours], ['Practical Hours', subject.practicalHours], ['Internal Marks', subject.internalMarks], ['External Marks', subject.externalMarks]].filter(([, value]) => value !== '' && value != null) }].filter(section => section.rows.length) })() : []
+  const mapping = s => {
+    const applicable = subjectBranchDetails(s, masters.branches)
+    const common = isCommonSubject(s, masters.branches)
+    return { year: entityName(masters.years, s.academicYearId, s.academicYear), course: entityName(masters.courses, s.courseId, s.course), branch: common ? `${applicable.length || Number(s.applicableBranchCount) || 0} branches` : applicable[0]?.name || entityName(masters.branches, s.branchId, s.branch), branchNames: applicable.map(branch => branch.name).join(', '), applicable, common, semester: entityName(masters.semesters, s.semesterId, s.semester) }
+  }
+  const sections = subject ? (() => { const m = mapping(subject); return [{ title: 'Subject Information', rows: [['Subject Code', subject.subjectCode], ['Subject Name', subject.subjectName], ['Subject Type', formatSubjectType(subject.subjectType)], ['Elective Type', subject.electiveType], ['Credits', subject.credits], ['Status', subject.status]] }, { title: 'Academic Mapping', rows: [['Academic Year', m.year], ['Course', m.course], ['Common or Branch-Specific', m.common ? 'Common subject' : 'Branch-specific subject'], ['Applicable Branch Count', m.common ? m.applicable.length || Number(subject.applicableBranchCount) || 0 : 1], ['Applicable Branches', m.branchNames || m.branch], ['Academic Level', getAcademicLevelFromSemester({ semester: m.semester })], ['Semester', m.semester]] }, { title: 'Academic Configuration', rows: [['Lecture Hours', subject.lectureHours], ['Tutorial Hours', subject.tutorialHours], ['Practical Hours', subject.practicalHours], ['Internal Marks', subject.internalMarks], ['External Marks', subject.externalMarks]].filter(([, value]) => value !== '' && value != null) }].filter(section => section.rows.length) })() : []
   const edit = () => navigate('/subject-management', { state: { subjectAction: { mode: 'edit', id: subject.id } } })
   return <><SubjectManagement />{subject && !loading && !error ? <Details subject={subject} sections={sections} close={() => navigate(returnTo)} edit={canAction('/subject-management','edit') ? edit : null} /> : <ViewDialog title="Subject Details" onClose={() => navigate(returnTo)} showExport={false}><div role={error ? 'alert' : 'status'}>{error || 'Loading subject details...'}{error && <button type="button" onClick={() => setAttempt(value => value + 1)}>Retry details</button>}</div></ViewDialog>}</>
 
@@ -577,7 +680,15 @@ function Editor({
   setEditorMode,
   loadSubjects,
   allSubjects = [],
+  commonConfig = { branchMode: 'all', branchIds: [], regulationId: '' },
+  setCommonConfig = () => {},
+  commonBranches = [],
+  commonSelectedBranchIds = [],
+  commonRegulations = [],
+  commonSemesters = [],
+  commonCreateBlocked = () => {},
 }) {
+  const commonMode = editorMode === 'common';
   const [selectedLevel, setFormLevel] = useState('');
   const formLevel = levels.includes(selectedLevel) ? selectedLevel : initialLevel;
   const hasYear = masters.years.some(year => key(year.id) === key(form.academicYearId));
@@ -606,6 +717,19 @@ function Editor({
     setFormLevel(v);
     change('semesterId', '');
   };
+  const setCommonBranchMode = branchMode => setCommonConfig(current => ({
+    ...current,
+    branchMode,
+    branchIds: branchMode === 'selected' && current.branchMode === 'all'
+      ? commonBranches.map(branch => key(branch.id))
+      : current.branchIds,
+  }));
+  const toggleCommonBranch = (branchId, checked) => setCommonConfig(current => ({
+    ...current,
+    branchIds: checked
+      ? [...new Set([...current.branchIds.map(key), key(branchId)])]
+      : current.branchIds.filter(id => key(id) !== key(branchId)),
+  }));
 
   const switchMode = newMode => {
     if (newMode === editorMode) return;
@@ -685,9 +809,20 @@ function Editor({
 
   const validateMapping = () => {
     const hasValue = value => value !== '' && value !== null && value !== undefined;
+    if (commonMode) {
+      const hasBranches = commonSelectedBranchIds.some(id => commonBranches.some(branch => key(branch.id) === key(id)));
+      const validSemester = commonSemesters.some(row => key(row.id) === key(form.semesterId));
+      const hasRegulation = !commonRegulations.length || commonRegulations.some(row => key(row.id) === key(commonConfig.regulationId));
+      if (!hasYear || !masters.courses.some(course => key(course.id) === key(form.courseId)) || !hasBranches || !validSemester || !hasRegulation) {
+        setMappingError('Select an academic year, program, available regulation (when configured), semester, and at least one applicable branch.');
+        return false;
+      }
+      setMappingError('');
+      return true;
+    }
     const missing = !hasYear || !masters.courses.some(course => key(course.id) === key(form.courseId)) || !branches.some(branch => key(branch.id) === key(form.branchId)) || !hasValue(formLevel) || !getSemestersForAcademicLevel(semesters, formLevel).some(row => key(row.id) === key(form.semesterId));
     if (missing) {
-      setMappingError('Please complete Academic Year, Course, Branch, Academic Level, and Semester before continuing.');
+        setMappingError('Please complete Academic Year, Course, Branch, Academic Level, and Semester before continuing.');
       return false;
     }
     setMappingError('');
@@ -956,7 +1091,9 @@ function Editor({
       goToTab(tabs[stepIndex + 1].id);
       return;
     }
-    if (editorMode === 'single') {
+    if (editorMode === 'common') {
+      commonCreateBlocked();
+    } else if (editorMode === 'single') {
       save(event);
     } else {
       handleSaveAll();
@@ -966,7 +1103,7 @@ function Editor({
   return (
     <div className="erp-two-column-layout sm-editor-layout" data-without-live-preview="true">
       <div className="erp-card-main">
-        {!editing && (
+        {!editing && !commonMode && (
           <div className="sm-mode-switch-bar">
             <div className="sm-mode-switch" role="radiogroup" aria-label="Creation Mode">
               <button
@@ -1018,12 +1155,51 @@ function Editor({
                 <p className="sm-editor-section-description">
                   {editorMode === 'multiple'
                     ? 'Choose the academic year and program placement. This academic mapping will apply to all subjects added in this workflow.'
-                    : 'Choose the academic year and program placement for this subject.'}
+                    : commonMode ? 'Choose the academic context and branches that share this subject.' : 'Choose the academic year and program placement for this subject.'}
                 </p>
                 {mastersLoading && <p role="status" className="sm-editor-section-description">Loading academic options...</p>}
                 {mastersError && <div role="alert" className="sm-editor-error">{mastersError} <button type="button" className="sm-btn sm-btn--secondary" onClick={retryMasters} disabled={mastersLoading}>Retry</button></div>}
                 {mappingError && <p role="alert" className="sm-editor-error">{mappingError}</p>}
-                <div className="sm-form-grid-2">
+                {commonMode ? (
+                  <div className="sm-form-grid-2">
+                    <Field label={<>Academic Year <span className="sm-required">*</span></>}>
+                      <Select label="Academic Year" value={form.academicYearId} options={masters.years} onChange={v => change('academicYearId', v)} />
+                    </Field>
+                    <Field label={<>Program <span className="sm-required">*</span></>}>
+                      <Select label="Program" value={form.courseId} options={masters.courses} onChange={v => change('courseId', v)} disabled={!hasYear} placeholder="Select program" />
+                    </Field>
+                    <Field label="Regulation">
+                      <Select label="Regulation" value={commonConfig.regulationId} options={commonRegulations} onChange={v => { setCommonConfig(current => ({ ...current, regulationId: v })); change('semesterId', '') }} disabled={!commonRegulations.length || !form.courseId} placeholder={commonRegulations.length ? 'Select regulation' : 'Regulation data unavailable'} />
+                      {!commonRegulations.length && <small>The current academic configuration API does not return regulation options.</small>}
+                    </Field>
+                    <Field label={<>Semester <span className="sm-required">*</span></>}>
+                      <Select label="Semester" value={form.semesterId} options={commonSemesters} onChange={v => change('semesterId', v)} disabled={!form.courseId || !commonSemesters.length} placeholder={form.courseId ? 'Select semester' : 'Choose a program first'} semester />
+                      {!!form.courseId && !mastersLoading && !commonSemesters.length && <small>No semesters match this academic year, regulation and branch selection.</small>}
+                    </Field>
+                    <div className="sm-common-branches sm-field">
+                      <span id="common-branch-applicability">Applicable Branches <span className="sm-required">*</span></span>
+                      <div className="sm-common-branch-modes" role="radiogroup" aria-labelledby="common-branch-applicability">
+                        <label><input type="radio" name="common-branch-mode" checked={commonConfig.branchMode === 'all'} onChange={() => setCommonBranchMode('all')} disabled={!form.courseId || mastersLoading} /> All Branches</label>
+                        <label><input type="radio" name="common-branch-mode" checked={commonConfig.branchMode === 'selected'} onChange={() => setCommonBranchMode('selected')} disabled={!form.courseId || mastersLoading} /> Selected Branches</label>
+                      </div>
+                      <div className="sm-common-branch-heading">
+                        <strong>{commonSelectedBranchIds.length} selected</strong>
+                        {commonConfig.branchMode === 'selected' && <div>
+                          <button type="button" onClick={() => setCommonConfig(current => ({ ...current, branchIds: commonBranches.map(branch => key(branch.id)) }))} disabled={!commonBranches.length || mastersLoading}>Select All</button>
+                          <button type="button" onClick={() => setCommonConfig(current => ({ ...current, branchIds: [] }))} disabled={!commonSelectedBranchIds.length}>Clear All</button>
+                        </div>}
+                      </div>
+                      {mastersLoading && form.courseId ? <p role="status" className="sm-common-branch-loading">Loading active branches…</p> : !form.courseId ? <small>Select a program to load its active branches.</small> : !commonBranches.length ? <small>No active branches are available for this program.</small> : (
+                        <div className="sm-common-branch-list">
+                          {commonBranches.map(branch => <label key={branch.id} className="sm-common-branch-item">
+                            <input type="checkbox" checked={commonSelectedBranchIds.includes(key(branch.id))} disabled={commonConfig.branchMode === 'all' || mastersLoading} onChange={event => toggleCommonBranch(branch.id, event.target.checked)} />
+                            <span>{branch.name}</span>
+                          </label>)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : <div className="sm-form-grid-2">
                   <Field label={<>Academic Year <span className="sm-required">*</span></>}>
                     <Select label="Academic Year" value={form.academicYearId} options={masters.years} onChange={v => change('academicYearId', v)} />
                     {!mastersLoading && !mastersError && !masters.years.length && <small>No academic years are available for this college.</small>}
@@ -1043,11 +1219,11 @@ function Editor({
                   <Field label={<>Semester <span className="sm-required">*</span></>}>
                     <Select label="Semester" hideSearch value={form.semesterId} options={getSemestersForAcademicLevel(semesters, formLevel)} onChange={v => change('semesterId', v)} disabled={!form.branchId || !formLevel} placeholder={formLevel ? 'Select semester' : 'Choose an academic level first'} semester />
                   </Field>
-                </div>
+                </div>}
               </section>
             )}
 
-            {activeTab === 'info' && editorMode === 'single' && (
+            {activeTab === 'info' && editorMode !== 'multiple' && (
               <section>
                 <div className="sm-step-header-row">
                   <div>
@@ -1382,7 +1558,7 @@ function Editor({
               </section>
             )}
 
-            {activeTab === 'review' && editorMode === 'single' && (
+            {activeTab === 'review' && editorMode !== 'multiple' && (
               <section className="sm-review-step">
                 <div className="sm-step-header-row">
                   <div>
@@ -1390,6 +1566,25 @@ function Editor({
                     <p className="sm-editor-section-description">Review all subject information, academic mapping, and workload details before saving.</p>
                   </div>
                 </div>
+
+                {commonMode && (
+                  <div className="sm-common-summary-card" aria-label="Common subject creation summary">
+                    <h4>Creation Summary</h4>
+                    <div className="sm-review-grid">
+                      <div className="sm-review-grid-item"><span>Subject</span><strong>{form.subjectName || 'Not entered'}</strong></div>
+                      <div className="sm-review-grid-item"><span>Program</span><strong>{entityName(masters.courses, form.courseId)}</strong></div>
+                      <div className="sm-review-grid-item"><span>Regulation</span><strong>{entityName(commonRegulations, commonConfig.regulationId, commonRegulations.length ? 'Not selected' : 'Not supplied by API')}</strong></div>
+                      <div className="sm-review-grid-item"><span>Semester</span><strong>{(() => { const semester = commonSemesters.find(row => key(row.id) === key(form.semesterId)); return semester ? semester.semesterName || semester.name || `Semester ${semNo(semester)}` : 'Not selected' })()}</strong></div>
+                      <div className="sm-review-grid-item"><span>Total applicable branches</span><strong>{commonSelectedBranchIds.length}</strong></div>
+                      <div className="sm-review-grid-item"><span>Total credits</span><strong>{form.credits === '' ? '—' : form.credits}</strong></div>
+                    </div>
+                    <p>1 common subject will be mapped to {commonSelectedBranchIds.length} {commonSelectedBranchIds.length === 1 ? 'branch' : 'branches'}.</p>
+                    <div className="sm-save-alert sm-save-alert--warning" role="status">
+                      <FiAlertCircle aria-hidden="true" />
+                      <div><strong>Backend support is required before this can be created.</strong><p>The current subject API only accepts one branch per subject. This review will not send a create request or duplicate subject records.</p></div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Academic Mapping */}
                 <div className="sm-review-mapping-card">
@@ -1407,7 +1602,7 @@ function Editor({
                     </div>
                     <div className="sm-review-grid-item">
                       <span>Branch</span>
-                      <strong>{entityName(branches, form.branchId)}</strong>
+                      <strong>{commonMode ? `${commonSelectedBranchIds.length} applicable branches` : entityName(branches, form.branchId)}</strong>
                     </div>
                     <div className="sm-review-grid-item">
                       <span>Academic Level</span>
@@ -1416,10 +1611,11 @@ function Editor({
                     <div className="sm-review-grid-item">
                       <span>Semester</span>
                       <strong>{(() => {
-                        const sem = semesters.find(s => key(s.id) === key(form.semesterId));
+                        const sem = (commonMode ? commonSemesters : semesters).find(s => key(s.id) === key(form.semesterId));
                         return sem ? (sem.semesterName || sem.name || `Semester ${semNo(sem)}`) : '-';
                       })()}</strong>
                     </div>
+                    {commonMode && <div className="sm-review-grid-item"><span>Regulation</span><strong>{entityName(commonRegulations, commonConfig.regulationId, 'Not available')}</strong></div>}
                   </div>
                 </div>
 
@@ -1620,7 +1816,26 @@ function Editor({
           </div>
 
           <div className="erp-actions-bar sm-editor-footer">
-            {stepIndex > 0 ? (
+            {commonMode ? (
+              <div className="sm-common-footer-nav">
+                <button
+                  type="button"
+                  className="cm-button secondary erp-btn erp-btn--secondary"
+                  disabled={saving || savingAll}
+                  onClick={close}
+                >
+                  Cancel
+                </button>
+                {stepIndex > 0 && <button
+                  type="button"
+                  className="cm-button secondary erp-btn erp-btn--secondary"
+                  disabled={saving || savingAll}
+                  onClick={() => goToTab(tabs[stepIndex - 1].id)}
+                >
+                  &larr; Previous
+                </button>}
+              </div>
+            ) : stepIndex > 0 ? (
               <button
                 type="button"
                 className="cm-button secondary erp-btn erp-btn--secondary"
@@ -1649,6 +1864,16 @@ function Editor({
                   onClick={() => goToTab(tabs[stepIndex + 1].id)}
                 >
                   Continue &rarr;
+                </button>
+              ) : editorMode === 'common' ? (
+                <button
+                  key="create-common"
+                  type="button"
+                  disabled={saving || savingAll}
+                  className="cm-button erp-btn erp-btn--primary"
+                  onClick={commonCreateBlocked}
+                >
+                  Create Common Subject
                 </button>
               ) : editorMode === 'single' ? (
                 <button

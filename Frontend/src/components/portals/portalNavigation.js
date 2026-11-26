@@ -2,6 +2,7 @@ export const facultyNavigation = [
   ['dashboard', 'Dashboard'],
   ['students', 'My Students'],
   ['subjects', 'My Subjects'],
+  ['syllabus', 'Syllabus Library'],
   ['attendance', 'Student Attendance'],
   ['my-attendance', 'My Attendance'],
   ['marks', 'Marks Entry'],
@@ -21,6 +22,7 @@ export const studentNavigation = [
   ['dashboard', 'Dashboard'],
   ['profile', 'My Profile'],
   ['subjects', 'My Subjects'],
+  ['syllabus', 'Syllabus Library'],
   ['attendance', 'My Attendance'],
   ['results', 'My Results'],
   ['timetable', 'My Timetable'],
@@ -34,4 +36,4 @@ export const portalHome = (role, isNonTeaching = false) => {
   return role === 'faculty' ? '/faculty-portal/dashboard' : role === 'student' ? '/student-portal/dashboard' : '/dashboard'
 }
 // Visible teaching workspace entries; account actions remain in the navbar.
-export const facultySidebarKeys = new Set(['dashboard', 'students', 'subjects', 'attendance', 'my-attendance', 'marks', 'timetable', 'materials', 'leave', 'meetings', 'placements'])
+export const facultySidebarKeys = new Set(['dashboard', 'students', 'subjects', 'syllabus', 'attendance', 'my-attendance', 'marks', 'timetable', 'materials', 'leave', 'meetings', 'placements'])

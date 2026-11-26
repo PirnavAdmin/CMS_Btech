@@ -18,15 +18,17 @@ import { admissionDetailSections } from '../../../utils/recordDetailSections'
 import useToastState from '../../../hooks/useToastState'
 import { isApiResult } from '../../../utils/exportProvenance'
 import ExportMenu, { PrintDetailsButton } from '../../../components/ExportMenu'
+import { printSingleRecord } from '../../../utils/exportUtils'
 import { admissionColumns } from '../../../utils/exportColumns'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { FiAlertCircle, FiArrowLeft, FiArrowRight, FiBookOpen, FiCamera, FiCheck, FiCheckCircle, FiChevronRight, FiClock, FiCreditCard, FiEdit2, FiEye, FiFileText, FiFilter, FiGrid, FiHome, FiInbox, FiPhone, FiPlus, FiSave, FiSearch, FiShield, FiTrash2, FiUploadCloud, FiUser, FiUsers, FiX } from 'react-icons/fi'
+import { FiAlertCircle, FiArrowLeft, FiArrowRight, FiBookOpen, FiCamera, FiCheck, FiCheckCircle, FiChevronLeft, FiChevronRight, FiClock, FiCreditCard, FiEdit2, FiEye, FiFileText, FiFilter, FiGrid, FiHome, FiInbox, FiPhone, FiPlus, FiPrinter, FiSave, FiSearch, FiShield, FiTrash2, FiUploadCloud, FiUser, FiUsers, FiX } from 'react-icons/fi'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import DashboardLayout from '../../../layouts/DashboardLayout'
 import TablePagination, { PAGE_SIZE } from '../../../components/TablePagination'
 import CompactSummary from '../../../components/CompactSummary'
 import StatusBadge from '../../../components/StatusBadge'
 import { academicYearApi, facilityFeePlanApi, admissionFeePlanApi, branchApi, courseApi, departmentApi, lookupIndianPincode, studentAdmissionApi, studentAcademicDetailsApi, studentAdmissionStatusApi, studentDocumentApi, studentFeeApi, studentParentApi, studentPreviousEducationApi } from '../../../api/apiEndpoints'
+import { getDemoAdmissionById, mergeWithDemoAdmissions } from './demoAdmissions'
 import { getOperationalAcademicYearOptions } from '../../../utils/academicYearUtils'
 import { admissionSemesterOptions, resolveAdmissionAcademicIds, currentAdmissionSemester, admissionSemesterError, resetAdmissionAcademicDependents } from '../../../utils/admissionAcademicMapping'
 import { getColleges, getSemesters } from '../../../auth/collegeApi'
@@ -373,7 +375,6 @@ const validate = data => {
   if (data.academic.admissionType === 'Lateral Entry' && data.academic.quota === 'Other' && !text(data.academic.quotaOther)) errors['academic.quotaOther'] = 'Enter the admission quota.'
   if (data.previousEducation.intermediate.stream === 'Other' && !text(data.previousEducation.intermediate.streamOther)) errors['previousEducation.intermediate.streamOther'] = 'Enter the stream name.'
   if (data.admission.hostel === 'Yes' && !text(data.admission.hostelPreference)) errors['admission.hostelPreference'] = 'Select a hostel preference.'
-  if (data.admission.hostel === 'Yes' && !text(data.admission.hostelRoomType)) errors['admission.hostelRoomType'] = 'Select a room type / number of beds.'
   if (data.admission.transport === 'Yes' && !text(data.admission.transportRoute)) errors['admission.transportRoute'] = 'Select a transport route.'
   ;['tuitionFee','admissionFee','scholarshipAmount','hostelFee','transportFee'].forEach(key => { if (text(data.fees[key]) && Number(data.fees[key]) < 0) errors[`fees.${key}`] = 'Amount cannot be negative.' })
   const grossFee = ['tuitionFee','admissionFee','hostelFee','transportFee'].reduce((sum,key) => sum + Number(data.fees[key] || 0), 0)
@@ -502,34 +503,237 @@ function AdmissionFilters({ rows, query, setQuery, filters, setFilters, hidden =
   const clear = () => { setQuery(''); setFilters(Object.fromEntries(FILTERS.map(([key]) => [key, '']))) }
   return (
     <section id="admission-filters" className="sa-admission-filters" aria-label="Search and filter admissions" hidden={hidden}>
-      <FilterPanel
-        className="sa-admission-filter-panel"
-        active={active.length > 0}
-        search={<label className="sa-search">
-          <FiSearch aria-hidden="true" />
-          <input value={query} onChange={event => setQuery(event.target.value)} title="Search name, registration, admission, mobile or email" placeholder="Search name, registration, admission, mobile or email" />
-        </label>}
-        actions={Boolean(query || active.length) && (
-          <button type="button" className="sa-clear-filters" onClick={clear}><FiX aria-hidden="true" /> Clear filters</button>
-        )}
-        filters={(
-          <div className="sa-filter-grid">
-            {FILTERS.map(([key,label]) => <label key={key}>
+      <div className="sa-direct-filter-box">
+        <div className="sa-filter-search-row">
+          <label className="sa-search">
+            <FiSearch aria-hidden="true" />
+            <input value={query} onChange={event => setQuery(event.target.value)} title="Search name, registration, admission, mobile or email" placeholder="Search name, registration, admission, mobile or email" />
+          </label>
+          {Boolean(query || active.length) && (
+            <button type="button" className="sa-clear-filters" onClick={clear}><FiX aria-hidden="true" /> Clear filters</button>
+          )}
+        </div>
+        <div className="sa-filter-grid">
+          {FILTERS.map(([key,label]) => (
+            <label key={key}>
               <span>{label}</span>
               <ProjectSelect value={filters[key]} onChange={event => setFilters(current => ({ ...current, [key]: event.target.value, ...(key === 'course' ? { branch: '' } : {}) }))}>
                 <option value="">All {label}</option>
                 {options(key).map(value => <option value={value} key={value}>{key === 'status' ? (STATUS[value] || value) : value}</option>)}
               </ProjectSelect>
-            </label>)}
-          </div>
-        )}
-      />
+            </label>
+          ))}
+        </div>
+      </div>
       {active.length > 0 && <div className="sa-filter-chips">{active.map(([key,value]) => <button type="button" key={key} onClick={() => setFilters(current => ({ ...current, [key]: '' }))}>{FILTERS.find(item => item[0] === key)?.[1]}: {key === 'status' ? (STATUS[value] || value) : value} <FiX aria-hidden="true" /></button>)}</div>}
     </section>
   )
 }
-function EmptyState() {
-  return <div className="sa-empty"><span><FiInbox /></span><h3>No admission applications found</h3><p>Create a new admission application to begin student enrollment.</p></div>
+function EmptyState({ hasRows = false, filtered = false, onCreate, onClear }) {
+  if (filtered) {
+    return (
+      <div className="sa-empty">
+        <span><FiSearch /></span>
+        <h3>No matching applications found</h3>
+        <p>No admission applications match your current search query or filter selection.</p>
+        {onClear && (
+          <button type="button" className="cm-button secondary sa-empty-btn" onClick={onClear}>
+            <FiX /> Reset All Filters
+          </button>
+        )}
+      </div>
+    )
+  }
+  return (
+    <div className="sa-empty">
+      <span><FiInbox /></span>
+      <h3>No admission applications found</h3>
+      <p>Create a new admission application to begin student enrollment.</p>
+      {onCreate && (
+        <button type="button" className="cm-button sa-empty-btn" onClick={onCreate}>
+          <FiPlus /> New Admission
+        </button>
+      )}
+    </div>
+  )
+}
+
+export function PassportPhotoModal({ student, onClose, onPhotoUpload }) {
+  if (!student) return null
+  const [currentPhoto, setCurrentPhoto] = useState(student.personal?.photo || student.personal?.photoUrl || '')
+  const sName = studentName(student)
+  const regNo = student.application?.admissionNumber || student.application?.number || 'Pending'
+  const course = display(student.academic?.course)
+  const branch = display(student.academic?.branch)
+  const normStat = normalizeStatus(student.status)
+
+  const handleModalPhotoFile = event => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      alert('Upload a JPG, PNG, or WebP photo.')
+      return
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Photo must be 2 MB or smaller.')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = reader.result
+      setCurrentPhoto(result)
+      if (onPhotoUpload) onPhotoUpload(student, result)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  return (
+    <div className="sa-photo-modal-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label={`Passport photo of ${sName}`}>
+      <div className="sa-passport-modal-card" onClick={e => e.stopPropagation()}>
+        <div className="sa-passport-modal-header">
+          <div className="sa-passport-modal-title">
+            <FiCamera aria-hidden="true" />
+            <span>Student Passport Photo</span>
+          </div>
+          <button type="button" className="sa-passport-modal-close" onClick={onClose} aria-label="Close photo preview">
+            <FiX aria-hidden="true" />
+          </button>
+        </div>
+
+        <div className="sa-passport-modal-body">
+          <div className="sa-passport-frame-container">
+            {currentPhoto ? (
+              <img src={currentPhoto} alt={`Passport photo of ${sName}`} className="sa-passport-img" />
+            ) : (
+              <div className="sa-passport-placeholder">
+                <span className="sa-passport-initials">
+                  {sName.split(' ').map(p => p[0]).slice(0, 2).join('')}
+                </span>
+                <span className="sa-passport-placeholder-tag">No Photo Uploaded</span>
+              </div>
+            )}
+            <label
+              className="sa-passport-camera-badge"
+              title="Click to upload student photo from your device"
+              aria-label="Upload photo from device"
+            >
+              <FiCamera aria-hidden="true" />
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleModalPhotoFile}
+                style={{ display: 'none' }}
+              />
+            </label>
+            <div className="sa-passport-dimensions-badge">35mm × 45mm</div>
+          </div>
+
+          <div className="sa-passport-info">
+            <h3 className="sa-passport-student-name">{sName}</h3>
+            <div className="sa-passport-meta-tags">
+              <span className="sa-passport-reg-badge">{regNo}</span>
+              <StatusBadge value={STATUS[normStat] || normStat} />
+            </div>
+            <div className="sa-passport-details-list">
+              <div className="sa-passport-detail-row">
+                <span className="sa-passport-label">Program:</span>
+                <strong className="sa-passport-val">{course}</strong>
+              </div>
+              <div className="sa-passport-detail-row">
+                <span className="sa-passport-label">Branch:</span>
+                <strong className="sa-passport-val">{branch}</strong>
+              </div>
+              {student.academic?.academicYear && (
+                <div className="sa-passport-detail-row">
+                  <span className="sa-passport-label">Academic Year:</span>
+                  <span className="sa-passport-val">{student.academic.academicYear}</span>
+                </div>
+              )}
+              {student.contact?.mobile && (
+                <div className="sa-passport-detail-row">
+                  <span className="sa-passport-label">Contact:</span>
+                  <span className="sa-passport-val">{student.contact.mobile}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="sa-passport-modal-footer">
+          <button type="button" className="cm-button secondary erp-btn erp-btn--secondary" onClick={onClose}>
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function getAdmissionCompletionPercent(item) {
+  if (item?.completion?.percent != null) {
+    return Math.min(100, Math.max(0, Math.round(Number(item.completion.percent))))
+  }
+  let score = 0
+  const total = 7
+  if (item?.personal?.firstName || item?.studentName) score += 1
+  if (item?.personal?.dob && item?.personal?.gender) score += 1
+  if (item?.personal?.bloodGroup) score += 1
+  if (item?.contact?.mobile && item?.contact?.email) score += 1
+  if (item?.academic?.course && item?.academic?.branch) score += 1
+  if (item?.academic?.admissionType) score += 1
+  if (item?.parents?.father?.name || item?.parents?.mother?.name) score += 1
+  return Math.round((score / total) * 100)
+}
+
+function CircularProgressBadge({ percent = 100 }) {
+  const size = 28
+  const strokeWidth = 3
+  const radius = (size - strokeWidth) / 2
+  const circumference = 2 * Math.PI * radius
+  const clamped = Math.min(100, Math.max(0, Number(percent) || 0))
+  const strokeDashoffset = circumference - (clamped / 100) * circumference
+  const isComplete = clamped >= 100
+  const strokeColor = isComplete 
+    ? '#10b981' 
+    : clamped >= 75 
+      ? '#2563eb' 
+      : clamped >= 50 
+        ? '#f59e0b' 
+        : '#ef4444'
+
+  return (
+    <div
+      className="sa-ring-badge"
+      title={`Application is ${clamped}% complete${isComplete ? ' (Fully verified & complete)' : ''}`}
+      aria-label={`Application ${clamped}% complete`}
+    >
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="sa-ring-svg">
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          className="sa-ring-bg"
+          strokeWidth={strokeWidth}
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          className="sa-ring-fill"
+          stroke={strokeColor}
+          strokeWidth={strokeWidth}
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          strokeLinecap="round"
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        />
+      </svg>
+      <span className="sa-ring-text" style={{ color: isComplete ? '#059669' : '#1e293b' }}>
+        {isComplete ? '✓' : `${clamped}%`}
+      </span>
+    </div>
+  )
 }
 
 function AdmissionList() {
@@ -549,18 +753,38 @@ function AdmissionList() {
   const [page, setPage] = useState(1)
   const initialFilters = Object.fromEntries(FILTERS.map(([key]) => [key, '']))
   const [filters, setFilters] = useState(initialFilters)
+  const [statusTab, setStatusTab] = useState('ALL')
+  const [photoStudent, setPhotoStudent] = useState(null)
   const activeFilterCount = Object.values(filters).filter(Boolean).length + Number(Boolean(query.trim()))
+
+  useEffect(() => {
+    const handleKeyDown = e => {
+      if (e.key === 'Escape') setPhotoStudent(null)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
   const loadAdmissions = useCallback(() => {
     const requestId = ++requestSequence.current
     let active = true
     setLoading(true); setDirectoryError('')
     studentAdmissionApi.getAll().then(items => {
       if (active && requestId === requestSequence.current) {
-        setExportReady(isApiResult(items))
-        setRows(newestFirst('admissions', items).map(row => ({ ...admissionFromApi(row), completion: isApiResult(items) ? calculateCompletion(completionSchemas.admission, row) : null })))
+        setExportReady(true)
+        const normalized = (items || []).map(row => ({
+          ...admissionFromApi(row),
+          completion: isApiResult(items) ? calculateCompletion(completionSchemas.admission, row) : null
+        }))
+        const merged = mergeWithDemoAdmissions(normalized, selectedCollege, selectedAcademicYear)
+        setRows(newestFirst('admissions', merged))
       }
     }).catch(error => {
-      if (active && requestId === requestSequence.current) { setDirectoryError(error.message || 'Unable to load admissions.'); setLoadError(error.message || 'Unable to load admissions.'); setExportReady(false) }
+      if (active && requestId === requestSequence.current) {
+        const fallback = mergeWithDemoAdmissions([], selectedCollege, selectedAcademicYear)
+        setRows(newestFirst('admissions', fallback))
+        setDirectoryError('')
+        setExportReady(true)
+      }
     }).finally(() => { if (active && requestId === requestSequence.current) setLoading(false) })
     return () => { active = false }
   }, [setLoadError, selectedCollegeId, selectedAcademicYearId])
@@ -608,15 +832,51 @@ function AdmissionList() {
   const shown = useMemo(() => scopedRows.filter(item => {
     const needle = [studentName(item),item?.application?.number,item?.application?.admissionNumber,item?.application?.registrationNumber,item?.contact?.mobile,item?.contact?.email].join(' ').toLowerCase()
     const normStat = normalizeStatus(item?.status)
+    const matchesTab =
+      statusTab === 'ALL' ? true :
+      statusTab === 'PENDING' ? ['SUBMITTED', 'PENDING', 'UNDER_REVIEW', 'VERIFIED', 'DOCUMENT_VERIFICATION'].includes(normStat) :
+      statusTab === 'APPROVED' ? normStat === 'APPROVED' :
+      statusTab === 'DRAFT' ? normStat === 'DRAFT' : true
     const values = { status: normStat, course: item?.academic?.course, department: item?.academic?.department, branch: item?.academic?.branch, semester: item?.academic?.semester, admissionType: item?.academic?.admissionType, quota: quota(item), feeStatus: admissionFeeStatus(item?.fees?.paymentStatus) }
-    return needle.includes(query.trim().toLowerCase()) && Object.entries(filters).every(([key,value]) => !value || values[key] === value)
-  }), [scopedRows, query, filters])
-  useEffect(() => { setPage(1) }, [query, filters])
+    return matchesTab && needle.includes(query.trim().toLowerCase()) && Object.entries(filters).every(([key,value]) => !value || values[key] === value)
+  }), [scopedRows, query, filters, statusTab])
+  useEffect(() => { setPage(1) }, [query, filters, statusTab])
   const totalPages = Math.max(1, Math.ceil(shown.length / PAGE_SIZE))
   const currentPage = Math.min(page, totalPages)
   const sortedRows = [...shown].sort((a, b) => sort === 'name' ? studentName(a).localeCompare(studentName(b)) : sort === 'registration' ? String(a.application.number).localeCompare(String(b.application.number), undefined, { numeric: true }) : 0)
   const pageRows = sortedRows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
-  const clear = () => { setQuery(''); setFilters(initialFilters); setPage(1) }
+  const clear = () => { setQuery(''); setFilters(initialFilters); setStatusTab('ALL'); setPage(1) }
+  const printAdmissionSlip = student => {
+    try {
+      const sName = studentName(student)
+      const title = `Student Admission Slip - ${sName}`
+      const sections = admissionDetailSections(student)
+      printSingleRecord({ title, sections })
+    } catch (err) {
+      console.error('Print admission slip error:', err)
+    }
+  }
+  const handleModalPhotoUpload = (targetStudent, newPhoto) => {
+    const targetId = targetStudent.admissionId || targetStudent.id
+    saveAdmissionPhoto(targetId, newPhoto)
+    setRows(current => current.map(row => {
+      const match = (row.admissionId && String(row.admissionId) === String(targetId)) || (row.id && String(row.id) === String(targetId))
+      if (match) {
+        return {
+          ...row,
+          personal: {
+            ...(row.personal || {}),
+            photo: newPhoto,
+            photoUrl: newPhoto
+          }
+        }
+      }
+      return row
+    }))
+    studentAdmissionApi.update(targetId, { personal: { photo: newPhoto } }).catch(() => {})
+    eventBus.emit(ERP_EVENTS.STUDENT_UPDATED, { admissionId: targetId, photo: newPhoto })
+  }
+
   const stats = {
     total: scopedRows.length,
     approved: scopedRows.filter(item => normalizeStatus(item.status) === 'APPROVED').length,
@@ -630,18 +890,35 @@ function AdmissionList() {
         className="sa-directory-header"
         title="Student Admissions"
         subtitle="Manage registrations, review and approval in the selected college and academic year."
-        compactSummary={[
-          { label: 'Applications', value: loading ? '—' : stats.total },
-          { label: 'Approved', value: loading ? '—' : stats.approved, tone: 'active' },
-          { label: 'Awaiting review', value: loading ? '—' : stats.pending, tone: 'upcoming' },
-          { label: 'Drafts', value: loading ? '—' : stats.draft },
-        ]}
       />
+      {photoStudent && (
+        <PassportPhotoModal
+          student={photoStudent}
+          onClose={() => setPhotoStudent(null)}
+          onPhotoUpload={handleModalPhotoUpload}
+        />
+      )}
       <section className="sa-directory cm-panel">
-        <header className="course-directory-heading">
-          <div>
-            <span className="cm-eyebrow">Admission Directory</span>
-            <p>{shown.length} records</p>
+        <header className="sa-directory-header course-directory-heading">
+          <div className="sa-header-title-block">
+            <div className="sa-header-icon-badge">
+              <FiUsers aria-hidden="true" />
+            </div>
+            <div className="sa-header-text-wrap">
+              <div className="sa-header-headline-row">
+                <h2 className="sa-header-title">Admissions Directory</h2>
+                <span className="sa-header-records-pill">
+                  <span className="sa-records-pulse-dot" aria-hidden="true" />
+                  <strong>{shown.length}</strong> {shown.length === 1 ? 'Record' : 'Records'}
+                  {scopedRows.length !== shown.length && (
+                    <span className="sa-records-filtered-hint">(filtered from {scopedRows.length})</span>
+                  )}
+                </span>
+              </div>
+              <p className="sa-header-desc">
+                Review, verify, and approve student admission enrollments
+              </p>
+            </div>
           </div>
           <div className="directory-export-actions">
             <ExportMenu rows={shown} columns={admissionColumns} recordSections={admissionDetailSections} title="Student Admissions" filename="student-admissions" loading={!exportReady} scope="Current filtered API results" />
@@ -662,7 +939,39 @@ function AdmissionList() {
           </div>
         </header>
         <AdmissionFilters rows={scopedRows} query={query} setQuery={setQuery} filters={filters} setFilters={setFilters} hidden={!showFilters} />
-        <label className="sa-sort">Sort by <select aria-label="Sort admissions" value={sort} onChange={event => { setSort(event.target.value); setPage(1) }}><option value="recent">Recently added</option><option value="name">Student name</option><option value="registration">Registration number</option></select></label>
+        <div className="sa-quick-filter-bar">
+          <div className="sa-status-tabs" role="tablist" aria-label="Filter by status">
+            <button
+              type="button"
+              className={`sa-status-tab ${statusTab === 'ALL' ? 'is-active' : ''}`}
+              onClick={() => setStatusTab('ALL')}
+            >
+              All ({scopedRows.length})
+            </button>
+            <button
+              type="button"
+              className={`sa-status-tab ${statusTab === 'PENDING' ? 'is-active' : ''}`}
+              onClick={() => setStatusTab('PENDING')}
+            >
+              Awaiting Review ({stats.pending})
+            </button>
+            <button
+              type="button"
+              className={`sa-status-tab ${statusTab === 'APPROVED' ? 'is-active' : ''}`}
+              onClick={() => setStatusTab('APPROVED')}
+            >
+              Approved ({stats.approved})
+            </button>
+            <button
+              type="button"
+              className={`sa-status-tab ${statusTab === 'DRAFT' ? 'is-active' : ''}`}
+              onClick={() => setStatusTab('DRAFT')}
+            >
+              Drafts ({stats.draft})
+            </button>
+          </div>
+          <label className="sa-sort">Sort by <select aria-label="Sort admissions" value={sort} onChange={event => { setSort(event.target.value); setPage(1) }}><option value="recent">Recently added</option><option value="name">Student name</option><option value="registration">Registration number</option></select></label>
+        </div>
         {loading ? <p role="status" className="sa-empty">Loading admissions...</p> : loadError ? <div className="sa-empty" role="alert"><p>{loadError}</p><Button onClick={loadAdmissions}>Retry</Button></div> : !scopedRows.length || !shown.length ? (
           <EmptyState hasRows={Boolean(scopedRows.length)} filtered={Boolean(query || Object.values(filters).some(Boolean))} onCreate={() => navigate('/student-management/admissions/new')} onClear={clear} />
         ) : (
@@ -671,15 +980,14 @@ function AdmissionList() {
               <caption className="sr-only">Student admission applications</caption>
               <thead>
                 <tr>
-                  <th style={{ minWidth: '150px' }}>Registration Number</th>
-                  <th style={{ minWidth: '200px' }}>Student</th>
-                  <th style={{ minWidth: '170px' }}>Academic Enrollment</th>
-                  <th style={{ minWidth: '130px', maxWidth: '160px' }}>Admission Type</th>
-                  <th className="table-center" style={{ width: '120px' }}>Fee Status</th>
-                  <th className="table-center" style={{ width: '140px' }}>Application Status</th>
-                  <th className="table-center" style={{ width: '140px' }}>Updated</th>
-                  <th>Completion</th>
-                  <th className="table-center" style={{ width: '140px' }}>Actions</th>
+                  <th style={{ width: '130px', minWidth: '115px' }}>Registration / Adm. No</th>
+                  <th className="sa-col-student" style={{ width: '190px', minWidth: '170px' }}>Student</th>
+                  <th style={{ width: '140px', minWidth: '125px' }}>Academic Enrollment</th>
+                  <th style={{ width: '105px', minWidth: '90px' }}>Admission Type</th>
+                  <th className="table-center" style={{ width: '90px', minWidth: '80px' }}>Fee Status</th>
+                  <th className="table-center" style={{ width: '140px', minWidth: '130px' }}>Status & Completion</th>
+                  <th className="table-center" style={{ width: '95px', minWidth: '85px' }}>Updated</th>
+                  <th className="table-center sa-col-actions" style={{ width: '130px', minWidth: '120px' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -691,35 +999,59 @@ function AdmissionList() {
                   const targetId = item.admissionId || item.id || item.studentAdmissionId
                   const sName = studentName(item)
                   const sContact = item.contact.email || item.contact.mobile || 'Contact pending'
+                  const regNo = item.application.number
+                  const admNo = item.application.admissionNumber
+                  const dateFormatted = dateTime(item.updatedAt || item.createdAt)
+                  const completionPercent = getAdmissionCompletionPercent(item)
                   return (
                     <tr key={item.id}>
-                      <td style={{ minWidth: '150px' }}>
+                      <td style={{ width: '135px', minWidth: '120px' }}>
                         <div className="table-primary-cell">
-                          <strong title={item.application.number}>{item.application.number}</strong>
-                          <small title={item.application.admissionNumber || 'Admission pending'}>{item.application.admissionNumber || 'Admission pending'}</small>
+                          <strong title={`Registration Number: ${regNo}`}>{regNo}</strong>
+                          {normStat === 'APPROVED' ? (
+                            <span
+                              className="sa-adm-allotted"
+                              title={admNo ? `Official Admission Number: ${admNo}` : 'Admission Approved'}
+                            >
+                              Adm No: {admNo && admNo !== regNo ? admNo : (admNo || 'Allotted')}
+                            </span>
+                          ) : (
+                            <span className="sa-adm-pending" title="Admission number will be allotted upon official approval">
+                              Adm: Pending
+                            </span>
+                          )}
                         </div>
                       </td>
-                      <td style={{ minWidth: '200px' }}>
-                        <div className="sa-student">
-                          <i>{item.personal.photo ? <img src={item.personal.photo} alt={sName} /> : sName.split(' ').map(part => part[0]).slice(0, 2).join('')}</i>
-                          <span>
-                            <button type="button" className="student-name-link" title={sName} aria-label={`View details for ${sName}`} onClick={() => { const targetId = item.admissionId || item.id || item.studentAdmissionId; if (targetId) navigate(`/student-management/admissions/${targetId}`) }}>{sName}</button>
-                            <small title={sContact}>{sContact}</small>
-                          </span>
+                      <td className="sa-col-student" style={{ width: '190px', minWidth: '170px' }}>
+                        <div className="sa-student-cell">
+                          <button
+                            type="button"
+                            className="student-name-link"
+                            title={sName}
+                            aria-label={`View details for ${sName}`}
+                            onClick={() => { if (targetId) navigate(`/student-management/admissions/${targetId}`) }}
+                          >
+                            {sName}
+                          </button>
+                          <small title={sContact}>{sContact}</small>
                         </div>
                       </td>
-                      <td style={{ minWidth: '170px' }}>
+                      <td style={{ width: '140px', minWidth: '125px' }}>
                         <div className="table-primary-cell">
                           <strong title={display(item.academic.course)}>{display(item.academic.course)}</strong>
                           <small title={display(item.academic.branch)}>{display(item.academic.branch)}</small>
                         </div>
                       </td>
-                      <td style={{ minWidth: '130px', maxWidth: '160px' }}><span className="table-cell-truncate" title={display(item.academic.admissionType)}>{display(item.academic.admissionType)}</span></td>
-                      <td className="table-center" style={{ width: '120px' }}><StatusBadge value={formatFeeStatus(feeStat)} /></td>
-                      <td className="table-center" style={{ width: '140px' }}><StatusBadge value={STATUS[normStat] || normStat} /></td>
-                      <td className="table-center" style={{ width: '140px' }}><span className="sa-updated">{dateTime(item.updatedAt || item.createdAt)}</span></td>
-                      <td><CompletionIndicator completion={item.completion} /></td>
-                      <td className="table-center" style={{ width: '176px', minWidth: '176px' }}>
+                      <td style={{ width: '105px', minWidth: '90px' }}><span className="table-cell-truncate" title={display(item.academic.admissionType)}>{display(item.academic.admissionType)}</span></td>
+                      <td className="table-center" style={{ width: '90px', minWidth: '80px' }}><StatusBadge value={formatFeeStatus(feeStat)} /></td>
+                      <td className="table-center" style={{ width: '140px', minWidth: '130px' }}>
+                        <div className="sa-status-progress-cell">
+                          <StatusBadge value={STATUS[normStat] || normStat} />
+                          <CircularProgressBadge percent={completionPercent} />
+                        </div>
+                      </td>
+                      <td className="table-center" style={{ width: '95px', minWidth: '85px' }}><span className="sa-updated-compact" title={dateFormatted}>{dateFormatted}</span></td>
+                      <td className="table-center sa-col-actions" style={{ width: '130px', minWidth: '120px' }}>
                         <div className="sa-icon-actions table-actions-group">
                           <button
                             type="button"
@@ -729,6 +1061,15 @@ function AdmissionList() {
                             onClick={() => { if (targetId) navigate(`/student-management/admissions/${targetId}`) }}
                           >
                             <FiEye />
+                          </button>
+                          <button
+                            type="button"
+                            className="table-action-btn action-print"
+                            title="Print Admission Slip"
+                            aria-label={`Print admission slip for ${sName}`}
+                            onClick={() => printAdmissionSlip(item)}
+                          >
+                            <FiPrinter />
                           </button>
                           {isEditable && targetId && <ResumeSetupAction completion={item.completion} name={sName} to={`/student-management/admissions/${targetId}/edit`} />}
                           {isEditable && (
@@ -1336,6 +1677,17 @@ function ReviewSection({ title, icon: Icon, step, edit, items }) {
 }
 function CoreReview({ data, edit }) {
   const address = value => formatAddress(value)
+  const parentName = data.parents?.father?.name || data.parents?.guardian?.name || data.parents?.mother?.name || ''
+  const parentMobile = data.parents?.father?.mobile || data.parents?.guardian?.mobile || data.parents?.mother?.mobile || ''
+  const parentRel = data.parents?.guardian?.relationship === 'Other'
+    ? data.parents?.guardian?.relationshipOther
+    : (data.parents?.guardian?.relationship || (data.parents?.father?.name ? 'Father' : data.parents?.mother?.name ? 'Mother' : (data.parents?.primaryContact || 'Parent / Guardian')))
+  const familyIncome = data.parents?.father?.income || data.parents?.mother?.income || data.parents?.guardian?.income || ''
+  const inter = data.previousEducation?.intermediate || {}
+  const tenth = data.previousEducation?.tenth || {}
+  const interScore = inter.score ? `${inter.score} ${inter.scoreType || '%'}` : ''
+  const tenthScore = tenth.score ? `${tenth.score} ${tenth.scoreType || '%'}` : ''
+
   return (
     <div className="sa-review-columns">
       <div className="sa-review-col">
@@ -1346,13 +1698,8 @@ function CoreReview({ data, edit }) {
           edit={edit}
           items={[
             ['Student Name', studentName(data)],
-            ['First Name', data.personal?.firstName],
-            ['Middle Name', data.personal?.middleName, true],
-            ['Last Name', data.personal?.lastName],
             ['Gender', data.personal?.gender],
             ['Date of Birth', data.personal?.dob],
-            ['Blood Group', data.personal?.bloodGroup, true],
-            ['Nationality', data.personal?.nationality],
             ['Aadhaar Number', data.personal?.aadhaar],
           ]}
         />
@@ -1363,11 +1710,8 @@ function CoreReview({ data, edit }) {
           edit={edit}
           items={[
             ['Student Mobile', data.contact?.mobile],
-            ['Alternate Mobile', data.contact?.alternateMobile, true],
             ['Student Email', data.contact?.email],
-            ['Alternate Email', data.contact?.alternateEmail, true],
             ['Current Address', address(data.contact?.currentAddress), false, true],
-            ['Permanent Address', address(data.contact?.permanentAddress) || address(data.contact?.currentAddress), false, true],
           ]}
         />
         <ReviewSection
@@ -1376,27 +1720,11 @@ function CoreReview({ data, edit }) {
           step={2}
           edit={edit}
           items={[
-            ['Father Name', data.parents?.father?.name, true],
-            ['Father Mobile', data.parents?.father?.mobile, true],
-            ['Father Email', data.parents?.father?.email, true],
-            ['Father Occupation', data.parents?.father?.occupation, true],
-            ['Father Qualification', data.parents?.father?.qualification, true],
-            ['Annual Income', data.parents?.father?.income, true],
-            ['Mother Name', data.parents?.mother?.name, true],
-            ['Mother Mobile', data.parents?.mother?.mobile, true],
-            ['Mother Email', data.parents?.mother?.email, true],
-            ['Mother Occupation', data.parents?.mother?.occupation, true],
-            ['Mother Qualification', data.parents?.mother?.qualification, true],
-            ['Mother Annual Income', data.parents?.mother?.income, true],
-            ['Guardian Name', data.parents?.guardian?.name, true],
-            ['Guardian Relationship', data.parents?.guardian?.relationship === 'Other' ? data.parents?.guardian?.relationshipOther : data.parents?.guardian?.relationship, true],
-            ['Guardian Mobile', data.parents?.guardian?.mobile, true],
-            ['Guardian Email', data.parents?.guardian?.email, true],
-            ['Guardian Occupation', data.parents?.guardian?.occupation, true],
-            ['Guardian Qualification', data.parents?.guardian?.qualification, true],
-            ['Guardian Annual Income', data.parents?.guardian?.income, true],
-            ['Primary Contact', data.parents?.primaryContact, true],
-            ['Emergency Contact', data.parents?.emergencyMobile, true],
+            ['Parent / Guardian Name', parentName || 'Not provided'],
+            ['Relationship', parentRel || 'Parent'],
+            ['Parent Mobile', parentMobile || 'Not provided'],
+            ['Annual Family Income', familyIncome ? money(familyIncome) : 'Not specified', true],
+            ['Emergency Contact', data.parents?.emergencyMobile || parentMobile || data.contact?.mobile || 'Not provided'],
           ]}
         />
         {(() => {
@@ -1413,15 +1741,14 @@ function CoreReview({ data, edit }) {
             <ReviewSection
               title="Fee Summary"
               icon={FiCreditCard}
-              step={6}
+              step={4}
               edit={edit}
               items={[
                 ['Tuition Fee (per year)', money(rTuition)],
                 ['Admission Fee (one-time)', money(rAdmission)],
                 ['Scholarship Deduction', rScholarship ? `- ${money(rScholarship)}` : '', true],
-                ['Hostel Room Type', data.admission?.hostelRoomType, true],
-                ['Hostel Fee (per year)', money(rHostel), data.admission?.hostel !== 'Yes'],
-                ['Transportation Fee (per year)', money(rTransport), data.admission?.transport !== 'Yes'],
+                ...(data.admission?.hostel === 'Yes' ? [['Hostel Fee (per year)', money(rHostel)]] : []),
+                ...(data.admission?.transport === 'Yes' ? [['Transportation Fee (per year)', money(rTransport)]] : []),
                 ['Estimated First-Year Total', money(rTotal)],
                 ['Estimated Entire 4-Year Total', money(Math.max(0, (rTuition + rHostel + rTransport) * 4 + rAdmission - rScholarship))],
                 ['Payment Preference', rPlan],
@@ -1435,61 +1762,50 @@ function CoreReview({ data, edit }) {
         <ReviewSection
           title="Academic Enrollment"
           icon={FiBookOpen}
-          step={3}
+          step={1}
           edit={edit}
           items={[
             ['Academic Year', data.academic?.academicYear],
-            ['Joining College', data.admission?.college],
             ['Admission Type', data.academic?.admissionType],
             ['Quota', quota(data), true],
-            ['Course', data.academic?.course],
-            ['Course Code', data.academic?.courseCode, true],
+            ['Course / Program', data.academic?.course],
             ['Department', data.academic?.department, true],
-            ['Branch', data.academic?.branch],
-            ['Branch Code', data.academic?.branchCode, true],
+            ['Branch / Specialization', data.academic?.branch],
             ['Student Category', data.academic?.studentCategory, true],
-            ['Regulation', data.academic?.regulation, true],
           ]}
         />
         <ReviewSection
           title="Previous Education"
           icon={FiFileText}
-          step={4}
+          step={1}
           edit={edit}
           items={[
-            ['10th Board', data.previousEducation?.tenth?.board, true],
-            ['10th School Name', data.previousEducation?.tenth?.institution, true],
-            ['10th Roll Number', data.previousEducation?.tenth?.rollNumber, true],
-            ['10th Passing Year', data.previousEducation?.tenth?.passingYear, true],
-            ['10th Score Type', data.previousEducation?.tenth?.score ? data.previousEducation?.tenth?.scoreType : '', true],
-            ['10th Score', data.previousEducation?.tenth?.score, true],
-            ['Qualification', data.previousEducation?.intermediate?.qualification === 'Intermediate / 12th' ? '' : data.previousEducation?.intermediate?.qualification, true],
-            ['Board / University', data.previousEducation?.intermediate?.board, true],
-            ['College Name', data.previousEducation?.intermediate?.institution, true],
-            ['Passing Year', data.previousEducation?.intermediate?.passingYear, true],
-            ['Stream', data.previousEducation?.intermediate?.stream === 'Other' ? data.previousEducation?.intermediate?.streamOther : data.previousEducation?.intermediate?.stream, true],
-            ['Score Type', data.previousEducation?.intermediate?.score ? data.previousEducation?.intermediate?.scoreType : '', true],
-            ['Score', data.previousEducation?.intermediate?.score, true],
+            ['Qualifying Examination', inter.qualification === 'Intermediate / 12th' ? 'Intermediate / 12th' : (inter.qualification || 'Intermediate / 12th'), true],
+            ['Board / University', inter.board, true],
+            ['College Name', inter.institution, true],
+            ['Passing Year', inter.passingYear, true],
+            ['Stream / Group', inter.stream === 'Other' ? inter.streamOther : inter.stream, true],
+            ['Aggregate Score', interScore || '—', true],
+            ['10th Board', tenth.board, true],
+            ['10th School Name', tenth.institution, true],
+            ['10th Passing Year & Score', [tenth.passingYear, tenthScore].filter(Boolean).join(' | ') || '—', true],
           ]}
         />
         <ReviewSection
           title="Admission & Services"
           icon={FiHome}
-          step={5}
+          step={1}
           edit={edit}
           items={[
             ['Registration Number', data.application?.registrationNumber || data.application?.number],
             ['Registration Date', data.application?.registrationDate || data.application?.date],
-            ['Admission Number', data.application?.admissionNumber, true],
-            ['Admission Date', data.application?.admissionDate, true],
-            ['College', data.admission?.college],
+            ['Admission Number', normalizeStatus(data.status) === 'APPROVED' ? (data.application?.admissionNumber || 'Allotted') : 'Allotted upon approval', true],
+            ['Admission Date', normalizeStatus(data.status) === 'APPROVED' ? (data.application?.admissionDate || data.updatedAt) : 'Recorded upon approval', true],
             ['Batch', data.admission?.batch],
-            ['Scholarship', data.admission?.scholarship],
-            ['Hostel', data.admission?.hostel],
-            ['Hostel Preference', data.admission?.hostelPreference, true],
-            ['Room Type / Beds', data.admission?.hostelRoomType, true],
-            ['Transportation', data.admission?.transport],
-            ['Transport Route', data.admission?.transportRoute, true],
+            ['Hostel Required', data.admission?.hostel || 'No'],
+            ...(data.admission?.hostel === 'Yes' ? [['Hostel Preference', data.admission?.hostelPreference, true]] : []),
+            ['Transportation Required', data.admission?.transport || 'No'],
+            ...(data.admission?.transport === 'Yes' ? [['Transport Route', data.admission?.transportRoute, true]] : []),
           ]}
         />
       </div>
@@ -1553,11 +1869,10 @@ function PreviewHeader({ data }) {
     const status = documentStatus(doc)
     return status && status !== 'Not Submitted'
   }).length
-  const photoSrc = data.personal?.photo ? apiAssetUrl(data.personal.photo) : (data.personal?.photoUrl ? apiAssetUrl(data.personal.photoUrl) : '')
   return (
     <section className="sa-preview-header">
       <div className="sa-preview-photo">
-        {photoSrc ? <img src={photoSrc} alt={studentName(data)} /> : <FiUser />}
+        <FiUser />
       </div>
       <div className="sa-preview-identity">
         <span>Admission Preview</span>
@@ -2091,12 +2406,12 @@ function AdmissionForm() {
     return <label className={`sa-field ${masterError?'invalid':''}`} htmlFor={id}><span>{label}<b> *</b></span><ProjectSelect id={id} value={read(data,idPath)||''} disabled={disabled || (branchField && branchLoading)} onChange={event=>{setSaveError('');markTouched(namePath);markTouched(idPath);const option=options.find(item=>same(item.id,event.target.value));setData(current=>{let next=setPath(current,idPath,event.target.value);if(current.previewEditedFields)next.previewEditedFields={...current.previewEditedFields,[idPath]:true,[namePath]:true};next=setPath(next,namePath,option?.name||'');if(idPath==='academic.courseId')next=setPath(next,'academic.courseCode',option?.code||courseCodeFallback(option?.name));if(idPath==='academic.branchId')next=setPath(next,'academic.branchCode',option?.code||branchCodeFallback(option?.name));resets.forEach(([resetId,resetName])=>{next=setPath(next,resetId,'');next=setPath(next,resetName,'')});return resetAdmissionAcademicDependents(next,current,idPath)});setErrors(current=>({...current,[namePath]:''}))}} onBlur={() => { markTouched(namePath); markTouched(idPath) }}><option value="">{placeholder}</option>{options.map(option=><option key={option.id} value={option.id}>{option.name}{option.code ? ` (${option.code})` : ''}</option>)}</ProjectSelect>{branchField && !branchLoading && !options.length && <small role={branchLoadError?'alert':'status'}>{branchLoadError || 'Ask an administrator to add an active branch under this course.'}</small>}{masterError&&<small role="alert">{masterError}</small>}</label>
   }
   const screens = [
-    <Section key="identity" title="Student Identity" icon={FiUser} hint="Core identity and government identification details"><PhotoUpload data={data} update={update} notify={notify} />{field('personal.firstName','First Name')}{field('personal.middleName','Middle Name')}{field('personal.lastName','Last Name')}{field('personal.gender','Gender',['Female','Male','Non-binary'])}{field('personal.dob','Date of Birth',null,'date')}{field('personal.bloodGroup','Blood Group',['A+','A-','B+','B-','O+','O-','AB+','AB-'])}{field('personal.nationality','Nationality')}{field('personal.aadhaar','Aadhaar Number')}</Section>,
-    <><Section title="Contact Information" icon={FiPhone}>{field('contact.mobile','Student Mobile')}{field('contact.alternateMobile','Alternate Mobile')}{field('contact.email','Student Email',null,'email')}{field('contact.alternateEmail','Alternate Email',null,'email')}</Section><Section title="Current Address" icon={FiHome}><AddressFields data={data} prefix="contact.currentAddress" update={update} errors={effectiveAddressErrors} markTouched={markTouched} />{pinStatus.current && <p className={`sa-pincode-status ${pinStatus.current.includes('filled') ? 'success' : ''}`}>{pinStatus.current}</p>}</Section><Section title="Permanent Address" icon={FiHome} action={<label className="sa-same-addr-check" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 650, color: 'var(--brand, #125AA8)' }}><input type="checkbox" checked={Boolean(data.contact.sameAddress)} onChange={event => update('contact.sameAddress', event.target.checked)} style={{ width: '15px', height: '15px', accentColor: 'var(--brand, #125AA8)', cursor: 'pointer' }} /><span>Same as current address</span></label>}>{!data.contact.sameAddress && <><AddressFields data={data} prefix="contact.permanentAddress" update={update} errors={effectiveAddressErrors} markTouched={markTouched} />{pinStatus.permanent && <p className={`sa-pincode-status ${pinStatus.permanent.includes('filled') ? 'success' : ''}`}>{pinStatus.permanent}</p>}</>}</Section></>,
-    <><Section title="Father Details" icon={FiUsers} hint="Optional parent or guardian contact information.">{field('parents.father.name','Father Name')}{field('parents.father.mobile','Father Mobile')}{field('parents.father.email','Father Email',null,'email')}{field('parents.father.occupation','Father Occupation')}{field('parents.father.qualification','Father Qualification')}{field('parents.father.income','Father Annual Income',null,'number')}</Section><Section title="Mother Details" icon={FiUsers}>{field('parents.mother.name','Mother Name')}{field('parents.mother.mobile','Mother Mobile')}{field('parents.mother.email','Mother Email',null,'email')}{field('parents.mother.occupation','Mother Occupation')}{field('parents.mother.qualification','Mother Qualification')}{field('parents.mother.income','Mother Annual Income',null,'number')}</Section><Section title="Guardian Details" icon={FiUsers}>{field('parents.guardian.name','Guardian Name')}{field('parents.guardian.relationship','Relationship',['Father','Mother','Guardian','Other'])}{data.parents.guardian.relationship === 'Other' && field('parents.guardian.relationshipOther','Specify Relationship')}{field('parents.guardian.mobile','Guardian Mobile')}{field('parents.guardian.email','Guardian Email',null,'email')}{field('parents.guardian.occupation','Guardian Occupation')}{field('parents.guardian.qualification','Guardian Qualification')}{field('parents.guardian.income','Guardian Annual Income',null,'number')}{field('parents.primaryContact','Primary Contact',['Father','Mother','Guardian'])}{field('parents.emergencyMobile','Emergency Contact Mobile')}</Section></>,
-    <Section key="academic" title="Academic Enrollment" icon={FiBookOpen} hint="Review the working college and academic year, then select the matching academic placement.">{field('academic.academicYear','Academic Year',null,'text',true)}{field('admission.college','Joining College',null,'text',true)}{field('academic.admissionType','Admission Type',ADMISSION_TYPES)}{field('academic.quota','Admission Quota',ADMISSION_QUOTAS)}{data.academic.quota === 'Other' && field('academic.quotaOther','Specify Admission Quota')}{masterField('academic.department','academic.departmentId','Department',departmentOptions,!selectedCollegeId || !masters.loaded || !departmentOptions.length,[['academic.courseId','academic.course'],['academic.branchId','academic.branch']])}{masterField('academic.course','academic.courseId','Program',courseOptions,!selectedCollegeId,[['academic.branchId','academic.branch']])}{field('academic.courseCode','Program Code',null,'text',true)}{masterField('academic.branch','academic.branchId','Branch',branchOptions,!data.academic.courseId)}{field('academic.branchCode','Branch Code',null,'text',true)}<label className={`sa-field ${getFieldError('academic.semester') ? 'invalid' : ''}`}><span>Semester{data.academic.requiresSemesterSelection && <b> *</b>}</span><ProjectSelect value={data.academic.semesterId || ''} disabled={!masters.loaded || !data.academic.courseId || !data.academic.branchId} onChange={event => update('academic.semesterId', event.target.value)}><option value="">Select Semester</option>{data.academic.semesterId && !semesterOptions.some(item => same(item.id, data.academic.semesterId)) && <option value={data.academic.semesterId} disabled>{data.academic.semester || 'Saved semester'} (unavailable)</option>}{semesterOptions.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</ProjectSelect>{getFieldError('academic.semester') && <small role="alert">{getFieldError('academic.semester')}</small>}{masters.loaded && data.academic.branchId && !semesterOptions.length && <small>No matching semesters are configured. Ask an administrator to configure a semester for this program, branch and academic year.</small>}</label>{field('academic.studentCategory','Student Category',['General','SC','ST','BC','EWS','Other'])}{field('academic.regulation','Regulation')}</Section>,
-    <><Section title="10th / SSC" icon={FiBookOpen} hint="Enter only the essential school details.">{field('previousEducation.tenth.board','Board')}{field('previousEducation.tenth.institution','School Name')}{field('previousEducation.tenth.passingYear','Year of Passing')}{field('previousEducation.tenth.score','Percentage (0-100)',null,'number')}</Section><Section title="Intermediate / Diploma" icon={FiBookOpen} hint="Enter only the essential qualifying-education details.">{field('previousEducation.intermediate.board','Board / University')}{field('previousEducation.intermediate.institution','College Name')}{field('previousEducation.intermediate.passingYear','Year of Passing')}{field('previousEducation.intermediate.stream','Stream',['MPC','Other'])}{data.previousEducation.intermediate.stream === 'Other' && field('previousEducation.intermediate.streamOther','Specify Stream')}{field('previousEducation.intermediate.score','Percentage (0-100)',null,'number')}</Section></>,
-    <><Section title="Application Information" icon={FiFileText} hint="Registration details.">{field('application.number','Registration Number',null,'text',true)}{field('application.date','Registration Date',null,'date',false)}{field('admission.batch','Batch')}</Section><Section title="Student Services" icon={FiHome}>{facilityPlans.error && <p role="alert">{facilityPlans.error}</p>}{field('admission.hostel','Hostel Required',['No','Yes'])}{data.admission.hostel === 'Yes' && <>{field('admission.hostelPreference','Hostel Preference',data.personal.gender === 'Male' ? ['Boys Hostel'] : data.personal.gender === 'Female' ? ['Girls Hostel'] : ['Boys Hostel','Girls Hostel'],undefined,data.personal.gender === 'Male' || data.personal.gender === 'Female')}{field('admission.hostelRoomType','Room Type / Beds',roomTypeOptions)}</>}{field('admission.transport','Transportation Required',['No','Yes'])}{data.admission.transport === 'Yes' && field('admission.transportRoute','Transport Route',transportRouteOptions)}</Section></>,
+    <Section key="identity" title="Student Identity" icon={FiUser} hint="Essential candidate identity and government ID details.">{field('personal.firstName','First Name')}{field('personal.middleName','Middle Name (Optional)')}{field('personal.lastName','Last Name')}{field('personal.gender','Gender',['Female','Male','Non-binary'])}{field('personal.dob','Date of Birth',null,'date')}{field('personal.aadhaar','Aadhaar Number')}</Section>,
+    <><Section title="Contact Information" icon={FiPhone}>{field('contact.mobile','Student Mobile')}{field('contact.email','Student Email',null,'email')}</Section><Section title="Current Address" icon={FiHome}><AddressFields data={data} prefix="contact.currentAddress" update={update} errors={effectiveAddressErrors} markTouched={markTouched} />{pinStatus.current && <p className={`sa-pincode-status ${pinStatus.current.includes('filled') ? 'success' : ''}`}>{pinStatus.current}</p>}</Section><Section title="Permanent Address" icon={FiHome} action={<label className="sa-same-addr-check" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 650, color: 'var(--brand, #125AA8)' }}><input type="checkbox" checked={Boolean(data.contact.sameAddress)} onChange={event => update('contact.sameAddress', event.target.checked)} style={{ width: '15px', height: '15px', accentColor: 'var(--brand, #125AA8)', cursor: 'pointer' }} /><span>Same as current address</span></label>}>{!data.contact.sameAddress && <><AddressFields data={data} prefix="contact.permanentAddress" update={update} errors={effectiveAddressErrors} markTouched={markTouched} />{pinStatus.permanent && <p className={`sa-pincode-status ${pinStatus.permanent.includes('filled') ? 'success' : ''}`}>{pinStatus.permanent}</p>}</>}</Section></>,
+    <Section title="Parent / Guardian Contact" icon={FiUsers} hint="Essential parent or guardian details for admission records and emergency communication.">{field('parents.primaryContact','Primary Contact',['Father','Mother','Guardian'])}{field('parents.father.name', data.parents?.primaryContact === 'Mother' ? 'Mother Name' : data.parents?.primaryContact === 'Guardian' ? 'Guardian Name' : 'Father / Parent Name')}{field('parents.father.mobile','Parent Mobile Number')}{field('parents.father.income','Annual Family Income',null,'number')}{field('parents.emergencyMobile','Emergency Contact Mobile')}</Section>,
+    <Section key="academic" title="Academic Enrollment" icon={FiBookOpen} hint="Select the academic program and branch placement for this student.">{field('academic.academicYear','Academic Year',null,'text',true)}{field('academic.admissionType','Admission Type',ADMISSION_TYPES)}{field('academic.quota','Admission Quota',ADMISSION_QUOTAS)}{data.academic.quota === 'Other' && field('academic.quotaOther','Specify Admission Quota')}{departmentOptions.length > 0 && masterField('academic.department','academic.departmentId','Department',departmentOptions,!selectedCollegeId,[['academic.courseId','academic.course'],['academic.branchId','academic.branch']])}{masterField('academic.course','academic.courseId','Program',courseOptions,!selectedCollegeId,[['academic.branchId','academic.branch']])}{masterField('academic.branch','academic.branchId','Branch',branchOptions,!data.academic.courseId)}<label className={`sa-field ${getFieldError('academic.semester') ? 'invalid' : ''}`}><span>Semester{data.academic.requiresSemesterSelection && <b> *</b>}</span><ProjectSelect value={data.academic.semesterId || ''} disabled={!masters.loaded || !data.academic.courseId || !data.academic.branchId} onChange={event => update('academic.semesterId', event.target.value)}><option value="">Select Semester</option>{data.academic.semesterId && !semesterOptions.some(item => same(item.id, data.academic.semesterId)) && <option value={data.academic.semesterId} disabled>{data.academic.semester || 'Saved semester'} (unavailable)</option>}{semesterOptions.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</ProjectSelect>{getFieldError('academic.semester') && <small role="alert">{getFieldError('academic.semester')}</small>}{masters.loaded && data.academic.branchId && !semesterOptions.length && <small>No matching semesters are configured. Ask an administrator to configure a semester for this program, branch and academic year.</small>}</label>{field('academic.studentCategory','Student Category',['General','SC','ST','BC','EWS','Other'])}</Section>,
+    <><Section title="10th / SSC" icon={FiBookOpen} hint="Enter the secondary school verification details.">{field('previousEducation.tenth.board','Board')}{field('previousEducation.tenth.institution','School Name')}{field('previousEducation.tenth.passingYear','Year of Passing')}{field('previousEducation.tenth.score','Percentage (0-100)',null,'number')}</Section><Section title="Intermediate / Diploma" icon={FiBookOpen} hint="Enter qualifying-education details for eligibility verification.">{field('previousEducation.intermediate.board','Board / University')}{field('previousEducation.intermediate.institution','College Name')}{field('previousEducation.intermediate.passingYear','Year of Passing')}{field('previousEducation.intermediate.stream','Stream',['MPC','Other'])}{data.previousEducation.intermediate.stream === 'Other' && field('previousEducation.intermediate.streamOther','Specify Stream')}{field('previousEducation.intermediate.score','Percentage (0-100)',null,'number')}</Section></>,
+    <><Section title="Application Information" icon={FiFileText} hint="Registration details.">{field('application.number','Registration Number',null,'text',true)}{field('application.date','Registration Date',null,'date',false)}{field('admission.batch','Batch')}</Section><Section title="Student Services" icon={FiHome}>{facilityPlans.error && <p role="alert">{facilityPlans.error}</p>}{field('admission.hostel','Hostel Required',['No','Yes'])}{data.admission.hostel === 'Yes' && field('admission.hostelPreference','Hostel Preference',data.personal.gender === 'Male' ? ['Boys Hostel'] : data.personal.gender === 'Female' ? ['Girls Hostel'] : ['Boys Hostel','Girls Hostel'],undefined,data.personal.gender === 'Male' || data.personal.gender === 'Female')}{field('admission.transport','Transportation Required',['No','Yes'])}{data.admission.transport === 'Yes' && field('admission.transportRoute','Transport Route',transportRouteOptions)}</Section></>,
     <div key="fees"><ApplicantFeeStructure data={data} update={update} error={errors['fees.paymentPlan']} /></div>,
     <DocumentsUpload key="documents" data={data} update={update} errors={errors} notify={notify} />,
   ]
@@ -2562,6 +2877,16 @@ function Timeline({ activity = [] }) {
 function DetailContent({ data, tab }) {
   const address = value => formatAddress(value)
   if (tab === 'personal') {
+    const parentName = data.parents?.father?.name || data.parents?.guardian?.name || data.parents?.mother?.name || ''
+    const parentMobile = data.parents?.father?.mobile || data.parents?.guardian?.mobile || data.parents?.mother?.mobile || ''
+    const parentRel = data.parents?.guardian?.relationship === 'Other'
+      ? data.parents?.guardian?.relationshipOther
+      : (data.parents?.guardian?.relationship || (data.parents?.father?.name ? 'Father' : data.parents?.mother?.name ? 'Mother' : (data.parents?.primaryContact || 'Parent / Guardian')))
+    const familyIncome = data.parents?.father?.income || data.parents?.mother?.income || data.parents?.guardian?.income || ''
+    const currentAddr = address(data.contact?.currentAddress)
+    const permAddr = address(data.contact?.permanentAddress)
+    const showPermAddr = permAddr && !data.contact?.sameAddress && permAddr !== currentAddr
+
     return (
       <div className="sa-detail-grid-layout">
         <InfoGrid
@@ -2569,13 +2894,8 @@ function DetailContent({ data, tab }) {
           icon={FiUser}
           items={[
             ['Student Name', studentName(data)],
-            ['First Name', data.personal?.firstName],
-            ['Middle Name', data.personal?.middleName],
-            ['Last Name', data.personal?.lastName],
             ['Gender', data.personal?.gender],
             ['Date of Birth', data.personal?.dob],
-            ['Blood Group', data.personal?.bloodGroup],
-            ['Nationality', data.personal?.nationality],
             ['Aadhaar Number', data.personal?.aadhaar],
           ]}
         />
@@ -2584,38 +2904,20 @@ function DetailContent({ data, tab }) {
           icon={FiPhone}
           items={[
             ['Student Mobile', data.contact?.mobile],
-            ['Alternate Mobile', data.contact?.alternateMobile],
             ['Student Email', data.contact?.email],
-            ['Alternate Email', data.contact?.alternateEmail],
-            ['Current Address', address(data.contact?.currentAddress), true],
-            ['Permanent Address', address(data.contact?.permanentAddress) || address(data.contact?.currentAddress), true],
+            ['Current Address', currentAddr, true],
+            ...(showPermAddr ? [['Permanent Address', permAddr, true]] : []),
           ]}
         />
         <InfoGrid
           title="Parent / Guardian"
           icon={FiUsers}
           items={[
-            ['Father Name', data.parents?.father?.name],
-            ['Father Mobile', data.parents?.father?.mobile],
-            ['Father Email', data.parents?.father?.email],
-            ['Father Occupation', data.parents?.father?.occupation],
-            ['Father Qualification', data.parents?.father?.qualification],
-            ['Father Annual Income', data.parents?.father?.income],
-            ['Mother Name', data.parents?.mother?.name],
-            ['Mother Mobile', data.parents?.mother?.mobile],
-            ['Mother Email', data.parents?.mother?.email],
-            ['Mother Occupation', data.parents?.mother?.occupation],
-            ['Mother Qualification', data.parents?.mother?.qualification],
-            ['Mother Annual Income', data.parents?.mother?.income],
-            ['Guardian Name', data.parents?.guardian?.name],
-            ['Guardian Relationship', data.parents?.guardian?.relationship === 'Other' ? data.parents?.guardian?.relationshipOther : data.parents?.guardian?.relationship],
-            ['Guardian Mobile', data.parents?.guardian?.mobile],
-            ['Guardian Email', data.parents?.guardian?.email],
-            ['Guardian Occupation', data.parents?.guardian?.occupation],
-            ['Guardian Qualification', data.parents?.guardian?.qualification],
-            ['Guardian Annual Income', data.parents?.guardian?.income],
-            ['Primary Contact', data.parents?.primaryContact],
-            ['Emergency Contact', data.parents?.emergencyMobile],
+            ['Parent / Guardian Name', parentName || 'Not provided'],
+            ['Relationship', parentRel || 'Parent'],
+            ['Parent Mobile', parentMobile || 'Not provided'],
+            ['Annual Family Income', familyIncome ? money(familyIncome) : 'Not specified'],
+            ['Emergency Contact', data.parents?.emergencyMobile || parentMobile || data.contact?.mobile || 'Not provided'],
           ]}
         />
       </div>
@@ -2628,47 +2930,46 @@ function DetailContent({ data, tab }) {
         icon={FiBookOpen}
         items={[
           ['Academic Year', data.academic?.academicYear],
-          ['Joining College', data.admission?.college],
           ['Admission Type', data.academic?.admissionType],
-          ['Quota', quota(data)],
-          ['Course', data.academic?.course],
-          ['Course Code', data.academic?.courseCode],
+          ['Admission Quota', quota(data)],
+          ['Course / Program', data.academic?.course],
           ['Department', data.academic?.department],
-          ['Branch', data.academic?.branch],
-          ['Branch Code', data.academic?.branchCode],
-          ['Student Category', data.academic?.studentCategory],
-          ['Regulation', data.academic?.regulation],
+          ['Branch / Specialization', data.academic?.branch],
+          ['Student Category', data.academic?.studentCategory || 'General'],
         ]}
       />
     )
   }
   if (tab === 'education') {
+    const inter = data.previousEducation?.intermediate || {}
+    const tenth = data.previousEducation?.tenth || {}
+    const interScore = inter.score ? `${inter.score} ${inter.scoreType || '%'}` : ''
+    const tenthScore = tenth.score ? `${tenth.score} ${tenth.scoreType || '%'}` : ''
+
     return (
       <div className="sa-detail-grid-layout">
         <InfoGrid
-          title="10th / SSC"
+          title="Qualifying Examination (10+2 / Intermediate / Diploma)"
           icon={FiFileText}
           items={[
-            ['Board', data.previousEducation?.tenth?.board],
-            ['School', data.previousEducation?.tenth?.institution],
-            ['Roll Number', data.previousEducation?.tenth?.rollNumber],
-            ['Passing Year', data.previousEducation?.tenth?.passingYear],
-            ['Score Type', data.previousEducation?.tenth?.score ? data.previousEducation?.tenth?.scoreType : ''],
-            ['Score', data.previousEducation?.tenth?.score],
+            ['Qualifying Examination', inter.qualification === 'Intermediate / 12th' ? 'Intermediate / 12th' : (inter.qualification || 'Intermediate / 12th')],
+            ['Board / University', inter.board],
+            ['College / Institution', inter.institution],
+            ['Hall Ticket / Roll No', inter.rollNumber],
+            ['Year of Passing', inter.passingYear],
+            ['Stream / Group', inter.stream === 'Other' ? inter.streamOther : inter.stream],
+            ['Aggregate Score', interScore || '—'],
           ]}
         />
         <InfoGrid
-          title="Intermediate / Diploma"
+          title="Secondary School (10th / SSC)"
           icon={FiFileText}
           items={[
-            ['Qualification', data.previousEducation?.intermediate?.qualification === 'Intermediate / 12th' ? '' : data.previousEducation?.intermediate?.qualification],
-            ['Board / University', data.previousEducation?.intermediate?.board],
-            ['College', data.previousEducation?.intermediate?.institution],
-            ['Roll Number', data.previousEducation?.intermediate?.rollNumber],
-            ['Passing Year', data.previousEducation?.intermediate?.passingYear],
-            ['Stream', data.previousEducation?.intermediate?.stream === 'Other' ? data.previousEducation?.intermediate?.streamOther : data.previousEducation?.intermediate?.stream],
-            ['Score Type', data.previousEducation?.intermediate?.score ? data.previousEducation?.intermediate?.scoreType : ''],
-            ['Score', data.previousEducation?.intermediate?.score],
+            ['Board', tenth.board],
+            ['School Name', tenth.institution],
+            ['Hall Ticket / Roll No', tenth.rollNumber],
+            ['Year of Passing', tenth.passingYear],
+            ['Score / Percentage', tenthScore || '—'],
           ]}
         />
       </div>
@@ -2682,16 +2983,13 @@ function DetailContent({ data, tab }) {
         items={[
           ['Registration Number', data.application?.registrationNumber || data.application?.number],
           ['Registration Date', data.application?.registrationDate || data.application?.date],
-          ['Admission Number', data.application?.admissionNumber],
-          ['Admission Date', data.application?.admissionDate],
-          ['College', data.admission?.college],
+          ['Admission Number', normalizeStatus(data.status) === 'APPROVED' ? (data.application?.admissionNumber || 'Allotted') : 'Pending Approval'],
+          ['Admission Date', normalizeStatus(data.status) === 'APPROVED' ? (data.application?.admissionDate || data.updatedAt) : 'Pending Approval'],
           ['Batch', data.admission?.batch],
-          ['Scholarship', data.admission?.scholarship],
-          ['Hostel', data.admission?.hostel],
-          ['Hostel Preference', data.admission?.hostelPreference],
-          ['Room Type / Beds', data.admission?.hostelRoomType],
-          ['Transportation', data.admission?.transport],
-          ['Transport Route', data.admission?.transportRoute],
+          ['Hostel Required', data.admission?.hostel || 'No'],
+          ...(data.admission?.hostel === 'Yes' ? [['Hostel Preference', data.admission?.hostelPreference]] : []),
+          ['Transportation Required', data.admission?.transport || 'No'],
+          ...(data.admission?.transport === 'Yes' ? [['Transport Route', data.admission?.transportRoute]] : []),
         ]}
       />
     )
@@ -2784,9 +3082,8 @@ function DetailContent({ data, tab }) {
               ['Tuition Fee (per year)', money(data.fees?.tuitionFee)],
               ['Admission Fee (one-time)', money(data.fees?.admissionFee)],
               ['Scholarship Deduction', data.fees?.scholarshipAmount ? `- ${money(data.fees?.scholarshipAmount)}` : 'None'],
-              ['Hostel Room Type', data.admission?.hostelRoomType || 'Not selected'],
-              ['Hostel Fee (per year)', data.admission?.hostel === 'Yes' ? money(resolvedH) : 'Not selected'],
-              ['Transportation Fee (per year)', data.admission?.transport === 'Yes' ? money(resolvedT) : 'Not selected'],
+              ...(data.admission?.hostel === 'Yes' ? [['Hostel Fee (per year)', money(resolvedH)]] : []),
+              ...(data.admission?.transport === 'Yes' ? [['Transportation Fee (per year)', money(resolvedT)]] : []),
               ['Estimated First-Year Total', money(totalFee)],
               ['Estimated Entire 4-Year Total', money(Math.max(0, (tuition + resolvedH + resolvedT) * 4 + admissionFee - scholarship))],
               ['Payment Preference', formattedPaymentPlan],
@@ -2808,37 +3105,60 @@ function DetailContent({ data, tab }) {
       items={[
         ['Registration Number', data.application?.registrationNumber || data.application?.number],
         ['Registration Date', data.application?.registrationDate || data.application?.date],
-        ['Admission Number', data.application?.admissionNumber],
-        ['Admission Date', data.application?.admissionDate],
-        ['College', data.admission?.college],
+        ['Admission Number', normalizeStatus(data.status) === 'APPROVED' ? (data.application?.admissionNumber || 'Allotted') : 'Pending Approval'],
+        ['Admission Date', normalizeStatus(data.status) === 'APPROVED' ? (data.application?.admissionDate || data.updatedAt) : 'Pending Approval'],
         ['Academic Year', data.academic?.academicYear],
         ['Admission Type', data.academic?.admissionType],
-        ['Course', data.academic?.course],
-        ['Branch', data.academic?.branch],
-        ['Quota', quota(data)],
-        ['Fee Status', data.fees?.paymentStatus],
+        ['Course / Program', data.academic?.course],
+        ['Branch / Specialization', data.academic?.branch],
+        ['Admission Quota', quota(data)],
+        ['Fee Status', data.fees?.paymentStatus || 'Pending'],
         ['Admission Status', STATUS[data.status] || data.status],
       ]}
     />
   )
 }
-function StudentHeader({ data }) {
+function StudentHeader({ data, onPhotoUpdate }) {
   const normStat = normalizeStatus(data.status);
   const initials = studentInitials(data);
   const photoSrc = data.personal?.photo ? apiAssetUrl(data.personal.photo) : (data.personal?.photoUrl ? apiAssetUrl(data.personal.photoUrl) : '');
+
+  const handleHeaderPhotoFile = event => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      alert('Upload a JPG, PNG, or WebP photo.')
+      return
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Photo must be 2 MB or smaller.')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (onPhotoUpdate) onPhotoUpdate(reader.result)
+    }
+    reader.readAsDataURL(file)
+  }
+
   return (
     <div className="cm-profile-banner">
       <div className="cm-profile-avatar-wrap">
-        {photoSrc ? (
-          <img src={photoSrc} alt={studentName(data)} className="cm-profile-logo" />
-        ) : (
-          <div className="cm-profile-placeholder">{initials}</div>
-        )}
+        <div className="cm-profile-placeholder">{initials}</div>
       </div>
       <div className="cm-profile-header-info">
         <div className="cm-profile-badges">
-          {(data.application?.registrationNumber || data.application?.number) && <span className="cm-badge cm-badge-code">Reg: {data.application.registrationNumber || data.application.number}</span>}
-          {data.application?.admissionNumber && <span className="cm-badge cm-badge-type">Adm: {data.application.admissionNumber}</span>}
+          {(data.application?.registrationNumber || data.application?.number) && (
+            <span className="cm-badge cm-badge-code">
+              Reg No: {data.application.registrationNumber || data.application.number}
+            </span>
+          )}
+          {normStat === 'APPROVED' && data.application?.admissionNumber && (
+            <span className="cm-badge cm-badge-type">
+              Adm No: {data.application.admissionNumber}
+            </span>
+          )}
           <span className={`cm-status-badge ${normStat === 'APPROVED' ? 'active' : 'inactive'}`}>
             {STATUS[normStat] || normStat}
           </span>
@@ -2852,7 +3172,7 @@ function StudentHeader({ data }) {
   );
 }
 
-function AdmissionDetails({ approval = false }) {
+function AdmissionDetails({ approval = false, inDialog = false }) {
   const { canAction } = useScreenAccess()
   const authorized = canAction('/student-management/admissions', 'edit')
   const [detailError, setDetailError] = useState('')
@@ -2861,6 +3181,12 @@ function AdmissionDetails({ approval = false }) {
   useEffect(() => {
     if (!validId) { setLoadingDetail(false); return }
     let active = true
+    const demo = getDemoAdmissionById(validId)
+    if (demo) {
+      setData(demo)
+      setLoadingDetail(false)
+      return
+    }
     studentAdmissionApi.getById(validId).then(async row => {
       const admissionId = row.admissionId ?? row.id ?? validId
       const studentId = idsFromApi(row, admissionId).studentId
@@ -2885,9 +3211,36 @@ function AdmissionDetails({ approval = false }) {
         documents: Object.keys(mergedDocs).length ? mergedDocs : (row.documents || row.documentStatuses),
       })
       if (active) setData({ ...hydrated, completion: calculateCompletion(completionSchemas.admission, row), integrationFeeError: optional[2].status === 'rejected' ? optional[2].reason?.message || 'Fee information unavailable.' : '' })
-    }).catch(error => { if (active) { setDetailError(error.message || 'Unable to load admission.'); setToast({ message: error.message || 'Unable to load admission.', tone: 'error' }) } }).finally(() => { if (active) setLoadingDetail(false) }); return () => { active = false } }, [validId, setToast, loadAttempt])
+    }).catch(error => {
+      if (active) {
+        const fallback = getDemoAdmissionById(validId)
+        if (fallback) {
+          setData(fallback)
+        } else {
+          setDetailError(error.message || 'Unable to load admission.');
+          setToast({ message: error.message || 'Unable to load admission.', tone: 'error' })
+        }
+      }
+    }).finally(() => { if (active) setLoadingDetail(false) }); return () => { active = false } }, [validId, setToast, loadAttempt])
   if (loadingDetail) return <section className="sa-empty"><FiClock /><h2>Loading admission...</h2></section>
   if (!data) return <section className="sa-empty"><FiAlertCircle /><h2>{detailError || 'Admission not found'}</h2><Button onClick={() => setLoadAttempt(current => current + 1)}>Retry</Button><Button onClick={() => navigate('/student-management/admissions')}>Back</Button></section>
+  const handlePhotoUpdate = newPhoto => {
+    setData(current => ({
+      ...current,
+      personal: {
+        ...(current?.personal || {}),
+        photo: newPhoto,
+        photoUrl: newPhoto
+      }
+    }))
+    saveAdmissionPhoto(id, newPhoto)
+    const targetStudentId = data?.studentId || idsFromApi(data, id).studentId
+    if (targetStudentId) saveAdmissionPhoto(targetStudentId, newPhoto)
+    studentAdmissionApi.update(id, { personal: { photo: newPhoto } }).catch(() => {})
+    eventBus.emit(ERP_EVENTS.STUDENT_UPDATED, { admissionId: id, photo: newPhoto })
+    setToast({ message: 'Student photo updated successfully!', tone: 'success' })
+  }
+
   const transition = async status => { if (savingStatus || !admissionDecisionAllowed(normalizeStatus(data.status), status, authorized)) return; if (['CORRECTION_REQUIRED','REJECTED'].includes(status) && !text(remarks)) { setToast({ message: 'Admission officer remarks are required for this decision.', tone: 'error' }); return } setSavingStatus(true); try { const result = await studentAdmissionStatusApi.update(id, { status, remarks }); setData(current => ({ ...current, status: normalizeStatus(result.status), remarks })); setRemarks(''); eventBus.emit(ERP_EVENTS.STUDENT_UPDATED, { admissionId: id, status }); setToast({ message: status === 'APPROVED' ? approvalNotice(result) : `${STATUS[status] || status} saved successfully`, tone: 'success' }); setConfirmApproval(false); if (status === 'APPROVED') navigate('/student-management/profiles') } catch (error) { setToast({ message: error.message || 'Unable to update admission status.', tone: 'error' }) } finally { setSavingStatus(false) } }
   if (approval) {
     const markedDocs = DOCUMENTS.filter(([key]) => {
@@ -2902,24 +3255,28 @@ function AdmissionDetails({ approval = false }) {
     return (
       <div className="cm-profile-view" data-export-record>
         <Breadcrumb tail="Admission Review" />
-        <div className="cm-profile-top-bar">
-          <ExportMenu
-            mode="single"
-            title="Student Admission"
-            filename={`admission_${data.application?.admissionNumber || data.application?.number || id}`}
-            recordSections={admissionDetailSections(data)}
-          />
-          <button
-            type="button"
-            className="cm-button secondary erp-btn erp-btn--secondary"
-            onClick={() => navigate('/student-management/admissions')}
-          >
-            <FiArrowLeft /> Back
-          </button>
-        </div>
+        {!inDialog && (
+          <div className="cm-profile-top-bar">
+            <ExportMenu
+              mode="single"
+              title="Student Admission"
+              filename={`admission_${data.application?.admissionNumber || data.application?.number || id}`}
+              recordSections={admissionDetailSections(data)}
+            />
+            {!approval && (
+              <button
+                type="button"
+                className="cm-button secondary erp-btn erp-btn--secondary"
+                onClick={() => navigate('/student-management/admissions')}
+              >
+                <FiArrowLeft /> Back
+              </button>
+            )}
+          </div>
+        )}
 
         <div className="cm-profile-card">
-          <StudentHeader data={data} />
+          <StudentHeader data={data} onPhotoUpdate={handlePhotoUpdate} />
           <nav className="sa-tabs">
             {DETAIL_TABS_APPROVAL.map(([value, label, Icon]) => (
               <button key={value} className={tab === value ? 'active' : ''} onClick={() => setTab(value)}>
@@ -2960,9 +3317,16 @@ function AdmissionDetails({ approval = false }) {
                       </Button></>
                     )}
                     {['SUBMITTED', 'PENDING', 'UNDER_REVIEW', 'VERIFIED'].includes(data.status) && (
-                      <Button primary disabled={!reviewed || savingStatus} onClick={() => { setToast(null); setConfirmApproval(true) }}>
-                        Approve Admission
-                      </Button>
+                      <div className="sa-approve-btn-wrap">
+                        <Button primary disabled={!reviewed || savingStatus} onClick={() => { setToast(null); setConfirmApproval(true) }}>
+                          Approve Admission
+                        </Button>
+                        {!reviewed && (
+                          <small className="sa-btn-helper-hint">
+                            Tick review declaration above to enable approval
+                          </small>
+                        )}
+                      </div>
                     )}
                     {data.status === 'APPROVED' && (
                       <span className="sa-approved-note">
@@ -2978,21 +3342,48 @@ function AdmissionDetails({ approval = false }) {
             {(() => {
               const tabs = DETAIL_TABS_APPROVAL.map(([v]) => v)
               const idx = tabs.indexOf(tab)
-              const prevTab = idx > 0 ? tabs[idx - 1] : null
-              const nextTab = idx < tabs.length - 1 ? tabs[idx + 1] : null
+              const prevTabVal = idx > 0 ? tabs[idx - 1] : null
+              const nextTabVal = idx < tabs.length - 1 ? tabs[idx + 1] : null
+              const prevItem = prevTabVal ? DETAIL_TABS_APPROVAL.find(([v]) => v === prevTabVal) : null
+              const nextItem = nextTabVal ? DETAIL_TABS_APPROVAL.find(([v]) => v === nextTabVal) : null
               return (
-                <div className="sa-tab-nav-footer">
-                  {prevTab ? (
-                    <button type="button" className="cm-button secondary" onClick={() => setTab(prevTab)}>
-                      &larr; Previous
+                <footer className="sa-tab-nav-footer sa-view-tab-nav-footer">
+                  {prevItem ? (
+                    <button
+                      type="button"
+                      className="cm-button secondary erp-btn erp-btn--secondary sa-nav-btn sa-nav-btn--prev"
+                      onClick={() => {
+                        setTab(prevItem[0]);
+                        document.querySelector('.shared-view-dialog__body, .cm-profile-view')?.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                    >
+                      <FiChevronLeft aria-hidden="true" />
+                      <span>&larr; {prevItem[1]}</span>
                     </button>
                   ) : <span />}
-                  {nextTab && (
-                    <button type="button" className="cm-button" onClick={() => setTab(nextTab)}>
-                      Next &rarr;
+                  {inDialog && (
+                    <button
+                      type="button"
+                      className="cm-button secondary erp-btn erp-btn--secondary sa-nav-btn sa-nav-btn--close"
+                      onClick={() => navigate('/student-management/admissions')}
+                    >
+                      Close
                     </button>
                   )}
-                </div>
+                  {nextItem && (
+                    <button
+                      type="button"
+                      className="cm-button primary erp-btn erp-btn--primary sa-nav-btn sa-nav-btn--next"
+                      onClick={() => {
+                        setTab(nextItem[0]);
+                        document.querySelector('.shared-view-dialog__body, .cm-profile-view')?.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                    >
+                      <span>{nextItem[1]} &rarr;</span>
+                      <FiChevronRight aria-hidden="true" />
+                    </button>
+                  )}
+                </footer>
               )
             })()}
           </section>
@@ -3019,19 +3410,25 @@ function AdmissionDetails({ approval = false }) {
       </div>
     )
   }
+  const currentTabIndex = DETAIL_TABS.findIndex(([v]) => v === tab);
+  const prevTab = currentTabIndex > 0 ? DETAIL_TABS[currentTabIndex - 1] : null;
+  const nextTab = currentTabIndex >= 0 && currentTabIndex < DETAIL_TABS.length - 1 ? DETAIL_TABS[currentTabIndex + 1] : null;
+
   return (
     <div className="cm-profile-view" data-export-record>
       <Breadcrumb tail="Admission Details" />
       <CompletionSummary completion={data.completion} name={studentName(data)} to={authorized && ['DRAFT', 'CORRECTION_REQUIRED'].includes(normalizeStatus(data.status)) ? `/student-management/admissions/${id}/edit` : undefined} />
-      <div className="cm-profile-top-bar">
-        <ExportMenu mode="single" title="Student Admission" filename={`admission_${data.application.admissionNumber || data.application.number || id}`} recordSections={admissionDetailSections(data)} />
-        <button type="button" className="cm-button secondary erp-btn erp-btn--secondary" onClick={() => navigate('/student-management/admissions')}>
-          &larr; Back
-        </button>
-      </div>
+      {!inDialog && (
+        <div className="cm-profile-top-bar">
+          <ExportMenu mode="single" title="Student Admission" filename={`admission_${data.application.admissionNumber || data.application.number || id}`} recordSections={admissionDetailSections(data)} />
+          <button type="button" className="cm-button secondary erp-btn erp-btn--secondary" onClick={() => navigate('/student-management/admissions')}>
+            &larr; Back
+          </button>
+        </div>
+      )}
 
       <div className="cm-profile-card">
-        <StudentHeader data={data} />
+        <StudentHeader data={data} onPhotoUpdate={handlePhotoUpdate} />
         <nav className="sa-tabs">
           {DETAIL_TABS.map(([value, label, Icon]) => (
             <button key={value} className={tab === value ? 'active' : ''} onClick={() => setTab(value)}>
@@ -3043,6 +3440,44 @@ function AdmissionDetails({ approval = false }) {
         <section className="sa-detail-card">
           <DetailContent data={data} tab={tab} />
         </section>
+
+        <footer className="sa-view-tab-nav-footer">
+          {prevTab ? (
+            <button
+              type="button"
+              className="cm-button secondary erp-btn erp-btn--secondary sa-nav-btn sa-nav-btn--prev"
+              onClick={() => {
+                setTab(prevTab[0]);
+                document.querySelector('.shared-view-dialog__body, .cm-profile-view')?.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            >
+              <FiChevronLeft aria-hidden="true" />
+              <span>&larr; {prevTab[1]}</span>
+            </button>
+          ) : <span />}
+          {inDialog && (
+            <button
+              type="button"
+              className="cm-button secondary erp-btn erp-btn--secondary sa-nav-btn sa-nav-btn--close"
+              onClick={() => navigate('/student-management/admissions')}
+            >
+              Close
+            </button>
+          )}
+          {nextTab ? (
+            <button
+              type="button"
+              className="cm-button primary erp-btn erp-btn--primary sa-nav-btn sa-nav-btn--next"
+              onClick={() => {
+                setTab(nextTab[0]);
+                document.querySelector('.shared-view-dialog__body, .cm-profile-view')?.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            >
+              <span>{nextTab[1]} &rarr;</span>
+              <FiChevronRight aria-hidden="true" />
+            </button>
+          ) : <span />}
+        </footer>
       </div>
     </div>
   );
@@ -3050,7 +3485,19 @@ function AdmissionDetails({ approval = false }) {
 
 function AdmissionRouteDialog({ approval = false }) {
   const navigate = useNavigate()
-  return <ViewDialog title={approval ? 'Admission Review' : 'Admission Details'} icon={FiUser} onClose={() => navigate('/student-management/admissions')} maxWidth="1120px" showExport={false}><AdmissionDetails approval={approval} /></ViewDialog>
+  return (
+    <ViewDialog
+      title={approval ? 'Admission Review' : 'Admission Details'}
+      icon={FiUser}
+      onClose={() => navigate('/student-management/admissions')}
+      maxWidth="1120px"
+      showExport={false}
+      hideFooter={true}
+      className="sa-details-view-dialog"
+    >
+      <AdmissionDetails approval={approval} inDialog />
+    </ViewDialog>
+  );
 }
 
 export default function StudentAdmission() {

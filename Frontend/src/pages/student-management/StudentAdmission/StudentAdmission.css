@@ -1697,14 +1697,58 @@
 }
 
 /* Tab Next/Previous navigation footer */
-.student-admission .sa-tab-nav-footer {
+.student-admission .sa-tab-nav-footer,
+.sa-view-tab-nav-footer {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
-  padding: 16px 20px !important;
-  margin-top: 8px !important;
-  border-top: 1px solid var(--border, var(--border)) !important;
-  background: var(--surface-soft, var(--surface-soft)) !important;
+  gap: 12px !important;
+  padding: 14px 20px !important;
+  margin-top: 12px !important;
+  border-top: 1px solid var(--border, #e2e8f0) !important;
+  background: var(--surface, #ffffff) !important;
+  border-radius: 0 0 12px 12px !important;
+}
+
+.sa-view-tab-nav-footer .sa-nav-btn,
+.student-admission .sa-tab-nav-footer .sa-nav-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  padding: 8px 18px !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  transition: all 0.16s ease !important;
+}
+
+.sa-view-tab-nav-footer .sa-nav-btn--next,
+.student-admission .sa-tab-nav-footer .sa-nav-btn--next {
+  background: var(--brand-solid, #2563eb) !important;
+  color: #ffffff !important;
+  border: 1px solid transparent !important;
+}
+
+.sa-view-tab-nav-footer .sa-nav-btn--next:hover,
+.student-admission .sa-tab-nav-footer .sa-nav-btn--next:hover {
+  background: #1d4ed8 !important;
+}
+
+.sa-view-tab-nav-footer .sa-nav-btn--prev,
+.sa-view-tab-nav-footer .sa-nav-btn--close,
+.student-admission .sa-tab-nav-footer .sa-nav-btn--prev,
+.student-admission .sa-tab-nav-footer .sa-nav-btn--close {
+  background: #f1f5f9 !important;
+  color: #334155 !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+.sa-view-tab-nav-footer .sa-nav-btn--prev:hover,
+.sa-view-tab-nav-footer .sa-nav-btn--close:hover,
+.student-admission .sa-tab-nav-footer .sa-nav-btn--prev:hover,
+.student-admission .sa-tab-nav-footer .sa-nav-btn--close:hover {
+  background: #e2e8f0 !important;
 }
 
 
@@ -2113,7 +2157,7 @@
 
 .student-admission .sa-admission-table {
   width: 100%;
-  min-width: 1120px;
+  min-width: 860px;
   border-collapse: separate;
   border-spacing: 0;
 }
@@ -2122,15 +2166,15 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  padding: 12px 14px;
-  border-bottom: 1px solid #6f8717;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border);
   color: var(--text-secondary) !important;
   background: var(--table-head) !important;
   font-size: 11px !important;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  line-height: 1.35;
-  white-space: normal;
+  font-weight: 750;
+  letter-spacing: 0.03em;
+  line-height: 1.3;
+  white-space: nowrap;
 }
 
 :root:not([data-theme="dark"]) .student-admission .sa-admission-table thead th {
@@ -2144,7 +2188,8 @@
 }
 
 .student-admission .sa-admission-table tbody td {
-  padding: 12px 14px;
+  padding: 9px 8px;
+  font-size: 12px;
 }
 
 @media (max-width: 1100px) {
@@ -2173,23 +2218,25 @@
   }
 }
 
-/* Keep admission rows visually balanced and action controls centered. */
-:root:not([data-theme="dark"]) .student-admission .sa-admission-table thead th,
-:root:not([data-theme="dark"]) .student-admission .sa-admission-table tbody td,
-:root[data-theme="dark"] .student-admission .sa-admission-table thead th,
-:root[data-theme="dark"] .student-admission .sa-admission-table tbody td {
-  text-align: center !important;
+/* Table alignment rules: data columns neatly left-aligned, status/actions centered. */
+.student-admission .sa-admission-table thead th,
+.student-admission .sa-admission-table tbody td {
   vertical-align: middle !important;
 }
 
-.student-admission .sa-admission-table .sa-student {
-  justify-content: center;
-  text-align: center;
+:root:not([data-theme="dark"]) .student-admission .sa-admission-table th.table-center,
+:root:not([data-theme="dark"]) .student-admission .sa-admission-table td.table-center,
+:root[data-theme="dark"] .student-admission .sa-admission-table th.table-center,
+:root[data-theme="dark"] .student-admission .sa-admission-table td.table-center {
+  text-align: center !important;
 }
 
-.student-admission .sa-admission-table .sa-student > span {
-  justify-items: center;
-  text-align: center;
+:root:not([data-theme="dark"]) .student-admission .sa-admission-table th.sa-col-student,
+:root:not([data-theme="dark"]) .student-admission .sa-admission-table td.sa-col-student,
+:root[data-theme="dark"] .student-admission .sa-admission-table th.sa-col-student,
+:root[data-theme="dark"] .student-admission .sa-admission-table td.sa-col-student {
+  text-align: left !important;
+  padding-left: 18px !important;
 }
 
 .student-admission .sa-admission-table .table-primary-cell {
@@ -2264,30 +2311,61 @@
   .student-admission .sa-reference-summary article:hover, .student-admission .sa-icon-actions > button:hover:not(:disabled) { transform: none; }
 }
 
-/* Keep admission values centered and render the student name as a text link. */
+/* Keep status, dates, and action columns centered; keep data columns neatly left-aligned. */
 .student-admission .sa-admission-table thead th,
-.student-admission .sa-admission-table tbody td { text-align: center !important; vertical-align: middle !important; }
-.student-admission .sa-admission-table .sa-student { justify-content: center; }
-.student-admission .sa-admission-table .sa-student > span { align-items: center; text-align: center; }
+.student-admission .sa-admission-table tbody td { vertical-align: middle !important; }
+.student-admission .sa-admission-table thead th.table-center,
+.student-admission .sa-admission-table tbody td.table-center { text-align: center !important; }
+
+/* Student column: clean, left-aligned, strictly stacked name and contact without initials badge */
+.student-admission .sa-admission-table th.sa-col-student,
+.student-admission .sa-admission-table td.sa-col-student {
+  text-align: left !important;
+  padding-left: 16px !important;
+}
+.student-admission .sa-admission-table .sa-student-cell {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  text-align: left !important;
+  gap: 2px !important;
+}
 .student-admission .sa-admission-table .student-name-link {
-  appearance: none;
-  display: inline-block;
-  max-width: 100%;
-  margin: 0 auto;
-  padding: 0;
+  appearance: none !important;
+  display: inline-block !important;
+  text-align: left !important;
+  margin: 0 !important;
+  padding: 0 !important;
   border: 0 !important;
-  border-radius: 0;
-  color: var(--text-primary);
+  border-radius: 0 !important;
+  color: var(--text-primary) !important;
   background: transparent !important;
   box-shadow: none !important;
-  font: inherit;
-  font-weight: 750;
-  text-align: center;
-  text-decoration: none;
-  cursor: pointer;
+  font: inherit !important;
+  font-size: 13px !important;
+  font-weight: 750 !important;
+  line-height: 1.35 !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
 }
-.student-admission .sa-admission-table .student-name-link:hover { color: var(--brand); text-decoration: underline; }
-.student-admission .sa-admission-table .student-name-link:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; border-radius: 2px; }
+.student-admission .sa-admission-table .student-name-link:hover {
+  color: var(--brand) !important;
+  text-decoration: underline !important;
+}
+.student-admission .sa-admission-table .student-name-link:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+.student-admission .sa-admission-table .sa-student-cell small {
+  display: block !important;
+  text-align: left !important;
+  margin: 0 !important;
+  color: var(--text-muted) !important;
+  font-size: 11.5px !important;
+  line-height: 1.3 !important;
+}
 
 /* Compact, toggleable admission filters. */
 .student-admission .sa-directory > .course-directory-heading {
@@ -2692,6 +2770,654 @@ dialog.student-admission.sa-admission-dialog { width: min(940px, calc(100vw - 32
 .student-admission.sa-admission-dialog .sa-wizard-actions { position: static; flex: 0 0 auto; margin: 0; padding: 10px 20px; border-top: 1px solid var(--border); background: var(--surface); }
 .student-admission.sa-admission-dialog .sa-wizard-actions button { min-height: 34px; font-size: 12px; }
 @media(max-width:700px) { .student-admission.sa-admission-dialog .sa-reference-stepper { grid-template-columns: repeat(3,minmax(0,1fr)); } .student-admission.sa-admission-dialog .sa-wizard-content { padding: 12px; } .student-admission.sa-admission-dialog .sa-wizard-actions { padding: 10px 12px; flex-wrap: wrap; } }
+
+/* Sticky Actions Column - Ensures Action Buttons Never Get Cut Off */
+.student-admission .sa-admission-table th.sa-col-actions,
+.student-admission .sa-admission-table td.sa-col-actions {
+  position: sticky !important;
+  right: 0 !important;
+  background: var(--surface) !important;
+  z-index: 5 !important;
+  box-shadow: -6px 0 12px -2px rgba(0, 0, 0, 0.08) !important;
+}
+.student-admission .sa-admission-table thead th.sa-col-actions {
+  background: var(--table-head) !important;
+  z-index: 6 !important;
+}
+.student-admission .sa-admission-table tbody tr:hover td.sa-col-actions {
+  background: var(--surface-soft) !important;
+}
+
+
+/* Approval Button Helper Hint */
+.sa-approve-btn-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.sa-btn-helper-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Direct Single-Step Filter Box (Eliminates Nested Filter Button) */
+.sa-direct-filter-box {
+  padding: 14px 16px;
+  background: var(--surface-soft);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sa-filter-search-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.sa-filter-search-row .sa-search {
+  flex: 1;
+  max-width: 480px;
+}
+.sa-direct-filter-box .sa-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(130px, 1fr));
+  gap: 10px;
+  padding: 0 !important;
+  background: transparent !important;
+  border-bottom: none !important;
+}
+@media (max-width: 900px) {
+  .sa-direct-filter-box .sa-filter-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .sa-direct-filter-box .sa-filter-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Quick Status Filter Tabs (Left side above table) */
+.sa-quick-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.sa-status-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface-soft);
+  padding: 3px;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--border);
+}
+.sa-status-tab {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.sa-status-tab:hover {
+  color: var(--text-primary);
+  background: rgba(0, 0, 0, 0.04);
+}
+.sa-status-tab.is-active {
+  color: var(--brand);
+  background: var(--surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  font-weight: 750;
+}
+
+/* Modern Admissions Directory Header */
+.sa-directory-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 64px;
+  padding: 12px 18px !important;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  flex-wrap: wrap;
+}
+.sa-header-title-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.sa-header-icon-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--brand, #2563eb) 12%, var(--surface-soft, #f8fafc));
+  color: var(--brand, #2563eb);
+  font-size: 18px;
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+.sa-header-text-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sa-header-headline-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.sa-header-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+.sa-header-records-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.sa-header-records-pill strong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+.sa-records-pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  display: inline-block;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+.sa-records-filtered-hint {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.sa-header-desc {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.3;
+}
+
+/* Clickable Student Avatar with Camera Hint */
+.sa-avatar-trigger-btn {
+  all: unset;
+  position: relative;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  flex-shrink: 0;
+}
+.sa-avatar-trigger-btn:hover {
+  transform: scale(1.08);
+}
+.sa-avatar-trigger-btn:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+.sa-avatar-hint-icon {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 16px;
+  height: 16px;
+  background: #ffffff;
+  color: #1d4ed8;
+  border: 1.5px solid #2563eb;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  opacity: 0.95;
+  transition: all 0.18s ease;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
+}
+.sa-avatar-trigger-btn:hover .sa-avatar-hint-icon {
+  opacity: 1;
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #ffffff;
+  transform: scale(1.15);
+}
+.sa-student-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  overflow: hidden;
+}
+.sa-student-details .student-name-link {
+  text-align: left !important;
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sa-student-details small {
+  color: var(--text-secondary);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sa-updated-compact {
+  display: inline-block;
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+/* Passport Photo Popup Modal */
+.sa-photo-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: saModalFadeIn 0.2s ease-out;
+}
+@keyframes saModalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.sa-passport-modal-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.25);
+  width: 100%;
+  max-width: 420px;
+  overflow: hidden;
+  animation: saModalScaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes saModalScaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+.sa-passport-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-soft);
+}
+.sa-passport-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.sa-passport-modal-close {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  transition: all 0.15s ease;
+}
+.sa-passport-modal-close:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--text-primary);
+}
+.sa-passport-modal-body {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.sa-passport-frame-container {
+  position: relative;
+  width: 175px;
+  height: 225px; /* 35mm x 45mm passport aspect ratio */
+  border-radius: 10px;
+  border: 3px solid #ffffff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14), 0 0 0 1px var(--border);
+  overflow: hidden;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sa-passport-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.sa-passport-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  color: #475569;
+}
+.sa-passport-initials {
+  font-size: 38px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.sa-passport-placeholder-tag {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.1);
+  letter-spacing: 0.05em;
+}
+.sa-passport-dimensions-badge {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #ffffff;
+  backdrop-filter: blur(2px);
+  pointer-events: none;
+}
+.sa-passport-info {
+  width: 100%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sa-passport-student-name {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 750;
+  color: var(--text-primary);
+}
+.sa-passport-meta-tags {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.sa-passport-reg-badge {
+  font-size: 11px;
+  font-weight: 600;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+.sa-passport-details-list {
+  margin-top: 6px;
+  padding: 10px 14px;
+  background: var(--surface-soft);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  text-align: left;
+}
+.sa-passport-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.sa-passport-label {
+  color: var(--text-secondary);
+}
+.sa-passport-val {
+  color: var(--text-primary);
+  font-weight: 600;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sa-passport-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-soft);
+}
+
+/* Action Print Button & Smart Empty State */
+.table-action-btn.action-print {
+  color: var(--text-secondary);
+}
+.table-action-btn.action-print:hover {
+  color: var(--brand, #2563eb);
+  background: color-mix(in srgb, var(--brand, #2563eb) 12%, transparent);
+}
+.sa-empty-btn {
+  margin-top: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Circular Completion Progress Ring Badge */
+.sa-status-progress-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.sa-ring-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  cursor: default;
+  transition: transform 0.15s ease;
+}
+.sa-ring-badge:hover {
+  transform: scale(1.15);
+}
+.sa-ring-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.sa-ring-bg {
+  fill: none;
+  stroke: var(--surface-soft, #e2e8f0);
+}
+.sa-ring-fill {
+  fill: none;
+  transition: stroke-dashoffset 0.4s ease;
+}
+.sa-ring-text {
+  position: absolute;
+  font-size: 8.5px;
+  font-weight: 750;
+  line-height: 1;
+  text-align: center;
+  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  pointer-events: none;
+}
+
+/* Avatar Camera Trigger for Profile Banner */
+.student-admission .cm-profile-avatar-wrap,
+.cm-profile-view .cm-profile-avatar-wrap {
+  position: relative !important;
+  overflow: visible !important;
+}
+
+.cm-avatar-upload-trigger {
+  position: absolute !important;
+  bottom: -3px !important;
+  right: -3px !important;
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 50% !important;
+  background: #ffffff !important;
+  color: #1d4ed8 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 15px !important;
+  cursor: pointer !important;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35), 0 0 0 2px rgba(255, 255, 255, 0.85) !important;
+  border: 2.5px solid #2563eb !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  z-index: 25 !important;
+}
+
+.cm-avatar-upload-trigger svg {
+  width: 16px !important;
+  height: 16px !important;
+  stroke-width: 2.3 !important;
+}
+
+.cm-avatar-upload-trigger:hover {
+  background: #2563eb !important;
+  color: #ffffff !important;
+  border-color: #ffffff !important;
+  transform: scale(1.15) !important;
+  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.45) !important;
+}
+
+.cm-avatar-upload-trigger:active {
+  transform: scale(0.95) !important;
+}
+
+/* Passport Photo Modal Upload Trigger */
+.sa-passport-camera-badge {
+  position: absolute !important;
+  bottom: 8px !important;
+  right: 8px !important;
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 50% !important;
+  background: #ffffff !important;
+  color: #1d4ed8 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 17px !important;
+  cursor: pointer !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), 0 0 0 2px rgba(255, 255, 255, 0.85) !important;
+  border: 2.5px solid #2563eb !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  z-index: 10 !important;
+}
+
+.sa-passport-camera-badge svg {
+  width: 18px !important;
+  height: 18px !important;
+  stroke-width: 2.3 !important;
+}
+
+.sa-passport-camera-badge:hover {
+  background: #2563eb !important;
+  color: #ffffff !important;
+  border-color: #ffffff !important;
+  transform: scale(1.15) !important;
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.5) !important;
+}
+
+.sa-passport-camera-badge:active {
+  transform: scale(0.95) !important;
+}
+
+/* Identification Column Labels */
+.sa-adm-allotted {
+  display: inline-block !important;
+  font-size: 10.5px !important;
+  font-weight: 600 !important;
+  color: #065f46 !important; /* dark emerald */
+  background: #ecfdf5 !important; /* soft mint */
+  border: 1px solid #a7f3d0 !important;
+  padding: 1px 6px !important;
+  border-radius: 4px !important;
+  margin-top: 2px !important;
+  white-space: nowrap !important;
+  letter-spacing: 0.2px !important;
+}
+
+.sa-adm-pending {
+  display: block !important;
+  font-size: 10px !important;
+  color: var(--text-muted, #94a3b8) !important;
+  font-weight: 500 !important;
+  margin-top: 2px !important;
+  font-style: italic !important;
+}
+
+
+
+
+
+
+
+
+
 :root #root .sa-directory-header .compact-summary:not([hidden]) > .compact-summary__item {
   flex-basis: auto;
 }
@@ -2712,4 +3438,3 @@ dialog.student-admission.sa-admission-dialog { width: min(940px, calc(100vw - 32
     flex-basis: calc(50% - 1px);
   }
 }
-

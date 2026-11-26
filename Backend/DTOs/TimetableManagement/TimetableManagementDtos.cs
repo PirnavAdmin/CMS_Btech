@@ -103,8 +103,15 @@ public sealed class ClassroomDto
     public bool Active { get; set; }
 }
 
+public sealed class TimetablePlanningRequest
+{
+    public List<PeriodConfigurationRequest> Periods { get; set; } = new();
+    public CalendarConfigurationRequest Calendar { get; set; } = new();
+}
+
 public sealed class CreateAdvancedTimetableRequest
 {
+    public TimetablePlanningRequest? Planning { get; set; }
     public long AcademicYearId { get; set; }
     public long CourseId { get; set; }
     public long BranchId { get; set; }
@@ -117,6 +124,7 @@ public sealed class CreateAdvancedTimetableRequest
 
 public sealed class UpdateAdvancedTimetableRequest
 {
+    public TimetablePlanningRequest? Planning { get; set; }
     public string TimetableName { get; set; } = string.Empty;
     public DateTime? EffectiveFrom { get; set; }
     public DateTime? EffectiveTo { get; set; }
@@ -241,6 +249,7 @@ public sealed class TimetableEntryDto
 
 public sealed class TimetableDetailDto
 {
+    public TimetablePlanningRequest? Planning { get; set; }
     public TimetableMasterDto Timetable { get; set; } = new();
     public List<TimetableSlotDto> Slots { get; set; } = new();
     public List<TimetableRequirementDto> Requirements { get; set; } = new();

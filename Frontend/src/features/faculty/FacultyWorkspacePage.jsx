@@ -10,6 +10,7 @@ import { facultyRouteByPath, restoredFacultyScreens } from './routeConfig.js'
 import { facultyService } from './services/facultyService.js'
 import { buildAttendanceRecords, getAttendanceCounts, validateMarks } from './domain/validation.js'
 import './workspace.css'
+import SyllabusPortalView from '../../pages/portals/SyllabusPortalView.jsx'
 
 const today = () => new Date().toISOString().slice(0, 10)
 const safeText = value => String(value ?? '')
@@ -1216,6 +1217,7 @@ function UnavailableScreen({ screen }) {
 
 export default function FacultyWorkspacePage() {
   const { screen = 'dashboard' } = useParams()
+  if (screen === 'syllabus') return <PortalLayout title="Syllabus Library"><main className="portal-page fw-page"><SyllabusPortalView role="faculty" /></main></PortalLayout>
   if (restoredFacultyScreens.includes(screen)) return <FacultyRestoredScreen key={screen} screen={screen} />
   return <FacultyCurrentWorkspacePage />
 }
