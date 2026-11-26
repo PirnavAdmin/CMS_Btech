@@ -1518,7 +1518,9 @@ function AttendanceRateBadge({ rate, criticalThreshold = null }) {
 }
 
 function ReportTable({ rows, columns, empty }) {
-  return <div className="erp-table-responsive"><table className="erp-table attendance-report-table"><thead><tr>{columns.map(([label]) => <th key={label}>{label}</th>)}</tr></thead><tbody>{rows.length ? rows.map((row, index) => <tr key={row.id || row.subject || row.month || index}>{columns.map(([label, render]) => <td key={label}>{render(row)}</td>)}</tr>) : <tr><td colSpan={columns.length} className="attendance-report-empty">{empty}</td></tr>}</tbody></table></div>
+  const centeredColumns = new Set(['Conducted Sessions', 'Present Marks', 'Absent Marks', 'Attendance', 'Attendance %', 'Present / Total', 'Conducted', 'Attended', 'Deficit', 'Sessions Needed', 'Action', 'Actions'])
+  const columnClass = label => centeredColumns.has(label) ? 'attendance-report-column--center' : undefined
+  return <div className="erp-table-responsive"><table className="erp-table attendance-report-table"><thead><tr>{columns.map(([label]) => <th scope="col" className={columnClass(label)} key={label}>{label}</th>)}</tr></thead><tbody>{rows.length ? rows.map((row, index) => <tr key={row.id || row.subject || row.month || index}>{columns.map(([label, render]) => <td className={columnClass(label)} key={label}>{render(row)}</td>)}</tr>) : <tr><td colSpan={columns.length} className="attendance-report-empty">{empty}</td></tr>}</tbody></table></div>
 }
 
 return { default: Attendance }
