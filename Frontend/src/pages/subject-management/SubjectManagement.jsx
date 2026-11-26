@@ -289,10 +289,10 @@ export default function SubjectManagement() {
   }, [subjects, scopeRecords, selectedAcademicYearId, selectedCollegeId, masters.courses, masters.branches])
 
   const records = useMemo(() => scopedSubjects.filter(s => {
-    const q = filters.search.trim().toLowerCase(), isElective = classificationOf(s) === 'Elective'
+    const q = filters.search.trim().toLowerCase()
     const subjectBranches = subjectBranchDetails(s, masters.branches)
     const common = isCommonSubject(s, masters.branches)
-    return (!q || `${s.subjectCode} ${s.subjectName}`.toLowerCase().includes(q)) && (!filters.academicYearId || key(s.academicYearId) === key(filters.academicYearId)) && (!filters.courseId || key(s.courseId) === key(filters.courseId)) && (!filters.branchId || subjectBranches.some(branch => branch.id === key(filters.branchId))) && (!filters.semesterId || key(s.semesterId) === key(filters.semesterId)) && (!filters.level || subjectLevel(s) === filters.level) && (!filters.subjectType || s.subjectType === filters.subjectType) && (!filters.electiveType || (filters.electiveType === 'Elective' ? isElective : !isElective)) && (!filters.status || s.status === filters.status) && (filters.applicability === 'all' || (filters.applicability === 'common' ? common : !common))
+    return (!q || `${s.subjectCode} ${s.subjectName}`.toLowerCase().includes(q)) && (!filters.academicYearId || key(s.academicYearId) === key(filters.academicYearId)) && (!filters.courseId || key(s.courseId) === key(filters.courseId)) && (!filters.branchId || subjectBranches.some(branch => branch.id === key(filters.branchId))) && (!filters.semesterId || key(s.semesterId) === key(filters.semesterId)) && (!filters.level || subjectLevel(s) === filters.level) && (!filters.subjectType || s.subjectType === filters.subjectType) && (!filters.electiveType || classificationOf(s) === filters.electiveType) && (!filters.status || s.status === filters.status) && (filters.applicability === 'all' || (filters.applicability === 'common' ? common : !common))
   }).sort((left, right) => key(left.id) === key(recentId) ? -1 : key(right.id) === key(recentId) ? 1 : 0), [scopedSubjects, filters, recentId, masters.semesters, masters.branches])
   const totalPages = Math.max(1, Math.ceil(records.length / PAGE_SIZE))
   const currentPage = Math.min(page, totalPages)
@@ -453,7 +453,7 @@ export default function SubjectManagement() {
             hideClear
             className="sm-filter-panel"
             leadingActions={(
-              <ExportMenu rows={records} columns={columns} filename="subject-directory" title="Subject Directory" scope="All matching subjects" onDownload={async exportOptions => filters.applicability && filters.applicability !== 'all' ? exportToCsv(exportOptions) : downloadServerExport(await subjectService.exportSubjects({ search: filters.search, academicYearId: filters.academicYearId, courseId: filters.courseId, branchId: filters.branchId, semesterId: filters.semesterId, subjectType: filters.subjectType, electiveType: filters.electiveType === 'Non-Elective' ? 'Core Subject' : filters.electiveType, status: filters.status }), 'subject-directory')} />
+              <ExportMenu rows={records} columns={columns} filename="subject-directory" title="Subject Directory" scope="All matching subjects" onDownload={async exportOptions => filters.applicability && filters.applicability !== 'all' ? exportToCsv(exportOptions) : downloadServerExport(await subjectService.exportSubjects({ search: filters.search, academicYearId: filters.academicYearId, courseId: filters.courseId, branchId: filters.branchId, semesterId: filters.semesterId, subjectType: filters.subjectType, electiveType: filters.electiveType, status: filters.status }), 'subject-directory')} />
             )}
             actions={(
               <div className="sm-header-actions-group">
@@ -495,7 +495,7 @@ export default function SubjectManagement() {
                   <Select label="Semester" value={filters.semesterId} options={getSemestersForAcademicLevel(filterSemesters, filters.level)} onChange={v => changeFilter('semesterId', v)} disabled={!filters.level} semester />
                   <Select label="Subject Type" value={filters.subjectType} options={types} onChange={v => changeFilter('subjectType', v)} />
                   <Select label="Applicability" value={filters.applicability || 'all'} options={[{ id: 'all', name: 'All Subjects' }, { id: 'common', name: 'Common Subjects' }, { id: 'branch-specific', name: 'Branch-Specific Subjects' }]} onChange={v => changeFilter('applicability', v)} />
-                  <Select label="Elective Classification" value={filters.electiveType} options={['Elective', 'Non-Elective']} onChange={v => changeFilter('electiveType', v)} />
+                  <Select label="Elective Classification" value={filters.electiveType} options={ELECTIVE_TYPES} onChange={v => changeFilter('electiveType', v)} />
                   <Select label="Status" value={filters.status} options={['Active', 'Inactive']} onChange={v => changeFilter('status', v)} />
                 </div>
               </div>
