@@ -2148,6 +2148,12 @@
   font-size: 12px;
   line-height: 1.4;
 }
+.faculty-management .fm-field-error {
+  display: block;
+  color: var(--danger, #c53c49);
+  font-size: 12px;
+  line-height: 1.4;
+}
 .faculty-management .fm-field [aria-invalid="true"] {
   border-color: var(--danger, #c53c49);
   background: color-mix(in srgb, var(--danger, #c53c49) 4%, var(--surface));

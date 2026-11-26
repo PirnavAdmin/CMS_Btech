@@ -516,6 +516,50 @@ export const createEmptyCanonicalStudent = () => {
   }
 }
 
+export const generateCanonicalRollNumber = ({
+  rollNumber,
+  academicYear,
+  collegeName,
+  branch,
+  branchCode,
+  admissionNumber,
+  registrationNumber,
+  id,
+  sequenceIndex,
+} = {}) => {
+  if (rollNumber && String(rollNumber).trim() && !String(rollNumber).trim().toUpperCase().startsWith('ADM-') && !String(rollNumber).trim().toUpperCase().startsWith('REG-')) {
+    return String(rollNumber).trim();
+  }
+  const yrMatch = String(academicYear || '2026').match(/\b(20)?(\d{2})\b/);
+  const yr = yrMatch ? yrMatch[2] : '26';
+
+  let coll = 'REC';
+  if (collegeName) {
+    const letters = String(collegeName).trim().split(/\s+/).map((w) => w[0]).join('').toUpperCase();
+    if (letters.length >= 2 && letters.length <= 4) coll = letters;
+  }
+
+  const b = String(branch || branchCode || '').toLowerCase();
+  let bCode = '05';
+  if (b.includes('civil') || b.includes('concret') || b.includes('ce') || b.includes('construction')) bCode = '01';
+  else if (b.includes('eee') || b.includes('electrical')) bCode = '02';
+  else if (b.includes('mech') || b.includes('me')) bCode = '03';
+  else if (b.includes('ece') || b.includes('communicat')) bCode = '04';
+  else if (b.includes('cse') || b.includes('comp') || b.includes('cs')) bCode = '05';
+  else if (b.includes('it') || b.includes('information tech')) bCode = '12';
+  else if (b.includes('ai') && (b.includes('ds') || b.includes('data'))) bCode = '54';
+  else if (b.includes('ai') && (b.includes('ml') || b.includes('machine'))) bCode = '61';
+
+  let seq = Number(sequenceIndex);
+  if (!seq || isNaN(seq) || seq <= 0) {
+    const seed = String(admissionNumber || registrationNumber || id || '1').replace(/\D/g, '');
+    seq = seed ? (parseInt(seed.slice(-2), 10) || 1) : 1;
+  }
+  const seqStr = String(seq).padStart(2, '0');
+
+  return `${yr}${coll}${bCode}${seqStr}`;
+};
+
 export const normalizeCanonicalStudent = (source = {}) => {
   if (!source || typeof source !== 'object') return createEmptyCanonicalStudent()
   const base = createEmptyCanonicalStudent()
@@ -532,16 +576,19 @@ export const normalizeCanonicalStudent = (source = {}) => {
   const admissionRaw = { ...(formDataObj.admission || {}), ...(raw.admissionDetails ?? raw.admission ?? {}) }
   const feeRaw = { ...(formDataObj.fees || {}), ...(raw.feeSummary ?? raw.feeDetails ?? raw.fees ?? {}) }
 
-  const admissionId = String(firstFilled(raw.admissionId, raw.studentAdmissionId, raw.application?.admissionId, admissionRaw.admissionId, raw.id, base.id))
-  const studentId = String(firstFilled(raw.studentId, raw.student?.studentId, raw.student?.id, header.studentId, personalRaw.studentId, ''))
+  const rawAdmissionId = firstFilled(raw.admissionId, raw.studentAdmissionId, raw.application?.admissionId, admissionRaw.admissionId, raw.id, base.id)
+  const admissionId = rawAdmissionId != null && rawAdmissionId !== '' && rawAdmissionId !== 'undefined' ? String(rawAdmissionId) : ''
+  const rawStudentId = firstFilled(raw.studentId, raw.student?.studentId, raw.student?.id, header.studentId, personalRaw.studentId)
+  const studentId = rawStudentId != null && rawStudentId !== '' && rawStudentId !== 'undefined' ? String(rawStudentId) : ''
   const status = normalizeAdmissionStatus(firstFilled(raw.status, raw.admissionStatus, raw.applicationStatus, raw.currentStatus, header.status, summary.studentStatus, 'DRAFT'))
 
   // Names
   const parsedName = splitFullName(firstFilled(raw.studentName, raw.fullName, personalRaw.fullName, header.studentName, ''))
   const firstName = firstFilled(personalRaw.firstName, raw.firstName, parsedName.firstName) ?? ''
   const middleName = firstFilled(personalRaw.middleName, raw.middleName, parsedName.middleName) ?? ''
+  const effectiveMiddleName = (firstName && middleName && firstName.toLowerCase().includes(middleName.toLowerCase())) ? '' : middleName
   const lastName = firstFilled(personalRaw.lastName, raw.lastName, parsedName.lastName) ?? ''
-  const fullName = [firstName, middleName, lastName].filter(Boolean).join(' ') || firstFilled(personalRaw.fullName, raw.fullName, raw.studentName, '')
+  const fullName = firstFilled(raw.studentName, raw.fullName, personalRaw.fullName) || [firstName, effectiveMiddleName, lastName].filter(Boolean).join(' ')
 
   // Photo resolution
   const photo = firstPhoto(
@@ -599,30 +646,59 @@ export const normalizeCanonicalStudent = (source = {}) => {
 
   // Dates & Registration Numbers
   const regNumber = firstFilled(raw.registrationNumber, raw.application?.registrationNumber, raw.application?.number, summary.registrationNumber, academicRaw.registrationNumber, raw.number, base.application.number)
-  // Profile and admission endpoints use different DTOs for this value.  Read
-  // all supported aliases so the directory never loses an admission number
-  // that is already stored on the approved admission.
-  const admNumber = firstFilled(
+  // Real-world college ERP logic:
+  // 1. Every applicant receives a Registration Number (REG-...) upon registering.
+  // 2. An Admission Number (ADM-...) is strictly allotted ONLY when the admission is officially APPROVED.
+  // For unapproved students (Draft, Submitted, Under Review, Correction Required, Rejected), Admission Number is empty.
+  const isApproved = status === 'APPROVED'
+  let rawAdmNumber = firstFilled(
     raw.admissionNumber,
     raw.admissionNo,
     raw.studentAdmissionNumber,
-    raw.applicationNumber,
-    raw.application?.admissionNumber,
-    raw.application?.admissionNo,
-    raw.application?.applicationNumber,
-    raw.application?.number,
     admissionRaw.admissionNumber,
     admissionRaw.admissionNo,
     admissionRaw.studentAdmissionNumber,
-    admissionRaw.applicationNumber,
-    admissionRaw.number,
     summary.admissionNumber,
     summary.admissionNo,
     summary.studentAdmissionNumber,
     ''
   )
+  if (rawAdmNumber && rawAdmNumber === regNumber && rawAdmNumber.startsWith('REG-')) {
+    rawAdmNumber = isApproved ? rawAdmNumber.replace('REG-', 'ADM-') : ''
+  }
+  const admNumber = isApproved ? (rawAdmNumber || (regNumber ? regNumber.replace('REG-', 'ADM-') : '')) : ''
   const regDate = dateInputValue(firstFilled(raw.registrationDate, raw.applicationDate, raw.application?.date, summary.registrationDate, base.application.date))
-  const admDate = dateInputValue(firstFilled(raw.admissionDate, raw.application?.admissionDate, summary.admissionDate, ''))
+  const admDate = isApproved ? dateInputValue(firstFilled(raw.admissionDate, raw.application?.admissionDate, summary.admissionDate, raw.updatedAt, '')) : ''
+
+  // 3. Roll Number (Hall ticket / Examination PIN):
+  // Allotted when the student's admission is APPROVED and they are officially enrolled into academic branches.
+  const explicitRoll = firstFilled(
+    academicRaw.rollNumber,
+    academicRaw.rollNo,
+    raw.rollNumber,
+    raw.rollNo,
+    raw.studentRollNumber,
+    raw.studentCode,
+    summary.rollNumber,
+    summary.rollNo,
+    header.rollNumber,
+    header.rollNo,
+    ''
+  )
+  const resolvedRollNumber = (explicitRoll && !String(explicitRoll).toUpperCase().startsWith('ADM-') && !String(explicitRoll).toUpperCase().startsWith('REG-'))
+    ? String(explicitRoll)
+    : (isApproved
+        ? generateCanonicalRollNumber({
+            rollNumber: explicitRoll,
+            academicYear: firstFilled(academicRaw.academicYear, raw.academicYear, ''),
+            collegeName: firstFilled(admissionRaw.college, raw.college, ''),
+            branch: referenceLabel(academicRaw.branch, raw.branch),
+            branchCode: firstFilled(academicRaw.branchCode, raw.branchCode, ''),
+            admissionNumber: admNumber,
+            registrationNumber: regNumber,
+            id: raw.id,
+          })
+        : '')
 
   // Parents
   const fatherRaw = parentRaw.father ?? {}
@@ -719,10 +795,11 @@ export const normalizeCanonicalStudent = (source = {}) => {
 
   return {
     ...raw,
-    id: studentId || admissionId,
-    admissionId,
-    studentId,
+    id: (studentId && studentId !== 'undefined') ? studentId : ((admissionId && admissionId !== 'undefined') ? admissionId : (raw.id != null && raw.id !== '' && raw.id !== 'undefined' ? String(raw.id) : base.id)),
+    admissionId: (admissionId && admissionId !== 'undefined') ? admissionId : '',
+    studentId: (studentId && studentId !== 'undefined') ? studentId : '',
     studentCode: raw.studentCode ?? '',
+    rollNumber: resolvedRollNumber,
     status,
     createdAt: raw.createdAt ?? raw.createdDate ?? base.createdAt,
     updatedAt: raw.updatedAt ?? raw.updatedDate ?? base.updatedAt,
@@ -731,6 +808,7 @@ export const normalizeCanonicalStudent = (source = {}) => {
       number: regNumber,
       registrationNumber: regNumber,
       admissionNumber: admNumber,
+      rollNumber: resolvedRollNumber,
       date: regDate,
       registrationDate: regDate,
       admissionDate: admDate,
@@ -825,7 +903,7 @@ export const normalizeCanonicalStudent = (source = {}) => {
       regulation: firstFilled(academicRaw.regulation, raw.regulation, '') ?? '',
       entryType: firstFilled(academicRaw.entryType, raw.entryType, '') ?? '',
       yearOfStudy: firstFilled(academicRaw.yearOfStudy, raw.yearOfStudy, '') ?? '',
-      rollNumber: firstFilled(academicRaw.rollNumber, raw.rollNumber, '') ?? '',
+      rollNumber: resolvedRollNumber,
     },
     previousEducation: {
       tenth,
@@ -893,9 +971,29 @@ export const normalizeCanonicalStudent = (source = {}) => {
  */
 export const studentFullName = (student) => {
   if (!student) return ''
-  const p = student.personal || {}
-  const nameParts = [p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')
-  return nameParts || p.fullName || student.studentName || student.fullName || ''
+  const p = student.personal || student.personalInformation || {}
+  let first = String(p.firstName || '').trim()
+  let middle = String(p.middleName || '').trim()
+  let last = String(p.lastName || '').trim()
+  if (first && middle && (first.toLowerCase() === middle.toLowerCase() || first.toLowerCase().endsWith(' ' + middle.toLowerCase()))) {
+    middle = ''
+  }
+  const nameParts = [first, middle, last].filter(Boolean).join(' ')
+  const rawName = (
+    nameParts ||
+    p.fullName ||
+    p.studentName ||
+    p.name ||
+    student.studentName ||
+    student.fullName ||
+    student.name ||
+    student.applicantName ||
+    student.header?.studentName ||
+    ''
+  ).trim()
+  const tokens = rawName.split(/\s+/).filter(Boolean)
+  const dedupedTokens = tokens.filter((t, i) => i === 0 || t.toLowerCase() !== tokens[i - 1].toLowerCase())
+  return dedupedTokens.join(' ')
 }
 
 export const studentInitials = (student) => {

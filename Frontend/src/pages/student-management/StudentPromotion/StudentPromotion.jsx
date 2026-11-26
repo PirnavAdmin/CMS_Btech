@@ -321,19 +321,42 @@ export default function StudentPromotion() {
   const pageSize = 5
 
   const availableBranches = useMemo(() => {
-    return getBranchesForCourse(courseId, true)
+    const list = getBranchesForCourse(courseId, true)
+    const invalidPattern = /signal|system|subject|dummy|test|temp|gW2EW|dxasc/i
+    return list.filter(b => {
+      const name = String(b.name || b.branchName || '').trim()
+      const code = String(b.code || b.branchCode || '').trim()
+      if (invalidPattern.test(name) || invalidPattern.test(code)) return false
+      if (!name) return false
+      return true
+    })
   }, [getBranchesForCourse, courseId])
 
   const availableSemesters = useMemo(() => {
     if (!courseId || !selectedBranchId || !selectedAcademicYearId) return []
     return getSemestersForCourse(courseId, false, { branchId: selectedBranchId, academicYearId: selectedAcademicYearId })
   }, [getSemestersForCourse, courseId, selectedBranchId, selectedAcademicYearId])
-  const sourceSemester = availableSemesters.find(s => Number(s.semesterNumber) === Number(selectedSemesterNumber))
-  const nextTerms = selectedSemesterNumber && selectedBranchId && selectedAcademicYearId
-    ? getSemestersForCourse(courseId, false, { branchId: selectedBranchId, academicYearId: targetAcademicYearId || selectedAcademicYearId })
-      .filter(s => Number(s.semesterNumber) === Number(selectedSemesterNumber) + 1)
-    : []
-  const nextSemesterId = nextTerms.length === 1 ? nextTerms[0].id : ''
+
+  const sourceSemester = useMemo(() => {
+    return availableSemesters.find(s => Number(s.semesterNumber || s.id) === Number(selectedSemesterNumber))
+  }, [availableSemesters, selectedSemesterNumber])
+
+  const nextTerms = useMemo(() => {
+    if (!selectedSemesterNumber || !selectedBranchId) return []
+    const nextSemNum = Number(selectedSemesterNumber) + 1
+    let terms = getSemestersForCourse(courseId, false, { branchId: selectedBranchId, academicYearId: targetAcademicYearId || selectedAcademicYearId })
+      .filter(s => Number(s.semesterNumber || s.id) === nextSemNum)
+    if (!terms.length) {
+      terms = getSemestersForCourse(courseId, false, { branchId: selectedBranchId })
+        .filter(s => Number(s.semesterNumber || s.id) === nextSemNum)
+    }
+    if (!terms.length) {
+      terms = getSemestersForCourse(courseId, false)
+        .filter(s => Number(s.semesterNumber || s.id) === nextSemNum)
+    }
+    return terms
+  }, [selectedSemesterNumber, selectedBranchId, courseId, targetAcademicYearId, selectedAcademicYearId, getSemestersForCourse])
+  const nextSemesterId = nextTerms[0]?.id || ''
 
   useEffect(() => {
     if (academicLoading) return
@@ -357,9 +380,22 @@ export default function StudentPromotion() {
   const finalSemesterNumber = Number(activeCourses.find(course => String(course.id) === String(courseId))?.totalSemesters) || 0
   const isFinalSemester = Boolean(finalSemesterNumber && Number(selectedSemesterNumber) === finalSemesterNumber)
   const isDegreeReview = isFinalSemester
-  const canExecutePromotion = Boolean(sourceSemester?.id && (isFinalSemester || (nextSemesterId && (!requiresNextYear || targetAcademicYearId))))
+  const canExecutePromotion = Boolean((sourceSemester || selectedSemesterNumber) && (isFinalSemester || nextSemesterId))
   const promotionType = isFinalSemester ? 'degree' : advancementType
   const promotionTypeLabel = { degree: 'Degree Completion', 'next-semester': 'Next Semester', 'next-year': 'Next Academic Year' }[promotionType]
+
+  // Automatically select the correct promotion type based on current semester
+  useEffect(() => {
+    const sem = Number(selectedSemesterNumber)
+    if (!sem) return
+    if (finalSemesterNumber && sem === finalSemesterNumber) {
+      setAdvancementType('degree')
+    } else if (sem % 2 === 0) {
+      setAdvancementType('next-year')
+    } else {
+      setAdvancementType('next-semester')
+    }
+  }, [selectedSemesterNumber, finalSemesterNumber])
 
   // Load Promotion Scope Students & History
   const loadPromotionData = useCallback(async (forceRefresh = false) => {
@@ -374,8 +410,8 @@ export default function StudentPromotion() {
       setLoading((x) => ({ ...x, list: true }))
       const selectedCourse = activeCourses.find((c) => String(c.id) === String(courseId))
       const selectedBranch = availableBranches.find((b) => String(b.id) === String(selectedBranchId))
-      const selectedSemester = availableSemesters.find((s) => Number(s.semesterNumber || s.id) === Number(selectedSemesterNumber))
-      if (!selectedSemester?.id) { setStudents([]); return }
+      const semNumber = Number(selectedSemesterNumber)
+      const selectedSemester = availableSemesters.find((s) => Number(s.semesterNumber || s.id) === semNumber)
       const selectedYear = activeAcademicYears.find((y) => String(y.id) === String(selectedAcademicYearId))
 
       // Load matching students from studentService
@@ -384,19 +420,25 @@ export default function StudentPromotion() {
         academicYear: selectedYear?.name,
         courseId,
         branchId: selectedBranchId,
-        semesterId: selectedSemester.id,
+        semesterId: selectedSemester?.id,
         course: selectedCourse?.name,
         courseCode: selectedCourse?.code,
         branch: selectedBranch?.name,
         branchCode: selectedBranch?.code,
-        semester: selectedSemester?.semesterName,
+        semester: selectedSemester?.semesterName || `Semester ${semNumber}`,
         forceRefresh,
       })
-      const eligibilityRows = await studentPromotionApi.getEligibleStudents({
-        branchId: selectedBranchId,
-        academicYearId: selectedAcademicYearId,
-        semesterNumber: selectedSemesterNumber,
-      })
+
+      let eligibilityRows = []
+      try {
+        eligibilityRows = await studentPromotionApi.getEligibleStudents({
+          branchId: selectedBranchId,
+          academicYearId: selectedAcademicYearId,
+          semesterNumber: selectedSemesterNumber,
+        })
+      } catch (eligErr) {
+        console.warn('Backend getEligibleStudents unavailable or returned empty:', eligErr)
+      }
       const eligibilityById = new Map((eligibilityRows || []).map(row => [String(row.studentId || row.id), row]))
 
       const scopeSections = getSectionsForScope({
@@ -460,6 +502,35 @@ export default function StudentPromotion() {
             },
             personal: { fullName: student.name },
           })
+        })
+      })
+
+      // Include eligible rows returned by promotion API if not already in roster
+      ;(eligibilityRows || []).forEach(row => {
+        const studentId = row.studentId || row.id
+        if (!studentId || scopedProfileIds.has(String(studentId))) return
+        scopedProfileIds.add(String(studentId))
+        scopedProfiles.push({
+          id: studentId,
+          studentId,
+          name: row.studentName || row.name || 'Student',
+          fullName: row.studentName || row.name || 'Student',
+          rollNumber: row.rollNumber || '',
+          registrationNumber: row.registrationNumber || '',
+          status: 'Active',
+          academic: {
+            course: row.courseName || selectedCourse?.name || '',
+            courseId,
+            branch: row.branchName || selectedBranch?.name || '',
+            branchId: selectedBranchId,
+            semester: row.currentSemester ? `Semester ${row.currentSemester}` : (selectedSemester?.semesterName || `Semester ${selectedSemesterNumber}`),
+            semesterId: selectedSemester?.id ?? selectedSemesterNumber,
+            section: row.sectionName || '',
+            academicYear: selectedYear?.name || '',
+            academicYearId: selectedAcademicYearId,
+            rollNumber: row.rollNumber || '',
+          },
+          personal: { fullName: row.studentName || row.name || 'Student' },
         })
       })
 
@@ -852,15 +923,47 @@ export default function StudentPromotion() {
               </ProjectSelect>
             </div>
             <div className="erp-form-group">
-              <label htmlFor="promotion-type">Promotion Type <span className="p-required">*</span></label>
-              <select id="promotion-type" className="erp-select" value={promotionType} disabled={!selectedSemesterNumber || loading.promotion} onChange={event => setAdvancementType(event.target.value)} aria-describedby="promotion-type-help">
-                <option value="next-semester" disabled={isFinalSemester}>Next Semester</option>
-                <option value="next-year" disabled={isFinalSemester}>Next Academic Year</option>
-                {isFinalSemester && <option value="degree">Degree Completion</option>}
+              <label htmlFor="promotion-type">Promotion Type <span className="p-required" style={{ color: '#dc2626' }}>*</span></label>
+              <select
+                id="promotion-type"
+                className="erp-select"
+                value={promotionType}
+                disabled={!selectedSemesterNumber || loading.promotion}
+                onChange={event => setAdvancementType(event.target.value)}
+                aria-describedby="promotion-type-help"
+              >
+                {isFinalSemester ? (
+                  <option value="degree">Degree Completion Review (Graduation)</option>
+                ) : Number(selectedSemesterNumber) % 2 === 0 ? (
+                  <>
+                    <option value="next-year">Next Academic Year (Annual Advancement)</option>
+                    <option value="next-semester" disabled>Next Semester (Cross-Year Advancement Required)</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="next-semester">Next Semester (Same Academic Year)</option>
+                    <option value="next-year" disabled>Next Academic Year (Available for Even Semesters)</option>
+                  </>
+                )}
               </select>
-              <small id="promotion-type-help">{selectedSemesterNumber && !canExecutePromotion ? "A unique saved target term is required." : ""}</small>
+              <small id="promotion-type-help" style={{ color: '#16a34a', display: 'block', marginTop: '4px' }}>
+                {selectedSemesterNumber
+                  ? isFinalSemester
+                    ? 'Final semester review for degree award and course completion.'
+                    : Number(selectedSemesterNumber) % 2 === 0
+                      ? `Annual advancement from Semester ${selectedSemesterNumber} to Semester ${Number(selectedSemesterNumber) + 1} (${nextYear[0]?.name || 'Next AY'}).`
+                      : `Regular progression from Semester ${selectedSemesterNumber} to Semester ${Number(selectedSemesterNumber) + 1} (${selectedYear?.name || ''}).`
+                  : ''}
+              </small>
             </div>
-            <button type="button" className="erp-btn erp-btn--primary promotion-load" disabled={!sourceSemester?.id || loading.list || loading.promotion} onClick={() => { setSelected([]); setDirPage(1); setTab('promotion'); loadPromotionData(true) }}>Load Students</button>
+            <button
+              type="button"
+              className="erp-btn erp-btn--primary promotion-load"
+              disabled={!selectedSemesterNumber || !selectedBranchId || !selectedAcademicYearId || loading.list || loading.promotion}
+              onClick={() => { setSelected([]); setDirPage(1); setTab('promotion'); loadPromotionData(true) }}
+            >
+              Load Students
+            </button>
           </fieldset>
           {loadError && <p role="alert">{loadError}</p>}
         </motion.section>

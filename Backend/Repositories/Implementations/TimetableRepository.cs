@@ -208,33 +208,110 @@ public sealed class TimetableRepository : ITimetableRepository
         }));
         var master = await multi.ReadSingleOrDefaultAsync<TimetableMasterDto>();
         if (master is null) return null;
-        return new TimetableDetailDto
+        var detail = new TimetableDetailDto
         {
             Timetable = master,
             Slots = (await multi.ReadAsync<TimetableSlotDto>()).ToList(),
             Requirements = (await multi.ReadAsync<TimetableRequirementDto>()).ToList(),
             Entries = (await multi.ReadAsync<TimetableEntryDto>()).ToList()
         };
+        multi.Dispose();
+        var planning = await c.QuerySingleOrDefaultAsync<string>(
+            "SELECT planning FROM timetable_planning WHERE timetable_id=@id", new { id });
+        if (planning is not null)
+            detail.Planning = JsonSerializer.Deserialize<TimetablePlanningRequest>(planning, PlanningJsonOptions);
+        return detail;
     }
+
+    private static readonly JsonSerializerOptions PlanningJsonOptions = new(JsonSerializerDefaults.Web);
 
     public async Task<long> CreateTimetableAsync(CreateAdvancedTimetableRequest r, long? actor, long? college, bool superAdmin)
     {
         await using var c = CreateConnection();
-        return await c.ExecuteScalarAsync<long>(Cmd("sp_tt_timetable_create", new
+        await c.OpenAsync();
+        await using var tx = await c.BeginTransactionAsync();
+        var id = await c.ExecuteScalarAsync<long>(Cmd("sp_tt_timetable_create", new
         {
             p_academic_year_id = r.AcademicYearId, p_course_id = r.CourseId,
             p_branch_id = r.BranchId, p_semester_id = r.SemesterId, p_section_id = r.SectionId,
             p_timetable_name = r.TimetableName, p_effective_from = r.EffectiveFrom?.Date,
             p_effective_to = r.EffectiveTo?.Date, p_actor_id = actor,
             p_college_id = college, p_is_super_admin = superAdmin ? 1 : 0
-        }));
+        }, tx));
+        if (r.Planning is not null)
+            await SavePlanningAsync(c, tx, id, r.Planning, actor, college, superAdmin);
+        await tx.CommitAsync();
+        return id;
     }
 
     public async Task UpdateTimetableAsync(long id, UpdateAdvancedTimetableRequest r, long? actor, long? college, bool superAdmin)
     {
-        await using var c=CreateConnection();
-        await WithTimetableLockAsync(c,id,tx => c.ExecuteAsync(Cmd("sp_tt_timetable_update",new
-        {p_timetable_id=id,p_timetable_name=r.TimetableName,p_effective_from=r.EffectiveFrom?.Date,p_effective_to=r.EffectiveTo?.Date,p_actor_id=actor,p_college_id=college,p_is_super_admin=superAdmin?1:0},tx)));
+        await using var c = CreateConnection();
+        await WithTimetableLockAsync(c, id, async tx =>
+        {
+            if (r.Planning is not null)
+                await SavePlanningAsync(c, tx, id, r.Planning, actor, college, superAdmin);
+            await c.ExecuteAsync(Cmd("sp_tt_timetable_update", new
+            {
+                p_timetable_id = id, p_timetable_name = r.TimetableName, p_effective_from = r.EffectiveFrom?.Date,
+                p_effective_to = r.EffectiveTo?.Date, p_actor_id = actor, p_college_id = college,
+                p_is_super_admin = superAdmin ? 1 : 0
+            }, tx));
+        });
+    }
+
+    private static async Task SavePlanningAsync(MySqlConnection c, MySqlTransaction tx, long id,
+        TimetablePlanningRequest planning, long? actor, long? college, bool superAdmin)
+    {
+        var status = await c.QuerySingleOrDefaultAsync<string>("""
+            SELECT t.status FROM timetables t JOIN sections s ON s.section_id=t.section_id
+            WHERE t.timetable_id=@id AND (@superAdmin OR s.college_id=@college)
+            FOR UPDATE
+            """, new { id, college, superAdmin }, tx);
+        if (status is null) throw new KeyNotFoundException("Timetable not found.");
+        if (status is not ("DRAFT" or "GENERATED")) throw new ArgumentException("Only draft timetable settings can be changed.");
+
+        var slots = planning.Periods.Where(period => period.PeriodType == "CLASS")
+            .Select((period, index) => new { id, actor, number = index + 1, period.PeriodName, period.StartTime, period.EndTime })
+            .ToList();
+        var existing = (await c.QueryAsync<TimetableSlotDto>("""
+            SELECT slot_number AS SlotNumber, slot_name AS SlotName, start_time AS StartTime, end_time AS EndTime
+            FROM timetable_slots WHERE timetable_id=@id AND status=1 ORDER BY slot_number
+            """, new { id }, tx)).AsList();
+        var slotsMatch = existing.Count == slots.Count && existing.Zip(slots).All(pair =>
+            pair.First.SlotNumber == pair.Second.number && pair.First.SlotName == pair.Second.PeriodName &&
+            pair.First.StartTime == TimeSpan.Parse(pair.Second.StartTime) &&
+            pair.First.EndTime == TimeSpan.Parse(pair.Second.EndTime));
+        var hasEntries = await c.ExecuteScalarAsync<bool>(
+            "SELECT EXISTS(SELECT 1 FROM timetable_entries WHERE timetable_id=@id AND status=1)", new { id }, tx);
+        if (hasEntries)
+        {
+            if (!slotsMatch)
+                throw new ArgumentException("Remove active timetable entries before changing teaching periods.");
+            if (await c.ExecuteScalarAsync<bool>("""
+                SELECT EXISTS(SELECT 1 FROM timetable_entries e WHERE e.timetable_id=@id AND e.status=1
+                    AND NOT EXISTS (SELECT 1 FROM JSON_TABLE(@days, '$[*]'
+                        COLUMNS (day_name VARCHAR(10) PATH '$')) d
+                        WHERE d.day_name=UPPER(e.day_of_week)))
+                """, new { id, days = JsonSerializer.Serialize(planning.Calendar.WorkingDays) }, tx))
+                throw new ArgumentException("Remove entries on excluded working days before changing the calendar.");
+        }
+        if (!slotsMatch)
+        {
+            await c.ExecuteAsync("""
+                UPDATE timetable_slots SET status=0,updated_by=@actor,updated_at=CURRENT_TIMESTAMP WHERE timetable_id=@id
+                """, new { id, actor }, tx);
+            await c.ExecuteAsync("""
+                INSERT INTO timetable_slots (timetable_id,slot_number,slot_name,start_time,end_time,status,created_by,updated_by)
+                VALUES (@id,@number,@PeriodName,@StartTime,@EndTime,1,@actor,@actor)
+                ON DUPLICATE KEY UPDATE slot_name=@PeriodName,start_time=@StartTime,end_time=@EndTime,
+                    status=1,updated_by=@actor,updated_at=CURRENT_TIMESTAMP
+                """, slots, tx);
+        }
+        await c.ExecuteAsync("""
+            INSERT INTO timetable_planning (timetable_id,planning) VALUES (@id,@json)
+            ON DUPLICATE KEY UPDATE planning=@json
+            """, new { id, json = JsonSerializer.Serialize(planning, PlanningJsonOptions) }, tx);
     }
 
     public async Task<IReadOnlyList<TimetableSlotDto>> SyncSlotsAsync(long id, long? actor, long? college, bool superAdmin)

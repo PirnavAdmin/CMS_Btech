@@ -83,6 +83,7 @@ public sealed class TimetableService : ITimetableService
     public Task<long> CreateTimetableAsync(CreateAdvancedTimetableRequest r,long? actor,long? college,bool superAdmin)
     {
         ValidateCreateTimetable(r);
+        ValidatePlanning(r.Planning);
         return _repository.CreateTimetableAsync(r,actor,college,superAdmin);
     }
 
@@ -92,7 +93,38 @@ public sealed class TimetableService : ITimetableService
         if (string.IsNullOrWhiteSpace(r.TimetableName)) throw new ArgumentException("TimetableName is required.");
         if (r.EffectiveFrom.HasValue && r.EffectiveTo.HasValue && r.EffectiveFrom > r.EffectiveTo)
             throw new ArgumentException("EffectiveFrom cannot be after EffectiveTo.");
+        ValidatePlanning(r.Planning);
         return _repository.UpdateTimetableAsync(id,r,actor,college,superAdmin);
+    }
+
+    private static void ValidatePlanning(TimetablePlanningRequest? planning)
+    {
+        if (planning is null) return;
+        if (planning.Periods is null || planning.Calendar is null)
+            throw new ArgumentException("Periods and calendar are required.");
+        var previousEnd = TimeSpan.Zero;
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var period in planning.Periods)
+        {
+            if (string.IsNullOrWhiteSpace(period.PeriodName) || period.PeriodName.Length > 100 ||
+                !names.Add(period.PeriodName.Trim()) || period.PeriodType is not ("CLASS" or "BREAK" or "LUNCH") ||
+                !TimeSpan.TryParseExact(period.StartTime, @"hh\:mm", null, out var start) ||
+                !TimeSpan.TryParseExact(period.EndTime, @"hh\:mm", null, out var end) ||
+                start < previousEnd || end <= start)
+                throw new ArgumentException("Use unique period names and valid, ordered, non-overlapping times.");
+            previousEnd = end;
+        }
+        if (!planning.Periods.Any(period => period.PeriodType == "CLASS"))
+            throw new ArgumentException("Add at least one teaching period.");
+
+        var days = planning.Calendar.WorkingDays;
+        if (days is null || days.Count == 0 || days.Distinct().Count() != days.Count ||
+            days.Any(day => !Enum.GetNames<DayOfWeek>().Any(name => name.ToUpperInvariant() == day)))
+            throw new ArgumentException("Choose valid working days without duplicates.");
+        var holidays = planning.Calendar.Holidays;
+        if (holidays is null || holidays.Select(day => day.Date.Date).Distinct().Count() != holidays.Count ||
+            holidays.Any(day => day.Type is not ("HOLIDAY" or "NON_WORKING" or "WORKING_OVERRIDE")))
+            throw new ArgumentException("Choose valid calendar exceptions without duplicate dates.");
     }
 
     public Task<IReadOnlyList<TimetableSlotDto>> SyncSlotsAsync(long id,long? actor,long? college,bool superAdmin)

@@ -3773,7 +3773,7 @@ function DepartmentManagement({ inlineCreate = false, onCreated, onDismiss } = {
                 columns={[
                   { key: 'name', label: 'Department', sortable: true, render: item => <div className="as-directory-record"><strong>{item.name}</strong><small>{item.code}</small></div> },
                   { key: 'hod', label: 'HOD', sortable: true, render: item => <span title={item.hod || 'Unassigned'}>{item.hod || 'Unassigned'}</span> },
-                  { key: 'branches', label: 'Linked Branches', render: item => linkedBranches(item.id)?.length ?? 'Unavailable' },
+                  { key: 'branches', label: 'Linked Branches', className: 'table-center', render: item => linkedBranches(item.id)?.length ?? 'Unavailable' },
                   completionColumn,
                   { key: 'status', label: 'Status', sortable: true, render: item => <StatusBadge value={item.status} /> },
                 ]}
