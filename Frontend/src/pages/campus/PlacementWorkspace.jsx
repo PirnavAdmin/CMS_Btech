@@ -202,7 +202,7 @@ function PlacementContent({ academic }) {
           <TablePagination page={currentPage} totalPages={pages} onPageChange={setPage} />
         </footer>
       </section>
-      {dialog?.mode === 'edit' && <PlacementEditor key={`${dialog.type}:${dialog.old?.id || 'new'}`} dialog={dialog} data={data} busy={state.saving} onSave={saveRecord}
+      {dialog?.mode === 'edit' && <PlacementEditor key={`${dialog.type}:${dialog.old?.id || 'new'}`} dialog={dialog} data={data} academic={academic} busy={state.saving} onSave={saveRecord}
         onAddCompany={canCreate && dialog.type === 'drive' ? form => setDialog({ mode: 'edit', type: 'company', form: {}, returnTo: { ...dialog, form, localDates: true } }) : undefined}
         onClose={() => setDialog(dialog.returnTo || null)} />}
       {dialog?.mode === 'view' && <PlacementDetails dialog={dialog} data={data} scope={scope} canEdit={canEdit} onEdit={() => openEdit(dialog.type, dialog.row)} onClose={() => setDialog(null)} />}
@@ -247,7 +247,7 @@ function Choice({ name, title, form, setForm, options, disabled, required, searc
   </ProjectSelect></label>
 }
 
-function PlacementEditor({ dialog, data, busy, onSave, onClose, onAddCompany }) {
+function PlacementEditor({ dialog, data, academic, busy, onSave, onClose, onAddCompany }) {
   const { type, old } = dialog
   const [form, setForm] = useState(() => {
     const row = dialog.form
@@ -263,6 +263,12 @@ function PlacementEditor({ dialog, data, busy, onSave, onClose, onAddCompany }) 
   const choice = (name, title, options, props = {}) => <Choice {...props} name={name} title={title} options={options} form={form} setForm={setForm} />
   const selectedApplication = data.applications.find(row => String(row.id) === String(form.applicationId))
   const eligible = data.eligibility.find(row => String(row.driveId) === String(form.driveId) && String(row.studentId) === String(form.studentId))
+  const student = data.students.find(row => String(row.studentId || row.id) === String(form.studentId))
+  const drive = data.drives.find(row => String(row.id) === String(form.driveId))
+  const branch = academic.branches?.find(row => String(row.branchId || row.id) === String(student?.branchId))
+  const semesterId = student?.semesterId || student?.currentSemesterId
+  const semester = academic.semesters?.find(row => String(row.semesterId || row.id) === String(semesterId))
+  const eligibilityText = data.relatedErrors?.[`eligibility-${form.driveId}`] ? 'Unavailable' : eligible ? label(eligible.eligibilityStatus) : 'Not evaluated'
   const submit = async () => {
     const found = validatePlacementForm(type, form, data, Boolean(old))
     if (!old && type === 'application' && eligible?.eligibilityStatus !== 'ELIGIBLE') found.studentId = 'Verify eligibility before submitting an application.'
@@ -298,9 +304,23 @@ function PlacementEditor({ dialog, data, busy, onSave, onClose, onAddCompany }) 
       <p className="placement-hint placement-full">{old ? 'Manage course, branch and academic criteria in Eligibility rules.' : 'The drive is saved as a draft. Configure eligibility rules next.'}</p>
     </>}
     {type === 'application' && <>
-      {choice('driveId', 'Drive *', data.drives.map(row => ({ value: row.id, label: `${row.title} · ${row.company || row.companyId}` })), { required: true, disabled: Boolean(old), searchable: true })}
-      {choice('studentId', 'Student *', data.students.map(row => ({ value: String(row.studentId || row.id), label: `${row.fullName || row.studentName || row.name} · ${row.rollNumber || row.admissionNumber || row.studentCode || row.studentId}` })), { required: true, disabled: Boolean(old), searchable: true })}
-      {!old && <p className="placement-hint placement-full">Eligibility — {data.relatedErrors?.[`eligibility-${form.driveId}`] ? 'Unavailable' : eligible ? `${label(eligible.eligibilityStatus)}. ${eligible.reason || ''}` : 'Not evaluated'}</p>}
+      {choice('driveId', 'Drive *', data.drives.map(row => ({ value: row.id, label: `${row.title} · ${row.company || row.companyId}` })), { required: true, disabled: Boolean(old), searchable: true, hideSearch: true })}
+      {choice('studentId', 'Student *', data.students.map(row => ({ value: String(row.studentId || row.id), label: `${row.fullName || row.studentName || row.name} · ${row.rollNumber || row.admissionNumber || row.studentCode || row.studentId}` })), { required: true, disabled: Boolean(old), searchable: true, hideSearch: true })}
+      <section className="placement-application-summary placement-full" aria-label="Application details">
+        <div className="placement-application-summary__heading"><h3>Application details</h3><p>Details are filled from the selected student and drive.</p></div>
+        <dl className="placement-details">
+          {[
+            ['Student Name', student?.studentName || student?.fullName || student?.name],
+            ['Roll / Registration No.', student?.rollNumber || student?.admissionNumber || student?.studentCode],
+            ['Branch', branch?.branchName || branch?.name || student?.branchName],
+            ['Semester / Batch', [semester?.semesterName || semester?.name || (semesterId ? `Semester ${semesterId}` : ''), student?.graduationYear || student?.batchName || student?.admissionYear].filter(Boolean).join(' / ')],
+            ['Company', drive?.company],
+            ['Job Role', drive?.role],
+            ['Eligibility', form.driveId && form.studentId ? eligibilityText : 'Select a drive and student'],
+          ].map(([name, value]) => <div key={name}><dt>{name}</dt><dd>{clean(value)}</dd></div>)}
+        </dl>
+        {eligible?.reason && <p className="placement-hint">{eligible.reason}</p>}
+      </section>
       {field('resumeUrl', 'Resume Document Path', { maxLength: 1000 })}
       <label className="placement-full">Cover Letter<textarea rows={3} value={form.coverLetter || ''} onChange={event => setForm(current => ({ ...current, coverLetter: event.target.value }))} /></label>
       {field('remarks', 'Remarks', { maxLength: 2000 })}
