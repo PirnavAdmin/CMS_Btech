@@ -10,14 +10,14 @@ const source = readFileSync(new URL('./backendTimetableService.js', import.meta.
 const scope = { academicYearId: 2, courseId: 1, branchId: 1, semesterId: 1, sectionId: 1 }
 const detail = { timetable: { ...scope, timetableId: 8, timetableName: 'CSE A', status: 'DRAFT', revision: 1, effectiveFrom: '2026-09-01', effectiveTo: '2026-12-31' },
   slots: [{ timetableSlotId: 21, startTime: '09:00:00', endTime: '10:00:00', slotName: 'P1' }], requirements: [{ subjectId: 3, periodsPerWeek: 2, blockSize: 1 }], entries: [{ timetableEntryId: 11, timetableSlotId: 21, subjectId: 3, facultyId: 4, classroomId: 5, classroomName: 'Room A', dayOfWeek: 'Monday', startTime: '09:00:00', endTime: '10:00:00', active: true }] }
-function setup(failPath = '') {
+function setup(failPath = '', savedDetail = detail) {
   const calls = []
   const api = Object.fromEntries(['get', 'post', 'put', 'remove'].map(method => [method, async (path, payload) => {
     calls.push({ method, path, payload })
     if (path === failPath) throw new Error('Backend failure')
     if (path === '/timetables' && method === 'post') return { timetableId: 8 }
     if (path === '/timetables') return [detail.timetable]
-    if (path === '/timetables/8') return detail
+    if (path === '/timetables/8') return savedDetail
     if (path === '/periods' && method === 'post') return { periodId: 6 }
     if (path === '/periods') return []
     if (path === '/calendar') return { reviewed: true, workingDays: ['MONDAY'], holidays: [], academicYearStartDate: '2026-09-01', academicYearEndDate: '2026-12-31' }
@@ -39,14 +39,36 @@ test('backend details map real IDs, publication, room and calendar without brows
   assert.equal(table.planning.periods[0].id, '21'); assert.equal(table.planning.requirements[3].periodsPerWeek, 2)
   assert(calls.filter(row => ['/periods', '/calendar'].includes(row.path)).every(row => row.payload.academicYearId === 2))
 })
-test('setup sends documented numeric IDs, calendar and period payloads before synchronizing slots', async () => {
+test('setup sends periods and calendar with the draft, without updating shared settings', async () => {
   const { service, calls } = setup()
   await service.setup(scope, 'CSE A', { periods: [{ id: 'preview-id', name: 'P1', type: 'class', startTime: '09:00', endTime: '10:00' }], calendar: { reviewed: true, workingDays: ['MONDAY'], holidays: ['2026-10-02'], startDate: '2026-09-01', endDate: '2026-12-31' }, requirements: {} })
   const created = calls.find(row => row.path === '/timetables' && row.method === 'post')
   assert.equal(created.payload.academicYearId, 2); assert.equal(created.payload.effectiveFrom, '2026-09-01T00:00:00')
-  assert.equal(calls.find(row => row.path === '/periods' && row.method === 'post').payload.periodType, 'CLASS')
-  assert.equal(calls.find(row => row.path === '/calendar' && row.method === 'put').payload.holidays[0].date, '2026-10-02T00:00:00')
-  assert(calls.some(row => row.path === '/timetables/8/sync-periods'))
+  assert.equal(created.payload.planning.periods[0].periodType, 'CLASS')
+  assert.equal(created.payload.planning.calendar.holidays[0].date, '2026-10-02T00:00:00')
+  assert(calls.filter(row => row.method !== 'get').every(row =>
+    ['/timetables', '/timetables/8/requirements'].includes(row.path)))
+})
+test('saved version settings take precedence over shared academic-year settings', async () => {
+  const { service, calls } = setup('', {
+    ...detail,
+    timetable: { ...detail.timetable, status: 'GENERATED' },
+    slots: [{ ...detail.slots[0], startTime: '08:00', endTime: '09:00' }],
+    planning: {
+      periods: [
+        { periodName: 'P1', periodType: 'CLASS', displayOrder: 1, startTime: '08:00', endTime: '09:00' },
+        { periodName: 'Tea', periodType: 'BREAK', displayOrder: 2, startTime: '09:00', endTime: '09:15' },
+      ],
+      calendar: { reviewed: true, workingDays: ['TUESDAY'], holidays: [{ date: '2026-10-02' }] },
+    },
+  })
+  const table = await service.detail(8)
+  assert.equal(table.publicationStatus, 'draft')
+  assert.equal(table.planning.periods[0].id, '21')
+  assert.equal(table.planning.periods[1].id, 'period:2')
+  assert.equal(table.planning.periods[1].type, 'break')
+  assert.equal(table.planning.calendar.workingDays[0], 'TUESDAY')
+  assert(calls.every(row => !['/periods', '/calendar'].includes(row.path)))
 })
 test('manual entry uses slot and classroom IDs; updates and deletes target the selected timetable', async () => {
   const { service, calls } = setup()
@@ -75,8 +97,8 @@ test('generation preserves endpoint semantics and validation displays server rea
   assert(calls.some(row => row.path === '/views/faculty/4'))
 })
 test('backend failures propagate and stop the workflow instead of local success', async () => {
-  const { service, calls } = setup('/periods')
-  await assert.rejects(service.setup(scope, 'CSE A', { calendar: { startDate: '2026-09-01', endDate: '2026-12-31' } }), /Backend failure/)
+  const { service, calls } = setup('/timetables')
+  await assert.rejects(service.setup(scope, 'CSE A', { periods: [], calendar: { holidays: [], startDate: '2026-09-01', endDate: '2026-12-31' } }), /Backend failure/)
   assert.equal(calls.length, 1)
   await assert.rejects(service.detail('local-uuid'), /valid backend/)
 })

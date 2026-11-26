@@ -3,7 +3,7 @@ import { normalizeTimetableMasterRows } from '../timetableService'
 import { departmentApi, subjectApi } from '../../api/apiEndpoints'
 import { academicLevel, scopeSections } from './timetableDomain'
 import { matchesScope, same } from '../../utils/timetableUtils'
-import { planningErrors, subjectRequirements, entryPlanningErrors } from '../../utils/timetablePlanner'
+import { planningErrors, subjectRequirements, entryPlanningErrors, roomOptions, suitableRoom } from '../../utils/timetablePlanner'
 import { getUserRole } from '../../auth/auth'
 import { selectedCollegeId } from '../../utils/collegeScope.js'
 import { scopeTimetableData } from './timetableCollegeScope.js'
@@ -30,9 +30,15 @@ export const backendWorkflow = {
     const live = await loadBackendWorkflow()
     const sections = scopeSections(live.sources, scope)
     if (!selected.length || selected.some(id => !sections.some(row => same(row.id, id)))) throw new Error('Select valid active sections.')
+    const rooms = roomOptions(live.sources, live.backend).filter(room => config.rooms.includes(room.value))
     for (const sectionId of selected) {
-      const errors = planningErrors(config, live.sources, { ...scope, sectionId }, live.backend)
-      if (errors.length) throw new Error(errors.join('\n'))
+      const sectionScope = { ...scope, sectionId }
+      const errors = planningErrors(config, live.sources, sectionScope, live.backend)
+      for (const { subject, periodsPerWeek } of subjectRequirements(live.sources, sectionScope, config.requirements)) {
+        if (periodsPerWeek > 0 && !rooms.some(room => suitableRoom(subject, room)))
+          errors.push(subject.name + ': select a suitable classroom or lab.')
+      }
+      if (errors.length) throw new Error([...new Set(errors)].join('\n'))
     }
     const saved = []
     for (const sectionId of selected) {
@@ -56,7 +62,7 @@ export const backendWorkflow = {
     for (const table of tables) {
       await draft(table)
       const errors = [...planningErrors(config, live.sources, table, live.backend), ...table.entries.flatMap(row => entryPlanningErrors(row, config, live.sources, table, live.backend))]
-      if (errors.length) throw new Error(errors.join('\n'))
+      if (errors.length) throw new Error([...new Set(errors)].join('\n'))
     }
     for (const table of tables) await service.setup(table, table.name, config, { tableId: table.id })
     return true

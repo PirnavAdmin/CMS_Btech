@@ -1,8 +1,31 @@
-.record-completion { display: inline-flex; align-items: center; gap: .35rem; white-space: nowrap; color: var(--text-secondary); font-size: var(--font-caption); font-variant-numeric: tabular-nums; }
-.record-completion progress { inline-size: 2.5rem; block-size: .35rem; accent-color: var(--brand); }
+.record-completion { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; color: var(--text-secondary); font-size: 12px; font-variant-numeric: tabular-nums; }
+.record-completion progress { display: none; }
+.record-completion-ring { position: relative; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.record-completion-ring svg { width: 100%; height: 100%; display: block; }
+.record-ring-bg { fill: none; stroke: var(--surface-soft, #e2e8f0); }
+.record-ring-fill { fill: none; transition: stroke-dashoffset 0.4s ease; }
+.record-ring-text { position: absolute; font-size: 8.5px; font-weight: 750; line-height: 1; text-align: center; }
+.record-completion-percent-label { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
 .record-completion-cell { white-space: nowrap; }
 .record-completion-action { padding: 3px 5px; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--brand); font: inherit; font-size: var(--font-caption); white-space: nowrap; cursor: pointer; }
 .record-completion-action:hover { background: var(--surface-hover); }
+
+/* Upgraded Information Completion Card */
+.record-completion-summary.sa-summary-card { padding: 12px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-soft); color: var(--text-primary); margin-bottom: 14px; }
+.sa-summary-top-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.sa-summary-ring-group { display: flex; align-items: center; gap: 12px; }
+.sa-summary-title-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sa-summary-title-line strong { font-size: 13.5px; font-weight: 700; }
+.sa-summary-badge { font-size: 10.5px; font-weight: 650; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--border); }
+.sa-summary-badge.is-complete { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+.sa-summary-badge.is-progress { background: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
+.sa-summary-subtitle { margin: 2px 0 0; font-size: 11.5px; color: var(--text-secondary); }
+.sa-summary-details { margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 6px; font-size: 11.5px; color: var(--text-secondary); }
+.sa-summary-details summary { cursor: pointer; color: var(--brand); font-weight: 600; }
+.sa-summary-details ul { margin: 6px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; }
+.sa-sec-done { color: #10b981; font-weight: 600; }
+.sa-sec-pending { color: #f59e0b; font-weight: 600; }
+.sa-sec-missing { color: var(--text-muted); }
 .record-completion-summary { padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-surface); background: var(--surface-soft); color: var(--text-primary); }
 .record-completion-summary > div { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); }
 .record-completion-summary details { margin-top: var(--space-1); color: var(--text-secondary); font-size: var(--font-caption); }

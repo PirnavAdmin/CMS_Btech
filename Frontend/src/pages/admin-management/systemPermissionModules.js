@@ -8,6 +8,7 @@ export const SYSTEM_MODULES = [
   { id: 'semesters', name: 'Semesters Management', description: 'Semester terms, session schedules & durations', category: 'Academic Structure' },
   { id: 'sections', name: 'Sections & Allocations', description: 'Student class sections, batches & capacities', category: 'Academic Structure' },
   { id: 'subjects', name: 'Subject Management', description: 'Core theory & lab subjects syllabus and codes', category: 'Curriculum' },
+  { id: 'syllabus_management', name: 'Syllabus Management', description: 'Manage semester syllabus documents, versions and publication', category: 'Curriculum' },
   { id: 'timetable', name: 'Timetable Scheduling', description: 'Weekly faculty-subject class periods & classrooms', category: 'Curriculum' },
   { id: 'credits', name: 'Credits & Syllabus', description: 'Credit points weightage, passing marks & units', category: 'Curriculum' },
   { id: 'electives', name: 'Elective Selection', description: 'Professional & open electives student allotments', category: 'Curriculum' },

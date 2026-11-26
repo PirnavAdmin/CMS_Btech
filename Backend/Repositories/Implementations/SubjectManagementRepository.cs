@@ -37,8 +37,7 @@ public sealed class SubjectManagementRepository
     private static string? NormalizeElectiveType(string? value) => Clean(value)?.ToLowerInvariant() switch
     {
         "elective" => "Elective",
-        "non-elective" => "Non-Elective",
-        "core subject" => "Core Subject",
+        "non-elective" or "core subject" => "Core Subject",
         _ => null
     };
 
@@ -50,7 +49,7 @@ public sealed class SubjectManagementRepository
         {
             p_id=id,p_search=Clean(r.Search),p_college_id=r.CollegeId,p_academic_year_id=r.AcademicYearId,
             p_course_id=r.CourseId,p_branch_id=r.BranchId,p_semester_id=r.SemesterId,p_level=level,
-            p_subject_type=Clean(r.SubjectType),p_elective_type=Clean(r.ElectiveType),p_status=SubjectStatusConverter.Parse(r.Status)
+            p_subject_type=Clean(r.SubjectType),p_elective_type=NormalizeElectiveType(r.ElectiveType),p_status=SubjectStatusConverter.Parse(r.Status)
         }, ct));
         var rows = (await results.ReadAsync()).Select(x => Row((object)x)).ToList();
         var mappings = (await results.ReadAsync()).Select(x => Row((object)x))
@@ -103,6 +102,6 @@ public sealed class SubjectManagementRepository
         var branches = (await sets.ReadAsync()).Select(x=>Row((object)x)).ToList();
         var semesters = (await sets.ReadAsync()).Select(x=>Row((object)x)).ToList();
         return new { years, academicYears=years,courses,branches,semesters,
-            electiveTypes=new[] { "Elective", "Non-Elective", "Core Subject" }, statuses=new[] { "Active","Inactive" } };
+            electiveTypes=new[] { "Elective", "Core Subject" }, statuses=new[] { "Active","Inactive" } };
     }
 }

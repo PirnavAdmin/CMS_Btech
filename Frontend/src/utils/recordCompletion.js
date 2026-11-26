@@ -164,7 +164,12 @@ export function calculateCompletion(schema, record) {
       earned += weight
       return false
     })
-    return [{ id: group.id, label: group.label, complete: !missing.length, missing }]
+    return [{
+      id: group.id,
+      label: group.label,
+      complete: !missing.length,
+      missing: missing.map(item => ({ key: item.key, label: item.label, required: Boolean(item.required) })),
+    }]
   })
   const percent = possible ? (earned === possible ? 100 : Math.min(99, Math.round(earned / possible * 100))) : null
   return { percent, sections, complete: percent === 100 }

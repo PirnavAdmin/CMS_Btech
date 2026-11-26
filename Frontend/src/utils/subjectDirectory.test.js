@@ -15,7 +15,7 @@ const form = { courseId: '1', branchId: '2', semesterId: '5', academicYearId: '7
 const rows = [
   { subjectId: 101, ...subjectApiPayload(form) },
   { subjectId: 102, ...subjectApiPayload({ ...form, subjectCode: 'CS502', subjectName: 'Machine Learning' }) },
-  { subjectId: 103, ...subjectApiPayload({ ...form, subjectCode: 'CS503', subjectName: 'Operating Systems', electiveType: 'Non-Elective' }) },
+  { subjectId: 103, ...subjectApiPayload({ ...form, subjectCode: 'CS503', subjectName: 'Operating Systems', electiveType: 'Core Subject' }) },
 ]
 const directory = records => records.map(mapApiSubject).map(subject => enrichSubject(subject, masters))
 const matchingIds = (records, query) => directory(records).filter(subject => matchesSubject(subject, query)).map(subject => subject.id)
@@ -34,22 +34,23 @@ test('create payload preserves the existing classification and academic year wit
   assert.equal('departmentId' in payload, false) // derived from the saved academic mapping
 })
 
-test('saved list shows AI/ML under Elective and only OS under Non-Elective', async () => {
+test('saved list shows AI/ML under Elective and only OS under Core Subject', async () => {
   const saved = await readSubjectPages(async () => ({ success: true, data: { items: rows } }))
   assert.deepEqual(matchingIds(saved, filters), [101, 102])
-  assert.deepEqual(matchingIds(saved, { ...filters, electiveType: 'Non-Elective' }), [103])
+  assert.deepEqual(matchingIds(saved, { ...filters, electiveType: 'Core Subject' }), [103])
+  assert.equal(mapApiSubject({ electiveType: 'Non-Elective' }).electiveType, 'Core Subject')
 })
 
 test('edit then refetch moves the same ID between classifications and semesters without duplicates', async () => {
   const stored = rows.map(row => ({ ...row }))
-  stored[0] = { subjectId: 101, ...subjectApiPayload({ ...form, electiveType: 'Non-Elective' }) }
+  stored[0] = { subjectId: 101, ...subjectApiPayload({ ...form, electiveType: 'Core Subject' }) }
   let refreshed = await readSubjectPages(async () => ({ data: stored }))
   assert.deepEqual(matchingIds(refreshed, filters), [102])
-  assert.deepEqual(matchingIds(refreshed, { ...filters, electiveType: 'Non-Elective' }), [101, 103])
+  assert.deepEqual(matchingIds(refreshed, { ...filters, electiveType: 'Core Subject' }), [101, 103])
   stored[2] = { ...stored[2], semesterId: 6 }
   refreshed = await readSubjectPages(async () => ({ data: stored }))
-  assert.deepEqual(matchingIds(refreshed, { ...filters, electiveType: 'Non-Elective' }), [101])
-  assert.deepEqual(matchingIds(refreshed, { ...filters, semester: '6', electiveType: 'Non-Elective' }), [103])
+  assert.deepEqual(matchingIds(refreshed, { ...filters, electiveType: 'Core Subject' }), [101])
+  assert.deepEqual(matchingIds(refreshed, { ...filters, semester: '6', electiveType: 'Core Subject' }), [103])
   assert.equal(new Set(refreshed.map(row => row.subjectId)).size, 3)
 })
 
@@ -73,7 +74,7 @@ test('dependent parent changes clear incompatible descendants, while classificat
   assert.equal(changed.course, 'All')
   assert.equal(changed.semester, 'All')
   assert.equal(changed.level, 'All')
-  assert.equal(changeAcademicFilter(filters, 'electiveType', 'Non-Elective').branch, '2')
+  assert.equal(changeAcademicFilter(filters, 'electiveType', 'Core Subject').branch, '2')
   assert.equal(hasAcademicFilter({ electiveType: 'Elective', department: 'All' }), false)
   assert.equal(hasAcademicFilter(filters), true)
 })
@@ -85,7 +86,7 @@ test('academic master options are dependent and do not collapse when classificat
   const duplicateSemesterMasters = { ...masters, semesters: [{ ...masters.semesters[0], semesterName: 'Semester 5' }, { ...masters.semesters[1], semesterName: 'Semester 6' }, { semesterId: 15, courseId: 1, branchId: 2, semesterName: 'Semester 5', semesterNumber: 5 }] }
   assert.deepEqual(academicFilterOptions('semester', filters, duplicateSemesterMasters), [{ id: '5', name: 'Semester 5' }, { id: '6', name: 'Semester 6' }])
   assert.deepEqual(academicFilterOptions('semester', { ...filters, branch: '3' }, masters), [])
-  assert.deepEqual(academicFilterOptions('branch', filters, masters), academicFilterOptions('branch', { ...filters, electiveType: 'Non-Elective' }, masters))
+  assert.deepEqual(academicFilterOptions('branch', filters, masters), academicFilterOptions('branch', { ...filters, electiveType: 'Core Subject' }, masters))
 })
 
 test('elective-only workflows reject non-elective, unclassified, inactive and mismatched subjects', () => {

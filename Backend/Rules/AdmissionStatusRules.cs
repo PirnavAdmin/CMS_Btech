@@ -47,6 +47,8 @@ namespace BTech.Rules
             return (currentStatus, newStatus) switch
             {
                 ("Draft", "Application Submitted") => true,
+                ("Draft", "Approved") => true,
+                ("Draft", "Rejected") => true,
                 ("Application Submitted", "Under Review") => true,
                 ("Application Submitted", "Correction Required") => true,
                 ("Application Submitted", "Approved") => true,
@@ -69,7 +71,7 @@ namespace BTech.Rules
 
             return currentStatus switch
             {
-                "Draft" => new[] { "Application Submitted" },
+                "Draft" => new[] { "Application Submitted", "Approved", "Rejected" },
                 "Application Submitted" => new[] { "Under Review", "Correction Required", "Approved", "Rejected" },
                 "Under Review" => new[] { "Document Verification", "Correction Required", "Approved", "Rejected" },
                 "Document Verification" => new[] { "Correction Required", "Approved", "Rejected" },
