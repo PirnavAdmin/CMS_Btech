@@ -419,6 +419,11 @@
 .attendance-review-note svg { flex: 0 0 auto; margin-top: 1px; color: var(--brand); }
 .attendance-save-review-dialog .shared-view-dialog__footer-actions { flex-wrap: wrap; }
 .attendance-report-table th { white-space: nowrap; }
+.attendance-page .attendance-report-table { width: 100%; min-width: max-content; border-collapse: collapse; }
+.attendance-page .attendance-report-table th,
+.attendance-page .attendance-report-table td { text-align: left; vertical-align: middle; }
+.attendance-page .attendance-report-table th.attendance-report-column--center,
+.attendance-page .attendance-report-table td.attendance-report-column--center { text-align: center; }
 .attendance-page .attendance-shortage-table {
   border-color: var(--border-strong);
 }

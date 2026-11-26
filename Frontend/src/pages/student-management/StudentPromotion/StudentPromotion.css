@@ -533,6 +533,15 @@
   margin-bottom: 16px;
 }
 
+#root .student-promotion .promotion-dashboard-header .compact-summary__item {
+  justify-content: flex-start;
+}
+
+#root .student-promotion .promotion-dashboard-header .compact-summary__item > strong {
+  min-height: 1.15em;
+  text-align: center;
+}
+
 .student-promotion .promotion-kpis {
   display: grid;
   grid-template-columns: repeat(3, minmax(92px, 1fr));
