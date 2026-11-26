@@ -9,6 +9,13 @@ export function validateEffectiveAccess(access, collegeId) {
 }
 export function hasModuleAction(access, module, action = 'view') {
   if (!module || !['view', 'create', 'edit', 'delete', 'export'].includes(action)) return false
+  // Preserve existing curriculum-view access for colleges whose role payloads
+  // predate the syllabus permission key. Mutations still require an explicit
+  // syllabus_management grant from the role matrix.
+  const permissions = access?.permissions
+  if (module === 'syllabus_management' && action === 'view' && permissions && !Object.hasOwn(permissions, module)) {
+    return access?.isSuperAdmin === true || permissions.subjects?.view === true
+  }
   return access?.isSuperAdmin === true || (access?.permissions?.[module]?.view === true && access.permissions[module][action] === true)
 }
 export function authorizedCollegeIds(access, assignedCollegeId = '') {

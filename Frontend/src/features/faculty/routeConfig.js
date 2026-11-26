@@ -4,6 +4,7 @@ export const facultyRoutes = [
   { path: '/faculty-portal/dashboard', screen: 'dashboard', title: 'Dashboard', phase: 'A' },
   { path: '/faculty-portal/students', screen: 'students', title: 'My Students', phase: 'B' },
   { path: '/faculty-portal/subjects', screen: 'subjects', title: 'My Subjects', phase: 'B' },
+  { path: '/faculty-portal/syllabus', screen: 'syllabus', title: 'Syllabus Library', phase: 'B' },
   { path: '/faculty-portal/attendance', screen: 'attendance', title: 'Attendance Management', phase: 'C' },
   { path: '/faculty-portal/my-attendance', screen: 'my-attendance', title: 'My Attendance', phase: 'C' },
   { path: '/faculty-portal/marks', screen: 'marks', title: 'Marks Entry', phase: 'C' },
