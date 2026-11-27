@@ -1,3 +1,5 @@
+using BTech.Data;
+using Microsoft.EntityFrameworkCore;
 using BTech.DTOs.Branch;
 using BTech.Models;
 using BTech.Repositories.Interfaces;
@@ -8,11 +10,13 @@ namespace BTech.Services.Implementations
     public class BranchService : IBranchService
     {
         private readonly IBranchRepository _repository;
+        private readonly ApplicationDbContext _context;
 
         public BranchService(
-            IBranchRepository repository)
+            IBranchRepository repository, ApplicationDbContext context)
         {
             _repository = repository;
+            _context = context;
         }
 
         // =====================================================
@@ -43,6 +47,8 @@ namespace BTech.Services.Implementations
                 throw new ArgumentException(
                     "Branch name is required.");
             }
+
+            await RequireCourseDepartmentAsync(dto.DepartmentId, dto.CourseId);
 
             var entity =
                 new Branch
@@ -220,6 +226,9 @@ namespace BTech.Services.Implementations
                     "Branch name is required.");
             }
 
+            if (dto.DepartmentId != entity.DepartmentId || dto.CourseId != entity.CourseId)
+                await RequireCourseDepartmentAsync(dto.DepartmentId, dto.CourseId);
+
             entity.Specialization = dto.Specialization?.Trim();
 
             entity.CourseId =
@@ -302,6 +311,20 @@ namespace BTech.Services.Implementations
         // =====================================================
         // MAP ENTITY → DTO
         // =====================================================
+
+        private async Task RequireCourseDepartmentAsync(long? departmentId, long courseId)
+        {
+            if (departmentId.HasValue && !await (
+                from course in _context.Courses
+                join department in _context.Departments on course.CollegeId equals department.CollegeId
+                where course.CourseId == courseId && course.DeletedAt == null &&
+                    department.DepartmentId == departmentId.Value && department.DeletedAt == null &&
+                    department.DepartmentType == Department.CourseType
+                select department.DepartmentId).AnyAsync())
+            {
+                throw new ArgumentException("Select a Course Department from the program's college.");
+            }
+        }
 
         private static BranchResponseDto
             Map(Branch x)

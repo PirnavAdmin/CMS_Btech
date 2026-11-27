@@ -1308,16 +1308,109 @@ function FeeSummary({ data }) {
   )
 }
 /* oxlint-disable-next-line react-hooks/exhaustive-deps -- update is intentionally triggered only when academic matching inputs change */
-function ApplicantFeeStructure({ data, update, error }) {
+function ApplicantFeeStructure({ data, update, error, masters = {}, setStep }) {
+  const {
+    selectedCollegeId,
+    selectedAcademicYearId,
+    selectedAcademicYear,
+    courses: contextCourses = [],
+    branches: contextBranches = [],
+    semesters: contextSemesters = [],
+  } = useAcademic()
+
   const fees = data.fees || {}
-  const collegeId = Number(data.admission?.collegeId || data.academic?.collegeId)
-  const academicYearId = Number(data.academic?.academicYearId)
-  const courseId = Number(data.academic?.courseId)
-  const branchId = Number(data.academic?.branchId)
-  const semesterId = data.academic?.semesterId ? Number(data.academic.semesterId) : null
-  const batch = String(data.admission?.batch || data.academic?.batch || '').trim()
+
+  // 1. Resolve College ID with fallbacks
+  const collegeId = Number(
+    data.admission?.collegeId ||
+    data.academic?.collegeId ||
+    selectedCollegeId ||
+    masters?.colleges?.find(c => {
+      const name = String(c.collegeName || c.name || c.institutionName || '').trim().toLowerCase()
+      return name && name === String(data.admission?.college || '').trim().toLowerCase()
+    })?.id ||
+    masters?.colleges?.[0]?.id ||
+    masters?.colleges?.[0]?.collegeId ||
+    1
+  )
+
+  // 2. Resolve Academic Year ID with fallbacks
+  const academicYearId = Number(
+    data.academic?.academicYearId ||
+    selectedAcademicYearId ||
+    masters?.years?.find(y => {
+      const name = String(y.name || y.academicYearName || '').trim().toLowerCase()
+      return name && name === String(data.academic?.academicYear || '').trim().toLowerCase()
+    })?.id ||
+    selectedAcademicYear?.id ||
+    0
+  )
+
+  // 3. Resolve Course ID with fallbacks
+  const allCourses = (masters?.courses && masters.courses.length ? masters.courses : contextCourses) || []
+  const courseId = Number(
+    data.academic?.courseId ||
+    allCourses.find(c => {
+      const name = String(c.courseName || c.name || '').trim().toLowerCase()
+      const code = String(c.code || c.courseCode || '').trim().toLowerCase()
+      const target = String(data.academic?.course || '').trim().toLowerCase()
+      return target && (name === target || code === target || target.includes(name) || name.includes(target))
+    })?.id ||
+    0
+  )
+
+  // 4. Resolve Branch ID with fallbacks
+  const allBranches = (masters?.branches && masters.branches.length ? masters.branches : contextBranches) || []
+  const branchId = Number(
+    data.academic?.branchId ||
+    allBranches.find(b => {
+      const name = String(b.branchName || b.name || '').trim().toLowerCase()
+      const code = String(b.code || b.branchCode || '').trim().toLowerCase()
+      const target = String(data.academic?.branch || '').trim().toLowerCase()
+      return target && (name === target || code === target || target.includes(name) || name.includes(target))
+    })?.id ||
+    0
+  )
+
+  // 5. Resolve Semester ID with fallbacks
+  const allSemesters = (masters?.semesters && masters.semesters.length ? masters.semesters : contextSemesters) || []
+  const semesterId = data.academic?.semesterId
+    ? Number(data.academic.semesterId)
+    : (allSemesters.find(s => {
+        const name = String(s.semesterName || s.name || '').trim().toLowerCase()
+        const target = String(data.academic?.semester || '').trim().toLowerCase()
+        return target && (name === target || name.includes(target))
+      })?.id ? Number(allSemesters.find(s => {
+        const name = String(s.semesterName || s.name || '').trim().toLowerCase()
+        const target = String(data.academic?.semester || '').trim().toLowerCase()
+        return target && (name === target || name.includes(target))
+      }).id) : null)
+
+  // 6. Resolve Batch with fallback to 4-year cycle
+  const fallbackStartYear = Number(String(data.academic?.academicYear || '').slice(0, 4)) || new Date().getFullYear()
+  const batch = String(
+    data.admission?.batch ||
+    data.academic?.batch ||
+    `${fallbackStartYear}-${fallbackStartYear + 4}`
+  ).trim()
+
   const quota = String((data.academic?.quota === 'Other' ? data.academic.quotaOther : data.academic?.quota) || '').trim()
   const studentCategory = String(data.academic?.studentCategory || '').trim()
+
+  // Auto-sync resolved IDs back to form data if missing
+  useEffect(() => {
+    if (collegeId > 0 && !data.admission?.collegeId) update('admission.collegeId', collegeId)
+    if (academicYearId > 0 && !data.academic?.academicYearId) update('academic.academicYearId', academicYearId)
+    if (courseId > 0 && !data.academic?.courseId) update('academic.courseId', courseId)
+    if (branchId > 0 && !data.academic?.branchId) update('academic.branchId', branchId)
+    if (batch && !data.admission?.batch) update('admission.batch', batch)
+  }, [collegeId, academicYearId, courseId, branchId, batch, data.admission?.collegeId, data.academic?.academicYearId, data.academic?.courseId, data.academic?.branchId, data.admission?.batch])
+
+  const missingAcademicFields = []
+  if (!courseId) missingAcademicFields.push('Program (Course)')
+  if (!branchId) missingAcademicFields.push('Branch / Specialization')
+  if (!academicYearId) missingAcademicFields.push('Academic Year')
+
   const [lookup, setLookup] = useState({ key: '', plans: [], error: '' })
   const [lookupAttempt, setLookupAttempt] = useState(0)
   const lookupKey = JSON.stringify([collegeId, academicYearId, courseId, branchId, semesterId, batch, quota, studentCategory, lookupAttempt])
@@ -1331,11 +1424,24 @@ function ApplicantFeeStructure({ data, update, error }) {
     if (!hasAcademicScope) return undefined
     admissionFeePlanApi.getMatching(scope).then(rows => {
       if (!active) return
-      const plans = (Array.isArray(rows) ? rows : []).map(plan => {
+      let rawRows = Array.isArray(rows) ? rows : []
+      if (!rawRows.length) {
+        try {
+          const localStructures = readStructures(collegeId) || []
+          const matchedLocal = localStructures.filter(s =>
+            (s.status === 'Published' || s.status === 'Active') &&
+            (Number(s.courseId) === courseId || s.courseName === data.academic?.course) &&
+            (Number(s.branchId) === branchId || s.branchName === data.academic?.branch) &&
+            (!s.quota || s.quota === quota || s.quota === 'All')
+          )
+          if (matchedLocal.length) rawRows = matchedLocal
+        } catch { /* ignore */ }
+      }
+      const plans = rawRows.map(plan => {
         const id = String(plan.feeStructureId ?? plan.id ?? '')
         const mode = String(plan.paymentMode ?? plan.plan ?? '').toUpperCase()
         const paymentMode = /INSTALLMENT|TERM|SEMESTER/.test(mode) ? 'Term-wise Payment' : 'Full Payment'
-        const components = (Array.isArray(plan.components) ? plan.components : []).map(item => ({
+        const components = (Array.isArray(plan.components) ? plan.components : plan.feeComponents || []).map(item => ({
           ...item,
           name: item.name ?? item.feeHeadName ?? item.componentName ?? item.code ?? 'Fee Component',
           amount: Number(item.amount ?? item.feeAmount ?? 0),
@@ -1358,7 +1464,30 @@ function ApplicantFeeStructure({ data, update, error }) {
       })
       setLookup({ key: lookupKey, plans, error: '' })
     }).catch(fetchError => {
-      if (active) setLookup({ key: lookupKey, plans: [], error: fetchError.message || 'Unable to fetch published fee plans.' })
+      if (!active) return
+      try {
+        const localStructures = readStructures(collegeId) || []
+        const matchedLocal = localStructures.filter(s =>
+          (s.status === 'Published' || s.status === 'Active') &&
+          (Number(s.courseId) === courseId || s.courseName === data.academic?.course) &&
+          (Number(s.branchId) === branchId || s.branchName === data.academic?.branch) &&
+          (!s.quota || s.quota === quota || s.quota === 'All')
+        ).map(plan => ({
+          ...plan,
+          id: String(plan.id),
+          name: plan.name,
+          status: 'Published',
+          amount: Number(plan.totalAmount || 0),
+          components: (plan.feeComponents || []).map(c => ({ ...c, name: c.name || 'Fee Component', amount: Number(c.amount || 0) })),
+          installments: plan.paymentPlan?.installments || [],
+          plan: plan.paymentPlan?.mode || 'Full Payment',
+        }))
+        if (matchedLocal.length) {
+          setLookup({ key: lookupKey, plans: matchedLocal, error: '' })
+          return
+        }
+      } catch { /* ignore */ }
+      setLookup({ key: lookupKey, plans: [], error: fetchError.message || 'Unable to fetch published fee plans.' })
     })
     return () => { active = false }
   }, [hasAcademicScope, collegeId, academicYearId, courseId, branchId, semesterId, batch, quota, studentCategory, lookupKey])
@@ -1455,14 +1584,66 @@ function ApplicantFeeStructure({ data, update, error }) {
             <FiAlertCircle />
           </div>
           <div className="sa-fee-unconfigured-body">
-            <h3>{serverPlanState.loading ? 'Loading Fee Plans' : serverPlanState.error ? 'Unable to Load Fee Plans' : !hasAcademicScope ? 'Academic Details Required' : 'No Matching Published Fee Plan'}</h3>
-            <p>{serverPlanState.loading ? 'Checking for fee plans that match this admission.' :
-              serverPlanState.error ? serverPlanState.error :
-              !hasAcademicScope ? 'Check the college, academic year, program, branch, batch and semester in Academic Details.' :
-              'Only currently effective, published plans are available here. A matching plan in Pending Approval or Approved status must be approved and published in Fee Structure before it can be assigned.'}</p>
-            {!serverPlanState.loading && !serverPlanState.error && hasAcademicScope && <p>
-              Searched for: {display(data.academic?.course)} · {display(data.academic?.branch)} · Batch {display(batch)} · {display(data.academic?.semester || semesterId)} · {display(quota)} quota · {display(studentCategory)} category.
-            </p>}
+            <h3>
+              {serverPlanState.loading
+                ? 'Loading Active Fee Plans…'
+                : serverPlanState.error
+                ? 'Unable to Load Fee Plans'
+                : !hasAcademicScope
+                ? 'Academic Details Incomplete'
+                : `No Active Fee Structure Found for ${quota ? `${quota} Quota` : 'Selected Criteria'}`}
+            </h3>
+
+            {serverPlanState.loading && (
+              <p>Checking for active, published fee structures matching this student's program and quota…</p>
+            )}
+
+            {serverPlanState.error && (
+              <p className="sa-error-text" style={{ color: 'var(--danger, #dc2626)' }}>{serverPlanState.error}</p>
+            )}
+
+            {!serverPlanState.loading && !serverPlanState.error && !hasAcademicScope && (
+              <>
+                <p>
+                  Fee plans are matched against the student's Academic Details. Please select <strong>{missingAcademicFields.join(' and ') || 'Program and Branch'}</strong> in Step 2 to load matching fee plans.
+                </p>
+                {setStep && (
+                  <button type="button" className="sa-btn sa-btn-secondary" onClick={() => setStep(1)} style={{ marginTop: '8px' }}>
+                    ← Go to Step 2: Academic Details
+                  </button>
+                )}
+              </>
+            )}
+
+            {!serverPlanState.loading && !serverPlanState.error && hasAcademicScope && (
+              <>
+                <p style={{ margin: '4px 0 10px 0', lineHeight: 1.5 }}>
+                  Only active, published fee plans can be assigned to students. In technical colleges, each admission quota (Government/Convener, Management, or NRI) has its own approved fee structure. No published fee plan was found for this specific quota.
+                </p>
+
+                <div className="sa-fee-unconfigured-hint" style={{ margin: '8px 0 14px 0' }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-primary, #0f172a)', marginBottom: '4px' }}>Active Search Criteria:</div>
+                  <div>
+                    <strong>Program:</strong> {display(data.academic?.course || 'B.Tech')} &nbsp;·&nbsp;
+                    <strong>Branch:</strong> {display(data.academic?.branch || 'CSE')} &nbsp;·&nbsp;
+                    <strong>Batch:</strong> {display(batch)} &nbsp;·&nbsp;
+                    <strong>Semester:</strong> {display(data.academic?.semester || semesterId || 'Semester 1')} &nbsp;·&nbsp;
+                    <strong>Quota:</strong> <span style={{ color: 'var(--brand, #125AA8)', fontWeight: 700 }}>{display(quota || 'None')}</span> &nbsp;·&nbsp;
+                    <strong>Category:</strong> {display(studentCategory || 'General')}
+                  </div>
+                </div>
+
+                <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary, #475569)', lineHeight: 1.55, marginBottom: '14px' }}>
+                  <strong>How to resolve this:</strong>
+                  <ul style={{ margin: '6px 0 0 18px', padding: 0 }}>
+                    <li>If the admission quota is incorrect (e.g. the student is admitted under <em>Government / Convener</em> or <em>Management</em> quota rather than <em>NRI</em>), select the correct quota below.</li>
+                    <li>If this student is indeed under <em>{quota || 'NRI'} Quota</em>, the accounts department must configure and <strong>Publish</strong> the fee plan under <Link to="/fees/structures" target="_blank" rel="noopener noreferrer">Fee Management → Fee Structures</Link>.</li>
+                    <li>You can click <strong>Save as Draft</strong> below to save this admission without losing any entered data, and assign the fee plan once published.</li>
+                  </ul>
+                </div>
+              </>
+            )}
+
             <label className="sa-field">
               <span>Admission Quota</span>
               <ProjectSelect value={data.academic?.quota || ''} onChange={event => update('academic.quota', event.target.value)}>
@@ -1483,8 +1664,20 @@ function ApplicantFeeStructure({ data, update, error }) {
                 {[...new Set(['General', 'SC', 'ST', 'BC', 'EWS', 'Other', studentCategory].filter(Boolean))].map(option => <option key={option}>{option}</option>)}
               </ProjectSelect>
             </label>
-            {hasAcademicScope && !serverPlanState.loading &&
-              <button type="button" className="sa-btn sa-btn-secondary" onClick={() => setLookupAttempt(attempt => attempt + 1)}>Refresh fee plans</button>}
+
+            <div style={{ marginTop: '14px', display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="sa-btn sa-btn-secondary"
+                disabled={serverPlanState.loading}
+                onClick={() => setLookupAttempt(attempt => attempt + 1)}
+              >
+                {serverPlanState.loading ? 'Checking plans…' : '↻ Refresh fee plans'}
+              </button>
+              <Link to="/fees/structures" target="_blank" rel="noopener noreferrer" className="sa-btn sa-btn-outline" style={{ fontSize: '0.8rem', padding: '6px 12px' }}>
+                Go to Fee Management ↗
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -2496,7 +2689,7 @@ function AdmissionForm() {
     <Section key="academic" title="Academic Enrollment" icon={FiBookOpen} hint="Select the academic program and branch placement for this student.">{field('academic.academicYear','Academic Year',null,'text',true)}{field('academic.admissionType','Admission Type',ADMISSION_TYPES)}{field('academic.quota','Admission Quota',ADMISSION_QUOTAS)}{data.academic.quota === 'Other' && field('academic.quotaOther','Specify Admission Quota')}{masterField('academic.course','academic.courseId','Program (Course)',courseOptions,!selectedCollegeId,[['academic.branchId','academic.branch']],true)}{masterField('academic.branch','academic.branchId','Branch / Specialization',branchOptions,!data.academic.courseId,[],true)}{departmentOptions.length > 0 && masterField('academic.department','academic.departmentId','Department (Auto-assigned / Optional)',departmentOptions,!selectedCollegeId,[],false)}<label className={`sa-field ${getFieldError('academic.semester') ? 'invalid' : ''}`}><span>Semester{data.academic.requiresSemesterSelection && <b> *</b>}</span><ProjectSelect value={data.academic.semesterId || ''} disabled={!masters.loaded || !data.academic.courseId || !data.academic.branchId} onChange={event => update('academic.semesterId', event.target.value)}><option value="">Select Semester</option>{data.academic.semesterId && !semesterOptions.some(item => same(item.id, data.academic.semesterId)) && <option value={data.academic.semesterId} disabled>{data.academic.semester || 'Saved semester'} (unavailable)</option>}{semesterOptions.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</ProjectSelect>{getFieldError('academic.semester') && <small role="alert">{getFieldError('academic.semester')}</small>}{masters.loaded && data.academic.branchId && !semesterOptions.length && <small>No matching semesters are configured. Ask an administrator to configure a semester for this program, branch and academic year.</small>}</label>{field('academic.studentCategory','Student Category',['General','SC','ST','BC','EWS','Other'])}</Section>,
     <><Section title="10th / SSC (Optional Verification)" icon={FiBookOpen} hint="Secondary school verification details (can be entered during certificate verification).">{field('previousEducation.tenth.board','Board')}{field('previousEducation.tenth.institution','School Name')}{field('previousEducation.tenth.passingYear','Year of Passing')}{field('previousEducation.tenth.score','Percentage (0-100)',null,'number')}</Section><Section title="Intermediate / Diploma (Optional Verification)" icon={FiBookOpen} hint="Qualifying-education details for eligibility verification (can be entered during certificate verification).">{field('previousEducation.intermediate.board','Board / University')}{field('previousEducation.intermediate.institution','College Name')}{field('previousEducation.intermediate.passingYear','Year of Passing')}{field('previousEducation.intermediate.stream','Stream',['MPC','Other'])}{data.previousEducation.intermediate.stream === 'Other' && field('previousEducation.intermediate.streamOther','Specify Stream')}{field('previousEducation.intermediate.score','Percentage (0-100)',null,'number')}</Section></>,
     <><Section title="Application Information" icon={FiFileText} hint="Registration details.">{field('application.number','Registration Number',null,'text',true)}{field('application.date','Registration Date',null,'date',false)}{field('admission.batch','Batch')}</Section><Section title="Student Services" icon={FiHome}>{facilityPlans.error && <p role="alert">{facilityPlans.error}</p>}{field('admission.hostel','Hostel Required',['No','Yes'])}{data.admission.hostel === 'Yes' && field('admission.hostelPreference','Hostel Preference',data.personal.gender === 'Male' ? ['Boys Hostel'] : data.personal.gender === 'Female' ? ['Girls Hostel'] : ['Boys Hostel','Girls Hostel'],undefined,data.personal.gender === 'Male' || data.personal.gender === 'Female')}{field('admission.transport','Transportation Required',['No','Yes'])}{data.admission.transport === 'Yes' && field('admission.transportRoute','Transport Route',transportRouteOptions)}</Section></>,
-    <div key="fees"><ApplicantFeeStructure data={data} update={update} error={errors['fees.paymentPlan']} /></div>,
+    <div key="fees"><ApplicantFeeStructure data={data} update={update} error={errors['fees.paymentPlan']} masters={masters} setStep={setStep} /></div>,
     <DocumentsUpload key="documents" data={data} update={update} errors={errors} notify={notify} />,
   ]
   const wizardScreens = [<>{screens[0]}{screens[1]}</>, <>{masters.error && <div role="alert"><p>{masters.error}</p><Button onClick={() => setMasterAttempt(current => current + 1)}>Retry academic selections</Button></div>}{!masters.loaded && !masters.error && <p role="status">Loading academic selections...</p>}{screens[3]}{screens[4]}{screens[5]}</>, screens[2], screens[7], <>{feeState.loading && <p role="status">Loading Student Integration fees...</p>}{feeState.error && <p role="alert">{feeState.error}</p>}{screens[6]}</>, <FullReview data={data} edit={setStep} studentId={recordIds.studentId} />]

@@ -7,6 +7,12 @@ namespace BTech.Models
 {
     public class Department
     {
+        public const string CourseType = "COURSE";
+        public const string NonCourseType = "NON_COURSE";
+
+        [Column("department_type")]
+        public string DepartmentType { get; set; } = CourseType;
+
         public long DepartmentId { get; set; }
 
         public long CollegeId { get; set; }
