@@ -58,8 +58,10 @@ namespace BTech.Middleware
                     DefaultMaxBodyLength));
 
             var stopwatch = Stopwatch.StartNew();
-            var requestBody = await ReadRequestBodyAsync(context, maxBodyLength);
-            var requestUrl = BuildSafeRequestUrl(context);
+            var isOtpRequest = context.Request.Path.StartsWithSegments("/api/otp", StringComparison.OrdinalIgnoreCase)
+                || context.Request.Path.StartsWithSegments("/api/v1/auth/forgot-password", StringComparison.OrdinalIgnoreCase);
+            var requestBody = isOtpRequest ? "<OTP request body omitted>" : await ReadRequestBodyAsync(context, maxBodyLength);
+            var requestUrl = isOtpRequest ? context.Request.Path.ToString() : BuildSafeRequestUrl(context);
             var operation = GetOperationName(context.Request.Method);
 
             LogRequest(context, operation, requestUrl, requestBody);
@@ -83,7 +85,7 @@ namespace BTech.Middleware
                 stopwatch.Stop();
                 context.Response.Body = originalResponseBody;
 
-                var responseBody = ReadResponseBody(context, captureStream);
+                var responseBody = isOtpRequest ? "<OTP response body omitted>" : ReadResponseBody(context, captureStream);
                 LogResponse(
                     context,
                     operation,
@@ -516,7 +518,7 @@ namespace BTech.Middleware
                     cancellationToken);
             }
 
-            
+
 
             public override async ValueTask WriteAsync(
     ReadOnlyMemory<byte> buffer,

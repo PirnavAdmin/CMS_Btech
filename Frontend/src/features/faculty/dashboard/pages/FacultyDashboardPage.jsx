@@ -48,8 +48,6 @@ function DashboardContent({ snapshot, facultyName }) {
       <img className="faculty-dashboard-welcome-art" src="/university-campus.svg" alt="" aria-hidden="true" />
     </section>
 
-    <DashboardMetrics snapshot={snapshot} />
-
     {!hasRecords && <section className="faculty-dashboard-empty-card">
       <FacultyEmptyState
         icon={FiBookOpen}
@@ -169,6 +167,9 @@ export default function FacultyDashboardPage() {
     <main className="portal-page faculty-dashboard-page">
       <header className="faculty-dashboard-heading">
         <div><p className="portal-eyebrow">DIGITAL CAMPUS / TEACHING FACULTY</p><h1>Dashboard</h1><p>Welcome back, {facultyName || snapshot?.faculty?.fullName || 'Faculty'}. Review your classes, pending actions and academic schedule.</p></div>
+        <div className="faculty-dashboard-heading-aside">
+          {snapshot && <DashboardMetrics snapshot={snapshot} />}
+        </div>
       </header>
       {loading && !snapshot ? <LoadingDashboard /> : error && !snapshot ? <DashboardError message={error} retry={retry} loading={loading} /> : snapshot ? <>{error && <DashboardError message={error} retry={retry} loading={loading} />}<DashboardContent snapshot={snapshot} facultyName={facultyName} /></> : null}
     </main>

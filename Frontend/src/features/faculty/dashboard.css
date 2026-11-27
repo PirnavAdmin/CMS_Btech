@@ -221,9 +221,9 @@
 
 .faculty-dashboard-schedule li {
   display: grid;
-  grid-template-columns: minmax(145px, 0.7fr) minmax(0, 1.5fr) auto;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: center;
-  gap: 14px;
+  gap: 0;
   padding: 12px 0;
   border-top: 1px solid var(--border);
 }
@@ -231,16 +231,37 @@
 .faculty-dashboard-time {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  min-width: 0;
   gap: 7px;
   color: var(--brand);
   font-size: 11px;
   font-weight: 700;
+  text-align: center;
 }
 
 .faculty-dashboard-class {
   display: grid;
+  align-content: center;
+  justify-items: center;
   gap: 4px;
   min-width: 0;
+  height: 100%;
+  padding-inline: 10px;
+  border-left: 1px solid var(--border);
+  text-align: center;
+}
+
+.faculty-dashboard-schedule .faculty-dashboard-status,
+.faculty-dashboard-schedule .faculty-dashboard-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  min-width: 0;
+  padding-inline: 10px;
+  border-left: 1px solid var(--border);
+  text-align: center;
 }
 
 .faculty-dashboard-class strong,
@@ -445,6 +466,14 @@
 
   .faculty-dashboard-time {
     grid-column: 1 / -1;
+  }
+
+  .faculty-dashboard-class,
+  .faculty-dashboard-schedule .faculty-dashboard-status,
+  .faculty-dashboard-schedule .faculty-dashboard-action {
+    height: auto;
+    padding-inline: 0;
+    border-left: 0;
   }
 
   .faculty-dashboard-action,
@@ -868,6 +897,16 @@
   min-width: 260px;
 }
 
+#root .portal-shell .faculty-dashboard-heading-aside {
+  display: flex;
+  flex: 0 1 850px;
+  align-self: flex-start;
+  width: 100%;
+  margin-left: auto;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
 #root .portal-shell .faculty-dashboard-metrics-top {
   width: min(100%, 1040px);
   margin: 0;
@@ -905,7 +944,7 @@
   font-size: 9px;
 }
 
-@media (max-width: 1350px) {
+@media (max-width: 1100px) {
   #root .portal-shell .faculty-dashboard-heading {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -923,7 +962,7 @@
   #root .portal-shell .faculty-dashboard-heading-aside {
     width: 100%;
     flex: none;
-    justify-items: start;
+    justify-content: flex-start;
   }
 
   #root .portal-shell .faculty-dashboard-metrics-top {
