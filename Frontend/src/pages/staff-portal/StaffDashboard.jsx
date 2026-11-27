@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { FiAlertCircle, FiArrowRight, FiBell, FiCalendar, FiCheck, FiCheckCircle, FiClock, FiFileText, FiInbox, FiMapPin, FiUser, FiUserCheck, FiUsers, FiX } from 'react-icons/fi'
+import { getAuthStorage } from '../../auth/auth.js'
 import {
   getDashboardMetrics,
   RECENT_NOTICES,
@@ -12,6 +13,7 @@ import './staff-portal.css'
 
 export default function StaffDashboard() {
   const navigate = useNavigate()
+  const userName = getAuthStorage()?.getItem('btech-user-name')?.trim() || STAFF_USER.name
 
   // Interactive local states
   const [attendanceMarked, setAttendanceMarked] = useState(false)
@@ -35,14 +37,14 @@ export default function StaffDashboard() {
   }
 
   return (
-    <div className="sp-page">
+    <div className="sp-page sp-dashboard-page">
       {/* Page Header */}
       <header className="sp-heading">
         <div>
           <p className="sp-eyebrow">DIGITAL CAMPUS / NON-TEACHING STAFF</p>
           <h1>Dashboard</h1>
           <p>
-            Welcome back, {STAFF_USER.name}. Review your shifts, pending lab
+            Welcome back, {userName}. Review your shifts, pending lab
             operations, circulars and campus meetings.
           </p>
         </div>
@@ -53,7 +55,7 @@ export default function StaffDashboard() {
           <section className="sp-welcome-card">
             <div className="sp-welcome-content">
               <div className="sp-welcome-greeting">
-                <h2>Welcome back, {STAFF_USER.name}</h2>
+                <h2>Welcome back, {userName}</h2>
                 <span className="sp-chip-role">{STAFF_USER.designation}</span>
               </div>
 

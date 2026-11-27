@@ -151,6 +151,14 @@ public class FacultyCreateController : ControllerBase
                 return IdentityConflict("USER_CONTACTS_INCOMPLETE", "The selected account must have both email and mobile saved before linking. Faculty creation cannot add or correct account contacts. Select another eligible account or resolve its contacts separately.");
             if (!FacultyAccountResolver.ContactsMatch(user,officialEmail,mobile))
                 return IdentityConflict("USER_CONTACT_MISMATCH", "Submit the selected account's canonical email and mobile from account-lookup. Faculty creation cannot change account contacts.");
+            var expectedRole = request.FacultyType == "NON_TEACHING" ? "NON_TEACHING" : "FACULTY";
+            var activeRoles = await (from assignment in _context.UserRoles
+                                     join role in _context.Roles on assignment.RoleId equals role.Role_id
+                                     where assignment.UserId == user.user_id && assignment.Status == 1 && assignment.RemovedAt == null
+                                           && role.Status == 1 && role.DeletedAt == null
+                                     select role.RoleCode).ToListAsync(HttpContext.RequestAborted);
+            if (activeRoles.Count != 1 || !string.Equals(activeRoles[0], expectedRole, StringComparison.OrdinalIgnoreCase))
+                return IdentityConflict("FACULTY_ROLE_MISMATCH", "The selected account must have only the role matching the employee category. Correct its role in account management before linking.");
             officialEmail=user.Email!;
             mobile=user.Mobile!;
         }

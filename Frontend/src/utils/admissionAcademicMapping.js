@@ -1,7 +1,15 @@
 const sameId = (left, right) => String(left ?? '') === String(right ?? '')
 
+export const isSemesterActive = item => {
+  if (!item) return false
+  if ([true, 1, '1'].includes(item.isArchived) || String(item.status ?? '').toLowerCase() === 'archived') return false
+  const statusStr = String(item.status ?? item.isActive ?? '').trim().toLowerCase()
+  if (['0', 'inactive', 'false', 'disabled'].includes(statusStr) || item.status === 0 || item.isActive === false) return false
+  return true
+}
+
 export const admissionSemesterOptions = (semesters, academic, collegeId) => semesters
-  .filter(item => ![true, 1, '1'].includes(item.isArchived) && String(item.status ?? '').toLowerCase() !== 'archived')
+  .filter(isSemesterActive)
   .filter(item => (!item.collegeId || sameId(item.collegeId, collegeId)) &&
     ['courseId', 'branchId', 'academicYearId'].every(key => academic[key] && sameId(item[key], academic[key])))
   .map(item => ({ id: item.semesterId ?? item.id, name: item.semesterName ?? item.name ?? `Semester ${item.semesterNumber}` }))

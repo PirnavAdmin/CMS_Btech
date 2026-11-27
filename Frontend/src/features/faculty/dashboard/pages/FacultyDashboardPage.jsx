@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { FiAlertTriangle, FiArrowRight, FiBookOpen, FiCalendar, FiCheckCircle, FiClock, FiLayers, FiUsers } from 'react-icons/fi'
-import PortalLayout from '../../../../layouts/PortalLayout.jsx'
+import FacultyPortalLayout from '../../components/FacultyPortalLayout.jsx'
 import { getAuthStorage } from '../../../../auth/auth.js'
 import FacultyCardSkeleton from '../../components/FacultyCardSkeleton.jsx'
 import FacultyEmptyState from '../../components/FacultyEmptyState.jsx'
@@ -163,7 +163,7 @@ export default function FacultyDashboardPage() {
       window.removeEventListener('storage', syncFacultyName)
     }
   }, [])
-  return <PortalLayout title="Dashboard">
+  return <FacultyPortalLayout title="Dashboard">
     <main className="portal-page faculty-dashboard-page">
       <header className="faculty-dashboard-heading">
         <div><p className="portal-eyebrow">DIGITAL CAMPUS / TEACHING FACULTY</p><h1>Dashboard</h1><p>Welcome back, {facultyName || snapshot?.faculty?.fullName || 'Faculty'}. Review your classes, pending actions and academic schedule.</p></div>
@@ -173,5 +173,5 @@ export default function FacultyDashboardPage() {
       </header>
       {loading && !snapshot ? <LoadingDashboard /> : error && !snapshot ? <DashboardError message={error} retry={retry} loading={loading} /> : snapshot ? <>{error && <DashboardError message={error} retry={retry} loading={loading} />}<DashboardContent snapshot={snapshot} facultyName={facultyName} /></> : null}
     </main>
-  </PortalLayout>
+  </FacultyPortalLayout>
 }

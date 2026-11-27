@@ -1,3 +1,5 @@
+using BTech.Data;
+using Microsoft.EntityFrameworkCore;
 using BTech.DTOs.Course;
 using BTech.Models;
 using BTech.Repositories.Interfaces;
@@ -9,13 +11,16 @@ namespace BTech.Services.Implementations
     {
         private readonly ICourseRepository _courseRepository;
         private readonly IUserRepository _userRepository;
+        private readonly ApplicationDbContext _context;
 
         public CourseService(
             ICourseRepository courseRepository,
-            IUserRepository userRepository)
+            IUserRepository userRepository,
+            ApplicationDbContext context)
         {
             _courseRepository = courseRepository;
             _userRepository = userRepository;
+            _context = context;
         }
 
         public async Task<IEnumerable<CourseResponseDto>> GetAllAsync(
@@ -48,6 +53,8 @@ namespace BTech.Services.Implementations
         {
             var collegeId = await ResolveCollegeIdAsync(dto.CollegeId, userId);
 
+            await RequireCourseDepartmentAsync(dto.DepartmentId, collegeId);
+
             if (await _courseRepository.ExistsCodeAsync(collegeId, dto.EffectiveCode))
                 throw new InvalidOperationException(
                     $"Course code '{dto.EffectiveCode}' already exists in college {collegeId}. Inactive and deleted records also reserve their codes.");
@@ -77,6 +84,9 @@ namespace BTech.Services.Implementations
                 throw new ArgumentException("CollegeId must be a positive number.");
             if (collegeId != existing.CollegeId)
                 throw new ArgumentException("The course does not belong to the selected college. Moving a course between colleges is not supported by this endpoint.");
+
+            if (dto.DepartmentId != existing.DepartmentId)
+                await RequireCourseDepartmentAsync(dto.DepartmentId, collegeId);
 
             if (await _courseRepository.ExistsCodeAsync(collegeId, dto.EffectiveCode, courseId))
                 throw new InvalidOperationException(
@@ -111,6 +121,16 @@ namespace BTech.Services.Implementations
                 userId);
 
             return updated == null ? null : Map(updated);
+        }
+
+        private async Task RequireCourseDepartmentAsync(long? departmentId, long collegeId)
+        {
+            if (departmentId.HasValue && !await _context.Departments.AnyAsync(department =>
+                department.DepartmentId == departmentId.Value && department.CollegeId == collegeId &&
+                department.DeletedAt == null && department.DepartmentType == Department.CourseType))
+            {
+                throw new ArgumentException("Select a Course Department from the selected college.");
+            }
         }
 
         private async Task<long> ResolveCollegeIdAsync(

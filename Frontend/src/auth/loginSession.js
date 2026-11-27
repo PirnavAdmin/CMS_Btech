@@ -11,6 +11,11 @@ export function normalizeLoginSession(response) {
     user: {
       ...user,
       role: user.role || roles[0],
+      assignedRole: user.assignedRole ?? user.assignedRoleName ?? session.assignedRole ?? session.assignedRoleName,
+      roleName: user.roleName ?? session.roleName,
+      roleCode: user.roleCode ?? session.roleCode,
+      designation: user.designation ?? session.designation,
+      jobTitle: user.jobTitle ?? session.jobTitle,
       id: user.id ?? user.userId ?? session.userId,
       name: user.name ?? user.fullName ?? session.fullName,
       email: user.email ?? session.email,

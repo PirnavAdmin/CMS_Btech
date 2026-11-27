@@ -106,7 +106,7 @@ function PageErrorNotices({ pathname }) {
   </aside>
 }
 
-export default function DashboardLayout({ children }) {
+export default function DashboardLayout({ children, hideBreadcrumb = false }) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -411,7 +411,7 @@ export default function DashboardLayout({ children }) {
           </div>
         </header>
 
-        <section className="page-content" key={`${pathname}:${campusGeneration}`}><PageErrorNotices pathname={pathname} />{!(pathname === '/faculty' || pathname.startsWith('/faculty/')) && <nav className="app-breadcrumb" aria-label="Breadcrumb"><Link to="/dashboard">Home</Link>{financeBreadcrumbs ? financeBreadcrumbs.map((crumb, index) => <span className="app-breadcrumb__item" key={`${crumb.label}:${index}`}><span aria-hidden="true">/</span>{index === financeBreadcrumbs.length - 1 ? <strong>{crumb.label}</strong> : crumb.to ? <Link to={crumb.to}>{crumb.label}</Link> : <span>{crumb.label}</span>}</span>) : <><span aria-hidden="true">/</span><span>{breadcrumbSection}</span>{pageName !== breadcrumbSection && <><span aria-hidden="true">/</span><strong>{pageName}</strong></>}</>}</nav>}{children}</section>
+        <section className="page-content" key={`${pathname}:${campusGeneration}`}><PageErrorNotices pathname={pathname} />{!hideBreadcrumb && !(pathname === '/faculty' || pathname.startsWith('/faculty/')) && <nav className="app-breadcrumb" aria-label="Breadcrumb"><Link to="/dashboard">Home</Link>{financeBreadcrumbs ? financeBreadcrumbs.map((crumb, index) => <span className="app-breadcrumb__item" key={`${crumb.label}:${index}`}><span aria-hidden="true">/</span>{index === financeBreadcrumbs.length - 1 ? <strong>{crumb.label}</strong> : crumb.to ? <Link to={crumb.to}>{crumb.label}</Link> : <span>{crumb.label}</span>}</span>) : <><span aria-hidden="true">/</span><span>{breadcrumbSection}</span>{pageName !== breadcrumbSection && <><span aria-hidden="true">/</span><strong>{pageName}</strong></>}</>}</nav>}{children}</section>
         <DeactivationBlockedDialog />
 
         {/* Logout Confirmation Modal */}
