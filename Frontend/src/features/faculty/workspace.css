@@ -2696,17 +2696,18 @@
 }
 
 #root .portal-shell .fw-material-filter-status > button {
-  padding: 4px 0;
-  border: 0;
-  background: transparent;
+  padding: 4px 9px;
+  border: 1px solid color-mix(in srgb, var(--brand) 38%, var(--border));
+  border-radius: 8px;
+  background: var(--surface);
   color: var(--brand);
-  font: inherit;
+  font: 600 12px/1.2 var(--font-family);
   font-weight: 750;
   cursor: pointer;
 }
 
 #root .portal-shell .fw-material-filter-status > button:hover {
-  text-decoration: underline;
+  background: var(--brand-soft);
 }
 
 @media (max-width: 700px) {
@@ -2792,9 +2793,26 @@
 
 #root .portal-shell .fw-material-library-actions > .fw-button {
   min-height: 38px;
-  padding: 8px 11px;
-  font-size: 11px;
+  padding: 8px 12px;
+  border-color: color-mix(in srgb, var(--brand) 38%, var(--border));
+  background: var(--surface);
+  color: var(--brand);
+  font-size: 13px;
+  font-weight: 750;
   white-space: nowrap;
+}
+
+#root .portal-shell .fw-material-library-actions > .fw-button svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  stroke-width: 2.4;
+}
+
+#root .portal-shell .fw-material-library-actions > .fw-material-upload-button {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: var(--surface);
 }
 
 #root .portal-shell .fw-material-filter-count {
@@ -3701,8 +3719,25 @@
   flex: 0 0 32px;
   width: 32px;
   min-height: 32px;
-  border: 1px solid var(--border);
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--brand) 42%, var(--border));
+  border-radius: 9px;
   background: var(--surface);
+  color: var(--brand);
+}
+
+#root .portal-shell .fw-material-table .fw-material-actions .fw-icon-button svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  stroke-width: 2.4;
+}
+
+#root .portal-shell .fw-material-table .fw-material-actions .fw-icon-button:hover:not(:disabled) {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: var(--surface);
 }
 
 @media (max-width: 700px) {
@@ -3812,18 +3847,23 @@
   width: 100%;
   min-width: 0;
   overflow-x: auto;
+  overflow-y: hidden;
   border: 1px solid var(--border);
   border-radius: 13px;
   background: var(--surface);
+  isolation: isolate;
   scrollbar-width: thin;
 }
 
 #root .portal-shell .fw-timetable-table {
-  width: 100%;
-  min-width: 980px;
+  display: table;
+  width: max(100%, 1100px);
+  min-width: 1100px;
+  box-sizing: border-box;
   border-collapse: separate;
   border-spacing: 0;
   table-layout: fixed;
+  background-color: var(--surface);
 }
 
 #root .portal-shell .fw-timetable-table caption {
@@ -3839,7 +3879,7 @@
 #root .portal-shell .fw-timetable-table th {
   padding: 13px 14px;
   border-bottom: 1px solid var(--border);
-  background: var(--table-head);
+  background-color: var(--table-head) !important;
   color: var(--text-secondary);
   font-size: 10px;
   font-weight: 800;
@@ -3881,12 +3921,28 @@
   background: color-mix(in srgb, var(--surface-soft) 52%, var(--surface));
 }
 
+#root .portal-shell .fw-timetable-table tbody tr > td {
+  background-color: var(--surface) !important;
+}
+
+#root .portal-shell .fw-timetable-table tbody tr:nth-child(even) > td {
+  background-color: color-mix(in srgb, var(--surface-soft) 52%, var(--surface)) !important;
+}
+
 #root .portal-shell .fw-timetable-table tbody tr:hover {
   background: color-mix(in srgb, var(--brand-soft) 58%, var(--surface));
 }
 
+#root .portal-shell .fw-timetable-table tbody tr:hover > td {
+  background-color: color-mix(in srgb, var(--brand-soft) 58%, var(--surface)) !important;
+}
+
 #root .portal-shell .fw-timetable-table tbody tr.is-now {
   background: color-mix(in srgb, var(--brand-soft) 72%, var(--surface));
+}
+
+#root .portal-shell .fw-timetable-table tbody tr.is-now > td {
+  background-color: color-mix(in srgb, var(--brand-soft) 72%, var(--surface)) !important;
 }
 
 #root .portal-shell .fw-timetable-table tbody tr.is-next .fw-schedule-time {
@@ -4039,6 +4095,7 @@
   }
 
   #root .portal-shell .fw-timetable-table {
+    width: max(100%, 940px);
     min-width: 940px;
   }
 }
