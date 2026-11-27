@@ -7,8 +7,9 @@ namespace BTech.DTOs.Faculty
         [Range(0, long.MaxValue)]
         public long UserId { get; set; }
 
+        [Required]
         [RegularExpression("^(TEACHING|NON_TEACHING)$")]
-        public string FacultyType { get; set; } = "TEACHING";
+        public string FacultyType { get; set; } = string.Empty;
 
         public long? EmployeeProfileId { get; set; }
 

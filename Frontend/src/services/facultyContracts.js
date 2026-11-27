@@ -37,9 +37,12 @@ export const requiredNumber = (value, label) => {
   return number
 }
 export const facultyCreatePayload = value => {
+  const facultyType = String(value.employeeCategory || value.facultyType || '').trim().toUpperCase().replace(/[\s-]+/g, '_')
+  if (!['TEACHING', 'NON_TEACHING'].includes(facultyType)) throw new Error('Select Teaching or Non-Teaching employee category.')
   const payload = {
     // Zero explicitly requests account creation/resolution in the create API.
     userId: optionalNumber(value.userId) || 0,
+    facultyType,
     employeeProfileId: optionalNumber(value.employeeProfileId),
     collegeId: requiredNumber(value.collegeId, 'College'),
     departmentId: requiredNumber(value.departmentId, 'Department'),
