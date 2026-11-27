@@ -28,7 +28,7 @@ namespace BTech.Controllers.V1
         public async Task<IActionResult> Add(
             [FromBody] AddDepartmentDto request)
         {
-            if (!ModelState.IsValid)
+            if (!ModelState.IsValid || request.DepartmentType is not (null or Department.CourseType or Department.NonCourseType))
             {
                 return BadRequest(new
                 {
@@ -41,6 +41,7 @@ namespace BTech.Controllers.V1
             {
                 DepartmentName = request.DepartmentName.Trim(),
                 DepartmentCode = request.DepartmentCode.Trim(),
+                DepartmentType = request.DepartmentType ?? Department.CourseType,
                 CollegeId = request.CollegeId,
 
                 // ADDED - HOD
@@ -271,7 +272,7 @@ namespace BTech.Controllers.V1
             long id,
             [FromBody] EditDepartmentDto request)
         {
-            if (!ModelState.IsValid)
+            if (!ModelState.IsValid || request.DepartmentType is not (null or Department.CourseType or Department.NonCourseType))
             {
                 return BadRequest(new
                 {
@@ -302,6 +303,18 @@ namespace BTech.Controllers.V1
                 });
             }
 
+            if (request.DepartmentType == Department.NonCourseType && department.DepartmentType != Department.NonCourseType &&
+                (await _context.Courses.AnyAsync(course => course.DepartmentId == id && course.DeletedAt == null) ||
+                 await _context.Branches.AnyAsync(branch => branch.DepartmentId == id && branch.DeletedAt == null)))
+            {
+                return Conflict(new
+                {
+                    success = false,
+                    message = "Move linked programs and branches to another Course Department before changing this department type."
+                });
+            }
+
+            department.DepartmentType = request.DepartmentType ?? department.DepartmentType;
             department.DepartmentCode =
                 request.DepartmentCode.Trim();
 
@@ -427,6 +440,8 @@ namespace BTech.Controllers.V1
 
                 DepartmentName =
                     department.DepartmentName,
+
+                DepartmentType = department.DepartmentType,
 
                 DepartmentCode =
                     department.DepartmentCode,
