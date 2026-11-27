@@ -137,6 +137,7 @@ export const API_ENDPOINTS = Object.freeze({
     academicDetails: (id) => endpoint(`/api/v1/student-admissions/${id}/academic-details`),
     previousEducation: (id) => endpoint(`/api/v1/student-admissions/${id}/previous-education`),
     status: (id) => endpoint(`/api/v1/student-admissions/${id}/status`), submit: (id) => endpoint(`/api/v1/student-admissions/${id}/submit`),
+    sendAccountSetup: (id) => endpoint(`/api/v1/student-admissions/${id}/send-account-setup`),
     feeSummary: (id) => endpoint(`/api/v1/student-admissions/${id}/fee-summary`), feeStructure: (id) => endpoint(`/api/v1/student-admissions/${id}/fee-structure`),
     matchingFeePlans: endpoint('/api/v1/student-admissions/fee-plans'),
   }),
@@ -1616,6 +1617,13 @@ export const studentAdmissionStatusApi = {
     }
 
     return normalizeRecord({ ...res, ...latest, status: latest?.status || targetStatus })
+  },
+  sendAccountSetup: async (id) => {
+    const reqId = requiredId(id, 'Admission ID')
+    return normalizeRecord(await request(API_ENDPOINTS.studentAdmissions.sendAccountSetup(reqId), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    }))
   },
 }
 export const studentPreviousEducationApi = {

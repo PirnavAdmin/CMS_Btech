@@ -81,10 +81,20 @@ const formatPaymentPreference = value => {
 // the approval response explicitly supplies one; never infer delivery.
 const approvalNotice = result => {
   const data = result && typeof result === 'object' ? result : {}
-  const emailSent = [data.activationEmailSent, data.emailSent, data.activation?.emailSent, data.accountActivation?.emailSent].some(value => value === true)
+  const emailSent = [
+    data.activationEmailSent,
+    data.emailSent,
+    data.activation?.emailSent,
+    data.accountActivation?.emailSent,
+    data.credentialDeliveryStatus === 'Sent'
+  ].some(value => value === true)
   return emailSent
     ? 'Admission approved successfully. An account activation email has been sent to the student’s registered email address.'
-    : 'Admission approved successfully. Account activation email delivery was not confirmed by the backend.'
+    : data.credentialDeliveryStatus === 'FailedEmailDelivery'
+      ? 'Admission approved successfully. Note: Account setup email delivery failed (verify SMTP credentials).'
+      : data.credentialDeliveryStatus === 'FailedNoStudentEmail'
+        ? 'Admission approved successfully. Note: Student does not have an email address for account setup.'
+        : 'Admission approved successfully. Account activation email delivery was not confirmed by the backend.'
 }
 const FILTERS = [
   ['status', 'Admission Status'], ['course', 'Program'],
