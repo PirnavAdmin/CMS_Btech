@@ -5681,3 +5681,47 @@
     font-size: 9px;
   }
 }
+
+@media (min-width: 1101px) {
+  #root .portal-shell .fw-timetable-topbar > .fw-timetable-overview {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0;
+  }
+
+  #root .portal-shell .fw-timetable-topbar > .fw-timetable-overview > article {
+    gap: 4px;
+    padding: 10px;
+  }
+}
+
+#root .portal-shell .fw-timetable-page {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  min-width: 0;
+}
+
+#root .portal-shell .fw-timetable-topbar > .fw-timetable-overview > article {
+  position: relative;
+}
+
+#root .portal-shell .fw-timetable-topbar > .fw-timetable-overview > article::after {
+  position: absolute;
+  top: 16px;
+  right: 0;
+  bottom: 16px;
+  width: 1px;
+  background: color-mix(in srgb, var(--brand) 20%, var(--border));
+  content: '';
+  pointer-events: none;
+}
+
+#root .portal-shell .fw-timetable-topbar > .fw-timetable-overview > article:last-child::after {
+  display: none;
+}
+
+@media (max-width: 1100px) {
+  #root .portal-shell .fw-timetable-topbar > .fw-timetable-overview > article:nth-child(even)::after {
+    display: none;
+  }
+}
