@@ -216,7 +216,9 @@ export const DOCUMENTS_CONFIG = [
   ['aadhaarCard', 'Aadhaar Card'],
   ['tenthMemo', '10th / SSC Marks Memo'],
   ['qualifyingMemo', 'Intermediate / Diploma Marks Memo'],
-  ['transferCertificate', 'Transfer Certificate'],
+  ['allotmentOrder', 'Entrance Allotment Order / Rank Card'],
+  ['transferCertificate', 'Transfer Certificate (TC)'],
+  ['studyCertificate', 'Study & Conduct / Bonafide Certificate'],
   ['casteCertificate', 'Caste Certificate'],
   ['incomeCertificate', 'Income Certificate'],
 ]
@@ -1028,7 +1030,6 @@ export const REQUIRED_FIELDS = [
   'personal.lastName',
   'personal.gender',
   'personal.dob',
-  'personal.aadhaar',
   'contact.mobile',
   'contact.email',
   'contact.currentAddress.line1',

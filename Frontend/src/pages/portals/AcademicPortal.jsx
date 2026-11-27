@@ -9,6 +9,8 @@ import { studentService } from '../../services/portals/studentService.js'
 import { facultyNavigation, studentNavigation } from '../../components/portals/portalNavigation.js'
 import { DataTable, Field, Feedback, MockNotice, PortalDialog, Stats, Status } from '../../components/portals/PortalUI.jsx'
 import StudentDashboard from './StudentDashboard.jsx'
+import LiveStudentDashboard, { LiveStudentModule } from './LiveStudentDashboard.jsx'
+import { isPortalPreview } from '../../auth/portalPreview.js'
 import TeachingPortal from './TeachingPortal.jsx'
 import FacultyCampusPage from './FacultyCampusPage.jsx'
 import FacultyProfile from './FacultyProfile.jsx'
@@ -24,6 +26,7 @@ export default function AcademicPortal({ role }) {
   const { screen = 'dashboard' } = useParams()
   const nav = role === 'faculty' ? facultyNavigation : studentNavigation
   const title = nav.find(([key]) => key === screen)?.[1]
+  if (role === 'student' && title && !isPortalPreview()) return <PortalLayout title={title}>{screen === 'dashboard' ? <LiveStudentDashboard /> : <LiveStudentModule screen={screen} title={title} />}</PortalLayout>
   if (screen === 'syllabus') return <PortalLayout title={title}><main className="portal-page"><SyllabusPortalView role={role} /></main></PortalLayout>
   if (!title) return <Navigate to={`/${role}-portal/dashboard`} replace />
   if (role === 'faculty' && ['events', 'placements', 'materials'].includes(screen)) return <FacultyCampusPage key={screen} screen={screen} />
