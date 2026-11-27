@@ -6139,7 +6139,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   align-items: start;
-  gap: 18px 20px;
+  gap: 12px;
 }
 
 #root .portal-shell .restored-faculty-page:has(.tm-workspace) > .tf-heading {
@@ -6163,6 +6163,10 @@
 #root .portal-shell .restored-faculty-page:has(.tm-workspace) :is(.tm-mode-bar, .tm-config-card, .tm-roster-card, .portal-feedback) {
   grid-column: 1 / -1;
   min-width: 0;
+}
+
+#root .portal-shell .restored-faculty-page:has(.tm-workspace) :is(.tm-config-card, .tm-roster-card) {
+  margin-bottom: 0;
 }
 
 @media (max-width: 1100px) {
