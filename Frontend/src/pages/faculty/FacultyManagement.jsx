@@ -1490,6 +1490,23 @@ const sections = [
     ['emergencyName', 'Emergency Contact Name', 'text'], ['emergencyMobile', 'Emergency Contact Number', 'tel'], ['relationship', 'Relationship', 'text'],
   ] },
 ]
+const copyFormSections = source => source.map(section => ({
+  ...section,
+  fields: section.fields.map(field => [...field]),
+}))
+const teachingFacultyFormSections = copyFormSections(sections)
+const nonTeachingStaffFormSections = copyFormSections(sections).map(section => ({
+  ...section,
+  heading: section.heading.replace('Faculty', 'Staff'),
+  description: section.description.replace('Faculty', 'Staff'),
+  fields: section.fields
+    .filter(([key]) => key !== 'teachingExperience')
+    .map(field => field[0] === 'employeeId'
+      ? [field[0], 'Staff ID', ...field.slice(2)]
+      : field[0] === 'fullName'
+        ? [field[0], 'Staff Full Name', ...field.slice(2)]
+        : field),
+}))
 const FACULTY_DOCUMENTS = [
   ['aadhaar', 'Aadhaar Card'],
   ['pan', 'PAN Card'],
@@ -1584,19 +1601,20 @@ const validEmail = value => {
     && !['co', 'cm'].includes(labels[labels.length - 1].toLowerCase())
 }
 
-function validateFaculty(data, rows, basicTeaching = false) {
+function validateEmployee(data, rows, { sections: formSections = sections, basicTeaching = false, employeeLabel = 'Faculty' } = {}) {
   const errors = {}
-  sections.forEach(section => section.fields.forEach(([key, label, type, required]) => {
+  formSections.forEach(section => section.fields.forEach(([key, label, type, required]) => {
     if (required && !(basicTeaching && optionalTeachingCreateFields.has(key)) && !String(data[key] ?? '').trim()) errors[key] = label + ' is required.'
     if (data[key] && Array.isArray(type) && !type.includes(data[key])) errors[key] = 'Select a valid ' + label.toLowerCase() + '.'
   }))
   if (['Others', 'Other'].includes(data.employeeCategory) && !String(data.employeeCategoryOther || '').trim()) errors.employeeCategoryOther = 'Specify the employee category.'
-  if (!data.employeeId) errors.employeeId = 'Faculty Code is required.'
-  if (!data.fullName?.trim()) errors.fullName = 'Faculty full name is required.'
+  if (!data.employeeId) errors.employeeId = `${employeeLabel} Code is required.`
+  if (!data.fullName?.trim()) errors.fullName = `${employeeLabel} full name is required.`
   else if (data.fullName.trim().length < 2 || !/^[\p{L}\p{M} .?'-]+$/u.test(data.fullName.trim())) errors.fullName = 'Enter a valid name using letters (at least 2 characters).'
   if (data.departmentId && (!Number.isSafeInteger(Number(data.departmentId)) || Number(data.departmentId) <= 0)) errors.departmentId = 'Select a valid department.'
   for (const key of ['email', 'personalEmail']) if (data[key] && !validEmail(data[key])) errors[key] = 'Please enter a valid email format'
-  if (rows.some(row => row.id !== data.id && String(row.email || '').trim().toLowerCase() === data.email?.trim().toLowerCase())) errors.email = 'A faculty member with this email already exists.'
+  const emailValue = String(data.email || '').trim().toLowerCase()
+  if (emailValue && rows.some(row => row.id !== data.id && String(row.email || '').trim().toLowerCase() === emailValue)) errors.email = `A ${employeeLabel.toLowerCase()} member with this email already exists.`
   for (const key of ['mobile', 'alternateMobile', 'emergencyMobile']) {
     const number = String(data[key] ?? '').trim()
     if (number && !/^[6-9]\d{9}$/.test(number)) errors[key] = 'Enter a valid 10-digit mobile number starting with 6, 7, 8 or 9.'
@@ -1610,6 +1628,15 @@ function validateFaculty(data, rows, basicTeaching = false) {
   if (address && !/^[A-Za-z0-9\s,./#'()\-]+$/.test(address)) errors.address = 'Address contains unsupported characters.'
   return errors
 }
+const validateTeachingFaculty = (data, rows, basicCreate = false) => validateEmployee(data, rows, {
+  sections: teachingFacultyFormSections,
+  basicTeaching: basicCreate,
+  employeeLabel: 'Faculty',
+})
+const validateNonTeachingStaff = (data, rows) => validateEmployee(data, rows, {
+  sections: nonTeachingStaffFormSections,
+  employeeLabel: 'Staff',
+})
 
 function Avatar({ faculty, large = false }) {
   const [failedSrc, setFailedSrc] = useState('')
@@ -2334,15 +2361,13 @@ const getNextFacultyCode = (list = [], collegeId, collegeOptions = [], isNonTeac
   return `${prefix}${String(nextSeq).padStart(3, '0')}`
 }
 
-function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], departmentOptions = [], departmentLoading = false, departmentLoadError = '', selectedCollegeId = '', saving, saveError = '' }) {
+function FacultyForm({ staffType, initial, faculty, onSave, onCancel, collegeOptions = [], departmentOptions = [], departmentLoading = false, departmentLoadError = '', selectedCollegeId = '', saving, saveError = '' }) {
   const defaultCollegeId = initial?.collegeId || selectedCollegeId || collegeOptions[0]?.value || ''
-  const isInitialNonTeaching = (initial?.employeeCategory || initial?.employee_category) === 'Non-Teaching'
+  const isInitialNonTeaching = staffType ? staffType === 'Non-Teaching' : (initial?.employeeCategory || initial?.employee_category) === 'Non-Teaching'
   const [data, setData] = useState(() => {
     const base = normalize(initial)
     base.collegeId = base.collegeId || defaultCollegeId
-    if (isInitialNonTeaching) {
-      base.employeeCategory = 'Non-Teaching'
-    }
+    if (staffType) base.employeeCategory = staffType
     const isNT = base.employeeCategory === 'Non-Teaching'
     const isHex = val => !val || /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i.test(String(val).trim()) || /^[0-9a-f]{32}$/i.test(String(val).trim())
     const isLegacyOrShort = String(base.employeeId).startsWith('STF-') || String(base.employeeId).startsWith('FAC-') || String(base.employeeId).startsWith('NTS-')
@@ -2357,12 +2382,14 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], 
   const [touched, setTouched] = useState({})
   const markTouched = key => setTouched(prev => ({ ...prev, [key]: true }))
   const basicTeaching = !initial?.id && isInitialNonTeaching === false && data.employeeCategory === 'Teaching'
-  const formSections = sections.map(section => ({
+  const categorySections = data.employeeCategory === 'Non-Teaching' ? nonTeachingStaffFormSections : teachingFacultyFormSections
+  const formSections = categorySections.map(section => ({
     ...section,
     fields: section.fields.map(field => basicTeaching && optionalTeachingCreateFields.has(field[0])
       ? [field[0], field[1], field[2], false] : field),
   }))
-  const liveErrors = useMemo(() => validateFaculty(clean(data), faculty, basicTeaching), [data, faculty, basicTeaching])
+  const validate = data.employeeCategory === 'Non-Teaching' ? validateNonTeachingStaff : validateTeachingFaculty
+  const liveErrors = useMemo(() => validate(clean(data), faculty, basicTeaching), [data, faculty, basicTeaching, validate])
   useEffect(() => {
     // Keep displayed errors current, but leave a field cleared while the user
     // edits it. The next wizard action will validate it again when requested.
@@ -2410,15 +2437,15 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], 
   }
   const focusError = () => requestAnimationFrame(() => formRef.current?.querySelector('[aria-invalid="true"]')?.focus())
 
-  const stepTitles = [...sections.map(s => s.title), 'Documents']
+  const stepTitles = [...categorySections.map(s => s.title), 'Documents']
   const totalSteps = stepTitles.length
 
   const next = async event => {
     event.preventDefault()
     if (saving || photoBusy) return
-    const checked = validateFaculty(clean(data), faculty, basicTeaching)
-    if (step < sections.length) {
-      const keys = [...sections[step].fields.map(([key]) => key), ...(step === 1 ? ['employeeCategoryOther'] : [])]
+    const checked = validate(clean(data), faculty, basicTeaching)
+    if (step < categorySections.length) {
+      const keys = [...categorySections[step].fields.map(([key]) => key), ...(step === 1 ? ['employeeCategoryOther'] : [])]
       const currentErrors = Object.fromEntries(Object.entries(checked).filter(([key]) => keys.includes(key)))
       setErrors(currentErrors)
       if (Object.keys(currentErrors).length) { focusError(); return }
@@ -2427,7 +2454,7 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], 
       // Final Documents Step -> Save
       setErrors(checked)
       if (Object.keys(checked).length) {
-        setStep(checked.employeeCategoryOther ? 1 : Math.max(0, sections.findIndex(section => section.fields.some(([key]) => checked[key]))))
+        setStep(checked.employeeCategoryOther ? 1 : Math.max(0, categorySections.findIndex(section => section.fields.some(([key]) => checked[key]))))
         focusError()
         return
       }
@@ -2450,7 +2477,7 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], 
   }
 
   const section = formSections[step] ?? null
-  const isDocumentsStep = step === sections.length
+  const isDocumentsStep = step === categorySections.length
   const isFinalStep = step === totalSteps - 1
   const isStepOptional = (section && !section.fields.some(([, , , required]) => required)) || isDocumentsStep
   const validationMessage = Object.entries(errors)
@@ -2506,7 +2533,7 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], 
             )}
             {section ? (
               <div className="fm-form-grid">
-                {section.fields.filter(([key]) => !(data.employeeCategory === 'Non-Teaching' && key === 'teachingExperience')).map(field => (
+                {section.fields.map(field => (
                   <Field key={field[0]} field={field[0] === 'employeeCategory' && ['Teaching', 'Non-Teaching'].includes(initial.employeeCategory) ? [field[0], field[1], 'readonly', field[3]] : field} data={data} errors={errors} update={update} collegeOptions={collegeOptions} departmentOptions={departmentOptions} departmentLoading={departmentLoading} departmentLoadError={departmentLoadError} touched={touched} liveErrors={liveErrors} markTouched={markTouched} />
                 ))}
               </div>
@@ -2545,6 +2572,12 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], 
     </div>
   )
 }
+function TeachingFacultyForm(props) {
+  return <FacultyForm {...props} staffType="Teaching" />
+}
+function NonTeachingStaffForm(props) {
+  return <FacultyForm {...props} staffType="Non-Teaching" />
+}
 function AssignmentList({ faculty, onRemove }) {
   const [pending, setPending] = useState(null)
   return (
@@ -2578,7 +2611,7 @@ function ProfileCard({ title, icon: Icon, rows = [] }) {
   return <InfoCard title={title} icon={Icon} rows={rows} />
 }
 
-function FacultyManagement() {
+function FacultyManagementWorkspace({ staffType = null }) {
   const [sort, setSort] = useState('name')
   const { canAction } = useScreenAccess()
   const canCreate = canAction('/faculty','create'), canEdit = canAction('/faculty','edit')
@@ -2697,7 +2730,7 @@ function FacultyManagement() {
           const matchedListed = faculty.find(f => String(f.id) === String(targetId) || String(f.facultyId) === String(targetId) || String(f.employeeId) === String(targetId))
           const existingAssignments = (allocations && allocations.length) ? allocations : (matchedListed?.assignments || safeMember.assignments || [])
           const merged = mergeFacultyData(matchedListed, safeMember, profile)
-          if (!scopeRecords([merged]).length) { setDetail(null); return }
+          if (!scopeRecords([merged]).length || (staffType && employeeCategoryOf(merged) !== staffType)) { setDetail(null); return }
           setDetail(normalize({
             ...merged,
             ...normalizeFaculty({ ...merged, facultyId: safeMember.id || targetId }),
@@ -2712,7 +2745,7 @@ function FacultyManagement() {
       })
       .catch(() => {})
     return () => { active = false }
-  }, [targetId, faculty, scopeRecords])
+  }, [targetId, faculty, scopeRecords, staffType])
   const queryParams = new URLSearchParams(location.search)
   const categoryParam = queryParams.get('category')
   const [selectedCategory, setSelectedCategory] = useState(
@@ -2730,15 +2763,16 @@ function FacultyManagement() {
 
   const teachingFaculty = useMemo(() => faculty.filter(f => employeeCategoryOf(f) === 'Teaching'), [faculty])
   const nonTeachingFaculty = useMemo(() => faculty.filter(f => employeeCategoryOf(f) === 'Non-Teaching'), [faculty])
-  const activeCategory = selectedCategory || 'Teaching'
+  const activeCategory = staffType || selectedCategory || 'Teaching'
   const categoryFaculty = activeCategory === 'Non-Teaching' ? nonTeachingFaculty : teachingFaculty
   const currentDesignations = useMemo(() => getDesignationOptions(activeCategory), [activeCategory])
 
-  const listed = faculty.find(item => String(item.id) === String(targetId) || String(item.facultyId) === String(targetId) || String(item.employeeId) === String(targetId))
+  const listed = faculty.find(item => (String(item.id) === String(targetId) || String(item.facultyId) === String(targetId) || String(item.employeeId) === String(targetId)) && (!staffType || employeeCategoryOf(item) === staffType))
   // The directory route must never render an old detail record. This can occur
   // while navigation is settling after a profile or edit screen is closed.
-  const selected = targetId ? (detail && String(detail.id) === String(targetId) ? { ...listed, ...detail, assignments: (detail?.assignments && detail.assignments.length) ? detail.assignments : (listed?.assignments || []) } : (listed ? { ...listed, ...detail } : detail)) : null
-  const assignedFaculty = faculty.find(item => item.id === assignmentId)
+  const selectedCandidate = targetId ? (detail && String(detail.id) === String(targetId) ? { ...listed, ...detail, assignments: (detail?.assignments && detail.assignments.length) ? detail.assignments : (listed?.assignments || []) } : (listed ? { ...listed, ...detail } : detail)) : null
+  const selected = selectedCandidate && (!staffType || employeeCategoryOf(selectedCandidate) === staffType) ? selectedCandidate : null
+  const assignedFaculty = faculty.find(item => String(item.id) === String(assignmentId) || String(item.facultyId) === String(assignmentId))
   const departments = [...new Set(departmentOptions.map(item => item.label).filter(Boolean))]
   const filtered = useMemo(() => categoryFaculty.filter(item => {
     const displayCode = formatFacultyDisplayCode(item, collegeOptions, faculty)
@@ -2811,7 +2845,7 @@ function FacultyManagement() {
   }
   const refreshAssignments = async () => {
     const assignments = await facultyService.getSubjectAllocations({ FacultyId: assignmentId })
-    setFaculty(rows => rows.map(row => row.id === assignmentId ? { ...row, assignments } : row))
+    setFaculty(rows => rows.map(row => String(row.id) === String(assignmentId) ? { ...row, assignments } : row))
   }
   const removeAssignment = async id => {
     try {
@@ -2863,8 +2897,8 @@ function FacultyManagement() {
         maxWidth="820px"
         className="faculty-form-dialog"
       >
-        <div className="faculty-management faculty-form-dialog-content">
-          <FacultyForm
+        <div className={`faculty-management faculty-form-dialog-content ${defaultNewCategory === 'Non-Teaching' ? 'faculty-management--non-teaching' : 'faculty-management--teaching'}`} data-staff-type={defaultNewCategory}>
+          {defaultNewCategory === 'Non-Teaching' ? <NonTeachingStaffForm
           key={location.key + ':' + Boolean(detail) + ':' + selectedCollegeId + ':' + defaultNewCategory}
           initial={selected || { employmentStatus: 'Working', employeeCategory: defaultNewCategory }}
           faculty={faculty}
@@ -2877,7 +2911,20 @@ function FacultyManagement() {
           saveError={loadError}
           onSave={save}
           onCancel={() => back()}
-          />
+          /> : <TeachingFacultyForm
+            key={location.key + ':' + Boolean(detail) + ':' + selectedCollegeId + ':' + defaultNewCategory}
+            initial={selected || { employmentStatus: 'Working', employeeCategory: defaultNewCategory }}
+            faculty={faculty}
+            collegeOptions={collegeOptions}
+            departmentOptions={departmentOptions}
+            departmentLoading={departmentLoading}
+            departmentLoadError={departmentLoadError}
+            selectedCollegeId={selectedCollegeId}
+            saving={saving}
+            saveError={loadError}
+            onSave={save}
+            onCancel={() => back()}
+          />}
         </div>
       </ReferenceViewDialog>
     )
@@ -2941,7 +2988,7 @@ function FacultyManagement() {
     ]
 
     content = (
-      <ReferenceViewDialog title={selected.employeeCategory === 'Non-Teaching' ? 'Staff Details' : 'Faculty Details'} onClose={() => back()} showExport={false} maxWidth="1080px"><div className="cm-profile-view" data-export-record>
+      <ReferenceViewDialog title={selected.employeeCategory === 'Non-Teaching' ? 'Staff Details' : 'Faculty Details'} onClose={() => back()} showExport={false} maxWidth="1080px"><div className={`cm-profile-view faculty-profile-view--${activeCategory === 'Non-Teaching' ? 'non-teaching' : 'teaching'}`} data-staff-type={activeCategory} data-export-record>
         <div className="cm-profile-top-bar">
           <button type="button" className="cm-button secondary erp-btn erp-btn--secondary" onClick={() => back()}>
             <FiArrowLeft aria-hidden="true" /> Back
@@ -3147,7 +3194,7 @@ function FacultyManagement() {
               </button>}
             </footer>
           </article>)}
-        </section> : <section className="faculty-directory">
+        </section> : <section className={`faculty-directory faculty-directory--${activeCategory === 'Non-Teaching' ? 'non-teaching' : 'teaching'}`} data-staff-type={activeCategory}>
 
           <header className="fm-section-bar">
             <div>
@@ -3174,7 +3221,7 @@ function FacultyManagement() {
           </FilterPanel>
           {filtered.length ? (
             <>
-              <div className="faculty-table-wrap">
+              <div className={`faculty-table-wrap faculty-table-wrap--${activeCategory === 'Non-Teaching' ? 'non-teaching' : 'teaching'}`}>
                 <table>
                   <caption className="fm-sr-only">{selectedCategory} directory and records</caption>
                   <thead>
@@ -3270,7 +3317,7 @@ function FacultyManagement() {
           ) : <strong aria-current="page">Faculty Directory</strong>}
         </nav>
       )}
-      <main className={`faculty-management${path === '/faculty' && !(categoryParam === 'Teaching' || categoryParam === 'Non-Teaching') ? ' faculty-management--overview' : ''}${path === '/faculty' && (categoryParam === 'Teaching' || categoryParam === 'Non-Teaching') ? ' faculty-management--directory' : ''}`}>
+      <main className={`faculty-management${path === '/faculty' && !(categoryParam === 'Teaching' || categoryParam === 'Non-Teaching') ? ' faculty-management--overview' : ''}${path === '/faculty' && (categoryParam === 'Teaching' || categoryParam === 'Non-Teaching') ? ' faculty-management--directory' : ''}${staffType === 'Teaching' ? ' faculty-management--teaching' : staffType === 'Non-Teaching' ? ' faculty-management--non-teaching' : ''}`} data-staff-type={staffType || undefined}>
         {loadError && path !== '/faculty/new' && !editId && <p className="fm-error" role="alert">{loadError} <button type="button" onClick={() => setReloadDirectory(value => value + 1)}>Retry</button></p>}
         {loadingFaculty ? <section className="fm-panel">Loading faculty records...</section> : content}
         {assignedFaculty && (
@@ -3280,6 +3327,23 @@ function FacultyManagement() {
       </main>
     </DashboardLayout>
   )
+}
+
+function TeachingFacultyScreen() {
+  return <FacultyManagementWorkspace staffType="Teaching" />
+}
+
+function NonTeachingStaffScreen() {
+  return <FacultyManagementWorkspace staffType="Non-Teaching" />
+}
+
+function FacultyManagement() {
+  const location = useLocation()
+  const category = new URLSearchParams(location.search).get('category')
+
+  if (category === 'Teaching') return <TeachingFacultyScreen key="teaching-faculty-screen" />
+  if (category === 'Non-Teaching') return <NonTeachingStaffScreen key="non-teaching-staff-screen" />
+  return <FacultyManagementWorkspace key="faculty-directory-overview" />
 }
 
 return { FacultyAttendanceScreen, AttendanceEditor, teachingDesignations, nonTeachingDesignations, getStoredDesignations, getDesignationOptions, formatTimeView, formatFacultyDisplayCode, default: FacultyManagement }

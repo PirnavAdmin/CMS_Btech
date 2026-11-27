@@ -1949,3 +1949,46 @@
     display: none;
   }
 }
+
+/* Compact the staff dashboard's vertical rhythm without changing other screens. */
+#root .portal-shell .staff-portal-workspace {
+  gap: 8px;
+  padding-block: 16px 32px;
+}
+
+.sp-dashboard-page > .sp-heading {
+  margin-bottom: 8px;
+}
+
+.sp-dashboard-page .sp-dashboard {
+  gap: 12px;
+}
+
+.sp-dashboard-page .sp-welcome-card {
+  gap: 20px;
+  padding: 20px 24px;
+}
+
+.sp-dashboard-page .sp-welcome-line {
+  margin-bottom: 6px;
+}
+
+.sp-dashboard-page .sp-tiles {
+  gap: 12px;
+}
+
+.sp-dashboard-page .sp-tile {
+  gap: 12px;
+  padding: 14px;
+}
+
+@media (max-width: 768px) {
+  #root .portal-shell .staff-portal-workspace {
+    gap: 8px;
+    padding-block: 14px 24px;
+  }
+
+  .sp-dashboard-page .sp-welcome-card {
+    padding: 16px;
+  }
+}

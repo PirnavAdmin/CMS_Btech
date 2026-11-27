@@ -1,5 +1,5 @@
 import ThemeColorPicker from '../../components/ThemeColorPicker'
-import { getUserRoleDisplayName } from '../../auth/auth'
+import { getAuthStorage, getUserRoleDisplayName } from '../../auth/auth'
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { FiBell, FiBookOpen, FiCalendar, FiCheckCircle, FiCheckSquare, FiChevronDown, FiChevronLeft, FiChevronRight, FiClock, FiFileText, FiGrid, FiLock, FiLogOut, FiMenu, FiSearch, FiUser, FiUsers, FiX } from 'react-icons/fi'
@@ -25,6 +25,7 @@ export const STAFF_NAVIGATION = [
 
 export default function StaffPortalLayout({ children, currentScreen = 'dashboard', title = 'Dashboard', subtitle }) {
   const navigate = useNavigate()
+  const userName = getAuthStorage()?.getItem('btech-user-name')?.trim() || 'Staff'
   const roleDisplayName = getUserRoleDisplayName()
   const [open, setOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('pirnav-sidebar-collapsed') === 'true')
@@ -180,14 +181,14 @@ export default function StaffPortalLayout({ children, currentScreen = 'dashboard
               {/* Dark-mode toggle */}
               <ThemeColorPicker />
 
-              {/* User Chip: sirisha / Non-Teaching Staff */}
+              {/* Signed-in staff account */}
               <details className="account-menu faculty-account-menu" ref={menuRef}>
                 <summary aria-label="Open staff account menu">
                   <span className="account-avatar faculty-account-avatar">
                     <FiUser aria-hidden="true" />
                   </span>
                   <span className="faculty-account-identity">
-                    <strong title="sirisha">sirisha</strong>
+                    <strong title={userName}>{userName}</strong>
                     <small>{roleDisplayName || 'Non-Teaching Staff'}</small>
                   </span>
                   <FiChevronDown className="faculty-account-chevron" aria-hidden="true" />
@@ -225,7 +226,7 @@ export default function StaffPortalLayout({ children, currentScreen = 'dashboard
         </header>
 
         {/* Workspace Container */}
-        <div className="page-content portal-workspace">
+        <div className="page-content portal-workspace staff-portal-workspace">
           {/* Breadcrumb */}
           <nav className="app-breadcrumb" aria-label="Breadcrumb">
             <Link to="/staff-portal/dashboard">Home</Link>
@@ -297,7 +298,7 @@ export default function StaffPortalLayout({ children, currentScreen = 'dashboard
               <FiX />
             </button>
           </header>
-          <p>Are you sure you want to log out of your session, sirisha?</p>
+          <p>Are you sure you want to log out of your session, {userName}?</p>
           <div className="portal-actions">
             <button type="button" onClick={() => setLogoutOpen(false)}>
               Stay Signed In
