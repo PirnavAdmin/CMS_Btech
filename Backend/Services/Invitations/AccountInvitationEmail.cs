@@ -25,8 +25,8 @@ public static class AccountInvitationEmail
         var heading=reset?"Password reset requested":"Welcome to Pirnav Engineering College";
         return $"""
             <h2>{heading}</h2>
-            <p>Hello {H(string.IsNullOrWhiteSpace(account.FullName)?"Administrator":account.FullName)},</p>
-            <p>{(reset?"An authorized administrator requested a password reset for your account.":"Your administrator account is ready. Please create your password and complete your profile.")}</p>
+            <p>Hello {H(string.IsNullOrWhiteSpace(account.FullName)?"CMS user":account.FullName)},</p>
+            <p>{(reset?"An authorized administrator requested a password reset for your account.":"Your CMS account is ready. Please create your password and complete your profile.")}</p>
             <p>College: {H(account.CollegeName)}<br>Assigned role: {H(account.RoleName)}<br>Login email: {H(account.Email)}</p>
             <p><a href="{H(setupUrl)}">{(reset?"Reset your password":"Set up your account")}</a></p>
             <p>This secure link expires 24 hours after issue and can be used once. A newer invitation replaces earlier links.</p>

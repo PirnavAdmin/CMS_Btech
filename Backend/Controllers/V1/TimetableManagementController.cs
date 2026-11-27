@@ -184,6 +184,11 @@ public sealed class TimetableManagementController : ControllerBase
     public async Task<IActionResult> Publish(long timetableId)
         => await Execute(()=>_service.PublishAsync(timetableId,UserId(),CollegeId(),IsSuperAdmin()),"Timetable published successfully.");
 
+    [HttpDelete("timetables/{timetableId:long}")]
+    [Authorize(Roles=AdminRoles)]
+    public async Task<IActionResult> DeleteDraft(long timetableId)
+        => await Execute(()=>_service.DeleteDraftAsync(timetableId,UserId(),CollegeId(),IsSuperAdmin()),"Draft timetable deleted successfully.");
+
     [HttpPost("timetables/{timetableId:long}/reopen")]
     [Authorize(Roles=AdminRoles)]
     public async Task<IActionResult> Reopen(long timetableId)

@@ -45,6 +45,15 @@ function mergeAcademicYears(...collections) {
   return [...byId.values()]
 }
 
+function currentExamYear(academic) {
+  const year = academic.currentAcademicYear
+  if (!academic.selectedCollegeId || !year) return null
+  const owner = year.collegeId ?? year.CollegeId ?? year.college_id
+  if (owner != null && String(owner) !== String(academic.selectedCollegeId)) return null
+  if (!(year.isCurrent === true || year.isActive === true || Number(year.status) === 1 || String(year.status).toLowerCase() === 'active')) return null
+  return normalizeAcademicYear(year)
+}
+
 export default function UnifiedExamManagement() {
   const academic = useAcademic()
   const { canAction } = useScreenAccess()
@@ -81,6 +90,7 @@ export default function UnifiedExamManagement() {
   const [subjects, setSubjects] = useState([])
   const [editingSubject, setEditingSubject] = useState(null)
   const [subjectLookup, setSubjectLookup] = useState(null)
+  const [sectionLookup, setSectionLookup] = useState(null)
   const [roomExam, setRoomExam] = useState(null)
   const [roomForm, setRoomForm] = useState({ scheduleId: '', buildingId: '', classroomId: '', students: '', invigilatorFacultyId: '' })
   const [editingAllocation, setEditingAllocation] = useState(null)
@@ -107,7 +117,7 @@ export default function UnifiedExamManagement() {
       collegeId = requireId(academic.selectedCollegeId, 'college')
       academicYearId = academic.selectedAcademicYearId ? requireId(academic.selectedAcademicYearId, 'academic year') : undefined
       const [lookupResponse, examRows, typeRows] = await Promise.all([
-        related('Academic lookups', () => call('exams/lookups', { query: { collegeId, academicYearId, includeSubjects: false } }), { data: {} }),
+        related('Academic lookups', () => call('exams/lookups', { query: { collegeId, academicYearId: currentExamYear(academic)?.id || academicYearId, includeSubjects: false } }), { data: {} }),
         list('exams', { collegeId, academicYearId }),
         related('Examination types', () => list('exam-types', { collegeId }), []),
       ])
@@ -174,9 +184,10 @@ export default function UnifiedExamManagement() {
 
   useEffect(() => { reload() }, [reload])
   useEffect(() => {
-    const academicYearId = academic.selectedAcademicYearId || academic.selectedAcademicYear?.id || academic.selectedAcademicYear?.academicYearId || academic.currentAcademicYear?.id || academic.currentAcademicYear?.academicYearId || ''
-    setDraft(value => ({ ...value, academicYearId: academicYearId ? String(academicYearId) : '' }))
-  }, [academic.selectedAcademicYearId, academic.selectedAcademicYear, academic.currentAcademicYear])
+    if (editingExam) return
+    const yearId = currentExamYear(academic)?.id || ''
+    setDraft(value => value.academicYearId === yearId ? value : { ...value, academicYearId: yearId, semesterId: '', sectionId: '' })
+  }, [academic.selectedCollegeId, academic.currentAcademicYear, editingExam])
 
   const loadExamAllocations = useCallback(async examId => {
     if (!examId) { setRoomExamAllocations([]); return [] }
@@ -282,7 +293,18 @@ export default function UnifiedExamManagement() {
   const occupiedRooms = roomAvailability.filter(room => !room.isAvailable && (!roomForm.buildingId || room.buildingBlock === roomForm.buildingId))
   const filteredBranches = lookups.branches.filter(row => !draft.courseId || String(row.courseId) === String(draft.courseId))
   const filteredSemesters = lookups.semesters.filter(row => (!draft.courseId || !row.courseId || String(row.courseId) === String(draft.courseId)) && (!draft.branchId || !row.branchId || String(row.branchId) === String(draft.branchId)))
-  const filteredSections = lookups.sections.filter(row => (!draft.courseId || !row.courseId || String(row.courseId) === String(draft.courseId)) && (!draft.branchId || !row.branchId || String(row.branchId) === String(draft.branchId)) && (!draft.semesterId || !row.semesterId || String(row.semesterId) === String(draft.semesterId)))
+  const sectionScope = [academic.selectedCollegeId, draft.academicYearId, draft.courseId, draft.branchId, draft.semesterId].join('/')
+  const filteredSections = []
+  const sectionNames = new Map()
+  if (sectionLookup?.scope === sectionScope) {
+    sectionLookup.rows.forEach(row => {
+      const name = String(row.name || row.sectionName || '').trim().replace(/\s+/g, ' ')
+      if (!name) return
+      const key = name.toLowerCase().replace(/^section\s+/, '')
+      if (!sectionNames.has(key) || String(row.id ?? row.sectionId) === String(draft.sectionId)) sectionNames.set(key, { ...row, displayName: `Section ${name.replace(/^section\s+/i, '')}` })
+    })
+    filteredSections.push(...sectionNames.values())
+  }
   const subjectCollegeId = academic.selectedCollegeId
   const { academicYearId, courseId, branchId, semesterId } = draft
   const subjectScope = [subjectCollegeId, academicYearId, courseId, branchId, semesterId].join('/')
@@ -290,6 +312,20 @@ export default function UnifiedExamManagement() {
   const canLoadSubjects = Boolean(subjectCollegeId && academicYearId && courseId && branchId && semesterId)
   const currentSubjectLookup = subjectLookup?.scope === subjectScope ? subjectLookup : null
   const filteredSubjects = currentSubjectLookup?.rows ?? []
+
+  useEffect(() => {
+    if (!subjectCollegeId || !academicYearId || !courseId || !branchId || !semesterId) return
+    const request = new AbortController()
+    setSectionLookup(null)
+    call('exams/lookups', { query: { collegeId: subjectCollegeId, academicYearId, courseId, branchId, semesterId, includeSubjects: false }, signal: request.signal })
+      .then(response => {
+        const result = unwrap(response)?.sections
+        if (!Array.isArray(result)) throw new Error('The server returned an invalid section list.')
+        if (!request.signal.aborted) setSectionLookup({ scope: sectionScope, rows: result.map(record) })
+      })
+      .catch(error => { if (!request.signal.aborted) setSectionLookup({ scope: sectionScope, rows: [], error: error.message || 'Unable to load sections.' }) })
+    return () => request.abort()
+  }, [sectionScope, subjectCollegeId, academicYearId, courseId, branchId, semesterId])
 
   useEffect(() => {
     if (!subjectEditorOpen || !canLoadSubjects) return
@@ -359,7 +395,7 @@ export default function UnifiedExamManagement() {
       branchId: String(exam.branchId ?? ''),
       year: String(exam.year ?? ''),
       semesterId: String(exam.semesterId ?? ''),
-      sectionId: String(exam.sectionId ?? ''),
+      sectionId: String(exam.sectionId ?? savedSchedules[0]?.sectionId ?? ''),
       startDate: dateOnly(exam.startDate),
       endDate: dateOnly(exam.endDate),
     })
@@ -385,7 +421,7 @@ export default function UnifiedExamManagement() {
   }
 
   function setDetail(key, value) {
-    setDraft(current => ({ ...current, [key]: value, ...(key === 'courseId' ? { branchId: '', semesterId: '', sectionId: '' } : {}), ...(key === 'branchId' ? { semesterId: '', sectionId: '' } : {}), ...(key === 'semesterId' ? { sectionId: '' } : {}) }))
+    setDraft(current => ({ ...current, [key]: value, ...(key === 'courseId' ? { branchId: '', semesterId: '', sectionId: '' } : {}), ...(key === 'branchId' ? { semesterId: '', sectionId: '' } : {}), ...(['semesterId', 'academicYearId'].includes(key) ? { sectionId: '' } : {}) }))
     setFieldErrors(current => {
       const next = { ...current }
       delete next[key]
@@ -441,7 +477,7 @@ export default function UnifiedExamManagement() {
     required.forEach(([key, message]) => { if (!String(draft[key] ?? '').trim()) nextErrors[key] = message })
     if (draft.examTypeId === '__others__' && !String(draft.customExamTypeName || '').trim()) nextErrors.customExamTypeName = 'Enter the custom examination type.'
     const hasOption = (options, value, keys) => options.some(option => keys.some(key => String(option[key]) === String(value)))
-    if (draft.academicYearId && !hasOption(lookups.academicYears, draft.academicYearId, ['id', 'academicYearId'])) nextErrors.academicYearId = 'Choose an academic year from the list.'
+    if (draft.academicYearId && (editingExam ? !hasOption(lookups.academicYears, draft.academicYearId, ['id', 'academicYearId']) : draft.academicYearId !== currentExamYear(academic)?.id)) nextErrors.academicYearId = 'Select the current academic year for this college.'
     if (draft.courseId && !hasOption(lookups.courses, draft.courseId, ['id', 'courseId'])) nextErrors.courseId = 'Choose a course from the list.'
     if (draft.branchId && !hasOption(filteredBranches, draft.branchId, ['id', 'branchId'])) nextErrors.branchId = 'Choose a department that belongs to the selected course.'
     if (draft.semesterId && !hasOption(filteredSemesters, draft.semesterId, ['id', 'semesterId'])) nextErrors.semesterId = 'Choose a semester that belongs to the selected course and department.'
@@ -473,6 +509,7 @@ export default function UnifiedExamManagement() {
     let savedExamId
     try {
       if (!draft.examName.trim() || !draft.examCode.trim()) throw new Error('Enter an examination name and code.')
+      if (!editingExam && (!currentExamYear(academic) || draft.academicYearId !== currentExamYear(academic).id)) throw new Error('Configure the current academic year for this college before saving.')
       if (!draft.startDate || !draft.endDate || draft.endDate < draft.startDate) throw new Error('Enter a valid examination date range.')
       if (status && !subjects.length) throw new Error('Add at least one subject and timetable entry before creating the examination.')
       const typeChoice = String(draft.examTypeId || '')
@@ -562,7 +599,7 @@ export default function UnifiedExamManagement() {
         <div className="uem-grid">
           <label className="uem-field"><span>Examination Name <b>*</b></span><input required aria-invalid={Boolean(fieldErrors.examName)} aria-describedby={fieldErrors.examName ? 'uem-error-examName' : undefined} value={draft.examName} onChange={e => setDetail('examName', e.target.value)} placeholder="Enter examination name" />{fieldErrors.examName && <small id="uem-error-examName" className="uem-field-error" role="alert">{fieldErrors.examName}</small>}</label>
           <label className="uem-field"><span>Examination Code <b>*</b></span><input required aria-invalid={Boolean(fieldErrors.examCode)} aria-describedby={fieldErrors.examCode ? 'uem-error-examCode' : undefined} value={draft.examCode} onChange={e => setDetail('examCode', e.target.value)} placeholder="Auto-generated code" />{fieldErrors.examCode && <small id="uem-error-examCode" className="uem-field-error" role="alert">{fieldErrors.examCode}</small>}</label>
-          <label className="uem-field"><span>Academic Year <b>*</b></span><select required aria-invalid={Boolean(fieldErrors.academicYearId)} aria-describedby={fieldErrors.academicYearId ? 'uem-error-academicYearId' : undefined} value={draft.academicYearId} onChange={e => setDetail('academicYearId', e.target.value)}><option value="">Select academic year</option>{lookups.academicYears.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select>{fieldErrors.academicYearId && <small id="uem-error-academicYearId" className="uem-field-error" role="alert">{fieldErrors.academicYearId}</small>}</label>
+          <label className="uem-field"><span>Academic Year <b>*</b></span><select required aria-invalid={Boolean(fieldErrors.academicYearId)} aria-describedby={fieldErrors.academicYearId ? 'uem-error-academicYearId' : undefined} value={draft.academicYearId} onChange={e => setDetail('academicYearId', e.target.value)}>{!draft.academicYearId && <option value="">{academic.loading ? 'Loading academic year…' : 'No current academic year configured'}</option>}{(editingExam ? lookups.academicYears.filter(row => String(row.id) === String(draft.academicYearId)) : [currentExamYear(academic)].filter(Boolean)).map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select>{fieldErrors.academicYearId && <small id="uem-error-academicYearId" className="uem-field-error" role="alert">{fieldErrors.academicYearId}</small>}</label>
           <label className="uem-field"><span>Examination Type <b>*</b></span><select required aria-invalid={Boolean(fieldErrors.examTypeId)} aria-describedby={fieldErrors.examTypeId ? 'uem-error-examTypeId' : undefined} value={draft.examTypeId} onChange={e => setDetail('examTypeId', e.target.value)}><option value="">Select examination type</option>{examTypeOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select>{fieldErrors.examTypeId && <small id="uem-error-examTypeId" className="uem-field-error" role="alert">{fieldErrors.examTypeId}</small>}</label>
           {draft.examTypeId === '__others__' && <label className="uem-field"><span>Custom Examination Type <b>*</b></span><input required aria-invalid={Boolean(fieldErrors.customExamTypeName)} aria-describedby={fieldErrors.customExamTypeName ? 'uem-error-customExamTypeName' : undefined} placeholder="Enter new examination type" value={draft.customExamTypeName || ''} onChange={e => setDetail('customExamTypeName', e.target.value)} />{fieldErrors.customExamTypeName && <small id="uem-error-customExamTypeName" className="uem-field-error" role="alert">{fieldErrors.customExamTypeName}</small>}</label>}
         </div>
@@ -574,7 +611,7 @@ export default function UnifiedExamManagement() {
           <label className="uem-field"><span>Department <b>*</b></span><select required disabled={!draft.courseId} aria-invalid={Boolean(fieldErrors.branchId)} aria-describedby={fieldErrors.branchId ? 'uem-error-branchId' : undefined} value={draft.branchId} onChange={e => setDetail('branchId', e.target.value)}><option value="">Select department</option>{draft.courseId && filteredBranches.map(row => <option key={row.id ?? row.branchId} value={row.id ?? row.branchId}>{row.name || row.branchName}</option>)}</select>{fieldErrors.branchId && <small id="uem-error-branchId" className="uem-field-error" role="alert">{fieldErrors.branchId}</small>}</label>
           <label className="uem-field"><span>Year</span><select value={draft.year} onChange={e => setDetail('year', e.target.value)}><option value="">Select year</option>{[1,2,3,4].map(year => <option key={year} value={year}>{year}{year===1?'st':year===2?'nd':year===3?'rd':'th'} Year</option>)}</select></label>
           <label className="uem-field"><span>Semester <b>*</b></span><select required aria-invalid={Boolean(fieldErrors.semesterId)} aria-describedby={fieldErrors.semesterId ? 'uem-error-semesterId' : undefined} value={draft.semesterId} onChange={e => setDetail('semesterId', e.target.value)}><option value="">Select semester</option>{filteredSemesters.map(row => <option key={row.id ?? row.semesterId} value={row.id ?? row.semesterId}>{row.name || row.semesterName}</option>)}</select>{fieldErrors.semesterId && <small id="uem-error-semesterId" className="uem-field-error" role="alert">{fieldErrors.semesterId}</small>}</label>
-          <label className="uem-field"><span>Section</span><select value={draft.sectionId} onChange={e => setDetail('sectionId', e.target.value)}><option value="">Select section</option>{filteredSections.map(row => <option key={row.id ?? row.sectionId} value={row.id ?? row.sectionId}>{row.name || row.sectionName}</option>)}</select></label>
+          <label className="uem-field"><span>Section</span><select disabled={!draft.semesterId || sectionLookup?.scope !== sectionScope || Boolean(sectionLookup?.error)} value={draft.sectionId} onChange={e => setDetail('sectionId', e.target.value)}><option value="">{!draft.semesterId ? 'Select section' : sectionLookup?.scope !== sectionScope ? 'Loading sections…' : sectionLookup.error ? 'Unable to load sections' : filteredSections.length ? 'Select section' : 'No sections available'}</option>{filteredSections.map(row => <option key={row.id ?? row.sectionId} value={row.id ?? row.sectionId}>{row.displayName}</option>)}</select>{sectionLookup?.scope === sectionScope && sectionLookup.error && <small className="uem-field-error" role="alert">{sectionLookup.error}</small>}</label>
         </div>
       </section>
       <section className="uem-form-section">
@@ -674,7 +711,7 @@ export default function UnifiedExamManagement() {
 }
 
 function initialDraft(academic) {
-  const academicYearId = academic.selectedAcademicYearId || academic.selectedAcademicYear?.id || academic.selectedAcademicYear?.academicYearId || academic.currentAcademicYear?.id || academic.currentAcademicYear?.academicYearId || ''
+  const academicYearId = currentExamYear(academic)?.id || ''
   return {
     examName: '', examCode: `EX-${new Date().getFullYear()}-${String(Date.now()).slice(-5)}`,
     academicYearId: academicYearId ? String(academicYearId) : '', examTypeId: '', customExamTypeName: '',

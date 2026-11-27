@@ -646,9 +646,9 @@ function LibraryScreen({ collegeId }) {
         ) : (
           <LibraryTable rows={visible} columns={columns} actions={actions} />
         )}
-        <footer className="library-pagination"><span>{filtered.length} matching records</span><label>Rows per page <select className="erp-select" value={size} onChange={event => { setSize(Number(event.target.value)); setPage(1) }}>
+        <footer className="library-pagination"><span className="library-pagination__count">{filtered.length} matching records</span><div className="library-pagination__controls"><label><span>Rows per page</span><select className="erp-select" value={size} onChange={event => { setSize(Number(event.target.value)); setPage(1) }}>
           {[10, 25, 50].map(value => <option key={value}>{value}</option>)}
-        </select></label>{totalPages > 1 && <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} />}</footer>
+        </select></label>{totalPages > 1 && <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} />}</div></footer>
       </>}
     </section>
     {(modal?.kind === 'edit' || modal?.kind === 'copies') && <BookEditor {...dialog} stockOnly={modal.kind === 'copies'} book={modal.row} books={catalog} categories={data.categories}

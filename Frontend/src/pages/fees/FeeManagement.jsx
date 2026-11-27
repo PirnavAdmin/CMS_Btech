@@ -749,7 +749,10 @@ export const FeeStructureWizardModule = (() => {
     const [previewConfigId, setPreviewConfigId] = useState("");
     const [scheduleTarget, setScheduleTarget] = useState("common");
     const [feeCategories, setFeeCategories] = useState([]);
-    const selectableFeeCategories = feeCategories.filter(row => String(row.name || "").trim().toLowerCase() !== "hostel");
+    const selectableFeeCategories = feeCategories.filter(row =>
+      (row.status === undefined || Number(row.status) === 1 || row.status === 'Active') &&
+      academicFeeComponent(row)
+    );
     const [serverPlans, setServerPlans] = useState([]);
     const lastBatchBranchRef = useRef("");
     const pendingBatchAutoFillRef = useRef("");
@@ -914,6 +917,7 @@ export const FeeStructureWizardModule = (() => {
     const addFeeComponent = () => {
       const type = feeCategories.find(row => String(row.id) === String(selectedFeeType));
       if (!type) return setError("Select a configured fee type.");
+      if (type.status !== undefined && Number(type.status) === 0) return setError("Inactive fee types cannot be added to new fee configurations.");
       if (defaultHeads.some(row => String(row.masterId) === String(type.id) || String(row.code || row.name).trim().toLowerCase() === String(type.code || type.name).trim().toLowerCase())) return setError("This fee type is already in the breakdown.");
       setDefaultHeads([...defaultHeads, { masterId: String(type.id), code: type.code || String(type.id), name: type.name, amount: "" }]);
       setSelectedFeeType("");
