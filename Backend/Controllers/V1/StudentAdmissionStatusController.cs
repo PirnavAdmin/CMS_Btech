@@ -401,6 +401,8 @@ namespace BTech.Controllers.V1
                     studentId = generatedStudentId,
                     accountProvisioningStatus,
                     credentialDeliveryStatus,
+                    emailSent = credentialDeliveryStatus == "Sent",
+                    activationEmailSent = credentialDeliveryStatus == "Sent",
 
                     allowedNextStatuses =
                         allowedNextStatuses,
@@ -412,6 +414,138 @@ namespace BTech.Controllers.V1
                         isFinalStatus
                 }
             });
+        }
+
+        // =========================================================
+        // POST - SEND / RESEND ACCOUNT SETUP EMAIL
+        // POST: api/v1/student-admissions/{admissionId}/send-account-setup
+        // =========================================================
+        [HttpPost("{admissionId:long}/send-account-setup")]
+        public async Task<IActionResult> SendAccountSetupEmail(long admissionId)
+        {
+            var admission = await _context.StudentAdmissions
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.AdmissionId == admissionId && !x.IsDeleted);
+
+            if (admission == null)
+            {
+                return NotFound(new
+                {
+                    success = false,
+                    message = "Student admission not found.",
+                    data = (object?)null
+                });
+            }
+
+            var status = AdmissionStatusRules.Normalize(admission.AdmissionStatus);
+            if (status != "Approved")
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = $"Account setup email can only be sent for approved admissions. Current status: '{status}'.",
+                    data = (object?)null
+                });
+            }
+
+            // Find linked student
+            var student = await _context.Students
+                .FirstOrDefaultAsync(s => s.AdmissionId == admissionId && s.DeletedAt == null);
+
+            long? userId = student?.UserId;
+            if (!userId.HasValue || userId.Value <= 0)
+            {
+                if (student == null)
+                {
+                    var studentId = await EnsureApprovedStudentAsync(admissionId);
+                    if (studentId.HasValue)
+                    {
+                        student = await _context.Students.FirstOrDefaultAsync(s => s.StudentId == studentId.Value);
+                    }
+                }
+
+                if (student != null)
+                {
+                    var accountResult = await EnsureApprovedStudentAccountAsync(student.StudentId, admissionId);
+                    userId = accountResult.UserId;
+                }
+            }
+
+            if (!userId.HasValue || userId.Value <= 0)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "No provisioned user account could be found or created for this student admission.",
+                    data = (object?)null
+                });
+            }
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.user_id == userId.Value && u.DeletedAt == null);
+            if (user == null)
+            {
+                return NotFound(new
+                {
+                    success = false,
+                    message = "Student user account record was not found.",
+                    data = (object?)null
+                });
+            }
+
+            if (string.IsNullOrWhiteSpace(user.Email))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Student account does not have a registered email address.",
+                    data = (object?)null
+                });
+            }
+
+            try
+            {
+                await _accountSetupService.SendSetupLinkAsync(user.user_id, "student");
+                _logger.LogInformation("Account setup email sent successfully for AdmissionId={AdmissionId}, StudentId={StudentId}, UserId={UserId}, Email={Email}",
+                    admissionId, student?.StudentId, user.user_id, user.Email);
+
+                return Ok(new
+                {
+                    success = true,
+                    message = $"Account setup email sent successfully to {user.Email}.",
+                    data = new
+                    {
+                        admissionId,
+                        studentId = student?.StudentId,
+                        userId = user.user_id,
+                        email = user.Email,
+                        credentialDeliveryStatus = "Sent",
+                        emailSent = true,
+                        activationEmailSent = true
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Failed to send account setup email for AdmissionId={AdmissionId}, StudentId={StudentId}, UserId={UserId}",
+                    admissionId, student?.StudentId, user.user_id);
+
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = $"Failed to deliver account setup email: {ex.Message}. Check SMTP configuration.",
+                    data = new
+                    {
+                        admissionId,
+                        studentId = student?.StudentId,
+                        userId = user.user_id,
+                        email = user.Email,
+                        credentialDeliveryStatus = "FailedEmailDelivery",
+                        emailSent = false,
+                        activationEmailSent = false
+                    }
+                });
+            }
         }
         private async Task<long?> EnsureApprovedStudentAsync(long admissionId)
         {
@@ -556,6 +690,44 @@ WHERE sa.AdmissionId = @admissionId
             else if (roleMapping.Status != 1 || roleMapping.RemovedAt != null)
             {
                 throw new InvalidOperationException("The linked student role is disabled. An administrator must review it before login.");
+            }
+
+            // Ensure college settings and college user mapping exist so AccountInvitationService can validate the college link
+            var collegeSetting = await _context.CollegeSettings.FirstOrDefaultAsync(cs =>
+                cs.CollegeId == student.CollegeId && cs.Status == 1);
+            if (collegeSetting == null)
+            {
+                var college = await _context.Colleges.FirstOrDefaultAsync(c =>
+                    c.CollegeId == student.CollegeId && c.DeletedAt == null);
+                if (college != null)
+                {
+                    collegeSetting = new CollegeSetting
+                    {
+                        CollegeId = college.CollegeId,
+                        CollegeName = college.CollegeName,
+                        CollegeCode = college.CollegeCode,
+                        CollegeEmail = college.Email,
+                        Status = 1
+                    };
+                    _context.CollegeSettings.Add(collegeSetting);
+                    await _context.SaveChangesAsync();
+                }
+            }
+
+            if (collegeSetting != null)
+            {
+                var userMapping = await _context.CollegeUserMappings.FirstOrDefaultAsync(m =>
+                    m.UserId == user.user_id && m.CollegeSettingId == collegeSetting.Id && m.Status == 1 && m.RemovedAt == null);
+                if (userMapping == null)
+                {
+                    _context.CollegeUserMappings.Add(new CollegeUserMapping
+                    {
+                        UserId = user.user_id,
+                        CollegeSettingId = collegeSetting.Id,
+                        Status = 1,
+                        AssignedAt = DateTime.UtcNow
+                    });
+                }
             }
 
             await _context.SaveChangesAsync();
