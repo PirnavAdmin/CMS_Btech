@@ -2445,7 +2445,7 @@ function AdmissionForm() {
   }, [masters.loaded, masters.courses, masters.branches, courseBranches, data.academic.course, data.academic.branch, data.admission.collegeId])
   const semesterOptions = admissionSemesterOptions(masters.semesters, data.academic, data.admission.collegeId)
   useEffect(() => {
-    if (!masters.loaded || !semesterOptions.length) return
+    if (!masters.loaded) return
     const isLateral = String(data.academic.admissionType || '').toLowerCase().includes('lateral')
     const matchingSem = isLateral
       ? (semesterOptions.find(s => /sem(ester)?\s*3\b/i.test(s.name) || s.name?.includes('3')) || semesterOptions[2] || semesterOptions[0])
@@ -2454,8 +2454,9 @@ function AdmissionForm() {
     const currentSemName = String(data.academic.semester || '').toLowerCase()
     const needsLateralAdjustment = isLateral && (currentSemName.includes('semester 1') || currentSemName.includes('sem 1'))
     const needsRegularAdjustment = !isLateral && (currentSemName.includes('semester 3') || currentSemName.includes('sem 3'))
+    const isCurrentSemValid = Boolean(data.academic.semesterId && semesterOptions.some(item => same(item.id, data.academic.semesterId)))
 
-    if (matchingSem && (!data.academic.semesterId || needsLateralAdjustment || needsRegularAdjustment)) {
+    if (matchingSem && (!data.academic.semesterId || !isCurrentSemValid || needsLateralAdjustment || needsRegularAdjustment)) {
       setData(current => ({
         ...current,
         academic: {
@@ -2464,8 +2465,17 @@ function AdmissionForm() {
           semester: matchingSem.name
         }
       }))
+    } else if (!isCurrentSemValid && data.academic.semesterId && !semesterOptions.length) {
+      setData(current => ({
+        ...current,
+        academic: {
+          ...current.academic,
+          semesterId: '',
+          semester: ''
+        }
+      }))
     }
-  }, [masters.loaded, semesterOptions, data.academic.admissionType, data.academic.courseId, data.academic.branchId])
+  }, [masters.loaded, semesterOptions, data.academic.admissionType, data.academic.courseId, data.academic.branchId, data.academic.semesterId])
   const academicMappingReady = [data.admission?.collegeId, data.academic?.academicYearId, data.academic?.courseId, data.academic?.branchId, data.academic?.semesterId].every(value => Number.isInteger(Number(value)) && Number(value) > 0)
   const allErrors = validate(data)
   const semesterError = masters.loaded ? admissionSemesterError(data.academic, semesterOptions) : ''
@@ -2863,9 +2873,28 @@ function AdmissionForm() {
     if (savingDraft || !canAction('/student-management/admissions', recordIds.admissionId ? 'edit' : 'create')) return;
     setSaveError('');
     setSavingDraft(true);
+    let ids = recordIds || {};
     try {
-      let ids = recordIds || {};
       const hasBasicIdentity = text(data.personal?.firstName) && text(data.personal?.gender);
+
+      // Pre-save to localStorage so progress is preserved immediately
+      if (ids.admissionId) {
+        try {
+          localStorage.setItem(`pirnav-draft-admission-${ids.admissionId}`, JSON.stringify(data));
+        } catch { /* storage fallback */ }
+      }
+
+      // Sanitize semesterId: If semester is inactive, do not pass an invalid semesterId that causes DB failure
+      const isSemesterActive = Boolean(data.academic?.semesterId && semesterOptions.some(item => same(item.id, data.academic.semesterId)));
+      const draftPayload = isSemesterActive
+        ? data
+        : {
+            ...data,
+            academic: {
+              ...data.academic,
+              semesterId: null,
+            }
+          };
 
       if (!ids.admissionId) {
         if (!hasBasicIdentity) {
@@ -2879,32 +2908,32 @@ function AdmissionForm() {
         }
 
         if (creationUncertain.current) throw new Error('A previous creation returned without an admission identity. Check the directory before creating another application.');
-        const duplicate = duplicateAdmissionMessage(await studentAdmissionApi.getAll(), data);
+        const duplicate = duplicateAdmissionMessage(await studentAdmissionApi.getAll(), draftPayload);
         if (duplicate) throw new Error(duplicate);
-        const result = await studentAdmissionApi.create(data);
+        const result = await studentAdmissionApi.create(draftPayload);
         rememberCreated('admissions', idsFromApi(result).admissionId);
         ids = idsFromApi(result);
         if (!ids.admissionId) { creationUncertain.current = true; throw new Error('The admission was created but no admission ID was returned.') };
         setRecordIds(ids);
       } else {
-        await studentAdmissionApi.update(ids.admissionId, data);
+        await studentAdmissionApi.update(ids.admissionId, draftPayload);
       }
 
       if (ids.admissionId && (data.academic?.course || data.academic?.courseId)) {
         try {
-          await studentAcademicDetailsApi.update(ids.admissionId, data);
+          await studentAcademicDetailsApi.update(ids.admissionId, draftPayload);
         } catch { /* non-blocking academic draft sync */ }
       }
 
       if (ids.studentId && (data.parents?.father?.name || data.parents?.mother?.name || data.parents?.guardian?.name)) {
         try {
-          await studentParentApi.update(ids.studentId, data);
+          await studentParentApi.update(ids.studentId, draftPayload);
         } catch { /* non-blocking parent draft sync */ }
       }
 
       if (ids.admissionId && (data.previousEducation?.tenth?.board || data.previousEducation?.tenth?.institution || data.previousEducation?.intermediate?.board)) {
         try {
-          await studentPreviousEducationApi.update(ids.admissionId, data);
+          await studentPreviousEducationApi.update(ids.admissionId, draftPayload);
         } catch { /* non-blocking previous education draft sync */ }
       }
 
@@ -2915,13 +2944,13 @@ function AdmissionForm() {
 
       if (ids.admissionId) {
         try {
-          localStorage.setItem(`pirnav-draft-admission-${ids.admissionId}`, JSON.stringify(data))
+          localStorage.setItem(`pirnav-draft-admission-${ids.admissionId}`, JSON.stringify(data));
         } catch { /* storage fallback */ }
       }
 
       if (ids.studentId) {
         try {
-          await uploadDocuments(ids.studentId)
+          await uploadDocuments(ids.studentId);
         } catch { /* non-blocking document upload during draft */ }
       }
 
@@ -2932,10 +2961,20 @@ function AdmissionForm() {
         window.setTimeout(() => navigate('/student-management/admissions'), 400);
       }
     } catch (error) {
-      setSaveError(error.message || 'Unable to save draft.');
-      setSaveDiagnostic(error.admissionDiagnostic || null);
+      if (ids?.admissionId) {
+        try {
+          localStorage.setItem(`pirnav-draft-admission-${ids.admissionId}`, JSON.stringify(data));
+        } catch { /* storage fallback */ }
+      }
       setConfirmCancel(false);
-      notify(error.message || 'Unable to save draft.', 'error');
+      if (shouldNavigate) {
+        notify(`Draft saved locally. (Server sync note: ${error.message || 'pending'})`, 'warning');
+        window.setTimeout(() => navigate('/student-management/admissions'), 400);
+      } else {
+        setSaveError(error.message || 'Unable to save draft to server.');
+        setSaveDiagnostic(error.admissionDiagnostic || null);
+        notify(error.message || 'Unable to save draft.', 'error');
+      }
     } finally {
       setSavingDraft(false);
     }
