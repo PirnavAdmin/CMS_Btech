@@ -1,7 +1,7 @@
 /* Portal pages use the same shell, header, sidebar and theme tokens as admin. */
 #root .portal-shell { min-height: 100dvh; color: var(--text-primary); }
 .portal-content { min-width: 0; margin-left: 260px; padding-top: 0; transition: margin-left .2s; }
-.portal-workspace { padding: 14px clamp(16px, 2vw, 24px) 24px; }
+.portal-workspace { padding: 14px clamp(16px, 1.25vw, 20px) 24px; }
 #root .portal-shell .portal-menu { display: none; }
 .portal-page { max-width: 1800px; font-size: 13px; line-height: 1.5; }
 .portal-page-heading { margin-bottom: 18px; align-items: center; }

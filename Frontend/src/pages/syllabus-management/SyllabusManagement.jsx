@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
-  Activity, Archive, ArrowLeft, ArrowUpRight, BookOpenCheck, Check, CircleAlert,
-  Clock3, Download, Eye, FileCheck2, FileText, Filter, Grid2X2, History, List, LoaderCircle,
-  MoreHorizontal, Plus, RefreshCw, Search, ShieldCheck, Upload, X,
+  Activity, Archive, ArrowLeft, BookOpenCheck, Check, CircleAlert,
+  Download, Eye, FileCheck2, FileText, History, LoaderCircle,
+  Plus, RefreshCw, Search, ShieldCheck, Upload, X,
 } from 'lucide-react'
+import { FaBookOpen, FaCalendarAlt, FaCheckCircle, FaClock, FaCopy, FaFileAlt, FaGraduationCap, FaSitemap, FaUniversity, FaUpload, FaUsers } from 'react-icons/fa'
 import DashboardLayout from '../../layouts/DashboardLayout.jsx'
 import PageHeader from '../../components/PageHeader.jsx'
 import { useAcademic } from '../../context/AcademicContext.jsx'
@@ -13,8 +14,7 @@ import { subjectApi } from '../../api/apiEndpoints.js'
 import { syllabusApi } from '../../services/syllabusApi.js'
 import { showError, showSuccess } from '../../utils/toast.js'
 import SyllabusFileDropzone from './SyllabusFileDropzone.jsx'
-import { SYLLABUS_MAX_FILE_SIZE, classifySyllabusFile } from './syllabusFiles.js'
-import { addDemoSubjects, addDemoSyllabi } from './syllabusDemoData.js'
+import { SYLLABUS_MAX_FILE_SIZE, classifySyllabusFile, formatFileSize } from './syllabusFiles.js'
 import './SyllabusManagement.css'
 
 const value = (row, ...keys) => {
@@ -47,7 +47,7 @@ const dateLabel = date => {
   const parsed = new Date(date)
   return Number.isNaN(parsed.getTime()) ? String(date) : new Intl.DateTimeFormat(undefined, { day: '2-digit', month: 'short', year: 'numeric' }).format(parsed)
 }
-const displayId = row => value(row, 'id', 'semesterId')
+const displayId = row => value(row, 'id', 'semesterId', 'branchId', 'courseId', 'departmentId', 'academicYearId')
 const branchIdOf = row => value(row, 'branchId') || value(row?.branch, 'id', 'branchId')
 const courseIdOf = row => value(row, 'courseId') || value(row?.course, 'id', 'courseId')
 const relationMatches = (row, field, selected) => {
@@ -66,16 +66,6 @@ const buildSemesterScopes = (semesterRows, branchRows) => semesterRows.flatMap(s
     ? matches.map(branch => ({ semester, branch, branchId: String(displayId(branch) || '') }))
     : [{ semester, branch: null, branchId: '' }]
 })
-const derivedOptions = (records, fields) => {
-  const unique = new Map()
-  records.forEach(row => {
-    const id = value(row, ...fields.ids)
-    const label = value(row, ...fields.names)
-    if (id !== '' && label !== '') unique.set(String(id), { id: String(id), label: String(label) })
-    else if (label !== '') unique.set(String(label), { id: String(label), label: String(label) })
-  })
-  return [...unique.values()].sort((a, b) => a.label.localeCompare(b.label))
-}
 const blankForm = semester => ({
   id: '',
   semesterId: String(displayId(semester) || ''),
@@ -180,7 +170,7 @@ function SyllabusModal({ open, onClose, form, setForm, academic, courses, branch
             <select value={form.category} onChange={set('category')}>{categories.map(category => <option key={category}>{category}</option>)}</select>
           </Field>
           {form.category === 'Subject-wise Syllabus' && <Field label="Subject" required>
-            <select required value={form.subjectId} onChange={set('subjectId')}><option value="">Choose a subject</option>{subjectOptions.filter(subject => !subject.isDemo).map(subject => <option key={value(subject, 'id', 'subjectId')} value={value(subject, 'id', 'subjectId')}>{value(subject, 'subjectCode', 'code')} · {value(subject, 'subjectName', 'name')}</option>)}</select>
+            <select required value={form.subjectId} onChange={set('subjectId')}><option value="">Choose a subject</option>{subjectOptions.map(subject => <option key={value(subject, 'id', 'subjectId')} value={value(subject, 'id', 'subjectId')}>{value(subject, 'subjectCode', 'code')} · {value(subject, 'subjectName', 'name')}</option>)}</select>
           </Field>}
           <Field label="Version" required><input required maxLength="30" value={form.version} onChange={set('version')} placeholder="1.0" /></Field>
           <Field label="Effective academic year" required>
@@ -203,42 +193,36 @@ function SyllabusModal({ open, onClose, form, setForm, academic, courses, branch
   </div>
 }
 
-function SyllabusCard({ semester, branch, records, subjectCount, unavailable, onUpload, onDetails, onArchive, onEdit, onPublish, canUpload, canEdit, canPublish, canArchive }) {
-  const latest = [...records].sort((a, b) => String(value(b, 'updatedAt', 'lastUpdated') || '').localeCompare(String(value(a, 'updatedAt', 'lastUpdated') || '')))[0]
-  const unavailableData = unavailable && !records.some(row => row.isDemo)
-  const status = unavailableData ? 'Unavailable' : records.some(row => statusKey(row) === 'published') ? 'Published' : records.some(row => statusKey(row) === 'draft') ? 'Draft' : records.length ? statusText(latest) : 'Pending'
-  const number = semNumber(semester)
-  const level = value(semester, 'yearNumber', 'academicLevel') || (number ? Math.ceil(number / 2) : '')
-  const docCount = unavailableData ? '—' : records.reduce((sum, row) => sum + (documentsOf(row).length || Number(value(row, 'documentCount', 'totalDocuments')) || 0), 0)
-  const latestVersion = unavailableData ? '—' : latest ? value(latest, 'version', 'versionNumber') || '1.0' : '—'
-  return <article className="syllabus-semester-card">
-    <div className="syllabus-card__top">
-      <span className="syllabus-card__icon"><BookOpenCheck size={18} /></span>
-      <span className={'syllabus-status syllabus-status--' + status.toLowerCase()}><i />{status}</span>
-      <details className="syllabus-more">
-        <summary aria-label={'More actions for Semester ' + number}><MoreHorizontal size={20} /></summary>
-        <div className="syllabus-more__menu">
-          <button type="button" onClick={onDetails}><History size={15} /> View history</button>
-          {canEdit && latest && !latest.isDemo && <button type="button" onClick={() => onEdit(latest)}><FileCheck2 size={15} /> Edit metadata</button>}
-          {canPublish && latest && !latest.isDemo && statusKey(latest) === 'draft' && <button type="button" onClick={() => onPublish(latest)}><Check size={15} /> Publish latest</button>}
-          {canArchive && latest && !latest.isDemo && statusKey(latest) !== 'archived' && <button type="button" className="is-danger" onClick={() => onArchive(latest)}><Archive size={15} /> Archive latest</button>}
-        </div>
-      </details>
-    </div>
-    <h3>{value(semester, 'semesterName', 'name') || 'Semester ' + number}</h3>
-    <p className="syllabus-card__branch">{value(branch, 'name', 'branchName', 'code') || 'Branch not assigned'}</p>
-    <p className="syllabus-card__subline">{level ? 'Year ' + level : 'Academic level configured'} <span>·</span> {number ? number % 2 ? 'Odd semester' : 'Even semester' : 'Term'}</p>
-    <div className="syllabus-card__metrics">
-      <div><strong>{subjectCount}</strong><span>Mapped subjects</span></div>
-      <div><strong>{docCount}</strong><span>Documents</span></div>
-      <div><strong>{latestVersion}</strong><span>Latest version</span></div>
-    </div>
-    <div className="syllabus-card__updated"><Clock3 size={14} /> Updated {unavailableData ? '—' : latest ? dateLabel(value(latest, 'updatedAt', 'lastUpdated', 'createdAt')) : '—'}</div>
-    <footer>
-      {canUpload && <button className="syllabus-btn syllabus-btn--primary" type="button" onClick={onUpload}><Upload size={15} /> Upload syllabus</button>}
-      <button className="syllabus-btn syllabus-btn--secondary" type="button" onClick={onDetails}>View details <ArrowUpRight size={15} /></button>
-    </footer>
-  </article>
+
+function branchLabel(scope) {
+  return value(scope.branch, 'name', 'branchName', 'code') || 'Unassigned branch'
+}
+
+function BranchDirectory({ groups, selected, onSelect }) {
+  const [search, setSearch] = useState('')
+  const [expanded, setExpanded] = useState(null)
+  const query = search.trim().toLowerCase()
+  return <aside className="syllabus-branch-directory">
+    <h2>Departments &amp; Branches</h2>
+    <label className="syllabus-search"><Search size={16} aria-hidden="true" /><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search Department..." aria-label="Search departments and branches" /></label>
+    <div className="syllabus-tree-controls"><button type="button" onClick={() => setExpanded(new Set(groups.keys()))}>Expand All</button><span aria-hidden="true">|</span><button type="button" onClick={() => setExpanded(new Set())}>Collapse All</button></div>
+    {[...groups].map(([departmentKey, { department, branches }], index) => {
+      const matches = [...branches].filter(([, scopes]) => department.toLowerCase().includes(query) || branchLabel(scopes).toLowerCase().includes(query))
+      if (!matches.length) return null
+      const open = query ? true : expanded ? expanded.has(departmentKey) : index === 0 || branches.has(selected)
+      const scopes = [...branches.values()].flatMap(item => item.scopes)
+      return <div key={departmentKey} className="syllabus-tree-group">
+        <button type="button" aria-expanded={open} onClick={() => {
+          const next = new Set(expanded ?? [...groups].filter(([, group], i) => i === 0 || group.branches.has(selected)).map(([name]) => name))
+          if (open) next.delete(departmentKey)
+          else next.add(departmentKey)
+          setExpanded(next)
+        }}><span className="syllabus-tree-toggle" aria-hidden="true">{open ? '-' : '+'}</span><strong title={department}>{department}</strong><span className="syllabus-tree-count">{scopes.filter(scope => scope.created).length}/{scopes.length}</span></button>
+        {open && <ul>{matches.map(([key, items]) => <li key={key}><button type="button" aria-current={selected === key ? 'true' : undefined} onClick={() => onSelect(key)}>{items.scopes.some(scope => scope.created) ? <FaCheckCircle aria-hidden="true" /> : <FaClock aria-hidden="true" />}<span>{branchLabel(items)}</span></button></li>)}</ul>}
+      </div>
+    })}
+    {!groups.size && <p>No departments or branches match the current filters.</p>}
+  </aside>
 }
 
 function DocumentRow({ document, record, onPreview, onDownload, onEdit, onReplace, canDownload, canEdit }) {
@@ -246,17 +230,17 @@ function DocumentRow({ document, record, onPreview, onDownload, onEdit, onReplac
   const title = value(document, 'fileName', 'name', 'title', 'originalFileName') || 'Syllabus document'
   const contentType = String(value(document, 'contentType', 'mimeType', 'fileType') || title.split('.').pop() || '').toLowerCase()
   const extension = title.split('.').pop()?.toLowerCase()
-  const previewable = document.isDemo || contentType.includes('pdf') || contentType.startsWith('image/') || contentType.startsWith('text/') || ['pdf', 'png', 'jpg', 'jpeg', 'txt', 'md', 'csv'].includes(contentType) || ['pdf', 'png', 'jpg', 'jpeg', 'txt', 'md', 'csv'].includes(extension)
+  const previewable = contentType.includes('pdf') || contentType.startsWith('image/') || contentType.startsWith('text/') || ['pdf', 'png', 'jpg', 'jpeg', 'txt', 'md', 'csv'].includes(contentType) || ['pdf', 'png', 'jpg', 'jpeg', 'txt', 'md', 'csv'].includes(extension)
   return <article className="syllabus-document-row">
     <span className="syllabus-document-row__icon"><FileText size={19} /></span>
     <div className="syllabus-document-row__main"><strong>{title}</strong><span>{classifySyllabusFile({ name: title })} · {value(document, 'size', 'fileSize') ? String(value(document, 'size', 'fileSize')) + ' bytes' : 'Document'} · {dateLabel(value(document, 'uploadedAt', 'createdAt'))}</span></div>
     <span className={'syllabus-status syllabus-status--' + statusKey(record)}><i />{statusText(record)}</span>
     <div className="syllabus-document-row__actions">
-      {previewable && (canDownload || document.isDemo) && <button type="button" className="syllabus-view-action" onClick={() => onPreview(document)} aria-label={'View ' + title}><Eye size={15} />View</button>}
+      {previewable && canDownload && <button type="button" className="syllabus-view-action" onClick={() => onPreview(document)} aria-label={'View ' + title}><Eye size={15} />View</button>}
       {canDownload && <button type="button" onClick={() => onDownload(document)} aria-label={'Download ' + title}><Download size={16} /></button>}
-      {canEdit && !record.isDemo && <><button type="button" onClick={() => onEdit(record)} aria-label={'Edit metadata for ' + title}><FileCheck2 size={16} /></button><button type="button" onClick={() => onReplace(record, document)} aria-label={'Replace ' + title}><RefreshCw size={16} /></button></>}
+      {canEdit && <><button type="button" onClick={() => onEdit(record)} aria-label={'Edit metadata for ' + title}><FileCheck2 size={16} /></button><button type="button" onClick={() => onReplace(record, document)} aria-label={'Replace ' + title}><RefreshCw size={16} /></button></>}
     </div>
-    {previewable && !canDownload && !document.isDemo && <span className="syllabus-document-row__hint">Download permission required for preview</span>}
+    {previewable && !canDownload && <span className="syllabus-document-row__hint">Download permission required for preview</span>}
     <input className="syllabus-visually-hidden" type="file" data-replace-input={id} />
   </article>
 }
@@ -272,18 +256,17 @@ function SubjectReader({ subject, semester, branch, onClose }) {
     <section className="syllabus-subject-reader" role="dialog" aria-modal="true" aria-labelledby="syllabus-subject-reader-title">
       <header><div><span>{value(subject, 'subjectCode', 'code') || 'SUBJECT'}</span><h2 id="syllabus-subject-reader-title">{value(subject, 'subjectName', 'name') || 'Subject details'}</h2><p>{value(branch, 'name', 'branchName', 'code') || 'Branch'} · {value(semester, 'semesterName', 'name') || 'Semester ' + semNumber(semester)}</p></div><button type="button" className="syllabus-icon-button" onClick={onClose} aria-label="Close subject reader"><X size={18} /></button></header>
       <div className="syllabus-subject-reader__body">
-        <div className="syllabus-subject-reader__facts"><div><small>Subject type</small><strong>{value(subject, 'subjectType', 'category') || 'Configured subject'}</strong></div><div><small>Credits</small><strong>{value(subject, 'credits', 'creditPoints') || '—'}</strong></div><div><small>Record</small><strong>{subject.isDemo ? 'Sample preview' : value(subject, 'status') || 'Configured'}</strong></div></div>
+        <div className="syllabus-subject-reader__facts"><div><small>Subject type</small><strong>{value(subject, 'subjectType', 'category') || 'Configured subject'}</strong></div><div><small>Credits</small><strong>{value(subject, 'credits', 'creditPoints') || '—'}</strong></div><div><small>Record</small><strong>{value(subject, 'status') || 'Configured'}</strong></div></div>
         <section><h3>Subject overview</h3><p>{description || 'Detailed subject description has not been added to this curriculum record.'}</p></section>
         {units.length > 0 && <section><h3>Units and topics</h3><ol className="syllabus-subject-reader__units">{units.map((unit, index) => <li key={index}><strong>{typeof unit === 'object' ? value(unit, 'title', 'unitName', 'name') || `Unit ${index + 1}` : `Unit ${index + 1}`}</strong>{typeof unit === 'object' ? <><p>{value(unit, 'description', 'summary') || ''}</p>{listEntries(value(unit, 'topics', 'subTopics', 'content')).length > 0 && <ul>{listEntries(value(unit, 'topics', 'subTopics', 'content')).map((topic, topicIndex) => <li key={topicIndex}>{entryText(topic)}</li>)}</ul>}</> : <p>{entryText(unit)}</p>}</li>)}</ol></section>}
         {outcomes.length > 0 && <section><h3>Learning outcomes</h3><ul>{outcomes.map((outcome, index) => <li key={index}>{entryText(outcome)}</li>)}</ul></section>}
-        {subject.isDemo && <div className="syllabus-demo-alert" role="note"><CircleAlert size={16} /><span>Sample curriculum text for preview only. Replace it with your approved subject syllabus.</span></div>}
       </div>
       <footer><button type="button" className="syllabus-btn syllabus-btn--secondary" onClick={onClose}>Close</button></footer>
     </section>
   </div>
 }
 
-function DetailWorkspace({ semester, branch, records, subjects, activeTab, setActiveTab, onBack, onModal, onPublish, onPreview, onDownload, onReplace, onViewSubject, canCreate, canEdit, canPublish, canDownload, extraRows, extraError, loadingExtra, loadExtra }) {
+function DetailWorkspace({ embedded = false, semester, branch, records, subjects, activeTab, setActiveTab, onBack, onModal, onPublish, onPreview, onDownload, onReplace, onViewSubject, canCreate, canEdit, canPublish, canDownload, extraRows, extraError, loadingExtra, loadExtra }) {
   const tabs = [
     ['documents', 'Syllabus Documents', FileText],
     ['subjects', 'Subject-wise Syllabus', BookOpenCheck],
@@ -297,21 +280,21 @@ function DetailWorkspace({ semester, branch, records, subjects, activeTab, setAc
   }
   const allDocuments = records.flatMap(record => documentsOf(record).map(document => ({ record, document })))
   return <div className="syllabus-detail">
-    <button type="button" className="syllabus-back-link" onClick={onBack}><ArrowLeft size={17} /> Back to semesters</button>
+    {!embedded && <><button type="button" className="syllabus-back-link" onClick={onBack}><ArrowLeft size={17} /> Back to semesters</button>
     <section className="syllabus-detail__hero">
       <div><span className="syllabus-eyebrow">SEMESTER WORKSPACE</span><h2>{value(semester, 'semesterName', 'name') || 'Semester ' + semNumber(semester)}{branch ? ' · ' + value(branch, 'name', 'branchName', 'code') : ''}</h2><p>Manage published syllabus files, subject mappings, revisions and audit activity for this branch.</p></div>
       <div className="syllabus-detail__actions">{canCreate && <button type="button" className="syllabus-btn syllabus-btn--secondary" onClick={() => onModal(null)}><Plus size={16} /> Add document</button>}{canPublish && records.some(row => statusKey(row) === 'draft') && <button type="button" className="syllabus-btn syllabus-btn--primary" onClick={() => onPublish(records.find(row => statusKey(row) === 'draft'))}><Check size={16} /> Publish draft</button>}</div>
     </section>
     <nav className="syllabus-tabs" aria-label="Semester syllabus sections">
       {tabs.map(([id, label, Icon]) => <button type="button" key={id} className={activeTab === id ? 'is-active' : ''} aria-current={activeTab === id ? 'page' : undefined} onClick={() => changeTab(id)}><Icon size={16} />{label}{id === 'documents' && <span>{allDocuments.length}</span>}</button>)}
-    </nav>
+    </nav></>}
     {activeTab === 'documents' && <section className="syllabus-detail-panel">
       <div className="syllabus-section-heading"><div><h3>Available syllabus files</h3><p>Documents and publication state for this semester.</p></div>{canCreate && <button className="syllabus-btn syllabus-btn--primary" type="button" onClick={() => onModal(null)}><Upload size={15} /> Upload document</button>}</div>
       {allDocuments.length ? <div className="syllabus-document-list">{allDocuments.map(({ record, document }, index) => <DocumentRow key={value(document, 'documentId', 'id') || recordId(record) + '-' + index} document={document} record={record} onPreview={onPreview} onDownload={onDownload} onEdit={onModal} onReplace={onReplace} canDownload={canDownload} canEdit={canEdit} />)}</div> : <div className="syllabus-empty syllabus-empty--compact"><FileText size={22} /><strong>No syllabus files yet</strong><span>Upload a document to start the semester’s syllabus record.</span></div>}
     </section>}
     {activeTab === 'subjects' && <section className="syllabus-detail-panel">
-      <div className="syllabus-section-heading"><div><h3>Mapped subjects</h3><p>Subjects are scoped to this branch and semester; missing development entries are shown as samples.</p></div></div>
-      {subjects.length ? <div className="syllabus-subject-list">{subjects.map((subject, index) => <article key={value(subject, 'id', 'subjectId') || index}><span className="syllabus-subject-code">{value(subject, 'subjectCode', 'code') || 'SUBJECT'}</span><div><strong>{value(subject, 'subjectName', 'name')}</strong><small>{value(subject, 'subjectType', 'category') || 'Configured subject'} · {value(subject, 'credits', 'creditPoints') || '—'} credits</small></div><span className={'syllabus-status syllabus-status--' + (subject.isDemo ? 'sample' : 'neutral')}><i />{value(subject, 'status') || 'Active'}</span><button type="button" className="syllabus-btn syllabus-btn--secondary syllabus-subject-view" onClick={() => onViewSubject(subject)}><Eye size={15} />View</button></article>)}</div> : <div className="syllabus-empty syllabus-empty--compact"><BookOpenCheck size={22} /><strong>No subject mappings returned</strong><span>Check that subjects are configured for this course and semester.</span></div>}
+      <div className="syllabus-section-heading"><div><h3>Mapped subjects</h3><p>Subjects are scoped to this branch and semester.</p></div></div>
+      {subjects.length ? <div className="syllabus-subject-list">{subjects.map((subject, index) => <article key={value(subject, 'id', 'subjectId') || index}><span className="syllabus-subject-code">{value(subject, 'subjectCode', 'code') || 'SUBJECT'}</span><div><strong>{value(subject, 'subjectName', 'name')}</strong><small>{value(subject, 'subjectType', 'category') || 'Configured subject'} · {value(subject, 'credits', 'creditPoints') || '—'} credits</small></div><span className="syllabus-status syllabus-status--neutral"><i />{value(subject, 'status') || 'Active'}</span><button type="button" className="syllabus-btn syllabus-btn--secondary syllabus-subject-view" onClick={() => onViewSubject(subject)}><Eye size={15} />View</button></article>)}</div> : <div className="syllabus-empty syllabus-empty--compact"><BookOpenCheck size={22} /><strong>No subject mappings returned</strong><span>Check that subjects are configured for this course and semester.</span></div>}
     </section>}
     {activeTab === 'curriculum' && <section className="syllabus-detail-panel"><div className="syllabus-section-heading"><div><h3>Curriculum &amp; credits</h3><p>Read-only academic structure for the selected semester.</p></div></div><div className="syllabus-curriculum-grid">
       {[['Semester', value(semester, 'semesterName', 'name') || 'Semester ' + semNumber(semester)], ['Semester number', semNumber(semester) || '—'], ['Academic level', value(semester, 'yearNumber', 'academicLevel') || (semNumber(semester) ? 'Year ' + Math.ceil(semNumber(semester) / 2) : '—')], ['Semester type', semNumber(semester) ? semNumber(semester) % 2 ? 'Odd' : 'Even' : '—'], ['Mapped subjects', subjects.length], ['Configured credits', value(semester, 'totalCredits', 'credits') || '—']].map(([label, item]) => <div key={label}><small>{label}</small><strong>{item}</strong></div>)}
@@ -321,6 +304,14 @@ function DetailWorkspace({ semester, branch, records, subjects, activeTab, setAc
       {loadingExtra ? <div className="syllabus-loading-line"><LoaderCircle size={18} className="syllabus-spin" /> Loading {activeTab}…</div> : extraError ? <div className="syllabus-form-alert" role="status">{extraError}</div> : extraRows.length ? <div className="syllabus-history-list">{extraRows.map((row, index) => <article key={value(row, 'id', 'versionId', 'activityId') || index}><span>{activeTab === 'versions' ? <History size={17} /> : <Activity size={17} />}</span><div><strong>{value(row, 'title', 'version', 'action', 'eventName') || 'Syllabus update'}</strong><small>{value(row, 'description', 'notes', 'userName', 'actor') || statusText(row)} · {dateLabel(value(row, 'createdAt', 'publishedAt', 'timestamp'))}</small></div></article>)}</div> : <div className="syllabus-empty syllabus-empty--compact"><History size={22} /><strong>No {activeTab === 'versions' ? 'versions' : 'activity'} available</strong><span>The backend has not returned any records.</span></div>}
     </section>}
   </div>
+}
+
+function programForCourse(course) {
+  if (!course) return null
+  const names = ['name', 'courseName', 'shortName', 'courseShortName', 'courseCode', 'code', 'courseType', 'type']
+    .map(key => value(course, key)).join(' ')
+  if (/\bb[.\s-]*tech(?:nology)?\b|bachelor of technology/i.test(names)) return 'B.Tech'
+  return /\b(diploma|certificate)\b/i.test(names) ? null : 'Degree'
 }
 
 export default function SyllabusManagement() {
@@ -335,14 +326,16 @@ export default function SyllabusManagement() {
   const canPublish = canEdit
   const canDownload = canAction('/syllabus-management', 'export')
   const canArchive = canAction('/syllabus-management', 'delete')
-  const [filters, setFilters] = useState({ academicYearId: academic.selectedAcademicYearId || '', courseId: '', departmentId: '', branchId: '', regulationId: '', batchId: '' })
+  const [filters, setFilters] = useState({ academicYearId: academic.selectedAcademicYearId || '', courseId: '', departmentId: '', branchId: '', subjectId: '', batchId: '' })
+  const [selectedProgram, setSelectedProgram] = useState('')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
-  const [view, setView] = useState('grid')
+  const [workspaceBranch, setWorkspaceBranch] = useState('')
+  const [workspaceSemester, setWorkspaceSemester] = useState('')
+  const [workspaceTab, setWorkspaceTab] = useState('overview')
   const [records, setRecords] = useState([])
   const [recordsLoading, setRecordsLoading] = useState(false)
   const [recordsError, setRecordsError] = useState('')
-  const [usingDemoData, setUsingDemoData] = useState(false)
   const [subjects, setSubjects] = useState([])
   const [subjectsError, setSubjectsError] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
@@ -360,6 +353,7 @@ export default function SyllabusManagement() {
   const [replaceProgress, setReplaceProgress] = useState('')
   const fileOperations = useRef(new Map())
   const listRequest = useRef(0)
+  const historyRequest = useRef(0)
   const currentCollege = String(academic.selectedCollegeId || '')
   useEffect(() => {
     if (!modalOpen && !preview && !readingSubject) return undefined
@@ -377,7 +371,7 @@ export default function SyllabusManagement() {
     setFilters(current => ({ ...current, academicYearId: current.academicYearId || academic.selectedAcademicYearId || '' }))
   }, [academic.selectedAcademicYearId])
   useEffect(() => {
-    setFilters(current => ({ ...current, courseId: '', departmentId: '', branchId: '', regulationId: '', batchId: '' }))
+    setFilters(current => ({ ...current, courseId: '', departmentId: '', branchId: '', subjectId: '', batchId: '' }))
   }, [currentCollege])
 
   const years = academic.academicYears || academic.activeAcademicYears || []
@@ -385,21 +379,18 @@ export default function SyllabusManagement() {
   const courses = academic.activeCourses || []
   const branches = academic.activeBranches || []
   const semesters = academic.activeSemesters || []
-  const scopedCourses = courses.filter(course => !filters.departmentId || same(value(course, 'departmentId'), filters.departmentId))
+  const program = selectedProgram || (courses.some(course => programForCourse(course) === 'Degree') && !courses.some(course => programForCourse(course) === 'B.Tech') ? 'Degree' : 'B.Tech')
+  const courseIds = new Set(courses.filter(course => programForCourse(course) === program).map(course => String(displayId(course))))
+  const inProgram = courseId => courseIds.has(String(courseId))
+  const programCourses = courses.filter(course => inProgram(displayId(course)))
+  const filteredCourses = programCourses.filter(course => !filters.courseId || same(displayId(course), filters.courseId))
+  const programBranches = branches.filter(branch => filteredCourses.some(course => same(displayId(course), courseIdOf(branch))))
+  const programDepartmentIds = new Set([
+    ...filteredCourses.map(course => value(course, 'departmentId')),
+    ...programBranches.map(branch => value(branch, 'departmentId') || value(courses.find(course => same(displayId(course), courseIdOf(branch))), 'departmentId')),
+  ].filter(Boolean).map(String))
   const scopedBranches = useMemo(() => branches.filter(branch => (!filters.courseId || !courseIdOf(branch) || same(courseIdOf(branch), filters.courseId)) && (!filters.departmentId || !value(branch, 'departmentId') || same(value(branch, 'departmentId'), filters.departmentId))), [branches, filters.courseId, filters.departmentId])
   const branchesForSemesterScopes = useMemo(() => scopedBranches.filter(branch => !filters.branchId || same(displayId(branch), filters.branchId)), [scopedBranches, filters.branchId])
-  const selectedCourseRecord = courses.find(course => same(displayId(course), filters.courseId))
-  const regulationSources = [
-    ...(filters.courseId ? [selectedCourseRecord].filter(Boolean) : courses),
-    ...branches.filter(branch => (!filters.courseId || same(value(branch, 'courseId'), filters.courseId)) && (!filters.branchId || same(displayId(branch), filters.branchId))),
-    ...semesters.filter(semester => (!filters.courseId || relationMatches(semester, 'course', filters.courseId)) && (!filters.branchId || relationMatches(semester, 'branch', filters.branchId))),
-  ]
-  const batchSources = [
-    ...regulationSources,
-    ...semesters.filter(semester => (!filters.courseId || relationMatches(semester, 'course', filters.courseId)) && (!filters.branchId || relationMatches(semester, 'branch', filters.branchId))),
-  ]
-  const regulationOptions = derivedOptions(regulationSources, { ids: ['regulationId', 'regulationCode', 'regulation'], names: ['regulationName', 'regulationCode', 'regulation'] })
-  const batchOptions = derivedOptions(batchSources, { ids: ['batchId', 'curriculumId', 'admissionBatchId', 'batch'], names: ['batchName', 'curriculumName', 'admissionBatchName', 'batch'] })
   const scopedSemesters = useMemo(() => semesters.filter(semester =>
     relationMatches(semester, 'course', filters.courseId) &&
     (!filters.courseId || !branchIdOf(semester) || branchesForSemesterScopes.some(branch => same(displayId(branch), branchIdOf(semester)))) &&
@@ -413,17 +404,12 @@ export default function SyllabusManagement() {
   const selectedSemester = routeBranchId ? selectedScope?.semester : selectedScope?.semester || scopedSemesters.find(semester => same(displayId(semester), routeSemesterId)) || semesters.find(semester => same(displayId(semester), routeSemesterId))
   const selectedBranch = selectedScope?.branch || branches.find(branch => same(displayId(branch), routeBranchId)) || null
   const detailMode = Boolean(routeSemesterId)
-  const scopesForCurrentView = useMemo(() => semesterScopes.filter(scope =>
-    (!routeSemesterId || same(displayId(scope.semester), routeSemesterId)) &&
-    (!routeBranchId || same(scope.branchId, routeBranchId)) &&
-    (!filters.branchId || same(scope.branchId, filters.branchId))), [semesterScopes, routeSemesterId, routeBranchId, filters.branchId])
-
   const fetchSyllabi = useCallback(async () => {
     const requestId = ++listRequest.current
     if (!currentCollege || !filters.academicYearId) {
       setRecords([])
       setRecordsError('')
-      setUsingDemoData(false)
+      setRecordsLoading(false)
       return
     }
     setRecordsLoading(true)
@@ -435,43 +421,24 @@ export default function SyllabusManagement() {
         courseId: filters.courseId,
         departmentId: filters.departmentId,
         branchId: routeBranchId || filters.branchId,
-        regulationId: filters.regulationId,
         batchId: filters.batchId,
         semesterId: routeSemesterId || '',
       })
       if (requestId === listRequest.current) {
-        const rows = import.meta.env.DEV ? addDemoSyllabi(response, scopesForCurrentView) : response
-        setRecords(rows)
-        setUsingDemoData(rows.some(row => row.isDemo))
+
+        setRecords(response)
       }
     } catch (error) {
       if (requestId === listRequest.current) {
-        const rows = import.meta.env.DEV ? addDemoSyllabi([], scopesForCurrentView) : []
-        setRecords(rows)
-        setUsingDemoData(rows.length > 0)
+
+        setRecords([])
         setRecordsError(readableError(error))
       }
     } finally {
       if (requestId === listRequest.current) setRecordsLoading(false)
     }
-  }, [currentCollege, filters, routeSemesterId, routeBranchId, scopesForCurrentView])
+  }, [currentCollege, filters, routeSemesterId, routeBranchId])
   useEffect(() => { fetchSyllabi(); return () => { listRequest.current += 1 } }, [fetchSyllabi])
-
-  useEffect(() => {
-    let current = true
-    const filterBranch = branches.find(branch => same(displayId(branch), filters.branchId))
-    const subjectCourseId = filters.courseId || courseIdOf(selectedScope?.semester) || courseIdOf(selectedBranch) || courseIdOf(filterBranch)
-    const sampleRows = () => import.meta.env.DEV ? addDemoSubjects([], scopesForCurrentView) : []
-    if (!currentCollege || !filters.academicYearId || !subjectCourseId) {
-      setSubjects(sampleRows())
-      setSubjectsError('')
-      return () => { current = false }
-    }
-    subjectApi.list({ collegeId: currentCollege, academicYearId: filters.academicYearId, courseId: subjectCourseId, branchId: routeBranchId || filters.branchId || undefined, semesterId: routeSemesterId || undefined })
-      .then(response => { if (current) setSubjects(import.meta.env.DEV ? addDemoSubjects(rowsFrom(response), scopesForCurrentView) : rowsFrom(response)) })
-      .catch(error => { if (current) { setSubjects(sampleRows()); setSubjectsError(readableError(error)) } })
-    return () => { current = false }
-  }, [currentCollege, filters.academicYearId, filters.courseId, filters.branchId, routeSemesterId, routeBranchId, branches, selectedScope, selectedBranch, scopesForCurrentView])
 
   const recordsForScope = useCallback(scope => records.filter(record => {
     if (!same(semId(record), displayId(scope.semester))) return false
@@ -483,26 +450,26 @@ export default function SyllabusManagement() {
     const subjectBranchId = branchIdOf(subject)
     return !subjectBranchId || !scope.branchId || same(subjectBranchId, scope.branchId)
   }), [subjects])
-  const demoContentAvailable = records.some(row => row.isDemo) || subjects.some(subject => subject.isDemo)
-  const visibleScopes = useMemo(() => {
+  const programScopes = semesterScopes.filter(({ semester, branch, branchId }) => inProgram(branchId ? courseIdOf(branch || branches.find(item => same(displayId(item), branchId))) : courseIdOf(semester)))
+  const stateForScope = related => recordsError ? 'unavailable' : related.some(row => statusKey(row) === 'published') ? 'published' : related.some(row => statusKey(row) === 'draft') ? 'draft' : related.length ? statusKey(related[0]) : 'pending'
+  const visibleScopes = (() => {
     const needle = search.trim().toLowerCase()
-    return semesterScopes.filter(scope => {
+    return programScopes.filter(scope => {
       const { semester, branch } = scope
       const related = recordsForScope(scope)
-      const state = recordsError && !related.some(row => row.isDemo) ? 'unavailable' : related.some(row => statusKey(row) === 'published') ? 'published' : related.some(row => statusKey(row) === 'draft') ? 'draft' : related.length ? statusKey(related[0]) : 'pending'
+      const state = stateForScope(related)
       const matchesStatus = statusFilter === 'All' || state === statusFilter.toLowerCase()
       const matchesSearch = !needle || [value(semester, 'semesterName', 'name'), semNumber(semester), value(semester, 'yearNumber', 'academicLevel'), value(branch, 'name', 'branchName', 'code')].some(item => String(item).toLowerCase().includes(needle))
-      return matchesStatus && matchesSearch
+      const matchesSubject = !filters.subjectId || subjectsForScope(scope).some(subject => same(value(subject, 'subjectId', 'id'), filters.subjectId))
+      return matchesStatus && matchesSearch && matchesSubject
     })
-  }, [semesterScopes, recordsForScope, statusFilter, search, recordsError])
+  })()
   const summary = useMemo(() => {
     const recordsByScope = semesterScopes.map(scope => recordsForScope(scope))
     return {
-      semesters: semesterScopes.length,
-      published: recordsByScope.filter(rows => rows.some(row => statusKey(row) === 'published')).length,
+      published: records.filter(row => statusKey(row) === 'published').length,
       drafts: records.filter(row => statusKey(row) === 'draft').length,
       pending: recordsByScope.filter(rows => rows.length === 0).length,
-      documents: records.reduce((sum, row) => sum + (documentsOf(row).length || Number(value(row, 'documentCount', 'totalDocuments')) || 0), 0),
     }
   }, [semesterScopes, recordsForScope, records])
 
@@ -518,7 +485,6 @@ export default function SyllabusManagement() {
     next.courseId = String(semesterCourseId || courseIdOf(branch) || filters.courseId)
     next.departmentId = String(value(semester, 'departmentId') || value(branch, 'departmentId') || value(course, 'departmentId') || filters.departmentId)
     next.branchId = String(semesterBranchId || '')
-    next.regulationId = filters.regulationId
     next.batchId = filters.batchId
     setForm(next)
     setFiles([])
@@ -636,30 +602,30 @@ export default function SyllabusManagement() {
       await fetchSyllabi()
     } catch (error) { showError(readableError(error)) }
   }
-  const loadExtra = async tab => {
-    const record = selectedScope
+  const loadExtra = async (tab, workspaceRecord) => {
+    const request = ++historyRequest.current
+    setLoadingExtra(false)
+    const record = workspaceRecord !== undefined ? workspaceRecord : (selectedScope
       ? recordsForScope(selectedScope)[0]
-      : records.find(row => same(semId(row), routeSemesterId) && (!routeBranchId || same(branchIdOf(row), routeBranchId)))
+      : records.find(row => same(semId(row), routeSemesterId) && (!routeBranchId || same(branchIdOf(row), routeBranchId))))
     const id = record && recordId(record)
     if (!id) { setExtraRows([]); setExtraError('A syllabus record is required to load this information.'); return }
-    if (record.isDemo) {
-      setExtraRows(tab === 'versions' ? record.versions || [] : record.activity || [])
-      setExtraError('')
-      return
-    }
     setLoadingExtra(true)
     setExtraError('')
-    try { setExtraRows(await (tab === 'versions' ? syllabusApi.versions(id, { collegeId: currentCollege }) : syllabusApi.activity(id, { collegeId: currentCollege }))) }
-    catch (error) { setExtraRows([]); setExtraError(readableError(error)) }
-    finally { setLoadingExtra(false) }
+    try {
+      const rows = await (tab === 'versions' ? syllabusApi.versions(id, { collegeId: currentCollege }) : syllabusApi.activity(id, { collegeId: currentCollege }))
+      if (request === historyRequest.current) setExtraRows(rows)
+    } catch (error) {
+      if (request === historyRequest.current) { setExtraRows([]); setExtraError(readableError(error)) }
+    } finally {
+      if (request === historyRequest.current) setLoadingExtra(false)
+    }
   }
   const documentBlob = async (document, download) => {
-    if (!canDownload && !document.isDemo) { showError('Your role does not have download permission.'); return }
+    if (!canDownload) { showError('Your role does not have download permission.'); return }
     try {
       const id = value(document, 'documentId', 'id', 'fileId')
-      const result = document.isDemo
-        ? { blob: new Blob([document.sampleText || 'Sample syllabus preview.'], { type: 'text/plain;charset=utf-8' }), contentType: 'text/plain' }
-        : await syllabusApi.downloadDocument(id, { collegeId: currentCollege })
+      const result = await syllabusApi.downloadDocument(id, { collegeId: currentCollege })
       const objectUrl = URL.createObjectURL(result.blob)
       const name = value(document, 'fileName', 'originalFileName', 'name') || 'syllabus-document'
       if (download) {
@@ -694,61 +660,252 @@ export default function SyllabusManagement() {
   }
   const confirmArchive = record => setConfirmation({ kind: 'archive', record })
 
-  const pageHeader = <PageHeader
+  const openUpload = () => openCreate(null, branches.find(branch => same(displayId(branch), filters.branchId)))
+  const dashboardStats = [
+    ['Total Programs', courses.length, 'Configured', FaGraduationCap],
+    ['Total Departments', departments.length, 'Across Programs', FaUniversity],
+    ['Total Courses / Branches', branches.length || courses.length, 'Branches & Groups', FaSitemap],
+    ['Total Semesters', semesters.length, 'Configured', FaCalendarAlt],
+    ['Published Syllabi', summary.published, 'Live', FaCheckCircle, 'published'],
+    ['Draft Syllabi', summary.drafts, 'In Progress', FaFileAlt, 'draft'],
+    ['Pending Syllabi', summary.pending, 'Not Created', FaClock, 'pending'],
+  ]
+
+  const pageHeader = detailMode ? <PageHeader
     className="syllabus-page-header"
     breadcrumb={[{ label: 'Home', link: '/dashboard' }, { label: 'Subjects & Curriculum' }, { label: 'Syllabus Management' }]}
     title="Syllabus Management"
     subtitle="Organize, revise and publish curriculum documents for every configured branch and semester."
-    primaryAction={canCreate && !detailMode ? <button className="syllabus-btn syllabus-btn--primary" onClick={() => openCreate(null, branches.find(branch => same(displayId(branch), filters.branchId)))} disabled={!semesters.length}><Plus size={16} /> Upload syllabus</button> : null}
-  />
-
-  const renderDirectory = () => <>
-    <section className="syllabus-filter-panel" aria-label="Academic filters">
-      <div className="syllabus-filter-panel__heading"><div><Filter size={16} /><strong>Academic scope</strong></div><span>Selections are limited to the active college context.</span></div>
-      <div className="syllabus-filter-grid">
-        <Field label="Academic year" required><select value={filters.academicYearId} onChange={event => setFilters(current => ({ ...current, academicYearId: event.target.value }))}><option value="">Select academic year</option>{years.map(year => <option key={displayId(year)} value={displayId(year)}>{value(year, 'name', 'academicYearName')}</option>)}</select></Field>
-        <Field label="Program / course"><select value={filters.courseId} onChange={event => setFilters(current => ({ ...current, courseId: event.target.value, branchId: '', regulationId: '', batchId: '' }))}><option value="">All programs</option>{scopedCourses.map(course => <option key={displayId(course)} value={displayId(course)}>{value(course, 'name', 'courseName')}</option>)}</select></Field>
-        <Field label="Department"><select value={filters.departmentId} onChange={event => setFilters(current => ({ ...current, departmentId: event.target.value, courseId: '', branchId: '', regulationId: '', batchId: '' }))}><option value="">All departments</option>{departments.map(department => <option key={displayId(department)} value={displayId(department)}>{value(department, 'name', 'departmentName')}</option>)}</select></Field>
-        <Field label="Branch / specialization"><select value={filters.branchId} onChange={event => setFilters(current => ({ ...current, branchId: event.target.value, regulationId: '', batchId: '' }))}><option value="">All branches</option>{scopedBranches.map(branch => <option key={displayId(branch)} value={displayId(branch)}>{value(branch, 'name', 'branchName', 'code')}</option>)}</select></Field>
-        <Field label="Regulation"><select value={filters.regulationId} onChange={event => setFilters(current => ({ ...current, regulationId: event.target.value }))}><option value="">All regulations</option>{regulationOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}</select></Field>
-        <Field label="Curriculum / batch"><select value={filters.batchId} onChange={event => setFilters(current => ({ ...current, batchId: event.target.value }))}><option value="">All curricula and batches</option>{batchOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}</select></Field>
-      </div>
-      {!canCreate && <div className="syllabus-inline-alert" role="status"><ShieldCheck size={16} /> Your role has view access only. Ask an administrator to grant the syllabus_management create permission to upload syllabus files.</div>}
-      {!academic.selectedCollegeId && <div className="syllabus-inline-alert" role="status"><CircleAlert size={16} /> Select an authorized college in the global academic context to view its syllabus.</div>}
-    </section>
-    <section className="syllabus-kpi-grid" aria-label="Syllabus summary">
-      {[
-        ['Branch / semester pairs', summary.semesters, BookOpenCheck, 'syllabus-kpi--green'],
-        ['Published pairs', summary.published, FileCheck2, 'syllabus-kpi--blue'],
-        ['Draft syllabi', summary.drafts, FileText, 'syllabus-kpi--amber'],
-        ['Pending pairs', summary.pending, Clock3, 'syllabus-kpi--violet'],
-        ['Uploaded documents', summary.documents, Upload, 'syllabus-kpi--teal'],
-      ].map(([label, count, Icon, tone]) => <article className={'syllabus-kpi ' + tone} key={label}><span><Icon size={19} /></span><div><strong>{recordsLoading ? <i className="syllabus-skeleton" /> : recordsError && !usingDemoData && label !== 'Branch / semester pairs' ? '—' : count}</strong><small>{label}</small></div></article>)}
-    </section>
-    <section className="syllabus-directory">
-      <div className="syllabus-directory__toolbar">
-        <div><h2>Branch &amp; semester syllabi</h2><p>{visibleScopes.length} of {semesterScopes.length} configured branch / semester pairs</p></div>
-        <div className="syllabus-directory__tools">
-          <label className="syllabus-search"><Search size={16} /><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search semesters" aria-label="Search semesters" /></label>
-          <select className="syllabus-status-filter" value={statusFilter} onChange={event => setStatusFilter(event.target.value)} aria-label="Filter publication status"><option>All</option><option>Sample</option><option>Published</option><option>Draft</option><option>Pending</option><option>Archived</option><option>Unavailable</option></select>
-          <div className="syllabus-view-switch" aria-label="Semester display"><button type="button" className={view === 'grid' ? 'is-active' : ''} aria-label="Grid view" onClick={() => setView('grid')}><Grid2X2 size={16} /></button><button type="button" className={view === 'list' ? 'is-active' : ''} aria-label="List view" onClick={() => setView('list')}><List size={17} /></button></div>
-          <button type="button" className="syllabus-icon-button" aria-label="Refresh syllabus list" onClick={fetchSyllabi}><RefreshCw size={16} /></button>
+  /> : <>
+    <header className="syllabus-overview-header">
+      <div className="syllabus-overview-heading">
+        <FaBookOpen aria-hidden="true" />
+        <div>
+          <h1>Syllabus Management</h1>
+          <p>Create, manage and publish academic syllabus across programs, departments and semesters.</p>
         </div>
       </div>
-      {recordsError && <div className="syllabus-inline-alert syllabus-inline-alert--warning" role="status"><CircleAlert size={17} /><span>{recordsError}</span><button type="button" onClick={fetchSyllabi}>Retry</button></div>}
-      {recordsLoading && <div className="syllabus-loading-grid" aria-label="Loading semester syllabi"><i /><i /><i /><i /></div>}
-      {!recordsLoading && !visibleScopes.length && <div className="syllabus-empty"><BookOpenCheck size={28} /><h3>{semesterScopes.length ? 'No branch / semester pairs match these filters' : 'No semesters configured for this scope'}</h3><p>{semesterScopes.length ? 'Change your search or status filter to see other semesters.' : 'Configure active branches and semesters for the selected academic year and program. Cards are created from those configured records.'}</p></div>}
-      {!recordsLoading && visibleScopes.length > 0 && <div className={view === 'grid' ? 'syllabus-card-grid' : 'syllabus-card-list'}>
-        {visibleScopes.map(scope => <SyllabusCard key={(scope.branchId || 'unassigned') + ':' + displayId(scope.semester)} semester={scope.semester} branch={scope.branch} records={recordsForScope(scope)} subjectCount={subjectsForScope(scope).length} unavailable={Boolean(recordsError)} canUpload={canCreate} canEdit={canEdit} canPublish={canPublish} canArchive={canArchive} onUpload={() => openCreate(scope.semester, scope.branch)} onDetails={() => { setDetailTab('documents'); setExtraRows([]); setExtraError(''); navigate('/syllabus-management/' + encodeURIComponent(displayId(scope.semester)) + (scope.branchId ? '?branchId=' + encodeURIComponent(scope.branchId) : '')) }} onArchive={confirmArchive} onEdit={openEdit} onPublish={record => executeAction('publish', record)} />)}
-      </div>}
-      {subjectsError && <p className="syllabus-data-note" role="status">Subject totals may be unavailable: {subjectsError}</p>}
+      <div className="syllabus-overview-actions" role="group" aria-label="Syllabus actions">
+        <button type="button" className="syllabus-btn" disabled title="Common syllabus is unavailable"><FaUsers aria-hidden="true" /> Common Syllabus</button>
+        <button type="button" className="syllabus-btn" disabled title="Syllabus copying is unavailable"><FaCopy aria-hidden="true" /> Copy Syllabus</button>
+        <button type="button" className="syllabus-btn" onClick={openUpload} disabled={!canCreate || !semesters.length} title={!canCreate ? "Create permission required" : undefined}><FaUpload aria-hidden="true" /> Bulk Upload</button>
+        <button type="button" className="syllabus-btn syllabus-overview-create" onClick={openUpload} disabled={!canCreate || !semesters.length} title={!canCreate ? "Create permission required" : undefined}><Plus aria-hidden="true" /> Create Syllabus</button>
+      </div>
+    </header>
+    <section className="syllabus-kpi-grid" aria-label="Syllabus summary">
+      {dashboardStats.map(([label, count, caption, Icon, status]) => (
+        <article className="syllabus-kpi" data-status={status} key={label}>
+          <Icon aria-hidden="true" />
+          <div>
+            <span>{label}</span>
+            <strong>{status && recordsLoading ? <i className="syllabus-skeleton" /> : status && recordsError ? '\u2014' : count}</strong>
+            <small>{caption}</small>
+          </div>
+        </article>
+      ))}
     </section>
   </>
 
-  return <DashboardLayout>
+  const clearFilters = () => {
+    setFilters({ academicYearId: academic.selectedAcademicYearId || '', courseId: '', departmentId: '', branchId: '', subjectId: '', batchId: '' })
+    setStatusFilter('All')
+    setSearch('')
+  }
+
+
+  const branchGroups = new Map()
+  const workspaceBranches = new Map()
+  const addWorkspaceBranch = (branchKey, branch, course, semester) => {
+    const departmentId = value(branch, 'departmentId') || value(semester, 'departmentId') || value(course, 'departmentId')
+    const department = value(departments.find(item => same(displayId(item), departmentId)), 'name', 'departmentName') || value(branch, 'departmentName') || 'Unassigned department'
+    const departmentKey = String(departmentId || department)
+    const group = branchGroups.get(departmentKey) || { department, branches: new Map() }
+    const entry = { branch, department, scopes: [] }
+    group.branches.set(branchKey, entry)
+    branchGroups.set(departmentKey, group)
+    workspaceBranches.set(branchKey, entry)
+    return entry
+  }
+  for (const branch of programBranches) {
+    const course = courses.find(item => same(displayId(item), courseIdOf(branch)))
+    const departmentId = value(branch, 'departmentId') || value(course, 'departmentId')
+    const branchId = String(displayId(branch))
+    if (filters.departmentId && !same(departmentId, filters.departmentId)) continue
+    if (filters.branchId && !same(branchId, filters.branchId)) continue
+    addWorkspaceBranch(branchId, branch, course)
+  }
+  const matchingScopes = new Set(visibleScopes)
+  for (const scope of programScopes) {
+    const course = courses.find(item => same(displayId(item), courseIdOf(scope.branch) || courseIdOf(scope.semester)))
+    const branchKey = scope.branchId || 'course:' + displayId(course)
+    const entry = workspaceBranches.get(branchKey) || addWorkspaceBranch(branchKey, scope.branch, course, scope.semester)
+    const related = recordsForScope(scope)
+    entry.scopes.push({ ...scope, key: branchKey + ':' + displayId(scope.semester), department: entry.department, records: related, matchesFilters: matchingScopes.has(scope), created: related.length > 0, state: stateForScope(related) })
+  }
+  const defaultBranchKey = [...workspaceBranches].find(([, entry]) => entry.scopes.some(scope => scope.matchesFilters))?.[0] ?? workspaceBranches.keys().next().value
+  const activeBranchKey = workspaceBranches.has(workspaceBranch) ? workspaceBranch : defaultBranchKey
+  const activeBranch = workspaceBranches.get(activeBranchKey)
+  const branchScopes = activeBranch?.scopes || []
+  const browsingFiltersActive = Boolean(search.trim() || filters.subjectId || statusFilter !== 'All')
+  const navigableScopes = browsingFiltersActive ? branchScopes.filter(scope => scope.matchesFilters) : branchScopes
+  const semestersByYear = new Map()
+  for (const scope of navigableScopes) {
+    const year = Number(value(scope.semester, 'yearNumber')) || Math.max(1, Math.ceil(semNumber(scope.semester) / 2))
+    if (!semestersByYear.has(year)) semestersByYear.set(year, [])
+    semestersByYear.get(year).push(scope)
+  }
+  const publishedCount = branchScopes.filter(scope => scope.state === 'published').length
+  const activeScope = navigableScopes.find(scope => scope.key === workspaceSemester) || navigableScopes[0]
+  const activeWorkspaceTab = activeScope?.key === workspaceSemester ? workspaceTab : filters.subjectId ? 'subjects' : 'overview'
+  const activeRecord = activeScope && ([...activeScope.records].sort((a, b) => String(value(b, 'updatedAt', 'createdAt')).localeCompare(String(value(a, 'updatedAt', 'createdAt'))))[0] || null)
+  const mappedSubjects = activeScope ? subjectsForScope(activeScope) : []
+  const activeSubjects = filters.subjectId ? mappedSubjects.filter(subject => same(value(subject, 'subjectId', 'id'), filters.subjectId)) : mappedSubjects
+  const subjectOptions = new Map()
+  for (const scope of activeBranch?.scopes || []) {
+    for (const subject of subjectsForScope(scope)) {
+      const id = value(subject, 'subjectId', 'id')
+      if (id) subjectOptions.set(String(id), value(subject, 'subjectName', 'name', 'subjectCode') || String(id))
+    }
+  }
+  const activeDocuments = activeScope ? activeScope.records.flatMap(documentsOf) : []
+  const previewDocument = activeDocuments.find(document => canDownload && ['PDF', 'Image', 'Text'].includes(classifySyllabusFile({ name: value(document, 'fileName', 'originalFileName', 'name') })))
+  const downloadDocument = canDownload ? activeDocuments[0] : null
+  const activeCourse = courses.find(item => same(displayId(item), courseIdOf(activeScope?.semester) || courseIdOf(activeBranch?.branch)))
+  const branchDuration = value(activeBranch?.branch, 'duration', 'durationYears') || value(activeCourse, 'durationYears', 'durationInYears', 'duration')
+  const yearLabel = value(years.find(year => same(displayId(year), filters.academicYearId)), 'name', 'academicYearName') || '\u2014'
+  const subjectTarget = Number(value(activeScope?.semester, 'totalSubjects', 'subjectCount') || value(activeRecord, 'totalSubjects'))
+  const subjectProgress = subjectTarget > 0 ? Math.min(100, Math.round(mappedSubjects.length / subjectTarget * 100)) : null
+  const totalCredits = value(activeScope?.semester, 'totalCredits', 'credits') || (activeSubjects.some(subject => value(subject, 'credits', 'creditPoints') !== '') ? activeSubjects.reduce((total, subject) => total + (Number(value(subject, 'credits', 'creditPoints')) || 0), 0) : '')
+
+  const workspaceCourseId = detailMode ? '' : displayId(activeCourse)
+  const workspaceBranchId = detailMode ? '' : displayId(activeBranch?.branch)
+  useEffect(() => {
+    let current = true
+    setSubjects([])
+    const filterBranch = branches.find(branch => same(displayId(branch), filters.branchId))
+    const subjectCourseId = filters.courseId || courseIdOf(selectedScope?.semester) || courseIdOf(selectedBranch) || courseIdOf(filterBranch) || workspaceCourseId
+    if (!currentCollege || !filters.academicYearId || !subjectCourseId) {
+      setSubjectsError('')
+      return () => { current = false }
+    }
+    subjectApi.list({ collegeId: currentCollege, academicYearId: filters.academicYearId, courseId: subjectCourseId, branchId: routeBranchId || filters.branchId || workspaceBranchId || undefined, semesterId: routeSemesterId || undefined })
+      .then(response => { if (current) setSubjects(rowsFrom(response)) })
+      .catch(error => { if (current) { setSubjectsError(readableError(error)) } })
+    return () => { current = false }
+  }, [currentCollege, filters.academicYearId, filters.courseId, filters.branchId, routeSemesterId, routeBranchId, branches, selectedScope, selectedBranch, workspaceCourseId, workspaceBranchId])
+
+  const renderDirectory = () => <>
+    <section className="syllabus-filters" aria-label="Academic filters">
+      <div className="syllabus-programs" role="group" aria-label="Program">
+        {['B.Tech', 'Degree'].map(item => (
+          <button key={item} className="syllabus-btn" type="button" aria-pressed={program === item} onClick={() => {
+            if (program === item) return
+            setSelectedProgram(item)
+            setWorkspaceBranch('')
+            setWorkspaceSemester('')
+            setWorkspaceTab('overview')
+            setFilters(current => ({ ...current, courseId: '', departmentId: '', branchId: '', subjectId: '' }))
+          }}>{item}</button>
+        ))}
+      </div>
+      <div className="syllabus-filter-grid">
+        <Field label="Academic Year"><select value={filters.academicYearId} onChange={event => setFilters(current => ({ ...current, academicYearId: event.target.value, subjectId: '' }))}><option value="">Select academic year</option>{years.map(year => <option key={displayId(year)} value={displayId(year)}>{value(year, 'name', 'academicYearName')}</option>)}</select></Field>
+        <Field label="Course"><select value={filters.courseId} onChange={event => setFilters(current => ({ ...current, courseId: event.target.value, departmentId: '', branchId: '', subjectId: '' }))}><option value="">All courses</option>{programCourses.map(course => <option key={displayId(course)} value={displayId(course)}>{value(course, 'name', 'courseName', 'code', 'courseCode')}</option>)}</select></Field>
+        <Field label="Department"><select value={filters.departmentId} onChange={event => setFilters(current => ({ ...current, departmentId: event.target.value, branchId: '', subjectId: '' }))}><option value="">All departments</option>{departments.filter(department => programDepartmentIds.has(String(displayId(department)))).map(department => <option key={displayId(department)} value={displayId(department)}>{value(department, 'name', 'departmentName')}</option>)}</select></Field>
+        <Field label="Branch"><select value={filters.branchId} onChange={event => setFilters(current => ({ ...current, branchId: event.target.value, subjectId: '' }))}><option value="">All branches</option>{scopedBranches.filter(branch => inProgram(courseIdOf(branch))).map(branch => <option key={displayId(branch)} value={displayId(branch)}>{value(branch, 'name', 'branchName', 'code')}</option>)}</select></Field>
+        <Field label="Subjects"><select value={filters.subjectId} onChange={event => { setFilters(current => ({ ...current, subjectId: event.target.value })); setWorkspaceSemester(''); setWorkspaceTab(event.target.value ? 'subjects' : 'overview') }}><option value="">All subjects</option>{[...subjectOptions].map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></Field>
+        <Field label="Syllabus Status"><select value={statusFilter} onChange={event => setStatusFilter(event.target.value)}><option value="All">All Status</option><option>Published</option><option>Draft</option><option>Pending</option><option>Archived</option><option>Unavailable</option></select></Field>
+        <label className="syllabus-search"><Search size={17} aria-hidden="true" /><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search..." aria-label="Search semesters" /></label>
+        <button className="syllabus-btn syllabus-clear-filters" type="button" onClick={clearFilters}><RefreshCw size={15} aria-hidden="true" />Clear Filters</button>
+      </div>
+    </section>
+      {!canCreate && <div className="syllabus-inline-alert" role="status"><ShieldCheck size={16} /> Your role has view access only. Ask an administrator to grant the syllabus_management create permission to upload syllabus files.</div>}
+      {!academic.selectedCollegeId && <div className="syllabus-inline-alert" role="status"><CircleAlert size={16} /> Select an authorized college in the global academic context to view its syllabus.</div>}
+
+    <div className="syllabus-branch-workspace">
+      <BranchDirectory key={program} groups={branchGroups} selected={activeBranchKey} onSelect={key => { setWorkspaceBranch(key); setWorkspaceSemester(''); setWorkspaceTab('overview'); if (filters.subjectId) setFilters(current => ({ ...current, subjectId: '' })) }} />
+      <section className="syllabus-branch-content" aria-label="Branch semester workspace">
+        {recordsError && <div className="syllabus-inline-alert syllabus-inline-alert--warning" role="status"><CircleAlert size={17} /><span>{recordsError}</span><button type="button" onClick={fetchSyllabi}>Retry</button></div>}
+        {recordsLoading && <div className="syllabus-loading-line" role="status"><LoaderCircle size={17} className="syllabus-spin" /> Loading syllabi?</div>}
+        {branchScopes.length > 0 ? <>
+          <div className="syllabus-branch-context">
+            <div><FaUniversity aria-hidden="true" /> <b>Program:</b> {program} <span>|</span> <b>Department:</b> {activeBranch.department} <span>|</span> <b>Branch:</b> {branchLabel(activeBranch)} <span>|</span> <b>Regulation:</b> {value(activeRecord, 'regulationName', 'regulationCode') || '\u2014'} <span>|</span> <b>Academic Year:</b> {yearLabel}</div>
+            <div><b>Duration:</b> {branchDuration ? branchDuration + ' Years' : '\u2014'} <span>|</span> <b>Total Semesters:</b> {branchScopes.length}</div>
+          </div>
+          <div className="syllabus-branch-stats" aria-label="Branch summary">
+            {[
+              ['Total Semesters', branchScopes.length, FaCalendarAlt, 'configured'],
+              ['Created', branchScopes.filter(scope => scope.created).length, FaCheckCircle, 'created'],
+              ['Published', publishedCount, FaCheckCircle, 'published'],
+              ['Draft', branchScopes.filter(scope => scope.state === 'draft').length, FaFileAlt, 'draft'],
+              ['Pending', branchScopes.filter(scope => !scope.created).length, FaClock, 'pending'],
+            ].map(([label, count, Icon, tone]) => <div key={label} data-tone={tone}><Icon aria-hidden="true" /><div>{label}<strong>{recordsError && tone !== 'configured' ? '\u2014' : count}</strong></div></div>)}
+          </div>
+          <div className="syllabus-coverage">
+            <div><h2>Semester navigation</h2><span>{recordsLoading ? 'Loading publication data?' : recordsError ? 'Publication progress unavailable' : <>{publishedCount} of {branchScopes.length} semesters published</>}</span></div>
+            {!recordsError && !recordsLoading && <progress max={branchScopes.length} value={publishedCount} aria-label="Published semesters" />}
+            <button type="button" className="syllabus-icon-button" onClick={fetchSyllabi} disabled={recordsLoading} title="Refresh syllabi" aria-label="Refresh syllabi"><RefreshCw size={16} /></button>
+          </div>
+          <nav className="syllabus-year-groups" aria-label="Semesters by year">
+            {[...semestersByYear].map(([year, scopes]) => <div key={year} role="group" aria-label={'Year ' + year}>
+              <h3>Year {year}</h3>
+              <div>{scopes.map(scope => <button type="button" key={scope.key} aria-current={scope.key === activeScope?.key ? 'true' : undefined} onClick={() => { setWorkspaceSemester(scope.key); setWorkspaceTab(filters.subjectId ? 'subjects' : 'overview') }}>
+                <strong>{semNumber(scope.semester) ? 'Semester ' + semNumber(scope.semester) : value(scope.semester, 'semesterName', 'name') || 'Semester'}</strong>
+                <span className={'syllabus-status syllabus-status--' + scope.state}><i />{scope.state[0].toUpperCase() + scope.state.slice(1)}</span>
+              </button>)}</div>
+            </div>)}
+          </nav>
+          {activeScope ? <section className="syllabus-semester-workspace">
+            <header className="syllabus-semester-heading">
+              <div><h2>Semester {semNumber(activeScope.semester)} - {yearLabel} ({semNumber(activeScope.semester) % 2 ? 'Odd' : 'Even'} Semester)</h2><span className={'syllabus-status syllabus-status--' + activeScope.state}><i />{activeScope.state[0].toUpperCase() + activeScope.state.slice(1)}</span></div>
+              <div><small>Last Updated: {dateLabel(value(activeRecord, 'updatedAt', 'lastUpdated', 'createdAt'))}</small>
+                <button type="button" disabled={!previewDocument} onClick={() => documentBlob(previewDocument, false)}>View</button>
+                <button type="button" disabled={!downloadDocument} onClick={() => documentBlob(downloadDocument, true)}>Download</button>
+                <details key={activeScope.key}><summary>More</summary><div>
+                  {canCreate && <button type="button" onClick={() => openCreate(activeScope.semester, activeScope.branch)}>Add document</button>}
+                  {canEdit && activeRecord && <button type="button" onClick={() => openEdit(activeRecord)}>Edit metadata</button>}
+                  {canPublish && activeRecord && statusKey(activeRecord) === 'draft' && <button type="button" onClick={() => executeAction('publish', activeRecord)}>Publish</button>}
+                  {canArchive && activeRecord && statusKey(activeRecord) !== 'archived' && <button type="button" onClick={() => confirmArchive(activeRecord)}>Archive</button>}
+                  <button type="button" onClick={() => navigate('/syllabus-management/' + encodeURIComponent(displayId(activeScope.semester)) + (activeScope.branchId ? '?branchId=' + encodeURIComponent(activeScope.branchId) : ''))}>Open full workspace</button>
+                </div></details>
+              </div>
+            </header>
+            <nav className="syllabus-workspace-tabs" aria-label="Semester sections">
+              {[['overview', 'Overview'], ['subjects', 'Mapped Subjects'], ['documents', 'Documents'], ['versions', 'Version History']].map(([tab, label]) => <button type="button" key={tab} aria-current={activeWorkspaceTab === tab ? 'true' : undefined} onClick={() => {
+                setWorkspaceSemester(activeScope.key)
+                setWorkspaceTab(tab)
+                if (tab === 'versions') { setExtraRows([]); loadExtra(tab, activeRecord) }
+              }}>{label}</button>)}
+            </nav>
+            {activeWorkspaceTab === 'overview' ? <div className="syllabus-semester-overview">
+              <div className="syllabus-overview-book"><FaBookOpen aria-hidden="true" /></div>
+              <dl>{[
+                ['Syllabus Title', value(activeRecord, 'title', 'syllabusTitle')],
+                ['Total Subjects', activeSubjects.length],
+                ['Total Credits', totalCredits],
+                ['Description', value(activeRecord, 'description', 'notes')],
+              ].map(([label, data]) => <div key={label}><dt>{label}</dt><dd>{data === '' ? '\u2014' : data}</dd></div>)}</dl>
+              <div className="syllabus-overview-documents">
+                <strong>Subjects Progress</strong>
+                {subjectProgress === null ? <p>{activeSubjects.length} mapped (target unavailable)</p> : <div className="syllabus-progress"><progress max="100" value={subjectProgress} aria-label="Subjects progress" /><b>{subjectProgress}%</b></div>}
+                <strong>Documents ({activeDocuments.length})</strong>
+                {activeDocuments.length ? <ul>{activeDocuments.map((document, index) => {
+                  const name = value(document, 'fileName', 'originalFileName', 'name') || 'Syllabus document'
+                  const size = value(document, 'size', 'fileSize', 'sizeBytes')
+                  return <li key={value(document, 'documentId', 'id') || index}><FaFileAlt data-type={classifySyllabusFile({ name })} aria-hidden="true" /><span title={name}>{name}</span><small>{size ? formatFileSize(size) : '?'}</small><button type="button" disabled={!canDownload} aria-label={'Download ' + name} onClick={() => documentBlob(document, true)}><Download size={15} /></button></li>
+                })}</ul> : <p>No documents available.</p>}
+              </div>
+            </div> : <DetailWorkspace embedded semester={activeScope.semester} branch={activeScope.branch} records={activeScope.records} subjects={activeSubjects} activeTab={activeWorkspaceTab} onModal={record => record ? openEdit(record) : openCreate(activeScope.semester, activeScope.branch)} onPreview={document => documentBlob(document, false)} onDownload={document => documentBlob(document, true)} onReplace={onReplace} onViewSubject={setReadingSubject} canCreate={canCreate} canEdit={canEdit} canDownload={canDownload} extraRows={extraRows} extraError={extraError} loadingExtra={loadingExtra} loadExtra={tab => loadExtra(tab, activeRecord)} />}
+          </section> : <div className="syllabus-empty syllabus-empty--compact"><Search size={22} /><strong>No semesters match the current filters</strong><button type="button" className="syllabus-btn syllabus-btn--secondary" onClick={() => { setSearch(''); setStatusFilter('All'); setFilters(current => ({ ...current, subjectId: '' })) }}>Reset semester filters</button></div>}
+        </> : !recordsLoading && <div className="syllabus-empty"><BookOpenCheck size={28} /><h3>No semesters match the current filters</h3></div>}
+        {subjectsError && <p className="syllabus-data-note" role="status">Subject totals may be unavailable: {subjectsError}</p>}
+      </section>
+    </div>
+  </>
+
+  return <DashboardLayout hideBreadcrumb={!detailMode}>
     <main className="syllabus-page">
       {pageHeader}
-      {demoContentAvailable && <div className="syllabus-demo-alert" role="status"><CircleAlert size={17} /><span>Sample syllabus documents and subject lists are shown for configured branch / semester pairs. They are local previews only; uploads, edits and publishing require the syllabus backend API.</span></div>}
       {detailMode && recordsError && <div className="syllabus-inline-alert syllabus-inline-alert--warning" role="status"><CircleAlert size={17} /><span>{recordsError}</span><button type="button" onClick={fetchSyllabi}>Retry</button></div>}
       {detailMode
         ? selectedSemester
@@ -758,7 +915,7 @@ export default function SyllabusManagement() {
       {replaceProgress && <div className="syllabus-toast-status" role="status"><LoaderCircle size={16} className="syllabus-spin" />{replaceProgress}</div>}
     </main>
     <SyllabusModal open={modalOpen} onClose={closeModal} form={form} setForm={setForm} academic={academic} courses={courses} branches={branches} subjects={subjects} files={files} setFiles={setFiles} errors={formErrors} setErrors={setFormErrors} onSave={saveSyllabus} saving={saving} canPublish={canPublish} onRetryFile={retryFile} onCancelFile={cancelFile} />
-    {readingSubject && <SubjectReader subject={readingSubject} semester={selectedSemester} branch={selectedBranch} onClose={() => setReadingSubject(null)} />}
+    {readingSubject && <SubjectReader subject={readingSubject} semester={detailMode ? selectedSemester : activeScope?.semester} branch={detailMode ? selectedBranch : activeScope?.branch} onClose={() => setReadingSubject(null)} />}
     {preview && <div className="syllabus-preview-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setPreview(null) }}><section className="syllabus-preview" role="dialog" aria-modal="true" aria-label={'Preview ' + preview.name}><header><strong>{preview.name}</strong><button type="button" className="syllabus-icon-button" onClick={() => setPreview(null)} aria-label="Close preview"><X size={18} /></button></header>{preview.type.startsWith('image/') ? <img src={preview.url} alt={preview.name} /> : preview.type.includes('pdf') || preview.name.toLowerCase().endsWith('.pdf') || preview.type.startsWith('text/') ? <iframe src={preview.url} title={preview.name} /> : <div className="syllabus-empty"><FileText size={25} /><h3>Preview unavailable</h3><p>This format must be downloaded to open.</p></div>}</section></div>}
     {confirmation && <div className="syllabus-modal-backdrop" role="presentation"><section className="syllabus-confirm" role="alertdialog" aria-modal="true" aria-labelledby="syllabus-confirm-title"><span><Archive size={20} /></span><h2 id="syllabus-confirm-title">Archive this syllabus?</h2><p>Archived documents are no longer shown as active to students and faculty. The record and its versions remain available for audit.</p><footer><button className="syllabus-btn syllabus-btn--quiet" type="button" onClick={() => setConfirmation(null)}>Cancel</button><button className="syllabus-btn syllabus-btn--danger" type="button" onClick={async () => { const record = confirmation.record; setConfirmation(null); await executeAction('archive', record, true) }}>Archive syllabus</button></footer></section></div>}
   </DashboardLayout>

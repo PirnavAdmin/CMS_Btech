@@ -1,0 +1,18 @@
+﻿.student-timetable { color: #14274f; }
+.student-timetable h1 { margin-bottom: .25rem; }
+.st-search { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; margin: 1rem 0; }
+.st-search input { flex: 1 1 300px; padding: .7rem; border: 1px solid #cbd8ee; border-radius: 6px; }
+.st-search button, .st-actions button { padding: .65rem .9rem; border: 1px solid #cbd8ee; border-radius: 6px; background: #fff; color: #14274f; cursor: pointer; }
+.st-details, .st-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: .75rem; margin: 1rem 0; }
+.st-details div, .st-metrics article { padding: .8rem; background: #f1f6ff; border: 1px solid #dae5f7; border-radius: 7px; }
+.st-details dt, .st-metrics span { display: block; font-size: .8rem; }
+.st-details dd { margin: .3rem 0 0; font-weight: 600; }
+.st-metrics strong { display: block; margin-top: .4rem; }
+.st-actions { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem; margin: 1rem 0; }
+.st-actions [aria-selected="true"] { color: white; background: #1b3158; }
+.st-scroll { overflow-x: auto; }
+.st-scroll table { width: 100%; border-collapse: collapse; min-width: 850px; }
+.st-scroll th { background: #1b3158; color: white; text-align: left; }
+.st-scroll th, .st-scroll td { padding: .7rem; border: 1px solid #dbe3ef; }
+.st-scroll tbody tr:nth-child(even) { background: #f6f8fc; }
+@media print { .st-search, .st-actions { display: none; } .st-scroll { overflow: visible; } .st-scroll table { min-width: 0; } }
