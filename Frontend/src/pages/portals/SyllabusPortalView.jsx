@@ -22,7 +22,7 @@ const date = value => {
   return Number.isNaN(parsed.getTime()) ? value : new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(parsed)
 }
 const errorText = error => error?.status === 404
-  ? 'The published syllabus service is not available yet. Contact your administrator.'
+  ? 'This syllabus document is no longer available. Refresh the library and try again.'
   : error?.status === 403
     ? 'Your account cannot view these syllabus documents.'
     : error?.status === 401
@@ -54,7 +54,7 @@ export default function SyllabusPortalView({ role }) {
     if (!id) return
     setDownloading(String(id))
     try {
-      const { blob } = await syllabusApi.downloadDocument(id, { collegeId })
+      const { blob } = await syllabusApi.downloadDocument(id, { collegeId, portal: true })
       const url = URL.createObjectURL(blob)
       const anchor = window.document.createElement('a')
       anchor.href = url
