@@ -6,7 +6,7 @@
 #root .portal-shell--student .sidebar-link.active{background:#1463d6;color:#fff}
 #root .portal-shell--student .sidebar-navigation{gap:2px}
 #root .portal-shell--student .sidebar-link{min-height:34px;font-size:12px}
-#root .portal-shell--student .portal-workspace{padding:18px 16px 35px}
+#root .portal-shell--student .portal-workspace{padding:var(--page-top-padding) 16px var(--page-bottom-padding)}
 #root .portal-shell--student .app-breadcrumb{display:none}
 .student-sidebar-logout{width:100%;border:0;background:transparent;text-align:left;cursor:pointer}
 .student-sidebar-profile{display:flex;align-items:center;gap:10px;margin:10px;padding:10px;border:1px solid var(--border);border-radius:10px;min-width:0}
@@ -41,7 +41,7 @@
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
-  padding: clamp(28px, 2.1vw, 40px) var(--portal-content-inset) 52px;
+  padding: var(--page-top-padding) var(--page-inline-padding) var(--page-bottom-padding);
 }
 
 #root .portal-shell .dashboard-header {
@@ -63,7 +63,7 @@
   flex: 0 0 auto;
   width: 100%;
   max-width: none;
-  margin: 0 0 24px;
+  margin: 0 0 var(--page-section-gap);
 }
 
 #root .portal-shell .faculty-page-container__content {
@@ -78,7 +78,7 @@
 }
 
 #root .portal-shell .faculty-page-container__content > * {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   align-self: stretch;
   width: 100%;
   max-width: none;
@@ -120,11 +120,11 @@
 
 /* Keep portal pages compact so the useful content stays near the page heading. */
 #root .portal-shell .portal-workspace {
-  padding-block: 18px 28px;
+  padding-block: var(--page-top-padding) var(--page-bottom-padding);
 }
 
 #root .portal-shell .faculty-page-container > .faculty-breadcrumbs {
-  margin-bottom: 14px;
+  margin-bottom: var(--space-3);
 }
 
 #root .portal-shell .portal-page h1 {
@@ -137,13 +137,13 @@
 }
 
 #root .portal-shell .portal-page p {
-  margin-top: 6px;
-  margin-bottom: 12px;
+  margin-top: 4px;
+  margin-bottom: 10px;
 }
 
 #root .portal-shell .portal-card {
-  margin-bottom: 16px;
-  padding: 18px;
+  margin-bottom: var(--space-4);
+  padding: var(--surface-padding);
 }
 
 #root .portal-shell .portal-stats {
@@ -185,7 +185,7 @@
   }
 
   #root .portal-shell .portal-workspace {
-    padding: 16px 16px 32px;
+    padding: var(--surface-padding-compact) 16px 24px;
   }
 }
 
@@ -209,7 +209,7 @@
   }
 
   #root .portal-shell .portal-workspace {
-    padding: 26px var(--portal-content-inset) 40px;
+    padding: var(--page-top-padding) var(--page-inline-padding) var(--page-bottom-padding);
   }
 
 }
@@ -222,7 +222,7 @@
 
 /* Student portal spacing; keep the shared faculty and admin shells unchanged. */
 #root .portal-shell--student{--portal-content-inset:20px}
-#root .portal-shell--student .portal-workspace{padding:18px 20px 28px}
+#root .portal-shell--student .portal-workspace{padding:var(--page-top-padding) 20px var(--page-bottom-padding)}
 #root .portal-shell--student .dashboard-header{height:var(--header-height);min-height:var(--header-height);padding:0 20px;flex-wrap:nowrap;align-items:center}
 #root .portal-shell--student .dashboard-header__actions{flex-wrap:nowrap;align-items:center;gap:8px;min-width:0}
 #root .portal-shell--student .global-search{min-width:0}
@@ -232,5 +232,5 @@
 #root .portal-shell--student .sidebar-link>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #root .portal-shell--student .student-sidebar-profile{flex:0 0 auto;margin:8px;padding:10px;align-items:center}
 @media(min-width:993px){#root .portal-shell--student.sidebar-collapsed .portal-content{margin-left:var(--sidebar-collapsed-width)}#root .portal-shell--student .sidebar.is-collapsed .sidebar-link{justify-content:center;padding:7px 0}}
-@media(max-width:992px){#root .portal-shell--student .portal-content{margin-left:0}#root .portal-shell--student .portal-menu{display:grid}#root .portal-shell--student .dashboard-header{padding-inline:16px}#root .portal-shell--student .portal-workspace{padding:16px}}
-@media(max-width:520px){#root .portal-shell--student .dashboard-header{gap:8px;padding-inline:12px}#root .portal-shell--student .dashboard-header__actions{gap:5px}#root .portal-shell--student .account-menu summary>span:nth-child(2){display:none}#root .portal-shell--student .portal-workspace{padding:16px 12px 24px}}
+@media(max-width:992px){#root .portal-shell--student .portal-content{margin-left:0}#root .portal-shell--student .portal-menu{display:grid}#root .portal-shell--student .dashboard-header{padding-inline:16px}#root .portal-shell--student .portal-workspace{padding:var(--surface-padding-compact) 16px 24px}}
+@media(max-width:520px){#root .portal-shell--student .dashboard-header{gap:8px;padding-inline:12px}#root .portal-shell--student .dashboard-header__actions{gap:5px}#root .portal-shell--student .account-menu summary>span:nth-child(2){display:none}#root .portal-shell--student .portal-workspace{padding:var(--surface-padding-compact) 12px 20px}}
