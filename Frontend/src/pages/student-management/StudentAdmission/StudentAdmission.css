@@ -2145,6 +2145,13 @@
   min-width: 0;
 }
 
+.student-admission .sa-admission-filters .sa-filter-grid .searchable-select__trigger {
+  height: 38px;
+  min-height: 38px;
+  padding: 0 10px;
+  border-radius: 7px;
+}
+
 .student-admission .sa-admission-filters .sa-filter-chips {
   display: flex;
   flex-wrap: wrap;

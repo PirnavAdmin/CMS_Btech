@@ -141,10 +141,12 @@ public sealed class TimetableService : ITimetableService
     {
         RequirePositive(id,nameof(id));
         if (r.Requirements is null) throw new ArgumentException("Requirements cannot be null.");
+        if (r.Requirements.GroupBy(x => x.SubjectId).Any(g => g.Count() > 1))
+            throw new ArgumentException("Duplicate subject requirements are not allowed.");
         foreach(var x in r.Requirements)
         {
-            if(x.SubjectId<=0 || x.PeriodsPerWeek<=0 || x.BlockSize<=0)
-                throw new ArgumentException("Each requirement needs SubjectId, positive PeriodsPerWeek and positive BlockSize.");
+            if(x.SubjectId<=0 || x.PeriodsPerWeek<=0 || x.BlockSize<=0 || x.PeriodsPerWeek % x.BlockSize != 0)
+                throw new ArgumentException("Each requirement needs SubjectId, positive PeriodsPerWeek and positive BlockSize that divides PeriodsPerWeek.");
         }
         return _repository.SaveRequirementsAsync(id,r,actor,college,superAdmin);
     }
@@ -208,6 +210,7 @@ public sealed class TimetableService : ITimetableService
     }
 
     public Task PublishAsync(long id,long? actor,long? college,bool superAdmin) => _repository.PublishAsync(id,actor,college,superAdmin);
+    public Task DeleteDraftAsync(long id,long? actor,long? college,bool superAdmin) => _repository.DeleteDraftAsync(id,actor,college,superAdmin);
     public Task ReopenAsync(long id,long? actor,long? college,bool superAdmin) => _repository.ReopenAsync(id,actor,college,superAdmin);
 
     public Task<IReadOnlyList<TimetableEntryDto>> AddEntryAsync(long id,ManualTimetableEntryRequest r,long? actor,long? college,bool superAdmin)
