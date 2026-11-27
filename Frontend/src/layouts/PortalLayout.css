@@ -189,7 +189,6 @@
 }
 
 @media (min-width: 901px) and (max-width: 1440px) {
-
   #root .portal-shell {
     --portal-content-inset: clamp(24px, 2.5vw, 36px);
   }
@@ -208,9 +207,4 @@
   #root .portal-shell .portal-content {
     transition: none;
   }
-}
-
-/* The faculty dashboard header is the first item in the app shell. */
-#root .portal-shell--faculty-dashboard .portal-content {
-  padding-top: 0;
 }
