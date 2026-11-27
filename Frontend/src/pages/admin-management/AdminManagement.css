@@ -5854,12 +5854,14 @@
 .rooms-block-overview__item small,.rooms-block-overview__empty{color:var(--text-muted);font-size:.7rem}
 .rooms-block-overview__empty{padding:8px 0}
 .rooms-generator-form{display:grid;gap:16px;padding:8px 2px}
+.rooms-generator-error{position:sticky;top:0;z-index:2;padding:12px 14px;border:1px solid var(--danger);border-radius:8px;background:var(--surface);color:var(--danger);font-size:.82rem;line-height:1.45;box-shadow:var(--shadow-sm)}
 .rooms-generator-note{display:flex;align-items:center;gap:8px;padding:11px 12px;border:1px solid var(--brand-soft);border-radius:9px;background:var(--surface-soft);color:var(--text-secondary);font-size:.76rem}
 .rooms-generator-note svg{flex:0 0 auto;color:var(--brand)}
 .rooms-generator-form__grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
 .rooms-generator-form label{display:grid;gap:6px;color:var(--text-secondary);font-size:.76rem;font-weight:700}
 .rooms-generator-form input,.rooms-generator-form select{box-sizing:border-box;width:100%;height:40px;padding:0 11px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text-primary);font:inherit;font-weight:500}
 .rooms-generator-form label small{color:var(--text-muted);font-size:.68rem;font-weight:400}
+.rooms-generator-form label small.rooms-generator-capacity-warning{color:var(--warning);font-weight:600}
 .rooms-generator-preview{margin:0;padding:10px 12px;border-radius:8px;background:var(--surface-soft);color:var(--text-secondary);font-size:.76rem;font-weight:650}
 @media(max-width:560px){.rooms-block-overview__intro{align-items:flex-start;flex-direction:column}.rooms-generator-form__grid{grid-template-columns:1fr}.rooms-block-overview__item{width:100%;min-width:0}}
 
@@ -6023,4 +6025,27 @@
   .college-workspace-dialog .shared-view-dialog__footer { padding-inline: 14px; }
   .college-form-dialog .ac-tabs button { flex-grow: 0; }
   .college-form-dialog .shared-view-dialog__footer { flex-wrap: wrap; gap: 6px; }
+}
+.ay-editor > .erp-form-scroll-body > .ay-range-error {
+  position: relative;
+  z-index: 1;
+  display: block;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--danger) 28%, transparent);
+  border-radius: 8px;
+  background: var(--surface, #fff);
+  color: var(--danger);
+  font-size: .88rem;
+  font-weight: 650;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .ay-editor > .erp-form-scroll-body > .ay-range-error {
+    margin-top: 10px;
+    padding: 9px 10px;
+    font-size: .82rem;
+  }
 }
