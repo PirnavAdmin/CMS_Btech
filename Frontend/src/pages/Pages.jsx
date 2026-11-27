@@ -650,7 +650,7 @@ function Dashboard() {
               </div>
             </div>
 
-            <div className="ym-bar-chart-layout">
+            <div className={`ym-bar-chart-layout ${barViewMode === 'Month' ? 'ym-bar-chart-layout--month' : ''}`}>
               {/* Y-Axis scale marks */}
               <div className="ym-bar-y-axis">
                 <span>{Math.max(...enrollmentVelocityData.map(d => d.value), 1)}</span>
