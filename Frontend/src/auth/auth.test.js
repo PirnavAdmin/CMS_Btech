@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { signIn, signOut, getUserCollegeId, getUserRole } from './auth.js'
+import { signIn, signOut, getUserCollegeId, getUserRole, getUserRoleDisplayName, isLibrarian } from './auth.js'
 import { selectedCollegeId } from '../utils/collegeScope.js'
 
 const storage = () => {
@@ -56,5 +56,15 @@ test('non-teaching role aliases open the canonical staff workspace', () => {
 
     window.sessionStorage.setItem('btech-user-role', 'non_teaching_staff')
     assert.equal(getUserRole(), 'staff')
+  } finally { delete globalThis.window }
+})
+
+test('a librarian designation routes a broad faculty role into the librarian workspace', () => {
+  globalThis.window = { localStorage: storage(), sessionStorage: storage() }
+  try {
+    signIn(['FACULTY'], 'opaque-token', '', false, { name: 'Krishna', designation: 'Librarian' })
+    assert.equal(getUserRole(), 'faculty')
+    assert.equal(getUserRoleDisplayName(), 'Librarian')
+    assert.equal(isLibrarian(), true)
   } finally { delete globalThis.window }
 })

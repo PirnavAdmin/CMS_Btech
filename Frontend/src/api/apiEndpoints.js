@@ -786,7 +786,7 @@ const normalizeProfile = (source) => {
     pincode: data.pincode ?? data.postalCode ?? '', city: data.city ?? '', district: data.district ?? '', state: data.state ?? '', permanentPincode: data.permanentPincode ?? '', permanentCity: data.permanentCity ?? '', permanentDistrict: data.permanentDistrict ?? '', permanentState: data.permanentState ?? '', bio: data.bio ?? data.aboutMe ?? '',
     lastLoginAt,
     updatedAt: data.updatedAt ?? '',
-    status: data.status ?? (data.accountStatus === 1 || data.accountStatus === undefined ? 'Active' : 'Inactive'),
+    status: data.status ?? (data.accountStatus === 1 || data.accountStatus === undefined ? 'Active' : 'Inactive'), academicStatus: data.status ?? '',
     accountStatus: data.accountStatus ?? 1, collegeId: data.collegeId ?? '', mustChangePassword: Boolean(data.mustChangePassword), profileCompleted: data.profileCompleted !== false,
     registrationNumber: data.registrationNumber ?? application.registrationNumber ?? application.number ?? '', admissionNumber: data.admissionNumber ?? application.admissionNumber ?? '',
     rollNumber: data.rollNumber ?? academic.rollNumber ?? '', course: data.course ?? data.courseName ?? academic.course ?? '', branch: data.branch ?? data.branchName ?? academic.branch ?? '',

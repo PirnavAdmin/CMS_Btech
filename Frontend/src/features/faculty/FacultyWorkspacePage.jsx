@@ -921,9 +921,9 @@ function MaterialsScreen({ data, action }) {
               <td><div className="fw-material-table-subject"><strong>{row.subjectCode || row.subjectName}</strong><span>{row.subjectCode ? row.subjectName : ''}</span><small>{row.unitTitle || (row.unit ? 'Unit ' + row.unit : 'Course resource')}</small></div></td>
               <td><div className="fw-material-sections fw-material-table-sections">{sectionNames.length ? <div>{sectionNames.slice(0, 3).map((name, index) => <span key={row.id + '-section-' + index}>{name}</span>)}{sectionNames.length > 3 && <span>+{sectionNames.length - 3} more</span>}</div> : <small>No sections assigned</small>}</div></td>
               <td><div className="fw-material-actions" aria-label={'Actions for ' + row.title}>
-                <button type="button" className="fw-icon-button" aria-label={'View ' + row.title} title="View details" onClick={() => setViewMaterial(row)}><FiFileText /></button>
-                <button type="button" className="fw-icon-button" aria-label={'Edit ' + row.title} title="Edit resource" onClick={() => beginEdit(row)}><FiEdit2 /></button>
-                <button type="button" className="fw-icon-button" aria-label={'Delete ' + row.title} title="Delete resource" onClick={() => { setDeleteError(''); setDeleteMaterial(row) }}><FiTrash2 /></button>
+                <button type="button" className="fw-icon-button fw-material-action-view" aria-label={'View ' + row.title} title="View details" onClick={() => setViewMaterial(row)}><FiFileText /><span>View</span></button>
+                <button type="button" className="fw-icon-button fw-material-action-edit" aria-label={'Edit ' + row.title} title="Edit resource" onClick={() => beginEdit(row)}><FiEdit2 /><span>Edit</span></button>
+                <button type="button" className="fw-icon-button fw-material-action-delete" aria-label={'Delete ' + row.title} title="Delete resource" onClick={() => { setDeleteError(''); setDeleteMaterial(row) }}><FiTrash2 /><span>Delete</span></button>
               </div></td>
             </tr>
           })}</tbody>
@@ -1262,7 +1262,7 @@ function FacultyCurrentWorkspacePage() {
   const title = titleFor(screen)
   if (['403', '404', 'session-expired'].includes(screen)) return <PortalLayout title={title}><main className="portal-page fw-page"><UnavailableScreen screen={screen} /></main></PortalLayout>
   if (!routes.some(route => route.screen === screen) || screen === 'dashboard') return <PortalLayout title="Page not found"><main className="portal-page fw-page"><UnavailableScreen screen="404" /></main></PortalLayout>
-  return <PortalLayout title={title}><main className="portal-page fw-page">
+  return <PortalLayout title={title}><main className={`portal-page fw-page${screen === 'subjects' ? ' fw-subjects-page' : ''}`}>
     {loading && !data ? <section className="fw-card" aria-busy="true"><FacultyCardSkeleton count={4} height="110px" /></section> : error && !data ? <section className="fw-error-card" role="alert"><FiAlertCircle /><div><h2>Could not load {title.toLowerCase()}</h2><p>{error}</p><button className="fw-button fw-button-primary" onClick={reload}>Retry</button></div></section> : <>
       {error && <p className="fw-inline-error" role="alert">{error}</p>}
       {notice && <p className="fw-inline-success" role="status"><FiCheckCircle />{notice}</p>}

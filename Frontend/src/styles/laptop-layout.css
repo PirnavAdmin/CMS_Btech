@@ -10,7 +10,7 @@
   }
 
   #root .portal-shell .portal-workspace {
-    padding-inline: clamp(24px, 2.5vw, 36px);
+    padding-inline: var(--portal-content-inset);
   }
 }
 
