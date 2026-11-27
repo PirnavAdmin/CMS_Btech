@@ -213,6 +213,7 @@ namespace BTech.Controllers
             });
         }
 
+        [AllowAnonymous]
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDto request)
         {
@@ -221,7 +222,7 @@ namespace BTech.Controllers
                 return BadRequest(new
                 {
                     success = false,
-                    message = "Identifier (Email, Mobile, or Employee ID) is required."
+                    message = "A valid email address is required."
                 });
             }
 
@@ -236,7 +237,7 @@ namespace BTech.Controllers
             if (!result.Success)
             {
                 return StatusCode(
-                    StatusCodes.Status403Forbidden,
+                    StatusCodes.Status503ServiceUnavailable,
                     new
                     {
                         success = false,

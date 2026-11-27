@@ -7,6 +7,8 @@ namespace BTech.Models
     [Table("otp_verifications")]
     public class OtpVerification
     {
+        public const int PasswordResetExpiryMinutes = 10;
+
         [Key]
         [Column("otp_verification_id")]
         public long OtpVerificationId { get; set; }
