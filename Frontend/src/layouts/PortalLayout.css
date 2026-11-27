@@ -1,7 +1,19 @@
 /* Keep the portal brand, title and sidebar controls in separate flex columns. */
 
 /* Shared faculty / student workspace polish. */
+#root .portal-shell--student{--sidebar-width:clamp(190px,13vw,230px);background:#f7f9fc}
+#root .portal-shell--student .sidebar{background:#fff}
+#root .portal-shell--student .sidebar-link.active{background:#1463d6;color:#fff}
+#root .portal-shell--student .sidebar-navigation{gap:2px}
+#root .portal-shell--student .sidebar-link{min-height:34px;font-size:12px}
+#root .portal-shell--student .portal-workspace{padding:18px 16px 35px}
+#root .portal-shell--student .app-breadcrumb{display:none}
+.student-sidebar-logout{width:100%;border:0;background:transparent;text-align:left;cursor:pointer}
+.student-sidebar-profile{display:flex;align-items:center;gap:10px;margin:10px;padding:10px;border:1px solid var(--border);border-radius:10px;min-width:0}
+.student-sidebar-avatar{display:grid;width:38px;height:38px;flex:none;place-items:center;overflow:hidden;border-radius:50%;background:var(--brand-soft)}
+.student-sidebar-avatar img,.account-avatar img{width:100%;height:100%;object-fit:cover}.student-sidebar-profile>span:last-child{display:grid;gap:2px;min-width:0}.student-sidebar-profile strong,.student-sidebar-profile small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.student-sidebar-profile small{color:var(--text-muted);font-size:10px}.sidebar.is-collapsed .student-sidebar-profile>span:last-child{display:none}.sidebar.is-collapsed .student-sidebar-profile{justify-content:center;padding:6px;margin:8px}
 #root .portal-shell {
+  --portal-content-inset: clamp(16px, 1.25vw, 20px);
   min-height: 100dvh;
   background:
     var(--main-bg);
@@ -13,7 +25,7 @@
   min-width: 0;
   box-sizing: border-box;
   margin-left: var(--sidebar-width);
-  padding-top: clamp(72px, 5vw, 96px);
+  padding-top: 0;
   min-height: 100dvh;
   transition: margin-left .2s ease;
 }
@@ -29,7 +41,11 @@
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
-  padding: clamp(28px, 2.1vw, 40px) clamp(24px, 3vw, 58px) 52px;
+  padding: clamp(28px, 2.1vw, 40px) var(--portal-content-inset) 52px;
+}
+
+#root .portal-shell .dashboard-header {
+  padding-inline: var(--portal-content-inset);
 }
 
 #root .portal-shell .faculty-page-container {
@@ -102,10 +118,60 @@
   border-radius: 16px;
 }
 
+/* Keep portal pages compact so the useful content stays near the page heading. */
+#root .portal-shell .portal-workspace {
+  padding-block: 18px 28px;
+}
+
+#root .portal-shell .faculty-page-container > .faculty-breadcrumbs {
+  margin-bottom: 14px;
+}
+
+#root .portal-shell .portal-page h1 {
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+#root .portal-shell .portal-page h2 {
+  margin-bottom: 12px;
+}
+
+#root .portal-shell .portal-page p {
+  margin-top: 6px;
+  margin-bottom: 12px;
+}
+
+#root .portal-shell .portal-card {
+  margin-bottom: 16px;
+  padding: 18px;
+}
+
+#root .portal-shell .portal-stats {
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+#root .portal-shell .portal-stats article {
+  gap: 6px;
+  padding: 16px;
+}
+
+#root .portal-shell .portal-table th {
+  padding: 12px;
+}
+
+#root .portal-shell .portal-table td {
+  padding: 12px;
+}
+
 @media (max-width: 900px) {
   #root .portal-shell .portal-content {
     margin-left: 0;
-    padding-top: 64px;
+    padding-top: 0;
+  }
+
+  #root .portal-shell {
+    --portal-content-inset: 16px;
   }
 
   #root .portal-shell .portal-menu {
@@ -115,7 +181,7 @@
 
 @media (max-width: 760px) {
   #root .portal-shell .portal-content {
-    padding-top: 108px;
+    padding-top: 0;
   }
 
   #root .portal-shell .portal-workspace {
@@ -124,19 +190,26 @@
 }
 
 @media (max-width: 440px) {
+  #root .portal-shell {
+    --portal-content-inset: 12px;
+  }
+
   #root .portal-shell .portal-workspace {
     padding-inline: 12px;
   }
 }
 
 @media (min-width: 901px) and (max-width: 1440px) {
+  #root .portal-shell {
+    --portal-content-inset: clamp(16px, 1.25vw, 20px);
+  }
 
   #root .portal-shell .portal-content {
-    padding-top: clamp(76px, 6vw, 88px);
+    padding-top: 0;
   }
 
   #root .portal-shell .portal-workspace {
-    padding: 26px clamp(24px, 2.5vw, 36px) 40px;
+    padding: 26px var(--portal-content-inset) 40px;
   }
 
 }
@@ -146,3 +219,18 @@
     transition: none;
   }
 }
+
+/* Student portal spacing; keep the shared faculty and admin shells unchanged. */
+#root .portal-shell--student{--portal-content-inset:20px}
+#root .portal-shell--student .portal-workspace{padding:18px 20px 28px}
+#root .portal-shell--student .dashboard-header{height:var(--header-height);min-height:var(--header-height);padding:0 20px;flex-wrap:nowrap;align-items:center}
+#root .portal-shell--student .dashboard-header__actions{flex-wrap:nowrap;align-items:center;gap:8px;min-width:0}
+#root .portal-shell--student .global-search{min-width:0}
+#root .portal-shell--student .sidebar-navigation{display:flex;flex-direction:column;gap:2px;padding:10px 8px;overflow-y:auto}
+#root .portal-shell--student .sidebar-link{width:100%;min-height:34px;margin:0;padding:7px 9px;gap:8px;flex:0 0 auto}
+#root .portal-shell--student .sidebar-link>svg{flex:0 0 17px}
+#root .portal-shell--student .sidebar-link>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#root .portal-shell--student .student-sidebar-profile{flex:0 0 auto;margin:8px;padding:10px;align-items:center}
+@media(min-width:993px){#root .portal-shell--student.sidebar-collapsed .portal-content{margin-left:var(--sidebar-collapsed-width)}#root .portal-shell--student .sidebar.is-collapsed .sidebar-link{justify-content:center;padding:7px 0}}
+@media(max-width:992px){#root .portal-shell--student .portal-content{margin-left:0}#root .portal-shell--student .portal-menu{display:grid}#root .portal-shell--student .dashboard-header{padding-inline:16px}#root .portal-shell--student .portal-workspace{padding:16px}}
+@media(max-width:520px){#root .portal-shell--student .dashboard-header{gap:8px;padding-inline:12px}#root .portal-shell--student .dashboard-header__actions{gap:5px}#root .portal-shell--student .account-menu summary>span:nth-child(2){display:none}#root .portal-shell--student .portal-workspace{padding:16px 12px 24px}}

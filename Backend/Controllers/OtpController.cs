@@ -3,6 +3,7 @@ using BTech.DTOs;
 using BTech.Models;
 using BTech.Services;
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -83,35 +84,20 @@ namespace BTech.Controllers
 
 
             // -------------------------------------------------
-            // Determine identifier and delivery method
+            // Determine whether the email request is supported
             // -------------------------------------------------
 
-            string identifier;
-            string deliveryMethod;
-
-            if (!string.IsNullOrWhiteSpace(request.Email))
+            if (string.IsNullOrWhiteSpace(request.Email))
             {
-                identifier = request.Email.Trim();
-                deliveryMethod = "EMAIL";
-            }
-            else
-            {
-                identifier = request.Mobile!.Trim();
-                deliveryMethod = "SMS";
+                return BadRequest(new { success = false, message = "SMS delivery is unavailable. Use your account email." });
             }
 
-
-            // -------------------------------------------------
-            // OTP purpose
-            // -------------------------------------------------
-
-            string otpType =
-                NormalizePurpose(request.Purpose);
-
-
-            // -------------------------------------------------
-            // Find active user
-            // -------------------------------------------------
+            var identifier = request.Email.Trim();
+            var otpType = NormalizePurpose(request.Purpose);
+            if (otpType is "PASSWORD_RESET" or "FORGOT_PASSWORD")
+            {
+                return BadRequest(new { success = false, message = "Request password reset codes at /api/v1/auth/forgot-password." });
+            }
 
             var user =
                 await FindActiveUserAsync(identifier);
@@ -193,7 +179,7 @@ namespace BTech.Controllers
                         otpType,
 
                     DeliveryMethod =
-                        deliveryMethod,
+                        "EMAIL",
 
                     ExpiresAt =
                         expiresAt,
@@ -222,100 +208,23 @@ namespace BTech.Controllers
             await _context.SaveChangesAsync();
 
 
-            // =================================================
-            // EMAIL OTP
-            // =================================================
-
-            if (deliveryMethod == "EMAIL")
+            try
             {
-                try
-                {
-                    await _emailService.SendOtpEmailAsync(
-                        identifier,
-                        otp,
-                        otpType);
-                }
-                catch (Exception ex)
-                {
-                    // Email failed
-                    otpVerification.Status = 0;
-
-                    await _context.SaveChangesAsync();
-
-                    throw;
-                }
-
-
-                // -------------------------------------------------
-                // EMAIL SUCCESS
-                // -------------------------------------------------
-
-                return Ok(new
-                {
-                    success = true,
-
-                    message =
-                        "OTP generated and sent successfully.",
-
-                    deliveryMethod =
-                        "EMAIL",
-
-                    expiresIn =
-                        300,
-
-                    // TEMPORARY TESTING ONLY
-                    // Remove this before production.
-                    otp = otp
-                });
+                await _emailService.SendOtpEmailAsync(identifier, otp, otpType);
+            }
+            catch
+            {
+                otpVerification.Status = 0;
+                await _context.SaveChangesAsync();
+                throw;
             }
 
-
-            // =================================================
-            // SMS DEVELOPMENT MODE
-            // =================================================
-
-            if (deliveryMethod == "SMS")
+            return Ok(new
             {
-                // -------------------------------------------------
-                // IMPORTANT:
-                // No paid SMS provider is being used here.
-                //
-                // OTP is generated and stored in database.
-                // OTP is returned in Swagger for development/testing.
-                // -------------------------------------------------
-
-                return Ok(new
-                {
-                    success = true,
-
-                    message =
-                        "OTP generated successfully. SMS is in development mode.",
-
-                    deliveryMethod =
-                        "SMS",
-
-                    expiresIn =
-                        300,
-
-                    // DEVELOPMENT ONLY
-                    otp = otp
-                });
-            }
-
-
-            // =================================================
-            // UNKNOWN DELIVERY METHOD
-            // =================================================
-
-            otpVerification.Status = 0;
-
-            await _context.SaveChangesAsync();
-
-            return BadRequest(new
-            {
-                success = false,
-                message =
-                    "Unsupported OTP delivery method."
+                success = true,
+                message = "OTP sent successfully.",
+                deliveryMethod = "EMAIL",
+                expiresIn = 300
             });
         }
 
@@ -325,6 +234,7 @@ namespace BTech.Controllers
         // POST: /api/otp/verify
         // =====================================================
 
+        [AllowAnonymous]
         [HttpPost("verify")]
         public async Task<IActionResult> VerifyOtp(
             [FromBody] VerifyOtpRequestDto request)
@@ -410,6 +320,8 @@ namespace BTech.Controllers
                 NormalizePurpose(request.Purpose);
 
 
+            var isPasswordReset = otpType is "PASSWORD_RESET" or "FORGOT_PASSWORD";
+
             // =================================================
             // GET LATEST ACTIVE OTP
             // =================================================
@@ -428,7 +340,7 @@ namespace BTech.Controllers
 
             if (otpRecord == null)
             {
-                return NotFound(new
+                return isPasswordReset ? InvalidPasswordResetOtp() : NotFound(new
                 {
                     success = false,
                     message =
@@ -448,7 +360,7 @@ namespace BTech.Controllers
 
                 await _context.SaveChangesAsync();
 
-                return BadRequest(new
+                return isPasswordReset ? InvalidPasswordResetOtp() : BadRequest(new
                 {
                     success = false,
                     message =
@@ -468,7 +380,7 @@ namespace BTech.Controllers
 
                 await _context.SaveChangesAsync();
 
-                return BadRequest(new
+                return isPasswordReset ? InvalidPasswordResetOtp() : BadRequest(new
                 {
                     success = false,
                     message =
@@ -498,7 +410,7 @@ namespace BTech.Controllers
                 await _context.SaveChangesAsync();
 
 
-                return BadRequest(new
+                return isPasswordReset ? InvalidPasswordResetOtp() : BadRequest(new
                 {
                     success = false,
 
@@ -587,42 +499,20 @@ namespace BTech.Controllers
 
 
             // -------------------------------------------------
-            // Identifier and delivery method
+            // Determine whether the email request is supported
             // -------------------------------------------------
 
-            string identifier;
-            string deliveryMethod;
-
-
-            if (!string.IsNullOrWhiteSpace(request.Email))
+            if (string.IsNullOrWhiteSpace(request.Email))
             {
-                identifier =
-                    request.Email.Trim();
-
-                deliveryMethod =
-                    "EMAIL";
-            }
-            else
-            {
-                identifier =
-                    request.Mobile!.Trim();
-
-                deliveryMethod =
-                    "SMS";
+                return BadRequest(new { success = false, message = "SMS delivery is unavailable. Use your account email." });
             }
 
-
-            // -------------------------------------------------
-            // Purpose
-            // -------------------------------------------------
-
-            string otpType =
-                NormalizePurpose(request.Purpose);
-
-
-            // -------------------------------------------------
-            // Find user
-            // -------------------------------------------------
+            var identifier = request.Email.Trim();
+            var otpType = NormalizePurpose(request.Purpose);
+            if (otpType is "PASSWORD_RESET" or "FORGOT_PASSWORD")
+            {
+                return BadRequest(new { success = false, message = "Request password reset codes at /api/v1/auth/forgot-password." });
+            }
 
             var user =
                 await FindActiveUserAsync(
@@ -698,7 +588,7 @@ namespace BTech.Controllers
                         otpType,
 
                     DeliveryMethod =
-                        deliveryMethod,
+                        "EMAIL",
 
                     ExpiresAt =
                         expiresAt,
@@ -727,87 +617,23 @@ namespace BTech.Controllers
             await _context.SaveChangesAsync();
 
 
-            // =================================================
-            // RESEND EMAIL
-            // =================================================
-
-            if (deliveryMethod == "EMAIL")
+            try
             {
-                try
-                {
-                    await _emailService.SendOtpEmailAsync(
-                        identifier,
-                        otp,
-                        otpType);
-                }
-                catch (Exception ex)
-                {
-                    otpVerification.Status = 0;
-
-                    await _context.SaveChangesAsync();
-
-                    throw;
-                }
-
-
-                return Ok(new
-                {
-                    success = true,
-
-                    message =
-                        "OTP resent and sent successfully.",
-
-                    deliveryMethod =
-                        "EMAIL",
-
-                    expiresIn =
-                        300,
-
-                    // TEMPORARY TESTING ONLY
-                    otp = otp
-                });
+                await _emailService.SendOtpEmailAsync(identifier, otp, otpType);
+            }
+            catch
+            {
+                otpVerification.Status = 0;
+                await _context.SaveChangesAsync();
+                throw;
             }
 
-
-            // =================================================
-            // RESEND SMS - DEVELOPMENT MODE
-            // =================================================
-
-            if (deliveryMethod == "SMS")
+            return Ok(new
             {
-                return Ok(new
-                {
-                    success = true,
-
-                    message =
-                        "OTP resent successfully. SMS is in development mode.",
-
-                    deliveryMethod =
-                        "SMS",
-
-                    expiresIn =
-                        300,
-
-                    // DEVELOPMENT ONLY
-                    otp = otp
-                });
-            }
-
-
-            // =================================================
-            // UNKNOWN DELIVERY METHOD
-            // =================================================
-
-            otpVerification.Status = 0;
-
-            await _context.SaveChangesAsync();
-
-            return BadRequest(new
-            {
-                success = false,
-
-                message =
-                    "Unsupported OTP delivery method."
+                success = true,
+                message = "OTP resent successfully.",
+                deliveryMethod = "EMAIL",
+                expiresIn = 300
             });
         }
 
@@ -817,6 +643,7 @@ namespace BTech.Controllers
         // POST: /api/otp/reset-password
         // =====================================================
 
+        [AllowAnonymous]
         [HttpPost("reset-password")]
         public async Task<IActionResult> ResetPassword(
             [FromBody] ResetPasswordDto request)
@@ -896,7 +723,7 @@ namespace BTech.Controllers
                     success = false,
 
                     message =
-                        "Unable to reset the password for this account."
+                        "OTP verification is required before resetting the password."
                 });
             }
 
@@ -922,9 +749,6 @@ namespace BTech.Controllers
                             DateTime.UtcNow &&
 
                         (
-                            x.OtpType ==
-                                "LOGIN" ||
-
                             x.OtpType ==
                                 "FORGOT_PASSWORD" ||
 
@@ -1043,6 +867,9 @@ namespace BTech.Controllers
                     ));
         }
 
+
+        private BadRequestObjectResult InvalidPasswordResetOtp() =>
+            BadRequest(new { success = false, message = "The verification code is invalid or has expired." });
 
         // =====================================================
         // NORMALIZE PURPOSE

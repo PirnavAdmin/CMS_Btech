@@ -20,15 +20,19 @@ export const facultyNavigation = [
 
 export const studentNavigation = [
   ['dashboard', 'Dashboard'],
-  ['profile', 'My Profile'],
-  ['subjects', 'My Subjects'],
-  ['syllabus', 'Syllabus Library'],
-  ['attendance', 'My Attendance'],
-  ['results', 'My Results'],
+  ['subjects', 'My Academics'],
   ['timetable', 'My Timetable'],
+  ['assignments', 'Assignments'],
+  ['exams', 'Examinations'],
   ['materials', 'Study Materials'],
-  ['fees', 'Fee Details'],
-  ['notifications', 'Notifications'],
+  ['attendance', 'Attendance'],
+  ['results', 'Grades & Reports'],
+  ['notifications', 'Announcements'],
+  ['fees', 'Fee Management'],
+  ['library', 'Library'],
+  ['messages', 'Messages'],
+  ['profile', 'My Profile'],
+  ['settings', 'Settings'],
 ]
 
 export const portalHome = (role, isNonTeaching = false) => {

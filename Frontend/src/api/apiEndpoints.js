@@ -16,7 +16,7 @@ if (typeof window !== 'undefined' && window.localStorage) {
 }
 
 const normalizeBaseUrl = (value = '') => value.trim().replace(/\/+$/, '')
-const DEFAULT_API_BASE_URL = 'https://blocked-database-secondary-watch.trycloudflare.com'
+const DEFAULT_API_BASE_URL = 'https://spring-wyoming-denied-lewis.trycloudflare.com'
 // Results endpoints are optional until the institution's result service is integrated.
 export const RESULTS_API_ENABLED = String(import.meta.env.VITE_RESULTS_API_ENABLED || '').toLowerCase() === 'true'
 
@@ -779,14 +779,14 @@ const normalizeProfile = (source) => {
   const application = data.application && typeof data.application === 'object' ? data.application : {}
   const lastLoginAt = data.lastLoginAt ?? data.last_login_at ?? data.LastLoginAt ?? data.lastLogin ?? data.last_login ?? ''
   return {
-    id: data.userId ?? data.studentId ?? '', facultyId: data.facultyId ?? '', identifier: data.employeeUserId ?? data.studentCode ?? data.studentId ?? '', fullName: data.fullName ?? data.studentName ?? '', collegeName: data.collegeName ?? '', collegeType: data.collegeType ?? '', universityName: data.universityName ?? '', collegeEmail: data.collegeEmail ?? '', collegeMobile: data.collegeMobile ?? '', collegePhone: data.collegePhone ?? '', collegeAddressLine1: data.collegeAddressLine1 ?? '', collegeAddressLine2: data.collegeAddressLine2 ?? '', collegeCity: data.collegeCity ?? '', collegeDistrict: data.collegeDistrict ?? '', collegeState: data.collegeState ?? '', collegeCountry: data.collegeCountry ?? '', collegePincode: data.collegePincode ?? '', collegeWebsite: data.collegeWebsite ?? '', profileImagePath: data.profileImagePath ?? '',
+    id: data.userId ?? data.studentId ?? '', studentId: data.studentId ?? '', facultyId: data.facultyId ?? '', identifier: data.employeeUserId ?? data.studentCode ?? data.studentId ?? '', fullName: data.fullName ?? data.studentName ?? '', collegeName: data.collegeName ?? '', collegeType: data.collegeType ?? '', universityName: data.universityName ?? '', collegeEmail: data.collegeEmail ?? '', collegeMobile: data.collegeMobile ?? '', collegePhone: data.collegePhone ?? '', collegeAddressLine1: data.collegeAddressLine1 ?? '', collegeAddressLine2: data.collegeAddressLine2 ?? '', collegeCity: data.collegeCity ?? '', collegeDistrict: data.collegeDistrict ?? '', collegeState: data.collegeState ?? '', collegeCountry: data.collegeCountry ?? '', collegePincode: data.collegePincode ?? '', collegeWebsite: data.collegeWebsite ?? '', profileImagePath: data.profileImagePath ?? '',
     email: data.email ?? '', mobile: data.mobile ?? '', role: Array.isArray(data.roles) ? data.roles.join(', ') : String(data.role ?? ''),
     dateOfBirth: data.dateOfBirth ?? '', gender: data.gender ?? '', department: data.department ?? data.departmentName ?? '', departmentId: data.departmentId ?? '',
     designation: data.designation ?? '', houseNumber: data.houseNumber ?? data.currentHouseNumber ?? '', address: data.address ?? data.currentAddress ?? '', permanentHouseNumber: data.permanentHouseNumber ?? '', permanentAddress: data.permanentAddress ?? '', postalCode: data.postalCode ?? '',
     pincode: data.pincode ?? data.postalCode ?? '', city: data.city ?? '', district: data.district ?? '', state: data.state ?? '', permanentPincode: data.permanentPincode ?? '', permanentCity: data.permanentCity ?? '', permanentDistrict: data.permanentDistrict ?? '', permanentState: data.permanentState ?? '', bio: data.bio ?? data.aboutMe ?? '',
     lastLoginAt,
     updatedAt: data.updatedAt ?? '',
-    status: data.status ?? (data.accountStatus === 1 || data.accountStatus === undefined ? 'Active' : 'Inactive'),
+    status: data.status ?? (data.accountStatus === 1 || data.accountStatus === undefined ? 'Active' : 'Inactive'), academicStatus: data.status ?? '',
     accountStatus: data.accountStatus ?? 1, collegeId: data.collegeId ?? '', mustChangePassword: Boolean(data.mustChangePassword), profileCompleted: data.profileCompleted !== false,
     registrationNumber: data.registrationNumber ?? application.registrationNumber ?? application.number ?? '', admissionNumber: data.admissionNumber ?? application.admissionNumber ?? '',
     rollNumber: data.rollNumber ?? academic.rollNumber ?? '', course: data.course ?? data.courseName ?? academic.course ?? '', branch: data.branch ?? data.branchName ?? academic.branch ?? '',
