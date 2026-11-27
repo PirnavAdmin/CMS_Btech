@@ -5,7 +5,7 @@ import { collegeRequest } from '../utils/collegeRequest.js'
 import { createApiUnavailableError, notifyApiUnavailable } from '../api/apiFailureNotice'
 import { selectedCollegeId } from '../utils/collegeScope.js'
 const cleanUrl = (url) => (url || "").replace(/\/+$/, "");
-const DEFAULT_API_BASE_URL="https://blocked-database-secondary-watch.trycloudflare.com"
+const DEFAULT_API_BASE_URL="https://spring-wyoming-denied-lewis.trycloudflare.com"
 const friendlyValidationMessage = (errors) => {
   if (!errors || typeof errors !== "object") return "";
   const fields = Object.keys(errors);

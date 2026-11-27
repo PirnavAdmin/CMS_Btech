@@ -8,7 +8,7 @@ import useToastState from '../../../hooks/useToastState'
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from './promotionMotion'
 import InfoCard from '../../../components/InfoCard'
-import { FiArrowRight, FiClock, FiEye, FiFilter, FiInfo, FiSearch, FiTrendingUp, FiUsers, FiX, FiAward, FiBookOpen, FiUser, FiRefreshCw } from 'react-icons/fi'
+import { FiArrowRight, FiClock, FiEye, FiFilter, FiInfo, FiSearch, FiTrendingUp, FiUsers, FiX, FiAward, FiBookOpen, FiUser, FiRefreshCw, FiShield, FiCheckCircle, FiAlertTriangle } from 'react-icons/fi'
 import DashboardLayout from '../../../layouts/DashboardLayout'
 import PageHeader from '../../../components/PageHeader'
 import StatusBadge from '../../../components/StatusBadge'
@@ -218,8 +218,24 @@ function ReviewDrawer({ student, onClose, onStatus, canEdit }) {
                 </div>
                 <div className="pr-field">
                   <span className="pr-label">Credits Earned</span>
-                  <span className="pr-value">{student?.creditsEarned ?? '—'}</span>
+                  <span className="pr-value">{student?.creditsEarned ? `${student.creditsEarned}${student.totalCredits ? ` / ${student.totalCredits}` : ''}` : '—'}</span>
                 </div>
+                <div className="pr-field">
+                  <span className="pr-label">Attendance Rate</span>
+                  <span className="pr-value">
+                    {student?.attendanceRate !== null && student?.attendanceRate !== undefined
+                      ? `${student.attendanceRate}%`
+                      : '—'}
+                  </span>
+                </div>
+                {student?.backlogs !== undefined && (
+                  <div className="pr-field">
+                    <span className="pr-label">Active Backlogs</span>
+                    <span className="pr-value" style={{ color: student.backlogs === 0 ? '#16a34a' : '#dc2626', fontWeight: 600 }}>
+                      {student.backlogs === 0 ? '0 Backlogs' : `${student.backlogs} Backlog${student.backlogs > 1 ? 's' : ''}`}
+                    </span>
+                  </div>
+                )}
                 <div className="pr-field">
                   <span className="pr-label">Eligibility Status</span>
                   <span className="pr-value">
@@ -288,7 +304,8 @@ export default function StudentPromotion() {
   const [sortBy, setSortBy] = useState('name')
   const [promotionResult, setPromotionResult] = useState(null)
   const promotionBusyRef = useRef(false)
-  const [students, setStudents] = useCollegeState([])
+  const [students, setStudents] = useState([])
+  const [isDemoMode, setIsDemoMode] = useState(false)
   const [history, setHistory] = useCollegeState([])
   const [historyError, setHistoryError] = useState('')
 
@@ -306,7 +323,7 @@ export default function StudentPromotion() {
   const scopeKey = [selectedCollegeId, courseId, selectedBranchId, selectedAcademicYearId, selectedSemesterNumber].join('|')
   const currentScope = useRef(scopeKey)
   currentScope.current = scopeKey
-  const scopeReady = loadedScope === scopeKey
+  const scopeReady = isDemoMode || (Boolean(loadedScope) && loadedScope === scopeKey)
 
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState([])
@@ -380,7 +397,7 @@ export default function StudentPromotion() {
   const finalSemesterNumber = Number(activeCourses.find(course => String(course.id) === String(courseId))?.totalSemesters) || 0
   const isFinalSemester = Boolean(finalSemesterNumber && Number(selectedSemesterNumber) === finalSemesterNumber)
   const isDegreeReview = isFinalSemester
-  const canExecutePromotion = Boolean((sourceSemester || selectedSemesterNumber) && (isFinalSemester || nextSemesterId))
+  const canExecutePromotion = Boolean((sourceSemester || selectedSemesterNumber) && (isFinalSemester || nextSemesterId || students.some(s => s.isDemo)))
   const promotionType = isFinalSemester ? 'degree' : advancementType
   const promotionTypeLabel = { degree: 'Degree Completion', 'next-semester': 'Next Semester', 'next-year': 'Next Academic Year' }[promotionType]
 
@@ -397,8 +414,209 @@ export default function StudentPromotion() {
     }
   }, [selectedSemesterNumber, finalSemesterNumber])
 
+  // Load Realistic Demo Student Batch for testing/previewing
+  const handleLoadDemoBatch = useCallback(() => {
+    let targetYearId = selectedAcademicYearId
+    let targetCourseId = courseId
+    let targetBranchId = selectedBranchId
+    let targetSem = selectedSemesterNumber
+
+    if (!targetYearId && activeAcademicYears.length > 0) {
+      targetYearId = activeAcademicYears[0].id
+      setSelectedAcademicYearId(targetYearId)
+    }
+    if (!targetCourseId && activeCourses.length > 0) {
+      targetCourseId = activeCourses[0].id
+      setCourseId(targetCourseId)
+    }
+    const branches = targetCourseId ? getBranchesForCourse(targetCourseId, true) : []
+    if (!targetBranchId && branches.length > 0) {
+      targetBranchId = branches[0].id
+      setSelectedBranchId(targetBranchId)
+    }
+    if (!targetSem) {
+      targetSem = '1'
+      setSelectedSemesterNumber('1')
+    }
+
+    const c = activeCourses.find(item => String(item.id) === String(targetCourseId))
+    const b = branches.find(item => String(item.id) === String(targetBranchId))
+    const y = activeAcademicYears.find(item => String(item.id) === String(targetYearId))
+    const activeBr = availableBranches.find(item => String(item.id) === String(targetBranchId)) || b
+    const branchDisplayName = activeBr?.name || 'Computer Science & Engineering'
+    const courseDisplayName = c?.name || 'Bachelor of Technology (BTECH)'
+    const yearDisplayName = y?.name || '2026-27'
+
+    const semNum = Number(targetSem) || 1
+    const nextSemLabel = isFinalSemester ? 'Degree completion review' : `Semester ${semNum + 1}`
+
+    const demo = [
+      {
+        id: 'demo-23B91A0501',
+        studentId: 'demo-23B91A0501',
+        isDemo: true,
+        rollNumber: '23B91A0501',
+        registrationNumber: 'REG20230501',
+        studentName: 'Aarav Sharma',
+        fullName: 'Aarav Sharma',
+        name: 'Aarav Sharma',
+        course: courseDisplayName,
+        branch: branchDisplayName,
+        section: 'Section A',
+        currentSemester: `Semester ${semNum}`,
+        nextSemester: nextSemLabel,
+        attendanceRate: 88,
+        attendanceSessions: 140,
+        creditsEarned: 40,
+        totalCredits: 40,
+        backlogs: 0,
+        sgpa: '8.92',
+        cgpa: '8.92',
+        eligibilityStatus: 'ELIGIBLE',
+        eligibilityLabel: 'Eligible',
+        status: 'eligible',
+        reason: 'Satisfies all requirements: 88% attendance, 100% credits cleared, 0 active backlogs.',
+        academic: {
+          course: courseDisplayName,
+          branch: branchDisplayName,
+          semester: `Semester ${semNum}`,
+          academicYear: yearDisplayName,
+          rollNumber: '23B91A0501',
+          section: 'Section A',
+        },
+        personal: { fullName: 'Aarav Sharma' },
+        college: 'Raghavendra Engineering College',
+        academicYear: yearDisplayName,
+      },
+      {
+        id: 'demo-23B91A0514',
+        studentId: 'demo-23B91A0514',
+        isDemo: true,
+        rollNumber: '23B91A0514',
+        registrationNumber: 'REG20230514',
+        studentName: 'Pooja Verma',
+        fullName: 'Pooja Verma',
+        name: 'Pooja Verma',
+        course: courseDisplayName,
+        branch: branchDisplayName,
+        section: 'Section A',
+        currentSemester: `Semester ${semNum}`,
+        nextSemester: nextSemLabel,
+        attendanceRate: 71,
+        attendanceSessions: 112,
+        creditsEarned: 34,
+        totalCredits: 40,
+        backlogs: 1,
+        sgpa: '7.15',
+        cgpa: '7.15',
+        eligibilityStatus: 'ELIGIBLE',
+        eligibilityLabel: 'Eligible (Condonation)',
+        status: 'eligible',
+        reason: 'Attendance 71% in condonation bracket (65%-75%). Medical condonation approved by Principal.',
+        academic: {
+          course: courseDisplayName,
+          branch: branchDisplayName,
+          semester: `Semester ${semNum}`,
+          academicYear: yearDisplayName,
+          rollNumber: '23B91A0514',
+          section: 'Section A',
+        },
+        personal: { fullName: 'Pooja Verma' },
+        college: 'Raghavendra Engineering College',
+        academicYear: yearDisplayName,
+      },
+      {
+        id: 'demo-23B91A0529',
+        studentId: 'demo-23B91A0529',
+        isDemo: true,
+        rollNumber: '23B91A0529',
+        registrationNumber: 'REG20230529',
+        studentName: 'Karthik Reddy',
+        fullName: 'Karthik Reddy',
+        name: 'Karthik Reddy',
+        course: courseDisplayName,
+        branch: branchDisplayName,
+        section: 'Section B',
+        currentSemester: `Semester ${semNum}`,
+        nextSemester: nextSemLabel,
+        attendanceRate: 52,
+        attendanceSessions: 84,
+        creditsEarned: 28,
+        totalCredits: 40,
+        backlogs: 3,
+        sgpa: '5.80',
+        cgpa: '5.80',
+        eligibilityStatus: 'INELIGIBLE',
+        eligibilityLabel: 'Detained (Attendance)',
+        status: 'ineligible',
+        reason: 'Detained due to attendance shortage (< 65%). Required to repeat current semester.',
+        academic: {
+          course: courseDisplayName,
+          branch: branchDisplayName,
+          semester: `Semester ${semNum}`,
+          academicYear: yearDisplayName,
+          rollNumber: '23B91A0529',
+          section: 'Section B',
+        },
+        personal: { fullName: 'Karthik Reddy' },
+        college: 'Raghavendra Engineering College',
+        academicYear: yearDisplayName,
+      },
+      {
+        id: 'demo-23B91A0542',
+        studentId: 'demo-23B91A0542',
+        isDemo: true,
+        rollNumber: '23B91A0542',
+        registrationNumber: 'REG20230542',
+        studentName: 'Sneha Patil',
+        fullName: 'Sneha Patil',
+        name: 'Sneha Patil',
+        course: courseDisplayName,
+        branch: branchDisplayName,
+        section: 'Section B',
+        currentSemester: `Semester ${semNum}`,
+        nextSemester: nextSemLabel,
+        attendanceRate: 78,
+        attendanceSessions: 124,
+        creditsEarned: 16,
+        totalCredits: 40,
+        backlogs: 5,
+        sgpa: '4.60',
+        cgpa: '4.60',
+        eligibilityStatus: 'INELIGIBLE',
+        eligibilityLabel: 'Detained (Credits)',
+        status: 'ineligible',
+        reason: 'Credit deficit: Earned only 16 of 40 credits (< 50% cutoff) with 5 backlogs.',
+        academic: {
+          course: courseDisplayName,
+          branch: branchDisplayName,
+          semester: `Semester ${semNum}`,
+          academicYear: yearDisplayName,
+          rollNumber: '23B91A0542',
+          section: 'Section B',
+        },
+        personal: { fullName: 'Sneha Patil' },
+        college: 'Raghavendra Engineering College',
+        academicYear: yearDisplayName,
+      },
+    ]
+
+    const expectedScopeKey = [selectedCollegeId, targetCourseId, targetBranchId, targetYearId, targetSem].join('|')
+    currentScope.current = expectedScopeKey
+    setIsDemoMode(true)
+    setLoadedScope(expectedScopeKey)
+    setStudents(demo)
+    setTab('promotion')
+    setDirPage(1)
+    setNotice('Loaded 4 realistic demo students for Semester Advancement review!', 'success')
+  }, [
+    selectedAcademicYearId, courseId, selectedBranchId, selectedSemesterNumber,
+    activeAcademicYears, activeCourses, getBranchesForCourse, availableBranches, selectedCollegeId, isFinalSemester, setNotice,
+  ])
+
   // Load Promotion Scope Students & History
   const loadPromotionData = useCallback(async (forceRefresh = false) => {
+    setIsDemoMode(false)
     if (!selectedBranchId || !selectedAcademicYearId || !selectedSemesterNumber) {
       setStudents([])
       return
@@ -746,6 +964,53 @@ export default function StudentPromotion() {
       return
     }
 
+    if (currentRows.some((row) => row.isDemo)) {
+      promotionBusyRef.current = true
+      setLoading((x) => ({ ...x, promotion: true }))
+      await new Promise((res) => setTimeout(res, 500))
+
+      const selectedYear = activeAcademicYears.find((y) => String(y.id) === String(selectedAcademicYearId))
+      const demoIds = new Set(currentRows.map(idOf))
+      const remaining = students.filter((s) => !demoIds.has(idOf(s)))
+      setStudents(remaining)
+
+      const histEntries = currentRows.map((row) => ({
+        id: `hist-${Date.now()}-${idOf(row)}`,
+        studentId: idOf(row),
+        studentName: nameOf(row),
+        rollNumber: row.rollNumber,
+        registrationNumber: row.registrationNumber,
+        course: row.course,
+        branch: row.branch,
+        fromSemester: row.currentSemester,
+        toSemester: isDegreeReview ? 'Degree Conferred (Graduated)' : row.nextSemester,
+        fromAcademicYearName: selectedYear?.name || '2026-27',
+        toAcademicYearName: !isDegreeReview && requiresNextYear ? nextYear[0]?.name : selectedYear?.name || '2026-27',
+        status: isDegreeReview ? 'Completed' : 'Promoted',
+        promotionStatus: isDegreeReview ? 'COMPLETED' : 'APPROVED',
+        createdAt: new Date().toISOString(),
+        createdByName: 'Suresh Reddy (COLLEGE_ADMIN)',
+        remarks: isDegreeReview
+          ? 'Degree requirements confirmed & degree awarded.'
+          : 'Academic standing verified & student advanced to next semester.',
+      }))
+      setHistory((prev) => [...histEntries, ...prev])
+      setPromotionResult({
+        successful: currentRows.length,
+        failed: 0,
+        message: isDegreeReview
+          ? `Degree completion successfully awarded for ${currentRows.length} student(s).`
+          : `Successfully promoted ${currentRows.length} student(s) to ${currentRows[0]?.nextSemester || 'next semester'}.`,
+      })
+      setNotice(`Promotion executed successfully for ${currentRows.length} student(s)!`, 'success')
+      setSelected([])
+      setConfirmRows(null)
+      setTab('history')
+      setLoading((x) => ({ ...x, promotion: false }))
+      promotionBusyRef.current = false
+      return
+    }
+
     try {
       promotionBusyRef.current = true
       setLoading((x) => ({ ...x, promotion: true }))
@@ -956,17 +1221,54 @@ export default function StudentPromotion() {
                   : ''}
               </small>
             </div>
-            <button
-              type="button"
-              className="erp-btn erp-btn--primary promotion-load"
-              disabled={!selectedSemesterNumber || !selectedBranchId || !selectedAcademicYearId || loading.list || loading.promotion}
-              onClick={() => { setSelected([]); setDirPage(1); setTab('promotion'); loadPromotionData(true) }}
-            >
-              Load Students
-            </button>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="erp-btn erp-btn--primary promotion-load"
+                disabled={!selectedSemesterNumber || !selectedBranchId || !selectedAcademicYearId || loading.list || loading.promotion}
+                onClick={() => { setSelected([]); setDirPage(1); setTab('promotion'); loadPromotionData(true) }}
+              >
+                Load Students
+              </button>
+              <button
+                type="button"
+                className="erp-btn erp-btn--secondary"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                onClick={handleLoadDemoBatch}
+                title="Load 4 realistic sample students (Eligible, Condonation, Detained) to preview promotion flow"
+              >
+                <FiUsers aria-hidden="true" /> Sample Preview
+              </button>
+            </div>
           </fieldset>
           {loadError && <p role="alert">{loadError}</p>}
         </motion.section>
+
+        {/* Real-World University Promotion Criteria Banner */}
+        <div className="promotion-criteria-banner erp-card" style={{ padding: '14px 18px', marginBottom: '16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <FiShield style={{ color: '#2563eb', fontSize: '22px', flexShrink: 0 }} />
+              <div>
+                <strong style={{ fontSize: '13px', color: '#1e293b' }}>University Academic Promotion Criteria (B.Tech Regulations)</strong>
+                <span style={{ fontSize: '12px', color: '#64748b', display: 'block' }}>
+                  Standard evaluation criteria for semester advancement, condonation, and credit detention.
+                </span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              <span className="erp-badge" style={{ background: '#ecfdf5', color: '#065f46', border: '1px solid #a7f3d0', fontSize: '11px', padding: '4px 8px', borderRadius: '6px' }}>
+                <strong>Min Attendance:</strong> 75% (&ge;65% with Medical Condonation)
+              </span>
+              <span className="erp-badge" style={{ background: '#eff6ff', color: '#1e40af', border: '1px solid #bfdbfe', fontSize: '11px', padding: '4px 8px', borderRadius: '6px' }}>
+                <strong>Credit Clearance:</strong> &ge;50% Credits for Cross-Year
+              </span>
+              <span className="erp-badge" style={{ background: '#fffbeb', color: '#92400e', border: '1px solid #fde68a', fontSize: '11px', padding: '4px 8px', borderRadius: '6px' }}>
+                <strong>Active Backlogs:</strong> &le;4 for Regular Progression
+              </span>
+            </div>
+          </div>
+        </div>
 
         {/* Tab Strip */}
         <div className="promotion-directory-column">
@@ -997,6 +1299,17 @@ export default function StudentPromotion() {
                   title="Load Students"
                   subtitle="Choose a valid Course, Branch, Academic Year, and Semester above, then select Load Students."
                 />
+                <div style={{ display: 'flex', justifyContent: 'center', marginTop: '16px' }}>
+                  <button
+                    type="button"
+                    className="erp-btn erp-btn--primary"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px' }}
+                    onClick={handleLoadDemoBatch}
+                  >
+                    <FiUsers aria-hidden="true" />
+                    Load Sample Student Batch (Interactive Preview)
+                  </button>
+                </div>
               </section>
             ) : (
               <>
@@ -1097,73 +1410,154 @@ export default function StudentPromotion() {
                               }}
                             />
                           </th>
-                          <th>Roll Number</th><th>Student Name</th><th>Branch</th>
-                          <th>Current Semester</th><th>Target Semester</th>
-                          <th>Eligibility</th><th>Status</th><th>Actions</th>
+                          <th style={{ minWidth: '110px' }}>Roll Number</th>
+                          <th style={{ minWidth: '150px' }}>Student Name</th>
+                          <th style={{ minWidth: '140px' }}>Transition</th>
+                          <th style={{ minWidth: '115px' }}>Attendance</th>
+                          <th style={{ minWidth: '150px' }}>Academic Standing</th>
+                          <th className="table-center" style={{ width: '130px' }}>Eligibility</th>
+                          <th style={{ minWidth: '170px' }}>Assessment / Reason</th>
+                          <th className="table-center" style={{ width: '70px' }}>Action</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {loading.list ? Array.from({ length: 5 }, (_, index) => <tr key={`loading-${index}`} className="promotion-skeleton-row" aria-hidden="true"><td colSpan={9}><span /></td></tr>) : paginatedCandidates.length === 0 ? (
+                        {loading.list ? (
+                          Array.from({ length: 5 }, (_, index) => (
+                            <tr key={`loading-${index}`} className="promotion-skeleton-row" aria-hidden="true">
+                              <td colSpan={9}><span /></td>
+                            </tr>
+                          ))
+                        ) : paginatedCandidates.length === 0 ? (
                           <tr>
                             <td colSpan={9} className="promotion-empty-cell">
                               <div className="promotion-empty-state" role="status">
                                 <span className="promotion-empty-icon"><FiUsers aria-hidden="true" /></span>
                                 <strong>{query ? 'No students match your search' : eligibilityTab === 'eligible' ? 'No eligible students in this scope' : 'No students awaiting review'}</strong>
-                                <p>{query ? 'Try another name, roll number, or registration number.' : 'Try a different academic scope or eligibility filter.'}</p>
-                                {query && <button type="button" onClick={() => { setQuery(''); setDirPage(1) }}>Clear search</button>}
-                                {!query && students.length > 0 && (
-                                  <button type="button" onClick={() => { setEligibilityTab(eligibilityTab === 'eligible' ? 'ineligible' : 'eligible'); setDirPage(1) }}>
-                                    View {eligibilityTab === 'eligible' ? 'pending students' : 'eligible students'}
+                                <p>{query ? 'Try another name, roll number, or registration number.' : 'Try a different academic scope or load demo students below.'}</p>
+                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginTop: '12px' }}>
+                                  {query && <button type="button" className="erp-btn erp-btn--secondary" onClick={() => { setQuery(''); setDirPage(1) }}>Clear search</button>}
+                                  <button type="button" className="erp-btn erp-btn--primary" onClick={handleLoadDemoBatch}>
+                                    <FiUsers aria-hidden="true" /> Load Sample Student Batch
                                   </button>
-                                )}
+                                </div>
                               </div>
                             </td>
                           </tr>
                         ) : (
-                          paginatedCandidates.map((x) => (
-                            <tr key={idOf(x)}>
-                              <td className="table-center" style={{ width: '44px' }}>
-                                <input
-                                  type="checkbox"
-                                  aria-label={'Select ' + nameOf(x)}
-                                  disabled={!canPromote || !scopeReady || loading.promotion}
-                                  checked={selected.includes(idOf(x))}
-                                  onChange={() =>
-                                    setSelected((v) =>
-                                      v.includes(idOf(x))
-                                        ? v.filter((id) => id !== idOf(x))
-                                        : [...v, idOf(x)]
-                                    )
-                                  }
-                                />
-                              </td>
-                              <td>{x.rollNumber || x.registrationNumber || '—'}</td>
-                              <td><strong>{nameOf(x)}</strong></td>
-                              <td>{x.branch}</td>
-                              <td>{x.currentSemester}</td>
-                              <td>{isDegreeReview ? 'Degree Completion' : nextTerms[0]?.semesterName || (canExecutePromotion ? x.nextSemester : '—')}</td>
-                              <td className="table-center" style={{ width: '120px' }}>
-                                <StatusBadge
-                                  value={x.eligibilityLabel || (statusOf(x) === 'eligible' ? 'Eligible' : 'Pending Review')}
-                                />
-                                {x.reason && <small className="promotion-eligibility-reason">{x.reason}</small>}
-                              </td>
-                              <td>{statusOf(x) === 'eligible' ? (isDegreeReview ? 'Eligible for Completion' : 'Ready for Promotion') : (isDegreeReview ? 'Pending Requirements' : 'Awaiting Eligibility')}</td>
-                              <td className="table-center" style={{ width: '80px' }}>
-                                <div className="table-actions-group">
-                                  <button
-                                    type="button"
-                                    className="table-action-btn action-view"
-                                    title="View Student"
-                                    aria-label="View Student"
-                                    onClick={() => setReview(x)}
-                                  >
-                                    <FiEye />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))
+                          paginatedCandidates.map((x) => {
+                            const attRate = x.attendanceRate !== null && x.attendanceRate !== undefined ? Number(x.attendanceRate) : null
+                            const isElig = statusOf(x) === 'eligible'
+                            const isDetained = /detained|shortage|deficit/i.test(String(x.eligibilityLabel || x.reason || ''))
+                            const hasBacklogs = x.backlogs !== undefined
+
+                            return (
+                              <tr key={idOf(x)}>
+                                <td className="table-center" style={{ width: '44px' }}>
+                                  <input
+                                    type="checkbox"
+                                    aria-label={'Select ' + nameOf(x)}
+                                    disabled={!canPromote || !scopeReady || loading.promotion}
+                                    checked={selected.includes(idOf(x))}
+                                    onChange={() =>
+                                      setSelected((v) =>
+                                        v.includes(idOf(x))
+                                          ? v.filter((id) => id !== idOf(x))
+                                          : [...v, idOf(x)]
+                                      )
+                                    }
+                                  />
+                                </td>
+                                <td>
+                                  <div style={{ fontWeight: 600 }}>{x.rollNumber || x.registrationNumber || '—'}</div>
+                                  {x.registrationNumber && x.rollNumber && x.registrationNumber !== x.rollNumber && (
+                                    <small style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{x.registrationNumber}</small>
+                                  )}
+                                </td>
+                                <td>
+                                  <strong>{nameOf(x)}</strong>
+                                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{x.branch} {x.section ? `• ${x.section}` : ''}</div>
+                                </td>
+                                <td>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px' }}>
+                                    <span>{x.currentSemester}</span>
+                                    <span style={{ color: 'var(--text-muted)' }}>&rarr;</span>
+                                    <strong style={{ color: 'var(--brand, #1769C2)' }}>
+                                      {isDegreeReview ? 'Degree Conferred' : nextTerms[0]?.semesterName || (canExecutePromotion ? x.nextSemester : '—')}
+                                    </strong>
+                                  </div>
+                                </td>
+                                <td>
+                                  {attRate !== null ? (
+                                    <span
+                                      className="erp-badge"
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        padding: '2px 8px',
+                                        borderRadius: '12px',
+                                        fontSize: '11px',
+                                        fontWeight: 600,
+                                        backgroundColor: attRate >= 75 ? '#dcfce7' : attRate >= 65 ? '#fef3c7' : '#fee2e2',
+                                        color: attRate >= 75 ? '#15803d' : attRate >= 65 ? '#b45309' : '#b91c1c',
+                                        border: `1px solid ${attRate >= 75 ? '#86efac' : attRate >= 65 ? '#fde68a' : '#fca5a5'}`,
+                                      }}
+                                    >
+                                      {attRate}% {attRate >= 75 ? '✓' : attRate >= 65 ? '(Condonation)' : '(Shortage)'}
+                                    </span>
+                                  ) : (
+                                    <span style={{ color: 'var(--text-muted)' }}>—</span>
+                                  )}
+                                </td>
+                                <td>
+                                  <div>
+                                    {x.creditsEarned !== null && x.creditsEarned !== undefined ? (
+                                      <span><strong>{x.creditsEarned}</strong>{x.totalCredits ? ` / ${x.totalCredits}` : ''} Credits</span>
+                                    ) : x.cgpa ? (
+                                      <span>CGPA: <strong>{x.cgpa}</strong></span>
+                                    ) : (
+                                      <span style={{ color: 'var(--text-muted)' }}>—</span>
+                                    )}
+                                  </div>
+                                  <div style={{ fontSize: '11px', marginTop: '2px' }}>
+                                    {hasBacklogs ? (
+                                      <span style={{ color: x.backlogs === 0 ? '#16a34a' : x.backlogs > 4 ? '#dc2626' : '#d97706', fontWeight: 600 }}>
+                                        {x.backlogs === 0 ? '0 Backlogs' : `${x.backlogs} Backlog${x.backlogs > 1 ? 's' : ''}`}
+                                      </span>
+                                    ) : x.sgpa ? (
+                                      <span style={{ color: 'var(--text-muted)' }}>SGPA: {x.sgpa}</span>
+                                    ) : null}
+                                    {x.cgpa && hasBacklogs && (
+                                      <span style={{ color: 'var(--text-muted)', marginLeft: '6px' }}>• CGPA {x.cgpa}</span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="table-center" style={{ width: '130px' }}>
+                                  <StatusBadge
+                                    value={x.eligibilityLabel || (isElig ? 'Eligible' : isDetained ? 'Detained' : 'Pending Review')}
+                                  />
+                                </td>
+                                <td>
+                                  <span style={{ fontSize: '12px', color: isElig ? '#15803d' : isDetained ? '#b91c1c' : '#64748b' }}>
+                                    {x.reason || (isElig ? 'Ready for promotion' : 'Awaiting review')}
+                                  </span>
+                                </td>
+                                <td className="table-center" style={{ width: '70px' }}>
+                                  <div className="table-actions-group">
+                                    <button
+                                      type="button"
+                                      className="table-action-btn action-view"
+                                      title="Review Student Details"
+                                      aria-label="Review Student Details"
+                                      onClick={() => setReview(x)}
+                                    >
+                                      <FiEye />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            )
+                          })
                         )}
                       </tbody>
                     </table>
@@ -1281,6 +1675,27 @@ export default function StudentPromotion() {
           onClose={() => setReview(null)}
           canEdit={canPromote && !review.promotionDate}
           onStatus={async (status) => {
+            if (review.isDemo) {
+              const normalized = String(status || '').toUpperCase()
+              setStudents((prev) => prev.map((s) => (
+                idOf(s) === idOf(review)
+                  ? {
+                      ...s,
+                      eligibilityStatus: normalized,
+                      eligibilityLabel: normalized === 'ELIGIBLE' ? 'Eligible (Admin Override)' : 'Ineligible (Admin Marked)',
+                      status: normalized === 'ELIGIBLE' ? 'eligible' : 'ineligible',
+                      reason: normalized === 'ELIGIBLE' ? 'Manually approved by Administrator override.' : 'Manually marked ineligible by Administrator.',
+                    }
+                  : s
+              )))
+              if (normalized === 'INELIGIBLE') {
+                setSelected((prev) => prev.filter((id) => id !== idOf(review)))
+                setConfirmRows((prev) => prev?.filter((row) => idOf(row) !== idOf(review)) || null)
+              }
+              setNotice(`Student marked ${normalized} successfully.`, 'success')
+              setReview(null)
+              return
+            }
             try {
               const normalized = await promotionService.setEligibilityStatus(review.studentId || review.id, status)
               setStudents((prev) => prev.map((s) => (

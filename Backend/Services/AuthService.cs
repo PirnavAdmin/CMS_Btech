@@ -20,6 +20,7 @@ namespace BTech.Services
         private readonly IJwtService _jwtService;
         private readonly IRefreshTokenRepository _refreshTokenRepository;
         private readonly IOtpVerificationRepository _otpVerificationRepository;
+        private readonly IEmailService _emailService;
 
         public AuthService(
             BTech.UserAccess.UserAccessService access,
@@ -29,7 +30,8 @@ namespace BTech.Services
             ILoginAuditRepository loginAuditRepository,
             IRefreshTokenRepository refreshTokenRepository,
             IJwtService jwtService,
-            IOtpVerificationRepository otpVerificationRepository)
+            IOtpVerificationRepository otpVerificationRepository,
+            IEmailService emailService)
         {
             _access = access;
             _userRepository = userRepository;
@@ -39,6 +41,7 @@ namespace BTech.Services
             _refreshTokenRepository = refreshTokenRepository;
             _jwtService = jwtService;
             _otpVerificationRepository = otpVerificationRepository;
+            _emailService = emailService;
         }
 
         public async Task<(bool Success, string Message, LoginResponseDto? Data)>
@@ -375,117 +378,71 @@ namespace BTech.Services
                 string? ipAddress,
                 string? userAgent)
         {
+            const string purpose = "PASSWORD_RESET";
+            const string responseMessage = "If an account matches the provided email, a verification code will be emailed.";
             var identifier = request.Identifier.Trim();
 
-            var user = await _userRepository
-                .FindByLoginIdentifierAsync(identifier);
-
-            // Return generic message for non-existent users to avoid account enumeration
-            if (user == null)
+            User? user;
+            try
             {
-                await CreateAuditAsync(
-                    null,
-                    identifier,
-                    "FAILED",
-                    "Forgot password requested for non-existent user",
-                    ipAddress,
-                    userAgent);
-
-                return (
-                    true,
-                    "If an account matches the provided identifier, an OTP has been sent.",
-                    new ForgotPasswordResponseDto
-                    {
-                        Success = true,
-                        Message = "If an account matches the provided identifier, an OTP has been sent."
-                    });
+                user = await _userRepository.FindByLoginIdentifierAsync(identifier);
+            }
+            catch (InvalidOperationException ex) when (ex.Message == "AMBIGUOUS_LOGIN_IDENTIFIER")
+            {
+                user = null;
             }
 
-            // Inactive / Deleted user check
+            var response = new ForgotPasswordResponseDto { Success = true, Message = responseMessage };
+            if (user == null || !string.Equals(user.Email?.Trim(), identifier, StringComparison.OrdinalIgnoreCase))
+            {
+                await CreateAuditAsync(null, identifier, "FAILED",
+                    "Forgot password requested for non-existent user", ipAddress, userAgent);
+                return (true, responseMessage, response);
+            }
+
             if (user.Status != 1 || user.DeletedAt != null)
             {
-                await CreateAuditAsync(
-                    user.user_id,
-                    identifier,
-                    "FAILED",
-                    "Forgot password requested for inactive user",
-                    ipAddress,
-                    userAgent);
-
-                return (
-                    false,
-                    "User account is inactive. Please contact administration.",
-                    null);
+                await CreateAuditAsync(user.user_id, identifier, "FAILED",
+                    "Forgot password requested for inactive user", ipAddress, userAgent);
+                return (true, responseMessage, response);
             }
 
-            var destination =
-                !string.IsNullOrWhiteSpace(user.Email)
-                    ? user.Email
-                    : user.Mobile ?? identifier;
+            var destination = user.Email!.Trim();
+            await _otpVerificationRepository.InvalidatePreviousOtpsAsync(destination, purpose);
 
-            var deliveryMethod =
-                !string.IsNullOrWhiteSpace(user.Email)
-                    ? "EMAIL"
-                    : "SMS";
-
-            // Invalidate any active previous OTPs
-            await _otpVerificationRepository
-                .InvalidatePreviousOtpsAsync(
-                    destination,
-                    "PASSWORD_RESET");
-
-            // Generate secure 6-digit numeric OTP
-            string plainOtp =
-                RandomNumberGenerator
-                    .GetInt32(100000, 1000000)
-                    .ToString();
-
-            string otpHash =
-                BCrypt.Net.BCrypt.HashPassword(
-                    plainOtp);
-
+            var plainOtp = RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
+            var now = DateTime.UtcNow;
             var otpRecord = new OtpVerification
             {
                 UserId = user.user_id,
                 Identifier = destination,
-                OtpHash = otpHash,
-                OtpType = "PASSWORD_RESET",
-                DeliveryMethod = deliveryMethod,
-                ExpiresAt =
-                    DateTime.UtcNow.AddMinutes(10),
+                OtpHash = BCrypt.Net.BCrypt.HashPassword(plainOtp),
+                OtpType = purpose,
+                DeliveryMethod = "EMAIL",
+                ExpiresAt = now.AddMinutes(OtpVerification.PasswordResetExpiryMinutes),
                 Attempts = 0,
                 MaxAttempts = 5,
                 Status = 1,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = now
             };
 
-            await _otpVerificationRepository
-                .CreateOtpAsync(otpRecord);
+            await _otpVerificationRepository.CreateOtpAsync(otpRecord);
 
-            // Audit the request
-            await CreateAuditAsync(
-                user.user_id,
-                identifier,
-                "SUCCESS",
-                "Password reset OTP generated",
-                ipAddress,
-                userAgent);
+            try
+            {
+                await _emailService.SendOtpEmailAsync(destination, plainOtp, purpose);
+            }
+            catch (Exception)
+            {
+                await _otpVerificationRepository.InvalidateOtpAsync(otpRecord);
+                await CreateAuditAsync(user.user_id, identifier, "FAILED",
+                    "Password reset OTP email delivery failed", ipAddress, userAgent);
+                return (false, "Unable to send the verification code. Please try again shortly.", null);
+            }
 
-            // Mask destination for security
-            string maskedDestination =
-                MaskIdentifier(destination);
-
-            return (
-                true,
-                "Password reset OTP has been sent.",
-                new ForgotPasswordResponseDto
-                {
-                    Success = true,
-                    Message =
-                        "Password reset OTP has been sent successfully.",
-                    DeliveryDestination =
-                        maskedDestination
-                });
+            await CreateAuditAsync(user.user_id, identifier, "SUCCESS",
+                "Password reset OTP generated", ipAddress, userAgent);
+            return (true, responseMessage, response);
         }
 
         private async Task CreateAuditAsync(
@@ -511,39 +468,6 @@ namespace BTech.Services
 
             await _loginAuditRepository
                 .CreateAsync(audit);
-        }
-
-        private static string MaskIdentifier(
-            string identifier)
-        {
-            if (string.IsNullOrWhiteSpace(identifier))
-                return "configured contact";
-
-            if (identifier.Contains('@'))
-            {
-                var parts =
-                    identifier.Split('@');
-
-                var name = parts[0];
-                var domain = parts[1];
-
-                if (name.Length <= 2)
-                    return $"{name[0]}*@{domain}";
-
-                return
-                    $"{name[0]}" +
-                    $"{new string('*', name.Length - 2)}" +
-                    $"{name[^1]}@{domain}";
-            }
-
-            if (identifier.Length >= 6)
-            {
-                return
-                    $"{identifier[..2]}******" +
-                    $"{identifier[^2..]}";
-            }
-
-            return "****";
         }
     }
 }

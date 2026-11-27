@@ -87,7 +87,7 @@
 
 .dashboard-layout--platform .page-content {
   gap: 16px;
-  padding: clamp(16px, 2.1vw, 28px) clamp(20px, 1.25vw, 24px) 38px;
+  padding: clamp(16px, 2.1vw, 28px) clamp(16px, 1.25vw, 20px) 38px;
 }
 .dashboard-layout--platform .app-breadcrumb {
   width: fit-content;

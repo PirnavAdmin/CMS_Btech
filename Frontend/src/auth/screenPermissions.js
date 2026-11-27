@@ -7,7 +7,7 @@ const granted = value => value === true || value === 1 || value === 'true' || va
 // controls access to shared administrative modules, not the workspace shell.
 const workspaceScreens = {
   faculty: ['dashboard', 'students', 'subjects', 'syllabus', 'attendance', 'my-attendance', 'marks', 'timetable', 'materials', 'leave', 'events', 'meetings', 'placements', 'notifications', 'profile'],
-  student: ['dashboard', 'profile', 'subjects', 'syllabus', 'attendance', 'results', 'timetable', 'materials', 'fees', 'notifications'],
+  student: ['dashboard', 'profile', 'subjects', 'syllabus', 'attendance', 'results', 'timetable', 'materials', 'fees', 'notifications', 'assignments', 'exams', 'library', 'messages', 'settings'],
   staff: ['dashboard', 'profile', 'my-profile', 'attendance', 'my-attendance', 'leave', 'duty-roster', 'tasks', 'notices', 'notifications', 'meetings-events', 'documents'],
 }
 
