@@ -119,7 +119,6 @@ const categories = [
   'Elective Syllabus', 'Revised Syllabus', 'Course Structure',
 ]
 const readableError = error => {
-  if (error?.status === 404) return 'Syllabus endpoints are not available on the backend yet. Review the documented API contract before enabling uploads.'
   if (error?.status === 413) return 'The server upload limit is lower than this file size. Ask the administrator to raise the limit or select a smaller file.'
   if (error?.status === 415) return 'The server rejected this document type (415).'
   return error?.message || 'The request could not be completed. Please retry.'

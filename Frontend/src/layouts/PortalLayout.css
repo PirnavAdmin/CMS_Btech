@@ -209,3 +209,8 @@
     transition: none;
   }
 }
+
+/* The faculty dashboard header is the first item in the app shell. */
+#root .portal-shell--faculty-dashboard .portal-content {
+  padding-top: 0;
+}

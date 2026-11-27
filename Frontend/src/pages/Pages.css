@@ -1514,6 +1514,21 @@
   gap: 12px;
 }
 
+.ym-bar-chart-layout--month .ym-bar-columns-wrap {
+  gap: 4px;
+}
+
+.ym-bar-chart-layout--month .ym-bar-column-item {
+  min-width: 0;
+}
+
+.ym-bar-chart-layout--month .ym-bar-x-label {
+  width: 100%;
+  font-size: 0.58rem;
+  line-height: 1.15;
+  text-align: center;
+}
+
 .ym-bar-column-item {
   display: flex;
   flex-direction: column;

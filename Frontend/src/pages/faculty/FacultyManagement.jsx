@@ -1580,6 +1580,7 @@ const validEmail = value => {
   return labels.length > 1
     && labels.every(label => label.length <= 63 && /^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$/.test(label))
     && /^[a-zA-Z]{2,63}$/.test(labels[labels.length - 1])
+    && !/(.)\1{2,}/i.test(labels[labels.length - 1])
     && !['co', 'cm'].includes(labels[labels.length - 1].toLowerCase())
 }
 

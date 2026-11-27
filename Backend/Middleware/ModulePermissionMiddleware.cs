@@ -64,7 +64,8 @@ public sealed class ModulePermissionMiddleware
             return;
         }
 
-        var module = ResolveModule(path);
+        var portalDownload = IsSyllabusPortalDownload(context.Request);
+        var module = portalDownload ? "subjects" : ResolveModule(path);
         var userIdValue = context.User.FindFirstValue(ClaimTypes.NameIdentifier)
             ?? context.User.FindFirstValue("sub");
         if (!long.TryParse(userIdValue, out var userId) || userId <= 0)
@@ -89,7 +90,7 @@ public sealed class ModulePermissionMiddleware
         }
 
 
-        var action = ResolveAction(context.Request.Method, path);
+        var action = portalDownload ? "view" : ResolveAction(context.Request.Method, path);
         if (!await AuthorizeAsync(context, path, module, userId, selectedAcademicCollege, action))
             return;
 
@@ -334,6 +335,10 @@ public sealed class ModulePermissionMiddleware
             long.TryParse(path[prefix.Length..], out var id) && id > 0;
     }
 
+    internal static bool IsSyllabusPortalDownload(HttpRequest request) =>
+        (request.Path.Value ?? "").StartsWith("/api/v1/syllabus-documents/", StringComparison.OrdinalIgnoreCase) &&
+        string.Equals(request.Query["portal"].ToString(), "true", StringComparison.OrdinalIgnoreCase);
+
     private static string? ResolveModule(string path)
     {
         var p = path.ToLowerInvariant();
@@ -347,6 +352,8 @@ public sealed class ModulePermissionMiddleware
             "campuses" or "campus-workspace" => "colleges",
             "results" or "grades" or "grade-policies" => "results",
             "marks" => "marks",
+            "syllabi" when p == "/api/v1/syllabi/published" => "subjects",
+            "syllabi" or "syllabus-documents" => "syllabus_management",
             "exams" or "exam-types" or "exam-schedules" => "examinations",
             "electives" or "elective-approvals" or "elective-allocations" or "student-electives" => "electives",
             "credits" or "credit-configurations" or "credit-registrations" => "credits",

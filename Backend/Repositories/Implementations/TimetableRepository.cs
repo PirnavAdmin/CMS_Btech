@@ -452,6 +452,22 @@ public sealed class TimetableRepository : ITimetableRepository
         await WithTimetableLockAsync(c,id,tx => c.ExecuteAsync(Cmd("sp_tt_publish",new {p_timetable_id=id,p_actor_id=actor,p_college_id=college,p_is_super_admin=superAdmin?1:0},tx)));
     }
 
+    public async Task DeleteDraftAsync(long id, long? actor, long? college, bool superAdmin)
+    {
+        await using var c = CreateConnection();
+        try
+        {
+            await WithTimetableLockAsync(c, id, tx => c.ExecuteAsync(Cmd("sp_tt_draft_delete", new
+            {
+                p_timetable_id = id, p_college_id = college, p_is_super_admin = superAdmin ? 1 : 0
+            }, tx)));
+        }
+        catch (MySqlException ex) when (ex.SqlState == "45004")
+        {
+            throw new KeyNotFoundException("Timetable not found.", ex);
+        }
+    }
+
     public async Task ReopenAsync(long id, long? actor, long? college, bool superAdmin)
     {
         await using var c=CreateConnection();

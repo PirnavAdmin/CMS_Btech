@@ -702,7 +702,7 @@ function AcademicYear() {
                 )}
 
                 </FormGroup>
-                {errors.range && <p className="field-error" role="alert">{errors.range}</p>}
+                {errors.range && <p className="field-error ay-range-error" role="alert">{errors.range}</p>}
               </FormLayout>
           </ViewDialog>
         )}
@@ -6799,6 +6799,7 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
   const [deallocatingRoom, setDeallocatingRoom] = useState(null)
   const [showRoomGenerator, setShowRoomGenerator] = useState(false)
   const [generatingRooms, setGeneratingRooms] = useState(false)
+  const [roomGeneratorError, setRoomGeneratorError] = useState('')
   const [roomGeneration, setRoomGeneration] = useState({ block: '', floorCount: 1, roomPrefix: 'A', roomsPerFloor: 10, roomType: 'Classroom', capacity: 60 })
 
   // Load Rooms, Sections, and Student Assignments
@@ -6992,18 +6993,21 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
   const previewFloorIndexes = previewFloorCount <= 2
     ? Array.from({ length: previewFloorCount }, (_, index) => index)
     : [0, previewFloorCount - 1]
+  const capacityExceedsLimit = Number(roomGeneration.capacity) > 500
   const handleGenerateRooms = async (event) => {
     event.preventDefault()
+    setRoomGeneratorError('')
     const block = roomGeneration.block.trim()
     const floorCount = Number(roomGeneration.floorCount)
     const roomsPerFloor = Number(roomGeneration.roomsPerFloor)
     const roomPrefix = roomGeneration.roomPrefix.trim().toUpperCase()
     const capacity = Number(roomGeneration.capacity)
-    if (!block || !Number.isInteger(floorCount) || floorCount < 1 || floorCount > maxGeneratedFloors || !/^[A-Z0-9]{1,8}$/.test(roomPrefix) || !Number.isInteger(roomsPerFloor) || roomsPerFloor < 1 || roomsPerFloor > 99 || !Number.isInteger(capacity) || capacity < 1) {
-      showError(`Review the block, floor count (1–${maxGeneratedFloors}), room prefix, rooms per floor (1–99), and capacity.`)
-      return
-    }
-    const existingNumbers = new Set(rooms.filter((room) => String(room.buildingBlock || '').trim().toLowerCase() === block.toLowerCase()).map((room) => String(room.roomNumber).trim().toLowerCase()))
+    if (!block) return setRoomGeneratorError('Enter an academic block.')
+    if (!Number.isInteger(floorCount) || floorCount < 1 || floorCount > maxGeneratedFloors) return setRoomGeneratorError(`Enter a whole number of floors between 1 and ${maxGeneratedFloors}.`)
+    if (!/^[A-Z0-9]{1,8}$/.test(roomPrefix)) return setRoomGeneratorError('Room code prefix must contain 1–8 letters or numbers without spaces or symbols.')
+    if (!Number.isInteger(roomsPerFloor) || roomsPerFloor < 1 || roomsPerFloor > 99) return setRoomGeneratorError('Enter a whole number of rooms per floor between 1 and 99.')
+    if (!Number.isInteger(capacity) || capacity < 1 || capacity > 500) return setRoomGeneratorError('Enter a whole-number capacity between 1 and 500.')
+    const existingNumbers = new Set(rooms.map((room) => String(room.roomNumber).trim().toLowerCase()))
     const planned = []
     for (let floorIndex = 0; floorIndex < floorCount; floorIndex += 1) {
       const floorNumber = floorIndex + 1
@@ -7014,18 +7018,22 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
         planned.push({ roomNumber, roomName: `${roomGeneration.roomType} ${roomNumber}`, buildingBlock: block, floor: floorLabel, roomType: roomGeneration.roomType, capacity, department: 'General / Shared', status: 'Available', facilities: [], description: '' })
       }
     }
-    if (!planned.length) return showError('All room numbers in this generation range already exist.')
-    if (planned.length > 300) return showError('Generate up to 300 rooms at a time. Reduce the floors, divisions, or rooms per division.')
+    if (!planned.length) return setRoomGeneratorError('All room numbers in this generation range already exist. Change the prefix or range.')
+    if (planned.length > 300) return setRoomGeneratorError('Generate up to 300 rooms at a time. Reduce the number of floors or rooms per floor.')
     setGeneratingRooms(true)
     let created = 0
-    const failures = []
     try {
       for (const room of planned) {
-        try { await roomService.createRoomPersisted(room); created += 1 } catch (error) { failures.push(`${room.roomNumber}: ${error?.message || 'save failed'}`) }
+        try { await roomService.createRoomPersisted(room); created += 1 } catch (error) {
+          setRoomGeneratorError(`Created ${created} of ${planned.length} rooms. Could not save ${room.roomNumber}: ${error?.message || 'The server did not provide a reason.'} Already saved rooms will be skipped if you retry.`)
+          await loadRooms()
+          return
+        }
       }
       await loadRooms()
-      if (failures.length) showError(`Created ${created} of ${planned.length} rooms. Failed: ${failures.slice(0, 3).join('; ')}${failures.length > 3 ? '…' : ''}`)
-      else { showSuccess(`${created} rooms generated in ${block}.`); setShowRoomGenerator(false) }
+      showSuccess(`${created} rooms generated in ${block}.`); setShowRoomGenerator(false)
+    } catch (error) {
+      setRoomGeneratorError(`Created ${created} of ${planned.length} rooms. ${error?.message || 'Unable to refresh the room list.'}`)
     } finally {
       setGeneratingRooms(false)
     }
@@ -7959,7 +7967,7 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
         <section className="rooms-block-overview" aria-label="Academic block overview">
           <div className="rooms-block-overview__intro">
             <div><span>ACADEMIC SPACE</span><h2>Blocks & floor plan</h2><p>Blocks and floor divisions are grouped from saved room records.</p></div>
-            <button type="button" className="rooms-add-btn" onClick={() => { const block = savedBuildings[0] || ''; const inferredPrefix = block.match(/([A-Za-z0-9]+)\s*$/)?.[1]?.toUpperCase() || 'A'; setRoomGeneration((current) => ({ ...current, block, roomPrefix: inferredPrefix })); setShowRoomGenerator(true) }}><FiZap /> Generate rooms</button>
+            <button type="button" className="rooms-add-btn" onClick={() => { const block = savedBuildings[0] || ''; const inferredPrefix = block.match(/([A-Za-z0-9]+)\s*$/)?.[1]?.toUpperCase() || 'A'; setRoomGeneratorError(''); setRoomGeneration((current) => ({ ...current, block, roomPrefix: inferredPrefix })); setShowRoomGenerator(true) }}><FiZap /> Generate rooms</button>
           </div>
           <div className="rooms-block-overview__list">
             {savedBuildings.length ? savedBuildings.map((block) => {
@@ -7970,16 +7978,17 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
           </div>
         </section>
 
-        {showRoomGenerator && <ViewDialog title="Generate rooms by floor" subtitle="Create configurable room ranges and save each room through the existing room service." icon={FiGrid} maxWidth="720px" showExport={false} busy={generatingRooms} className="rooms-generator-dialog" onClose={() => !generatingRooms && setShowRoomGenerator(false)} footerContent={<><button type="button" className="erp-btn erp-btn--secondary" onClick={() => setShowRoomGenerator(false)} disabled={generatingRooms}>Cancel</button><button type="submit" form="room-generator-form" className="erp-btn erp-btn--primary" disabled={generatingRooms}>{generatingRooms ? 'Generating…' : 'Generate rooms'}</button></>}>
-          <form id="room-generator-form" className="rooms-generator-form" onSubmit={handleGenerateRooms}>
+        {showRoomGenerator && <ViewDialog title="Generate rooms by floor" subtitle="Create configurable room ranges and save each room through the existing room service." icon={FiGrid} maxWidth="720px" showExport={false} busy={generatingRooms} className="rooms-generator-dialog" onClose={() => !generatingRooms && setShowRoomGenerator(false)} footerContent={<><button type="button" className="erp-btn erp-btn--secondary" onClick={() => setShowRoomGenerator(false)} disabled={generatingRooms}>Cancel</button><button type="submit" form="room-generator-form" className="erp-btn erp-btn--primary" disabled={generatingRooms || capacityExceedsLimit}>{generatingRooms ? 'Generating…' : 'Generate rooms'}</button></>}>
+          <form id="room-generator-form" className="rooms-generator-form" onSubmit={handleGenerateRooms} noValidate>
+            {roomGeneratorError && <div className="rooms-generator-error" role="alert">{roomGeneratorError}</div>}
             <div className="rooms-generator-note"><FiInfo /> Codes start at <strong>{roomGeneration.roomPrefix || 'A'}-101</strong> on the ground floor and continue based on rooms per floor. The next floor starts at {roomGeneration.roomPrefix || 'A'}-201. Existing codes are skipped.</div>
             <label>Academic block<input value={roomGeneration.block} onChange={(event) => { const block = event.target.value; const inferredPrefix = block.match(/([A-Za-z0-9]+)\s*$/)?.[1]?.toUpperCase(); setRoomGeneration((current) => ({ ...current, block, ...(inferredPrefix ? { roomPrefix: inferredPrefix } : {}) })) }} placeholder="e.g. Mechanical Block-A" required list="saved-academic-blocks" /><datalist id="saved-academic-blocks">{savedBuildings.map((block) => <option key={block} value={block} />)}</datalist></label>
             <div className="rooms-generator-form__grid">
               <label>Number of floors<input type="number" min="1" max={maxGeneratedFloors} step="1" value={roomGeneration.floorCount} onChange={(event) => setRoomGeneration((current) => ({ ...current, floorCount: event.target.value === '' ? '' : Number(event.target.value) }))} required /><small>Enter 1–{maxGeneratedFloors}; floor names are assigned in order.</small></label>
               <label>Room code prefix<input value={roomGeneration.roomPrefix} onChange={(event) => setRoomGeneration((current) => ({ ...current, roomPrefix: event.target.value }))} placeholder="A" maxLength={8} required /><small>You can edit this manually.</small></label>
-              <label>Rooms per floor<input type="number" min="1" max="99" value={roomGeneration.roomsPerFloor} onChange={(event) => setRoomGeneration((current) => ({ ...current, roomsPerFloor: Number(event.target.value) }))} /></label>
+              <label>Rooms per floor<input type="number" min="1" max="99" value={roomGeneration.roomsPerFloor} onChange={(event) => setRoomGeneration((current) => ({ ...current, roomsPerFloor: event.target.value === '' ? '' : Number(event.target.value) }))} /></label>
               <label>Room type<select value={roomGeneration.roomType} onChange={(event) => setRoomGeneration((current) => ({ ...current, roomType: event.target.value }))}>{ROOM_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}</select></label>
-              <label>Capacity<input type="number" min="1" max="500" value={roomGeneration.capacity} onChange={(event) => setRoomGeneration((current) => ({ ...current, capacity: Number(event.target.value) }))} /></label>
+              <label>Capacity<input type="number" min="1" max="500" value={roomGeneration.capacity} aria-invalid={capacityExceedsLimit} aria-describedby={capacityExceedsLimit ? 'rooms-generator-capacity-warning' : undefined} onChange={(event) => setRoomGeneration((current) => ({ ...current, capacity: event.target.value === '' ? '' : Number(event.target.value) }))} />{capacityExceedsLimit && <small id="rooms-generator-capacity-warning" className="rooms-generator-capacity-warning" role="alert">Capacity cannot exceed 500 seats.</small>}</label>
             </div>
             <p className="rooms-generator-preview">{previewFloorCount * Math.max(0, Number(roomGeneration.roomsPerFloor) || 0)} rooms planned · {previewFloorIndexes.map((index) => `${generationFloorLabel(index)}: ${roomGeneration.roomPrefix || 'A'}-${(index + 1) * 100 + 1} to ${roomGeneration.roomPrefix || 'A'}-${(index + 1) * 100 + (Number(roomGeneration.roomsPerFloor) || 0)}`).join(previewFloorCount > 2 ? ' · … · ' : ' · ') || 'Choose floors'}</p>
           </form>
