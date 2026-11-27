@@ -1351,7 +1351,11 @@ function ApplicantFeeStructure({ data, update, error }) {
           plan: paymentMode,
           paymentPlan: { mode: paymentMode, installments: Array.isArray(plan.installments) ? plan.installments : [] },
         }
-      }).filter(plan => plan.id)
+      }).filter(plan => {
+        if (!plan.id) return false
+        const s = String(plan.status ?? '').trim().toUpperCase()
+        return s === 'PUBLISHED' || s === 'ACTIVE'
+      })
       setLookup({ key: lookupKey, plans, error: '' })
     }).catch(fetchError => {
       if (active) setLookup({ key: lookupKey, plans: [], error: fetchError.message || 'Unable to fetch published fee plans.' })
@@ -1362,7 +1366,10 @@ function ApplicantFeeStructure({ data, update, error }) {
   const lookupComplete = hasAcademicScope && lookup.key === lookupKey
   const serverPlanState = { loading: hasAcademicScope && !lookupComplete, error: lookupComplete ? lookup.error : '' }
   // The admission endpoint already applies the authoritative scope and effective-date rules.
-  const matchingPlans = lookupComplete ? [...new Map(lookup.plans.map(plan => [plan.id, plan])).values()] : []
+  const matchingPlans = lookupComplete ? [...new Map(lookup.plans.filter(plan => {
+    const s = String(plan.status ?? '').trim().toUpperCase()
+    return s === 'PUBLISHED' || s === 'ACTIVE'
+  }).map(plan => [plan.id, plan])).values()] : []
   const assignedComponents = Array.isArray(fees.components) ? fees.components : Array.isArray(fees.feeComponents) ? fees.feeComponents : []
   const hasAssignedPlan = /^\d+$/.test(String(fees.structureId ?? '')) &&
     (assignedComponents.length > 0 || Number(fees.tuitionFee || 0) > 0 || Number(fees.totalFee || 0) > 0)
@@ -2331,8 +2338,12 @@ function AdmissionForm() {
   const branchSource = courseBranches.length ? courseBranches : courseMasterBranches
   const branchOptions=branchSource.filter(isItemActive).map(item=>{
     const opt = academicOption(item,['branchId','id'],['branchName','name','branchShortName','shortName'])
+    const specialization = item.specialization || item.Specialization || ''
+    const displayName = specialization && !opt.name.toLowerCase().includes(specialization.toLowerCase())
+      ? `${opt.name} - ${specialization}`
+      : opt.name
     const code = item.branchCode || item.code || item.shortName || item.branchShortName || branchCodeFallback(opt.name)
-    return { ...opt, code, courseId:item.courseId??item.course?.courseId??item.course?.id, collegeId:item.collegeId??item.college?.collegeId??item.college?.id }
+    return { ...opt, name: displayName, rawName: opt.name, specialization, code, courseId:item.courseId??item.course?.courseId??item.course?.id, collegeId:item.collegeId??item.college?.collegeId??item.college?.id }
   }).filter(item=>item.id&&(!selectedCollegeId||same(item.collegeId,selectedCollegeId)||collegeCourseIds.has(String(item.courseId)))&&(data.academic.courseId&&same(item.courseId,data.academic.courseId)))
   const collegeOptions=masters.colleges.filter(isItemActive).map(item=>({id:item.collegeId??item.id,name:item.collegeName??item.name??item.institutionName??''})).filter(item=>item.id&&item.name)
 
@@ -2411,7 +2422,7 @@ function AdmissionForm() {
   useEffect(() => {
     const targetCourse = courseOptions.find(c => same(c.id, data.academic.courseId) || same(c.name, data.academic.course))
     const expectedCourseCode = targetCourse?.code || courseCodeFallback(data.academic.course)
-    const targetBranch = branchOptions.find(b => same(b.id, data.academic.branchId) || same(b.name, data.academic.branch))
+    const targetBranch = branchOptions.find(b => same(b.id, data.academic.branchId) || same(b.name, data.academic.branch) || same(b.rawName, data.academic.branch))
     const expectedBranchCode = targetBranch?.code || branchCodeFallback(data.academic.branch)
 
     if (data.academic.course && expectedCourseCode && (!data.academic.courseCode || data.academic.courseCode !== expectedCourseCode)) {
@@ -2453,6 +2464,8 @@ function AdmissionForm() {
             if (idPath === 'academic.branchId') {
               next = setPath(next, 'academic.branchCode', option?.code || branchCodeFallback(option?.name))
               const selectedBranchRecord = branchSource.find(b => same(b.branchId ?? b.id, event.target.value))
+              const spec = option?.specialization || selectedBranchRecord?.specialization || selectedBranchRecord?.Specialization || ''
+              next = setPath(next, 'academic.specialization', spec)
               const autoDeptId = selectedBranchRecord?.departmentId ?? selectedBranchRecord?.department?.departmentId ?? selectedBranchRecord?.department?.id
               if (autoDeptId) {
                 const matchingDept = departmentOptions.find(d => same(d.id, autoDeptId))
