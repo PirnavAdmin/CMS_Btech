@@ -1085,12 +1085,11 @@ function AdmissionList() {
                           >
                             <FiPrinter />
                           </button>
-                          {isEditable && targetId && <ResumeSetupAction completion={item.completion} name={sName} to={`/student-management/admissions/${targetId}/edit`} />}
                           {isEditable && (
                             <button
                               type="button"
                               className="table-action-btn action-edit"
-                              title="Edit Application"
+                              title={item.completion && !item.completion.complete ? `Resume Setup / Edit Application (${item.completion.percent || 0}%)` : "Edit Application"}
                               aria-label={`Edit application for ${sName}`}
                               onClick={() => {
                                 if (targetId) navigate(`/student-management/admissions/${targetId}/edit`)
@@ -1099,15 +1098,6 @@ function AdmissionList() {
                               <FiEdit2 />
                             </button>
                           )}
-                          <button
-                            type="button"
-                            className="table-action-btn action-deactivate"
-                            title="Delete unavailable: admissions API does not support deletion"
-                            aria-label={`Delete application for ${sName} (unavailable)`}
-                            disabled
-                          >
-                            <FiTrash2 />
-                          </button>
                           {isReviewable && (
                             <button
                               type="button"
