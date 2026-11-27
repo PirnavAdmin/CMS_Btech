@@ -62,7 +62,7 @@
 
 #root .faculty-portal-shell .faculty-shell-header { position: sticky; top: 0; z-index: 40; display: flex; min-height: var(--header-height); box-sizing: border-box; align-items: center; gap: 10px; padding: 0 var(--faculty-content-inset); border-bottom: 1px solid var(--border); background: var(--header-bg); backdrop-filter: blur(8px); }
 #root .faculty-portal-shell .faculty-shell-menu-toggle { display: none; }
-#root .faculty-portal-shell .faculty-shell-search { position: relative; display: flex; width: min(380px, 100%); height: 48px; min-width: 0; box-sizing: border-box; flex: 1 1 120px; align-items: center; gap: 8px; padding: 7px 12px; border: 1px solid var(--border); border-radius: 9px; color: var(--text-muted); background: var(--input-bg); }
+#root .faculty-portal-shell .faculty-shell-search { position: relative; display: flex; width: 50%; height: 48px; min-width: 0; max-width: none; box-sizing: border-box; flex: 0 1 50%; align-items: center; gap: 8px; padding: 7px 12px; border: 1px solid var(--border); border-radius: 9px; color: var(--text-muted); background: var(--input-bg); }
 #root .faculty-portal-shell .faculty-shell-search:focus-within { border-color: var(--brand); box-shadow: var(--focus-ring); }
 #root .faculty-portal-shell .faculty-shell-search input { width: 100%; min-width: 0; border: 0; outline: 0; color: var(--text-primary); background: transparent; font: 13.5px var(--font-family); }
 #root .faculty-portal-shell .faculty-shell-search-results { position: absolute; z-index: 70; inset: calc(100% + 6px) 0 auto; display: grid; padding: 6px; border: 1px solid var(--border); border-radius: 10px; background: var(--dropdown-bg); box-shadow: var(--shadow-md); }
@@ -78,6 +78,10 @@
 
 @media (min-width: 993px) {
   #root .faculty-portal-shell .faculty-shell-header { flex: 0 0 var(--header-height); }
+  #root .faculty-portal-shell .faculty-shell-header > .faculty-shell-search { flex: 0 1 50%; width: 50%; min-width: 0; }
+  #root .faculty-portal-shell .faculty-shell-header > .faculty-shell-actions { display: flex; width: max-content; min-width: max-content; flex: 0 0 auto; flex-wrap: nowrap; align-items: center; justify-content: flex-end; margin-left: auto; }
+  #root .faculty-portal-shell .faculty-shell-actions > .faculty-navbar-actions { display: flex; width: max-content; min-width: max-content; flex: 0 0 auto; flex-direction: row; flex-wrap: nowrap; align-items: center; }
+  #root .faculty-portal-shell .faculty-navbar-actions > :is(.faculty-notifications, .faculty-account-menu) { flex: 0 0 auto; }
 }
 @media (max-width: 992px) {
   #root .faculty-portal-shell .faculty-shell-sidebar { transform: translateX(-100%); }
