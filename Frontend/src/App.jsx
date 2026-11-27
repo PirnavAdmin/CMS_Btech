@@ -194,7 +194,7 @@ export default function App() {
           <Route path="/portal-preview" element={<PortalPreview />} />
           <Route path="/dashboard" element={<RoleDashboard><AcademicProvider><ScreenPermissionBoundary><Dashboard /></ScreenPermissionBoundary></AcademicProvider></RoleDashboard>} />
           <Route path="/faculty-portal/session-expired" element={<FacultyRouteErrorBoundary><FacultySessionExpiredPage /></FacultyRouteErrorBoundary>} />
-          <Route element={<PortalRoute roles={[ROLES.FACULTY]} />}>
+          <Route element={<AcademicProvider><PortalRoute roles={[ROLES.FACULTY]} /></AcademicProvider>}>
             <Route path="/faculty-portal" element={<Navigate to="/faculty-portal/dashboard" replace />} />
             <Route path={facultyRouteByPath['/faculty-portal/dashboard'].path} element={<FacultyRouteErrorBoundary><FacultyDashboardPage /></FacultyRouteErrorBoundary>} />
             <Route path="/faculty-portal/:screen?" element={<FacultyRouteErrorBoundary><FacultyWorkspacePage /></FacultyRouteErrorBoundary>} />
