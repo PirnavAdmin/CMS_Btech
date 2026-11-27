@@ -148,7 +148,7 @@ export function matchingAdmissionFeeStructures(plans, academic = {}, admission =
   return plans.filter(plan => {
     if (['hostel', 'transport'].includes(normalized(plan.domain || plan.category))) return false
     if ((plan.components || plan.feeComponents || []).some(component => ['hostel', 'transport'].includes(normalized(component.domain || component.category)))) return false
-    if (!['Published', 'Active', 'Approved'].includes(plan.status)) return false
+    if (!['Published', 'Active'].includes(plan.status)) return false
     if (plan.collegeId && admission.collegeId && String(plan.collegeId) !== String(admission.collegeId)) return false
     if (!matches(plan, 'course') || !matches(plan, 'branch') || !matches(plan, 'academicYear')) return false
     if (plan.batch && normalized(plan.batch) !== normalized(admission.batch)) return false

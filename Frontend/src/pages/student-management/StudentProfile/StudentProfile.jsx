@@ -101,7 +101,7 @@ import { PassportPhotoModal } from '../StudentAdmission/StudentAdmission'
 import ExportMenu, { PrintDetailsButton } from '../../../components/ExportMenu'
 import { profileColumns } from '../../../utils/exportColumns'
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FiAlertCircle, FiArrowLeft, FiBookOpen, FiCamera, FiCheckCircle, FiChevronLeft, FiChevronRight, FiEdit2, FiEye, FiFileText, FiRefreshCw, FiSave, FiSearch, FiUser, FiUsers, FiX } from "react-icons/fi";
+import { FiAlertCircle, FiArrowLeft, FiBookOpen, FiCamera, FiCheckCircle, FiChevronDown, FiChevronLeft, FiChevronRight, FiEdit2, FiEye, FiFileText, FiFilter, FiRefreshCw, FiRotateCcw, FiSave, FiSearch, FiUser, FiUsers, FiX } from "react-icons/fi";
 import InfoCard from "../../../components/InfoCard";
 import StatusBadge from "../../../components/StatusBadge";
 import DashboardLayout from "../../../layouts/DashboardLayout";
@@ -711,6 +711,16 @@ export default function StudentProfile() {
     [selectedStudent, setSelectedStudent] = useState(null),
     [photoStudent, setPhotoStudent] = useState(null),
     [branchTab, setBranchTab] = useState("ALL"),
+    [showFilterDrawer, setShowFilterDrawer] = useState(false),
+    [filters, setFilters] = useState({
+      course: 'ALL',
+      branch: 'ALL',
+      semester: 'ALL',
+      section: 'ALL',
+      gender: 'ALL',
+      status: 'ALL',
+      academicYear: 'ALL',
+    }),
     [tab, setTab] = useState("personal"),
     [editing, setEditing] = useState(null);
 
@@ -971,8 +981,121 @@ export default function StudentProfile() {
       existing.count += 1;
       map.set(key, existing);
     });
+    return Array.from(map.values()).sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+  }, [scopedStudents]);
+
+  const MAX_VISIBLE_BRANCH_TABS = 5;
+  const isBranchMoreActive = useMemo(() => {
+    if (branchTab === 'ALL') return false;
+    const topKeys = new Set(availableBranches.slice(0, MAX_VISIBLE_BRANCH_TABS).map(b => b.key));
+    return !topKeys.has(branchTab) && availableBranches.some(b => b.key === branchTab);
+  }, [availableBranches, branchTab]);
+
+  const visibleBranchTabs = useMemo(() => {
+    if (availableBranches.length <= MAX_VISIBLE_BRANCH_TABS + 1) {
+      return availableBranches;
+    }
+    return availableBranches.slice(0, MAX_VISIBLE_BRANCH_TABS);
+  }, [availableBranches]);
+
+  const moreBranchTabs = useMemo(() => {
+    if (availableBranches.length <= MAX_VISIBLE_BRANCH_TABS + 1) {
+      return [];
+    }
+    return availableBranches.slice(MAX_VISIBLE_BRANCH_TABS);
+  }, [availableBranches]);
+
+  const availableCourses = useMemo(() => {
+    const map = new Map();
+    scopedStudents.forEach((s) => {
+      const c = shortLabel(s.academic?.course || s.academic?.courseName);
+      if (!c) return;
+      const key = String(c).trim();
+      const existing = map.get(key) || { key, label: c, count: 0 };
+      existing.count += 1;
+      map.set(key, existing);
+    });
+    return Array.from(map.values()).sort((a, b) => b.count - a.count);
+  }, [scopedStudents]);
+
+  const availableSemesters = useMemo(() => {
+    const map = new Map();
+    scopedStudents.forEach((s) => {
+      const sem = s.academic?.semester || (s.academic?.semesterNumber ? `Semester ${s.academic.semesterNumber}` : '');
+      if (!sem) return;
+      const key = String(sem).trim();
+      const existing = map.get(key) || { key, label: sem, count: 0 };
+      existing.count += 1;
+      map.set(key, existing);
+    });
+    return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
+  }, [scopedStudents]);
+
+  const availableSections = useMemo(() => {
+    const map = new Map();
+    scopedStudents.forEach((s) => {
+      const sec = s.academic?.section || s.academic?.sectionName;
+      if (!sec) return;
+      const key = String(sec).trim();
+      const existing = map.get(key) || { key, label: sec, count: 0 };
+      existing.count += 1;
+      map.set(key, existing);
+    });
+    return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
+  }, [scopedStudents]);
+
+  const availableYears = useMemo(() => {
+    const map = new Map();
+    scopedStudents.forEach((s) => {
+      const yr = s.academic?.academicYear;
+      if (!yr) return;
+      const key = String(yr).trim();
+      const existing = map.get(key) || { key, label: yr, count: 0 };
+      existing.count += 1;
+      map.set(key, existing);
+    });
+    return Array.from(map.values()).sort((a, b) => b.label.localeCompare(a.label));
+  }, [scopedStudents]);
+
+  const availableStatuses = useMemo(() => {
+    const map = new Map();
+    scopedStudents.forEach((s) => {
+      const st = status(s.status);
+      if (!st) return;
+      const key = String(s.status || st).trim();
+      const existing = map.get(key) || { key, label: st, count: 0 };
+      existing.count += 1;
+      map.set(key, existing);
+    });
     return Array.from(map.values());
   }, [scopedStudents]);
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.branch !== 'ALL' || branchTab !== 'ALL') count += 1;
+    if (filters.course !== 'ALL') count += 1;
+    if (filters.semester !== 'ALL') count += 1;
+    if (filters.section !== 'ALL') count += 1;
+    if (filters.academicYear !== 'ALL') count += 1;
+    if (filters.gender !== 'ALL') count += 1;
+    if (filters.status !== 'ALL') count += 1;
+    return count;
+  }, [filters, branchTab]);
+
+  const resetAllFilters = () => {
+    setFilters({
+      course: 'ALL',
+      branch: 'ALL',
+      semester: 'ALL',
+      section: 'ALL',
+      gender: 'ALL',
+      status: 'ALL',
+      academicYear: 'ALL',
+    });
+    setBranchTab('ALL');
+    setQuery('');
+    setPage(1);
+  };
 
   const filtered = useMemo(
     () => {
@@ -980,6 +1103,7 @@ export default function StudentProfile() {
         const a = x.academic || {},
           app = x.application || {},
           c = x.contact || {},
+          p = x.personal || {},
           needle = [
             name(x),
             a.rollNumber,
@@ -994,17 +1118,63 @@ export default function StudentProfile() {
             .join(" ")
             .toLowerCase();
         const matchesQuery = !query.trim() || needle.includes(query.trim().toLowerCase());
+
         const studentBranch = shortLabel(a.branch || a.branchName || '');
+        const activeBranch = branchTab !== 'ALL' ? branchTab : filters.branch;
         const matchesBranch =
-          branchTab === "ALL" ||
-          a.branch === branchTab ||
-          shortLabel(a.branch) === branchTab ||
-          studentBranch === branchTab;
-        return matchesQuery && matchesBranch;
+          activeBranch === 'ALL' ||
+          a.branch === activeBranch ||
+          shortLabel(a.branch) === activeBranch ||
+          studentBranch === activeBranch;
+
+        const studentCourse = shortLabel(a.course || a.courseName || '');
+        const matchesCourse =
+          filters.course === 'ALL' ||
+          a.course === filters.course ||
+          shortLabel(a.course) === filters.course ||
+          studentCourse === filters.course;
+
+        const studentSemester = String(a.semester || '').trim().toLowerCase();
+        const matchesSemester =
+          filters.semester === 'ALL' ||
+          studentSemester === String(filters.semester).trim().toLowerCase();
+
+        const studentSection = String(a.section || '').trim().toLowerCase();
+        const matchesSection =
+          filters.section === 'ALL' ||
+          studentSection === String(filters.section).trim().toLowerCase();
+
+        const studentYear = String(a.academicYear || '').trim().toLowerCase();
+        const matchesYear =
+          filters.academicYear === 'ALL' ||
+          studentYear === String(filters.academicYear).trim().toLowerCase();
+
+        const rawGender = String(p.gender || x.gender || '').trim().toLowerCase();
+        const matchesGender =
+          filters.gender === 'ALL' ||
+          (filters.gender === 'Male' && (rawGender === 'male' || rawGender === 'm')) ||
+          (filters.gender === 'Female' && (rawGender === 'female' || rawGender === 'f')) ||
+          (filters.gender === 'Non-binary' && (rawGender === 'non-binary' || rawGender === 'other'));
+
+        const rawStatus = String(x.status || '').trim().toLowerCase();
+        const matchesStatus =
+          filters.status === 'ALL' ||
+          rawStatus === String(filters.status).trim().toLowerCase();
+
+        return (
+          matchesQuery &&
+          matchesBranch &&
+          matchesCourse &&
+          matchesSemester &&
+          matchesSection &&
+          matchesYear &&
+          matchesGender &&
+          matchesStatus
+        );
       });
       return deduplicateProfiles(list);
     },
-    [scopedStudents, query, branchTab],
+    [scopedStudents, query, branchTab, filters],
   );
   const getStudentSortName = (s) => {
     if (!s) return "";
@@ -1091,7 +1261,7 @@ export default function StudentProfile() {
         String(x.admissionId) === String(selectedId)
       )
     ) : null);
-  useEffect(() => setPage(1), [query, branchTab, sort]);
+  useEffect(() => setPage(1), [query, branchTab, sort, filters]);
   const openProfile = async (studentOrId) => {
     const requestId = ++detailSequence.current;
     setDetailLoading(true); setDetailError('');
@@ -1449,29 +1619,347 @@ export default function StudentProfile() {
                   loading={loading || Boolean(error)}
                   scope="Current filtered API results"
                 />
+                <button
+                  type="button"
+                  className={`export-button sp-filter-btn ${showFilterDrawer || activeFilterCount > 0 ? 'is-active' : ''}`}
+                  onClick={() => setShowFilterDrawer(v => !v)}
+                  aria-expanded={showFilterDrawer}
+                  title="Toggle Advanced Filters"
+                >
+                  <FiFilter aria-hidden="true" />
+                  <span>Filters</span>
+                  {activeFilterCount > 0 && (
+                    <span className="sp-filter-badge">{activeFilterCount}</span>
+                  )}
+                  <FiChevronDown aria-hidden="true" className={`sp-filter-chevron ${showFilterDrawer ? 'is-open' : ''}`} />
+                </button>
               </div>
             </header>
+
+            {showFilterDrawer && (
+              <div className="sp-filter-drawer-panel" role="region" aria-label="Student Filters">
+                <div className="sp-filter-drawer-header">
+                  <div className="sp-filter-drawer-title">
+                    <FiFilter aria-hidden="true" />
+                    <span>Filter Student Profiles</span>
+                    {activeFilterCount > 0 && (
+                      <span className="sp-filter-active-pill">{activeFilterCount} active</span>
+                    )}
+                  </div>
+                  <div className="sp-filter-drawer-actions">
+                    {activeFilterCount > 0 && (
+                      <button
+                        type="button"
+                        className="sp-filter-reset-btn"
+                        onClick={resetAllFilters}
+                      >
+                        <FiRotateCcw aria-hidden="true" />
+                        Reset all
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="sp-filter-drawer-close"
+                      onClick={() => setShowFilterDrawer(false)}
+                      aria-label="Close filters"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                </div>
+
+                <div className="sp-filter-drawer-grid">
+                  <div className="sp-filter-group">
+                    <label htmlFor="sp-filter-branch">Branch / Specialization</label>
+                    <select
+                      id="sp-filter-branch"
+                      value={filters.branch}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setFilters(prev => ({ ...prev, branch: val }));
+                        setBranchTab(val);
+                        setPage(1);
+                      }}
+                    >
+                      <option value="ALL">All Branches ({scopedStudents.length})</option>
+                      {availableBranches.map(b => (
+                        <option key={b.key} value={b.key}>
+                          {b.label} ({b.count})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="sp-filter-group">
+                    <label htmlFor="sp-filter-course">Program / Course</label>
+                    <select
+                      id="sp-filter-course"
+                      value={filters.course}
+                      onChange={e => {
+                        setFilters(prev => ({ ...prev, course: e.target.value }));
+                        setPage(1);
+                      }}
+                    >
+                      <option value="ALL">All Programs</option>
+                      {availableCourses.map(c => (
+                        <option key={c.key} value={c.key}>
+                          {c.label} ({c.count})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="sp-filter-group">
+                    <label htmlFor="sp-filter-semester">Semester</label>
+                    <select
+                      id="sp-filter-semester"
+                      value={filters.semester}
+                      onChange={e => {
+                        setFilters(prev => ({ ...prev, semester: e.target.value }));
+                        setPage(1);
+                      }}
+                    >
+                      <option value="ALL">All Semesters</option>
+                      {availableSemesters.map(s => (
+                        <option key={s.key} value={s.key}>
+                          {s.label} ({s.count})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="sp-filter-group">
+                    <label htmlFor="sp-filter-section">Classroom Section</label>
+                    <select
+                      id="sp-filter-section"
+                      value={filters.section}
+                      onChange={e => {
+                        setFilters(prev => ({ ...prev, section: e.target.value }));
+                        setPage(1);
+                      }}
+                    >
+                      <option value="ALL">All Sections</option>
+                      {availableSections.map(s => (
+                        <option key={s.key} value={s.key}>
+                          {s.label} ({s.count})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="sp-filter-group">
+                    <label htmlFor="sp-filter-year">Academic Year</label>
+                    <select
+                      id="sp-filter-year"
+                      value={filters.academicYear}
+                      onChange={e => {
+                        setFilters(prev => ({ ...prev, academicYear: e.target.value }));
+                        setPage(1);
+                      }}
+                    >
+                      <option value="ALL">All Academic Years</option>
+                      {availableYears.map(y => (
+                        <option key={y.key} value={y.key}>
+                          {y.label} ({y.count})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="sp-filter-group">
+                    <label htmlFor="sp-filter-gender">Gender</label>
+                    <select
+                      id="sp-filter-gender"
+                      value={filters.gender}
+                      onChange={e => {
+                        setFilters(prev => ({ ...prev, gender: e.target.value }));
+                        setPage(1);
+                      }}
+                    >
+                      <option value="ALL">All Genders</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Non-binary">Non-binary</option>
+                    </select>
+                  </div>
+
+                  <div className="sp-filter-group">
+                    <label htmlFor="sp-filter-status">Status</label>
+                    <select
+                      id="sp-filter-status"
+                      value={filters.status}
+                      onChange={e => {
+                        setFilters(prev => ({ ...prev, status: e.target.value }));
+                        setPage(1);
+                      }}
+                    >
+                      <option value="ALL">All Statuses</option>
+                      {availableStatuses.map(s => (
+                        <option key={s.key} value={s.key}>
+                          {s.label} ({s.count})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {activeFilterCount > 0 && (
+                  <div className="sp-filter-chips-row">
+                    <span className="sp-chips-legend">Applied Filters:</span>
+                    {(filters.branch !== 'ALL' || branchTab !== 'ALL') && (
+                      <span className="sp-filter-chip">
+                        Branch: <strong>{filters.branch !== 'ALL' ? filters.branch : branchTab}</strong>
+                        <button type="button" aria-label="Remove branch filter" onClick={() => { setFilters(p => ({ ...p, branch: 'ALL' })); setBranchTab('ALL'); }}>&times;</button>
+                      </span>
+                    )}
+                    {filters.course !== 'ALL' && (
+                      <span className="sp-filter-chip">
+                        Course: <strong>{filters.course}</strong>
+                        <button type="button" aria-label="Remove course filter" onClick={() => setFilters(p => ({ ...p, course: 'ALL' }))}>&times;</button>
+                      </span>
+                    )}
+                    {filters.semester !== 'ALL' && (
+                      <span className="sp-filter-chip">
+                        Semester: <strong>{filters.semester}</strong>
+                        <button type="button" aria-label="Remove semester filter" onClick={() => setFilters(p => ({ ...p, semester: 'ALL' }))}>&times;</button>
+                      </span>
+                    )}
+                    {filters.section !== 'ALL' && (
+                      <span className="sp-filter-chip">
+                        Section: <strong>{filters.section}</strong>
+                        <button type="button" aria-label="Remove section filter" onClick={() => setFilters(p => ({ ...p, section: 'ALL' }))}>&times;</button>
+                      </span>
+                    )}
+                    {filters.academicYear !== 'ALL' && (
+                      <span className="sp-filter-chip">
+                        Year: <strong>{filters.academicYear}</strong>
+                        <button type="button" aria-label="Remove year filter" onClick={() => setFilters(p => ({ ...p, academicYear: 'ALL' }))}>&times;</button>
+                      </span>
+                    )}
+                    {filters.gender !== 'ALL' && (
+                      <span className="sp-filter-chip">
+                        Gender: <strong>{filters.gender}</strong>
+                        <button type="button" aria-label="Remove gender filter" onClick={() => setFilters(p => ({ ...p, gender: 'ALL' }))}>&times;</button>
+                      </span>
+                    )}
+                    {filters.status !== 'ALL' && (
+                      <span className="sp-filter-chip">
+                        Status: <strong>{filters.status}</strong>
+                        <button type="button" aria-label="Remove status filter" onClick={() => setFilters(p => ({ ...p, status: 'ALL' }))}>&times;</button>
+                      </span>
+                    )}
+                    <button type="button" className="sp-chip-reset-all" onClick={resetAllFilters}>
+                      Clear all
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="sa-quick-filter-bar">
               <div className="sa-status-tabs" role="tablist" aria-label="Filter by branch">
                 <button
                   type="button"
                   className={`sa-status-tab ${branchTab === 'ALL' ? 'is-active' : ''}`}
-                  onClick={() => { setBranchTab('ALL'); setPage(1); }}
+                  onClick={() => {
+                    setBranchTab('ALL');
+                    setFilters(prev => ({ ...prev, branch: 'ALL' }));
+                    setPage(1);
+                  }}
                 >
                   All ({scopedStudents.length})
                 </button>
-                {availableBranches.map(b => (
+                {visibleBranchTabs.map(b => (
                   <button
                     key={b.key}
                     type="button"
                     className={`sa-status-tab ${branchTab === b.key ? 'is-active' : ''}`}
-                    onClick={() => { setBranchTab(b.key); setPage(1); }}
+                    onClick={() => {
+                      setBranchTab(b.key);
+                      setFilters(prev => ({ ...prev, branch: b.key }));
+                      setPage(1);
+                    }}
                   >
                     {b.label} ({b.count})
                   </button>
                 ))}
+                {moreBranchTabs.length > 0 && (
+                  <div className="sa-branch-more-wrap">
+                    <select
+                      aria-label="More branches"
+                      className={`sa-status-tab sa-branch-more-select ${isBranchMoreActive ? 'is-active' : ''}`}
+                      value={isBranchMoreActive ? branchTab : ''}
+                      onChange={e => {
+                        const val = e.target.value;
+                        if (val) {
+                          setBranchTab(val);
+                          setFilters(prev => ({ ...prev, branch: val }));
+                          setPage(1);
+                        }
+                      }}
+                    >
+                      <option value="" disabled>
+                        {isBranchMoreActive ? `Branch: ${branchTab}` : `More Branches (${moreBranchTabs.length}) ▾`}
+                      </option>
+                      {moreBranchTabs.map(b => (
+                        <option key={b.key} value={b.key}>
+                          {b.label} ({b.count})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
+              {!showFilterDrawer && activeFilterCount > 0 && (
+                <div className="sp-filter-chips-row" style={{ width: '100%', marginTop: '6px', paddingTop: '6px' }}>
+                  <span className="sp-chips-legend">Active filters ({activeFilterCount}):</span>
+                  {(filters.branch !== 'ALL' || branchTab !== 'ALL') && (
+                    <span className="sp-filter-chip">
+                      Branch: <strong>{filters.branch !== 'ALL' ? filters.branch : branchTab}</strong>
+                      <button type="button" aria-label="Remove branch filter" onClick={() => { setFilters(p => ({ ...p, branch: 'ALL' })); setBranchTab('ALL'); }}>&times;</button>
+                    </span>
+                  )}
+                  {filters.course !== 'ALL' && (
+                    <span className="sp-filter-chip">
+                      Program: <strong>{filters.course}</strong>
+                      <button type="button" aria-label="Remove course filter" onClick={() => setFilters(p => ({ ...p, course: 'ALL' }))}>&times;</button>
+                    </span>
+                  )}
+                  {filters.semester !== 'ALL' && (
+                    <span className="sp-filter-chip">
+                      Semester: <strong>{filters.semester}</strong>
+                      <button type="button" aria-label="Remove semester filter" onClick={() => setFilters(p => ({ ...p, semester: 'ALL' }))}>&times;</button>
+                    </span>
+                  )}
+                  {filters.section !== 'ALL' && (
+                    <span className="sp-filter-chip">
+                      Section: <strong>{filters.section}</strong>
+                      <button type="button" aria-label="Remove section filter" onClick={() => setFilters(p => ({ ...p, section: 'ALL' }))}>&times;</button>
+                    </span>
+                  )}
+                  {filters.academicYear !== 'ALL' && (
+                    <span className="sp-filter-chip">
+                      Year: <strong>{filters.academicYear}</strong>
+                      <button type="button" aria-label="Remove year filter" onClick={() => setFilters(p => ({ ...p, academicYear: 'ALL' }))}>&times;</button>
+                    </span>
+                  )}
+                  {filters.gender !== 'ALL' && (
+                    <span className="sp-filter-chip">
+                      Gender: <strong>{filters.gender}</strong>
+                      <button type="button" aria-label="Remove gender filter" onClick={() => setFilters(p => ({ ...p, gender: 'ALL' }))}>&times;</button>
+                    </span>
+                  )}
+                  {filters.status !== 'ALL' && (
+                    <span className="sp-filter-chip">
+                      Status: <strong>{filters.status}</strong>
+                      <button type="button" aria-label="Remove status filter" onClick={() => setFilters(p => ({ ...p, status: 'ALL' }))}>&times;</button>
+                    </span>
+                  )}
+                  <button type="button" className="sp-chip-reset-all" onClick={resetAllFilters}>
+                    Clear all
+                  </button>
+                </div>
+              )}
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: 'auto' }}>
                 <label className="sa-search" style={{ height: '34px', minWidth: '240px', maxWidth: '340px' }}>
                   <FiSearch aria-hidden="true" />

@@ -34,7 +34,7 @@
 .account-menu__panel button { display:flex; gap:8px; align-items:center; border:0; padding:9px 10px; border-radius:7px; background:transparent; color:var(--text-primary); text-align:left; font:12px var(--font-family); cursor:pointer; }
 .account-menu__panel button:hover { background:var(--cms-hover); }
 .account-menu__panel .account-menu__signout { color:var(--danger); }
-.page-content { box-sizing:border-box; display:grid; align-content:start; gap:12px; min-width:0; width:100%; padding:var(--space-4) var(--space-5); }
+.page-content { box-sizing:border-box; display:grid; align-content:start; gap:12px; min-width:0; width:100%; padding:var(--space-4) 16px; }
 .app-breadcrumb { display:flex; align-items:center; flex-wrap:wrap; gap:8px; font-size:11px; color:var(--text-muted); }
 .app-breadcrumb a { color:var(--brand); text-decoration:none; }
 .app-breadcrumb__item { display:inline-flex; gap:8px; }
