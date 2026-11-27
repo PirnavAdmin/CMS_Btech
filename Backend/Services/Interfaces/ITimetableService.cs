@@ -38,6 +38,7 @@ public interface ITimetableService
     Task<TimetableRevisionCreatedDto> CreateRevisionAsync(long timetableId, CreateTimetableRevisionRequest request, long? actorId, long? tokenCollegeId, bool isSuperAdmin);
     Task<PublishTimetableBatchResultDto> PublishBatchAsync(PublishTimetableBatchRequest request, long? actorId, long? tokenCollegeId, bool isSuperAdmin);
     Task PublishAsync(long timetableId, long? actorId, long? tokenCollegeId, bool isSuperAdmin);
+    Task DeleteDraftAsync(long timetableId, long? actorId, long? tokenCollegeId, bool isSuperAdmin);
     Task ReopenAsync(long timetableId, long? actorId, long? tokenCollegeId, bool isSuperAdmin);
 
     Task<IReadOnlyList<TimetableEntryDto>> AddEntryAsync(long timetableId, ManualTimetableEntryRequest request, long? actorId, long? tokenCollegeId, bool isSuperAdmin);

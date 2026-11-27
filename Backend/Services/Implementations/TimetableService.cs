@@ -210,6 +210,7 @@ public sealed class TimetableService : ITimetableService
     }
 
     public Task PublishAsync(long id,long? actor,long? college,bool superAdmin) => _repository.PublishAsync(id,actor,college,superAdmin);
+    public Task DeleteDraftAsync(long id,long? actor,long? college,bool superAdmin) => _repository.DeleteDraftAsync(id,actor,college,superAdmin);
     public Task ReopenAsync(long id,long? actor,long? college,bool superAdmin) => _repository.ReopenAsync(id,actor,college,superAdmin);
 
     public Task<IReadOnlyList<TimetableEntryDto>> AddEntryAsync(long id,ManualTimetableEntryRequest r,long? actor,long? college,bool superAdmin)
