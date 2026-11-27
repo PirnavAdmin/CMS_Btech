@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { FiAlertCircle, FiBookOpen, FiCheckCircle, FiCopy, FiEdit2, FiEye, FiHash, FiLayers, FiMoreVertical, FiPlus, FiRefreshCw, FiSearch, FiTrash2 } from 'react-icons/fi'
+import { FiAlertCircle, FiBookOpen, FiCheckCircle, FiCopy, FiEdit2, FiEye, FiHash, FiLayers, FiMoreVertical, FiPlus, FiRefreshCw, FiSearch, FiTrash2, FiUserPlus, FiUserX } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import PageHeader from '../../components/PageHeader'
 import ViewDialog from '../../components/ViewDialog'
@@ -9,6 +9,7 @@ import StatusBadge from '../../components/StatusBadge'
 import ScopedModuleNotice from '../../components/ScopedModuleNotice'
 import { useAcademic } from '../../context/AcademicContext'
 import { useScreenAccess } from '../../auth/ScreenAccess'
+import { studentApi } from '../../api/apiEndpoints'
 import useScopedModule from '../../services/useScopedModule'
 import { call, LIBRARY_DEFAULT_CATEGORIES, loadLibrary, requireId, saveBook } from '../../services/scopedModulesService'
 import './LibraryWorkspace.css'
@@ -44,13 +45,29 @@ const librarySampleData = {
     { id: 'sample-fine-2', fineId: 'sample-fine-2', issueId: 'sample-issue-4', borrowerId: 'sample-student-4', borrowerName: 'Meera Joshi', borrowerCode: '21CSE006', department: 'Computer Science', borrowerType: 'Student', bookTitle: 'Introduction to Algorithms', category: 'Computer Science', dueDate: '2026-11-18', assessedDate: '2026-11-17', amount: 10, paidAmount: 10, balance: 0, status: 'Paid' },
   ],
 }
+const sampleBorrowersStorageKey = collegeId => `cms-library-sample-borrowers-${collegeId || 'default'}`
+function loadSampleBorrowers(collegeId) {
+  try {
+    const rows = JSON.parse(localStorage.getItem(sampleBorrowersStorageKey(collegeId)))
+    return Array.isArray(rows) ? rows : null
+  } catch { return null }
+}
 const sampleBooksStorageKey = collegeId => `cms-librarian-sample-books:${collegeId || 'preview'}`
+const sampleCirculationStorageKey = collegeId => `cms-librarian-sample-circulation:${collegeId || 'preview'}`
 function loadSampleBooks(collegeId) {
   try {
     const rows = JSON.parse(localStorage.getItem(sampleBooksStorageKey(collegeId)) || 'null')
     return Array.isArray(rows) ? rows : librarySampleData.books
   } catch {
     return librarySampleData.books
+  }
+}
+function loadSampleCirculation(collegeId) {
+  try {
+    const rows = JSON.parse(localStorage.getItem(sampleCirculationStorageKey(collegeId)) || 'null')
+    return Array.isArray(rows) ? rows : librarySampleData.circulation
+  } catch {
+    return librarySampleData.circulation
   }
 }
 const activeLoan = row => ['Issued', 'Overdue'].includes(row.status)
@@ -377,6 +394,45 @@ function LibraryForm({ title, action, busy, error, onClose, onSubmit, readOnly =
   </ViewDialog>
 }
 
+function StudentAccountEditor({ student, academicYearId, academicYearLabel, preview = false, busy, error, readOnly = false, onClose, onSave }) {
+  const [validation, setValidation] = useState('')
+  const submit = event => {
+    event.preventDefault()
+    setValidation('')
+    const form = Object.fromEntries(new FormData(event.currentTarget).entries())
+    if (!String(form.fullName || '').trim() || !String(form.studentCode || '').trim()) {
+      setValidation('Enter the student name and student ID.'); return
+    }
+    if (!preview && !student?.academicYearId && !academicYearId) {
+      setValidation('Choose an academic year in the portal before adding a student.'); return
+    }
+    onSave({
+      studentCode: String(form.studentCode).trim(),
+      fullName: String(form.fullName).trim(),
+      email: String(form.email || '').trim() || null,
+      mobile: String(form.mobile || '').trim() || null,
+      gender: form.gender || null,
+      dateOfBirth: form.dateOfBirth || null,
+      address: String(form.address || '').trim() || null,
+      academicYearId: preview ? (student?.academicYearId || academicYearId || '') : Number(student?.academicYearId || academicYearId),
+      courseId: student?.courseId || null,
+      branchId: student?.branchId || null,
+      status: student?.status === 0 || student?.status === false ? 0 : 1,
+    })
+  }
+  return <LibraryForm title={student ? 'Edit Student' : 'Add Student'} action={student ? 'Save Changes' : 'Add Student'} busy={busy} error={validation || error} readOnly={readOnly} onClose={onClose} onSubmit={submit}>
+    <p className="library-hint library-full-field">This creates a campus student record. Active student records are available for library borrowing.</p>
+    <label>Student ID / Roll Number<input className="erp-input" name="studentCode" required maxLength={50} defaultValue={student?.studentCode || student?.code || ''} /></label>
+    <label>Full Name<input className="erp-input" name="fullName" required maxLength={150} defaultValue={student?.fullName || student?.studentName || student?.name || ''} /></label>
+    <label>Academic Year<input className="erp-input" readOnly value={student?.academicYearName || academicYearLabel || (academicYearId ? `Academic year ${academicYearId}` : 'Select an academic year in the portal')} /></label>
+    <label>Email<input className="erp-input" name="email" type="email" maxLength={150} defaultValue={student?.email || ''} /></label>
+    <label>Mobile Number<input className="erp-input" name="mobile" inputMode="tel" maxLength={20} defaultValue={student?.mobile || ''} /></label>
+    <label>Gender<select className="erp-select" name="gender" defaultValue={student?.gender || ''}><option value="">Prefer not to say</option><option value="Male">Male</option><option value="Female">Female</option><option value="Other">Other</option></select></label>
+    <label>Date of Birth<input className="erp-input" name="dateOfBirth" type="date" max={new Date().toISOString().slice(0, 10)} defaultValue={String(student?.dateOfBirth || '').slice(0, 10)} /></label>
+    <label className="library-full-field">Address<input className="erp-input" name="address" maxLength={500} defaultValue={student?.address || ''} /></label>
+  </LibraryForm>
+}
+
 function BookEditor({ book, books, categories, stockOnly, onSave, ...dialog }) {
   const [form, setForm] = useState({
     title: book?.title ?? '', author: book?.author ?? '', isbn: book?.isbn ?? '', accessionNo: book?.accessionNo ?? '',
@@ -581,7 +637,7 @@ const librarianScreenTab = screen => {
   return 'Books'
 }
 
-function LibraryScreen({ collegeId, portalScreen }) {
+function LibraryScreen({ collegeId, academicYearId, academicYearLabel, portalScreen }) {
   const { canAction } = useScreenAccess()
   const canCreate = canAction('/library', 'create')
   const canEdit = canAction('/library', 'edit')
@@ -598,16 +654,19 @@ function LibraryScreen({ collegeId, portalScreen }) {
   const [modal, setModal] = useState(() => portalScreen === 'add-book' ? { kind: 'edit' } : portalScreen === 'issue-books' ? { kind: 'issue' } : null)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [studentBusy, setStudentBusy] = useState(false)
   const isTestEnv = typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'test'
   const [bookView, setBookView] = useState(isTestEnv || portalScreen ? 'table' : 'cards')
   const [sampleBooks, setSampleBooks] = useState(() => loadSampleBooks(collegeId))
+  const [sampleBorrowerRows, setSampleBorrowerRows] = useState(() => loadSampleBorrowers(collegeId))
+  const [sampleCirculationRows, setSampleCirculationRows] = useState(() => loadSampleCirculation(collegeId))
   // Temporary frontend-only lost-book records; these are intentionally not part of loadLibrary/API data.
   const [lostBookFines, setLostBookFines] = useState([])
   const [renewalDates, setRenewalDates] = useState({})
   const errors = data.resourceErrors || {}
   const hasRecords = [data.books, data.circulation, data.borrowers, data.fines, data.categories].some(rows => rows.length > 0)
   const samplePreview = Boolean(portalScreen) && !state.loading && !state.waitingForContext && !hasRecords
-  const displayData = samplePreview ? { ...librarySampleData, books: sampleBooks } : data
+  const displayData = samplePreview ? { ...librarySampleData, books: sampleBooks, borrowers: sampleBorrowerRows || librarySampleData.borrowers, circulation: sampleCirculationRows } : data
   const canManageSampleBooks = samplePreview
   const ready = key => samplePreview || (!state.loading && !state.error && !state.waitingForContext && !errors[key])
   const writable = key => !samplePreview && ready(key) && !state.saving
@@ -622,8 +681,11 @@ function LibraryScreen({ collegeId, portalScreen }) {
   })
   const fines = displayData.fines.map(row => ({ ...row, fineLabel: money(row.amount), paidLabel: money(row.paidAmount), balanceLabel: money(row.balance) }))
   const eligibleBorrowers = borrowers.filter(row => !['inactive', 'suspended', 'deactivated'].includes(norm(row.accountStatus)))
-  const availableBooks = catalog.filter(row => activeBook(row) && row.availableCopies > 0 &&
-    displayData.categories.some(category => same(category.categoryId, row.categoryId) && activeBook(category)))
+  const availableBooks = catalog.filter(row => activeBook(row) && row.availableCopies > 0 && (
+    displayData.categories.some(category => same(category.categoryId, row.categoryId) && activeBook(category)) ||
+    (samplePreview && String(row.categoryId || '').startsWith('default:') &&
+      LIBRARY_DEFAULT_CATEGORIES.some(category => `default:${category.categoryCode}` === String(row.categoryId)))
+  ))
   const canIssue = canCreate && ['books', 'issues', 'students', 'categories'].every(writable) && eligibleBorrowers.length > 0
   const isCategoryReport = tab === 'Reports' && report === 'Category Statistics'
   const categoryStats = [...new Set(catalog.map(row => row.category || 'Uncategorized'))].map(category => {
@@ -683,8 +745,70 @@ function LibraryScreen({ collegeId, portalScreen }) {
     setSampleBooks(next)
     localStorage.setItem(sampleBooksStorageKey(collegeId), JSON.stringify(next))
   }
+  const persistSampleBorrowers = next => {
+    setSampleBorrowerRows(next)
+    localStorage.setItem(sampleBorrowersStorageKey(collegeId), JSON.stringify(next))
+  }
+  const persistSampleCirculation = next => {
+    setSampleCirculationRows(next)
+    localStorage.setItem(sampleCirculationStorageKey(collegeId), JSON.stringify(next))
+  }
+  const saveStudent = async payload => {
+    setStudentBusy(true)
+    setError('')
+    try {
+      const student = modal.row
+      if (samplePreview) {
+        const localId = student?.id || `sample-student-${crypto.randomUUID()}`
+        const localRecord = {
+          ...student,
+          ...payload,
+          id: localId,
+          studentId: student?.studentId || localId,
+          code: payload.studentCode,
+          name: payload.fullName,
+          type: 'Student',
+          accountStatus: payload.status ? 'Active' : 'Inactive',
+        }
+        const current = sampleBorrowerRows || librarySampleData.borrowers
+        persistSampleBorrowers(student ? current.map(row => row.id === student.id ? localRecord : row) : [localRecord, ...current])
+        setNotice(student ? 'Sample student updated in this browser.' : 'Sample student added in this browser.')
+      } else {
+        const body = { ...payload, collegeId: requireId(collegeId, 'college') }
+        if (student) await studentApi.update(requireId(student.studentId || student.id, 'student'), body)
+        else await studentApi.create(body)
+        await reload()
+        setNotice(student ? 'Student record updated.' : 'Student added to the campus directory and library borrower list.')
+      }
+      setModal(null)
+    } catch (reason) {
+      setError(reason?.message || 'The student record could not be saved.')
+    } finally {
+      setStudentBusy(false)
+    }
+  }
+  const changeStudentStatus = async (student, status) => {
+    setStudentBusy(true)
+    setError('')
+    try {
+      if (samplePreview) {
+        const current = sampleBorrowerRows || librarySampleData.borrowers
+        persistSampleBorrowers(current.map(row => row.id === student.id ? { ...row, status, accountStatus: status ? 'Active' : 'Inactive' } : row))
+      } else {
+        await studentApi.updateStatus(requireId(student.studentId || student.id, 'student'), status)
+        await reload()
+      }
+      setModal(null)
+      setNotice(status ? 'Student reactivated.' : 'Student deactivated in the campus student directory.')
+    } catch (reason) {
+      setError(reason?.message || 'The student status could not be changed.')
+    } finally {
+      setStudentBusy(false)
+    }
+  }
   const saveSampleBook = (form, old) => {
-    const category = displayData.categories.find(row => String(row.categoryId) === String(form.categoryId))
+    const category = displayData.categories.find(row => String(row.categoryId) === String(form.categoryId)) ||
+      LIBRARY_DEFAULT_CATEGORIES.find(row => `default:${row.categoryCode}` === String(form.categoryId))
     const totalCopies = Math.max(0, Number(form.totalCopies) || 0)
     const issuedCopies = Number(old?.issuedCopies) || 0
     const id = old?.id || `sample-book-${crypto.randomUUID()}`
@@ -707,8 +831,41 @@ function LibraryScreen({ collegeId, portalScreen }) {
     setModal(null)
     setNotice(old ? 'Sample book updated in this browser.' : 'Sample book added in this browser.')
   }
+  const saveSampleIssue = body => {
+    const book = catalog.find(row => same(row.id, body.bookId))
+    const borrower = eligibleBorrowers.find(row => same(row.id, body.studentId))
+    if (!book || !borrower || book.availableCopies < 1) {
+      setError('The selected book or borrower is no longer available. Refresh the sample data and try again.')
+      return
+    }
+    const localIssueId = `sample-issue-${crypto.randomUUID()}`
+    const issue = {
+      id: localIssueId, issueId: localIssueId,
+      borrowerId: borrower.id, borrowerName: borrower.name, borrowerCode: borrower.code,
+      borrowerType: borrower.type || 'Student', bookId: book.id, bookTitle: book.title,
+      accession: book.accessionNo, category: book.category, issueDate: body.issueDate,
+      dueDate: body.dueDate, status: 'Issued', overdueDays: 0,
+    }
+    persistSampleCirculation([issue, ...sampleCirculationRows])
+    persistSampleBooks(sampleBooks.map(row => row.id === book.id ? {
+      ...row, availableCopies: Math.max(0, Number(row.availableCopies) - 1),
+      issuedCopies: Number(row.issuedCopies || 0) + 1,
+    } : row))
+    setModal(null)
+    setNotice('Sample book issued in this browser. No library service data was changed.')
+  }
   const saveRecordOperation = body => {
     const { kind, row } = modal
+    if (samplePreview && kind === 'return') {
+      const book = sampleBooks.find(item => same(item.id, row.bookId))
+      persistSampleCirculation(sampleCirculationRows.map(item => same(item.id, row.id)
+        ? { ...item, returnDate: body.returnDate, status: 'Returned', overdueDays: 0 } : item))
+      if (book) persistSampleBooks(sampleBooks.map(item => same(item.id, book.id)
+        ? { ...item, availableCopies: Number(item.availableCopies || 0) + 1, issuedCopies: Math.max(0, Number(item.issuedCopies || 0) - 1) } : item))
+      setModal(null)
+      setNotice('Sample book return saved in this browser.')
+      return
+    }
     if (samplePreview && ['delete', 'archive', 'restore'].includes(kind)) {
       if (kind === 'delete') persistSampleBooks(sampleBooks.filter(book => book.id !== row.id))
       else persistSampleBooks(sampleBooks.map(book => book.id === row.id ? { ...book, status: kind === 'restore' } : book))
@@ -739,10 +896,16 @@ function LibraryScreen({ collegeId, portalScreen }) {
     setModal(null); setNotice('Temporary lost-book fine updated.')
   }
   const saveRenewal = ({ dueDate }) => {
-    setRenewalDates(current => ({ ...current, [modal.row.id]: dueDate }))
-    setModal(null); setNotice('Book renewed in temporary frontend state.')
+    if (samplePreview) {
+      persistSampleCirculation(sampleCirculationRows.map(row => same(row.id, modal.row.id) ? { ...row, dueDate } : row))
+      setNotice('Sample book renewed in this browser.')
+    } else {
+      setRenewalDates(current => ({ ...current, [modal.row.id]: dueDate }))
+      setNotice('Book renewed in temporary frontend state.')
+    }
+    setModal(null)
   }
-  const sampleBookDialog = samplePreview && ['edit', 'copies', 'delete', 'archive', 'restore'].includes(modal?.kind)
+  const sampleBookDialog = samplePreview && ['edit', 'copies', 'delete', 'archive', 'restore', 'issue', 'return', 'renew', 'mark-lost', 'edit-lost-fine'].includes(modal?.kind)
   const permissionLockedDialog = (modal?.kind === 'edit' && (modal.row ? !canEdit : !canCreate)) || (modal?.kind === 'copies' && !canEdit) || (modal?.kind === 'issue' && !canCreate)
   const dialog = { busy: state.saving, error, onClose: close, readOnly: samplePreview ? !sampleBookDialog : permissionLockedDialog }
   const options = (label, key, values) => <label>{label}<select className="erp-select" value={filters[key] || ''} onChange={event => filter(key, event.target.value)}>
@@ -752,12 +915,16 @@ function LibraryScreen({ collegeId, portalScreen }) {
       <summary aria-label={'Actions menu for ' + row.title} title="Book actions"><FiMoreVertical aria-hidden="true" /></summary>
       <div className="library-book-menu-items" role="group" aria-label={'Book actions for ' + row.title}>
         {(canEdit || canManageSampleBooks) && <button type="button" disabled={!canManageSampleBooks && (!writable('books') || !ready('categories'))} onClick={event => { event.currentTarget.closest('details').open = false; open('copies', row) }}>Manage Copies</button>}
-        {canCreate && <button type="button" disabled={!canIssue || !availableBooks.some(book => book.id === row.id)} onClick={event => { event.currentTarget.closest('details').open = false; open('issue', row) }}>Issue Book</button>}
+        {(canCreate || samplePreview) && <button type="button" disabled={samplePreview ? !availableBooks.some(book => book.id === row.id) || !eligibleBorrowers.length : !canIssue || !availableBooks.some(book => book.id === row.id)} onClick={event => { event.currentTarget.closest('details').open = false; open('issue', row) }}>Issue Book</button>}
         {(canEdit || canManageSampleBooks) && <button type="button" disabled={!canManageSampleBooks && !writable('books')} onClick={event => { event.currentTarget.closest('details').open = false; open(activeBook(row) ? 'archive' : 'restore', row) }}>{activeBook(row) ? 'Archive' : 'Restore'}</button>}
       </div>
     </details>
-    : isBorrowers ? row => <button className={button} onClick={() => open('borrower', row)}>View</button>
-    : tab === 'Issue & Return' && mode === 'Return / Renew' && canCreate ? row => <div className="library-row-actions"><button className={button} disabled={!writable('issues')} onClick={() => open('return', row)}>Return</button><button className={button} disabled={!writable('issues')} onClick={() => open('renew', row)}>Renew</button>{!lostBookFines.some(item => same(item.issueId, row.id)) && <button className={button} disabled={!writable('issues')} onClick={() => open('mark-lost', row)}>Mark as Lost</button>}</div>
+    : isBorrowers ? row => <div className="library-row-actions">
+      <button type="button" className={button} onClick={() => open('borrower', row)}>View</button>
+      {(canEdit || samplePreview) && <button type="button" className={button} aria-label={`Edit ${row.name}`} disabled={!samplePreview && !writable('students')} onClick={() => open('student', row)}><FiEdit2 aria-hidden="true" />Edit</button>}
+      {(canDelete || samplePreview) && <button type="button" className={`${button} is-danger`} aria-label={`${['inactive', 'suspended', 'deactivated'].includes(norm(row.accountStatus)) ? 'Reactivate' : 'Deactivate'} ${row.name}`} disabled={!samplePreview && !writable('students')} onClick={() => ['inactive', 'suspended', 'deactivated'].includes(norm(row.accountStatus)) ? changeStudentStatus(row, 1) : open('deactivate-student', row)}>{['inactive', 'suspended', 'deactivated'].includes(norm(row.accountStatus)) ? 'Reactivate' : <><FiUserX aria-hidden="true" />Deactivate</>}</button>}
+    </div>
+    : tab === 'Issue & Return' && mode === 'Return / Renew' && (canCreate || samplePreview) ? row => <div className="library-row-actions"><button className={button} disabled={!samplePreview && !writable('issues')} onClick={() => open('return', row)}>Return</button><button className={button} disabled={!samplePreview && !writable('issues')} onClick={() => open('renew', row)}>Renew</button>{!lostBookFines.some(item => same(item.issueId, row.id)) && <button className={button} disabled={!samplePreview && !writable('issues')} onClick={() => open('mark-lost', row)}>Mark as Lost</button>}</div>
     : isLostFineView && canEdit ? row => <button className={button} onClick={() => open('edit-lost-fine', row)}>Edit Fine</button>
     : isFines && (canCreate || canEdit) ? row => <div className="library-row-actions">
       {canCreate && <button className={button} disabled={!writable('fines') || !(row.balance > 0)} onClick={() => open('payment', row)}>Pay</button>}
@@ -797,6 +964,7 @@ function LibraryScreen({ collegeId, portalScreen }) {
     ]} />
     {samplePreview ? <div className="library-sample-notice" role="status"><FiBookOpen aria-hidden="true" /><span><strong>Sample data preview</strong><small>Changes stay in this browser and never reach the live library service.</small></span><button type="button" onClick={() => reload().catch(() => {})} aria-label="Retry loading live library data"><FiRefreshCw />Retry live data</button></div> : <ScopedModuleNotice state={state} data={data} resource={resource} onRetry={reload} />}
     {notice && <p className="library-notice" role="status">{notice}</p>}
+    {isBorrowers && <p className="library-hint">Library borrower accounts come from the campus student directory. Add Student creates a campus student record; active students are then available for book issue.</p>}
     {!portalScreen && <nav className="library-tabs" aria-label="Library views">{tabs.map(item => <button key={item} type="button" aria-current={tab === item ? 'page' : undefined}
       onClick={() => choose(setTab, item)}>{item}</button>)}</nav>
     }
@@ -812,7 +980,7 @@ function LibraryScreen({ collegeId, portalScreen }) {
         </section>
         <section className="library-panel library-dashboard__panel"><header className="library-dashboard__panel-heading"><h3>Quick Actions</h3></header>
           <div className="library-dashboard__quick">
-            <button type="button" onClick={goIssue} disabled={!canIssue || !availableBooks.length}><span className="is-purple"><FiCopy aria-hidden="true" /></span>Issue Book</button>
+            <button type="button" onClick={goIssue} disabled={samplePreview ? !availableBooks.length || !eligibleBorrowers.length : !canIssue || !availableBooks.length}><span className="is-purple"><FiCopy aria-hidden="true" /></span>Issue Book</button>
             <button type="button" onClick={goReturns} disabled={!ready('issues')}><span className="is-green"><FiCheckCircle aria-hidden="true" /></span>Return Book</button>
             <button type="button" onClick={() => { setTab('Books'); open('edit') }} disabled={!samplePreview && (!canCreate || !writable('books') || !ready('categories'))}><span className="is-blue"><FiBookOpen aria-hidden="true" /></span>Add New Book</button>
             <button type="button" onClick={() => setTab('Borrowers')}><span className="is-orange"><FiLayers aria-hidden="true" /></span>Student Records</button>
@@ -836,7 +1004,7 @@ function LibraryScreen({ collegeId, portalScreen }) {
       {tab === 'Issue & Return' && <div className="library-mode-bar">
         <div className="library-tabs" role="group" aria-label="Circulation mode">{['Issue Book', 'Return / Renew', 'Lost Book Fines'].map(item =>
           <button key={item} type="button" aria-pressed={mode === item} onClick={() => choose(setMode, item)}>{item}</button>)}</div>
-        {mode === 'Issue Book' && canCreate && <button type="button" className={primary} disabled={!canIssue || !availableBooks.length || !eligibleBorrowers.length} onClick={() => open('issue')}>Start Issue</button>}
+        {mode === 'Issue Book' && (canCreate || samplePreview) && <button type="button" className={primary} disabled={samplePreview ? !availableBooks.length || !eligibleBorrowers.length : !canIssue || !availableBooks.length || !eligibleBorrowers.length} onClick={() => open('issue')}>Start Issue</button>}
       </div>}
       {isFines && <p className="library-hint">Date filters apply to assessment dates. Paid amounts and balances come from the library service.</p>}
       {tab === 'Issue & Return' && <p className="library-hint">{mode === 'Issue Book' ? 'Select a student and an available catalog title to issue a book.' : mode === 'Return / Renew' ? 'Record a return or extend a loan due date. Renewals are held in temporary frontend state.' : 'Lost-book fines shown here are temporary frontend records and are not saved to the library service.'}</p>}
@@ -863,6 +1031,7 @@ function LibraryScreen({ collegeId, portalScreen }) {
           <input className="erp-input" type="date" value={filters[key] || ''} min={key === 'to' ? filters.from : undefined} max={key === 'from' ? filters.to : undefined} onChange={event => filter(key, event.target.value)} />
         </label>)}
         {canExport && ready(resource) && <ExportMenu rows={filtered} columns={columns.map(([key, label]) => ({ key, label }))} title={tab === 'Reports' ? report : tab} filename={'library-' + (tab === 'Reports' ? report : tab).toLowerCase().replaceAll(' ', '-')} />}
+        {isBorrowers && (canCreate || samplePreview) && <button type="button" className={primary} onClick={() => { setError(''); open('student') }}><FiUserPlus aria-hidden="true" />Add Student</button>}
         {tab === 'Books' && <div className="library-view-switcher" role="group" aria-label="Book view layout">
           <button type="button" className={`erp-btn ${bookView === 'cards' ? 'erp-btn--primary' : 'erp-btn--secondary'}`} onClick={() => setBookView('cards')} aria-pressed={bookView === 'cards'}>Grid View</button>
           <button type="button" className={`erp-btn ${bookView === 'table' ? 'erp-btn--primary' : 'erp-btn--secondary'}`} onClick={() => setBookView('table')} aria-pressed={bookView === 'table'}>Table View</button>
@@ -883,8 +1052,16 @@ function LibraryScreen({ collegeId, portalScreen }) {
     </section>}
     {(modal?.kind === 'edit' || modal?.kind === 'copies') && <BookEditor {...dialog} stockOnly={modal.kind === 'copies'} book={modal.row} books={catalog} categories={displayData.categories}
       onSave={form => samplePreview ? saveSampleBook(form, modal.row) : commit((modal.row ? canEdit : canCreate) && ready('categories'), 'books', () => saveBook(form, modal.row, scope, displayData.categories), modal.kind === 'copies' ? 'Copy stock updated.' : 'Book saved.')} />}
+    {modal?.kind === 'student' && <StudentAccountEditor student={modal.row} academicYearId={academicYearId} academicYearLabel={academicYearLabel} preview={samplePreview} busy={studentBusy} error={error}
+      readOnly={samplePreview ? false : modal.row ? !canEdit || !writable('students') : !canCreate || !writable('students')}
+      onClose={() => { if (!studentBusy) setModal(null) }} onSave={saveStudent} />}
+    {modal?.kind === 'deactivate-student' && <ViewDialog title="Deactivate this student?" subtitle={modal.row.name} busy={studentBusy} onClose={() => { if (!studentBusy) setModal(null) }} showExport={false} maxWidth="520px"
+      footerContent={<><button type="button" className={button} disabled={studentBusy} onClick={() => setModal(null)}>Cancel</button><button type="button" className={`${primary} is-danger`} disabled={studentBusy || (!samplePreview && !writable('students'))} onClick={() => changeStudentStatus(modal.row, 0)}>{studentBusy ? 'Saving…' : 'Deactivate Student'}</button></>}>
+      {error && <p className="library-error" role="alert">{error}</p>}
+      <p className="library-hint">Deactivation changes the campus student record, not just library access. The student will no longer be offered for new issues in this portal.</p>
+    </ViewDialog>}
     {modal?.kind === 'issue' && <IssueEditor {...dialog} books={availableBooks} borrowers={eligibleBorrowers} loans={loans} initialBook={modal.row}
-      onSave={body => commit(canIssue, 'issues', () => call('library/issues', { method: 'POST', body: { collegeId: college(), ...body } }), 'Book issued.')} />}
+      onSave={body => samplePreview ? saveSampleIssue(body) : commit(canIssue, 'issues', () => call('library/issues', { method: 'POST', body: { collegeId: college(), ...body } }), 'Book issued.')} />}
     {modal?.kind === 'renew' && <RenewEditor {...dialog} row={modal.row} onSave={saveRenewal} />}
     {modal && ['return', 'payment', 'waive', 'archive', 'restore', 'delete'].includes(modal.kind) && <RecordOperation {...dialog} kind={modal.kind} row={modal.row} onSave={saveRecordOperation} />}
     {modal?.kind === 'mark-lost' && <LostBookDialog {...dialog} row={{ ...modal.row, replacementCost: catalog.find(book => same(book.id, modal.row.bookId))?.price }} onSave={saveLostBook} />}
@@ -905,6 +1082,6 @@ function LibraryScreen({ collegeId, portalScreen }) {
 }
 
 export default function LibraryWorkspace({ portalScreen }) {
-  const { selectedCollegeId } = useAcademic()
-  return <LibraryScreen key={`${selectedCollegeId || 'unselected'}:${portalScreen || 'admin'}`} collegeId={selectedCollegeId} portalScreen={portalScreen} />
+  const { selectedCollegeId, selectedAcademicYearId, selectedAcademicYear } = useAcademic()
+  return <LibraryScreen key={`${selectedCollegeId || 'unselected'}:${portalScreen || 'admin'}`} collegeId={selectedCollegeId} academicYearId={selectedAcademicYearId} academicYearLabel={selectedAcademicYear?.name || selectedAcademicYear?.academicYearName || ''} portalScreen={portalScreen} />
 }
