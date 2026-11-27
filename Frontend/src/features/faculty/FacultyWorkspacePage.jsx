@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { FiAlertCircle, FiArrowDown, FiArrowRight, FiCheck, FiCheckCircle, FiDownload, FiBookOpen, FiBriefcase, FiCalendar, FiChevronLeft, FiChevronRight, FiClock, FiEdit2, FiFileText, FiFilter, FiGrid, FiLogIn, FiLogOut, FiMapPin, FiSearch, FiSend, FiTrash2, FiUpload, FiUsers, FiX } from 'react-icons/fi'
-import PortalLayout from '../../layouts/PortalLayout.jsx'
+import FacultyPortalLayout from './components/FacultyPortalLayout.jsx'
 import FacultyRestoredScreen from '../../pages/portals/FacultyRestoredScreen.jsx'
 import { PortalDialog, Status } from '../../components/portals/PortalUI.jsx'
 import FacultyCardSkeleton from './components/FacultyCardSkeleton.jsx'
@@ -1217,7 +1217,7 @@ function UnavailableScreen({ screen }) {
 
 export default function FacultyWorkspacePage() {
   const { screen = 'dashboard' } = useParams()
-  if (screen === 'syllabus') return <PortalLayout title="Syllabus Library"><main className="portal-page fw-page"><SyllabusPortalView role="faculty" /></main></PortalLayout>
+  if (screen === 'syllabus') return <FacultyPortalLayout title="Syllabus Library"><main className="portal-page fw-page"><SyllabusPortalView role="faculty" /></main></FacultyPortalLayout>
   if (restoredFacultyScreens.includes(screen)) return <FacultyRestoredScreen key={screen} screen={screen} />
   return <FacultyCurrentWorkspacePage />
 }
@@ -1260,9 +1260,9 @@ function FacultyCurrentWorkspacePage() {
     }
   }
   const title = titleFor(screen)
-  if (['403', '404', 'session-expired'].includes(screen)) return <PortalLayout title={title}><main className="portal-page fw-page"><UnavailableScreen screen={screen} /></main></PortalLayout>
-  if (!routes.some(route => route.screen === screen) || screen === 'dashboard') return <PortalLayout title="Page not found"><main className="portal-page fw-page"><UnavailableScreen screen="404" /></main></PortalLayout>
-  return <PortalLayout title={title}><main className={`portal-page fw-page${screen === 'subjects' ? ' fw-subjects-page' : ''}`}>
+  if (['403', '404', 'session-expired'].includes(screen)) return <FacultyPortalLayout title={title}><main className="portal-page fw-page"><UnavailableScreen screen={screen} /></main></FacultyPortalLayout>
+  if (!routes.some(route => route.screen === screen) || screen === 'dashboard') return <FacultyPortalLayout title="Page not found"><main className="portal-page fw-page"><UnavailableScreen screen="404" /></main></FacultyPortalLayout>
+  return <FacultyPortalLayout title={title}><main className={`portal-page fw-page${screen === 'subjects' ? ' fw-subjects-page' : ''}`}>
     {loading && !data ? <section className="fw-card" aria-busy="true"><FacultyCardSkeleton count={4} height="110px" /></section> : error && !data ? <section className="fw-error-card" role="alert"><FiAlertCircle /><div><h2>Could not load {title.toLowerCase()}</h2><p>{error}</p><button className="fw-button fw-button-primary" onClick={reload}>Retry</button></div></section> : <>
       {error && <p className="fw-inline-error" role="alert">{error}</p>}
       {notice && <p className="fw-inline-success" role="status"><FiCheckCircle />{notice}</p>}
@@ -1281,5 +1281,5 @@ function FacultyCurrentWorkspacePage() {
       {screen === 'profile' && <ProfileScreen data={data} action={runAction} />}
       {screen === 'notifications' && <NotificationsScreen data={data} action={runAction} reload={reload} />}
     </>}
-  </main></PortalLayout>
+  </main></FacultyPortalLayout>
 }

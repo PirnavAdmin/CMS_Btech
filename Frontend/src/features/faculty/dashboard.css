@@ -514,21 +514,21 @@
 }
 
 /* Dashboard cards follow the workspace system and scale cleanly on smaller screens. */
-#root .portal-shell .faculty-dashboard {
+#root .faculty-portal-shell .faculty-dashboard {
   gap: clamp(14px, 1.2vw, 20px);
 }
 
-#root .portal-shell .faculty-dashboard-page {
+#root .faculty-portal-shell .faculty-dashboard-page {
   flex: 0 0 auto;
   align-self: stretch;
 }
 
-#root .portal-shell .faculty-dashboard-page .faculty-breadcrumbs {
+#root .faculty-portal-shell .faculty-dashboard-page .faculty-breadcrumbs {
   margin-bottom: 34px;
   font-size: 14px;
 }
 
-#root .portal-shell .faculty-dashboard-welcome {
+#root .faculty-portal-shell .faculty-dashboard-welcome {
   position: relative;
   overflow: hidden;
   min-height: clamp(190px, 13vw, 245px);
@@ -541,30 +541,30 @@
   box-shadow: var(--shadow-sm);
 }
 
-#root .portal-shell .faculty-dashboard-welcome h1 {
+#root .faculty-portal-shell .faculty-dashboard-welcome h1 {
   font-size: clamp(34px, 2.7vw, 52px);
   line-height: 1.12;
   letter-spacing: -.045em;
 }
 
-#root .portal-shell .faculty-dashboard-welcome > div > p:not(.faculty-dashboard-eyebrow) {
+#root .faculty-portal-shell .faculty-dashboard-welcome > div > p:not(.faculty-dashboard-eyebrow) {
   font-size: clamp(15px, .94vw, 18px);
   line-height: 1.55;
 }
 
-#root .portal-shell .faculty-dashboard-eyebrow {
+#root .faculty-portal-shell .faculty-dashboard-eyebrow {
   font-size: clamp(11px, .73vw, 14px) !important;
   letter-spacing: .12em;
 }
 
-#root .portal-shell .faculty-dashboard-tags span {
+#root .faculty-portal-shell .faculty-dashboard-tags span {
   padding: 8px 15px;
   border-radius: 999px;
   font-size: clamp(11px, .73vw, 14px);
 }
 
-#root .portal-shell .faculty-dashboard-primary,
-#root .portal-shell .faculty-dashboard-action {
+#root .faculty-portal-shell .faculty-dashboard-primary,
+#root .faculty-portal-shell .faculty-dashboard-action {
   min-height: clamp(48px, 3.125vw, 60px);
   padding-inline: clamp(18px, 1.25vw, 24px);
   border-radius: 13px;
@@ -573,17 +573,17 @@
   transition: transform .16s ease, box-shadow .16s ease;
 }
 
-#root .portal-shell .faculty-dashboard-primary:hover,
-#root .portal-shell .faculty-dashboard-action:hover {
+#root .faculty-portal-shell .faculty-dashboard-primary:hover,
+#root .faculty-portal-shell .faculty-dashboard-action:hover {
   transform: translateY(-1px);
   box-shadow: 0 12px 24px color-mix(in srgb, var(--brand) 25%, transparent);
 }
 
-#root .portal-shell .faculty-dashboard-metrics {
+#root .faculty-portal-shell .faculty-dashboard-metrics {
   gap: clamp(14px, 1.15vw, 22px);
 }
 
-#root .portal-shell .faculty-dashboard-metric {
+#root .faculty-portal-shell .faculty-dashboard-metric {
   min-height: 166px;
   padding: clamp(20px, 1.5vw, 29px);
   border-radius: 18px;
@@ -591,138 +591,138 @@
   transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
 }
 
-#root .portal-shell .faculty-dashboard-metric:hover {
+#root .faculty-portal-shell .faculty-dashboard-metric:hover {
   transform: translateY(-3px);
   border-color: color-mix(in srgb, var(--brand) 42%, var(--border));
   box-shadow: var(--shadow-sm);
 }
 
-#root .portal-shell .faculty-dashboard-metric-icon {
+#root .faculty-portal-shell .faculty-dashboard-metric-icon {
   flex-basis: clamp(48px, 3.1vw, 60px);
   width: clamp(48px, 3.1vw, 60px);
   height: clamp(48px, 3.1vw, 60px);
   border-radius: 15px;
 }
 
-#root .portal-shell .faculty-dashboard-metric-label {
+#root .faculty-portal-shell .faculty-dashboard-metric-label {
   font-size: clamp(11px, .73vw, 14px);
   letter-spacing: .055em;
 }
 
-#root .portal-shell .faculty-dashboard-metric-copy strong {
+#root .faculty-portal-shell .faculty-dashboard-metric-copy strong {
   font-size: clamp(30px, 2.1vw, 40px);
 }
 
-#root .portal-shell .faculty-dashboard-metric-copy small {
+#root .faculty-portal-shell .faculty-dashboard-metric-copy small {
   font-size: 13px;
 }
 
-#root .portal-shell .faculty-dashboard-schedule,
-#root .portal-shell .faculty-dashboard-panel,
-#root .portal-shell .faculty-dashboard-empty-card {
+#root .faculty-portal-shell .faculty-dashboard-schedule,
+#root .faculty-portal-shell .faculty-dashboard-panel,
+#root .faculty-portal-shell .faculty-dashboard-empty-card {
   padding: clamp(20px, 1.45vw, 28px);
   border-radius: 18px;
   box-shadow: var(--shadow-sm);
 }
 
-#root .portal-shell .faculty-dashboard-schedule h2,
-#root .portal-shell .faculty-dashboard-panel h2 {
+#root .faculty-portal-shell .faculty-dashboard-schedule h2,
+#root .faculty-portal-shell .faculty-dashboard-panel h2 {
   font-size: 20px;
 }
 
-#root .portal-shell .faculty-dashboard-schedule header > a,
-#root .portal-shell .faculty-dashboard-panel header > a {
+#root .faculty-portal-shell .faculty-dashboard-schedule header > a,
+#root .faculty-portal-shell .faculty-dashboard-panel header > a {
   font-size: 14px;
 }
 
-#root .portal-shell .faculty-dashboard-schedule li,
-#root .portal-shell .faculty-dashboard-panel li {
+#root .faculty-portal-shell .faculty-dashboard-schedule li,
+#root .faculty-portal-shell .faculty-dashboard-panel li {
   padding-block: 15px;
 }
 
-#root .portal-shell .faculty-dashboard-time,
-#root .portal-shell .faculty-dashboard-class strong,
-#root .portal-shell .faculty-dashboard-panel li strong {
+#root .faculty-portal-shell .faculty-dashboard-time,
+#root .faculty-portal-shell .faculty-dashboard-class strong,
+#root .faculty-portal-shell .faculty-dashboard-panel li strong {
   font-size: 13px;
 }
 
-#root .portal-shell .faculty-dashboard-class small,
-#root .portal-shell .faculty-dashboard-panel li small {
+#root .faculty-portal-shell .faculty-dashboard-class small,
+#root .faculty-portal-shell .faculty-dashboard-panel li small {
   font-size: 12px;
 }
 
 @media (max-width: 640px) {
-  #root .portal-shell .faculty-dashboard {
+  #root .faculty-portal-shell .faculty-dashboard {
     gap: 16px;
   }
 
-  #root .portal-shell .faculty-dashboard-welcome {
+  #root .faculty-portal-shell .faculty-dashboard-welcome {
     min-height: 0;
     padding: 20px;
     border-radius: 15px;
   }
 
-  #root .portal-shell .faculty-dashboard-metrics {
+  #root .faculty-portal-shell .faculty-dashboard-metrics {
     gap: 10px;
   }
 
-  #root .portal-shell .faculty-dashboard-metric {
+  #root .faculty-portal-shell .faculty-dashboard-metric {
     min-height: 132px;
     padding: 14px;
     gap: 9px;
   }
 
-  #root .portal-shell .faculty-dashboard-metric-icon {
+  #root .faculty-portal-shell .faculty-dashboard-metric-icon {
     flex-basis: 36px;
     width: 36px;
     height: 36px;
   }
 
-  #root .portal-shell .faculty-dashboard-metric-copy strong {
+  #root .faculty-portal-shell .faculty-dashboard-metric-copy strong {
     font-size: 26px;
   }
 
-  #root .portal-shell .faculty-dashboard-schedule,
-  #root .portal-shell .faculty-dashboard-panel,
-  #root .portal-shell .faculty-dashboard-empty-card {
+  #root .faculty-portal-shell .faculty-dashboard-schedule,
+  #root .faculty-portal-shell .faculty-dashboard-panel,
+  #root .faculty-portal-shell .faculty-dashboard-empty-card {
     padding: 16px;
   }
 }
 
 @media (min-width: 901px) and (max-width: 1200px) {
-  #root .portal-shell .faculty-dashboard-metrics {
+  #root .faculty-portal-shell .faculty-dashboard-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (min-width: 901px) and (max-width: 1100px) {
-  #root .portal-shell .faculty-dashboard-welcome {
+  #root .faculty-portal-shell .faculty-dashboard-welcome {
     align-items: flex-start;
     flex-direction: column;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  #root .portal-shell .faculty-dashboard-primary,
-  #root .portal-shell .faculty-dashboard-action,
-  #root .portal-shell .faculty-dashboard-metric {
+  #root .faculty-portal-shell .faculty-dashboard-primary,
+  #root .faculty-portal-shell .faculty-dashboard-action,
+  #root .faculty-portal-shell .faculty-dashboard-metric {
     transition: none;
   }
 }
 
 /* Faculty welcome panel uses the staff portal's quick-action composition. */
-#root .portal-shell .faculty-dashboard-welcome {
+#root .faculty-portal-shell .faculty-dashboard-welcome {
   gap: clamp(20px, 3vw, 56px);
 }
 
-#root .portal-shell .faculty-dashboard-welcome-copy {
+#root .faculty-portal-shell .faculty-dashboard-welcome-copy {
   position: relative;
   z-index: 1;
   flex: 1 1 auto;
   min-width: 0;
 }
 
-#root .portal-shell .faculty-dashboard-greeting {
+#root .faculty-portal-shell .faculty-dashboard-greeting {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -730,11 +730,11 @@
   margin-bottom: 8px;
 }
 
-#root .portal-shell .faculty-dashboard-greeting h1 {
+#root .faculty-portal-shell .faculty-dashboard-greeting h1 {
   margin: 0;
 }
 
-#root .portal-shell .faculty-dashboard-role {
+#root .faculty-portal-shell .faculty-dashboard-role {
   display: inline-flex;
   align-items: center;
   min-height: 34px;
@@ -748,11 +748,11 @@
   white-space: nowrap;
 }
 
-#root .portal-shell .faculty-dashboard-welcome-copy > p:not(.faculty-dashboard-eyebrow) {
+#root .faculty-portal-shell .faculty-dashboard-welcome-copy > p:not(.faculty-dashboard-eyebrow) {
   margin-bottom: 14px;
 }
 
-#root .portal-shell .faculty-dashboard-quick-actions {
+#root .faculty-portal-shell .faculty-dashboard-quick-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -760,7 +760,7 @@
   margin-top: 20px;
 }
 
-#root .portal-shell .faculty-dashboard-quick-actions a {
+#root .faculty-portal-shell .faculty-dashboard-quick-actions a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -775,40 +775,40 @@
   transition: transform .16s ease, box-shadow .16s ease, background-color .16s ease;
 }
 
-#root .portal-shell .faculty-dashboard-quick-actions .faculty-dashboard-primary {
+#root .faculty-portal-shell .faculty-dashboard-quick-actions .faculty-dashboard-primary {
   border: 1px solid var(--brand);
   background: var(--brand);
   color: var(--surface) !important;
   box-shadow: 0 8px 18px color-mix(in srgb, var(--brand) 20%, transparent);
 }
 
-#root .portal-shell .faculty-dashboard-quick-actions .faculty-dashboard-secondary {
+#root .faculty-portal-shell .faculty-dashboard-quick-actions .faculty-dashboard-secondary {
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text-primary);
 }
 
-#root .portal-shell .faculty-dashboard-quick-actions .faculty-dashboard-text-link {
+#root .faculty-portal-shell .faculty-dashboard-quick-actions .faculty-dashboard-text-link {
   min-height: 40px;
   padding-inline: 12px;
   color: var(--brand);
 }
 
-#root .portal-shell .faculty-dashboard-quick-actions a:hover {
+#root .faculty-portal-shell .faculty-dashboard-quick-actions a:hover {
   transform: translateY(-1px);
 }
 
-#root .portal-shell .faculty-dashboard-quick-actions .faculty-dashboard-primary:hover {
+#root .faculty-portal-shell .faculty-dashboard-quick-actions .faculty-dashboard-primary:hover {
   background: var(--brand-hover);
   box-shadow: 0 12px 24px color-mix(in srgb, var(--brand) 25%, transparent);
 }
 
-#root .portal-shell .faculty-dashboard-quick-actions .faculty-dashboard-secondary:hover {
+#root .faculty-portal-shell .faculty-dashboard-quick-actions .faculty-dashboard-secondary:hover {
   border-color: color-mix(in srgb, var(--brand) 42%, var(--border));
   background: var(--brand-soft);
 }
 
-#root .portal-shell .faculty-dashboard-welcome-art {
+#root .faculty-portal-shell .faculty-dashboard-welcome-art {
   display: block;
   flex: 0 1 clamp(190px, 19vw, 330px);
   width: clamp(190px, 19vw, 330px);
@@ -818,21 +818,21 @@
 }
 
 @media (min-width: 1201px) {
-  #root .portal-shell .faculty-dashboard-metrics {
+  #root .faculty-portal-shell .faculty-dashboard-metrics {
     width: min(100%, 1040px);
     margin-left: auto;
   }
 }
 
 @media (max-width: 1350px) {
-  #root .portal-shell .faculty-dashboard-metrics {
+  #root .faculty-portal-shell .faculty-dashboard-metrics {
     width: 100%;
     margin-left: 0;
   }
 }
 
 @media (max-width: 1100px) {
-  #root .portal-shell .faculty-dashboard-welcome-art {
+  #root .faculty-portal-shell .faculty-dashboard-welcome-art {
     position: absolute;
     right: 18px;
     bottom: 12px;
@@ -840,64 +840,64 @@
     opacity: .16;
   }
 
-  #root .portal-shell .faculty-dashboard-welcome-copy {
+  #root .faculty-portal-shell .faculty-dashboard-welcome-copy {
     width: 100%;
   }
 }
 
 @media (max-width: 640px) {
-  #root .portal-shell .faculty-dashboard-welcome-art {
+  #root .faculty-portal-shell .faculty-dashboard-welcome-art {
     display: none;
   }
 
-  #root .portal-shell .faculty-dashboard-greeting {
+  #root .faculty-portal-shell .faculty-dashboard-greeting {
     align-items: flex-start;
     flex-direction: column;
     gap: 9px;
   }
 
-  #root .portal-shell .faculty-dashboard-quick-actions {
+  #root .faculty-portal-shell .faculty-dashboard-quick-actions {
     gap: 8px;
     margin-top: 16px;
   }
 
-  #root .portal-shell .faculty-dashboard-quick-actions a {
+  #root .faculty-portal-shell .faculty-dashboard-quick-actions a {
     min-height: 42px;
     padding-inline: 12px;
   }
 }
 
 @media (max-width: 420px) {
-  #root .portal-shell .faculty-dashboard-quick-actions .faculty-dashboard-primary,
-  #root .portal-shell .faculty-dashboard-quick-actions .faculty-dashboard-secondary {
+  #root .faculty-portal-shell .faculty-dashboard-quick-actions .faculty-dashboard-primary,
+  #root .faculty-portal-shell .faculty-dashboard-quick-actions .faculty-dashboard-secondary {
     flex: 1 1 calc(50% - 8px);
   }
 
-  #root .portal-shell .faculty-dashboard-quick-actions .faculty-dashboard-text-link {
+  #root .faculty-portal-shell .faculty-dashboard-quick-actions .faculty-dashboard-text-link {
     justify-content: flex-start;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  #root .portal-shell .faculty-dashboard-quick-actions a {
+  #root .faculty-portal-shell .faculty-dashboard-quick-actions a {
     transition: none;
   }
 }
 
 /* Keep the faculty KPIs visible beside the dashboard title. */
-#root .portal-shell .faculty-dashboard-heading {
+#root .faculty-portal-shell .faculty-dashboard-heading {
   align-items: flex-start;
   justify-content: flex-start;
   gap: 16px;
   margin-bottom: 12px;
 }
 
-#root .portal-shell .faculty-dashboard-heading > div:first-child {
+#root .faculty-portal-shell .faculty-dashboard-heading > div:first-child {
   flex: 1 1 320px;
   min-width: 260px;
 }
 
-#root .portal-shell .faculty-dashboard-heading-aside {
+#root .faculty-portal-shell .faculty-dashboard-heading-aside {
   display: flex;
   flex: 0 1 850px;
   align-self: flex-start;
@@ -907,45 +907,45 @@
   min-width: 0;
 }
 
-#root .portal-shell .faculty-dashboard-metrics-top {
+#root .faculty-portal-shell .faculty-dashboard-metrics-top {
   width: min(100%, 1040px);
   margin: 0;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 
-#root .portal-shell .faculty-dashboard-metrics-top .faculty-dashboard-metric {
+#root .faculty-portal-shell .faculty-dashboard-metrics-top .faculty-dashboard-metric {
   min-height: 82px;
   padding: 11px;
   gap: 9px;
   border-radius: 14px;
 }
 
-#root .portal-shell .faculty-dashboard-metrics-top .faculty-dashboard-metric-icon {
+#root .faculty-portal-shell .faculty-dashboard-metrics-top .faculty-dashboard-metric-icon {
   flex-basis: 38px;
   width: 38px;
   height: 38px;
   border-radius: 11px;
 }
 
-#root .portal-shell .faculty-dashboard-metrics-top .faculty-dashboard-metric-copy {
+#root .faculty-portal-shell .faculty-dashboard-metrics-top .faculty-dashboard-metric-copy {
   gap: 4px;
 }
 
-#root .portal-shell .faculty-dashboard-metrics-top .faculty-dashboard-metric-label {
+#root .faculty-portal-shell .faculty-dashboard-metrics-top .faculty-dashboard-metric-label {
   font-size: 9px;
 }
 
-#root .portal-shell .faculty-dashboard-metrics-top .faculty-dashboard-metric-copy strong {
+#root .faculty-portal-shell .faculty-dashboard-metrics-top .faculty-dashboard-metric-copy strong {
   font-size: 24px;
 }
 
-#root .portal-shell .faculty-dashboard-metrics-top .faculty-dashboard-metric-copy small {
+#root .faculty-portal-shell .faculty-dashboard-metrics-top .faculty-dashboard-metric-copy small {
   font-size: 9px;
 }
 
 @media (max-width: 1100px) {
-  #root .portal-shell .faculty-dashboard-heading {
+  #root .faculty-portal-shell .faculty-dashboard-heading {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     align-content: start;
@@ -955,17 +955,17 @@
     min-height: 0;
   }
 
-  #root .portal-shell .faculty-dashboard-heading > div:first-child {
+  #root .faculty-portal-shell .faculty-dashboard-heading > div:first-child {
     min-width: 0;
   }
 
-  #root .portal-shell .faculty-dashboard-heading-aside {
+  #root .faculty-portal-shell .faculty-dashboard-heading-aside {
     width: 100%;
     flex: none;
     justify-content: flex-start;
   }
 
-  #root .portal-shell .faculty-dashboard-metrics-top {
+  #root .faculty-portal-shell .faculty-dashboard-metrics-top {
     width: 100%;
     margin: 0;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -973,7 +973,7 @@
 }
 
 @media (max-width: 440px) {
-  #root .portal-shell .faculty-dashboard-metrics-top {
+  #root .faculty-portal-shell .faculty-dashboard-metrics-top {
     grid-template-columns: minmax(0, 1fr);
   }
 }
