@@ -921,9 +921,9 @@ function MaterialsScreen({ data, action }) {
               <td><div className="fw-material-table-subject"><strong>{row.subjectCode || row.subjectName}</strong><span>{row.subjectCode ? row.subjectName : ''}</span><small>{row.unitTitle || (row.unit ? 'Unit ' + row.unit : 'Course resource')}</small></div></td>
               <td><div className="fw-material-sections fw-material-table-sections">{sectionNames.length ? <div>{sectionNames.slice(0, 3).map((name, index) => <span key={row.id + '-section-' + index}>{name}</span>)}{sectionNames.length > 3 && <span>+{sectionNames.length - 3} more</span>}</div> : <small>No sections assigned</small>}</div></td>
               <td><div className="fw-material-actions" aria-label={'Actions for ' + row.title}>
-                <button type="button" className="fw-icon-button" aria-label={'View ' + row.title} title="View details" onClick={() => setViewMaterial(row)}><FiFileText /></button>
-                <button type="button" className="fw-icon-button" aria-label={'Edit ' + row.title} title="Edit resource" onClick={() => beginEdit(row)}><FiEdit2 /></button>
-                <button type="button" className="fw-icon-button" aria-label={'Delete ' + row.title} title="Delete resource" onClick={() => { setDeleteError(''); setDeleteMaterial(row) }}><FiTrash2 /></button>
+                <button type="button" className="fw-icon-button fw-material-action-view" aria-label={'View ' + row.title} title="View details" onClick={() => setViewMaterial(row)}><FiFileText /><span>View</span></button>
+                <button type="button" className="fw-icon-button fw-material-action-edit" aria-label={'Edit ' + row.title} title="Edit resource" onClick={() => beginEdit(row)}><FiEdit2 /><span>Edit</span></button>
+                <button type="button" className="fw-icon-button fw-material-action-delete" aria-label={'Delete ' + row.title} title="Delete resource" onClick={() => { setDeleteError(''); setDeleteMaterial(row) }}><FiTrash2 /><span>Delete</span></button>
               </div></td>
             </tr>
           })}</tbody>
