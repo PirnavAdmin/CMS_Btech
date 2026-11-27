@@ -2,7 +2,7 @@
 
 /* Shared faculty / student workspace polish. */
 #root .portal-shell {
-  --portal-content-inset: clamp(24px, 3vw, 58px);
+  --portal-content-inset: clamp(16px, 1.25vw, 20px);
   min-height: 100dvh;
   background:
     var(--main-bg);
@@ -190,7 +190,7 @@
 
 @media (min-width: 901px) and (max-width: 1440px) {
   #root .portal-shell {
-    --portal-content-inset: clamp(24px, 2.5vw, 36px);
+    --portal-content-inset: clamp(16px, 1.25vw, 20px);
   }
 
   #root .portal-shell .portal-content {
@@ -198,7 +198,7 @@
   }
 
   #root .portal-shell .portal-workspace {
-    padding: 26px clamp(24px, 2.5vw, 36px) 40px;
+    padding: 26px var(--portal-content-inset) 40px;
   }
 
 }
