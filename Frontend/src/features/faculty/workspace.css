@@ -1222,18 +1222,19 @@
 
 /* Clearer hierarchy and roomier controls across faculty workspace screens. */
 #root .faculty-portal-shell .fw-page {
-  gap: 24px;
+  align-content: start;
+  gap: var(--page-section-gap);
 }
 
 #root .faculty-portal-shell .fw-page > .faculty-breadcrumbs {
-  margin: 0 0 4px;
+  margin: 0;
   font-size: 14px;
 }
 
 #root .faculty-portal-shell .fw-heading {
   align-items: flex-end;
   gap: 24px;
-  margin: 0 0 2px;
+  margin: 0;
 }
 
 #root .faculty-portal-shell .fw-heading h1 {
@@ -1458,7 +1459,7 @@
 
 @media (max-width: 640px) {
   #root .faculty-portal-shell .fw-page {
-    gap: 17px;
+    gap: 12px;
   }
 
   #root .faculty-portal-shell .fw-heading {
@@ -4156,15 +4157,19 @@
 /* Personal attendance layout follows the staff punch-card and monthly-summary hierarchy. */
 #root .faculty-portal-shell .fw-my-attendance-summary {
   display: grid;
-  gap: 22px;
+  gap: 14px;
   min-width: 0;
+}
+
+#root .faculty-portal-shell .fw-my-attendance-page {
+  gap: 14px;
 }
 
 #root .faculty-portal-shell .fw-attendance-page-topbar {
   display: grid;
-  grid-template-columns: minmax(360px, .72fr) minmax(0, 1.28fr);
+  grid-template-columns: minmax(300px, .72fr) minmax(0, 1.28fr);
   align-items: center;
-  gap: 22px;
+  gap: 16px;
   min-width: 0;
 }
 
@@ -4181,9 +4186,9 @@
 }
 
 #root .faculty-portal-shell .fw-attendance-page-topbar .fw-personal-attendance-stats article {
-  min-height: 100px;
-  padding: 13px 12px 13px 16px;
-  gap: 9px;
+  min-height: 82px;
+  padding: 10px 10px 10px 13px;
+  gap: 8px;
 }
 
 #root .faculty-portal-shell .fw-attendance-page-topbar .fw-personal-attendance-stat-icon {
@@ -4207,8 +4212,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
-  padding: 26px 30px;
+  gap: 18px;
+  padding: 18px 22px;
 }
 
 #root .faculty-portal-shell .fw-attendance-today__main {
@@ -4403,7 +4408,7 @@
 #root .faculty-portal-shell .fw-personal-attendance-stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  gap: 10px;
 }
 
 #root .faculty-portal-shell .fw-personal-attendance-stats article {
@@ -4412,8 +4417,8 @@
   align-items: center;
   gap: 14px;
   min-width: 0;
-  min-height: 112px;
-  padding: 18px 20px 18px 24px;
+  min-height: 88px;
+  padding: 12px 14px 12px 17px;
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 14px;

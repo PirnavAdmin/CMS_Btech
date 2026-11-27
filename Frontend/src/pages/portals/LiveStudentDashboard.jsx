@@ -5,6 +5,11 @@ import { profileApi, timetableManagementApi } from '../../api/apiEndpoints'
 import studentIllustration from '../../assets/student-dashboard-illustration.png'
 import './student-dashboard.css'
 import StudentTimetable from './StudentTimetable'
+import StudentAssignments from './StudentAssignments'
+import StudentExaminations from './StudentExaminations'
+import StudentStudyMaterials from './StudentStudyMaterials'
+import StudentAttendance from './StudentAttendance'
+import StudentGradesReports from './StudentGradesReports'
 
 const localDate = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 const display = value => value == null || String(value).trim() === '' ? 'Not available' : value
@@ -100,6 +105,11 @@ export default function LiveStudentDashboard() {
 
 export function LiveStudentModule({ screen, title }) {
   if (screen === 'timetable') return <StudentTimetable />
+  if (screen === 'assignments') return <StudentAssignments />
+  if (screen === 'exams') return <StudentExaminations />
+  if (screen === 'materials') return <StudentStudyMaterials />
+  if (screen === 'attendance') return <StudentAttendance />
+  if (screen === 'results') return <StudentGradesReports />
   return <OtherStudentModule screen={screen} title={title} />
 }
 

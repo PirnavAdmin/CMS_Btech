@@ -286,6 +286,7 @@ export default function StudentPromotion() {
   const {
     activeAcademicYears,
     selectedCollegeId,
+    selectedAcademicYearId: contextAcademicYearId,
     activeCourses,
     loading: academicLoading,
     error: academicError,
@@ -312,8 +313,24 @@ export default function StudentPromotion() {
   // Promotion Scope
   const [courseId, setCourseId] = useState('')
   const [selectedBranchId, setSelectedBranchId] = useState('')
-  const [selectedAcademicYearId, setSelectedAcademicYearId] = useState('')
+  const [selectedAcademicYearId, setSelectedAcademicYearId] = useState(contextAcademicYearId || '')
   const [selectedSemesterNumber, setSelectedSemesterNumber] = useState('')
+
+  // Auto-default academic year from context and course if only 1 active course
+  useEffect(() => {
+    if (!selectedAcademicYearId && (contextAcademicYearId || activeAcademicYears.length > 0)) {
+      const match = activeAcademicYears.find(y => String(y.id ?? y.academicYearId) === String(contextAcademicYearId)) || activeAcademicYears[0]
+      if (match) {
+        setSelectedAcademicYearId(String(match.id ?? match.academicYearId))
+      }
+    }
+  }, [selectedAcademicYearId, contextAcademicYearId, activeAcademicYears])
+
+  useEffect(() => {
+    if (!courseId && activeCourses.length === 1) {
+      setCourseId(String(activeCourses[0].id))
+    }
+  }, [courseId, activeCourses])
   const selectedYear = activeAcademicYears.find(row => String(row.id) === String(selectedAcademicYearId))
   const yearStart = row => String(row?.startDate || row?.startYear || row?.name || '').match(/^\d{4}/)?.[0] || ''
   const nextYear = activeAcademicYears.filter(row => yearStart(selectedYear) && yearStart(row) === String(Number(yearStart(selectedYear)) + 1))

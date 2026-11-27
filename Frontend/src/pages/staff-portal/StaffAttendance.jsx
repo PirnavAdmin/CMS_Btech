@@ -141,7 +141,7 @@ export default function StaffAttendance() {
   }, [currentMonthData])
 
   return (
-    <div className="sp-page">
+    <div className="sp-page sp-attendance-page">
       {/* Page Header */}
       <header className="sp-heading">
         <div>

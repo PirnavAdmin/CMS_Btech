@@ -40,7 +40,7 @@
 .account-menu__panel button { display:flex; gap:8px; align-items:center; border:0; padding:9px 10px; border-radius:7px; background:transparent; color:var(--text-primary); text-align:left; font:12px var(--font-family); cursor:pointer; }
 .account-menu__panel button:hover { background:var(--cms-hover); }
 .account-menu__panel .account-menu__signout { color:var(--danger); }
-.page-content { box-sizing:border-box; display:grid; align-content:start; gap:12px; min-width:0; width:100%; padding:var(--space-4) 16px; }
+.page-content { box-sizing:border-box; display:grid; align-content:start; gap:var(--page-section-gap); min-width:0; width:100%; padding:var(--page-top-padding) var(--page-inline-padding) var(--page-bottom-padding); }
 .app-breadcrumb { display:flex; align-items:center; flex-wrap:wrap; gap:8px; font-size:11px; color:var(--text-muted); }
 .app-breadcrumb a { color:var(--brand); text-decoration:none; }
 .app-breadcrumb__item { display:inline-flex; gap:8px; }
@@ -50,10 +50,10 @@
   .dashboard-header__actions { flex:0 0 auto; flex-wrap:nowrap; gap:8px; justify-content:flex-end; }
   .dashboard-header > .global-search { flex:0 1 50%; width:50%; max-width:none; }
 }
-@media(max-width:992px) { .dashboard-layout>main,.dashboard-layout.sidebar-collapsed>main { width:100%; margin-left:0; } .mobile-navigation-toggle { display:grid; } .dashboard-header { padding:8px 12px; gap:8px; flex-wrap:wrap; } .dashboard-header__actions { gap:6px; } .page-content { padding:var(--space-3); } }
+@media(max-width:992px) { .dashboard-layout>main,.dashboard-layout.sidebar-collapsed>main { width:100%; margin-left:0; } .mobile-navigation-toggle { display:grid; } .dashboard-header { padding:8px 12px; gap:8px; flex-wrap:wrap; } .dashboard-header__actions { gap:6px; } .page-content { padding:var(--surface-padding-compact); } }
 @media(min-width:993px) and (max-width:1200px) { .dashboard-header { height:auto; min-height:var(--header-height); flex-wrap:wrap; padding-block:8px; } .dashboard-header__actions { flex:1 1 auto; flex-wrap:wrap; } .dashboard-header__academic-context { flex:1 1 100%; justify-content:flex-end; } }
 @media(max-width:992px) { .dashboard-header__actions { width:100%; margin-left:0; justify-content:flex-end; flex-wrap:wrap; } .dashboard-header__academic-context { flex:1 1 100%; justify-content:flex-end; } }
-@media(max-width:600px) { .global-search { max-width:none; } .dashboard-header__actions { width:100%; justify-content:space-between; } .dashboard-header__academic-context { flex:1 1 100%; justify-content:stretch; flex-wrap:wrap; } .dashboard-header__academic-context .workspace-context-select--college, .dashboard-header__academic-context .header-academic-year { flex:1 1 190px; width:auto; min-width:0; } .account-menu summary>span:nth-child(2) { display:grid; min-width:0; } .account-menu strong,.account-menu small { max-width:112px; overflow:hidden; text-overflow:ellipsis; } }
+@media(max-width:600px) { .global-search { max-width:none; } .page-content { gap:var(--space-3); padding:var(--space-3); } .dashboard-header__actions { width:100%; justify-content:space-between; } .dashboard-header__academic-context { flex:1 1 100%; justify-content:stretch; flex-wrap:wrap; } .dashboard-header__academic-context .workspace-context-select--college, .dashboard-header__academic-context .header-academic-year { flex:1 1 190px; width:auto; min-width:0; } .account-menu summary>span:nth-child(2) { display:grid; min-width:0; } .account-menu strong,.account-menu small { max-width:112px; overflow:hidden; text-overflow:ellipsis; } }
 /* ==========================================================================
    Account Menu Dropdown & Header
    ========================================================================== */
