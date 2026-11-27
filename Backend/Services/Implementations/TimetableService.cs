@@ -182,6 +182,8 @@ public sealed class TimetableService : ITimetableService
     public async Task<TimetableGenerationResultDto> GenerateAsync(long id,GenerateTimetableRequest r,bool missingOnly,long? actor,long? college,bool superAdmin)
     {
         RequirePositive(id,nameof(id));
+        r ??= new GenerateTimetableRequest();
+        if (missingOnly && r.ReplaceGenerated) throw new ArgumentException("Generate Missing cannot replace existing entries.");
         var result=await _repository.GenerateAsync(id,r,missingOnly,actor,college,superAdmin);
         return result;
     }

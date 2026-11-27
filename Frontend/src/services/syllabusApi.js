@@ -21,7 +21,7 @@ const responseMessage = (body, status) => {
   400: 'The syllabus details were rejected. Check the form and try again.',
   401: 'Your session has expired. Sign in again.',
   403: 'You do not have permission to manage syllabus documents for this college.',
-  404: 'The syllabus service is not available on the backend yet (404). See the syllabus backend contract.',
+  404: 'The syllabus record or document could not be found.',
   413: 'The server rejected the upload size (413). Reduce the file size or ask the administrator to configure the upload limit.',
   415: 'The server rejected this file type (415).',
   500: 'The syllabus service encountered a server error (500). Please retry later.',

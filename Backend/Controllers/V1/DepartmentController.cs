@@ -293,8 +293,14 @@ namespace BTech.Controllers.V1
                 });
             }
 
-            department.DepartmentName =
-                request.DepartmentName.Trim();
+            if (!string.Equals(department.DepartmentName.Trim(), request.DepartmentName.Trim(), StringComparison.Ordinal))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Department name cannot be changed after creation."
+                });
+            }
 
             department.DepartmentCode =
                 request.DepartmentCode.Trim();

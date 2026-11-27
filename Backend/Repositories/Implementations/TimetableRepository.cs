@@ -403,6 +403,10 @@ public sealed class TimetableRepository : ITimetableRepository
             using var multi=await c.QueryMultipleAsync(Cmd("sp_tt_generate",new {p_timetable_id=id,p_replace_generated=r.ReplaceGenerated?1:0,p_missing_only=missingOnly?1:0,p_classroom_ids_json=Json(r.ClassroomIds??new()),p_actor_id=actor,p_college_id=college,p_is_super_admin=superAdmin?1:0},tx));
             var summary=await multi.ReadSingleOrDefaultAsync<GenerationSummary>();
             var x=new TimetableGenerationResultDto{TimetableId=id,ScheduledCount=summary?.ScheduledCount??0,AddedCount=summary?.AddedCount??0,Unscheduled=(await multi.ReadAsync<TimetableUnscheduledDto>()).ToList(),Conflicts=(await multi.ReadAsync<TimetableConflictDto>()).ToList()};
+            // Regeneration is transactional: keep the previous schedule if the replacement is incomplete.
+            if (r.ReplaceGenerated && !missingOnly && x.Unscheduled.Count > 0)
+                throw new ArgumentException("Regeneration cancelled; previous schedule retained. " +
+                    string.Join("; ", x.Unscheduled.Select(u => $"{u.SubjectName}: {u.Message}")));
             return x;
         });
         result.Timetable=await GetTimetableAsync(id,college,superAdmin);

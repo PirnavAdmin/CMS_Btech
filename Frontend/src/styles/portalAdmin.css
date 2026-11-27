@@ -1,7 +1,7 @@
 /* Portal pages use the same shell, header, sidebar and theme tokens as admin. */
 #root .portal-shell { min-height: 100dvh; color: var(--text-primary); }
-.portal-content { min-width: 0; margin-left: 260px; padding-top: 64px; transition: margin-left .2s; }
-.portal-workspace { padding: 14px clamp(16px, 2vw, 24px) 24px; }
+.portal-content { min-width: 0; margin-left: 260px; padding-top: 0; transition: margin-left .2s; }
+.portal-workspace { padding: 14px clamp(16px, 1.25vw, 20px) 24px; }
 #root .portal-shell .portal-menu { display: none; }
 .portal-page { max-width: 1800px; font-size: 13px; line-height: 1.5; }
 .portal-page-heading { margin-bottom: 18px; align-items: center; }
@@ -58,13 +58,12 @@
   .portal-profile-columns { grid-template-columns: 1fr; }
 }
 @media (max-width: 900px) {
-  #root .portal-shell .portal-content { margin-left: 0; padding-top: 60px; }
+  #root .portal-shell .portal-content { margin-left: 0; }
   #root .portal-shell .portal-menu { display: grid; }
   .portal-workspace { padding: 14px 16px 24px; }
   .portal-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 760px) {
-  #root .portal-shell .portal-content { padding-top: 104px; }
   .portal-card { padding: 16px; }
   .portal-page-heading { gap: 10px; align-items: flex-start; }
   .portal-profile-facts { grid-template-columns: 1fr; }

@@ -23,6 +23,13 @@ namespace BTech.Repositories.Implementations
             await _context.SaveChangesAsync();
         }
 
+        public async Task InvalidateOtpAsync(OtpVerification otpVerification)
+        {
+            otpVerification.Status = 0;
+            otpVerification.ExpiresAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+        }
+
         public async Task InvalidatePreviousOtpsAsync(string identifier, string otpType)
         {
             var activeOtps = await _context.OtpVerifications

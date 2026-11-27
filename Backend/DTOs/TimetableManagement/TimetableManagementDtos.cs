@@ -164,6 +164,8 @@ public sealed class FacultyOptionDto
 
 public sealed class GenerateTimetableRequest
 {
+    public TimetablePlanningRequest? Planning { get; set; }
+    public List<TimetableRequirementRequest>? Requirements { get; set; }
     public bool ReplaceGenerated { get; set; } = true;
     public List<long> ClassroomIds { get; set; } = new();
 }
