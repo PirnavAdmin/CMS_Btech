@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom'
 import { FacultyManagement } from '../pages/faculty/FacultyManagement'
 import facultyService from '../services/facultyService'
 import { academicYearApi } from '../api/apiEndpoints'
@@ -25,6 +25,10 @@ beforeEach(() => {
 })
 afterEach(cleanup)
 const mount = (path = '/faculty') => render(<MemoryRouter initialEntries={[path]}><Routes><Route path="/faculty/*" element={<FacultyManagement />} /></Routes></MemoryRouter>)
+function StaffCategorySwitcher() {
+  const navigate = useNavigate()
+  return <button type="button" onClick={() => navigate('/faculty?category=Non-Teaching')}>Switch to non-teaching workspace</button>
+}
 test('faculty opens configuration cards, then shows the selected directory and search', async () => {
   mount(); expect(await screen.findByRole('button', { name: 'Teaching Faculty' })).toBeTruthy()
   expect(screen.queryByRole('button', { name: 'View details for Teaching Member' })).toBeNull()
@@ -37,6 +41,22 @@ test('faculty opens configuration cards, then shows the selected directory and s
   await screen.findByRole('button', { name: 'Non-Teaching Staff' })
   fireEvent.click(screen.getByRole('button', { name: 'Non-Teaching Staff', exact: true }))
   await screen.findByRole('button', { name: 'View details for Library Staff' })
+})
+test('teaching and non-teaching workspaces keep separate filters and only show their own records', async () => {
+  render(<MemoryRouter initialEntries={['/faculty?category=Teaching']}>
+    <StaffCategorySwitcher />
+    <Routes><Route path="/faculty/*" element={<FacultyManagement />} /></Routes>
+  </MemoryRouter>)
+
+  await screen.findByRole('button', { name: 'View details for Teaching Member' })
+  expect(document.querySelector('main.faculty-management').dataset.staffType).toBe('Teaching')
+  fireEvent.change(screen.getByLabelText('Search teaching'), { target: { value: 'missing member' } })
+
+  fireEvent.click(screen.getByRole('button', { name: 'Switch to non-teaching workspace' }))
+  await screen.findByRole('button', { name: 'View details for Library Staff' })
+  expect(document.querySelector('main.faculty-management').dataset.staffType).toBe('Non-Teaching')
+  expect(screen.queryByRole('button', { name: 'View details for Teaching Member' })).toBeNull()
+  expect(screen.getByLabelText('Search non-teaching').value).toBe('')
 })
 test('directory API errors are visible and retry restores real data', async () => {
   facultyService.list.mockRejectedValueOnce(new Error('Faculty offline'))
@@ -57,12 +77,17 @@ test('faculty details use a cancellable native dialog with the original route', 
   expect(screen.queryByRole('dialog')).toBeNull()
   await screen.findByRole('button', { name: 'View details for Teaching Member' })
 })
+test('a staff record cannot be opened through the teaching screen route', async () => {
+  mount('/faculty/2?category=Teaching')
+  expect(await screen.findByText('Faculty record not found')).toBeTruthy()
+  expect(screen.queryByText('Library Staff')).toBeNull()
+})
 
 test('faculty registration validates before creating an employee', async () => {
   mount('/faculty/new?category=Teaching')
   const dialog = await screen.findByRole('dialog', { name: 'Add Teaching Faculty' })
   fireEvent.submit(dialog.querySelector('form'))
-  expect(within(dialog).getByRole('alert').textContent).toMatch(/full name is required/i)
+  expect(within(dialog).getByText(/full name is required/i, { selector: 'small' })).toBeTruthy()
   expect(facultyService.create).not.toHaveBeenCalled()
 })
 
@@ -100,6 +125,15 @@ test('non-teaching staff cannot continue with a malformed email domain ending', 
   expect(dialog.getByRole('button', { name: /Personal Details/ }).getAttribute('aria-current')).toBe('step')
   expect(within(email.closest('.fm-field')).getByRole('alert').textContent).toBe('Please enter a valid email format')
   expect(facultyService.create).not.toHaveBeenCalled()
+})
+test('non-teaching form uses its own staff fields and excludes teaching-only experience', async () => {
+  mount('/faculty/new?category=Non-Teaching')
+  const dialog = within(await screen.findByRole('dialog', { name: 'Add Non-Teaching Staff' }))
+  expect(dialog.getByLabelText(/^Staff Full Name/)).toBeTruthy()
+  const steps = within(dialog.getByRole('navigation', { name: 'Faculty form steps' }))
+  fireEvent.click(steps.getByRole('button', { name: /Academic Details/ }))
+  expect(dialog.queryByLabelText(/Teaching Experience/)).toBeNull()
+  expect(dialog.getByLabelText(/Industry Experience/)).toBeTruthy()
 })
 
 test('edit faculty email validation shows the inline error and clears it for valid input', async () => {
@@ -139,7 +173,7 @@ test('teaching registration exposes all steps and can skip optional details', as
 test('allocation options fail visibly without fabricated academic choices', async () => {
   academicYearApi.getAll.mockRejectedValueOnce(new Error('Academic options offline'))
   mount('/faculty?category=Teaching'); fireEvent.click(await screen.findByRole('button', { name: 'Assign academic work: Teaching Member' }))
-  const dialog = await screen.findByRole('dialog', { name: 'Teaching Member - Subject Allocations' })
+  const dialog = await screen.findByRole('dialog', { name: /Teaching Member.*Subject Allocations/ })
   await within(dialog).findByText('Academic options offline')
   expect(within(dialog).queryByText('Section A')).toBeNull()
   expect(within(dialog).getByRole('button', { name: 'Retry options' })).toBeTruthy()

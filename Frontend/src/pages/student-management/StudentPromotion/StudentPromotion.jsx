@@ -286,6 +286,7 @@ export default function StudentPromotion() {
   const {
     activeAcademicYears,
     selectedCollegeId,
+    selectedAcademicYearId: contextAcademicYearId,
     activeCourses,
     loading: academicLoading,
     error: academicError,
@@ -312,8 +313,24 @@ export default function StudentPromotion() {
   // Promotion Scope
   const [courseId, setCourseId] = useState('')
   const [selectedBranchId, setSelectedBranchId] = useState('')
-  const [selectedAcademicYearId, setSelectedAcademicYearId] = useState('')
+  const [selectedAcademicYearId, setSelectedAcademicYearId] = useState(contextAcademicYearId || '')
   const [selectedSemesterNumber, setSelectedSemesterNumber] = useState('')
+
+  // Auto-default academic year from context and course if only 1 active course
+  useEffect(() => {
+    if (!selectedAcademicYearId && (contextAcademicYearId || activeAcademicYears.length > 0)) {
+      const match = activeAcademicYears.find(y => String(y.id ?? y.academicYearId) === String(contextAcademicYearId)) || activeAcademicYears[0]
+      if (match) {
+        setSelectedAcademicYearId(String(match.id ?? match.academicYearId))
+      }
+    }
+  }, [selectedAcademicYearId, contextAcademicYearId, activeAcademicYears])
+
+  useEffect(() => {
+    if (!courseId && activeCourses.length === 1) {
+      setCourseId(String(activeCourses[0].id))
+    }
+  }, [courseId, activeCourses])
   const selectedYear = activeAcademicYears.find(row => String(row.id) === String(selectedAcademicYearId))
   const yearStart = row => String(row?.startDate || row?.startYear || row?.name || '').match(/^\d{4}/)?.[0] || ''
   const nextYear = activeAcademicYears.filter(row => yearStart(selectedYear) && yearStart(row) === String(Number(yearStart(selectedYear)) + 1))
@@ -1386,7 +1403,7 @@ export default function StudentPromotion() {
                     <table className="erp-table">
                       <thead>
                         <tr>
-                          <th className="table-center" style={{ width: '44px' }}>
+                          <th className="table-center" style={{ width: '40px' }}>
                             <input
                               type="checkbox"
                               aria-label="Select all students"
@@ -1410,14 +1427,14 @@ export default function StudentPromotion() {
                               }}
                             />
                           </th>
-                          <th style={{ minWidth: '110px' }}>Roll Number</th>
-                          <th style={{ minWidth: '150px' }}>Student Name</th>
-                          <th style={{ minWidth: '140px' }}>Transition</th>
-                          <th style={{ minWidth: '115px' }}>Attendance</th>
-                          <th style={{ minWidth: '150px' }}>Academic Standing</th>
-                          <th className="table-center" style={{ width: '130px' }}>Eligibility</th>
-                          <th style={{ minWidth: '170px' }}>Assessment / Reason</th>
-                          <th className="table-center" style={{ width: '70px' }}>Action</th>
+                          <th style={{ width: '120px', whiteSpace: 'nowrap' }}>Roll Number</th>
+                          <th style={{ width: '140px' }}>Student Name</th>
+                          <th style={{ width: '165px', whiteSpace: 'nowrap' }}>Transition</th>
+                          <th style={{ width: '115px', whiteSpace: 'nowrap' }}>Attendance</th>
+                          <th style={{ width: '135px', whiteSpace: 'nowrap' }}>Academic Standing</th>
+                          <th className="table-center" style={{ width: '120px', whiteSpace: 'nowrap' }}>Eligibility</th>
+                          <th style={{ minWidth: '170px', maxWidth: '240px' }}>Assessment / Reason</th>
+                          <th className="table-center" style={{ width: '65px', whiteSpace: 'nowrap' }}>Action</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1467,26 +1484,26 @@ export default function StudentPromotion() {
                                     }
                                   />
                                 </td>
-                                <td>
+                                <td style={{ whiteSpace: 'nowrap' }}>
                                   <div style={{ fontWeight: 600 }}>{x.rollNumber || x.registrationNumber || '—'}</div>
                                   {x.registrationNumber && x.rollNumber && x.registrationNumber !== x.rollNumber && (
-                                    <small style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{x.registrationNumber}</small>
+                                    <small style={{ color: 'var(--text-muted)', fontSize: '11px', display: 'block' }}>{x.registrationNumber}</small>
                                   )}
                                 </td>
                                 <td>
-                                  <strong>{nameOf(x)}</strong>
+                                  <strong style={{ display: 'block', color: 'var(--text-primary)' }}>{nameOf(x)}</strong>
                                   <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{x.branch} {x.section ? `• ${x.section}` : ''}</div>
                                 </td>
-                                <td>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px' }}>
-                                    <span>{x.currentSemester}</span>
+                                <td style={{ whiteSpace: 'nowrap' }}>
+                                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', whiteSpace: 'nowrap' }}>
+                                    <span style={{ fontWeight: 500 }}>{x.currentSemester}</span>
                                     <span style={{ color: 'var(--text-muted)' }}>&rarr;</span>
                                     <strong style={{ color: 'var(--brand, #1769C2)' }}>
                                       {isDegreeReview ? 'Degree Conferred' : nextTerms[0]?.semesterName || (canExecutePromotion ? x.nextSemester : '—')}
                                     </strong>
                                   </div>
                                 </td>
-                                <td>
+                                <td style={{ whiteSpace: 'nowrap' }}>
                                   {attRate !== null ? (
                                     <span
                                       className="erp-badge"
@@ -1498,6 +1515,7 @@ export default function StudentPromotion() {
                                         borderRadius: '12px',
                                         fontSize: '11px',
                                         fontWeight: 600,
+                                        whiteSpace: 'nowrap',
                                         backgroundColor: attRate >= 75 ? '#dcfce7' : attRate >= 65 ? '#fef3c7' : '#fee2e2',
                                         color: attRate >= 75 ? '#15803d' : attRate >= 65 ? '#b45309' : '#b91c1c',
                                         border: `1px solid ${attRate >= 75 ? '#86efac' : attRate >= 65 ? '#fde68a' : '#fca5a5'}`,
@@ -1509,7 +1527,7 @@ export default function StudentPromotion() {
                                     <span style={{ color: 'var(--text-muted)' }}>—</span>
                                   )}
                                 </td>
-                                <td>
+                                <td style={{ whiteSpace: 'nowrap' }}>
                                   <div>
                                     {x.creditsEarned !== null && x.creditsEarned !== undefined ? (
                                       <span><strong>{x.creditsEarned}</strong>{x.totalCredits ? ` / ${x.totalCredits}` : ''} Credits</span>
@@ -1532,17 +1550,31 @@ export default function StudentPromotion() {
                                     )}
                                   </div>
                                 </td>
-                                <td className="table-center" style={{ width: '130px' }}>
+                                <td className="table-center" style={{ width: '120px', whiteSpace: 'nowrap' }}>
                                   <StatusBadge
                                     value={x.eligibilityLabel || (isElig ? 'Eligible' : isDetained ? 'Detained' : 'Pending Review')}
                                   />
                                 </td>
-                                <td>
-                                  <span style={{ fontSize: '12px', color: isElig ? '#15803d' : isDetained ? '#b91c1c' : '#64748b' }}>
+                                <td style={{ maxWidth: '240px', minWidth: '170px' }}>
+                                  <div
+                                    className="p-reason-text"
+                                    style={{
+                                      fontSize: '11.5px',
+                                      lineHeight: '1.4',
+                                      color: isElig ? '#15803d' : isDetained ? '#b91c1c' : '#64748b',
+                                      display: '-webkit-box',
+                                      WebkitLineClamp: 2,
+                                      WebkitBoxOrient: 'vertical',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      wordBreak: 'break-word',
+                                    }}
+                                    title={x.reason || (isElig ? 'Ready for promotion' : 'Awaiting review')}
+                                  >
                                     {x.reason || (isElig ? 'Ready for promotion' : 'Awaiting review')}
-                                  </span>
+                                  </div>
                                 </td>
-                                <td className="table-center" style={{ width: '70px' }}>
+                                <td className="table-center" style={{ width: '65px', whiteSpace: 'nowrap' }}>
                                   <div className="table-actions-group">
                                     <button
                                       type="button"

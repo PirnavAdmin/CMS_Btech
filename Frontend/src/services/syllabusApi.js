@@ -49,8 +49,9 @@ async function request(path, options = {}) {
   }
   return body?.data ?? body?.result ?? body
 }
-const normalizeList = data => {
+const normalizeList = (data, strict = false) => {
   const rows = Array.isArray(data) ? data : data?.items ?? data?.records ?? data?.results ?? data?.syllabi ?? data?.documents
+  if (strict && !Array.isArray(rows)) throw new Error('The syllabus API returned an invalid list. Please retry.')
   return Array.isArray(rows) ? rows : []
 }
 const dedupedList = (key, fetcher) => {
@@ -62,7 +63,7 @@ const dedupedList = (key, fetcher) => {
 const idPath = (syllabusId, suffix = '') => root + '/' + encodeURIComponent(syllabusId) + suffix
 
 export const syllabusApi = {
-  list: async params => normalizeList(await dedupedList(url(root, params), () => request(root, { params }))),
+  list: async params => normalizeList(await dedupedList(url(root, params), () => request(root, { params })), true),
   listPublished: async params => {
     const scopedParams = { ...params, collegeId: params?.collegeId || selectedCollegeId() }
     return normalizeList(await dedupedList(url(root + '/published', scopedParams), () => request(root + '/published', { params: scopedParams })))
@@ -74,9 +75,9 @@ export const syllabusApi = {
   archive: (id, params) => request(idPath(id, '/archive'), { method: 'POST', params }),
   versions: (id, params) => request(idPath(id, '/versions'), { params }).then(normalizeList),
   activity: (id, params) => request(idPath(id, '/activity'), { params }).then(normalizeList),
-  uploadDocument(syllabusId, file, onProgress, replaceDocumentId) {
+  uploadDocument(syllabusId, file, onProgress, replaceDocumentId, collegeId = selectedCollegeId()) {
     const suffix = replaceDocumentId ? '/documents/' + encodeURIComponent(replaceDocumentId) + '/replace' : '/documents'
-    const requestUrl = url(idPath(syllabusId, suffix), { collegeId: selectedCollegeId() })
+    const requestUrl = url(idPath(syllabusId, suffix), { collegeId })
     const xhr = new XMLHttpRequest()
     const promise = new Promise((resolve, reject) => {
       xhr.open(replaceDocumentId ? 'PUT' : 'POST', requestUrl)
@@ -99,7 +100,7 @@ export const syllabusApi = {
       }
       const formData = new FormData()
       formData.append('file', file)
-      formData.append('collegeId', selectedCollegeId())
+      formData.append('collegeId', collegeId)
       xhr.send(formData)
     })
     return { promise, cancel: () => xhr.abort() }

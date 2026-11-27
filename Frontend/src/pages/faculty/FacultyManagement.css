@@ -1,4 +1,6 @@
 /* FacultyManagement.css */
+/* Keep shared employee primitives under .faculty-management. Screen-only overrides
+   must be rooted at .faculty-management--teaching or --non-teaching. */
 /* Page */
 .faculty-management {
   --fm-on-brand: var(--text-on-accent, #fff);
