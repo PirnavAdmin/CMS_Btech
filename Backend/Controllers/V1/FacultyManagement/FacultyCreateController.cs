@@ -66,7 +66,7 @@ public class FacultyCreateController : ControllerBase
         try
         {
             var selected=CollegeSelection.Resolve(collegeId, request.CollegeId == 0 ? null : request.CollegeId);
-            var scopeError=ResolveCollegeScope(selected, requireAdmin: request.UserId > 0, out var authorizedCollege);
+            var scopeError=ResolveCollegeScope(selected, requireAdmin: true, out var authorizedCollege);
             if (scopeError is not null) return scopeError;
             request.CollegeId=authorizedCollege;
             return await CreateCore(request);
@@ -171,6 +171,9 @@ public class FacultyCreateController : ControllerBase
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
             resolution="new-account";
+            // Provision the invitation prerequisites inside the existing creation transaction.
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"CALL sp_cms_faculty_setup_access({user.user_id}, {request.CollegeId}, {request.FacultyType}, {GetCurrentUserId()})");
         }
         if (request.EmployeeProfileId > 0 && !await _context.EmployeeProfiles.AnyAsync(x =>
             x.EmployeeProfileId == request.EmployeeProfileId && x.UserId == user.user_id && x.DeletedAt == null))
@@ -191,6 +194,7 @@ public class FacultyCreateController : ControllerBase
             faculty.FacultyId,user.user_id,request.CollegeId,resolution);
 
         bool emailSent = false;
+        string accountSetupEmailStatus = faculty.Status != 1 ? "PendingActivation" : "NotRequired";
         string emailMessage = "Welcome email could not be sent.";
 
         try
@@ -200,6 +204,7 @@ public class FacultyCreateController : ControllerBase
                 await _accountSetupService.SendSetupLinkAsync(user.user_id, "faculty");
                 emailSent = true;
                 emailMessage = "Password setup email sent successfully.";
+                accountSetupEmailStatus = "Sent";
             }
             else if (faculty.Status == 1)
             {
@@ -233,6 +238,7 @@ public class FacultyCreateController : ControllerBase
                 "Faculty created, but account setup/notification email failed. FacultyId={FacultyId}",
                 faculty.FacultyId);
             emailMessage = "Faculty created, but the email could not be sent.";
+            if (user.MustChangePassword) accountSetupEmailStatus = "Failed";
         }
 
 
@@ -280,6 +286,8 @@ public class FacultyCreateController : ControllerBase
   department.DepartmentName
       },
 
+      accountSetupRequired = user.MustChangePassword,
+      accountSetupEmailStatus,
       emailSent,
 
       emailMessage

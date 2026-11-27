@@ -12,3 +12,27 @@ test('builder creates a timetable only after academic selection and valid period
 test('builder rejects a reversed timetable date range without generation',async()=>{
  const generate=await setup(undefined,{...sources,years:[{...sources.years[0],startDate:'2026-12-15',endDate:'2026-09-01'}]});expect(screen.getByRole('button',{name:'Continue to Subjects'}).disabled).toBe(true);expect(generate).not.toHaveBeenCalled()
 })
+test('practical subjects require two consecutive periods', async () => {
+  await setup(undefined, {
+    ...sources,
+    subjects: [...sources.subjects, { ...scope, id: '10', name: 'Programming Lab', subjectType: 'Practical' }],
+  })
+  fireEvent.click(screen.getByRole('button', { name: 'Continue to Subjects' }))
+  const lab = screen.getByLabelText('Consecutive periods for Programming Lab')
+  expect(lab.value).toBe('2')
+  expect(lab.disabled).toBe(true)
+  expect(screen.getByLabelText('Consecutive periods for Programming').value).toBe('1')
+})
+test('editing saved period settings retains the defaults displayed by the form', () => {
+  render(<TimetableBuilder sources={sources} entries={[]} tables={[]} busy={false} enabled
+    initial={{ ...scope, configure: true, planning: {
+      periods: [], rooms: ['text:room 1'], requirements: {},
+      calendar: { startDate: '2026-01-01', endDate: '2026-12-31', workingDays: ['MONDAY'], holidays: [], reviewed: true },
+    } }}
+  />)
+  fireEvent.change(screen.getByLabelText('Periods Per Day'), { target: { value: '6' } })
+  fireEvent.change(screen.getByLabelText('Period Duration (minutes)'), { target: { value: '60' } })
+  fireEvent.change(screen.getByLabelText(/Lunch \(minutes/), { target: { value: '60' } })
+  expect(screen.getByLabelText('College Start Time').value).toBe('09:00')
+  expect(screen.getByRole('button', { name: 'Continue to Subjects' }).disabled).toBe(false)
+})

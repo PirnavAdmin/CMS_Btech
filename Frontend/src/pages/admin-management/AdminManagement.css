@@ -5854,6 +5854,7 @@
 .rooms-block-overview__item small,.rooms-block-overview__empty{color:var(--text-muted);font-size:.7rem}
 .rooms-block-overview__empty{padding:8px 0}
 .rooms-generator-form{display:grid;gap:16px;padding:8px 2px}
+.rooms-generator-error{position:sticky;top:0;z-index:2;padding:12px 14px;border:1px solid var(--danger);border-radius:8px;background:var(--surface);color:var(--danger);font-size:.82rem;line-height:1.45;box-shadow:var(--shadow-sm)}
 .rooms-generator-note{display:flex;align-items:center;gap:8px;padding:11px 12px;border:1px solid var(--brand-soft);border-radius:9px;background:var(--surface-soft);color:var(--text-secondary);font-size:.76rem}
 .rooms-generator-note svg{flex:0 0 auto;color:var(--brand)}
 .rooms-generator-form__grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}

@@ -4,6 +4,7 @@ import { departmentApi, subjectApi } from '../../api/apiEndpoints'
 import { academicLevel, scopeSections } from './timetableDomain'
 import { matchesScope, same } from '../../utils/timetableUtils'
 import { planningErrors, subjectRequirements, entryPlanningErrors, roomOptions, suitableRoom } from '../../utils/timetablePlanner'
+import { periodSessions } from '../../utils/timetablePeriods'
 import { getUserRole } from '../../auth/auth'
 import { selectedCollegeId } from '../../utils/collegeScope.js'
 import { scopeTimetableData } from './timetableCollegeScope.js'
@@ -24,8 +25,12 @@ const draft = async table => {
   if (current.revision !== table.revision) throw new Error('Timetable changed. Refresh before saving.')
   return current
 }
+const effectiveRequirements = (sources, scope, config) => Object.fromEntries(
+  subjectRequirements(sources, scope, config.requirements).filter(row => row.periodsPerWeek > 0)
+    .map(({ subject, periodsPerWeek, blockSize }) => [subject.id, { periodsPerWeek, blockSize }]))
+
 export const backendWorkflow = {
-  async generate({ scope, selected, config, expected, replace }) {
+  async generate({ scope, selected, config, expected, replace, draftOnly = false }) {
     authorize()
     const live = await loadBackendWorkflow()
     const sections = scopeSections(live.sources, scope)
@@ -34,24 +39,32 @@ export const backendWorkflow = {
     for (const sectionId of selected) {
       const sectionScope = { ...scope, sectionId }
       const errors = planningErrors(config, live.sources, sectionScope, live.backend)
-      for (const { subject, periodsPerWeek } of subjectRequirements(live.sources, sectionScope, config.requirements)) {
-        if (periodsPerWeek > 0 && !rooms.some(room => suitableRoom(subject, room)))
+      for (const { subject, periodsPerWeek, blockSize } of subjectRequirements(live.sources, sectionScope, config.requirements)) {
+        if (periodsPerWeek > 0 && (!Number.isInteger(blockSize) || blockSize < 1 || periodsPerWeek % blockSize !== 0))
+          errors.push(subject.name + ': the weekly target must divide into full sessions of ' + blockSize + ' periods.')
+        else if (!draftOnly && periodsPerWeek > 0 && !periodSessions(config.periods, blockSize).length)
+          errors.push(subject.name + ': no uninterrupted block of ' + blockSize + ' periods fits between breaks.')
+        if (!draftOnly && periodsPerWeek > 0 && !rooms.some(room => suitableRoom(subject, room)))
           errors.push(subject.name + ': select a suitable classroom or lab.')
       }
       if (errors.length) throw new Error([...new Set(errors)].join('\n'))
     }
     const saved = []
     for (const sectionId of selected) {
-      const previous = expected.find(row => same(row.sectionId, sectionId)) ?? live.tables.find(row =>
+      const previous = (!draftOnly && expected.find(row => same(row.sectionId, sectionId)) || null) ?? live.tables.find(row =>
         row.publicationStatus === 'draft' && !row.entries.length &&
         matchesScope(row, { ...scope, sectionId }) &&
         row.planning?.calendar?.startDate === config.calendar.startDate &&
         row.planning?.calendar?.endDate === config.calendar.endDate)
       const current = previous ? await draft(previous) : null
-      const sectionConfig = { ...config, requirements: Object.fromEntries(subjectRequirements(live.sources, { ...scope, sectionId }, config.requirements).filter(row => row.periodsPerWeek > 0).map(row => [row.subject.id, { periodsPerWeek: row.periodsPerWeek, blockSize: row.blockSize }])) }
+      const sectionConfig = { ...config, requirements: effectiveRequirements(live.sources, { ...scope, sectionId }, config) }
       const name = current?.name || `${live.sources.branches.find(row => same(row.id, scope.branchId))?.name} / ${sections.find(row => same(row.id, sectionId))?.name} / ${config.calendar.startDate}`
       const initial = !current?.entries.length
       const table = initial ? await service.setup({ ...scope, sectionId }, name, sectionConfig, { tableId: current?.id }) : current
+      if (draftOnly) {
+        saved.push(table)
+        continue
+      }
       const generated = await service.generate(scope, table.name, config, { tableId: table.id, initial, replace })
       saved.push({ ...table, ...generated, planning: table.planning })
     }
@@ -61,12 +74,31 @@ export const backendWorkflow = {
     const live = await loadBackendWorkflow()
     for (const table of tables) {
       await draft(table)
-      const errors = [...planningErrors(config, live.sources, table, live.backend), ...table.entries.flatMap(row => entryPlanningErrors(row, config, live.sources, table, live.backend))]
+      const errors = planningErrors(config, live.sources, table, live.backend)
       if (errors.length) throw new Error([...new Set(errors)].join('\n'))
+
+      const invalidClasses = table.entries.flatMap(row => {
+        const issues = entryPlanningErrors(row, config, live.sources, table, live.backend)
+        if (!issues.length) return []
+        const subject = live.sources.subjects.find(item => same(item.id, row.subjectId))
+        return [(subject?.name || 'Class') + ' (' + row.dayOfWeek + ' ' + row.startTime.slice(0, 5) + ' to ' + row.endTime.slice(0, 5) + '). ' + issues.join(' ')]
+      })
+      if (invalidClasses.length) {
+        const remaining = invalidClasses.length - 3
+        throw new Error([
+          'Existing classes conflict with the new settings. Keep the previous settings or start with an empty draft.',
+          ...invalidClasses.slice(0, 3),
+          ...(remaining > 0 ? [remaining + ' more affected classes.'] : []),
+        ].join('\n'))
+      }
     }
-    for (const table of tables) await service.setup(table, table.name, config, { tableId: table.id })
+    for (const table of tables) {
+      await service.setup(table, table.name, { ...config, requirements: effectiveRequirements(live.sources, table, config) },
+        { tableId: table.id })
+    }
     return true
   },
+  async deleteDraft(table) { await draft(table); await service.deleteDraft(table.id); return true },
   async saveEntry(table, form) { await draft(table); return service.saveEntry(table.id, table.revision, form) },
   async removeEntry(table, id) { await draft(table); return service.removeEntry(table.id, table.revision, id) },
   async validate(tables) {

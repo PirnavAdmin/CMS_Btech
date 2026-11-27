@@ -1,4 +1,4 @@
-import { DAYS, key, same, active, matchesScope, eligibleSubjects, eligibleFaculty, validTime, timeMinutes, overlaps, conflictsFor, roomKey } from './timetableUtils.js'
+import { DAYS, key, same, active, matchesScope, eligibleSubjects, eligibleFaculty, validTime, timeMinutes, overlaps, conflictsFor, roomKey, sameRoom } from './timetableUtils.js'
 import { isTeachingPeriod, teachingPeriods, periodSetupErrors, periodSessions } from './timetablePeriods.js'
 import { semesterPeriod, timetableDateErrors } from './timetableSemester.js'
 
@@ -54,9 +54,11 @@ export function sourcePeriods(entries = []) {
   return [...new Map(entries.filter(row => active(row) && validTime(row) && row.timetableSlotId).map(row => [`${row.startTime.slice(0, 5)}-${row.endTime.slice(0, 5)}`, { id: key(row.timetableSlotId), startTime: row.startTime.slice(0, 5), endTime: row.endTime.slice(0, 5), source: row.origin === 'local' ? 'local' : 'backend' }])).values()].sort((a, b) => timeMinutes(a.startTime) - timeMinutes(b.startTime))
 }
 
+export const isLabSubject = subject => /lab|practical/i.test(subject.subjectType || '')
+
 export function suitableRoom(subject, room) {
   if (!room.roomType) return true
-  if (/lab|practical/i.test(subject.subjectType || '')) return /lab/i.test(room.roomType)
+  if (isLabSubject(subject)) return /lab/i.test(room.roomType)
   if (/theory|lecture|tutorial/i.test(subject.subjectType || '')) return !/lab/i.test(room.roomType)
   return true
 }
@@ -67,7 +69,7 @@ export function subjectRequirements(sources, scope, overrides = {}) {
     const counts = [...new Set(allocations.map(row => Number(row.periodsPerWeek)).filter(value => Number.isInteger(value) && value > 0))]
     const explicit = overrides[key(subject.id)] || {}
     const count = explicit.periodsPerWeek !== undefined && explicit.periodsPerWeek !== '' ? Number(explicit.periodsPerWeek) : counts.length === 1 ? counts[0] : 0
-    const blockSize = explicit.blockSize !== undefined && explicit.blockSize !== '' ? Number(explicit.blockSize) : 1
+    const blockSize = isLabSubject(subject) ? 2 : explicit.blockSize !== undefined && explicit.blockSize !== '' ? Number(explicit.blockSize) : 1
     return { subject, faculty: eligibleFaculty(sources.faculty, sources.allocations, subject.id, scope), periodsPerWeek: count, blockSize, source: explicit.periodsPerWeek !== undefined && explicit.periodsPerWeek !== '' ? 'Planning setting' : counts.length === 1 ? 'Faculty allocation' : 'Not configured' }
   })
 }
@@ -101,7 +103,18 @@ export function entryPlanningErrors(row, config, sources, scope, allEntries = []
   if (!room || !config.rooms.includes(room.value)) errors.push('Choose a room selected in the planning settings.')
   const requirement = subjectRequirements(sources, scope, config.requirements).find(item => same(item.subject.id, row.subjectId))
   if (!requirement) errors.push('Select a subject included in this timetable.')
-  if (requirement && periods.length !== requirement.blockSize) errors.push('Class duration must match the configured consecutive periods per session.')
+  const sessionEntries = row.scheduleGroupKey ? allEntries.filter(item =>
+    active(item) && item.scheduleGroupKey === row.scheduleGroupKey && same(item.timetableId, row.timetableId) &&
+    same(item.subjectId, row.subjectId) && same(item.facultyId, row.facultyId) && sameRoom(item, row) &&
+    item.dayOfWeek === row.dayOfWeek && validTime(item)).sort((a, b) => timeMinutes(a.startTime) - timeMinutes(b.startTime)) : []
+  const groupedDuration = sessionEntries.some(item => same(item.id, row.id) &&
+    item.startTime === row.startTime && item.endTime === row.endTime) &&
+    sessionEntries.every((item, index) => index === 0 || timeMinutes(sessionEntries[index - 1].endTime) === timeMinutes(item.startTime))
+    ? teachingPeriods(config.periods).filter(period => timeMinutes(period.startTime) >= timeMinutes(sessionEntries[0].startTime) &&
+        timeMinutes(period.endTime) <= timeMinutes(sessionEntries.at(-1).endTime)).length
+    : 0
+  if (requirement && (groupedDuration || periods.length) !== requirement.blockSize)
+    errors.push('Class duration must match the configured consecutive periods per session.')
   if (requirement && room && !suitableRoom(requirement.subject, room)) errors.push('Subject type requires a suitable classroom or lab.')
   return errors
 }

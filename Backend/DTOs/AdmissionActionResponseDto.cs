@@ -29,5 +29,9 @@ namespace BTech.DTOs
         public string AccountProvisioningStatus { get; set; } = "NotProvisioned";
 
         public string CredentialDeliveryStatus { get; set; } = "NotAttempted";
+
+        public bool EmailSent => CredentialDeliveryStatus == "Sent";
+
+        public bool ActivationEmailSent => CredentialDeliveryStatus == "Sent";
     }
 }
