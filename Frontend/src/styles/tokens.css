@@ -207,6 +207,13 @@
   --space-4: 16px;
   --space-5: 20px;
   --space-6: 24px;
+  --page-inline-padding: clamp(16px, 1.25vw, 20px);
+  --page-top-padding: 20px;
+  --page-bottom-padding: 32px;
+  --page-section-gap: 16px;
+  --surface-padding: 20px;
+  --surface-padding-compact: 16px;
+  --control-gap: 8px;
   --control-height: 38px;
   --button-height: 36px;
   --focus-ring: 0 0 0 3px color-mix(in srgb, var(--brand) 42%, transparent);

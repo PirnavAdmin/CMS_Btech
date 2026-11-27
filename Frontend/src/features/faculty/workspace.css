@@ -1,5 +1,6 @@
 .fw-page {
   display: grid;
+  align-content: start;
   gap: 16px;
 }
 
@@ -1220,72 +1221,73 @@
 }
 
 /* Clearer hierarchy and roomier controls across faculty workspace screens. */
-#root .portal-shell .fw-page {
-  gap: 24px;
+#root .faculty-portal-shell .fw-page {
+  align-content: start;
+  gap: var(--page-section-gap);
 }
 
-#root .portal-shell .fw-page > .faculty-breadcrumbs {
-  margin: 0 0 4px;
+#root .faculty-portal-shell .fw-page > .faculty-breadcrumbs {
+  margin: 0;
   font-size: 14px;
 }
 
-#root .portal-shell .fw-heading {
+#root .faculty-portal-shell .fw-heading {
   align-items: flex-end;
   gap: 24px;
-  margin: 0 0 2px;
+  margin: 0;
 }
 
-#root .portal-shell .fw-heading h1 {
+#root .faculty-portal-shell .fw-heading h1 {
   margin: 7px 0 8px;
   font-size: clamp(34px, 2.4vw, 46px);
   line-height: 1.1;
   letter-spacing: -.045em;
 }
 
-#root .portal-shell .fw-heading > div:first-child > p:last-child {
+#root .faculty-portal-shell .fw-heading > div:first-child > p:last-child {
   max-width: 760px;
   color: var(--text-secondary);
   font-size: 15px;
   line-height: 1.55;
 }
 
-#root .portal-shell .fw-page .portal-eyebrow,
-#root .portal-shell .fw-eyebrow {
+#root .faculty-portal-shell .fw-page .portal-eyebrow,
+#root .faculty-portal-shell .fw-eyebrow {
   font-size: 11px !important;
   letter-spacing: .12em;
 }
 
-#root .portal-shell .fw-card,
-#root .portal-shell .fw-workload-card,
-#root .portal-shell .fw-profile-hero,
-#root .portal-shell .fw-leave-balance-grid article {
+#root .faculty-portal-shell .fw-card,
+#root .faculty-portal-shell .fw-workload-card,
+#root .faculty-portal-shell .fw-profile-hero,
+#root .faculty-portal-shell .fw-leave-balance-grid article {
   padding: 24px;
   border-color: color-mix(in srgb, var(--border) 82%, var(--brand));
   border-radius: 18px;
   box-shadow: var(--shadow-sm);
 }
 
-#root .portal-shell .fw-card h2 {
+#root .faculty-portal-shell .fw-card h2 {
   font-size: 18px;
 }
 
-#root .portal-shell .fw-card-heading {
+#root .faculty-portal-shell .fw-card-heading {
   margin-bottom: 18px;
 }
 
-#root .portal-shell .fw-card-heading > div > p,
-#root .portal-shell .fw-card-heading > p {
+#root .faculty-portal-shell .fw-card-heading > div > p,
+#root .faculty-portal-shell .fw-card-heading > p {
   font-size: 13px;
 }
 
-#root .portal-shell .fw-toolbar {
+#root .faculty-portal-shell .fw-toolbar {
   align-items: end;
   gap: 12px;
   margin-bottom: 18px;
 }
 
-#root .portal-shell .fw-search,
-#root .portal-shell .fw-field :is(input, select, textarea) {
+#root .faculty-portal-shell .fw-search,
+#root .faculty-portal-shell .fw-field :is(input, select, textarea) {
   min-height: 52px;
   border-color: var(--border);
   border-radius: 10px;
@@ -1294,23 +1296,23 @@
   font-size: 14px;
 }
 
-#root .portal-shell .fw-search {
+#root .faculty-portal-shell .fw-search {
   padding-inline: 13px;
 }
 
-#root .portal-shell .fw-search input {
+#root .faculty-portal-shell .fw-search input {
   font-size: 14px;
 }
 
-#root .portal-shell .fw-field {
+#root .faculty-portal-shell .fw-field {
   gap: 7px;
   color: var(--text-secondary);
   font-size: 13px;
   font-weight: 700;
 }
 
-#root .portal-shell .fw-button,
-#root .portal-shell .fw-pager button {
+#root .faculty-portal-shell .fw-button,
+#root .faculty-portal-shell .fw-pager button {
   min-height: 46px;
   padding-inline: 17px;
   border-radius: 11px;
@@ -1318,29 +1320,29 @@
   transition: transform .16s ease, box-shadow .16s ease, background-color .16s ease;
 }
 
-#root .portal-shell .fw-button:hover:not(:disabled),
-#root .portal-shell .fw-pager button:hover:not(:disabled) {
+#root .faculty-portal-shell .fw-button:hover:not(:disabled),
+#root .faculty-portal-shell .fw-pager button:hover:not(:disabled) {
   transform: translateY(-1px);
   box-shadow: 0 5px 14px rgb(18 64 110 / 12%);
 }
 
-#root .portal-shell .fw-button-primary {
+#root .faculty-portal-shell .fw-button-primary {
   box-shadow: 0 7px 16px color-mix(in srgb, var(--brand) 20%, transparent);
 }
 
-#root .portal-shell .fw-table-scroll {
+#root .faculty-portal-shell .fw-table-scroll {
   overflow: auto;
   border: 1px solid var(--border);
   border-radius: 13px;
   background: var(--surface);
 }
 
-#root .portal-shell .fw-table {
+#root .faculty-portal-shell .fw-table {
   min-width: 720px;
   font-size: 15px;
 }
 
-#root .portal-shell .fw-table th {
+#root .faculty-portal-shell .fw-table th {
   height: 64px;
   padding: 16px 18px;
   background: var(--table-head);
@@ -1349,40 +1351,40 @@
   letter-spacing: .07em;
 }
 
-#root .portal-shell .fw-table td {
+#root .faculty-portal-shell .fw-table td {
   padding: 16px 18px;
   color: var(--text-secondary);
   font-size: 15px;
   line-height: 1.5;
 }
 
-#root .portal-shell .fw-table tbody tr:nth-child(even) {
+#root .faculty-portal-shell .fw-table tbody tr:nth-child(even) {
   background: color-mix(in srgb, var(--surface-soft) 70%, var(--surface));
 }
 
-#root .portal-shell .fw-table tbody tr:hover {
+#root .faculty-portal-shell .fw-table tbody tr:hover {
   background: var(--brand-soft);
 }
 
-#root .portal-shell .fw-sort {
+#root .faculty-portal-shell .fw-sort {
   color: var(--text-on-dark);
   font-size: 11px;
 }
 
-#root .portal-shell .fw-link-button {
+#root .faculty-portal-shell .fw-link-button {
   color: var(--brand);
   font-size: 13px;
   font-weight: 750;
 }
 
-#root .portal-shell .fw-summary-line,
-#root .portal-shell .fw-pager {
+#root .faculty-portal-shell .fw-summary-line,
+#root .faculty-portal-shell .fw-pager {
   gap: 12px;
   color: var(--text-muted);
   font-size: 13px;
 }
 
-#root .portal-shell .fw-chip {
+#root .faculty-portal-shell .fw-chip {
   min-height: 30px;
   padding: 5px 10px;
   border-color: color-mix(in srgb, var(--brand) 18%, var(--border));
@@ -1391,7 +1393,7 @@
   font-size: 12px;
 }
 
-#root .portal-shell .fw-tabs {
+#root .faculty-portal-shell .fw-tabs {
   gap: 5px;
   padding: 5px;
   border: 1px solid var(--border);
@@ -1399,130 +1401,130 @@
   background: var(--surface-soft);
 }
 
-#root .portal-shell .fw-tabs button {
+#root .faculty-portal-shell .fw-tabs button {
   min-height: 36px;
   padding-inline: 13px;
   border-radius: 9px;
   font-size: 12px;
 }
 
-#root .portal-shell .fw-tabs button.is-active {
+#root .faculty-portal-shell .fw-tabs button.is-active {
   background: var(--surface);
   color: var(--brand);
   box-shadow: 0 2px 8px rgb(19 49 79 / 10%);
 }
 
-#root .portal-shell .fw-subject-card {
+#root .faculty-portal-shell .fw-subject-card {
   padding: 20px;
   border-radius: 14px;
   transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
 }
 
-#root .portal-shell .fw-subject-card:hover {
+#root .faculty-portal-shell .fw-subject-card:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-sm);
 }
 
-#root .portal-shell .fw-drawer {
+#root .faculty-portal-shell .fw-drawer {
   width: min(720px, 94vw);
   padding: clamp(18px, 3vw, 30px);
   box-shadow: -18px 0 48px rgb(8 26 48 / 18%);
 }
 
-#root .portal-shell .fw-drawer > header h2 {
+#root .faculty-portal-shell .fw-drawer > header h2 {
   font-size: 24px;
   letter-spacing: -.03em;
 }
 
-#root .portal-shell .fw-detail-pairs > div {
+#root .faculty-portal-shell .fw-detail-pairs > div {
   padding: 14px;
   border-radius: 11px;
 }
 
 @media (max-width: 900px) {
-  #root .portal-shell .fw-heading {
+  #root .faculty-portal-shell .fw-heading {
     align-items: flex-start;
   }
 
-  #root .portal-shell .fw-toolbar {
+  #root .faculty-portal-shell .fw-toolbar {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  #root .portal-shell .fw-search {
+  #root .faculty-portal-shell .fw-search {
     grid-column: 1 / -1;
     width: 100%;
   }
 }
 
 @media (max-width: 640px) {
-  #root .portal-shell .fw-page {
-    gap: 17px;
-  }
-
-  #root .portal-shell .fw-heading {
+  #root .faculty-portal-shell .fw-page {
     gap: 12px;
   }
 
-  #root .portal-shell .fw-heading h1 {
+  #root .faculty-portal-shell .fw-heading {
+    gap: 12px;
+  }
+
+  #root .faculty-portal-shell .fw-heading h1 {
     font-size: 31px;
   }
 
-  #root .portal-shell .fw-heading > div:first-child > p:last-child {
+  #root .faculty-portal-shell .fw-heading > div:first-child > p:last-child {
     font-size: 14px;
   }
 
-  #root .portal-shell .fw-heading-actions,
-  #root .portal-shell .fw-heading-actions > * {
+  #root .faculty-portal-shell .fw-heading-actions,
+  #root .faculty-portal-shell .fw-heading-actions > * {
     width: 100%;
   }
 
-  #root .portal-shell .fw-card,
-  #root .portal-shell .fw-workload-card,
-  #root .portal-shell .fw-profile-hero,
-  #root .portal-shell .fw-leave-balance-grid article {
+  #root .faculty-portal-shell .fw-card,
+  #root .faculty-portal-shell .fw-workload-card,
+  #root .faculty-portal-shell .fw-profile-hero,
+  #root .faculty-portal-shell .fw-leave-balance-grid article {
     padding: 16px;
     border-radius: 14px;
   }
 
-  #root .portal-shell .fw-toolbar {
+  #root .faculty-portal-shell .fw-toolbar {
     grid-template-columns: 1fr;
   }
 
-  #root .portal-shell .fw-search {
+  #root .faculty-portal-shell .fw-search {
     grid-column: auto;
   }
 
-  #root .portal-shell .fw-table-scroll {
+  #root .faculty-portal-shell .fw-table-scroll {
     overflow: visible;
     border: 0;
     background: transparent;
   }
 
-  #root .portal-shell .fw-table {
+  #root .faculty-portal-shell .fw-table {
     min-width: 0;
   }
 
-  #root .portal-shell .fw-table-scroll:has(.fw-marks-table) {
+  #root .faculty-portal-shell .fw-table-scroll:has(.fw-marks-table) {
     overflow-x: auto;
     border: 1px solid var(--border);
     background: var(--surface);
   }
 
-  #root .portal-shell .fw-table-scroll:has(.fw-marks-table) .fw-table {
+  #root .faculty-portal-shell .fw-table-scroll:has(.fw-marks-table) .fw-table {
     min-width: 520px;
   }
 
-  #root .portal-shell .fw-tabs {
+  #root .faculty-portal-shell .fw-tabs {
     max-width: 100%;
     overflow-x: auto;
   }
 
-  #root .portal-shell .fw-drawer-backdrop {
+  #root .faculty-portal-shell .fw-drawer-backdrop {
     align-items: end;
   }
 
-  #root .portal-shell .fw-drawer {
+  #root .faculty-portal-shell .fw-drawer {
     width: 100%;
     height: min(92dvh, 920px);
     border-radius: 20px 20px 0 0;
@@ -1530,45 +1532,45 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  #root .portal-shell .fw-button,
-  #root .portal-shell .fw-pager button,
-  #root .portal-shell .fw-subject-card {
+  #root .faculty-portal-shell .fw-button,
+  #root .faculty-portal-shell .fw-pager button,
+  #root .faculty-portal-shell .fw-subject-card {
     transition: none;
   }
 }
 
 @media (max-width: 640px) {
-  #root .portal-shell .fw-card-heading .fw-tabs {
+  #root .faculty-portal-shell .fw-card-heading .fw-tabs {
     width: 100%;
     box-sizing: border-box;
   }
 
-  #root .portal-shell .fw-card-heading .fw-tabs button {
+  #root .faculty-portal-shell .fw-card-heading .fw-tabs button {
     flex: 1 1 0;
   }
 }
 
 /* Clear personal attendance summary, calendar, and records. */
-#root .portal-shell .fw-attendance-summary,
-#root .portal-shell .fw-attendance-calendar-card,
-#root .portal-shell .fw-attendance-records {
+#root .faculty-portal-shell .fw-attendance-summary,
+#root .faculty-portal-shell .fw-attendance-calendar-card,
+#root .faculty-portal-shell .fw-attendance-records {
   display: grid;
   gap: 18px;
 }
 
-#root .portal-shell .fw-attendance-summary .fw-card-heading,
-#root .portal-shell .fw-attendance-calendar-card .fw-card-heading,
-#root .portal-shell .fw-attendance-records .fw-card-heading {
+#root .faculty-portal-shell .fw-attendance-summary .fw-card-heading,
+#root .faculty-portal-shell .fw-attendance-calendar-card .fw-card-heading,
+#root .faculty-portal-shell .fw-attendance-records .fw-card-heading {
   margin: 0;
 }
 
-#root .portal-shell .fw-attendance-summary .fw-card-heading > div > p:last-child,
-#root .portal-shell .fw-attendance-calendar-card .fw-card-heading > div > p:last-child,
-#root .portal-shell .fw-attendance-records .fw-card-heading > div > p:last-child {
+#root .faculty-portal-shell .fw-attendance-summary .fw-card-heading > div > p:last-child,
+#root .faculty-portal-shell .fw-attendance-calendar-card .fw-card-heading > div > p:last-child,
+#root .faculty-portal-shell .fw-attendance-records .fw-card-heading > div > p:last-child {
   margin-bottom: 0;
 }
 
-#root .portal-shell .fw-attendance-record-count {
+#root .faculty-portal-shell .fw-attendance-record-count {
   display: inline-flex;
   align-items: center;
   min-height: 30px;
@@ -1582,7 +1584,7 @@
   white-space: nowrap;
 }
 
-#root .portal-shell .fw-attendance-overview {
+#root .faculty-portal-shell .fw-attendance-overview {
   display: grid;
   grid-template-columns: minmax(180px, .8fr) minmax(0, 1.2fr);
   align-items: center;
@@ -1593,37 +1595,37 @@
   background: linear-gradient(110deg, var(--brand-soft), var(--surface-soft));
 }
 
-#root .portal-shell .fw-attendance-overview > div:first-child {
+#root .faculty-portal-shell .fw-attendance-overview > div:first-child {
   display: grid;
   gap: 5px;
 }
 
-#root .portal-shell .fw-attendance-overview > div:first-child > span {
+#root .faculty-portal-shell .fw-attendance-overview > div:first-child > span {
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 700;
 }
 
-#root .portal-shell .fw-attendance-overview strong {
+#root .faculty-portal-shell .fw-attendance-overview strong {
   color: var(--text-primary);
   font-size: clamp(30px, 3vw, 42px);
   letter-spacing: -.04em;
   line-height: 1;
 }
 
-#root .portal-shell .fw-attendance-overview strong small {
+#root .faculty-portal-shell .fw-attendance-overview strong small {
   margin-left: 2px;
   color: var(--brand);
   font-size: .58em;
 }
 
-#root .portal-shell .fw-attendance-overview p {
+#root .faculty-portal-shell .fw-attendance-overview p {
   margin: 0;
   color: var(--text-muted);
   font-size: 12px;
 }
 
-#root .portal-shell .fw-attendance-progress {
+#root .faculty-portal-shell .fw-attendance-progress {
   height: 12px;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--brand) 12%, var(--border));
@@ -1631,7 +1633,7 @@
   background: var(--surface);
 }
 
-#root .portal-shell .fw-attendance-progress > span {
+#root .faculty-portal-shell .fw-attendance-progress > span {
   display: block;
   height: 100%;
   border-radius: inherit;
@@ -1639,11 +1641,11 @@
   transition: width .3s ease;
 }
 
-#root .portal-shell .fw-attendance-metrics {
+#root .faculty-portal-shell .fw-attendance-metrics {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-#root .portal-shell .fw-attendance-metrics article {
+#root .faculty-portal-shell .fw-attendance-metrics article {
   gap: 6px;
   min-width: 0;
   padding: 16px;
@@ -1652,31 +1654,31 @@
   background: var(--surface);
 }
 
-#root .portal-shell .fw-attendance-metrics article > span {
+#root .faculty-portal-shell .fw-attendance-metrics article > span {
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 700;
 }
 
-#root .portal-shell .fw-attendance-metrics article > strong {
+#root .faculty-portal-shell .fw-attendance-metrics article > strong {
   color: var(--text-primary);
   font-size: 26px;
   line-height: 1.1;
 }
 
-#root .portal-shell .fw-attendance-metrics article > small {
+#root .faculty-portal-shell .fw-attendance-metrics article > small {
   color: var(--text-muted);
   font-size: 11px;
 }
 
-#root .portal-shell .fw-attendance-legend {
+#root .faculty-portal-shell .fw-attendance-legend {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 8px 14px;
 }
 
-#root .portal-shell .fw-attendance-legend > span {
+#root .faculty-portal-shell .fw-attendance-legend > span {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -1684,26 +1686,26 @@
   font-size: 11px;
 }
 
-#root .portal-shell .fw-attendance-legend i {
+#root .faculty-portal-shell .fw-attendance-legend i {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: var(--border);
 }
 
-#root .portal-shell .fw-attendance-legend i.is-present {
+#root .faculty-portal-shell .fw-attendance-legend i.is-present {
   background: var(--success, #16a36a);
 }
 
-#root .portal-shell .fw-attendance-legend i.is-leave {
+#root .faculty-portal-shell .fw-attendance-legend i.is-leave {
   background: var(--warning, #d68a12);
 }
 
-#root .portal-shell .fw-attendance-legend i.is-holiday {
+#root .faculty-portal-shell .fw-attendance-legend i.is-holiday {
   background: var(--brand);
 }
 
-#root .portal-shell .fw-calendar-grid {
+#root .faculty-portal-shell .fw-calendar-grid {
   grid-template-columns: repeat(7, minmax(30px, 1fr));
   gap: 8px;
   width: 100%;
@@ -1711,7 +1713,7 @@
   margin: 0;
 }
 
-#root .portal-shell .fw-calendar-grid > span {
+#root .faculty-portal-shell .fw-calendar-grid > span {
   box-sizing: border-box;
   min-height: 54px;
   border-radius: 11px;
@@ -1720,7 +1722,7 @@
   font-weight: 650;
 }
 
-#root .portal-shell .fw-calendar-grid > span.is-weekday {
+#root .faculty-portal-shell .fw-calendar-grid > span.is-weekday {
   min-height: 28px;
   border: 0;
   background: transparent;
@@ -1730,19 +1732,19 @@
   text-transform: uppercase;
 }
 
-#root .portal-shell .fw-calendar-grid > span.is-placeholder {
+#root .faculty-portal-shell .fw-calendar-grid > span.is-placeholder {
   min-height: 0;
   border: 0;
   background: transparent;
 }
 
-#root .portal-shell .fw-calendar-grid > span:not(.is-weekday):not(.is-placeholder) {
+#root .faculty-portal-shell .fw-calendar-grid > span:not(.is-weekday):not(.is-placeholder) {
   grid-template-rows: 1fr 5px;
   gap: 2px;
   padding: 7px 4px 5px;
 }
 
-#root .portal-shell .fw-calendar-grid > span:not(.is-weekday):not(.is-placeholder)::after {
+#root .faculty-portal-shell .fw-calendar-grid > span:not(.is-weekday):not(.is-placeholder)::after {
   width: 5px;
   height: 5px;
   border-radius: 50%;
@@ -1750,65 +1752,65 @@
   content: '';
 }
 
-#root .portal-shell .fw-calendar-grid > span.is-present {
+#root .faculty-portal-shell .fw-calendar-grid > span.is-present {
   border-color: color-mix(in srgb, var(--success, #16a36a) 36%, var(--border));
   background: color-mix(in srgb, var(--success, #16a36a) 11%, var(--surface));
 }
 
-#root .portal-shell .fw-calendar-grid > span.is-present::after {
+#root .faculty-portal-shell .fw-calendar-grid > span.is-present::after {
   background: var(--success, #16a36a) !important;
 }
 
-#root .portal-shell .fw-calendar-grid > span.is-leave {
+#root .faculty-portal-shell .fw-calendar-grid > span.is-leave {
   border-color: color-mix(in srgb, var(--warning, #d68a12) 38%, var(--border));
   background: color-mix(in srgb, var(--warning, #d68a12) 11%, var(--surface));
 }
 
-#root .portal-shell .fw-calendar-grid > span.is-leave::after {
+#root .faculty-portal-shell .fw-calendar-grid > span.is-leave::after {
   background: var(--warning, #d68a12);
 }
 
-#root .portal-shell .fw-calendar-grid > span.is-holiday {
+#root .faculty-portal-shell .fw-calendar-grid > span.is-holiday {
   border-color: color-mix(in srgb, var(--brand) 35%, var(--border));
   background: var(--brand-soft);
 }
 
-#root .portal-shell .fw-calendar-grid > span.is-holiday::after {
+#root .faculty-portal-shell .fw-calendar-grid > span.is-holiday::after {
   background: var(--brand);
 }
 
 @media (max-width: 900px) {
-  #root .portal-shell .fw-attendance-metrics {
+  #root .faculty-portal-shell .fw-attendance-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 640px) {
-  #root .portal-shell .fw-attendance-overview {
+  #root .faculty-portal-shell .fw-attendance-overview {
     grid-template-columns: 1fr;
     gap: 14px;
     padding: 16px;
   }
 
-  #root .portal-shell .fw-attendance-summary,
-  #root .portal-shell .fw-attendance-calendar-card,
-  #root .portal-shell .fw-attendance-records {
+  #root .faculty-portal-shell .fw-attendance-summary,
+  #root .faculty-portal-shell .fw-attendance-calendar-card,
+  #root .faculty-portal-shell .fw-attendance-records {
     gap: 14px;
   }
 
-  #root .portal-shell .fw-attendance-calendar-card .fw-card-heading {
+  #root .faculty-portal-shell .fw-attendance-calendar-card .fw-card-heading {
     align-items: flex-start;
   }
 
-  #root .portal-shell .fw-attendance-legend {
+  #root .faculty-portal-shell .fw-attendance-legend {
     gap: 6px 10px;
   }
 
-  #root .portal-shell .fw-calendar-grid {
+  #root .faculty-portal-shell .fw-calendar-grid {
     gap: 5px;
   }
 
-  #root .portal-shell .fw-calendar-grid > span {
+  #root .faculty-portal-shell .fw-calendar-grid > span {
     min-height: 44px;
     border-radius: 9px;
     font-size: 12px;
@@ -1816,7 +1818,7 @@
 }
 
 /* Faculty student directory dashboard and responsive filter toolbar. */
-#root .portal-shell .fw-student-topbar {
+#root .faculty-portal-shell .fw-student-topbar {
   display: grid;
   grid-template-columns: minmax(340px, .9fr) minmax(0, 1.6fr);
   align-items: start;
@@ -1824,12 +1826,12 @@
   min-width: 0;
 }
 
-#root .portal-shell .fw-student-topbar > .fw-heading {
+#root .faculty-portal-shell .fw-student-topbar > .fw-heading {
   align-self: start;
   margin: 0;
 }
 
-#root .portal-shell .fw-student-topbar > .fw-student-overview {
+#root .faculty-portal-shell .fw-student-topbar > .fw-student-overview {
   width: 100%;
   min-width: 0;
   max-width: none;
@@ -1840,13 +1842,13 @@
   scrollbar-width: thin;
 }
 
-#root .portal-shell .fw-student-overview {
+#root .faculty-portal-shell .fw-student-overview {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
 }
 
-#root .portal-shell .fw-student-overview > article {
+#root .faculty-portal-shell .fw-student-overview > article {
   display: grid;
   gap: 7px;
   min-width: 0;
@@ -1857,67 +1859,67 @@
   box-shadow: var(--shadow-sm);
 }
 
-#root .portal-shell .fw-student-overview > article.is-primary {
+#root .faculty-portal-shell .fw-student-overview > article.is-primary {
   border-color: color-mix(in srgb, var(--brand) 28%, var(--border));
   background: linear-gradient(120deg, var(--brand-soft), var(--surface));
 }
 
-#root .portal-shell .fw-student-overview > article.is-warning {
+#root .faculty-portal-shell .fw-student-overview > article.is-warning {
   border-color: color-mix(in srgb, var(--warning, #d68a12) 34%, var(--border));
 }
 
-#root .portal-shell .fw-student-overview > article > span {
+#root .faculty-portal-shell .fw-student-overview > article > span {
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 700;
 }
 
-#root .portal-shell .fw-student-overview > article > strong {
+#root .faculty-portal-shell .fw-student-overview > article > strong {
   color: var(--text-primary);
   font-size: clamp(24px, 2vw, 31px);
   letter-spacing: -.035em;
   line-height: 1;
 }
 
-#root .portal-shell .fw-student-overview > article.is-primary > strong {
+#root .faculty-portal-shell .fw-student-overview > article.is-primary > strong {
   color: var(--brand);
 }
 
-#root .portal-shell .fw-student-overview > article.is-warning > strong {
+#root .faculty-portal-shell .fw-student-overview > article.is-warning > strong {
   color: var(--warning, #b87509);
 }
 
-#root .portal-shell .fw-student-overview > article > small {
+#root .faculty-portal-shell .fw-student-overview > article > small {
   color: var(--text-muted);
   font-size: 11px;
 }
 
-#root .portal-shell .fw-student-directory-card {
+#root .faculty-portal-shell .fw-student-directory-card {
   gap: 18px;
 }
 
-#root .portal-shell .fw-student-directory-heading {
+#root .faculty-portal-shell .fw-student-directory-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
 }
 
-#root .portal-shell .fw-student-directory-heading h2,
-#root .portal-shell .fw-student-filter-heading h3 {
+#root .faculty-portal-shell .fw-student-directory-heading h2,
+#root .faculty-portal-shell .fw-student-filter-heading h3 {
   margin: 0;
   color: var(--text-primary);
   font-size: 17px;
 }
 
-#root .portal-shell .fw-student-directory-heading p,
-#root .portal-shell .fw-student-filter-heading p {
+#root .faculty-portal-shell .fw-student-directory-heading p,
+#root .faculty-portal-shell .fw-student-filter-heading p {
   margin: 5px 0 0;
   color: var(--text-muted);
   font-size: 12px;
 }
 
-#root .portal-shell .fw-student-directory-heading > span {
+#root .faculty-portal-shell .fw-student-directory-heading > span {
   flex: 0 0 auto;
   padding: 7px 10px;
   border: 1px solid var(--border);
@@ -1928,27 +1930,27 @@
   font-weight: 700;
 }
 
-#root .portal-shell .fw-student-directory-toolbar {
+#root .faculty-portal-shell .fw-student-directory-toolbar {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-#root .portal-shell .fw-student-directory-toolbar .fw-search {
+#root .faculty-portal-shell .fw-student-directory-toolbar .fw-search {
   flex: 1 1 auto;
   min-width: 200px;
   min-height: 48px;
   border-radius: 11px;
 }
 
-#root .portal-shell .fw-student-directory-toolbar .fw-student-export {
+#root .faculty-portal-shell .fw-student-directory-toolbar .fw-student-export {
   flex: 0 0 auto;
   min-width: 142px;
   border-color: color-mix(in srgb, var(--brand) 22%, var(--border));
   color: var(--brand);
 }
 
-#root .portal-shell .fw-student-filters {
+#root .faculty-portal-shell .fw-student-filters {
   display: grid;
   gap: 14px;
   padding: 16px;
@@ -1957,27 +1959,27 @@
   background: var(--surface-soft);
 }
 
-#root .portal-shell .fw-student-filter-heading h3 {
+#root .faculty-portal-shell .fw-student-filter-heading h3 {
   font-size: 14px;
 }
 
-#root .portal-shell .fw-student-filter-heading p {
+#root .faculty-portal-shell .fw-student-filter-heading p {
   font-size: 11px;
 }
 
-#root .portal-shell .fw-student-filter-grid {
+#root .faculty-portal-shell .fw-student-filter-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   align-items: end;
   gap: 12px;
 }
 
-#root .portal-shell .fw-student-filter-grid .fw-field > select {
+#root .faculty-portal-shell .fw-student-filter-grid .fw-field > select {
   min-height: 44px;
   border-radius: 10px;
 }
 
-#root .portal-shell .fw-student-results {
+#root .faculty-portal-shell .fw-student-results {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1986,7 +1988,7 @@
   min-height: 32px;
 }
 
-#root .portal-shell .fw-student-results > div:first-child {
+#root .faculty-portal-shell .fw-student-results > div:first-child {
   display: inline-flex;
   align-items: baseline;
   gap: 6px;
@@ -1994,38 +1996,38 @@
   font-size: 12px;
 }
 
-#root .portal-shell .fw-student-results > div:first-child strong {
+#root .faculty-portal-shell .fw-student-results > div:first-child strong {
   color: var(--text-primary);
   font-size: 15px;
 }
 
-#root .portal-shell .fw-student-results .fw-chip-list {
+#root .faculty-portal-shell .fw-student-results .fw-chip-list {
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
 }
 
-#root .portal-shell .fw-student-results .fw-chip {
+#root .faculty-portal-shell .fw-student-results .fw-chip {
   min-height: 32px;
   font-size: 11px;
 }
 
-#root .portal-shell .fw-student-table .fw-table-scroll {
+#root .faculty-portal-shell .fw-student-table .fw-table-scroll {
   margin: 0;
   border-radius: 14px;
 }
 
-#root .portal-shell .fw-student-table .fw-table {
+#root .faculty-portal-shell .fw-student-table .fw-table {
   min-width: 920px;
   table-layout: auto;
 }
 
-#root .portal-shell .fw-student-table .fw-table th {
+#root .faculty-portal-shell .fw-student-table .fw-table th {
   height: 58px;
   padding: 12px 16px;
 }
 
-#root .portal-shell .fw-student-table .fw-table th .fw-sort {
+#root .faculty-portal-shell .fw-student-table .fw-table th .fw-sort {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -2041,32 +2043,32 @@
   cursor: pointer;
 }
 
-#root .portal-shell .fw-student-table .fw-table th .fw-sort:hover,
-#root .portal-shell .fw-student-table .fw-table th .fw-sort.is-active {
+#root .faculty-portal-shell .fw-student-table .fw-table th .fw-sort:hover,
+#root .faculty-portal-shell .fw-student-table .fw-table th .fw-sort.is-active {
   border-color: rgb(255 255 255 / 38%);
   background: rgb(255 255 255 / 18%);
 }
 
-#root .portal-shell .fw-student-table .fw-table th .fw-sort:focus-visible {
+#root .faculty-portal-shell .fw-student-table .fw-table th .fw-sort:focus-visible {
   outline: 2px solid #fff;
   outline-offset: 2px;
 }
 
-#root .portal-shell .fw-student-table .fw-table th .fw-sort svg {
+#root .faculty-portal-shell .fw-student-table .fw-table th .fw-sort svg {
   width: 14px;
   height: 14px;
   transition: transform .15s ease;
 }
 
-#root .portal-shell .fw-student-table .fw-table th .fw-sort svg.is-ascending {
+#root .faculty-portal-shell .fw-student-table .fw-table th .fw-sort svg.is-ascending {
   transform: rotate(180deg);
 }
 
-#root .portal-shell .fw-student-table .fw-table td {
+#root .faculty-portal-shell .fw-student-table .fw-table td {
   padding: 12px 16px;
 }
 
-#root .portal-shell .fw-student-roll {
+#root .faculty-portal-shell .fw-student-roll {
   display: inline-flex;
   padding: 6px 9px;
   border: 1px solid var(--border);
@@ -2078,7 +2080,7 @@
   white-space: nowrap;
 }
 
-#root .portal-shell .fw-student-identity-button {
+#root .faculty-portal-shell .fw-student-identity-button {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -2090,11 +2092,11 @@
   transition: background-color .15s ease;
 }
 
-#root .portal-shell .fw-student-identity-button:hover {
+#root .faculty-portal-shell .fw-student-identity-button:hover {
   background: var(--surface-soft);
 }
 
-#root .portal-shell .fw-student-avatar {
+#root .faculty-portal-shell .fw-student-avatar {
   display: grid;
   flex: 0 0 36px;
   width: 36px;
@@ -2108,14 +2110,14 @@
   font-weight: 800;
 }
 
-#root .portal-shell .fw-student-identity {
+#root .faculty-portal-shell .fw-student-identity {
   display: grid;
   flex: 1 1 auto;
   gap: 3px;
   min-width: 0;
 }
 
-#root .portal-shell .fw-student-identity strong {
+#root .faculty-portal-shell .fw-student-identity strong {
   overflow: hidden;
   color: var(--brand);
   font-size: 13px;
@@ -2123,7 +2125,7 @@
   white-space: nowrap;
 }
 
-#root .portal-shell .fw-student-identity small {
+#root .faculty-portal-shell .fw-student-identity small {
   overflow: hidden;
   color: var(--text-muted);
   font-size: 10px;
@@ -2132,43 +2134,43 @@
   white-space: nowrap;
 }
 
-#root .portal-shell .fw-student-identity-button > svg {
+#root .faculty-portal-shell .fw-student-identity-button > svg {
   flex: 0 0 15px;
   width: 15px;
   height: 15px;
   color: var(--text-muted);
 }
 
-#root .portal-shell .fw-student-attendance {
+#root .faculty-portal-shell .fw-student-attendance {
   display: grid;
   gap: 6px;
   min-width: 110px;
 }
 
-#root .portal-shell .fw-student-attendance > div {
+#root .faculty-portal-shell .fw-student-attendance > div {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
 }
 
-#root .portal-shell .fw-student-attendance strong {
+#root .faculty-portal-shell .fw-student-attendance strong {
   color: var(--text-primary);
   font-size: 13px;
 }
 
-#root .portal-shell .fw-student-attendance small {
+#root .faculty-portal-shell .fw-student-attendance small {
   color: var(--success, #138a5b);
   font-size: 10px;
   white-space: nowrap;
 }
 
-#root .portal-shell .fw-student-attendance.is-at-risk strong,
-#root .portal-shell .fw-student-attendance.is-at-risk small {
+#root .faculty-portal-shell .fw-student-attendance.is-at-risk strong,
+#root .faculty-portal-shell .fw-student-attendance.is-at-risk small {
   color: var(--danger, #c23a3a);
 }
 
-#root .portal-shell .fw-student-attendance__track {
+#root .faculty-portal-shell .fw-student-attendance__track {
   display: block;
   height: 5px;
   overflow: hidden;
@@ -2176,89 +2178,89 @@
   background: var(--surface-soft);
 }
 
-#root .portal-shell .fw-student-attendance__track i {
+#root .faculty-portal-shell .fw-student-attendance__track i {
   display: block;
   height: 100%;
   border-radius: inherit;
   background: var(--success, #138a5b);
 }
 
-#root .portal-shell .fw-student-attendance.is-at-risk .fw-student-attendance__track i {
+#root .faculty-portal-shell .fw-student-attendance.is-at-risk .fw-student-attendance__track i {
   background: var(--danger, #c23a3a);
 }
 
 @media (max-width: 1100px) {
-  #root .portal-shell .fw-student-topbar {
+  #root .faculty-portal-shell .fw-student-topbar {
     grid-template-columns: minmax(0, 1fr);
     gap: 16px;
   }
 
-  #root .portal-shell .fw-student-topbar > .fw-student-overview {
+  #root .faculty-portal-shell .fw-student-topbar > .fw-student-overview {
     justify-self: stretch;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     overflow-x: visible;
   }
 
-  #root .portal-shell .fw-student-overview {
+  #root .faculty-portal-shell .fw-student-overview {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  #root .portal-shell .fw-student-filter-grid {
+  #root .faculty-portal-shell .fw-student-filter-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 640px) {
-  #root .portal-shell .fw-student-directory-heading {
+  #root .faculty-portal-shell .fw-student-directory-heading {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  #root .portal-shell .fw-student-table .fw-table-scroll {
+  #root .faculty-portal-shell .fw-student-table .fw-table-scroll {
     overflow: visible;
     border: 0;
     background: transparent;
   }
 
-  #root .portal-shell .fw-student-table .fw-table {
+  #root .faculty-portal-shell .fw-student-table .fw-table {
     min-width: 0;
   }
 
-  #root .portal-shell .fw-student-directory-toolbar {
+  #root .faculty-portal-shell .fw-student-directory-toolbar {
     align-items: stretch;
     flex-direction: column;
   }
 
-  #root .portal-shell .fw-student-directory-toolbar .fw-search,
-  #root .portal-shell .fw-student-directory-toolbar .fw-student-export {
+  #root .faculty-portal-shell .fw-student-directory-toolbar .fw-search,
+  #root .faculty-portal-shell .fw-student-directory-toolbar .fw-student-export {
     width: 100%;
     min-width: 0;
   }
 
-  #root .portal-shell .fw-student-filter-grid {
+  #root .faculty-portal-shell .fw-student-filter-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  #root .portal-shell .fw-student-results {
+  #root .faculty-portal-shell .fw-student-results {
     align-items: flex-start;
     flex-direction: column;
   }
 }
 
 /* Structured overview panels for the faculty class and resource workspaces. */
-#root .portal-shell .fw-timetable-overview,
-#root .portal-shell .fw-marks-overview,
-#root .portal-shell .fw-material-overview,
-#root .portal-shell .fw-leave-overview {
+#root .faculty-portal-shell .fw-timetable-overview,
+#root .faculty-portal-shell .fw-marks-overview,
+#root .faculty-portal-shell .fw-material-overview,
+#root .faculty-portal-shell .fw-leave-overview {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
 }
 
-#root .portal-shell .fw-timetable-overview > article,
-#root .portal-shell .fw-marks-overview > article,
-#root .portal-shell .fw-material-overview > article,
-#root .portal-shell .fw-leave-overview > article {
+#root .faculty-portal-shell .fw-timetable-overview > article,
+#root .faculty-portal-shell .fw-marks-overview > article,
+#root .faculty-portal-shell .fw-material-overview > article,
+#root .faculty-portal-shell .fw-leave-overview > article {
   display: grid;
   align-content: start;
   gap: 7px;
@@ -2270,31 +2272,31 @@
   box-shadow: var(--shadow-sm);
 }
 
-#root .portal-shell .fw-timetable-overview > article.is-primary,
-#root .portal-shell .fw-marks-overview > article.is-primary,
-#root .portal-shell .fw-material-overview > article.is-primary,
-#root .portal-shell .fw-leave-overview > article.is-primary {
+#root .faculty-portal-shell .fw-timetable-overview > article.is-primary,
+#root .faculty-portal-shell .fw-marks-overview > article.is-primary,
+#root .faculty-portal-shell .fw-material-overview > article.is-primary,
+#root .faculty-portal-shell .fw-leave-overview > article.is-primary {
   border-color: color-mix(in srgb, var(--brand) 28%, var(--border));
   background: linear-gradient(120deg, var(--brand-soft), var(--surface));
 }
 
-#root .portal-shell .fw-leave-overview > article.is-warning {
+#root .faculty-portal-shell .fw-leave-overview > article.is-warning {
   border-color: color-mix(in srgb, var(--warning, #d68a12) 34%, var(--border));
 }
 
-#root .portal-shell .fw-timetable-overview > article > span,
-#root .portal-shell .fw-marks-overview > article > span,
-#root .portal-shell .fw-material-overview > article > span,
-#root .portal-shell .fw-leave-overview > article > span {
+#root .faculty-portal-shell .fw-timetable-overview > article > span,
+#root .faculty-portal-shell .fw-marks-overview > article > span,
+#root .faculty-portal-shell .fw-material-overview > article > span,
+#root .faculty-portal-shell .fw-leave-overview > article > span {
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 700;
 }
 
-#root .portal-shell .fw-timetable-overview > article > strong,
-#root .portal-shell .fw-marks-overview > article > strong,
-#root .portal-shell .fw-material-overview > article > strong,
-#root .portal-shell .fw-leave-overview > article > strong {
+#root .faculty-portal-shell .fw-timetable-overview > article > strong,
+#root .faculty-portal-shell .fw-marks-overview > article > strong,
+#root .faculty-portal-shell .fw-material-overview > article > strong,
+#root .faculty-portal-shell .fw-leave-overview > article > strong {
   overflow: hidden;
   color: var(--text-primary);
   font-size: clamp(22px, 1.8vw, 29px);
@@ -2303,21 +2305,21 @@
   text-overflow: ellipsis;
 }
 
-#root .portal-shell .fw-timetable-overview > article.is-primary > strong,
-#root .portal-shell .fw-marks-overview > article.is-primary > strong,
-#root .portal-shell .fw-material-overview > article.is-primary > strong,
-#root .portal-shell .fw-leave-overview > article.is-primary > strong {
+#root .faculty-portal-shell .fw-timetable-overview > article.is-primary > strong,
+#root .faculty-portal-shell .fw-marks-overview > article.is-primary > strong,
+#root .faculty-portal-shell .fw-material-overview > article.is-primary > strong,
+#root .faculty-portal-shell .fw-leave-overview > article.is-primary > strong {
   color: var(--brand);
 }
 
-#root .portal-shell .fw-leave-overview > article.is-warning > strong {
+#root .faculty-portal-shell .fw-leave-overview > article.is-warning > strong {
   color: var(--warning, #b87509);
 }
 
-#root .portal-shell .fw-timetable-overview > article > small,
-#root .portal-shell .fw-marks-overview > article > small,
-#root .portal-shell .fw-material-overview > article > small,
-#root .portal-shell .fw-leave-overview > article > small {
+#root .faculty-portal-shell .fw-timetable-overview > article > small,
+#root .faculty-portal-shell .fw-marks-overview > article > small,
+#root .faculty-portal-shell .fw-material-overview > article > small,
+#root .faculty-portal-shell .fw-leave-overview > article > small {
   overflow: hidden;
   color: var(--text-muted);
   font-size: 11px;
@@ -2325,12 +2327,12 @@
   white-space: nowrap;
 }
 
-#root .portal-shell .fw-marks-overview > article:first-child > strong {
+#root .faculty-portal-shell .fw-marks-overview > article:first-child > strong {
   font-size: clamp(16px, 1.35vw, 20px);
   line-height: 1.25;
 }
 
-#root .portal-shell .fw-attendance-class-heading {
+#root .faculty-portal-shell .fw-attendance-class-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2342,19 +2344,19 @@
   background: linear-gradient(110deg, var(--brand-soft), var(--surface));
 }
 
-#root .portal-shell .fw-attendance-class-heading h2 {
+#root .faculty-portal-shell .fw-attendance-class-heading h2 {
   margin: 0;
   color: var(--text-primary);
   font-size: 19px;
 }
 
-#root .portal-shell .fw-attendance-class-heading > div > p:last-child {
+#root .faculty-portal-shell .fw-attendance-class-heading > div > p:last-child {
   margin: 5px 0 0;
   color: var(--text-secondary);
   font-size: 12px;
 }
 
-#root .portal-shell .fw-attendance-class-heading > span {
+#root .faculty-portal-shell .fw-attendance-class-heading > span {
   flex: 0 0 auto;
   padding: 7px 11px;
   border: 1px solid var(--border);
@@ -2365,14 +2367,14 @@
   font-weight: 700;
 }
 
-#root .portal-shell .fw-attendance-class-metrics {
+#root .faculty-portal-shell .fw-attendance-class-metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 14px;
 }
 
-#root .portal-shell .fw-attendance-class-metrics > article {
+#root .faculty-portal-shell .fw-attendance-class-metrics > article {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2384,69 +2386,69 @@
   background: var(--surface-soft);
 }
 
-#root .portal-shell .fw-attendance-class-metrics > article > span {
+#root .faculty-portal-shell .fw-attendance-class-metrics > article > span {
   color: var(--text-secondary);
   font-size: 11px;
   font-weight: 700;
 }
 
-#root .portal-shell .fw-attendance-class-metrics > article > strong {
+#root .faculty-portal-shell .fw-attendance-class-metrics > article > strong {
   color: var(--text-primary);
   font-size: 17px;
 }
 
-#root .portal-shell .fw-attendance-class-metrics > article.is-present > strong { color: var(--success, #138a5b); }
-#root .portal-shell .fw-attendance-class-metrics > article.is-absent > strong { color: var(--danger, #c23a3a); }
-#root .portal-shell .fw-attendance-class-metrics > article.is-late > strong { color: var(--warning, #b87509); }
+#root .faculty-portal-shell .fw-attendance-class-metrics > article.is-present > strong { color: var(--success, #138a5b); }
+#root .faculty-portal-shell .fw-attendance-class-metrics > article.is-absent > strong { color: var(--danger, #c23a3a); }
+#root .faculty-portal-shell .fw-attendance-class-metrics > article.is-late > strong { color: var(--warning, #b87509); }
 
 @media (max-width: 1050px) {
-  #root .portal-shell .fw-timetable-overview,
-  #root .portal-shell .fw-marks-overview,
-  #root .portal-shell .fw-material-overview,
-  #root .portal-shell .fw-leave-overview {
+  #root .faculty-portal-shell .fw-timetable-overview,
+  #root .faculty-portal-shell .fw-marks-overview,
+  #root .faculty-portal-shell .fw-material-overview,
+  #root .faculty-portal-shell .fw-leave-overview {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 640px) {
-  #root .portal-shell .fw-attendance-class-heading {
+  #root .faculty-portal-shell .fw-attendance-class-heading {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  #root .portal-shell .fw-attendance-class-metrics {
+  #root .faculty-portal-shell .fw-attendance-class-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 /* Compact, scannable resource library. */
-#root .portal-shell .fw-material-library-card {
+#root .faculty-portal-shell .fw-material-library-card {
   display: grid;
   gap: 17px;
   padding: 20px;
 }
 
-#root .portal-shell .fw-material-library-heading {
+#root .faculty-portal-shell .fw-material-library-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
 }
 
-#root .portal-shell .fw-material-library-heading h2 {
+#root .faculty-portal-shell .fw-material-library-heading h2 {
   margin: 0;
   color: var(--text-primary);
   font-size: 18px;
   letter-spacing: -.02em;
 }
 
-#root .portal-shell .fw-material-library-heading > div > p:last-child {
+#root .faculty-portal-shell .fw-material-library-heading > div > p:last-child {
   margin: 5px 0 0;
   color: var(--text-muted);
   font-size: 12px;
 }
 
-#root .portal-shell .fw-material-library-heading > span {
+#root .faculty-portal-shell .fw-material-library-heading > span {
   flex: 0 0 auto;
   padding: 8px 11px;
   border: 1px solid var(--border);
@@ -2457,11 +2459,11 @@
   font-weight: 650;
 }
 
-#root .portal-shell .fw-material-library-heading > span strong {
+#root .faculty-portal-shell .fw-material-library-heading > span strong {
   color: var(--brand);
 }
 
-#root .portal-shell .fw-material-toolbar {
+#root .faculty-portal-shell .fw-material-toolbar {
   display: grid;
   grid-template-columns: minmax(240px, 1.5fr) repeat(2, minmax(170px, 1fr));
   align-items: end;
@@ -2473,7 +2475,7 @@
   background: var(--surface-soft);
 }
 
-#root .portal-shell .fw-material-toolbar .fw-search {
+#root .faculty-portal-shell .fw-material-toolbar .fw-search {
   width: 100%;
   min-width: 0;
   min-height: 44px;
@@ -2481,22 +2483,22 @@
   background: var(--surface);
 }
 
-#root .portal-shell .fw-material-toolbar .fw-field {
+#root .faculty-portal-shell .fw-material-toolbar .fw-field {
   min-width: 0;
 }
 
-#root .portal-shell .fw-material-toolbar .fw-field > select {
+#root .faculty-portal-shell .fw-material-toolbar .fw-field > select {
   min-height: 44px;
   border-radius: 10px;
   background-color: var(--surface);
 }
 
-#root .portal-shell .fw-material-list {
+#root .faculty-portal-shell .fw-material-list {
   display: grid;
   gap: 10px;
 }
 
-#root .portal-shell .fw-material-row {
+#root .faculty-portal-shell .fw-material-row {
   display: grid;
   grid-template-columns: 48px minmax(0, 1fr) 88px auto;
   align-items: center;
@@ -2509,13 +2511,13 @@
   transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
 }
 
-#root .portal-shell .fw-material-row:hover {
+#root .faculty-portal-shell .fw-material-row:hover {
   transform: translateY(-1px);
   border-color: color-mix(in srgb, var(--brand) 32%, var(--border));
   box-shadow: var(--shadow-sm);
 }
 
-#root .portal-shell .fw-material-file-icon {
+#root .faculty-portal-shell .fw-material-file-icon {
   display: grid;
   align-content: center;
   justify-items: center;
@@ -2528,18 +2530,18 @@
   color: var(--brand);
 }
 
-#root .portal-shell .fw-material-file-icon > svg {
+#root .faculty-portal-shell .fw-material-file-icon > svg {
   width: 19px;
   height: 19px;
 }
 
-#root .portal-shell .fw-material-content {
+#root .faculty-portal-shell .fw-material-content {
   display: grid;
   gap: 6px;
   min-width: 0;
 }
 
-#root .portal-shell .fw-material-content > h3 {
+#root .faculty-portal-shell .fw-material-content > h3 {
   overflow: hidden;
   margin: 0;
   color: var(--text-primary);
@@ -2550,8 +2552,8 @@
   white-space: nowrap;
 }
 
-#root .portal-shell .fw-material-file-meta,
-#root .portal-shell .fw-material-details {
+#root .faculty-portal-shell .fw-material-file-meta,
+#root .faculty-portal-shell .fw-material-details {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -2561,14 +2563,14 @@
   font-size: 10px;
 }
 
-#root .portal-shell .fw-material-file-meta > span:not(.fw-material-type) {
+#root .faculty-portal-shell .fw-material-file-meta > span:not(.fw-material-type) {
   max-width: min(360px, 45vw);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-#root .portal-shell .fw-material-type {
+#root .faculty-portal-shell .fw-material-type {
   padding: 3px 6px;
   border: 1px solid color-mix(in srgb, var(--brand) 16%, var(--border));
   border-radius: 5px;
@@ -2579,20 +2581,20 @@
   letter-spacing: .04em;
 }
 
-#root .portal-shell .fw-material-details > strong {
+#root .faculty-portal-shell .fw-material-details > strong {
   color: var(--text-secondary);
   font-size: 10px;
   font-weight: 750;
 }
 
-#root .portal-shell .fw-material-details > i {
+#root .faculty-portal-shell .fw-material-details > i {
   width: 3px;
   height: 3px;
   border-radius: 50%;
   background: var(--text-muted);
 }
 
-#root .portal-shell .fw-material-sections {
+#root .faculty-portal-shell .fw-material-sections {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -2601,17 +2603,17 @@
   font-size: 10px;
 }
 
-#root .portal-shell .fw-material-sections > span {
+#root .faculty-portal-shell .fw-material-sections > span {
   font-weight: 650;
 }
 
-#root .portal-shell .fw-material-sections > div {
+#root .faculty-portal-shell .fw-material-sections > div {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
 }
 
-#root .portal-shell .fw-material-sections > div > span {
+#root .faculty-portal-shell .fw-material-sections > div > span {
   padding: 3px 7px;
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -2621,12 +2623,12 @@
   font-weight: 650;
 }
 
-#root .portal-shell .fw-material-sections > small {
+#root .faculty-portal-shell .fw-material-sections > small {
   color: var(--text-muted);
   font-size: 10px;
 }
 
-#root .portal-shell .fw-material-downloads {
+#root .faculty-portal-shell .fw-material-downloads {
   display: grid;
   grid-template-columns: 16px auto;
   align-items: center;
@@ -2637,24 +2639,24 @@
   color: var(--text-muted);
 }
 
-#root .portal-shell .fw-material-downloads > svg {
+#root .faculty-portal-shell .fw-material-downloads > svg {
   width: 14px;
   height: 14px;
   color: var(--brand);
 }
 
-#root .portal-shell .fw-material-downloads > strong {
+#root .faculty-portal-shell .fw-material-downloads > strong {
   color: var(--text-primary);
   font-size: 14px;
 }
 
-#root .portal-shell .fw-material-downloads > small {
+#root .faculty-portal-shell .fw-material-downloads > small {
   grid-column: 2;
   color: var(--text-muted);
   font-size: 9px;
 }
 
-#root .portal-shell .fw-material-actions {
+#root .faculty-portal-shell .fw-material-actions {
   display: flex;
   align-items: center;
   gap: 5px;
@@ -2662,30 +2664,30 @@
   border-left: 1px solid var(--border);
 }
 
-#root .portal-shell .fw-material-actions .fw-icon-button {
+#root .faculty-portal-shell .fw-material-actions .fw-icon-button {
   width: 34px;
   min-height: 34px;
   border-radius: 9px;
   color: var(--text-secondary);
 }
 
-#root .portal-shell .fw-material-actions .fw-icon-button:hover {
+#root .faculty-portal-shell .fw-material-actions .fw-icon-button:hover {
   color: var(--brand);
 }
 
 @media (max-width: 950px) {
-  #root .portal-shell .fw-material-toolbar {
+  #root .faculty-portal-shell .fw-material-toolbar {
     grid-template-columns: minmax(0, 1.3fr) repeat(2, minmax(120px, 1fr));
   }
 
-  #root .portal-shell .fw-material-row {
+  #root .faculty-portal-shell .fw-material-row {
     grid-template-columns: 44px minmax(0, 1fr) 76px auto;
     gap: 10px;
     padding: 12px;
   }
 }
 
-#root .portal-shell .fw-material-filter-status {
+#root .faculty-portal-shell .fw-material-filter-status {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2695,45 +2697,46 @@
   font-size: 11px;
 }
 
-#root .portal-shell .fw-material-filter-status > button {
-  padding: 4px 0;
-  border: 0;
-  background: transparent;
+#root .faculty-portal-shell .fw-material-filter-status > button {
+  padding: 4px 9px;
+  border: 1px solid color-mix(in srgb, var(--brand) 38%, var(--border));
+  border-radius: 8px;
+  background: var(--surface);
   color: var(--brand);
-  font: inherit;
+  font: 600 12px/1.2 var(--font-family);
   font-weight: 750;
   cursor: pointer;
 }
 
-#root .portal-shell .fw-material-filter-status > button:hover {
-  text-decoration: underline;
+#root .faculty-portal-shell .fw-material-filter-status > button:hover {
+  background: var(--brand-soft);
 }
 
 @media (max-width: 700px) {
-  #root .portal-shell .fw-material-library-card {
+  #root .faculty-portal-shell .fw-material-library-card {
     padding: 14px;
   }
 
-  #root .portal-shell .fw-material-library-heading {
+  #root .faculty-portal-shell .fw-material-library-heading {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  #root .portal-shell .fw-material-toolbar {
+  #root .faculty-portal-shell .fw-material-toolbar {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  #root .portal-shell .fw-material-row {
+  #root .faculty-portal-shell .fw-material-row {
     grid-template-columns: 40px minmax(0, 1fr);
     align-items: start;
   }
 
-  #root .portal-shell .fw-material-file-icon {
+  #root .faculty-portal-shell .fw-material-file-icon {
     width: 40px;
     height: 44px;
   }
 
-  #root .portal-shell .fw-material-downloads {
+  #root .faculty-portal-shell .fw-material-downloads {
     grid-column: 1;
     grid-row: 2;
     justify-content: start;
@@ -2741,7 +2744,7 @@
     border: 0;
   }
 
-  #root .portal-shell .fw-material-actions {
+  #root .faculty-portal-shell .fw-material-actions {
     grid-column: 2;
     grid-row: 2;
     justify-self: end;
@@ -2749,20 +2752,20 @@
     border: 0;
   }
 
-  #root .portal-shell .fw-material-content > h3 {
+  #root .faculty-portal-shell .fw-material-content > h3 {
     white-space: normal;
   }
 }
 
 /* Study material summary icons and resource library controls. */
-#root .portal-shell .fw-material-stat-label {
+#root .faculty-portal-shell .fw-material-stat-label {
   display: flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
 }
 
-#root .portal-shell .fw-material-stat-label > svg {
+#root .faculty-portal-shell .fw-material-stat-label > svg {
   box-sizing: content-box;
   flex: 0 0 17px;
   width: 17px;
@@ -2774,14 +2777,14 @@
   stroke-width: 2;
 }
 
-#root .portal-shell .fw-material-stat-label > span {
+#root .faculty-portal-shell .fw-material-stat-label > span {
   min-width: 0;
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 700;
 }
 
-#root .portal-shell .fw-material-library-actions {
+#root .faculty-portal-shell .fw-material-library-actions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -2790,14 +2793,31 @@
   gap: 8px;
 }
 
-#root .portal-shell .fw-material-library-actions > .fw-button {
+#root .faculty-portal-shell .fw-material-library-actions > .fw-button {
   min-height: 38px;
-  padding: 8px 11px;
-  font-size: 11px;
+  padding: 8px 12px;
+  border-color: color-mix(in srgb, var(--brand) 38%, var(--border));
+  background: var(--surface);
+  color: var(--brand);
+  font-size: 13px;
+  font-weight: 750;
   white-space: nowrap;
 }
 
-#root .portal-shell .fw-material-filter-count {
+#root .faculty-portal-shell .fw-material-library-actions > .fw-button svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  stroke-width: 2.4;
+}
+
+#root .faculty-portal-shell .fw-material-library-actions > .fw-material-upload-button {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: var(--surface);
+}
+
+#root .faculty-portal-shell .fw-material-filter-count {
   display: inline-grid;
   width: 18px;
   height: 18px;
@@ -2810,86 +2830,86 @@
   font-weight: 800;
 }
 
-#root .portal-shell .fw-material-toolbar {
+#root .faculty-portal-shell .fw-material-toolbar {
   grid-template-columns: minmax(0, 1fr);
 }
 
-#root .portal-shell .fw-material-filter-controls {
+#root .faculty-portal-shell .fw-material-filter-controls {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: end;
   gap: 12px;
 }
 
-#root .portal-shell .fw-material-filter-controls[hidden] {
+#root .faculty-portal-shell .fw-material-filter-controls[hidden] {
   display: none;
 }
 
-#root .portal-shell .fw-material-filter-controls .fw-field {
+#root .faculty-portal-shell .fw-material-filter-controls .fw-field {
   min-width: 0;
 }
 
-#root .portal-shell .fw-material-filter-controls .fw-field > select {
+#root .faculty-portal-shell .fw-material-filter-controls .fw-field > select {
   min-height: 44px;
   border-radius: 10px;
   background-color: var(--surface);
 }
 
 @media (max-width: 700px) {
-  #root .portal-shell .fw-material-library-actions {
+  #root .faculty-portal-shell .fw-material-library-actions {
     justify-content: flex-start;
     width: 100%;
   }
 
-  #root .portal-shell .fw-material-filter-controls {
+  #root .faculty-portal-shell .fw-material-filter-controls {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 
 /* Leave management: balances, request guidance, and scannable history. */
-#root .portal-shell .fw-leave-stat-label {
+#root .faculty-portal-shell .fw-leave-stat-label {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-#root .portal-shell .fw-leave-stat-label > svg {
+#root .faculty-portal-shell .fw-leave-stat-label > svg {
   width: 16px;
   height: 16px;
   color: var(--brand);
 }
 
-#root .portal-shell .fw-leave-overview > article.is-warning .fw-leave-stat-label > svg {
+#root .faculty-portal-shell .fw-leave-overview > article.is-warning .fw-leave-stat-label > svg {
   color: var(--warning, #b87509);
 }
 
-#root .portal-shell .fw-leave-balances {
+#root .faculty-portal-shell .fw-leave-balances {
   display: grid;
   gap: 14px;
   margin: 18px 0 22px;
 }
 
-#root .portal-shell .fw-leave-section-heading {
+#root .faculty-portal-shell .fw-leave-section-heading {
   display: flex;
   align-items: end;
   justify-content: space-between;
   gap: 16px;
 }
 
-#root .portal-shell .fw-leave-section-heading h2 {
+#root .faculty-portal-shell .fw-leave-section-heading h2 {
   margin: 0;
   color: var(--text-primary);
   font-size: 19px;
   letter-spacing: -.025em;
 }
 
-#root .portal-shell .fw-leave-section-heading p:last-child {
+#root .faculty-portal-shell .fw-leave-section-heading p:last-child {
   margin: 5px 0 0;
   color: var(--text-muted);
   font-size: 12px;
 }
 
-#root .portal-shell .fw-leave-section-heading > span {
+#root .faculty-portal-shell .fw-leave-section-heading > span {
   flex: 0 0 auto;
   padding: 7px 10px;
   border: 1px solid var(--border);
@@ -2900,13 +2920,13 @@
   font-weight: 700;
 }
 
-#root .portal-shell .fw-leave-balance-cards {
+#root .faculty-portal-shell .fw-leave-balance-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
   gap: 12px;
 }
 
-#root .portal-shell .fw-leave-balance-card {
+#root .faculty-portal-shell .fw-leave-balance-card {
   display: grid;
   align-content: start;
   gap: 11px;
@@ -2918,15 +2938,15 @@
   box-shadow: var(--shadow-sm);
 }
 
-#root .portal-shell .fw-leave-balance-card-heading {
+#root .faculty-portal-shell .fw-leave-balance-card-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
 }
 
-#root .portal-shell .fw-leave-category-icon,
-#root .portal-shell .fw-leave-panel-icon {
+#root .faculty-portal-shell .fw-leave-category-icon,
+#root .faculty-portal-shell .fw-leave-panel-icon {
   display: grid;
   flex: 0 0 auto;
   width: 38px;
@@ -2937,13 +2957,13 @@
   color: var(--brand);
 }
 
-#root .portal-shell .fw-leave-category-icon > svg,
-#root .portal-shell .fw-leave-panel-icon > svg {
+#root .faculty-portal-shell .fw-leave-category-icon > svg,
+#root .faculty-portal-shell .fw-leave-panel-icon > svg {
   width: 18px;
   height: 18px;
 }
 
-#root .portal-shell .fw-leave-category-code {
+#root .faculty-portal-shell .fw-leave-category-code {
   padding: 5px 8px;
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -2952,7 +2972,7 @@
   font-weight: 750;
 }
 
-#root .portal-shell .fw-leave-category-name {
+#root .faculty-portal-shell .fw-leave-category-name {
   overflow: hidden;
   margin: 0;
   color: var(--text-primary);
@@ -2962,42 +2982,42 @@
   white-space: nowrap;
 }
 
-#root .portal-shell .fw-leave-balance-amount {
+#root .faculty-portal-shell .fw-leave-balance-amount {
   display: flex;
   align-items: center;
   gap: 9px;
 }
 
-#root .portal-shell .fw-leave-balance-amount > strong {
+#root .faculty-portal-shell .fw-leave-balance-amount > strong {
   color: var(--brand);
   font-size: 29px;
   letter-spacing: -.04em;
   line-height: 1;
 }
 
-#root .portal-shell .fw-leave-balance-amount > span {
+#root .faculty-portal-shell .fw-leave-balance-amount > span {
   display: grid;
   gap: 3px;
 }
 
-#root .portal-shell .fw-leave-balance-amount b {
+#root .faculty-portal-shell .fw-leave-balance-amount b {
   color: var(--text-secondary);
   font-size: 10px;
 }
 
-#root .portal-shell .fw-leave-balance-amount small {
+#root .faculty-portal-shell .fw-leave-balance-amount small {
   color: var(--text-muted);
   font-size: 10px;
 }
 
-#root .portal-shell .fw-leave-balance-progress {
+#root .faculty-portal-shell .fw-leave-balance-progress {
   overflow: hidden;
   height: 7px;
   border-radius: 999px;
   background: var(--surface-soft);
 }
 
-#root .portal-shell .fw-leave-balance-progress > span {
+#root .faculty-portal-shell .fw-leave-balance-progress > span {
   display: block;
   height: 100%;
   border-radius: inherit;
@@ -3005,7 +3025,7 @@
   transition: width .2s ease;
 }
 
-#root .portal-shell .fw-leave-balance-card > footer {
+#root .faculty-portal-shell .fw-leave-balance-card > footer {
   display: flex;
   justify-content: space-between;
   gap: 10px;
@@ -3013,43 +3033,43 @@
   font-size: 10px;
 }
 
-#root .portal-shell .fw-leave-workspace {
+#root .faculty-portal-shell .fw-leave-workspace {
   grid-template-columns: minmax(0, 1.08fr) minmax(0, .92fr);
   gap: 16px;
 }
 
-#root .portal-shell .fw-leave-workspace > .fw-card {
+#root .faculty-portal-shell .fw-leave-workspace > .fw-card {
   display: grid;
   gap: 18px;
   min-width: 0;
   padding: 22px;
 }
 
-#root .portal-shell .fw-leave-panel-heading {
+#root .faculty-portal-shell .fw-leave-panel-heading {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-#root .portal-shell .fw-leave-panel-heading h2 {
+#root .faculty-portal-shell .fw-leave-panel-heading h2 {
   margin: 0;
   color: var(--text-primary);
   font-size: 19px;
   letter-spacing: -.025em;
 }
 
-#root .portal-shell .fw-leave-panel-heading p:last-child {
+#root .faculty-portal-shell .fw-leave-panel-heading p:last-child {
   margin: 4px 0 0;
   color: var(--text-muted);
   font-size: 11px;
   line-height: 1.5;
 }
 
-#root .portal-shell .fw-leave-date-fields {
+#root .faculty-portal-shell .fw-leave-date-fields {
   gap: 12px;
 }
 
-#root .portal-shell .fw-leave-half-day {
+#root .faculty-portal-shell .fw-leave-half-day {
   width: fit-content;
   padding: 9px 11px;
   border: 1px solid var(--border);
@@ -3057,22 +3077,22 @@
   background: var(--surface-soft);
 }
 
-#root .portal-shell .fw-leave-half-day > span {
+#root .faculty-portal-shell .fw-leave-half-day > span {
   display: grid;
   gap: 2px;
 }
 
-#root .portal-shell .fw-leave-half-day strong {
+#root .faculty-portal-shell .fw-leave-half-day strong {
   color: var(--text-primary);
   font-size: 11px;
 }
 
-#root .portal-shell .fw-leave-half-day small {
+#root .faculty-portal-shell .fw-leave-half-day small {
   color: var(--text-muted);
   font-size: 10px;
 }
 
-#root .portal-shell .fw-leave-request-summary {
+#root .faculty-portal-shell .fw-leave-request-summary {
   display: grid;
   grid-template-columns: 36px minmax(0, 1fr) minmax(120px, auto);
   align-items: center;
@@ -3083,7 +3103,7 @@
   background: linear-gradient(110deg, var(--brand-soft), var(--surface));
 }
 
-#root .portal-shell .fw-leave-request-summary-icon {
+#root .faculty-portal-shell .fw-leave-request-summary-icon {
   display: grid;
   width: 34px;
   height: 34px;
@@ -3093,35 +3113,35 @@
   color: var(--brand);
 }
 
-#root .portal-shell .fw-leave-request-summary-icon > svg {
+#root .faculty-portal-shell .fw-leave-request-summary-icon > svg {
   width: 17px;
   height: 17px;
 }
 
-#root .portal-shell .fw-leave-request-summary > div {
+#root .faculty-portal-shell .fw-leave-request-summary > div {
   display: grid;
   gap: 3px;
   min-width: 0;
 }
 
-#root .portal-shell .fw-leave-request-summary > div > span {
+#root .faculty-portal-shell .fw-leave-request-summary > div > span {
   color: var(--text-secondary);
   font-size: 10px;
   font-weight: 700;
 }
 
-#root .portal-shell .fw-leave-request-summary strong {
+#root .faculty-portal-shell .fw-leave-request-summary strong {
   color: var(--text-primary);
   font-size: 17px;
 }
 
-#root .portal-shell .fw-leave-request-summary strong small {
+#root .faculty-portal-shell .fw-leave-request-summary strong small {
   color: var(--text-secondary);
   font-size: 10px;
   font-weight: 550;
 }
 
-#root .portal-shell .fw-leave-request-summary p {
+#root .faculty-portal-shell .fw-leave-request-summary p {
   overflow: hidden;
   margin: 0;
   color: var(--text-muted);
@@ -3130,25 +3150,25 @@
   white-space: nowrap;
 }
 
-#root .portal-shell .fw-leave-request-summary-balance {
+#root .faculty-portal-shell .fw-leave-request-summary-balance {
   padding-left: 13px;
   border-left: 1px solid color-mix(in srgb, var(--brand) 22%, var(--border));
 }
 
-#root .portal-shell .fw-leave-attachment-field > span:first-child {
+#root .faculty-portal-shell .fw-leave-attachment-field > span:first-child {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
   gap: 4px 8px;
 }
 
-#root .portal-shell .fw-leave-attachment-field > span:first-child > small {
+#root .faculty-portal-shell .fw-leave-attachment-field > span:first-child > small {
   color: var(--text-muted);
   font-size: 10px;
   font-weight: 500;
 }
 
-#root .portal-shell .fw-leave-attachment-control {
+#root .faculty-portal-shell .fw-leave-attachment-control {
   position: relative;
   display: flex;
   align-items: center;
@@ -3162,21 +3182,21 @@
   color: var(--text-secondary);
 }
 
-#root .portal-shell .fw-leave-attachment-control > svg {
+#root .faculty-portal-shell .fw-leave-attachment-control > svg {
   flex: 0 0 auto;
   width: 17px;
   height: 17px;
   color: var(--brand);
 }
 
-#root .portal-shell .fw-leave-attachment-control > span {
+#root .faculty-portal-shell .fw-leave-attachment-control > span {
   overflow: hidden;
   font-size: 11px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-#root .portal-shell .fw-leave-attachment-control > input {
+#root .faculty-portal-shell .fw-leave-attachment-control > input {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -3186,12 +3206,12 @@
   cursor: pointer;
 }
 
-#root .portal-shell .fw-leave-attachment-control:focus-within {
+#root .faculty-portal-shell .fw-leave-attachment-control:focus-within {
   outline: 2px solid color-mix(in srgb, var(--brand) 60%, transparent);
   outline-offset: 2px;
 }
 
-#root .portal-shell .fw-leave-form-footer {
+#root .faculty-portal-shell .fw-leave-form-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -3200,34 +3220,34 @@
   margin-top: 2px;
 }
 
-#root .portal-shell .fw-leave-form-footer > span {
+#root .faculty-portal-shell .fw-leave-form-footer > span {
   flex: 1 1 180px;
   color: var(--text-muted);
   font-size: 10px;
   line-height: 1.5;
 }
 
-#root .portal-shell .fw-leave-form-footer > .fw-button {
+#root .faculty-portal-shell .fw-leave-form-footer > .fw-button {
   display: inline-flex;
   align-items: center;
   gap: 7px;
 }
 
-#root .portal-shell .fw-leave-form-footer > .fw-button-primary {
+#root .faculty-portal-shell .fw-leave-form-footer > .fw-button-primary {
   border-color: var(--brand);
   background: var(--brand-solid);
   color: var(--text-on-dark);
   box-shadow: 0 7px 16px color-mix(in srgb, var(--brand) 20%, transparent);
 }
 
-#root .portal-shell .fw-leave-form-footer > .fw-button-primary:hover:not(:disabled) {
+#root .faculty-portal-shell .fw-leave-form-footer > .fw-button-primary:hover:not(:disabled) {
   border-color: var(--brand-hover);
   background: var(--brand-solid-hover);
   color: var(--text-on-dark);
   box-shadow: 0 9px 19px color-mix(in srgb, var(--brand) 26%, transparent);
 }
 
-#root .portal-shell .fw-leave-form-footer > .fw-button-primary:disabled {
+#root .faculty-portal-shell .fw-leave-form-footer > .fw-button-primary:disabled {
   border-color: color-mix(in srgb, var(--brand) 25%, var(--border));
   background: color-mix(in srgb, var(--brand) 13%, var(--surface));
   color: color-mix(in srgb, var(--brand) 54%, var(--text-muted));
@@ -3236,16 +3256,16 @@
   cursor: not-allowed;
 }
 
-#root .portal-shell .fw-leave-form-footer > .fw-button > svg {
+#root .faculty-portal-shell .fw-leave-form-footer > .fw-button > svg {
   width: 15px;
   height: 15px;
 }
 
-#root .portal-shell .fw-leave-history {
+#root .faculty-portal-shell .fw-leave-history {
   align-content: start;
 }
 
-#root .portal-shell .fw-leave-history-filters {
+#root .faculty-portal-shell .fw-leave-history-filters {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -3253,7 +3273,7 @@
   border-bottom: 1px solid var(--border);
 }
 
-#root .portal-shell .fw-leave-history-filters > button {
+#root .faculty-portal-shell .fw-leave-history-filters > button {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -3269,23 +3289,23 @@
   cursor: pointer;
 }
 
-#root .portal-shell .fw-leave-history-filters > button > span {
+#root .faculty-portal-shell .fw-leave-history-filters > button > span {
   color: var(--text-muted);
   font-size: 9px;
 }
 
-#root .portal-shell .fw-leave-history-filters > button.is-active {
+#root .faculty-portal-shell .fw-leave-history-filters > button.is-active {
   border-color: color-mix(in srgb, var(--brand) 28%, var(--border));
   background: var(--brand-soft);
   color: var(--brand);
 }
 
-#root .portal-shell .fw-leave-request-list {
+#root .faculty-portal-shell .fw-leave-request-list {
   display: grid;
   gap: 10px;
 }
 
-#root .portal-shell .fw-leave-request-row {
+#root .faculty-portal-shell .fw-leave-request-row {
   display: grid;
   gap: 9px;
   min-width: 0;
@@ -3295,8 +3315,8 @@
   background: var(--surface);
 }
 
-#root .portal-shell .fw-leave-request-topline,
-#root .portal-shell .fw-leave-request-topline > div {
+#root .faculty-portal-shell .fw-leave-request-topline,
+#root .faculty-portal-shell .fw-leave-request-topline > div {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -3304,11 +3324,11 @@
   min-width: 0;
 }
 
-#root .portal-shell .fw-leave-request-topline > div {
+#root .faculty-portal-shell .fw-leave-request-topline > div {
   justify-content: flex-start;
 }
 
-#root .portal-shell .fw-leave-request-type-icon {
+#root .faculty-portal-shell .fw-leave-request-type-icon {
   display: grid;
   flex: 0 0 auto;
   width: 32px;
@@ -3319,12 +3339,12 @@
   color: var(--brand);
 }
 
-#root .portal-shell .fw-leave-request-type-icon > svg {
+#root .faculty-portal-shell .fw-leave-request-type-icon > svg {
   width: 15px;
   height: 15px;
 }
 
-#root .portal-shell .fw-leave-request-topline h3 {
+#root .faculty-portal-shell .fw-leave-request-topline h3 {
   overflow: hidden;
   margin: 0;
   color: var(--text-primary);
@@ -3333,32 +3353,32 @@
   white-space: nowrap;
 }
 
-#root .portal-shell .fw-leave-request-topline p {
+#root .faculty-portal-shell .fw-leave-request-topline p {
   margin: 3px 0 0;
   color: var(--text-muted);
   font-size: 10px;
 }
 
-#root .portal-shell .fw-leave-request-dates {
+#root .faculty-portal-shell .fw-leave-request-dates {
   margin: 0;
   color: var(--text-secondary);
   font-size: 11px;
   font-weight: 700;
 }
 
-#root .portal-shell .fw-leave-request-dates > span {
+#root .faculty-portal-shell .fw-leave-request-dates > span {
   padding: 0 4px;
   color: var(--text-muted);
   font-size: 10px;
   font-weight: 500;
 }
 
-#root .portal-shell .fw-leave-request-applied {
+#root .faculty-portal-shell .fw-leave-request-applied {
   color: var(--text-muted);
   font-size: 10px;
 }
 
-#root .portal-shell .fw-leave-request-remarks {
+#root .faculty-portal-shell .fw-leave-request-remarks {
   margin: 0;
   padding: 8px 10px;
   border-radius: 8px;
@@ -3368,7 +3388,7 @@
   line-height: 1.5;
 }
 
-#root .portal-shell .fw-leave-cancel-button {
+#root .faculty-portal-shell .fw-leave-cancel-button {
   display: inline-flex;
   align-items: center;
   justify-self: start;
@@ -3385,60 +3405,60 @@
   cursor: pointer;
 }
 
-#root .portal-shell .fw-leave-cancel-button > svg {
+#root .faculty-portal-shell .fw-leave-cancel-button > svg {
   width: 13px;
   height: 13px;
 }
 
 @media (max-width: 1180px) {
-  #root .portal-shell .fw-leave-workspace {
+  #root .faculty-portal-shell .fw-leave-workspace {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 
 @media (max-width: 700px) {
-  #root .portal-shell .fw-leave-section-heading {
+  #root .faculty-portal-shell .fw-leave-section-heading {
     align-items: flex-start;
   }
 
-  #root .portal-shell .fw-leave-workspace > .fw-card {
+  #root .faculty-portal-shell .fw-leave-workspace > .fw-card {
     padding: 16px;
   }
 
-  #root .portal-shell .fw-leave-request-summary {
+  #root .faculty-portal-shell .fw-leave-request-summary {
     grid-template-columns: 34px minmax(0, 1fr);
   }
 
-  #root .portal-shell .fw-leave-request-summary-balance {
+  #root .faculty-portal-shell .fw-leave-request-summary-balance {
     grid-column: 2;
     padding: 9px 0 0;
     border-top: 1px solid color-mix(in srgb, var(--brand) 22%, var(--border));
     border-left: 0;
   }
 
-  #root .portal-shell .fw-leave-date-fields {
+  #root .faculty-portal-shell .fw-leave-date-fields {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  #root .portal-shell .fw-leave-form-footer > .fw-button {
+  #root .faculty-portal-shell .fw-leave-form-footer > .fw-button {
     width: 100%;
     justify-content: center;
   }
 }
 
-#root .portal-shell .fw-leave-topbar {
+#root .faculty-portal-shell .fw-leave-topbar {
   display: grid;
   grid-template-columns: minmax(340px, .9fr) minmax(0, 1.6fr);
   align-items: start;
   gap: 24px;
 }
 
-#root .portal-shell .fw-leave-topbar > .fw-heading {
+#root .faculty-portal-shell .fw-leave-topbar > .fw-heading {
   align-self: start;
   margin: 0;
 }
 
-#root .portal-shell .fw-leave-topbar > .fw-leave-overview {
+#root .faculty-portal-shell .fw-leave-topbar > .fw-leave-overview {
   width: 100%;
   min-width: 0;
   max-width: none;
@@ -3449,31 +3469,31 @@
   scrollbar-width: thin;
 }
 
-#root .portal-shell .fw-leave-topbar > .fw-leave-overview > article {
+#root .faculty-portal-shell .fw-leave-topbar > .fw-leave-overview > article {
   scroll-snap-align: start;
 }
 
 @media (max-width: 1100px) {
-  #root .portal-shell .fw-leave-topbar {
+  #root .faculty-portal-shell .fw-leave-topbar {
     grid-template-columns: minmax(0, 1fr);
     gap: 16px;
   }
 
-  #root .portal-shell .fw-leave-topbar > .fw-leave-overview {
+  #root .faculty-portal-shell .fw-leave-topbar > .fw-leave-overview {
     width: 100%;
     max-width: none;
     justify-self: stretch;
   }
 }
 
-#root .portal-shell .fw-material-topbar {
+#root .faculty-portal-shell .fw-material-topbar {
   display: grid;
   grid-template-columns: minmax(340px, .9fr) minmax(0, 1.6fr);
   align-items: start;
   gap: 24px;
 }
 
-#root .portal-shell .fw-marks-topbar {
+#root .faculty-portal-shell .fw-marks-topbar {
   display: grid;
   grid-template-columns: minmax(340px, .9fr) minmax(0, 1.6fr);
   align-items: start;
@@ -3481,12 +3501,12 @@
   min-width: 0;
 }
 
-#root .portal-shell .fw-marks-topbar > .fw-heading {
+#root .faculty-portal-shell .fw-marks-topbar > .fw-heading {
   align-self: start;
   margin: 0;
 }
 
-#root .portal-shell .fw-marks-topbar > .fw-marks-overview {
+#root .faculty-portal-shell .fw-marks-topbar > .fw-marks-overview {
   width: 100%;
   min-width: 0;
   max-width: none;
@@ -3497,7 +3517,7 @@
   scrollbar-width: thin;
 }
 
-#root .portal-shell .fw-marks-actions {
+#root .faculty-portal-shell .fw-marks-actions {
   display: flex;
   justify-content: flex-end;
   flex-wrap: wrap;
@@ -3506,22 +3526,22 @@
 }
 
 @media (max-width: 1100px) {
-  #root .portal-shell .fw-marks-topbar {
+  #root .faculty-portal-shell .fw-marks-topbar {
     grid-template-columns: minmax(0, 1fr);
     gap: 16px;
   }
 
-  #root .portal-shell .fw-marks-topbar > .fw-marks-overview {
+  #root .faculty-portal-shell .fw-marks-topbar > .fw-marks-overview {
     justify-self: stretch;
   }
 }
 
-#root .portal-shell .fw-material-topbar > .fw-heading {
+#root .faculty-portal-shell .fw-material-topbar > .fw-heading {
   align-self: start;
   margin: 0;
 }
 
-#root .portal-shell .fw-material-topbar > .fw-material-overview {
+#root .faculty-portal-shell .fw-material-topbar > .fw-material-overview {
   width: 100%;
   min-width: 0;
   max-width: none;
@@ -3532,22 +3552,22 @@
   scrollbar-width: thin;
 }
 
-#root .portal-shell .fw-material-topbar > .fw-material-overview > article {
+#root .faculty-portal-shell .fw-material-topbar > .fw-material-overview > article {
   scroll-snap-align: start;
 }
 
 @media (max-width: 1100px) {
-  #root .portal-shell .fw-material-topbar {
+  #root .faculty-portal-shell .fw-material-topbar {
     grid-template-columns: minmax(0, 1fr);
     gap: 16px;
   }
 
-  #root .portal-shell .fw-material-topbar > .fw-material-overview {
+  #root .faculty-portal-shell .fw-material-topbar > .fw-material-overview {
     justify-self: stretch;
   }
 }
 
-#root .portal-shell .fw-material-table-scroll {
+#root .faculty-portal-shell .fw-material-table-scroll {
   width: 100%;
   min-width: 0;
   overflow-x: auto;
@@ -3557,7 +3577,7 @@
   scrollbar-width: thin;
 }
 
-#root .portal-shell .fw-material-table {
+#root .faculty-portal-shell .fw-material-table {
   width: 100%;
   min-width: 980px;
   border-collapse: separate;
@@ -3565,7 +3585,7 @@
   table-layout: fixed;
 }
 
-#root .portal-shell .fw-material-table caption {
+#root .faculty-portal-shell .fw-material-table caption {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -3575,7 +3595,7 @@
   clip-path: inset(50%);
 }
 
-#root .portal-shell .fw-material-table th {
+#root .faculty-portal-shell .fw-material-table th {
   padding: 13px 14px;
   border-bottom: 1px solid var(--border);
   background: var(--table-head);
@@ -3587,12 +3607,12 @@
   text-transform: uppercase;
 }
 
-#root .portal-shell .fw-material-table th:first-child { width: 41%; }
-#root .portal-shell .fw-material-table th:nth-child(2) { width: 28%; }
-#root .portal-shell .fw-material-table th:nth-child(3) { width: 19%; }
-#root .portal-shell .fw-material-table th:nth-child(4) { width: 12%; }
+#root .faculty-portal-shell .fw-material-table th:first-child { width: 41%; }
+#root .faculty-portal-shell .fw-material-table th:nth-child(2) { width: 28%; }
+#root .faculty-portal-shell .fw-material-table th:nth-child(3) { width: 19%; }
+#root .faculty-portal-shell .fw-material-table th:nth-child(4) { width: 12%; }
 
-#root .portal-shell .fw-material-table td {
+#root .faculty-portal-shell .fw-material-table td {
   min-width: 0;
   padding: 13px 14px;
   border-bottom: 1px solid var(--border);
@@ -3601,39 +3621,39 @@
   vertical-align: middle;
 }
 
-#root .portal-shell .fw-material-table tbody tr:last-child td {
+#root .faculty-portal-shell .fw-material-table tbody tr:last-child td {
   border-bottom: 0;
 }
 
-#root .portal-shell .fw-material-table tbody tr:nth-child(even) {
+#root .faculty-portal-shell .fw-material-table tbody tr:nth-child(even) {
   background: color-mix(in srgb, var(--surface-soft) 55%, var(--surface));
 }
 
-#root .portal-shell .fw-material-table tbody tr:hover {
+#root .faculty-portal-shell .fw-material-table tbody tr:hover {
   background: color-mix(in srgb, var(--brand-soft) 48%, var(--surface));
 }
 
-#root .portal-shell .fw-material-table-file {
+#root .faculty-portal-shell .fw-material-table-file {
   display: flex;
   align-items: center;
   gap: 11px;
   min-width: 0;
 }
 
-#root .portal-shell .fw-material-table-file > .fw-material-file-icon {
+#root .faculty-portal-shell .fw-material-table-file > .fw-material-file-icon {
   flex: 0 0 42px;
   width: 42px;
   height: 44px;
   border-radius: 10px;
 }
 
-#root .portal-shell .fw-material-table-file-content {
+#root .faculty-portal-shell .fw-material-table-file-content {
   display: grid;
   gap: 7px;
   min-width: 0;
 }
 
-#root .portal-shell .fw-material-table-file-content > strong {
+#root .faculty-portal-shell .fw-material-table-file-content > strong {
   display: -webkit-box;
   overflow: hidden;
   color: var(--text-primary);
@@ -3645,104 +3665,121 @@
   -webkit-line-clamp: 2;
 }
 
-#root .portal-shell .fw-material-table-file-content .fw-material-file-meta {
+#root .faculty-portal-shell .fw-material-table-file-content .fw-material-file-meta {
   flex-wrap: nowrap;
   gap: 6px;
 }
 
-#root .portal-shell .fw-material-table-file-content .fw-material-file-meta > span:not(.fw-material-type) {
+#root .faculty-portal-shell .fw-material-table-file-content .fw-material-file-meta > span:not(.fw-material-type) {
   max-width: min(230px, 18vw);
 }
 
-#root .portal-shell .fw-material-table-subject {
+#root .faculty-portal-shell .fw-material-table-subject {
   display: grid;
   gap: 4px;
   min-width: 0;
 }
 
-#root .portal-shell .fw-material-table-subject > strong {
+#root .faculty-portal-shell .fw-material-table-subject > strong {
   color: var(--brand);
   font-size: 10px;
   font-weight: 800;
 }
 
-#root .portal-shell .fw-material-table-subject > span,
-#root .portal-shell .fw-material-table-subject > small {
+#root .faculty-portal-shell .fw-material-table-subject > span,
+#root .faculty-portal-shell .fw-material-table-subject > small {
   overflow: hidden;
   color: var(--text-secondary);
   font-size: 10px;
   text-overflow: ellipsis;
 }
 
-#root .portal-shell .fw-material-table-subject > small {
+#root .faculty-portal-shell .fw-material-table-subject > small {
   color: var(--text-muted);
 }
 
-#root .portal-shell .fw-material-table-sections {
+#root .faculty-portal-shell .fw-material-table-sections {
   display: block;
 }
 
-#root .portal-shell .fw-material-table-sections > div {
+#root .faculty-portal-shell .fw-material-table-sections > div {
   gap: 5px;
 }
 
-#root .portal-shell .fw-material-table-sections > div > span {
+#root .faculty-portal-shell .fw-material-table-sections > div > span {
   white-space: nowrap;
 }
 
-#root .portal-shell .fw-material-table .fw-material-actions {
+#root .faculty-portal-shell .fw-material-table .fw-material-actions {
   justify-content: flex-end;
   gap: 5px;
   padding: 0;
   border: 0;
 }
 
-#root .portal-shell .fw-material-table .fw-material-actions .fw-icon-button {
+#root .faculty-portal-shell .fw-material-table .fw-material-actions .fw-icon-button {
   flex: 0 0 32px;
   width: 32px;
   min-height: 32px;
-  border: 1px solid var(--border);
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--brand) 42%, var(--border));
+  border-radius: 9px;
   background: var(--surface);
+  color: var(--brand);
 }
 
-@media (max-width: 700px) {
-  #root .portal-shell .fw-material-table {
-    min-width: 920px;
-  }
-
-  #root .portal-shell .fw-material-table th,
-  #root .portal-shell .fw-material-table td {
-    padding: 11px 10px;
-  }
+#root .faculty-portal-shell .fw-material-table .fw-material-actions .fw-icon-button svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  stroke-width: 2.4;
 }
 
-#root .portal-shell .fw-material-upload-button:hover:not(:disabled) {
+#root .faculty-portal-shell .fw-material-table .fw-material-actions .fw-icon-button:hover:not(:disabled) {
   border-color: var(--brand);
   background: var(--brand);
   color: var(--surface);
 }
 
-#root .portal-shell .fw-material-filter-button:hover:not(:disabled),
-#root .portal-shell .fw-material-export-button:hover:not(:disabled) {
+@media (max-width: 700px) {
+  #root .faculty-portal-shell .fw-material-table {
+    min-width: 920px;
+  }
+
+  #root .faculty-portal-shell .fw-material-table th,
+  #root .faculty-portal-shell .fw-material-table td {
+    padding: 11px 10px;
+  }
+}
+
+#root .faculty-portal-shell .fw-material-upload-button:hover:not(:disabled) {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: var(--surface);
+}
+
+#root .faculty-portal-shell .fw-material-filter-button:hover:not(:disabled),
+#root .faculty-portal-shell .fw-material-export-button:hover:not(:disabled) {
   border-color: var(--border);
   background: var(--surface);
   color: var(--text-primary);
 }
 
 /* Keep the timetable heading left and its weekly summary aligned on the right. */
-#root .portal-shell .fw-timetable-topbar {
+#root .faculty-portal-shell .fw-timetable-topbar {
   display: grid;
   grid-template-columns: minmax(300px, .78fr) minmax(0, 1.65fr);
   align-items: start;
   gap: 22px;
 }
 
-#root .portal-shell .fw-timetable-topbar > .fw-heading {
+#root .faculty-portal-shell .fw-timetable-topbar > .fw-heading {
   align-self: start;
   margin: 0;
 }
 
-#root .portal-shell .fw-timetable-topbar > .fw-timetable-overview {
+#root .faculty-portal-shell .fw-timetable-topbar > .fw-timetable-overview {
   width: 100%;
   min-width: 0;
   max-width: none;
@@ -3754,27 +3791,27 @@
   scrollbar-width: thin;
 }
 
-#root .portal-shell .fw-timetable-topbar > .fw-timetable-overview > article {
+#root .faculty-portal-shell .fw-timetable-topbar > .fw-timetable-overview > article {
   padding: 13px 14px;
   scroll-snap-align: start;
 }
 
-#root .portal-shell .fw-timetable-schedule-heading {
+#root .faculty-portal-shell .fw-timetable-schedule-heading {
   align-items: center;
   margin-bottom: 18px;
 }
 
-#root .portal-shell .fw-timetable-schedule-heading h2 {
+#root .faculty-portal-shell .fw-timetable-schedule-heading h2 {
   color: var(--text-primary);
   font-size: 21px;
   letter-spacing: -.025em;
 }
 
-#root .portal-shell .fw-timetable-schedule-heading .fw-eyebrow {
+#root .faculty-portal-shell .fw-timetable-schedule-heading .fw-eyebrow {
   margin-bottom: 5px !important;
 }
 
-#root .portal-shell .fw-timetable-schedule-actions {
+#root .faculty-portal-shell .fw-timetable-schedule-actions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -3782,7 +3819,7 @@
   gap: 9px;
 }
 
-#root .portal-shell .fw-timetable-filterbar {
+#root .faculty-portal-shell .fw-timetable-filterbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -3790,14 +3827,14 @@
   margin-bottom: 12px;
 }
 
-#root .portal-shell .fw-timetable-search {
+#root .faculty-portal-shell .fw-timetable-search {
   flex: 0 1 440px;
   min-width: 220px;
   min-height: 42px;
   border-radius: 10px;
 }
 
-#root .portal-shell .fw-timetable-results {
+#root .faculty-portal-shell .fw-timetable-results {
   flex: 0 0 auto;
   padding: 7px 10px;
   border: 1px solid var(--border);
@@ -3808,25 +3845,30 @@
   font-weight: 700;
 }
 
-#root .portal-shell .fw-timetable-table-scroll {
+#root .faculty-portal-shell .fw-timetable-table-scroll {
   width: 100%;
   min-width: 0;
   overflow-x: auto;
+  overflow-y: hidden;
   border: 1px solid var(--border);
   border-radius: 13px;
   background: var(--surface);
+  isolation: isolate;
   scrollbar-width: thin;
 }
 
-#root .portal-shell .fw-timetable-table {
-  width: 100%;
-  min-width: 980px;
+#root .faculty-portal-shell .fw-timetable-table {
+  display: table;
+  width: max(100%, 1100px);
+  min-width: 1100px;
+  box-sizing: border-box;
   border-collapse: separate;
   border-spacing: 0;
   table-layout: fixed;
+  background-color: var(--surface);
 }
 
-#root .portal-shell .fw-timetable-table caption {
+#root .faculty-portal-shell .fw-timetable-table caption {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -3836,10 +3878,10 @@
   clip-path: inset(50%);
 }
 
-#root .portal-shell .fw-timetable-table th {
+#root .faculty-portal-shell .fw-timetable-table th {
   padding: 13px 14px;
   border-bottom: 1px solid var(--border);
-  background: var(--table-head);
+  background-color: var(--table-head) !important;
   color: var(--text-secondary);
   font-size: 10px;
   font-weight: 800;
@@ -3848,22 +3890,22 @@
   text-transform: uppercase;
 }
 
-#root .portal-shell .fw-timetable-table th:first-child { width: 11%; }
-#root .portal-shell .fw-timetable-table th:nth-child(2) { width: 14%; }
-#root .portal-shell .fw-timetable-table th:nth-child(3) { width: 24%; }
-#root .portal-shell .fw-timetable-table th:nth-child(4) { width: 14%; }
-#root .portal-shell .fw-timetable-table th:nth-child(5) { width: 16%; }
-#root .portal-shell .fw-timetable-table th:nth-child(6) { width: 11%; }
-#root .portal-shell .fw-timetable-table th:nth-child(7) { width: 10%; }
+#root .faculty-portal-shell .fw-timetable-table th:first-child { width: 11%; }
+#root .faculty-portal-shell .fw-timetable-table th:nth-child(2) { width: 14%; }
+#root .faculty-portal-shell .fw-timetable-table th:nth-child(3) { width: 24%; }
+#root .faculty-portal-shell .fw-timetable-table th:nth-child(4) { width: 14%; }
+#root .faculty-portal-shell .fw-timetable-table th:nth-child(5) { width: 16%; }
+#root .faculty-portal-shell .fw-timetable-table th:nth-child(6) { width: 11%; }
+#root .faculty-portal-shell .fw-timetable-table th:nth-child(7) { width: 10%; }
 
-#root .portal-shell .fw-timetable-table.is-day-mode th:first-child { width: 14%; }
-#root .portal-shell .fw-timetable-table.is-day-mode th:nth-child(2) { width: 29%; }
-#root .portal-shell .fw-timetable-table.is-day-mode th:nth-child(3) { width: 15%; }
-#root .portal-shell .fw-timetable-table.is-day-mode th:nth-child(4) { width: 17%; }
-#root .portal-shell .fw-timetable-table.is-day-mode th:nth-child(5) { width: 13%; }
-#root .portal-shell .fw-timetable-table.is-day-mode th:nth-child(6) { width: 12%; }
+#root .faculty-portal-shell .fw-timetable-table.is-day-mode th:first-child { width: 14%; }
+#root .faculty-portal-shell .fw-timetable-table.is-day-mode th:nth-child(2) { width: 29%; }
+#root .faculty-portal-shell .fw-timetable-table.is-day-mode th:nth-child(3) { width: 15%; }
+#root .faculty-portal-shell .fw-timetable-table.is-day-mode th:nth-child(4) { width: 17%; }
+#root .faculty-portal-shell .fw-timetable-table.is-day-mode th:nth-child(5) { width: 13%; }
+#root .faculty-portal-shell .fw-timetable-table.is-day-mode th:nth-child(6) { width: 12%; }
 
-#root .portal-shell .fw-timetable-table td {
+#root .faculty-portal-shell .fw-timetable-table td {
   padding: 13px 14px;
   border-bottom: 1px solid var(--border);
   color: var(--text-secondary);
@@ -3873,39 +3915,55 @@
   overflow-wrap: anywhere;
 }
 
-#root .portal-shell .fw-timetable-table tbody tr:last-child td {
+#root .faculty-portal-shell .fw-timetable-table tbody tr:last-child td {
   border-bottom: 0;
 }
 
-#root .portal-shell .fw-timetable-table tbody tr:nth-child(even) {
+#root .faculty-portal-shell .fw-timetable-table tbody tr:nth-child(even) {
   background: color-mix(in srgb, var(--surface-soft) 52%, var(--surface));
 }
 
-#root .portal-shell .fw-timetable-table tbody tr:hover {
+#root .faculty-portal-shell .fw-timetable-table tbody tr > td {
+  background-color: var(--surface) !important;
+}
+
+#root .faculty-portal-shell .fw-timetable-table tbody tr:nth-child(even) > td {
+  background-color: color-mix(in srgb, var(--surface-soft) 52%, var(--surface)) !important;
+}
+
+#root .faculty-portal-shell .fw-timetable-table tbody tr:hover {
   background: color-mix(in srgb, var(--brand-soft) 58%, var(--surface));
 }
 
-#root .portal-shell .fw-timetable-table tbody tr.is-now {
+#root .faculty-portal-shell .fw-timetable-table tbody tr:hover > td {
+  background-color: color-mix(in srgb, var(--brand-soft) 58%, var(--surface)) !important;
+}
+
+#root .faculty-portal-shell .fw-timetable-table tbody tr.is-now {
   background: color-mix(in srgb, var(--brand-soft) 72%, var(--surface));
 }
 
-#root .portal-shell .fw-timetable-table tbody tr.is-next .fw-schedule-time {
+#root .faculty-portal-shell .fw-timetable-table tbody tr.is-now > td {
+  background-color: color-mix(in srgb, var(--brand-soft) 72%, var(--surface)) !important;
+}
+
+#root .faculty-portal-shell .fw-timetable-table tbody tr.is-next .fw-schedule-time {
   box-shadow: inset 0 0 0 1px var(--brand);
 }
 
-#root .portal-shell .fw-timetable-table tbody tr.subject-color-0 { --schedule-accent: var(--brand); }
-#root .portal-shell .fw-timetable-table tbody tr.subject-color-1 { --schedule-accent: var(--success, #138a5b); }
-#root .portal-shell .fw-timetable-table tbody tr.subject-color-2 { --schedule-accent: var(--warning, #d68a12); }
-#root .portal-shell .fw-timetable-table tbody tr.subject-color-3 { --schedule-accent: var(--danger, #c23a3a); }
+#root .faculty-portal-shell .fw-timetable-table tbody tr.subject-color-0 { --schedule-accent: var(--brand); }
+#root .faculty-portal-shell .fw-timetable-table tbody tr.subject-color-1 { --schedule-accent: var(--success, #138a5b); }
+#root .faculty-portal-shell .fw-timetable-table tbody tr.subject-color-2 { --schedule-accent: var(--warning, #d68a12); }
+#root .faculty-portal-shell .fw-timetable-table tbody tr.subject-color-3 { --schedule-accent: var(--danger, #c23a3a); }
 
-#root .portal-shell .fw-schedule-day {
+#root .faculty-portal-shell .fw-schedule-day {
   display: inline-grid;
   gap: 3px;
   color: var(--text-primary);
   font-weight: 750;
 }
 
-#root .portal-shell .fw-schedule-day > small {
+#root .faculty-portal-shell .fw-schedule-day > small {
   width: fit-content;
   padding: 2px 6px;
   border-radius: 999px;
@@ -3915,20 +3973,20 @@
   font-weight: 750;
 }
 
-#root .portal-shell .fw-schedule-time-cell,
-#root .portal-shell .fw-schedule-subject {
+#root .faculty-portal-shell .fw-schedule-time-cell,
+#root .faculty-portal-shell .fw-schedule-subject {
   display: grid;
   justify-items: start;
   gap: 5px;
   min-width: 0;
 }
 
-#root .portal-shell .fw-schedule-subject {
+#root .faculty-portal-shell .fw-schedule-subject {
   padding-left: 9px;
   border-left: 3px solid var(--schedule-accent, var(--brand));
 }
 
-#root .portal-shell .fw-schedule-time {
+#root .faculty-portal-shell .fw-schedule-time {
   display: inline-flex;
   width: fit-content;
   padding: 6px 8px;
@@ -3940,29 +3998,29 @@
   white-space: nowrap;
 }
 
-#root .portal-shell .fw-schedule-state {
+#root .faculty-portal-shell .fw-schedule-state {
   color: var(--text-muted);
   font-size: 10px;
   font-weight: 700;
 }
 
-#root .portal-shell .fw-schedule-state.is-current {
+#root .faculty-portal-shell .fw-schedule-state.is-current {
   color: var(--success, #138a5b);
 }
 
-#root .portal-shell .fw-schedule-subject > strong {
+#root .faculty-portal-shell .fw-schedule-subject > strong {
   color: var(--text-primary);
   font-size: 12px;
   font-weight: 750;
 }
 
-#root .portal-shell .fw-schedule-subject > small {
+#root .faculty-portal-shell .fw-schedule-subject > small {
   color: var(--brand);
   font-size: 10px;
   font-weight: 750;
 }
 
-#root .portal-shell .fw-schedule-metadata {
+#root .faculty-portal-shell .fw-schedule-metadata {
   display: grid;
   grid-template-columns: 14px minmax(0, 1fr);
   align-items: start;
@@ -3975,14 +4033,14 @@
   white-space: normal;
 }
 
-#root .portal-shell .fw-schedule-metadata > svg {
+#root .faculty-portal-shell .fw-schedule-metadata > svg {
   width: 14px;
   height: 14px;
   margin-top: 1px;
   color: var(--brand);
 }
 
-#root .portal-shell .fw-schedule-metadata > span {
+#root .faculty-portal-shell .fw-schedule-metadata > span {
   display: block;
   min-width: 0;
   max-width: none;
@@ -3992,7 +4050,7 @@
   white-space: normal;
 }
 
-#root .portal-shell .fw-schedule-type {
+#root .faculty-portal-shell .fw-schedule-type {
   display: inline-flex;
   width: fit-content;
   padding: 4px 8px;
@@ -4004,7 +4062,7 @@
   font-weight: 700;
 }
 
-#root .portal-shell .fw-schedule-attendance {
+#root .faculty-portal-shell .fw-schedule-attendance {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -4021,146 +4079,151 @@
   white-space: nowrap;
 }
 
-#root .portal-shell .fw-schedule-attendance:hover {
+#root .faculty-portal-shell .fw-schedule-attendance:hover {
   border-color: var(--brand);
   background: var(--brand);
   color: var(--surface);
 }
 
-#root .portal-shell .fw-schedule-attendance:focus-visible {
+#root .faculty-portal-shell .fw-schedule-attendance:focus-visible {
   outline: 2px solid var(--brand);
   outline-offset: 2px;
 }
 
 @media (max-width: 700px) {
-  #root .portal-shell .fw-timetable-table th,
-  #root .portal-shell .fw-timetable-table td {
+  #root .faculty-portal-shell .fw-timetable-table th,
+  #root .faculty-portal-shell .fw-timetable-table td {
     padding: 11px 10px;
   }
 
-  #root .portal-shell .fw-timetable-table {
+  #root .faculty-portal-shell .fw-timetable-table {
+    width: max(100%, 940px);
     min-width: 940px;
   }
 }
 
 @media (max-width: 1100px) {
-  #root .portal-shell .fw-timetable-topbar {
+  #root .faculty-portal-shell .fw-timetable-topbar {
     grid-template-columns: minmax(0, 1fr);
     gap: 15px;
   }
 
-  #root .portal-shell .fw-timetable-topbar > .fw-timetable-overview {
+  #root .faculty-portal-shell .fw-timetable-topbar > .fw-timetable-overview {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     overflow: visible;
   }
 }
 
 @media (max-width: 640px) {
-  #root .portal-shell .fw-timetable-schedule-heading {
+  #root .faculty-portal-shell .fw-timetable-schedule-heading {
     align-items: stretch;
     flex-direction: column;
   }
 
-  #root .portal-shell .fw-timetable-schedule-actions {
+  #root .faculty-portal-shell .fw-timetable-schedule-actions {
     justify-content: space-between;
   }
 
-  #root .portal-shell .fw-timetable-schedule-actions > .fw-button {
+  #root .faculty-portal-shell .fw-timetable-schedule-actions > .fw-button {
     flex: 1 1 auto;
   }
 
-  #root .portal-shell .fw-timetable-schedule-actions > .fw-tabs {
+  #root .faculty-portal-shell .fw-timetable-schedule-actions > .fw-tabs {
     flex: 1 1 100%;
     justify-content: space-between;
   }
 
-  #root .portal-shell .fw-timetable-filterbar {
+  #root .faculty-portal-shell .fw-timetable-filterbar {
     align-items: stretch;
     flex-direction: column;
   }
 
-  #root .portal-shell .fw-timetable-search {
+  #root .faculty-portal-shell .fw-timetable-search {
     width: 100%;
     max-width: none;
     min-width: 0;
   }
 
-  #root .portal-shell .fw-timetable-results {
+  #root .faculty-portal-shell .fw-timetable-results {
     align-self: flex-start;
   }
 
-  #root .portal-shell .fw-timetable-topbar > .fw-timetable-overview {
+  #root .faculty-portal-shell .fw-timetable-topbar > .fw-timetable-overview {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
   }
 }
 
 /* Personal attendance layout follows the staff punch-card and monthly-summary hierarchy. */
-#root .portal-shell .fw-my-attendance-summary {
+#root .faculty-portal-shell .fw-my-attendance-summary {
   display: grid;
-  gap: 22px;
+  gap: 14px;
   min-width: 0;
 }
 
-#root .portal-shell .fw-attendance-page-topbar {
+#root .faculty-portal-shell .fw-my-attendance-page {
+  gap: 14px;
+}
+
+#root .faculty-portal-shell .fw-attendance-page-topbar {
   display: grid;
-  grid-template-columns: minmax(360px, .72fr) minmax(0, 1.28fr);
+  grid-template-columns: minmax(300px, .72fr) minmax(0, 1.28fr);
   align-items: center;
-  gap: 22px;
+  gap: 16px;
   min-width: 0;
 }
 
-#root .portal-shell .fw-attendance-page-topbar > .fw-heading {
+#root .faculty-portal-shell .fw-attendance-page-topbar > .fw-heading {
   min-width: 0;
   margin: 0;
 }
 
-#root .portal-shell .fw-attendance-page-topbar > .fw-personal-attendance-stats {
+#root .faculty-portal-shell .fw-attendance-page-topbar > .fw-personal-attendance-stats {
   justify-self: end;
   width: 100%;
   max-width: 1040px;
   gap: 10px;
 }
 
-#root .portal-shell .fw-attendance-page-topbar .fw-personal-attendance-stats article {
-  min-height: 100px;
-  padding: 13px 12px 13px 16px;
-  gap: 9px;
+#root .faculty-portal-shell .fw-attendance-page-topbar .fw-personal-attendance-stats article {
+  min-height: 82px;
+  padding: 10px 10px 10px 13px;
+  gap: 8px;
 }
 
-#root .portal-shell .fw-attendance-page-topbar .fw-personal-attendance-stat-icon {
+#root .faculty-portal-shell .fw-attendance-page-topbar .fw-personal-attendance-stat-icon {
   flex-basis: 36px;
   width: 36px;
   height: 36px;
 }
 
-#root .portal-shell .fw-attendance-page-topbar .fw-personal-attendance-stat-copy strong {
+#root .faculty-portal-shell .fw-attendance-page-topbar .fw-personal-attendance-stat-copy strong {
   font-size: 23px;
 }
 
 @media (max-width: 1100px) {
-  #root .portal-shell .fw-attendance-page-topbar {
+  #root .faculty-portal-shell .fw-attendance-page-topbar {
     grid-template-columns: minmax(0, 1fr);
     gap: 14px;
   }
 }
 
-#root .portal-shell .fw-attendance-today {
+#root .faculty-portal-shell .fw-attendance-today {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
-  padding: 26px 30px;
+  gap: 18px;
+  padding: 18px 22px;
 }
 
-#root .portal-shell .fw-attendance-today__main {
+#root .faculty-portal-shell .fw-attendance-today__main {
   display: grid;
   justify-items: start;
   gap: 9px;
   min-width: 0;
 }
 
-#root .portal-shell .fw-attendance-today__badge {
+#root .faculty-portal-shell .fw-attendance-today__badge {
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -4174,14 +4237,14 @@
   text-transform: uppercase;
 }
 
-#root .portal-shell .fw-attendance-today__main h2 {
+#root .faculty-portal-shell .fw-attendance-today__main h2 {
   margin: 0;
   color: var(--text-primary);
   font-size: clamp(21px, 1.7vw, 29px);
   letter-spacing: -.025em;
 }
 
-#root .portal-shell .fw-attendance-today__main p {
+#root .faculty-portal-shell .fw-attendance-today__main p {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -4190,12 +4253,12 @@
   font-size: 14px;
 }
 
-#root .portal-shell .fw-attendance-today__main p svg {
+#root .faculty-portal-shell .fw-attendance-today__main p svg {
   flex: 0 0 auto;
   color: var(--brand);
 }
 
-#root .portal-shell .fw-attendance-today__right {
+#root .faculty-portal-shell .fw-attendance-today__right {
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -4203,7 +4266,7 @@
   flex-wrap: wrap;
 }
 
-#root .portal-shell .fw-punch-status-box {
+#root .faculty-portal-shell .fw-punch-status-box {
   display: grid;
   gap: 4px;
   min-width: 190px;
@@ -4213,18 +4276,18 @@
   background: var(--surface-soft);
 }
 
-#root .portal-shell .fw-punch-status-box > span,
-#root .portal-shell .fw-punch-status-box > small {
+#root .faculty-portal-shell .fw-punch-status-box > span,
+#root .faculty-portal-shell .fw-punch-status-box > small {
   color: var(--text-muted);
   font-size: 12px;
 }
 
-#root .portal-shell .fw-punch-status-box strong {
+#root .faculty-portal-shell .fw-punch-status-box strong {
   color: var(--text-primary);
   font-size: 14px;
 }
 
-#root .portal-shell .fw-worked-hours-pill {
+#root .faculty-portal-shell .fw-worked-hours-pill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -4240,13 +4303,13 @@
   white-space: nowrap;
 }
 
-#root .portal-shell .fw-attendance-punch-actions {
+#root .faculty-portal-shell .fw-attendance-punch-actions {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-#root .portal-shell .fw-attendance-punch-actions button {
+#root .faculty-portal-shell .fw-attendance-punch-actions button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -4264,26 +4327,26 @@
   transition: filter .15s ease, opacity .15s ease;
 }
 
-#root .portal-shell .fw-attendance-punch-actions button:hover:not(:disabled) {
+#root .faculty-portal-shell .fw-attendance-punch-actions button:hover:not(:disabled) {
   filter: brightness(.94);
 }
 
-#root .portal-shell .fw-attendance-punch-actions button:disabled {
+#root .faculty-portal-shell .fw-attendance-punch-actions button:disabled {
   opacity: .52;
   cursor: not-allowed;
 }
 
-#root .portal-shell .fw-attendance-punch-actions .fw-punch-check-in {
+#root .faculty-portal-shell .fw-attendance-punch-actions .fw-punch-check-in {
   border-color: var(--success);
   background: var(--success);
 }
 
-#root .portal-shell .fw-attendance-punch-actions .fw-punch-check-out {
+#root .faculty-portal-shell .fw-attendance-punch-actions .fw-punch-check-out {
   border-color: var(--danger);
   background: var(--danger);
 }
 
-#root .portal-shell .fw-attendance-month-toolbar {
+#root .faculty-portal-shell .fw-attendance-month-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -4291,14 +4354,14 @@
   flex-wrap: wrap;
 }
 
-#root .portal-shell .fw-attendance-month-controls {
+#root .faculty-portal-shell .fw-attendance-month-controls {
   display: flex;
   align-items: center;
   gap: 9px;
 }
 
-#root .portal-shell .fw-attendance-month-controls button,
-#root .portal-shell .fw-attendance-month-controls select {
+#root .faculty-portal-shell .fw-attendance-month-controls button,
+#root .faculty-portal-shell .fw-attendance-month-controls select {
   min-height: 44px;
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -4307,24 +4370,24 @@
   font: inherit;
 }
 
-#root .portal-shell .fw-attendance-month-controls button {
+#root .faculty-portal-shell .fw-attendance-month-controls button {
   display: grid;
   width: 44px;
   place-items: center;
 }
 
-#root .portal-shell .fw-attendance-month-controls select {
+#root .faculty-portal-shell .fw-attendance-month-controls select {
   min-width: 166px;
   padding: 0 13px;
   font-weight: 700;
 }
 
-#root .portal-shell .fw-attendance-month-controls :disabled {
+#root .faculty-portal-shell .fw-attendance-month-controls :disabled {
   opacity: .72;
   cursor: not-allowed;
 }
 
-#root .portal-shell .fw-attendance-month-rate {
+#root .faculty-portal-shell .fw-attendance-month-rate {
   display: inline-flex;
   align-items: center;
   gap: 9px;
@@ -4338,24 +4401,24 @@
   font-weight: 700;
 }
 
-#root .portal-shell .fw-attendance-month-rate strong {
+#root .faculty-portal-shell .fw-attendance-month-rate strong {
   font-size: 17px;
 }
 
-#root .portal-shell .fw-personal-attendance-stats {
+#root .faculty-portal-shell .fw-personal-attendance-stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  gap: 10px;
 }
 
-#root .portal-shell .fw-personal-attendance-stats article {
+#root .faculty-portal-shell .fw-personal-attendance-stats article {
   position: relative;
   display: flex;
   align-items: center;
   gap: 14px;
   min-width: 0;
-  min-height: 112px;
-  padding: 18px 20px 18px 24px;
+  min-height: 88px;
+  padding: 12px 14px 12px 17px;
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 14px;
@@ -4363,7 +4426,7 @@
   box-shadow: var(--shadow-sm);
 }
 
-#root .portal-shell .fw-personal-attendance-stats article::before {
+#root .faculty-portal-shell .fw-personal-attendance-stats article::before {
   position: absolute;
   top: 12px;
   bottom: 12px;
@@ -4374,12 +4437,12 @@
   content: '';
 }
 
-#root .portal-shell .fw-personal-attendance-stats .is-present { --attendance-tone: #10b981; }
-#root .portal-shell .fw-personal-attendance-stats .is-late { --attendance-tone: #f59e0b; }
-#root .portal-shell .fw-personal-attendance-stats .is-absent { --attendance-tone: #ef4444; }
-#root .portal-shell .fw-personal-attendance-stats .is-leave { --attendance-tone: #8b5cf6; }
+#root .faculty-portal-shell .fw-personal-attendance-stats .is-present { --attendance-tone: #10b981; }
+#root .faculty-portal-shell .fw-personal-attendance-stats .is-late { --attendance-tone: #f59e0b; }
+#root .faculty-portal-shell .fw-personal-attendance-stats .is-absent { --attendance-tone: #ef4444; }
+#root .faculty-portal-shell .fw-personal-attendance-stats .is-leave { --attendance-tone: #8b5cf6; }
 
-#root .portal-shell .fw-personal-attendance-stat-icon {
+#root .faculty-portal-shell .fw-personal-attendance-stat-icon {
   display: grid;
   flex: 0 0 44px;
   width: 44px;
@@ -4390,13 +4453,13 @@
   color: var(--attendance-tone);
 }
 
-#root .portal-shell .fw-personal-attendance-stat-copy {
+#root .faculty-portal-shell .fw-personal-attendance-stat-copy {
   display: grid;
   gap: 3px;
   min-width: 0;
 }
 
-#root .portal-shell .fw-personal-attendance-stat-copy > span {
+#root .faculty-portal-shell .fw-personal-attendance-stat-copy > span {
   color: var(--text-muted);
   font-size: 11px;
   font-weight: 700;
@@ -4404,13 +4467,13 @@
   text-transform: uppercase;
 }
 
-#root .portal-shell .fw-personal-attendance-stat-copy strong {
+#root .faculty-portal-shell .fw-personal-attendance-stat-copy strong {
   color: var(--text-primary);
   font-size: 27px;
   line-height: 1;
 }
 
-#root .portal-shell .fw-personal-attendance-stat-copy small {
+#root .faculty-portal-shell .fw-personal-attendance-stat-copy small {
   overflow: hidden;
   color: var(--text-muted);
   font-size: 11px;
@@ -4419,79 +4482,79 @@
 }
 
 @media (max-width: 1000px) {
-  #root .portal-shell .fw-attendance-page-topbar {
+  #root .faculty-portal-shell .fw-attendance-page-topbar {
     align-items: stretch;
   }
 
-  #root .portal-shell .fw-attendance-page-topbar > .fw-personal-attendance-stats {
+  #root .faculty-portal-shell .fw-attendance-page-topbar > .fw-personal-attendance-stats {
     justify-self: stretch;
     max-width: none;
   }
 
-  #root .portal-shell .fw-attendance-today {
+  #root .faculty-portal-shell .fw-attendance-today {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  #root .portal-shell .fw-attendance-today__right {
+  #root .faculty-portal-shell .fw-attendance-today__right {
     width: 100%;
     justify-content: flex-start;
   }
 
-  #root .portal-shell .fw-personal-attendance-stats {
+  #root .faculty-portal-shell .fw-personal-attendance-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 640px) {
-  #root .portal-shell .fw-attendance-today {
+  #root .faculty-portal-shell .fw-attendance-today {
     gap: 18px;
     padding: 18px;
   }
 
-  #root .portal-shell .fw-attendance-today__right {
+  #root .faculty-portal-shell .fw-attendance-today__right {
     align-items: stretch;
     flex-direction: column;
   }
 
-  #root .portal-shell .fw-punch-status-box {
+  #root .faculty-portal-shell .fw-punch-status-box {
     min-width: 0;
   }
 
-  #root .portal-shell .fw-attendance-punch-actions button {
+  #root .faculty-portal-shell .fw-attendance-punch-actions button {
     flex: 1 1 0;
     padding-inline: 10px;
   }
 
-  #root .portal-shell .fw-attendance-month-rate {
+  #root .faculty-portal-shell .fw-attendance-month-rate {
     width: 100%;
     justify-content: center;
     box-sizing: border-box;
   }
 
-  #root .portal-shell .fw-personal-attendance-stats {
+  #root .faculty-portal-shell .fw-personal-attendance-stats {
     gap: 10px;
   }
 
-  #root .portal-shell .fw-personal-attendance-stats article {
+  #root .faculty-portal-shell .fw-personal-attendance-stats article {
     min-height: 96px;
     padding: 13px 12px 13px 16px;
     gap: 10px;
   }
 
-  #root .portal-shell .fw-personal-attendance-stat-icon {
+  #root .faculty-portal-shell .fw-personal-attendance-stat-icon {
     flex-basis: 36px;
     width: 36px;
     height: 36px;
   }
 
-  #root .portal-shell .fw-personal-attendance-stat-copy strong {
+  #root .faculty-portal-shell .fw-personal-attendance-stat-copy strong {
     font-size: 23px;
   }
 }
 
 @media (max-width: 420px) {
-  #root .portal-shell .fw-personal-attendance-stats {
+  #root .faculty-portal-shell .fw-personal-attendance-stats {
     grid-template-columns: minmax(0, 1fr);
   }
 }
@@ -5411,7 +5474,7 @@
   }
 }
 
-#root .portal-shell .fw-leave-workspace > .fw-card {
+#root .faculty-portal-shell .fw-leave-workspace > .fw-card {
   position: relative;
   overflow: hidden;
   border-color: color-mix(in srgb, var(--brand) 18%, var(--border));
@@ -5419,7 +5482,7 @@
   box-shadow: 0 14px 34px color-mix(in srgb, var(--brand) 7%, transparent);
 }
 
-#root .portal-shell .fw-leave-workspace > .fw-card::before {
+#root .faculty-portal-shell .fw-leave-workspace > .fw-card::before {
   position: absolute;
   inset: 0 0 auto;
   height: 3px;
@@ -5427,14 +5490,14 @@
   content: '';
 }
 
-#root .portal-shell .fw-leave-panel-heading {
+#root .faculty-portal-shell .fw-leave-panel-heading {
   align-items: flex-start;
   gap: 13px;
   padding-bottom: 15px;
   border-bottom: 1px solid color-mix(in srgb, var(--brand) 12%, var(--border));
 }
 
-#root .portal-shell .fw-leave-panel-icon {
+#root .faculty-portal-shell .fw-leave-panel-icon {
   flex: 0 0 42px;
   width: 42px;
   height: 42px;
@@ -5445,7 +5508,7 @@
   box-shadow: 0 5px 12px color-mix(in srgb, var(--brand) 9%, transparent);
 }
 
-#root .portal-shell .fw-leave-panel-heading .fw-eyebrow {
+#root .faculty-portal-shell .fw-leave-panel-heading .fw-eyebrow {
   margin: 0 0 3px;
   color: var(--brand);
   font-size: 10px;
@@ -5453,11 +5516,11 @@
   letter-spacing: .13em;
 }
 
-#root .portal-shell .fw-leave-panel-heading h2 {
+#root .faculty-portal-shell .fw-leave-panel-heading h2 {
   font-size: 20px;
 }
 
-#root .portal-shell .fw-leave-request-steps {
+#root .faculty-portal-shell .fw-leave-request-steps {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
@@ -5466,7 +5529,7 @@
   list-style: none;
 }
 
-#root .portal-shell .fw-leave-request-steps > li {
+#root .faculty-portal-shell .fw-leave-request-steps > li {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -5479,7 +5542,7 @@
   transition: border-color .16s ease, background-color .16s ease, color .16s ease;
 }
 
-#root .portal-shell .fw-leave-request-steps > li > span {
+#root .faculty-portal-shell .fw-leave-request-steps > li > span {
   display: grid;
   flex: 0 0 23px;
   width: 23px;
@@ -5493,12 +5556,12 @@
   font-weight: 800;
 }
 
-#root .portal-shell .fw-leave-request-steps > li > span svg {
+#root .faculty-portal-shell .fw-leave-request-steps > li > span svg {
   width: 12px;
   height: 12px;
 }
 
-#root .portal-shell .fw-leave-request-steps > li > small {
+#root .faculty-portal-shell .fw-leave-request-steps > li > small {
   overflow: hidden;
   font-size: 10px;
   font-weight: 700;
@@ -5506,75 +5569,75 @@
   white-space: nowrap;
 }
 
-#root .portal-shell .fw-leave-request-steps > li.is-current,
-#root .portal-shell .fw-leave-request-steps > li.is-complete {
+#root .faculty-portal-shell .fw-leave-request-steps > li.is-current,
+#root .faculty-portal-shell .fw-leave-request-steps > li.is-complete {
   border-color: color-mix(in srgb, var(--brand) 30%, var(--border));
   background: color-mix(in srgb, var(--brand) 7%, var(--surface));
   color: var(--brand);
 }
 
-#root .portal-shell .fw-leave-request-steps > li.is-current > span,
-#root .portal-shell .fw-leave-request-steps > li.is-complete > span {
+#root .faculty-portal-shell .fw-leave-request-steps > li.is-current > span,
+#root .faculty-portal-shell .fw-leave-request-steps > li.is-complete > span {
   border-color: var(--brand);
   background: var(--brand-solid);
   color: var(--text-on-dark);
 }
 
-#root .portal-shell .fw-leave-application-form {
+#root .faculty-portal-shell .fw-leave-application-form {
   gap: 15px;
 }
 
-#root .portal-shell .fw-leave-application-form .fw-field > span {
+#root .faculty-portal-shell .fw-leave-application-form .fw-field > span {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-#root .portal-shell .fw-leave-application-form .fw-field > :is(input, select, textarea) {
+#root .faculty-portal-shell .fw-leave-application-form .fw-field > :is(input, select, textarea) {
   box-shadow: 0 2px 5px color-mix(in srgb, var(--brand) 4%, transparent);
   transition: border-color .16s ease, box-shadow .16s ease;
 }
 
-#root .portal-shell .fw-leave-application-form .fw-field > :is(input, select, textarea):focus {
+#root .faculty-portal-shell .fw-leave-application-form .fw-field > :is(input, select, textarea):focus {
   border-color: var(--brand);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 12%, transparent);
 }
 
-#root .portal-shell .fw-leave-half-day {
+#root .faculty-portal-shell .fw-leave-half-day {
   transition: border-color .16s ease, background-color .16s ease;
 }
 
-#root .portal-shell .fw-leave-half-day:has(input:checked) {
+#root .faculty-portal-shell .fw-leave-half-day:has(input:checked) {
   border-color: color-mix(in srgb, var(--brand) 38%, var(--border));
   background: color-mix(in srgb, var(--brand) 7%, var(--surface));
 }
 
-#root .portal-shell .fw-leave-request-summary {
+#root .faculty-portal-shell .fw-leave-request-summary {
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 55%);
 }
 
-#root .portal-shell .fw-leave-request-summary-icon {
+#root .faculty-portal-shell .fw-leave-request-summary-icon {
   border: 1px solid color-mix(in srgb, var(--brand) 12%, var(--border));
 }
 
-#root .portal-shell .fw-leave-form-footer {
+#root .faculty-portal-shell .fw-leave-form-footer {
   padding-top: 13px;
   border-top: 1px solid var(--border);
 }
 
-#root .portal-shell .fw-leave-form-footer > .fw-button-primary:not(:disabled) {
+#root .faculty-portal-shell .fw-leave-form-footer > .fw-button-primary:not(:disabled) {
   min-height: 44px;
   padding-inline: 16px;
   border-radius: 11px;
   box-shadow: 0 7px 16px color-mix(in srgb, var(--brand) 20%, transparent);
 }
 
-#root .portal-shell .fw-leave-form-footer > .fw-button-primary:not(:disabled):hover {
+#root .faculty-portal-shell .fw-leave-form-footer > .fw-button-primary:not(:disabled):hover {
   transform: translateY(-1px);
   box-shadow: 0 10px 20px color-mix(in srgb, var(--brand) 26%, transparent);
 }
 
-#root .portal-shell .fw-leave-submit-spinner {
+#root .faculty-portal-shell .fw-leave-submit-spinner {
   width: 14px;
   height: 14px;
   border: 2px solid color-mix(in srgb, var(--surface) 55%, transparent);
@@ -5583,35 +5646,35 @@
   animation: fw-material-delete-spin .7s linear infinite;
 }
 
-#root .portal-shell .fw-leave-history-filters > button {
+#root .faculty-portal-shell .fw-leave-history-filters > button {
   min-height: 34px;
   padding-inline: 10px;
   transition: border-color .16s ease, background-color .16s ease, transform .16s ease;
 }
 
-#root .portal-shell .fw-leave-history-filters > button:hover {
+#root .faculty-portal-shell .fw-leave-history-filters > button:hover {
   transform: translateY(-1px);
   border-color: color-mix(in srgb, var(--brand) 30%, var(--border));
   background: var(--brand-soft);
   color: var(--brand);
 }
 
-#root .portal-shell .fw-leave-history-filters > button.is-active > span {
+#root .faculty-portal-shell .fw-leave-history-filters > button.is-active > span {
   color: var(--brand);
 }
 
-#root .portal-shell .fw-leave-request-row {
+#root .faculty-portal-shell .fw-leave-request-row {
   border-left: 3px solid var(--border);
   box-shadow: 0 3px 10px color-mix(in srgb, var(--brand) 4%, transparent);
   transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease, background-color .16s ease;
 }
 
-#root .portal-shell .fw-leave-request-row.is-pending { border-left-color: var(--warning, #d39217); }
-#root .portal-shell .fw-leave-request-row.is-approved { border-left-color: var(--success, #17844f); }
-#root .portal-shell .fw-leave-request-row.is-rejected { border-left-color: var(--danger, #b42332); }
-#root .portal-shell .fw-leave-request-row.is-cancelled { border-left-color: var(--text-muted); }
+#root .faculty-portal-shell .fw-leave-request-row.is-pending { border-left-color: var(--warning, #d39217); }
+#root .faculty-portal-shell .fw-leave-request-row.is-approved { border-left-color: var(--success, #17844f); }
+#root .faculty-portal-shell .fw-leave-request-row.is-rejected { border-left-color: var(--danger, #b42332); }
+#root .faculty-portal-shell .fw-leave-request-row.is-cancelled { border-left-color: var(--text-muted); }
 
-#root .portal-shell .fw-leave-request-row:hover {
+#root .faculty-portal-shell .fw-leave-request-row:hover {
   transform: translateY(-2px);
   border-top-color: color-mix(in srgb, var(--brand) 25%, var(--border));
   border-right-color: color-mix(in srgb, var(--brand) 25%, var(--border));
@@ -5619,14 +5682,14 @@
   box-shadow: 0 9px 20px color-mix(in srgb, var(--brand) 9%, transparent);
 }
 
-#root .portal-shell .fw-leave-request-type-icon {
+#root .faculty-portal-shell .fw-leave-request-type-icon {
   width: 36px;
   height: 36px;
   border: 1px solid color-mix(in srgb, var(--brand) 12%, var(--border));
   background: color-mix(in srgb, var(--brand) 7%, var(--surface));
 }
 
-#root .portal-shell .fw-leave-request-date-line {
+#root .faculty-portal-shell .fw-leave-request-date-line {
   display: flex;
   align-items: center;
   gap: 7px;
@@ -5636,76 +5699,76 @@
   background: var(--surface-soft);
 }
 
-#root .portal-shell .fw-leave-request-date-line > svg {
+#root .faculty-portal-shell .fw-leave-request-date-line > svg {
   flex: 0 0 14px;
   width: 14px;
   height: 14px;
   color: var(--brand);
 }
 
-#root .portal-shell .fw-leave-request-dates {
+#root .faculty-portal-shell .fw-leave-request-dates {
   overflow-wrap: anywhere;
 }
 
-#root .portal-shell .fw-leave-request-applied {
+#root .faculty-portal-shell .fw-leave-request-applied {
   display: flex;
   align-items: center;
   gap: 5px;
 }
 
-#root .portal-shell .fw-leave-request-applied > svg {
+#root .faculty-portal-shell .fw-leave-request-applied > svg {
   width: 12px;
   height: 12px;
   color: var(--text-muted);
 }
 
-#root .portal-shell .fw-leave-cancel-button {
+#root .faculty-portal-shell .fw-leave-cancel-button {
   min-height: 32px;
   padding-inline: 10px;
   transition: border-color .16s ease, background-color .16s ease, transform .16s ease;
 }
 
-#root .portal-shell .fw-leave-cancel-button:hover {
+#root .faculty-portal-shell .fw-leave-cancel-button:hover {
   transform: translateY(-1px);
   border-color: color-mix(in srgb, var(--danger) 46%, var(--border));
   background: color-mix(in srgb, var(--danger) 7%, var(--surface));
 }
 
 @media (max-width: 700px) {
-  #root .portal-shell .fw-leave-request-steps > li {
+  #root .faculty-portal-shell .fw-leave-request-steps > li {
     gap: 5px;
     padding: 7px 6px;
   }
 
-  #root .portal-shell .fw-leave-request-steps > li > small {
+  #root .faculty-portal-shell .fw-leave-request-steps > li > small {
     font-size: 9px;
   }
 }
 
 @media (min-width: 1101px) {
-  #root .portal-shell .fw-timetable-topbar > .fw-timetable-overview {
+  #root .faculty-portal-shell .fw-timetable-topbar > .fw-timetable-overview {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0;
   }
 
-  #root .portal-shell .fw-timetable-topbar > .fw-timetable-overview > article {
+  #root .faculty-portal-shell .fw-timetable-topbar > .fw-timetable-overview > article {
     gap: 4px;
     padding: 10px;
   }
 }
 
-#root .portal-shell .fw-timetable-page {
+#root .faculty-portal-shell .fw-timetable-page {
   display: grid;
   align-content: start;
   gap: 16px;
   min-width: 0;
 }
 
-#root .portal-shell .fw-timetable-topbar > .fw-timetable-overview > article {
+#root .faculty-portal-shell .fw-timetable-topbar > .fw-timetable-overview > article {
   position: relative;
 }
 
-#root .portal-shell .fw-timetable-topbar > .fw-timetable-overview > article::after {
+#root .faculty-portal-shell .fw-timetable-topbar > .fw-timetable-overview > article::after {
   position: absolute;
   top: 16px;
   right: 0;
@@ -5716,18 +5779,18 @@
   pointer-events: none;
 }
 
-#root .portal-shell .fw-timetable-topbar > .fw-timetable-overview > article:last-child::after {
+#root .faculty-portal-shell .fw-timetable-topbar > .fw-timetable-overview > article:last-child::after {
   display: none;
 }
 
 @media (max-width: 1100px) {
-  #root .portal-shell .fw-timetable-topbar > .fw-timetable-overview > article:nth-child(even)::after {
+  #root .faculty-portal-shell .fw-timetable-topbar > .fw-timetable-overview > article:nth-child(even)::after {
     display: none;
   }
 }
 
 /* Study Materials: make every action easy to see and use. */
-#root .portal-shell .fw-material-library-actions > .fw-button {
+#root .faculty-portal-shell .fw-material-library-actions > .fw-button {
   min-height: 42px;
   padding: 9px 13px;
   border-radius: 10px;
@@ -5738,22 +5801,22 @@
   transition: background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease, transform .16s ease;
 }
 
-#root .portal-shell .fw-material-library-actions > .fw-button > svg {
+#root .faculty-portal-shell .fw-material-library-actions > .fw-button > svg {
   width: 16px;
   height: 16px;
   flex: 0 0 16px;
   stroke-width: 2.2;
 }
 
-#root .portal-shell .fw-material-library-actions > .fw-material-filter-button,
-#root .portal-shell .fw-material-library-actions > .fw-material-export-button {
+#root .faculty-portal-shell .fw-material-library-actions > .fw-material-filter-button,
+#root .faculty-portal-shell .fw-material-library-actions > .fw-material-export-button {
   border: 1px solid color-mix(in srgb, var(--brand) 38%, var(--border));
   background: var(--surface);
   color: var(--text-primary);
 }
 
-#root .portal-shell .fw-material-library-actions > .fw-material-filter-button:hover:not(:disabled),
-#root .portal-shell .fw-material-library-actions > .fw-material-export-button:hover:not(:disabled) {
+#root .faculty-portal-shell .fw-material-library-actions > .fw-material-filter-button:hover:not(:disabled),
+#root .faculty-portal-shell .fw-material-library-actions > .fw-material-export-button:hover:not(:disabled) {
   border-color: var(--brand);
   background: var(--brand-soft);
   color: var(--brand);
@@ -5761,22 +5824,22 @@
   transform: translateY(-1px);
 }
 
-#root .portal-shell .fw-material-library-actions > .fw-material-upload-button {
+#root .faculty-portal-shell .fw-material-library-actions > .fw-material-upload-button {
   border: 1px solid var(--brand-solid);
   background: var(--brand-solid);
   color: var(--text-on-dark);
   box-shadow: 0 4px 10px color-mix(in srgb, var(--brand-solid) 22%, transparent);
 }
 
-#root .portal-shell .fw-material-library-actions > .fw-material-upload-button:hover:not(:disabled) {
+#root .faculty-portal-shell .fw-material-library-actions > .fw-material-upload-button:hover:not(:disabled) {
   border-color: var(--brand-solid-hover);
   background: var(--brand-solid-hover);
   color: var(--text-on-dark);
 }
 
-#root .portal-shell .fw-material-library-actions > .fw-button:focus-visible,
-#root .portal-shell .fw-material-filter-status > button:focus-visible,
-#root .portal-shell .fw-material-actions .fw-icon-button:focus-visible,
+#root .faculty-portal-shell .fw-material-library-actions > .fw-button:focus-visible,
+#root .faculty-portal-shell .fw-material-filter-status > button:focus-visible,
+#root .faculty-portal-shell .fw-material-actions .fw-icon-button:focus-visible,
 .portal-dialog .fw-material-delete-actions > button:focus-visible,
 .portal-dialog .fw-material-edit-actions > button:focus-visible,
 .portal-dialog .fw-material-download-button:focus-visible,
@@ -5785,7 +5848,7 @@
   outline-offset: 2px;
 }
 
-#root .portal-shell .fw-material-filter-count {
+#root .faculty-portal-shell .fw-material-filter-count {
   min-width: 21px;
   height: 21px;
   padding: 0 5px;
@@ -5794,7 +5857,7 @@
   font-size: 11px;
 }
 
-#root .portal-shell .fw-material-filter-status > button {
+#root .faculty-portal-shell .fw-material-filter-status > button {
   min-height: 36px;
   padding: 7px 10px;
   border: 1px solid color-mix(in srgb, var(--brand) 35%, var(--border));
@@ -5806,18 +5869,18 @@
   text-decoration: none;
 }
 
-#root .portal-shell .fw-material-filter-status > button:hover {
+#root .faculty-portal-shell .fw-material-filter-status > button:hover {
   border-color: var(--brand);
   background: var(--brand);
   color: var(--text-on-dark);
   text-decoration: none;
 }
 
-#root .portal-shell .fw-material-table .fw-material-actions {
+#root .faculty-portal-shell .fw-material-table .fw-material-actions {
   gap: 7px;
 }
 
-#root .portal-shell .fw-material-table .fw-material-actions .fw-icon-button {
+#root .faculty-portal-shell .fw-material-table .fw-material-actions .fw-icon-button {
   flex: 0 0 38px;
   width: 38px;
   min-height: 38px;
@@ -5828,37 +5891,37 @@
   box-shadow: 0 1px 3px rgb(24 39 75 / 8%);
 }
 
-#root .portal-shell .fw-material-table .fw-material-actions .fw-icon-button svg {
+#root .faculty-portal-shell .fw-material-table .fw-material-actions .fw-icon-button svg {
   width: 16px;
   height: 16px;
   stroke-width: 2.1;
 }
 
-#root .portal-shell .fw-material-table .fw-material-actions .fw-icon-button:hover {
+#root .faculty-portal-shell .fw-material-table .fw-material-actions .fw-icon-button:hover {
   border-color: var(--brand);
   background: var(--brand);
   color: var(--text-on-dark);
 }
 
-#root .portal-shell .fw-material-table .fw-material-actions .fw-icon-button[aria-label^="Delete"] {
+#root .faculty-portal-shell .fw-material-table .fw-material-actions .fw-icon-button[aria-label^="Delete"] {
   border-color: color-mix(in srgb, var(--danger, #c23a3a) 32%, var(--border));
   background: color-mix(in srgb, var(--danger, #c23a3a) 9%, var(--surface));
   color: var(--danger, #b42332);
 }
 
-#root .portal-shell .fw-material-table .fw-material-actions .fw-icon-button[aria-label^="Delete"]:hover {
+#root .faculty-portal-shell .fw-material-table .fw-material-actions .fw-icon-button[aria-label^="Delete"]:hover {
   border-color: var(--danger, #c23a3a);
   background: var(--danger-solid);
   color: var(--text-on-dark);
 }
 
 /* Keep table actions legible even when theme colors or browser scaling vary. */
-#root .portal-shell .fw-material-table th:first-child { width: 37%; }
-#root .portal-shell .fw-material-table th:nth-child(2) { width: 26%; }
-#root .portal-shell .fw-material-table th:nth-child(3) { width: 16%; }
-#root .portal-shell .fw-material-table th:nth-child(4) { width: 21%; }
+#root .faculty-portal-shell .fw-material-table th:first-child { width: 37%; }
+#root .faculty-portal-shell .fw-material-table th:nth-child(2) { width: 26%; }
+#root .faculty-portal-shell .fw-material-table th:nth-child(3) { width: 16%; }
+#root .faculty-portal-shell .fw-material-table th:nth-child(4) { width: 21%; }
 
-#root .portal-shell .fw-material-table .fw-material-actions .fw-icon-button {
+#root .faculty-portal-shell .fw-material-table .fw-material-actions .fw-icon-button {
   flex: 0 0 auto;
   width: auto;
   min-width: 38px;
@@ -5869,7 +5932,7 @@
   color: var(--text-primary);
 }
 
-#root .portal-shell .fw-material-table .fw-material-actions .fw-icon-button > svg {
+#root .faculty-portal-shell .fw-material-table .fw-material-actions .fw-icon-button > svg {
   display: block;
   width: 14px !important;
   height: 14px !important;
@@ -5879,7 +5942,7 @@
   stroke-width: 2.4;
 }
 
-#root .portal-shell .fw-material-table .fw-material-actions .fw-icon-button > span {
+#root .faculty-portal-shell .fw-material-table .fw-material-actions .fw-icon-button > span {
   display: inline;
   color: currentColor;
   font-size: 9px;
@@ -5887,24 +5950,24 @@
   line-height: 1;
 }
 
-#root .portal-shell .fw-material-table .fw-material-actions .fw-material-action-view,
-#root .portal-shell .fw-material-table .fw-material-actions .fw-material-action-edit {
+#root .faculty-portal-shell .fw-material-table .fw-material-actions .fw-material-action-view,
+#root .faculty-portal-shell .fw-material-table .fw-material-actions .fw-material-action-edit {
   background: var(--surface);
   color: var(--text-primary);
 }
 
-#root .portal-shell .fw-material-table .fw-material-actions .fw-material-action-view:hover,
-#root .portal-shell .fw-material-table .fw-material-actions .fw-material-action-edit:hover {
+#root .faculty-portal-shell .fw-material-table .fw-material-actions .fw-material-action-view:hover,
+#root .faculty-portal-shell .fw-material-table .fw-material-actions .fw-material-action-edit:hover {
   background: var(--brand);
   color: var(--text-on-dark);
 }
 
-#root .portal-shell .fw-material-table .fw-material-actions .fw-material-action-delete {
+#root .faculty-portal-shell .fw-material-table .fw-material-actions .fw-material-action-delete {
   background: var(--danger-soft);
   color: var(--danger, #a32332);
 }
 
-#root .portal-shell .fw-material-table .fw-material-actions .fw-material-action-delete:hover {
+#root .faculty-portal-shell .fw-material-table .fw-material-actions .fw-material-action-delete:hover {
   background: var(--danger-solid);
   color: var(--text-on-dark);
 }
@@ -5944,17 +6007,17 @@
 }
 
 @media (max-width: 700px) {
-  #root .portal-shell .fw-material-library-actions {
+  #root .faculty-portal-shell .fw-material-library-actions {
     justify-content: flex-start;
     width: 100%;
   }
 
-  #root .portal-shell .fw-material-library-actions > .fw-button {
+  #root .faculty-portal-shell .fw-material-library-actions > .fw-button {
     flex: 1 1 135px;
     justify-content: center;
   }
 
-  #root .portal-shell .fw-material-table .fw-material-actions .fw-icon-button {
+  #root .faculty-portal-shell .fw-material-table .fw-material-actions .fw-icon-button {
     flex: 0 0 auto;
     width: auto;
     min-height: 32px;
@@ -5962,11 +6025,11 @@
 }
 
 /* Keep Study Materials row actions visually secondary to the content. */
-#root .portal-shell .fw-material-table .fw-material-actions {
+#root .faculty-portal-shell .fw-material-table .fw-material-actions {
   gap: 6px;
 }
 
-#root .portal-shell .fw-material-table .fw-material-actions .fw-icon-button {
+#root .faculty-portal-shell .fw-material-table .fw-material-actions .fw-icon-button {
   min-height: 30px;
   padding: 0 7px;
   border-color: var(--border);
@@ -5977,7 +6040,7 @@
   font-weight: 600;
 }
 
-#root .portal-shell .fw-material-table .fw-material-actions .fw-icon-button > svg {
+#root .faculty-portal-shell .fw-material-table .fw-material-actions .fw-icon-button > svg {
   width: 13px !important;
   height: 13px !important;
   min-width: 13px;
@@ -5985,31 +6048,144 @@
   stroke-width: 2;
 }
 
-#root .portal-shell .fw-material-table .fw-material-actions .fw-icon-button > span {
+#root .faculty-portal-shell .fw-material-table .fw-material-actions .fw-icon-button > span {
   font-size: 10px;
   font-weight: 600;
 }
 
-#root .portal-shell .fw-material-table .fw-material-actions .fw-material-action-view,
-#root .portal-shell .fw-material-table .fw-material-actions .fw-material-action-edit {
+#root .faculty-portal-shell .fw-material-table .fw-material-actions .fw-material-action-view,
+#root .faculty-portal-shell .fw-material-table .fw-material-actions .fw-material-action-edit {
   color: var(--text-secondary);
 }
 
-#root .portal-shell .fw-material-table .fw-material-actions .fw-material-action-view:hover,
-#root .portal-shell .fw-material-table .fw-material-actions .fw-material-action-edit:hover {
+#root .faculty-portal-shell .fw-material-table .fw-material-actions .fw-material-action-view:hover,
+#root .faculty-portal-shell .fw-material-table .fw-material-actions .fw-material-action-edit:hover {
   border-color: var(--border-strong);
   background: var(--surface-raised);
   color: var(--text-primary);
 }
 
-#root .portal-shell .fw-material-table .fw-material-actions .fw-material-action-delete {
+#root .faculty-portal-shell .fw-material-table .fw-material-actions .fw-material-action-delete {
   border-color: color-mix(in srgb, var(--danger) 22%, var(--border));
   background: color-mix(in srgb, var(--danger) 5%, var(--surface));
   color: color-mix(in srgb, var(--danger) 82%, var(--text-primary));
 }
 
-#root .portal-shell .fw-material-table .fw-material-actions .fw-material-action-delete:hover {
+#root .faculty-portal-shell .fw-material-table .fw-material-actions .fw-material-action-delete:hover {
   border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
   background: var(--danger-soft);
   color: var(--danger);
+}
+
+/* Tighter vertical rhythm on the My Subjects overview. */
+#root .faculty-portal-shell .fw-subjects-page {
+  gap: 12px;
+}
+
+#root .faculty-portal-shell .fw-subjects-page > .fw-heading {
+  margin-bottom: 0;
+}
+
+#root .faculty-portal-shell .fw-subjects-page > .fw-heading > div:first-child > p:last-child {
+  margin-bottom: 0 !important;
+}
+
+#root .faculty-portal-shell .fw-subjects-page > .fw-workload-card {
+  min-height: 0;
+  padding: 12px 18px;
+  gap: 16px;
+}
+
+#root .faculty-portal-shell .fw-subjects-page > .fw-workload-card .fw-eyebrow {
+  margin-bottom: 4px !important;
+}
+
+#root .faculty-portal-shell .fw-subjects-page > .fw-workload-card p {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+#root .faculty-portal-shell .fw-subjects-page > .fw-workload-card strong {
+  display: block;
+  margin-bottom: 4px;
+  line-height: 1.1;
+}
+
+#root .faculty-portal-shell .fw-subjects-page > .fw-workload-card progress {
+  max-width: 360px;
+  height: 8px;
+}
+
+#root .faculty-portal-shell .fw-subjects-page > .fw-card {
+  padding: 16px 18px;
+}
+
+#root .faculty-portal-shell .fw-subjects-page > .fw-card .fw-card-heading {
+  margin-bottom: 10px;
+}
+
+@media (max-width: 700px) {
+  #root .faculty-portal-shell .fw-subjects-page > .fw-workload-card,
+  #root .faculty-portal-shell .fw-subjects-page > .fw-card {
+    padding: 12px;
+  }
+
+  #root .faculty-portal-shell .fw-subjects-page > .fw-workload-card {
+    gap: 10px;
+  }
+
+  #root .faculty-portal-shell .fw-subjects-page > .fw-workload-card progress {
+    max-width: none;
+  }
+}
+
+/* Marks Entry only: position the existing KPI strip at the upper right. */
+#root .portal-shell .restored-faculty-page:has(.tm-workspace) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+}
+
+#root .portal-shell .restored-faculty-page:has(.tm-workspace) > .tf-heading {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+}
+
+#root .portal-shell .restored-faculty-page:has(.tm-workspace) .tm-wrapper,
+#root .portal-shell .restored-faculty-page:has(.tm-workspace) .tm-workspace {
+  display: contents;
+}
+
+#root .portal-shell .restored-faculty-page:has(.tm-workspace) .tm-analytics-grid {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+  align-self: center;
+}
+
+#root .portal-shell .restored-faculty-page:has(.tm-workspace) :is(.tm-mode-bar, .tm-config-card, .tm-roster-card, .portal-feedback) {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+#root .portal-shell .restored-faculty-page:has(.tm-workspace) :is(.tm-config-card, .tm-roster-card) {
+  margin-bottom: 0;
+}
+
+@media (max-width: 1100px) {
+  #root .portal-shell .restored-faculty-page:has(.tm-workspace) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #root .portal-shell .restored-faculty-page:has(.tm-workspace) > .tf-heading {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  #root .portal-shell .restored-faculty-page:has(.tm-workspace) .tm-analytics-grid {
+    grid-column: 1;
+    grid-row: 2;
+  }
 }

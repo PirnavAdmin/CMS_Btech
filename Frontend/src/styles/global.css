@@ -82,7 +82,7 @@ body { margin: 0; color: var(--text-main); background: var(--bg-page); font-fami
 
 /* Shared page shell and headings. */
 .erp-page, .cm-page, .college-module, .semester-management, .section-management, .student-admission, .student-profile, .student-promotion, .profile-page, .settings-page { min-width: 0; width: 100%; }
-.erp-page { display: grid; gap: var(--space-5); color: var(--text-main); }
+.erp-page { display: grid; align-content: start; gap: var(--page-section-gap); color: var(--text-main); }
 .erp-page-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); }
 .erp-page-title { margin: 0; color: var(--text-main); font-size: 28px; line-height: 1.2; font-weight: 800; }
 .erp-page-subtitle { margin: 6px 0 0; max-width: 680px; color: var(--text-muted-global); font-size: var(--font-body); line-height: 1.5; }

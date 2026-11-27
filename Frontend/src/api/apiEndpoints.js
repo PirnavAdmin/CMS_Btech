@@ -1814,6 +1814,7 @@ export const studentPromotionApi = {
   getPromotedStudents: async (params) => listData(await request(withQuery(API_ENDPOINTS.promotions.promotedStudents, params))), getStudentHistory: async (id) => listData(await request(API_ENDPOINTS.promotions.studentHistory(requiredId(id, 'Student ID')))), getHistoryByStudent: async (id) => listData(await request(API_ENDPOINTS.promotions.historyByStudent(requiredId(id, 'Student ID')))),
 }
 export const studentAttendanceApi = {
+  getMine: async () => listData(await request(endpoint('/api/v1/student-attendance/me'))),
   list: async (params) => listData(await request(withQuery(API_ENDPOINTS.studentAttendance.list, params))),
   create: async (payload) => normalizeRecord(await request(API_ENDPOINTS.studentAttendance.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
   getById: async (sessionId, params) => normalizeRecord(await request(withQuery(API_ENDPOINTS.studentAttendance.detail(requiredId(sessionId, 'Session ID')), params))),
@@ -1853,6 +1854,17 @@ export const resultsApi = {
   list: async (params) => listData(await request(withQuery(API_ENDPOINTS.results.list, params))),
   create: async (payload) => normalizeRecord(await request(API_ENDPOINTS.results.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
   getTranscript: async (studentId) => normalizeRecord(await request(API_ENDPOINTS.results.transcript(requiredId(studentId, 'Student ID')))),
+}
+
+// Read-only student examination data. The result endpoint enforces that a
+// student can only request their own published results in ResultRepository.
+export const studentExaminationApi = {
+  getSchedule: async () => listData(await request(endpoint('/api/v1/exam-schedules/views'))),
+  getExams: async () => listData(await request(withQuery(endpoint('/api/v1/exams'), { status: true, page: 1, pageSize: 500 }))),
+  getPublishedResults: async studentId => {
+    const id = requiredId(studentId, 'Student ID')
+    return listData(await request(endpoint(`/api/v1/results/student/${id}`)))
+  },
 }
 
 export async function lookupIndianPostOffices(pincode) {
