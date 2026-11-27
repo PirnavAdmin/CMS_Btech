@@ -486,7 +486,7 @@
 
 /* Dashboard cards follow the workspace system and scale cleanly on smaller screens. */
 #root .portal-shell .faculty-dashboard {
-  gap: clamp(24px, 2vw, 32px);
+  gap: clamp(14px, 1.2vw, 20px);
 }
 
 #root .portal-shell .faculty-dashboard-page {
@@ -502,8 +502,8 @@
 #root .portal-shell .faculty-dashboard-welcome {
   position: relative;
   overflow: hidden;
-  min-height: clamp(220px, 15.9vw, 305px);
-  padding: clamp(30px, 2.8vw, 54px);
+  min-height: clamp(190px, 13vw, 245px);
+  padding: clamp(22px, 2vw, 36px);
   border-color: color-mix(in srgb, var(--brand) 18%, var(--border));
   border-radius: 22px;
   background:
@@ -858,7 +858,9 @@
 /* Keep the faculty KPIs visible beside the dashboard title. */
 #root .portal-shell .faculty-dashboard-heading {
   align-items: flex-start;
-  gap: 24px;
+  justify-content: flex-start;
+  gap: 16px;
+  margin-bottom: 12px;
 }
 
 #root .portal-shell .faculty-dashboard-heading > div:first-child {
@@ -874,8 +876,8 @@
 }
 
 #root .portal-shell .faculty-dashboard-metrics-top .faculty-dashboard-metric {
-  min-height: 94px;
-  padding: 13px;
+  min-height: 82px;
+  padding: 11px;
   gap: 9px;
   border-radius: 14px;
 }
@@ -904,8 +906,24 @@
 }
 
 @media (max-width: 1350px) {
+  #root .portal-shell .faculty-dashboard-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+    justify-content: start;
+    gap: 12px;
+    height: auto;
+    min-height: 0;
+  }
+
   #root .portal-shell .faculty-dashboard-heading > div:first-child {
     min-width: 0;
+  }
+
+  #root .portal-shell .faculty-dashboard-heading-aside {
+    width: 100%;
+    flex: none;
+    justify-items: start;
   }
 
   #root .portal-shell .faculty-dashboard-metrics-top {
