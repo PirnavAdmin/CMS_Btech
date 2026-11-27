@@ -2,10 +2,32 @@ namespace BTech.DTOs.Fees;
 
 public sealed class FeeCategoryDto
 {
+    [System.Text.Json.Serialization.JsonPropertyName("id")]
     public long Id { get; init; }
+
+    [System.Text.Json.Serialization.JsonPropertyName("feeCategoryId")]
+    public long FeeCategoryId => Id;
+
+    [System.Text.Json.Serialization.JsonPropertyName("code")]
     public string Code { get; init; } = string.Empty;
+
+    [System.Text.Json.Serialization.JsonPropertyName("categoryCode")]
+    public string CategoryCode => Code;
+
+    [System.Text.Json.Serialization.JsonPropertyName("name")]
     public string Name { get; init; } = string.Empty;
+
+    [System.Text.Json.Serialization.JsonPropertyName("categoryName")]
+    public string CategoryName => Name;
+
+    [System.Text.Json.Serialization.JsonPropertyName("feeCategory")]
+    public string? FeeCategory { get; init; } = "Academic";
+
+    [System.Text.Json.Serialization.JsonPropertyName("description")]
     public string? Description { get; init; }
+
+    [System.Text.Json.Serialization.JsonPropertyName("status")]
+    public int Status { get; init; } = 1;
 }
 
 public sealed class FeeStructureDto

@@ -170,7 +170,9 @@ export function structureTotalFeeComponents(structure, amount) {
   if (!hasSingleStructureFee(structure)) throw new Error('Existing fee breakdown and refund rules must be preserved.')
   return [{ masterId: 'structure-total-fee', name: 'Total Fee', category: 'Academic', amount, mandatory: true, refundable: false, recurring: true, frequency: structure.cycle }]
 }
-export const academicFeeComponent = component => !['Hostel', 'Transport'].includes(component.domain || component.category)
+export const academicFeeComponent = component => !['Hostel', 'Transport'].includes(component?.domain || component?.feeCategory || component?.category)
+export const hostelFeeComponent = component => (component?.domain || component?.feeCategory || component?.category) === 'Hostel'
+export const transportFeeComponent = component => (component?.domain || component?.feeCategory || component?.category) === 'Transport'
 const structureComponentsActive = (state, structure) => structure.components.every(component =>
   (component.masterId === 'structure-total-fee' && component.name === 'Total Fee' && component.category === 'Academic' && component.mandatory === true && component.refundable === false) ||
   (academicFeeComponent(component) && state.components.some(master => master.id === component.masterId && master.status === 'Active' && academicFeeComponent(master))))
