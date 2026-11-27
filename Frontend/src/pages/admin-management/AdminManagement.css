@@ -6024,3 +6024,26 @@
   .college-form-dialog .ac-tabs button { flex-grow: 0; }
   .college-form-dialog .shared-view-dialog__footer { flex-wrap: wrap; gap: 6px; }
 }
+.ay-editor > .erp-form-scroll-body > .ay-range-error {
+  position: relative;
+  z-index: 1;
+  display: block;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--danger) 28%, transparent);
+  border-radius: 8px;
+  background: var(--surface, #fff);
+  color: var(--danger);
+  font-size: .88rem;
+  font-weight: 650;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .ay-editor > .erp-form-scroll-body > .ay-range-error {
+    margin-top: 10px;
+    padding: 9px 10px;
+    font-size: .82rem;
+  }
+}

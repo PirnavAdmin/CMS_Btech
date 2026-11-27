@@ -702,7 +702,7 @@ function AcademicYear() {
                 )}
 
                 </FormGroup>
-                {errors.range && <p className="field-error" role="alert">{errors.range}</p>}
+                {errors.range && <p className="field-error ay-range-error" role="alert">{errors.range}</p>}
               </FormLayout>
           </ViewDialog>
         )}
