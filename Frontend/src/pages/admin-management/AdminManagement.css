@@ -5860,6 +5860,7 @@
 .rooms-generator-form label{display:grid;gap:6px;color:var(--text-secondary);font-size:.76rem;font-weight:700}
 .rooms-generator-form input,.rooms-generator-form select{box-sizing:border-box;width:100%;height:40px;padding:0 11px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text-primary);font:inherit;font-weight:500}
 .rooms-generator-form label small{color:var(--text-muted);font-size:.68rem;font-weight:400}
+.rooms-generator-form label small.rooms-generator-capacity-warning{color:var(--warning);font-weight:600}
 .rooms-generator-preview{margin:0;padding:10px 12px;border-radius:8px;background:var(--surface-soft);color:var(--text-secondary);font-size:.76rem;font-weight:650}
 @media(max-width:560px){.rooms-block-overview__intro{align-items:flex-start;flex-direction:column}.rooms-generator-form__grid{grid-template-columns:1fr}.rooms-block-overview__item{width:100%;min-width:0}}
 

@@ -6992,6 +6992,7 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
   const previewFloorIndexes = previewFloorCount <= 2
     ? Array.from({ length: previewFloorCount }, (_, index) => index)
     : [0, previewFloorCount - 1]
+  const capacityExceedsLimit = Number(roomGeneration.capacity) > 500
   const handleGenerateRooms = async (event) => {
     event.preventDefault()
     const block = roomGeneration.block.trim()
@@ -6999,6 +7000,7 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
     const roomsPerFloor = Number(roomGeneration.roomsPerFloor)
     const roomPrefix = roomGeneration.roomPrefix.trim().toUpperCase()
     const capacity = Number(roomGeneration.capacity)
+    if (capacityExceedsLimit) return
     if (!block || !Number.isInteger(floorCount) || floorCount < 1 || floorCount > maxGeneratedFloors || !/^[A-Z0-9]{1,8}$/.test(roomPrefix) || !Number.isInteger(roomsPerFloor) || roomsPerFloor < 1 || roomsPerFloor > 99 || !Number.isInteger(capacity) || capacity < 1) {
       showError(`Review the block, floor count (1–${maxGeneratedFloors}), room prefix, rooms per floor (1–99), and capacity.`)
       return
@@ -7970,16 +7972,16 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
           </div>
         </section>
 
-        {showRoomGenerator && <ViewDialog title="Generate rooms by floor" subtitle="Create configurable room ranges and save each room through the existing room service." icon={FiGrid} maxWidth="720px" showExport={false} busy={generatingRooms} className="rooms-generator-dialog" onClose={() => !generatingRooms && setShowRoomGenerator(false)} footerContent={<><button type="button" className="erp-btn erp-btn--secondary" onClick={() => setShowRoomGenerator(false)} disabled={generatingRooms}>Cancel</button><button type="submit" form="room-generator-form" className="erp-btn erp-btn--primary" disabled={generatingRooms}>{generatingRooms ? 'Generating…' : 'Generate rooms'}</button></>}>
-          <form id="room-generator-form" className="rooms-generator-form" onSubmit={handleGenerateRooms}>
+        {showRoomGenerator && <ViewDialog title="Generate rooms by floor" subtitle="Create configurable room ranges and save each room through the existing room service." icon={FiGrid} maxWidth="720px" showExport={false} busy={generatingRooms} className="rooms-generator-dialog" onClose={() => !generatingRooms && setShowRoomGenerator(false)} footerContent={<><button type="button" className="erp-btn erp-btn--secondary" onClick={() => setShowRoomGenerator(false)} disabled={generatingRooms}>Cancel</button><button type="submit" form="room-generator-form" className="erp-btn erp-btn--primary" disabled={generatingRooms || capacityExceedsLimit}>{generatingRooms ? 'Generating…' : 'Generate rooms'}</button></>}>
+          <form id="room-generator-form" className="rooms-generator-form" onSubmit={handleGenerateRooms} noValidate>
             <div className="rooms-generator-note"><FiInfo /> Codes start at <strong>{roomGeneration.roomPrefix || 'A'}-101</strong> on the ground floor and continue based on rooms per floor. The next floor starts at {roomGeneration.roomPrefix || 'A'}-201. Existing codes are skipped.</div>
             <label>Academic block<input value={roomGeneration.block} onChange={(event) => { const block = event.target.value; const inferredPrefix = block.match(/([A-Za-z0-9]+)\s*$/)?.[1]?.toUpperCase(); setRoomGeneration((current) => ({ ...current, block, ...(inferredPrefix ? { roomPrefix: inferredPrefix } : {}) })) }} placeholder="e.g. Mechanical Block-A" required list="saved-academic-blocks" /><datalist id="saved-academic-blocks">{savedBuildings.map((block) => <option key={block} value={block} />)}</datalist></label>
             <div className="rooms-generator-form__grid">
               <label>Number of floors<input type="number" min="1" max={maxGeneratedFloors} step="1" value={roomGeneration.floorCount} onChange={(event) => setRoomGeneration((current) => ({ ...current, floorCount: event.target.value === '' ? '' : Number(event.target.value) }))} required /><small>Enter 1–{maxGeneratedFloors}; floor names are assigned in order.</small></label>
               <label>Room code prefix<input value={roomGeneration.roomPrefix} onChange={(event) => setRoomGeneration((current) => ({ ...current, roomPrefix: event.target.value }))} placeholder="A" maxLength={8} required /><small>You can edit this manually.</small></label>
-              <label>Rooms per floor<input type="number" min="1" max="99" value={roomGeneration.roomsPerFloor} onChange={(event) => setRoomGeneration((current) => ({ ...current, roomsPerFloor: Number(event.target.value) }))} /></label>
+              <label>Rooms per floor<input type="number" min="1" max="99" value={roomGeneration.roomsPerFloor} onChange={(event) => setRoomGeneration((current) => ({ ...current, roomsPerFloor: event.target.value === '' ? '' : Number(event.target.value) }))} /></label>
               <label>Room type<select value={roomGeneration.roomType} onChange={(event) => setRoomGeneration((current) => ({ ...current, roomType: event.target.value }))}>{ROOM_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}</select></label>
-              <label>Capacity<input type="number" min="1" max="500" value={roomGeneration.capacity} onChange={(event) => setRoomGeneration((current) => ({ ...current, capacity: Number(event.target.value) }))} /></label>
+              <label>Capacity<input type="number" min="1" max="500" value={roomGeneration.capacity} aria-invalid={capacityExceedsLimit} aria-describedby={capacityExceedsLimit ? 'rooms-generator-capacity-warning' : undefined} onChange={(event) => setRoomGeneration((current) => ({ ...current, capacity: event.target.value === '' ? '' : Number(event.target.value) }))} />{capacityExceedsLimit && <small id="rooms-generator-capacity-warning" className="rooms-generator-capacity-warning" role="alert">Capacity cannot exceed 500 seats.</small>}</label>
             </div>
             <p className="rooms-generator-preview">{previewFloorCount * Math.max(0, Number(roomGeneration.roomsPerFloor) || 0)} rooms planned · {previewFloorIndexes.map((index) => `${generationFloorLabel(index)}: ${roomGeneration.roomPrefix || 'A'}-${(index + 1) * 100 + 1} to ${roomGeneration.roomPrefix || 'A'}-${(index + 1) * 100 + (Number(roomGeneration.roomsPerFloor) || 0)}`).join(previewFloorCount > 2 ? ' · … · ' : ' · ') || 'Choose floors'}</p>
           </form>
