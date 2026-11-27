@@ -706,6 +706,8 @@ builder.Services.AddScoped<ITimetableRepository, TimetableRepository>();
 
 builder.Services.AddScoped<IMarksRepository, MarksRepository>();
 builder.Services.AddScoped<IMarksService, MarksService>();
+builder.Services.AddScoped<ISyllabusRepository, SyllabusRepository>();
+builder.Services.AddScoped<ISyllabusService, SyllabusService>();
 builder.Services.AddScoped<IResultRepository, ResultRepository>();
 builder.Services.AddScoped<IResultService, ResultService>();
 

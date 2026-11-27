@@ -120,6 +120,7 @@ export const backendTimetableService = {
       timetableSlotId: id(slots[0].id), timetableSlotIds: slots.map(row => id(row.id)), entryType: form.entryType || 'LECTURE' }
     return form.id ? api.put(`${path(tableId)}/entries/${id(form.id)}`, payload) : api.post(`${path(tableId)}/entries`, payload)
   },
+  deleteDraft: tableId => api.remove(path(tableId)),
   removeEntry: (tableId, revision, entryId) => api.remove(`${path(tableId)}/entries/${id(entryId)}`),
   async validate(tableId) {
     const result = await api.post(`${path(tableId)}/validate`)

@@ -1,0 +1,68 @@
+# Apply Database/Sql/Syllabus/01_Syllabus.sql after the Subject Management SQL.
+# Set valid IDs and JWTs for one college. Use a management token with
+# syllabus_management view, create, edit, delete and export permissions.
+# The portal token needs subjects view and a matching student or faculty assignment.
+@baseUrl = http://localhost:5084
+@token = MANAGEMENT_JWT
+@portalToken = FACULTY_OR_STUDENT_JWT
+@collegeId = 1
+@academicYearId = 1
+@courseId = 1
+@branchId = 1
+@semesterId = 1
+@filePath = sample.pdf
+
+### Create a draft
+# @name create
+POST {{baseUrl}}/api/v1/syllabi
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "collegeId": {{collegeId}},
+  "academicYearId": {{academicYearId}},
+  "courseId": {{courseId}},
+  "branchId": {{branchId}},
+  "semesterId": {{semesterId}},
+  "effectiveAcademicYearId": {{academicYearId}},
+  "title": "Semester syllabus",
+  "category": "Complete Semester Syllabus",
+  "version": "1.0"
+}
+
+### Upload the first document
+# @name upload
+POST {{baseUrl}}/api/v1/syllabi/{{create.response.body.$.data.syllabusId}}/documents?collegeId={{collegeId}}
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=syllabus-file
+
+--syllabus-file
+Content-Disposition: form-data; name="file"; filename="syllabus.pdf"
+Content-Type: application/pdf
+
+< {{filePath}}
+--syllabus-file--
+
+### Publish the draft
+POST {{baseUrl}}/api/v1/syllabi/{{create.response.body.$.data.syllabusId}}/publish?collegeId={{collegeId}}
+Authorization: Bearer {{token}}
+
+### List published syllabi as an eligible faculty member or student
+GET {{baseUrl}}/api/v1/syllabi/published?collegeId={{collegeId}}
+Authorization: Bearer {{portalToken}}
+
+### Download the published document as a portal user
+GET {{baseUrl}}/api/v1/syllabus-documents/{{upload.response.body.$.data.documentId}}/download?collegeId={{collegeId}}&portal=true
+Authorization: Bearer {{portalToken}}
+
+### View the revisions
+GET {{baseUrl}}/api/v1/syllabi/{{create.response.body.$.data.syllabusId}}/versions?collegeId={{collegeId}}
+Authorization: Bearer {{token}}
+
+### View the audit activity
+GET {{baseUrl}}/api/v1/syllabi/{{create.response.body.$.data.syllabusId}}/activity?collegeId={{collegeId}}
+Authorization: Bearer {{token}}
+
+### Archive the syllabus
+POST {{baseUrl}}/api/v1/syllabi/{{create.response.body.$.data.syllabusId}}/archive?collegeId={{collegeId}}
+Authorization: Bearer {{token}}

@@ -2,6 +2,7 @@
 .dashboard-layout { display:flex; width:100%; min-height:100dvh; background:var(--app-bg); color:var(--text-primary); font-family:var(--font-family); }
 .dashboard-layout>main { display:flex; flex-direction:column; min-width:0; width:calc(100% - var(--sidebar-width)); margin-left:var(--sidebar-width); background:var(--main-bg); }
 .dashboard-layout.sidebar-collapsed>main { width:calc(100% - var(--sidebar-collapsed-width)); margin-left:var(--sidebar-collapsed-width); }
+.dashboard-layout.sidebar-collapsed>.portal-content { margin-left:var(--sidebar-collapsed-width); }
 .dashboard-header { position:sticky; top:0; z-index:40; box-sizing:border-box; min-height:var(--header-height); display:flex; flex-wrap:wrap; align-items:center; gap:14px; padding:8px var(--space-5); background:var(--header-bg); backdrop-filter:blur(8px); border-bottom:1px solid var(--border); }
 .dashboard-header__actions { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin-left:auto; min-width:0; }
 .dashboard-header__academic-context { display:flex; align-items:center; gap:8px; min-width:0; }

@@ -306,7 +306,7 @@ function TimetableScreen({ data }) {
   const teachingDays = new Set(data.weekly.map(row => row.day)).size
   const assignedSections = new Set(data.weekly.map(row => row.sectionId || row.sectionName).filter(Boolean)).size
 
-  return <>
+  return <div className="fw-timetable-page">
     <div className="fw-timetable-topbar">
       <FeatureHeading eyebrow="TEACHING SCHEDULE" title="My Timetable" subtitle="Plan your week and jump directly into attendance." />
       <section className="fw-timetable-overview" aria-label="Weekly schedule overview">
@@ -374,7 +374,7 @@ function TimetableScreen({ data }) {
         onAction={normalizedSearch ? () => setSearch('') : undefined}
       />}
     </section>
-  </>
+  </div>
 }
 
 function MyAttendanceSummary({ data }) {

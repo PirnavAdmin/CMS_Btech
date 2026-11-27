@@ -73,3 +73,30 @@ export function periodSessions(periods = [], size = 1) {
     .filter(block => block.length === size && block.every((row, index) => !index || timeMinutes(block[index - 1].endTime) === timeMinutes(row.startTime))
       && !periods.some(row => !isTeachingPeriod(row) && overlaps(row, { startTime: block[0].startTime, endTime: block.at(-1).endTime })))
 }
+
+export function recommendDailyPeriods(settings, workingDayCount, sections) {
+  if (!workingDayCount || !sections.length || sections.some(sessions => !sessions.length)) return null
+  const weeklyTarget = Math.max(...sections.map(sessions => sessions.reduce((total, size) => total + size, 0)))
+  for (let count = Math.ceil(weeklyTarget / workingDayCount); count <= 24; count++) {
+    const automatic = { ...settings, periodsPerDay: count }
+    const preview = dailyPeriods(automatic)
+    if (preview.errors.length) continue
+    const segments = []
+    for (const period of preview.periods) {
+      if (!isTeachingPeriod(period)) segments.push(0)
+      else if (!segments.length) segments.push(1)
+      else segments[segments.length - 1]++
+    }
+    const fits = sections.every(sessions => {
+      const free = Array.from({ length: workingDayCount }, () => segments).flat()
+      return [...sessions].sort((a, b) => b - a).every(size => {
+        const index = free.findIndex(remaining => remaining >= size)
+        if (index === -1) return false
+        free[index] -= size
+        return true
+      })
+    })
+    if (fits) return { automatic, weeklyTarget, freePeriods: count * workingDayCount - weeklyTarget }
+  }
+  return null
+}
