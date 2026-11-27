@@ -18,6 +18,9 @@ namespace BTech.DTOs.Department
 
         public long? HodUserId { get; set; }
 
+        [RegularExpression("^(COURSE|NON_COURSE)$", ErrorMessage = "Choose a valid department type.")]
+        public string? DepartmentType { get; set; }
+
         // ADDED
         public string? Description { get; set; }
     }
@@ -37,6 +40,9 @@ namespace BTech.DTOs.Department
         public long CollegeId { get; set; }
 
         public long? HodUserId { get; set; }
+
+        [RegularExpression("^(COURSE|NON_COURSE)$", ErrorMessage = "Choose a valid department type.")]
+        public string? DepartmentType { get; set; }
 
         // ADDED
         public string? Description { get; set; }
@@ -62,6 +68,8 @@ namespace BTech.DTOs.Department
         public string? CollegeName { get; set; }
 
         public long? HodUserId { get; set; }
+
+        public string DepartmentType { get; set; } = BTech.Models.Department.CourseType;
 
         // ADDED - HOD NAME
         public string? HodName { get; set; }

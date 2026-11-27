@@ -1,4 +1,5 @@
 import { useParams } from 'react-router-dom'
+import { isLibrarian } from '../../auth/auth.js'
 import StaffPortalLayout, { STAFF_NAVIGATION } from './StaffPortalLayout.jsx'
 import StaffDashboard from './StaffDashboard.jsx'
 import StaffProfile from './StaffProfile.jsx'
@@ -9,9 +10,11 @@ import StaffTasks from './StaffTasks.jsx'
 import StaffNotices from './StaffNotices.jsx'
 import StaffMeetings from './StaffMeetings.jsx'
 import StaffDocuments from './StaffDocuments.jsx'
+import LibrarianPortal from '../librarian/LibrarianPortal.jsx'
 
 export default function StaffPortal() {
   const { screen = 'dashboard' } = useParams()
+  if (isLibrarian()) return <LibrarianPortal basePath="/staff-portal" />
 
   // Normalize aliases: 'profile' -> 'my-profile', 'attendance' -> 'my-attendance'
   const normalizedKey =

@@ -11,10 +11,11 @@ import { FacultyManagement, FacultyLeaveManagement, Payroll } from './pages/facu
 import { ExaminationSetup, ExaminationList, CreateExamination, ExamType } from './pages/examinations/examination-setup/ExaminationSetup'
 import { ExamTimetable, ExamScheduleList, DepartmentExamSchedule, StudentExamSchedule, HallAllocation, ExamConfiguration, CompletedExams } from './pages/examinations/exam-timetable/ExamModule'
 import { MarksManagement, MarksEntry, EditMarks, StudentMarks, SubjectMarksReport, MarksApproval } from './pages/examinations/marks-management/MarksManagement'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
 import ScreenPermissionBoundary from './auth/ScreenPermissionBoundary.jsx'
 import PortalRoute, { RoleDashboard, RoleAlias } from './components/portals/PortalRoute.jsx'
+import { isLibrarian } from './auth/auth.js'
 import { facultyRouteByPath } from './features/faculty/routeConfig.js'
 const AcademicPortal = lazy(() => import('./pages/portals/AcademicPortal.jsx'))
 const StaffPortal = lazy(() => import('./pages/staff-portal/StaffPortal.jsx'))
@@ -27,6 +28,20 @@ const FacultyDashboardPage = lazy(() => import('./features/faculty/dashboard/pag
 const FacultyWorkspacePage = lazy(() => import('./features/faculty/FacultyWorkspacePage.jsx'))
 const FacultyRouteErrorBoundary = lazy(() => import('./features/faculty/FacultyRouteErrorBoundary.jsx'))
 const FacultySessionExpiredPage = lazy(() => import('./features/faculty/FacultySessionExpiredPage.jsx'))
+const LibrarianPortal = lazy(() => import('./pages/librarian/LibrarianPortal.jsx'))
+
+function FacultyDashboardEntry() {
+  return isLibrarian() ? <LibrarianPortal basePath="/faculty-portal" /> : <FacultyDashboardPage />
+}
+
+function FacultyWorkspaceEntry() {
+  return isLibrarian() ? <LibrarianPortal basePath="/faculty-portal" /> : <FacultyWorkspacePage />
+}
+
+function FacultyScreenBoundary({ children }) {
+  const { pathname } = useLocation()
+  return <FacultyRouteErrorBoundary key={pathname}>{children}</FacultyRouteErrorBoundary>
+}
 
 
 
@@ -196,8 +211,8 @@ export default function App() {
           <Route path="/faculty-portal/session-expired" element={<AcademicProvider><FacultyRouteErrorBoundary><FacultySessionExpiredPage /></FacultyRouteErrorBoundary></AcademicProvider>} />
           <Route element={<AcademicProvider><PortalRoute roles={[ROLES.FACULTY]} /></AcademicProvider>}>
             <Route path="/faculty-portal" element={<Navigate to="/faculty-portal/dashboard" replace />} />
-            <Route path={facultyRouteByPath['/faculty-portal/dashboard'].path} element={<FacultyRouteErrorBoundary><FacultyDashboardPage /></FacultyRouteErrorBoundary>} />
-            <Route path="/faculty-portal/:screen?" element={<FacultyRouteErrorBoundary><FacultyWorkspacePage /></FacultyRouteErrorBoundary>} />
+            <Route path={facultyRouteByPath['/faculty-portal/dashboard'].path} element={<FacultyRouteErrorBoundary><FacultyDashboardEntry /></FacultyRouteErrorBoundary>} />
+            <Route path="/faculty-portal/:screen?" element={<FacultyScreenBoundary><FacultyWorkspaceEntry /></FacultyScreenBoundary>} />
           </Route>
           <Route element={<PortalRoute roles={[ROLES.STUDENT]} />}>
             <Route path="/student-portal/:screen?" element={<AcademicPortal role="student" />} />

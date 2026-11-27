@@ -54,6 +54,29 @@ function roleFromAccessToken() {
   }
 }
 
+function librarianLabel(value) {
+  return roleDisplayValue(value).split(/[,/|]/).some(role => role.trim().toLowerCase().replace(/[\s-]+/g, '_') === 'librarian')
+}
+
+function tokenHasLibrarianIdentity() {
+  try {
+    const payload = getAccessToken().split('.')[1]?.replace(/-/g, '+').replace(/_/g, '/')
+    const claims = payload ? JSON.parse(atob(payload)) : {}
+    return [claims.role, claims.roles, claims.roleName, claims.roleCode, claims.designation, claims.jobTitle, claims.position,
+      claims['http://schemas.microsoft.com/ws/2008/06/identity/claims/role']].some(librarianLabel)
+  } catch { return false }
+}
+
+function storedLibrarianIdentity() {
+  const localStore = safeStorage('localStorage')
+  const sessionStore = safeStorage('sessionStorage')
+  return [
+    readStorageValue(localStore, DISPLAY_ROLE_STORAGE_KEY), readStorageValue(sessionStore, DISPLAY_ROLE_STORAGE_KEY),
+    readStorageValue(localStore, 'btech-user-designation'), readStorageValue(sessionStore, 'btech-user-designation'),
+    readStorageValue(localStore, 'btech-user-assigned-role'), readStorageValue(sessionStore, 'btech-user-assigned-role'),
+  ].some(librarianLabel) || tokenHasLibrarianIdentity()
+}
+
 export function getAuthStorage() {
   const localStore = safeStorage('localStorage')
   const sessionStore = safeStorage('sessionStorage')
@@ -119,15 +142,34 @@ export function isAuthenticated() {
   return readStorageValue(localStore, AUTH_STORAGE_KEY) === 'true' || readStorageValue(sessionStore, AUTH_STORAGE_KEY) === 'true'
 }
 
+export function rememberUserDesignation(designation) {
+  const storage = getAuthStorage()
+  const value = String(designation || '').trim()
+  if (!storage) return
+  storage.setItem('btech-user-designation', value)
+  storage.setItem('btech-designation-checked', 'true')
+  if (librarianLabel(value)) {
+    storage.setItem(DISPLAY_ROLE_STORAGE_KEY, 'Librarian')
+    storage.setItem('btech-user-assigned-role', 'Librarian')
+  }
+}
+
 export function signIn(role, accessToken, refreshToken, rememberMe = false, user = {}) {
   signOut()
 
   const storage = rememberMe ? safeStorage('localStorage') : safeStorage('sessionStorage')
   if (!storage) return
 
+  const assignedRole = user.assignedRole ?? user.assignedRoleName ?? user.roleName ?? user.roleCode ?? user.designation
+  const isAssignedLibrarian = [role, user.roles, user.role, user.assignedRole, user.assignedRoleName, user.roleName, user.roleCode, user.designation, user.jobTitle, user.position].some(librarianLabel)
+  const displayRole = isAssignedLibrarian ? 'Librarian' : roleDisplayValue(assignedRole) || roleDisplayValue(role) || roleDisplayValue(user.role)
+
   storage.setItem(AUTH_STORAGE_KEY, 'true')
   storage.setItem(ROLE_STORAGE_KEY, normalizeStoredRole(role))
-  storage.setItem(DISPLAY_ROLE_STORAGE_KEY, roleDisplayValue(role) || roleDisplayValue(user.assignedRole ?? user.role))
+  storage.setItem(DISPLAY_ROLE_STORAGE_KEY, displayRole)
+  storage.setItem('btech-user-designation', String(user.designation ?? user.jobTitle ?? user.position ?? '').trim())
+  storage.setItem('btech-designation-checked', String(user.designation != null || user.jobTitle != null || user.position != null))
+  storage.setItem('btech-user-assigned-role', roleDisplayValue(assignedRole))
   storage.setItem('btech-access-token', accessToken)
   storage.setItem('btech-refresh-token', refreshToken)
   storage.setItem('btech-user-name', String(user.name || '').trim())
@@ -140,7 +182,7 @@ export function signIn(role, accessToken, refreshToken, rememberMe = false, user
 export function signOut() {
   const localStore = safeStorage('localStorage')
   const sessionStore = safeStorage('sessionStorage')
-  ;['pirnav_academic_context', 'pirnav-selected-college-id', 'selected_college_id', 'pirnav-selected-academic-year-id', 'btech-user-college-id', 'btech-must-change-password', 'btech-profile-completed', 'cms-portal-preview'].forEach(key => {
+  ;['pirnav_academic_context', 'pirnav-selected-college-id', 'selected_college_id', 'pirnav-selected-academic-year-id', 'btech-user-college-id', 'btech-user-designation', 'btech-designation-checked', 'btech-user-assigned-role', 'btech-must-change-password', 'btech-profile-completed', 'cms-portal-preview'].forEach(key => {
     localStore?.removeItem(key)
     sessionStore?.removeItem(key)
   })
@@ -176,6 +218,7 @@ export function getUserRole() {
 
 // Keep the assigned role label separate from the normalized value used by RBAC checks.
 export function getUserRoleDisplayName() {
+  if (isLibrarian()) return 'Librarian'
   const storage = getAuthStorage()
   const storedName = readStorageValue(storage, DISPLAY_ROLE_STORAGE_KEY)
     || readStorageValue(safeStorage('localStorage'), DISPLAY_ROLE_STORAGE_KEY)
@@ -186,6 +229,13 @@ export function getUserRoleDisplayName() {
   const role = getUserRole() || ''
   if (role === 'admin') return 'Administrator'
   return role ? role.replace(/[_-]+/g, ' ').replace(/\b\w/g, letter => letter.toUpperCase()) : 'User'
+}
+
+export function isLibrarian() {
+  const localRole = normalizeStoredRole(readStorageValue(safeStorage('localStorage'), ROLE_STORAGE_KEY))
+  const sessionRole = normalizeStoredRole(readStorageValue(safeStorage('sessionStorage'), ROLE_STORAGE_KEY))
+  if ([localRole, sessionRole].includes('admin')) return false
+  return storedLibrarianIdentity()
 }
 
 export function hasRole(allowedRoles = []) {
