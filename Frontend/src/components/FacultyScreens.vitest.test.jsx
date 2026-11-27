@@ -66,7 +66,7 @@ test('faculty registration validates before creating an employee', async () => {
   expect(facultyService.create).not.toHaveBeenCalled()
 })
 
-test('faculty email validation rejects .co and .cm with inline guidance', async () => {
+test('faculty email validation rejects malformed domain endings with inline guidance', async () => {
   mount('/faculty/new?category=Teaching')
   const dialogElement = await screen.findByRole('dialog', { name: 'Add Teaching Faculty' })
   const dialog = within(dialogElement)
@@ -74,7 +74,7 @@ test('faculty email validation rejects .co and .cm with inline guidance', async 
   const emailField = email.closest('.fm-field')
   expect(email.getAttribute('placeholder')).toBe('name@gmail.com')
 
-  for (const address of ['sandy@pirnav.co', 'sandy@pirnav.cm']) {
+  for (const address of ['sandy@pirnav.co', 'sandy@pirnav.cm', 'sandy@gmail.commmmm']) {
     fireEvent.change(email, { target: { value: address } })
     fireEvent.blur(email)
     const warning = within(emailField).getByRole('alert')
@@ -84,10 +84,22 @@ test('faculty email validation rejects .co and .cm with inline guidance', async 
     expect(dialogElement.querySelector('.fm-registration-notice')).toBeNull()
   }
 
-  fireEvent.change(email, { target: { value: 'sandy@college.edu' } })
+  fireEvent.change(email, { target: { value: 'sandy@college.community' } })
   fireEvent.blur(email)
   expect(within(emailField).queryByRole('alert')).toBeNull()
   expect(email.getAttribute('aria-invalid')).toBe('false')
+})
+
+test('non-teaching staff cannot continue with a malformed email domain ending', async () => {
+  mount('/faculty/new?category=Non-Teaching')
+  const dialog = within(await screen.findByRole('dialog', { name: 'Add Non-Teaching Staff' }))
+  const email = dialog.getByLabelText(/^Email/)
+  fireEvent.change(email, { target: { value: 'sandy@gmail.commmmm' } })
+  fireEvent.click(dialog.getByRole('button', { name: 'Next' }))
+
+  expect(dialog.getByRole('button', { name: /Personal Details/ }).getAttribute('aria-current')).toBe('step')
+  expect(within(email.closest('.fm-field')).getByRole('alert').textContent).toBe('Please enter a valid email format')
+  expect(facultyService.create).not.toHaveBeenCalled()
 })
 
 test('edit faculty email validation shows the inline error and clears it for valid input', async () => {
