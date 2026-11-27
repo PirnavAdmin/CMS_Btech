@@ -1262,7 +1262,7 @@ function FacultyCurrentWorkspacePage() {
   const title = titleFor(screen)
   if (['403', '404', 'session-expired'].includes(screen)) return <PortalLayout title={title}><main className="portal-page fw-page"><UnavailableScreen screen={screen} /></main></PortalLayout>
   if (!routes.some(route => route.screen === screen) || screen === 'dashboard') return <PortalLayout title="Page not found"><main className="portal-page fw-page"><UnavailableScreen screen="404" /></main></PortalLayout>
-  return <PortalLayout title={title}><main className="portal-page fw-page">
+  return <PortalLayout title={title}><main className={`portal-page fw-page${screen === 'subjects' ? ' fw-subjects-page' : ''}`}>
     {loading && !data ? <section className="fw-card" aria-busy="true"><FacultyCardSkeleton count={4} height="110px" /></section> : error && !data ? <section className="fw-error-card" role="alert"><FiAlertCircle /><div><h2>Could not load {title.toLowerCase()}</h2><p>{error}</p><button className="fw-button fw-button-primary" onClick={reload}>Retry</button></div></section> : <>
       {error && <p className="fw-inline-error" role="alert">{error}</p>}
       {notice && <p className="fw-inline-success" role="status"><FiCheckCircle />{notice}</p>}

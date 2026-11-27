@@ -1,5 +1,6 @@
 .fw-page {
   display: grid;
+  align-content: start;
   gap: 16px;
 }
 
@@ -6012,4 +6013,66 @@
   border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
   background: var(--danger-soft);
   color: var(--danger);
+}
+
+/* Tighter vertical rhythm on the My Subjects overview. */
+#root .portal-shell .fw-subjects-page {
+  gap: 12px;
+}
+
+#root .portal-shell .fw-subjects-page > .fw-heading {
+  margin-bottom: 0;
+}
+
+#root .portal-shell .fw-subjects-page > .fw-heading > div:first-child > p:last-child {
+  margin-bottom: 0 !important;
+}
+
+#root .portal-shell .fw-subjects-page > .fw-workload-card {
+  min-height: 0;
+  padding: 12px 18px;
+  gap: 16px;
+}
+
+#root .portal-shell .fw-subjects-page > .fw-workload-card .fw-eyebrow {
+  margin-bottom: 4px !important;
+}
+
+#root .portal-shell .fw-subjects-page > .fw-workload-card p {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+#root .portal-shell .fw-subjects-page > .fw-workload-card strong {
+  display: block;
+  margin-bottom: 4px;
+  line-height: 1.1;
+}
+
+#root .portal-shell .fw-subjects-page > .fw-workload-card progress {
+  max-width: 360px;
+  height: 8px;
+}
+
+#root .portal-shell .fw-subjects-page > .fw-card {
+  padding: 16px 18px;
+}
+
+#root .portal-shell .fw-subjects-page > .fw-card .fw-card-heading {
+  margin-bottom: 10px;
+}
+
+@media (max-width: 700px) {
+  #root .portal-shell .fw-subjects-page > .fw-workload-card,
+  #root .portal-shell .fw-subjects-page > .fw-card {
+    padding: 12px;
+  }
+
+  #root .portal-shell .fw-subjects-page > .fw-workload-card {
+    gap: 10px;
+  }
+
+  #root .portal-shell .fw-subjects-page > .fw-workload-card progress {
+    max-width: none;
+  }
 }
